@@ -2,5 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+html { scroll-behavior: smooth; }
+
 :root { --radius: 1rem; }
 body { @apply bg-white text-neutral-900; }
