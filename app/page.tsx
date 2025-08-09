@@ -10,12 +10,22 @@ export default function HomePage() {
       {/* NAVBAR */}
       <nav className="fixed inset-x-0 top-0 z-50 bg-white/90 backdrop-blur border-b border-neutral-200">
         <div className="mx-auto max-w-6xl px-4 h-16 flex items-center justify-between">
-          <a href="#" className="text-lg font-bold tracking-tight">MO T-SHIRT</a>
+          <a href="#" className="text-lg font-bold tracking-tight">
+            MO T-SHIRT
+          </a>
           <div className="hidden sm:flex items-center gap-6">
-            <a href="#services" className="hover:text-orange-600">Services</a>
-            <a href="#work" className="hover:text-orange-600">Work</a>
-            <a href="#how-it-works" className="hover:text-orange-600">How it works</a>
-            <a href="#contact" className="hover:text-orange-600">Contact</a>
+            <section id="services" className="scroll-mt-28">
+              ...
+            </section>
+            <section id="work" className="scroll-mt-28">
+              ...
+            </section>
+            <section id="how-it-works" className="scroll-mt-28">
+              ...
+            </section>
+            <section id="contact" className="scroll-mt-28">
+              ...
+            </section>
           </div>
           <a
             href="https://wa.me/23059184930?text=Hi%20MO%20T-SHIRT,%20I%20want%20custom%20prints.%20Can%20you%20help?"
@@ -41,8 +51,9 @@ export default function HomePage() {
               <span className="text-orange-600">T-Shirts, Polos & Caps</span>
             </h1>
             <p className="mt-4 text-neutral-600 max-w-xl">
-              Mauritius-based print studio specializing in DTF & Vinyl. Ideal for companies,
-              schools, clubs, and events. Pick-up in Surinam or delivery via Post.
+              Mauritius-based print studio specializing in DTF & Vinyl. Ideal
+              for companies, schools, clubs, and events. Pick-up in Surinam or
+              delivery via Post.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <a
@@ -61,9 +72,15 @@ export default function HomePage() {
               </a>
             </div>
             <div className="mt-6 flex items-center gap-4 text-sm text-neutral-600">
-              <span className="inline-flex items-center gap-2">✅ Corporate-ready</span>
-              <span className="inline-flex items-center gap-2">✅ Clean & premium</span>
-              <span className="inline-flex items-center gap-2">✅ Trusted locally</span>
+              <span className="inline-flex items-center gap-2">
+                ✅ Corporate-ready
+              </span>
+              <span className="inline-flex items-center gap-2">
+                ✅ Clean & premium
+              </span>
+              <span className="inline-flex items-center gap-2">
+                ✅ Trusted locally
+              </span>
             </div>
           </div>
 
@@ -77,11 +94,17 @@ export default function HomePage() {
       </section>
 
       {/* SERVICES */}
-      <section id="services" className="scroll-mt-24 mx-auto max-w-6xl px-4 py-16">
+      <section
+        id="services"
+        className="scroll-mt-24 mx-auto max-w-6xl px-4 py-16"
+      >
         <div className="mb-10">
-          <h2 className="text-3xl font-semibold tracking-tight">What we print</h2>
+          <h2 className="text-3xl font-semibold tracking-tight">
+            What we print
+          </h2>
           <p className="text-neutral-600 mt-2">
-            DTF and Vinyl printing with crisp edges, rich colour, and strong durability.
+            DTF and Vinyl printing with crisp edges, rich colour, and strong
+            durability.
           </p>
         </div>
         <div className="grid md:grid-cols-3 gap-6">
@@ -90,9 +113,14 @@ export default function HomePage() {
             { t: "Poloshirts", d: "Smart look for staff and front-of-house." },
             { t: "Caps", d: "Perfect add-on for brand visibility." },
           ].map((s, i) => (
-            <div key={i} className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+            <div
+              key={i}
+              className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm"
+            >
               <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-xl bg-orange-50 grid place-items-center text-orange-600">🧢</div>
+                <div className="h-9 w-9 rounded-xl bg-orange-50 grid place-items-center text-orange-600">
+                  🧢
+                </div>
                 <h3 className="font-semibold tracking-tight">{s.t}</h3>
               </div>
               <p className="text-neutral-600 mt-3">{s.d}</p>
@@ -118,13 +146,19 @@ export default function HomePage() {
       </section>
 
       {/* WORK */}
-      <section id="work" className="scroll-mt-24 bg-neutral-50 border-y border-neutral-200">
+      <section
+        id="work"
+        className="scroll-mt-24 bg-neutral-50 border-y border-neutral-200"
+      >
         <div className="mx-auto max-w-6xl px-4 py-16">
           <div className="mb-8 flex items-end justify-between">
             <div>
-              <h2 className="text-3xl font-semibold tracking-tight">Recent work</h2>
+              <h2 className="text-3xl font-semibold tracking-tight">
+                Recent work
+              </h2>
               <p className="text-neutral-600 mt-2">
-                Swap these placeholders with your actual client photos and mockups.
+                Swap these placeholders with your actual client photos and
+                mockups.
               </p>
             </div>
             <a
@@ -138,26 +172,47 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {Array.from({ length: 9 }).map((_, i) => (
-              <div key={i} className="aspect-square rounded-2xl bg-white border border-neutral-200 shadow-sm" />
+              <div
+                key={i}
+                className="aspect-square rounded-2xl bg-white border border-neutral-200 shadow-sm"
+              />
             ))}
           </div>
         </div>
       </section>
 
       {/* HOW IT WORKS */}
-      <section id="how-it-works" className="scroll-mt-24 mx-auto max-w-6xl px-4 py-16">
+      <section
+        id="how-it-works"
+        className="scroll-mt-24 mx-auto max-w-6xl px-4 py-16"
+      >
         <div className="mb-10">
-          <h2 className="text-3xl font-semibold tracking-tight">How it works</h2>
-          <p className="text-neutral-600 mt-2">Simple path from idea to delivery.</p>
+          <h2 className="text-3xl font-semibold tracking-tight">
+            How it works
+          </h2>
+          <p className="text-neutral-600 mt-2">
+            Simple path from idea to delivery.
+          </p>
         </div>
         <div className="grid md:grid-cols-4 gap-6">
           {[
             { n: "1", t: "Chat", d: "Tell us what you need on WhatsApp." },
-            { n: "2", t: "Design", d: "Send your logo. We prep print-ready art." },
+            {
+              n: "2",
+              t: "Design",
+              d: "Send your logo. We prep print-ready art.",
+            },
             { n: "3", t: "Approve", d: "You confirm the mockup before print." },
-            { n: "4", t: "Print & Ship", d: "We print and deliver or arrange pick-up." },
+            {
+              n: "4",
+              t: "Print & Ship",
+              d: "We print and deliver or arrange pick-up.",
+            },
           ].map((step, i) => (
-            <div key={i} className="rounded-2xl border border-neutral-200 p-5 shadow-sm">
+            <div
+              key={i}
+              className="rounded-2xl border border-neutral-200 p-5 shadow-sm"
+            >
               <div className="flex items-center gap-3">
                 <span className="h-8 w-8 rounded-full bg-orange-500 text-white grid place-items-center text-sm font-semibold">
                   {step.n}
@@ -171,7 +226,10 @@ export default function HomePage() {
       </section>
 
       {/* CONTACT */}
-      <section id="contact" className="scroll-mt-24 mx-auto max-w-6xl px-4 py-16">
+      <section
+        id="contact"
+        className="scroll-mt-24 mx-auto max-w-6xl px-4 py-16"
+      >
         <div className="grid md:grid-cols-2 gap-10 items-start">
           <div>
             <h2 className="text-3xl font-semibold tracking-tight">Contact</h2>
@@ -190,8 +248,12 @@ export default function HomePage() {
                   +230 5918 4930
                 </a>
               </div>
-              <div className="flex items-center gap-2">📍 Surinam, Mauritius</div>
-              <div className="flex items-center gap-2">🕘 Mon–Sat 9:00–18:00</div>
+              <div className="flex items-center gap-2">
+                📍 Surinam, Mauritius
+              </div>
+              <div className="flex items-center gap-2">
+                🕘 Mon–Sat 9:00–18:00
+              </div>
             </div>
             <div className="mt-6 flex gap-3">
               <a
@@ -269,9 +331,15 @@ export default function HomePage() {
             <span>Mauritius</span>
           </div>
           <div className="flex items-center gap-4">
-            <a href="#" className="hover:underline">Instagram</a>
-            <a href="#" className="hover:underline">Google Maps</a>
-            <a href="#contact" className="hover:underline">Contact</a>
+            <a href="#" className="hover:underline">
+              Instagram
+            </a>
+            <a href="#" className="hover:underline">
+              Google Maps
+            </a>
+            <a href="#contact" className="hover:underline">
+              Contact
+            </a>
           </div>
         </div>
       </footer>
