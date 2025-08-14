@@ -1,43 +1,53 @@
-import { NextResponse } from 'next/server';
+// app/api/send-email/route.ts
 import nodemailer from 'nodemailer';
+import { NextResponse } from 'next/server';
+
+type Body = {
+  to: string;
+  subject: string;
+  text?: string;
+  html?: string;
+};
 
 export async function POST(req: Request) {
   try {
-    const { to, subject, text, pdfUrl } = await req.json();
-    if (!to || !pdfUrl) return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+    const body: Body = await req.json();
+    const { to, subject, text = '', html = '' } = body;
 
-    // Fetch the PDF into a Buffer (to attach)
-    const res = await fetch(pdfUrl);
-    if (!res.ok) throw new Error('Failed to fetch PDF from storage');
-    const arrayBuf = await res.arrayBuffer();
-    const buf = Buffer.from(arrayBuf);
+    const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+    const port = Number(process.env.SMTP_PORT || 465);
+    const secure = (String(process.env.SMTP_SECURE || 'true') === 'true') || port === 465;
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
+    const from = process.env.SMTP_FROM || user;
+
+    if (!user || !pass) {
+      return NextResponse.json({ error: 'SMTP credentials not configured' }, { status: 500 });
+    }
 
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,          // e.g. 'smtp.gmail.com'
-      port: Number(process.env.SMTP_PORT),  // e.g. 465
-      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for 587
-      auth: {
-        user: process.env.SMTP_USER,        // your SMTP user
-        pass: process.env.SMTP_PASS,        // your SMTP password/app password
-      },
+      host,
+      port,
+      secure,
+      auth: { user, pass },
     });
 
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    // Optional: verify connection (helpful when debugging deployment)
+    await transporter.verify();
+
+    const info = await transporter.sendMail({
+      from,
       to,
-      subject: subject || 'Your Receipt',
-      text: text || 'Please find your receipt attached.',
-      attachments: [
-        {
-          filename: 'receipt.pdf',
-          content: buf,
-          contentType: 'application/pdf',
-        },
-      ],
+      subject,
+      text,
+      html,
     });
 
-    return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Failed to send email' }, { status: 500 });
+    // don't leak full info in production logs; return the id for debug
+    return NextResponse.json({ ok: true, messageId: info.messageId });
+  } catch (err: any) {
+    // log error server-side, but return a clean message
+    const message = err?.message || String(err);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
