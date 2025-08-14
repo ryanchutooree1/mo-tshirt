@@ -2,6 +2,7 @@
 import { initializeApp, getApps } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
+import { getStorage } from 'firebase/storage'
 
 // --- Your Firebase configuration (direct values) ---
 const firebaseConfig = {
@@ -16,6 +17,7 @@ const firebaseConfig = {
 // Prevent re-initialization during hot reload
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0]
 
-// Export Firebase services
+// Export Firebase & Storage services
 export const auth = getAuth(app)
 export const db = getFirestore(app)
+export const storage = getStorage(app);
