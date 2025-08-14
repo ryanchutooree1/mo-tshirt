@@ -1,19 +1,28 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import {
-  doc, setDoc, getDoc, updateDoc, collection,
-  query, orderBy, limit, getDocs, addDoc
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  collection,
+  query,
+  orderBy,
+  limit,
+  getDocs,
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { format } from 'date-fns';
 
 export default function OwnerDashboard() {
   const adminId = 'mo-owner';
   const today = format(new Date(), 'yyyy-MM-dd');
 
-  const [tasks, setTasks] = useState<{ title: string; completed: boolean }[]>([]);
+  const [tasks, setTasks] = useState<{ title: string; completed: boolean }[]>(
+    []
+  );
   const [streak, setStreak] = useState(0);
   const [newTask, setNewTask] = useState('');
   const [loading, setLoading] = useState(true);
@@ -24,51 +33,45 @@ export default function OwnerDashboard() {
   const [repeatClients, setRepeatClients] = useState(0);
   const [deliveredToday, setDeliveredToday] = useState(0);
   const [latestOrders, setLatestOrders] = useState<any[]>([]);
-  const [inventory, setInventory] = useState<{ size: string; qty: number }[]>([]);
+  const [inventory, setInventory] = useState<{ size?: string; qty: number }[]>(
+    []
+  );
   const [efficiencyValue, setEfficiencyValue] = useState(0);
 
-  // POS
-  const [saleModalOpen, setSaleModalOpen] = useState(false);
-  const [saleData, setSaleData] = useState({ client: '', amount: '', items: '', payment: 'Cash' });
-
-  // DMS
-  const [file, setFile] = useState<File | null>(null);
-  const [uploadedFiles, setUploadedFiles] = useState<{ name: string, url: string }[]>([]);
-
-  // Fetch all data
+  // Fetch tasks
   useEffect(() => {
     const fetchData = async () => {
-      const checklistRef = doc(db, 'users', adminId, 'checklists', today);
-      const checklistSnap = await getDoc(checklistRef);
-
-      if (checklistSnap.exists()) {
-        setTasks(checklistSnap.data().tasks || []);
-        setStreak(checklistSnap.data().streak || 0);
+      const ref = doc(db, 'users', adminId, 'checklists', today);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const data = snap.data();
+        setTasks(data?.tasks || []);
+        setStreak(data?.streak || 0);
       } else {
-        await setDoc(checklistRef, { tasks: [], streak: 0 });
+        await setDoc(ref, { tasks: [], streak: 0 });
       }
+      setLoading(false);
+    };
+    fetchData();
+  }, [adminId, today]);
 
-      // Load Orders & Inventory in Parallel
+  // Fetch orders, revenue, and EV
+  useEffect(() => {
+    const fetchOrders = async () => {
       const ordersRef = collection(db, 'orders');
-      const invRef = collection(db, 'inventory');
-      const [ordersSnap, invSnap] = await Promise.all([
-        getDocs(query(ordersRef, orderBy('date', 'desc'), limit(10))),
-        getDocs(invRef)
-      ]);
+      const q = query(ordersRef, orderBy('date', 'desc'), limit(5));
+      const querySnapshot = await getDocs(q);
 
       let revenueToday = 0;
       let pendingCount = 0;
       let deliveredCount = 0;
       let completedCount = 0;
       let totalCount = 0;
-      let clientSet = new Set();
-
       const ordersList: any[] = [];
-      ordersSnap.forEach((docSnap) => {
+
+      querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
         ordersList.push(data);
-        clientSet.add(data.client);
-
         if (data.date === today) {
           revenueToday += data.amount || 0;
           if (data.status === 'Pending') pendingCount++;
@@ -78,87 +81,205 @@ export default function OwnerDashboard() {
         totalCount++;
       });
 
-      const invList: any[] = [];
-      invSnap.forEach((docSnap) => invList.push(docSnap.data()));
-
       setLatestOrders(ordersList);
       setTodayRevenue(revenueToday);
       setPendingOrders(pendingCount);
       setDeliveredToday(deliveredCount);
-      setRepeatClients(clientSet.size);
-      setInventory(invList);
-      setEfficiencyValue(totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0);
-
-      setLoading(false);
+      const ev = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+      setEfficiencyValue(ev);
     };
 
-    fetchData();
+    fetchOrders();
   }, [today]);
 
-  // Save tasks
-  const saveTasks = async (updatedTasks: typeof tasks, updatedStreak = streak) => {
+  // Fetch inventory
+  useEffect(() => {
+    const fetchInventory = async () => {
+      const invRef = collection(db, 'inventory');
+      const invSnap = await getDocs(invRef);
+      const invList: any[] = [];
+      invSnap.forEach((docSnap) => {
+        // include id so lists and POS can act on it later
+        invList.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      setInventory(invList);
+    };
+    fetchInventory();
+  }, []);
+
+  const saveTasks = async (
+    updatedTasks: typeof tasks,
+    updatedStreak = streak
+  ) => {
     setTasks(updatedTasks);
-    const refDoc = doc(db, 'users', adminId, 'checklists', today);
-    await updateDoc(refDoc, { tasks: updatedTasks, streak: updatedStreak });
+    const ref = doc(db, 'users', adminId, 'checklists', today);
+    await updateDoc(ref, { tasks: updatedTasks, streak: updatedStreak });
   };
 
-  // POS - Add Sale
-  const handleAddSale = async () => {
-    if (!saleData.client || !saleData.amount) return;
-    await addDoc(collection(db, 'orders'), {
-      client: saleData.client,
-      amount: Number(saleData.amount),
-      items: saleData.items,
-      payment: saleData.payment,
-      date: today,
-      status: 'Pending'
-    });
-    setSaleModalOpen(false);
-    setSaleData({ client: '', amount: '', items: '', payment: 'Cash' });
+  const toggleTask = async (index: number) => {
+    const updated = [...tasks];
+    updated[index].completed = !updated[index].completed;
+    let newStreak = streak;
+    if (updated.every((t) => t.completed)) {
+      newStreak += 1;
+      setStreak(newStreak);
+    }
+    await saveTasks(updated, newStreak);
   };
 
-  // DMS - Upload File
-  const handleFileUpload = async () => {
-    if (!file) return;
-    const fileRef = ref(storage, `documents/${file.name}`);
-    await uploadBytes(fileRef, file);
-    const url = await getDownloadURL(fileRef);
-    setUploadedFiles((prev) => [...prev, { name: file.name, url }]);
-    setFile(null);
+  const addTask = async () => {
+    if (!newTask.trim()) return;
+    const updated = [...tasks, { title: newTask.trim(), completed: false }];
+    setNewTask('');
+    await saveTasks(updated);
   };
 
-  if (loading) return <main className="p-6">Loading dashboard...</main>;
+  const removeTask = async (index: number) => {
+    await saveTasks(tasks.filter((_, i) => i !== index));
+  };
+
+  const progressPct = tasks.length
+    ? Math.round((tasks.filter((t) => t.completed).length / tasks.length) * 100)
+    : 0;
+
+  if (loading) {
+    return <main className="p-6">Loading dashboard...</main>;
+  }
 
   return (
-    <main className="min-h-screen px-6 py-10 max-w-7xl mx-auto space-y-8">
-      <header className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">MO T-SHIRT — Owner Dashboard</h1>
-        <button
-          onClick={() => setSaleModalOpen(true)}
-          className="bg-green-500 text-white px-4 py-2 rounded-lg shadow hover:bg-green-600"
-        >
-          ➕ New Sale
-        </button>
-      </header>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {[
-          { label: "Today’s Revenue", value: `Rs ${todayRevenue.toLocaleString()}` },
-          { label: "Pending Orders", value: pendingOrders },
-          { label: "Repeat Clients", value: repeatClients },
-          { label: "Delivered Today", value: deliveredToday },
-          { label: "Efficiency", value: `${efficiencyValue}%` }
-        ].map((stat, idx) => (
-          <div key={idx} className="bg-white shadow p-4 rounded-lg text-center">
-            <p className="text-gray-500 text-sm">{stat.label}</p>
-            <h2 className="text-xl font-bold">{stat.value}</h2>
-          </div>
-        ))}
+    <main className="min-h-screen px-6 py-10 max-w-6xl mx-auto">
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">MO T-SHIRT — Owner Dashboard</h1>
+          <p className="text-gray-600">Your business control center.</p>
+        </div>
       </div>
 
-      {/* Orders Table */}
-      <section className="bg-white p-4 rounded-lg shadow">
+      {/* Big Navigation Buttons (including POS + DMS) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <Link
+          href="/admin/inventory"
+          className="group block bg-white border rounded-lg p-6 text-center shadow hover:shadow-md transition"
+          aria-label="Go to Inventory"
+        >
+          <div className="text-4xl">📦</div>
+          <div className="mt-2 font-bold text-xl">Inventory</div>
+          <div className="text-sm text-gray-500 mt-1">Manage sizes, colors, stock</div>
+        </Link>
+
+        <Link
+          href="/admin/orders"
+          className="group block bg-white border rounded-lg p-6 text-center shadow hover:shadow-md transition"
+          aria-label="Go to Orders"
+        >
+          <div className="text-4xl">🧾</div>
+          <div className="mt-2 font-bold text-xl">Orders</div>
+          <div className="text-sm text-gray-500 mt-1">View & update orders</div>
+        </Link>
+
+        <Link
+          href="/admin/clients"
+          className="group block bg-white border rounded-lg p-6 text-center shadow hover:shadow-md transition"
+          aria-label="Go to Clients"
+        >
+          <div className="text-4xl">👥</div>
+          <div className="mt-2 font-bold text-xl">Clients</div>
+          <div className="text-sm text-gray-500 mt-1">CRM & contact history</div>
+        </Link>
+
+        <Link
+          href="/admin/analytics"
+          className="group block bg-white border rounded-lg p-6 text-center shadow hover:shadow-md transition"
+          aria-label="Go to Analytics"
+        >
+          <div className="text-4xl">📊</div>
+          <div className="mt-2 font-bold text-xl">Analytics</div>
+          <div className="text-sm text-gray-500 mt-1">Sales, EV, trends</div>
+        </Link>
+
+        <Link
+          href="/admin/pos"
+          className="group block bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-lg p-6 text-center shadow-lg hover:from-orange-600 hover:to-orange-500 transition"
+          aria-label="Go to POS"
+        >
+          <div className="text-4xl">🛒</div>
+          <div className="mt-2 font-bold text-xl">POS</div>
+          <div className="text-sm mt-1 opacity-90">Record sales — updates inventory</div>
+        </Link>
+
+        <Link
+          href="/admin/dms"
+          className="group block bg-gradient-to-r from-sky-500 to-sky-400 text-white rounded-lg p-6 text-center shadow-lg hover:from-sky-600 hover:to-sky-500 transition"
+          aria-label="Go to Document Management"
+        >
+          <div className="text-4xl">📂</div>
+          <div className="mt-2 font-bold text-xl">DMS</div>
+          <div className="text-sm mt-1 opacity-90">Upload and manage documents</div>
+        </Link>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white shadow p-4 rounded-lg text-center">
+          <p className="text-gray-500 text-sm">Today’s Revenue</p>
+          <h2 className="text-xl font-bold">Rs {todayRevenue.toLocaleString()}</h2>
+        </div>
+        <div className="bg-white shadow p-4 rounded-lg text-center">
+          <p className="text-gray-500 text-sm">Pending Orders</p>
+          <h2 className="text-xl font-bold">{pendingOrders}</h2>
+        </div>
+        <div className="bg-white shadow p-4 rounded-lg text-center">
+          <p className="text-gray-500 text-sm">Repeat Clients</p>
+          <h2 className="text-xl font-bold">{repeatClients}</h2>
+        </div>
+        <div className="bg-white shadow p-4 rounded-lg text-center">
+          <p className="text-gray-500 text-sm">Delivered Today</p>
+          <h2 className="text-xl font-bold">{deliveredToday}</h2>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="w-full bg-gray-200 rounded-full overflow-hidden mb-4" style={{ height: 20 }}>
+        <div
+          style={{
+            width: `${progressPct}%`,
+            background: progressPct === 100 ? '#22c55e' : '#f97316',
+            borderRadius: '9999px'
+          }}
+          className="h-full transition-all"
+        />
+      </div>
+      <p className="text-sm mb-6">{progressPct}% Complete • Streak: {streak} days</p>
+
+      {/* Add Task */}
+      <div className="flex gap-2 mb-6">
+        <input
+          value={newTask}
+          onChange={(e) => setNewTask(e.target.value)}
+          placeholder="Add a new task..."
+          className="flex-1 border rounded-lg px-3 py-2"
+        />
+        <button
+          onClick={addTask}
+          className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
+        >
+          Add
+        </button>
+      </div>
+
+      {/* Tasks */}
+      <ul className="space-y-3 mb-10">
+        {tasks.map((task, i) => (
+          <li key={i} className="flex items-center gap-3 p-3 border rounded-lg hover:shadow-sm transition">
+            <input type="checkbox" checked={task.completed} onChange={() => toggleTask(i)} className="w-5 h-5" />
+            <span className={`flex-1 ${task.completed ? 'line-through text-gray-500' : ''}`}>{task.title}</span>
+            <button onClick={() => removeTask(i)} className="text-red-500 text-sm hover:underline">Remove</button>
+          </li>
+        ))}
+      </ul>
+
+      {/* Order Overview */}
+      <div className="bg-white shadow p-4 rounded-lg mb-8">
         <h2 className="text-lg font-bold mb-4">Latest Orders</h2>
         <table className="w-full text-sm">
           <thead>
@@ -171,89 +292,33 @@ export default function OwnerDashboard() {
           <tbody>
             {latestOrders.map((order, idx) => (
               <tr key={idx} className="border-b">
-                <td>{order.client}</td>
-                <td>Rs {order.amount}</td>
-                <td>{order.status}</td>
+                <td className="py-2">{order.client}</td>
+                <td className="py-2">Rs {order.amount}</td>
+                <td className="py-2">{order.status}</td>
               </tr>
             ))}
           </tbody>
         </table>
-      </section>
+      </div>
 
       {/* Inventory Snapshot */}
-      <section className="bg-white p-4 rounded-lg shadow">
-        <h2 className="text-lg font-bold mb-4">Inventory</h2>
+      <div className="bg-white shadow p-4 rounded-lg mb-8">
+        <h2 className="text-lg font-bold mb-4">Inventory Snapshot</h2>
         <ul>
           {inventory.map((item, idx) => (
             <li key={idx} className="flex justify-between border-b py-2">
-              <span>{item.size}</span>
+              <span>{item.size ?? item.id}</span>
               <span>{item.qty} pcs</span>
             </li>
           ))}
         </ul>
-      </section>
+      </div>
 
-      {/* DMS */}
-      <section className="bg-white p-4 rounded-lg shadow">
-        <h2 className="text-lg font-bold mb-4">Document Management</h2>
-        <div className="flex gap-2 mb-4">
-          <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-          <button
-            onClick={handleFileUpload}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
-          >
-            Upload
-          </button>
-        </div>
-        <ul>
-          {uploadedFiles.map((f, i) => (
-            <li key={i}>
-              <a href={f.url} target="_blank" rel="noreferrer" className="text-blue-600 underline">{f.name}</a>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* POS Modal */}
-      {saleModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-96 shadow-lg">
-            <h2 className="text-lg font-bold mb-4">New Sale</h2>
-            <input
-              placeholder="Client Name"
-              value={saleData.client}
-              onChange={(e) => setSaleData({ ...saleData, client: e.target.value })}
-              className="w-full border p-2 mb-2 rounded"
-            />
-            <input
-              placeholder="Amount"
-              type="number"
-              value={saleData.amount}
-              onChange={(e) => setSaleData({ ...saleData, amount: e.target.value })}
-              className="w-full border p-2 mb-2 rounded"
-            />
-            <input
-              placeholder="Items"
-              value={saleData.items}
-              onChange={(e) => setSaleData({ ...saleData, items: e.target.value })}
-              className="w-full border p-2 mb-2 rounded"
-            />
-            <select
-              value={saleData.payment}
-              onChange={(e) => setSaleData({ ...saleData, payment: e.target.value })}
-              className="w-full border p-2 mb-4 rounded"
-            >
-              <option>Cash</option>
-              <option>Bank Transfer</option>
-              <option>Card</option>
-            </select>
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setSaleModalOpen(false)} className="px-4 py-2 border rounded">Cancel</button>
-              <button onClick={handleAddSale} className="px-4 py-2 bg-green-500 text-white rounded">Save</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* EV Metric */}
+      <div className="bg-white shadow p-4 rounded-lg text-center">
+        <p className="text-gray-500 text-sm">Efficiency Value</p>
+        <h2 className="text-2xl font-bold">{efficiencyValue}%</h2>
+      </div>
     </main>
   );
 }
