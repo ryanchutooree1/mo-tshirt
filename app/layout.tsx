@@ -6,7 +6,11 @@ export const metadata = {
   description: "High-quality T-shirt, polo, and cap printing in Mauritius.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
       <body className="font-sans bg-white text-gray-900">
@@ -17,10 +21,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/">MO T-SHIRT</Link>
             </h1>
             <div className="flex gap-6">
-              <Link href="/services" className="hover:text-orange-500">Services</Link>
-              <Link href="/work" className="hover:text-orange-500">Work</Link>
-              <Link href="/how-it-works" className="hover:text-orange-500">How it works</Link>
-              <Link href="/contact" className="hover:text-orange-500">Contact</Link>
+              <Link href="/services" className="hover:text-orange-500">
+                Services
+              </Link>
+              <Link href="/work" className="hover:text-orange-500">
+                Work
+              </Link>
+              <Link href="/how-it-works" className="hover:text-orange-500">
+                How it works
+              </Link>
+              <Link href="/contact" className="hover:text-orange-500">
+                Contact
+              </Link>
             </div>
           </nav>
         </header>
@@ -29,8 +41,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main className="pt-20">{children}</main>
 
         {/* Footer */}
-        <footer className="bg-gray-900 text-white text-center py-6 mt-20">
-          <p>© {new Date().getFullYear()} MO T-SHIRT. All rights reserved.</p>
+        <footer className="bg-[#0B0F19] text-white py-4">
+          <div className="max-w-6xl mx-auto flex justify-between items-center px-6 text-sm">
+            <p>© 2025 MO T-SHIRT. All rights reserved.</p>
+            <a
+              href="/login"
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              Admin Login
+            </a>
+          </div>
         </footer>
       </body>
     </html>
