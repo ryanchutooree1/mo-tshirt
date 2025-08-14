@@ -3,9 +3,8 @@ import type { NextRequest } from 'next/server';
 
 export function middleware(req: NextRequest) {
   const isLoggedIn = req.cookies.get('admin_auth')?.value === 'true';
-  const isLoginPage = req.nextUrl.pathname.startsWith('/admin/login');
 
-  if (!isLoggedIn && !isLoginPage && req.nextUrl.pathname.startsWith('/admin')) {
+  if (!isLoggedIn && req.nextUrl.pathname.startsWith('/admin/owner-dashboard')) {
     return NextResponse.redirect(new URL('/admin/login', req.url));
   }
 
@@ -13,5 +12,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ['/admin/owner-dashboard'],
 };
