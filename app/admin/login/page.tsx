@@ -9,7 +9,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const params = useSearchParams();
   const router = useRouter();
-  const next = params.get('next') || '/admin';
+  const next = params.get('next') || '/admin/owner-dashboard';
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +39,6 @@ export default function LoginPage() {
       <form onSubmit={submit} className="w-full max-w-sm bg-white border rounded-2xl p-6 shadow-sm">
         <h1 className="text-2xl font-semibold mb-2">Owner Login</h1>
         <p className="text-sm text-gray-500 mb-4">Enter your admin password to continue.</p>
-
         <input
           type="password"
           className="w-full border rounded-xl px-3 py-2 mb-3"
@@ -49,7 +48,6 @@ export default function LoginPage() {
           required
         />
         {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
-
         <button
           disabled={loading}
           className="w-full bg-black text-white rounded-xl px-4 py-2 disabled:opacity-60"
