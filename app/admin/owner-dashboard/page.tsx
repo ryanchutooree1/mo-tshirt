@@ -33,9 +33,10 @@ export default function OwnerDashboard() {
   const [repeatClients, setRepeatClients] = useState(0);
   const [deliveredToday, setDeliveredToday] = useState(0);
   const [latestOrders, setLatestOrders] = useState<any[]>([]);
-  const [inventory, setInventory] = useState<{ size?: string; qty: number }[]>(
-    []
-  );
+  // <-- updated type: include optional id, size, qty
+  const [inventory, setInventory] = useState<
+    Array<{ id?: string; size?: string; qty?: number }>
+  >([]);
   const [efficiencyValue, setEfficiencyValue] = useState(0);
 
   // Fetch tasks
@@ -97,10 +98,10 @@ export default function OwnerDashboard() {
     const fetchInventory = async () => {
       const invRef = collection(db, 'inventory');
       const invSnap = await getDocs(invRef);
-      const invList: any[] = [];
+      const invList: Array<{ id?: string; size?: string; qty?: number }> = [];
       invSnap.forEach((docSnap) => {
-        // include id so lists and POS can act on it later
-        invList.push({ id: docSnap.id, ...docSnap.data() });
+        // cast to any to let Firestore shape through; include id
+        invList.push({ id: docSnap.id, ...(docSnap.data() as any) });
       });
       setInventory(invList);
     };
@@ -306,9 +307,9 @@ export default function OwnerDashboard() {
         <h2 className="text-lg font-bold mb-4">Inventory Snapshot</h2>
         <ul>
           {inventory.map((item, idx) => (
-            <li key={idx} className="flex justify-between border-b py-2">
+            <li key={item.id ?? idx} className="flex justify-between border-b py-2">
               <span>{item.size ?? item.id}</span>
-              <span>{item.qty} pcs</span>
+              <span>{(item.qty ?? 0).toString()} pcs</span>
             </li>
           ))}
         </ul>
