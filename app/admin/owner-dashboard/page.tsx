@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { format } from 'date-fns';
 
 export default function OwnerDashboard() {
-  const adminId = 'mo-owner'; // could be dynamic later
+  const adminId = 'mo-owner';
   const today = format(new Date(), 'yyyy-MM-dd');
 
   const [tasks, setTasks] = useState<{ title: string; completed: boolean }[]>([]);
@@ -14,7 +14,16 @@ export default function OwnerDashboard() {
   const [newTask, setNewTask] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // Fetch today's checklist from Firebase
+  // Stats
+  const [todayRevenue, setTodayRevenue] = useState(0);
+  const [pendingOrders, setPendingOrders] = useState(0);
+  const [repeatClients, setRepeatClients] = useState(0);
+  const [deliveredToday, setDeliveredToday] = useState(0);
+  const [latestOrders, setLatestOrders] = useState<any[]>([]);
+  const [inventory, setInventory] = useState<{ size: string; qty: number }[]>([]);
+  const [efficiencyValue, setEfficiencyValue] = useState(0);
+
+  // Fetch tasks
   useEffect(() => {
     const fetchData = async () => {
       const ref = doc(db, 'users', adminId, 'checklists', today);
@@ -29,6 +38,58 @@ export default function OwnerDashboard() {
     };
     fetchData();
   }, [adminId, today]);
+
+  // Fetch orders, revenue, and EV
+  useEffect(() => {
+    const fetchOrders = async () => {
+      const ordersRef = collection(db, 'orders');
+      const q = query(ordersRef, orderBy('date', 'desc'), limit(5));
+      const querySnapshot = await getDocs(q);
+
+      let revenueToday = 0;
+      let pendingCount = 0;
+      let deliveredCount = 0;
+      let completedCount = 0;
+      let totalCount = 0;
+
+      const ordersList: any[] = [];
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        ordersList.push(data);
+        if (data.date === today) {
+          revenueToday += data.amount || 0;
+          if (data.status === 'Pending') pendingCount++;
+          if (data.status === 'Delivered') deliveredCount++;
+        }
+        if (data.status === 'Delivered') completedCount++;
+        totalCount++;
+      });
+
+      setLatestOrders(ordersList);
+      setTodayRevenue(revenueToday);
+      setPendingOrders(pendingCount);
+      setDeliveredToday(deliveredCount);
+
+      const ev = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+      setEfficiencyValue(ev);
+    };
+
+    fetchOrders();
+  }, [today]);
+
+  // Fetch inventory
+  useEffect(() => {
+    const fetchInventory = async () => {
+      const invRef = collection(db, 'inventory');
+      const invSnap = await getDocs(invRef);
+      const invList: any[] = [];
+      invSnap.forEach((docSnap) => {
+        invList.push(docSnap.data());
+      });
+      setInventory(invList);
+    };
+    fetchInventory();
+  }, []);
 
   const saveTasks = async (updatedTasks: typeof tasks, updatedStreak = streak) => {
     setTasks(updatedTasks);
@@ -67,9 +128,57 @@ export default function OwnerDashboard() {
   }
 
   return (
-    <main className="min-h-screen px-6 py-10 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-4">MO T-SHIRT — Owner Dashboard</h1>
-      <p className="text-gray-600 mb-6">Daily checklist to grow your business.</p>
+    <main className="min-h-screen px-6 py-10 max-w-6xl mx-auto">
+      <h1 className="text-3xl font-bold mb-2">MO T-SHIRT — Owner Dashboard</h1>
+      <p className="text-gray-600 mb-6">Your business control center.</p>
+
+      {/* Big Navigation Buttons */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <a
+          href="/admin/inventory"
+          className="bg-orange-500 text-white rounded-lg p-8 text-center text-2xl font-bold shadow hover:bg-orange-600 transition"
+        >
+          📦 Inventory
+        </a>
+        <a
+          href="/admin/orders"
+          className="bg-orange-500 text-white rounded-lg p-8 text-center text-2xl font-bold shadow hover:bg-orange-600 transition"
+        >
+          🧾 Orders
+        </a>
+        <a
+          href="/admin/clients"
+          className="bg-orange-500 text-white rounded-lg p-8 text-center text-2xl font-bold shadow hover:bg-orange-600 transition"
+        >
+          👥 Clients
+        </a>
+        <a
+          href="/admin/analytics"
+          className="bg-orange-500 text-white rounded-lg p-8 text-center text-2xl font-bold shadow hover:bg-orange-600 transition"
+        >
+          📊 Analytics
+        </a>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white shadow p-4 rounded-lg text-center">
+          <p className="text-gray-500 text-sm">Today’s Revenue</p>
+          <h2 className="text-xl font-bold">Rs {todayRevenue.toLocaleString()}</h2>
+        </div>
+        <div className="bg-white shadow p-4 rounded-lg text-center">
+          <p className="text-gray-500 text-sm">Pending Orders</p>
+          <h2 className="text-xl font-bold">{pendingOrders}</h2>
+        </div>
+        <div className="bg-white shadow p-4 rounded-lg text-center">
+          <p className="text-gray-500 text-sm">Repeat Clients</p>
+          <h2 className="text-xl font-bold">{repeatClients}</h2>
+        </div>
+        <div className="bg-white shadow p-4 rounded-lg text-center">
+          <p className="text-gray-500 text-sm">Delivered Today</p>
+          <h2 className="text-xl font-bold">{deliveredToday}</h2>
+        </div>
+      </div>
 
       {/* Progress Bar */}
       <div className="w-full bg-gray-200 rounded-full overflow-hidden mb-4" style={{ height: 20 }}>
@@ -82,9 +191,7 @@ export default function OwnerDashboard() {
           className="h-full transition-all"
         />
       </div>
-      <p className="text-sm mb-6">
-        {progressPct}% Complete • Streak: {streak} days
-      </p>
+      <p className="text-sm mb-6">{progressPct}% Complete • Streak: {streak} days</p>
 
       {/* Add Task */}
       <div className="flex gap-2 mb-6">
@@ -105,32 +212,55 @@ export default function OwnerDashboard() {
       {/* Tasks */}
       <ul className="space-y-3 mb-10">
         {tasks.map((task, i) => (
-          <li
-            key={i}
-            className="flex items-center gap-3 p-3 border rounded-lg hover:shadow-sm transition"
-          >
-            <input
-              type="checkbox"
-              checked={task.completed}
-              onChange={() => toggleTask(i)}
-              className="w-5 h-5"
-            />
-            <span
-              className={`flex-1 ${
-                task.completed ? 'line-through text-gray-500' : ''
-              }`}
-            >
-              {task.title}
-            </span>
-            <button
-              onClick={() => removeTask(i)}
-              className="text-red-500 text-sm hover:underline"
-            >
-              Remove
-            </button>
+          <li key={i} className="flex items-center gap-3 p-3 border rounded-lg hover:shadow-sm transition">
+            <input type="checkbox" checked={task.completed} onChange={() => toggleTask(i)} className="w-5 h-5" />
+            <span className={`flex-1 ${task.completed ? 'line-through text-gray-500' : ''}`}>{task.title}</span>
+            <button onClick={() => removeTask(i)} className="text-red-500 text-sm hover:underline">Remove</button>
           </li>
         ))}
       </ul>
+
+      {/* Order Overview */}
+      <div className="bg-white shadow p-4 rounded-lg mb-8">
+        <h2 className="text-lg font-bold mb-4">Latest Orders</h2>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b">
+              <th className="py-2 text-left">Client</th>
+              <th className="py-2 text-left">Amount</th>
+              <th className="py-2 text-left">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {latestOrders.map((order, idx) => (
+              <tr key={idx} className="border-b">
+                <td className="py-2">{order.client}</td>
+                <td className="py-2">Rs {order.amount}</td>
+                <td className="py-2">{order.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Inventory Snapshot */}
+      <div className="bg-white shadow p-4 rounded-lg mb-8">
+        <h2 className="text-lg font-bold mb-4">Inventory Snapshot</h2>
+        <ul>
+          {inventory.map((item, idx) => (
+            <li key={idx} className="flex justify-between border-b py-2">
+              <span>{item.size}</span>
+              <span>{item.qty} pcs</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* EV Metric */}
+      <div className="bg-white shadow p-4 rounded-lg text-center">
+        <p className="text-gray-500 text-sm">Efficiency Value</p>
+        <h2 className="text-2xl font-bold">{efficiencyValue}%</h2>
+      </div>
     </main>
   );
 }
