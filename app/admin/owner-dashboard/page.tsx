@@ -11,6 +11,28 @@ import { format } from 'date-fns';
 
 type InvItem = { id?: string; size?: string; qty?: number };
 
+
+/* -------------------- Numerology Calculation -------------------- */
+function calcNumerology(date: Date) {
+  const day = date.getDate();
+  const month = date.getMonth() + 1;
+  const year = date.getFullYear();
+
+  const sumDigits = (n: number) => n.toString().split('').reduce((acc, d) => acc + Number(d), 0);
+
+  const reduceNum = (n: number) => {
+    while (n > 9 && n !== 11 && n !== 22 && n !== 33) {
+      n = sumDigits(n);
+    }
+    return n;
+  };
+
+  const primary = reduceNum(day + month + year);
+  const secondary = reduceNum(sumDigits(day) + sumDigits(month) + sumDigits(year));
+
+  return { primary, secondary };
+}
+
 /* -------------------- Calculator Card -------------------- */
 function CalculatorCard() {
   const [expr, setExpr] = useState<string>('');
@@ -153,6 +175,9 @@ function CalculatorCard() {
 export default function OwnerDashboard() {
   const adminId = 'mo-owner';
   const today = format(new Date(), 'yyyy-MM-dd');
+  const now = new Date();
+  const { primary, secondary } = calcNumerology(now);
+  const formattedDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth()+1).padStart(2, '0')}/${now.getFullYear()}`;
 
   // Checklist
   const [tasks, setTasks] = useState<{ title: string; completed: boolean }[]>([]);
@@ -298,17 +323,13 @@ export default function OwnerDashboard() {
 
   return (
     <main className="min-h-screen px-6 py-8 max-w-7xl mx-auto space-y-8">
-      {/* HERO */}
+      {/* HERO with numerology */}
       <header className="bg-gradient-to-r from-black to-gray-800 text-white rounded-2xl p-6 shadow">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight">MO T-SHIRT — Owner Dashboard</h1>
-            <p className="opacity-80 mt-1">{today} • Built for a future CEO</p>
-          </div>
-          <div className="flex gap-2">
-            <Link href="/admin/pos" className="px-4 py-2 bg-orange-500 rounded-lg hover:bg-orange-600">🛒 New Sale</Link>
-            <Link href="/admin/dms" className="px-4 py-2 bg-sky-500 rounded-lg hover:bg-sky-600">📂 Upload Doc</Link>
-          </div>
+        <div>
+          <h1 className="text-3xl font-extrabold">MO T-SHIRT — Owner Dashboard</h1>
+          <p className="opacity-80 mt-1">
+            {formattedDate} • Primary: <span className="text-emerald-400 font-bold">{primary}</span> • Secondary: <span className="text-sky-400 font-bold">{secondary}</span>
+          </p>
         </div>
       </header>
 
