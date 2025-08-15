@@ -1,28 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { db } from '@/lib/firebase';
 import {
-  doc,
-  setDoc,
-  getDoc,
-  updateDoc,
-  collection,
-  query,
-  orderBy,
-  limit,
-  getDocs,
+  doc, setDoc, getDoc, updateDoc, collection,
+  query, orderBy, limit, getDocs,
 } from 'firebase/firestore';
 import { format } from 'date-fns';
+
+type InvItem = { id?: string; size?: string; qty?: number };
 
 export default function OwnerDashboard() {
   const adminId = 'mo-owner';
   const today = format(new Date(), 'yyyy-MM-dd');
 
-  const [tasks, setTasks] = useState<{ title: string; completed: boolean }[]>(
-    []
-  );
+  // Checklist
+  const [tasks, setTasks] = useState<{ title: string; completed: boolean }[]>([]);
   const [streak, setStreak] = useState(0);
   const [newTask, setNewTask] = useState('');
   const [loading, setLoading] = useState(true);
@@ -33,15 +27,30 @@ export default function OwnerDashboard() {
   const [repeatClients, setRepeatClients] = useState(0);
   const [deliveredToday, setDeliveredToday] = useState(0);
   const [latestOrders, setLatestOrders] = useState<any[]>([]);
-  // <-- updated type: include optional id, size, qty
-  const [inventory, setInventory] = useState<
-    Array<{ id?: string; size?: string; qty?: number }>
-  >([]);
+  const [inventory, setInventory] = useState<InvItem[]>([]);
   const [efficiencyValue, setEfficiencyValue] = useState(0);
 
-  // Fetch tasks
+  // Derived
+  const progressPct = tasks.length
+    ? Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100)
+    : 0;
+
+  // CEO-ish derived numbers
+  const { todaysOrdersCount, aov } = useMemo(() => {
+    const todays = latestOrders.filter(o => o.date === today);
+    const count = todays.length || 0;
+    const rev = todays.reduce((sum, o) => sum + (o.amount || 0), 0);
+    return { todaysOrdersCount: count, aov: count ? Math.round(rev / count) : 0 };
+  }, [latestOrders, today]);
+
+  const lowStock = useMemo(
+    () => inventory.filter(i => (i.qty ?? 0) > 0 && (i.qty as number) < 10).slice(0, 3),
+    [inventory]
+  );
+
+  // INIT: tasks doc
   useEffect(() => {
-    const fetchData = async () => {
+    (async () => {
       const ref = doc(db, 'users', adminId, 'checklists', today);
       const snap = await getDoc(ref);
       if (snap.exists()) {
@@ -52,16 +61,15 @@ export default function OwnerDashboard() {
         await setDoc(ref, { tasks: [], streak: 0 });
       }
       setLoading(false);
-    };
-    fetchData();
+    })();
   }, [adminId, today]);
 
-  // Fetch orders, revenue, and EV
+  // Orders + EV snapshot
   useEffect(() => {
-    const fetchOrders = async () => {
+    (async () => {
       const ordersRef = collection(db, 'orders');
-      const q = query(ordersRef, orderBy('date', 'desc'), limit(5));
-      const querySnapshot = await getDocs(q);
+      const qy = query(ordersRef, orderBy('date', 'desc'), limit(20));
+      const qs = await getDocs(qy);
 
       let revenueToday = 0;
       let pendingCount = 0;
@@ -69,10 +77,12 @@ export default function OwnerDashboard() {
       let completedCount = 0;
       let totalCount = 0;
       const ordersList: any[] = [];
+      const clientSet = new Set<string>();
 
-      querySnapshot.forEach((docSnap) => {
-        const data = docSnap.data();
+      qs.forEach((d) => {
+        const data = d.data();
         ordersList.push(data);
+        if (data.client) clientSet.add(String(data.client));
         if (data.date === today) {
           revenueToday += data.amount || 0;
           if (data.status === 'Pending') pendingCount++;
@@ -86,225 +96,223 @@ export default function OwnerDashboard() {
       setTodayRevenue(revenueToday);
       setPendingOrders(pendingCount);
       setDeliveredToday(deliveredCount);
-      const ev = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-      setEfficiencyValue(ev);
-    };
-
-    fetchOrders();
+      setRepeatClients(clientSet.size);
+      setEfficiencyValue(totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0);
+    })();
   }, [today]);
 
-  // Fetch inventory
+  // Inventory snapshot
   useEffect(() => {
-    const fetchInventory = async () => {
+    (async () => {
       const invRef = collection(db, 'inventory');
-      const invSnap = await getDocs(invRef);
-      const invList: Array<{ id?: string; size?: string; qty?: number }> = [];
-      invSnap.forEach((docSnap) => {
-        // cast to any to let Firestore shape through; include id
-        invList.push({ id: docSnap.id, ...(docSnap.data() as any) });
-      });
-      setInventory(invList);
-    };
-    fetchInventory();
+      const snap = await getDocs(invRef);
+      const list: InvItem[] = [];
+      snap.forEach((docSnap) => list.push({ id: docSnap.id, ...(docSnap.data() as any) }));
+      setInventory(list);
+    })();
   }, []);
 
-  const saveTasks = async (
-    updatedTasks: typeof tasks,
-    updatedStreak = streak
-  ) => {
+  // Checklist helpers
+  const saveTasks = async (updatedTasks: typeof tasks, updatedStreak = streak) => {
     setTasks(updatedTasks);
-    const ref = doc(db, 'users', adminId, 'checklists', today);
-    await updateDoc(ref, { tasks: updatedTasks, streak: updatedStreak });
+    const refDoc = doc(db, 'users', adminId, 'checklists', today);
+    await updateDoc(refDoc, { tasks: updatedTasks, streak: updatedStreak });
   };
-
   const toggleTask = async (index: number) => {
     const updated = [...tasks];
     updated[index].completed = !updated[index].completed;
     let newStreak = streak;
-    if (updated.every((t) => t.completed)) {
+    if (updated.length > 0 && updated.every(t => t.completed)) {
       newStreak += 1;
       setStreak(newStreak);
     }
     await saveTasks(updated, newStreak);
   };
-
   const addTask = async () => {
     if (!newTask.trim()) return;
     const updated = [...tasks, { title: newTask.trim(), completed: false }];
     setNewTask('');
     await saveTasks(updated);
   };
-
   const removeTask = async (index: number) => {
     await saveTasks(tasks.filter((_, i) => i !== index));
   };
+  const markAllDone = async () => {
+    if (!tasks.length) return;
+    const updated = tasks.map(t => ({ ...t, completed: true }));
+    const newStreak = streak + 1;
+    setStreak(newStreak);
+    await saveTasks(updated, newStreak);
+  };
+  const quickAdd = async (title: string) => {
+    const updated = [...tasks, { title, completed: false }];
+    await saveTasks(updated);
+  };
 
-  const progressPct = tasks.length
-    ? Math.round((tasks.filter((t) => t.completed).length / tasks.length) * 100)
-    : 0;
+  // “Smart” one-liner insight
+  const insight = useMemo(() => {
+    if (pendingOrders > deliveredToday) return '⚠️ Fulfilment lagging vs. completions — clear the queue.';
+    if (aov > 0 && aov >= 1500) return '💡 High AOV today — consider upsell bundles.';
+    if (progressPct < 50) return '🚀 Push your daily checklist past 50% to keep the streak hot.';
+    if (lowStock.length) return `📦 Low stock: ${lowStock.map(i => i.size ?? i.id).join(', ')}`;
+    return '✅ Systems normal. Keep compounding.';
+  }, [pendingOrders, deliveredToday, aov, progressPct, lowStock]);
 
-  if (loading) {
-    return <main className="p-6">Loading dashboard...</main>;
-  }
+  if (loading) return <main className="p-6">Loading dashboard...</main>;
 
   return (
-    <main className="min-h-screen px-6 py-10 max-w-6xl mx-auto">
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">MO T-SHIRT — Owner Dashboard</h1>
-          <p className="text-gray-600">Your business control center.</p>
+    <main className="min-h-screen px-6 py-8 max-w-7xl mx-auto space-y-8">
+      {/* HERO */}
+      <header className="bg-gradient-to-r from-black to-gray-800 text-white rounded-2xl p-6 shadow">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight">MO T-SHIRT — Owner Dashboard</h1>
+            <p className="opacity-80 mt-1">{today} • Built for a future CEO</p>
+          </div>
+          <div className="flex gap-2">
+            <Link href="/admin/pos" className="px-4 py-2 bg-orange-500 rounded-lg hover:bg-orange-600">🛒 New Sale</Link>
+            <Link href="/admin/dms" className="px-4 py-2 bg-sky-500 rounded-lg hover:bg-sky-600">📂 Upload Doc</Link>
+          </div>
         </div>
-      </div>
+      </header>
 
-      {/* Big Navigation Buttons (including POS + DMS) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <Link
-          href="/admin/inventory"
-          className="group block bg-white border rounded-lg p-6 text-center shadow hover:shadow-md transition"
-          aria-label="Go to Inventory"
-        >
-          <div className="text-4xl">📦</div>
-          <div className="mt-2 font-bold text-xl">Inventory</div>
-          <div className="text-sm text-gray-500 mt-1">Manage sizes, colors, stock</div>
-        </Link>
-
-        <Link
-          href="/admin/orders"
-          className="group block bg-white border rounded-lg p-6 text-center shadow hover:shadow-md transition"
-          aria-label="Go to Orders"
-        >
-          <div className="text-4xl">🧾</div>
-          <div className="mt-2 font-bold text-xl">Orders</div>
-          <div className="text-sm text-gray-500 mt-1">View & update orders</div>
-        </Link>
-
-        <Link
-          href="/admin/clients"
-          className="group block bg-white border rounded-lg p-6 text-center shadow hover:shadow-md transition"
-          aria-label="Go to Clients"
-        >
-          <div className="text-4xl">👥</div>
-          <div className="mt-2 font-bold text-xl">Clients</div>
-          <div className="text-sm text-gray-500 mt-1">CRM & contact history</div>
-        </Link>
-
-        <Link
-          href="/admin/analytics"
-          className="group block bg-white border rounded-lg p-6 text-center shadow hover:shadow-md transition"
-          aria-label="Go to Analytics"
-        >
-          <div className="text-4xl">📊</div>
-          <div className="mt-2 font-bold text-xl">Analytics</div>
-          <div className="text-sm text-gray-500 mt-1">Sales, EV, trends</div>
-        </Link>
-
-        <Link
-          href="/admin/pos"
-          className="group block bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-lg p-6 text-center shadow-lg hover:from-orange-600 hover:to-orange-500 transition"
-          aria-label="Go to POS"
-        >
-          <div className="text-4xl">🛒</div>
-          <div className="mt-2 font-bold text-xl">POS</div>
-          <div className="text-sm mt-1 opacity-90">Record sales — updates inventory</div>
-        </Link>
-
-        <Link
-          href="/admin/dms"
-          className="group block bg-gradient-to-r from-sky-500 to-sky-400 text-white rounded-lg p-6 text-center shadow-lg hover:from-sky-600 hover:to-sky-500 transition"
-          aria-label="Go to Document Management"
-        >
-          <div className="text-4xl">📂</div>
-          <div className="mt-2 font-bold text-xl">DMS</div>
-          <div className="text-sm mt-1 opacity-90">Upload and manage documents</div>
-        </Link>
-      </div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white shadow p-4 rounded-lg text-center">
-          <p className="text-gray-500 text-sm">Today’s Revenue</p>
-          <h2 className="text-xl font-bold">Rs {todayRevenue.toLocaleString()}</h2>
+      {/* DAILY COMMAND CENTER — TASKS AT THE TOP */}
+      <section className="bg-white rounded-xl shadow p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-xl font-bold">Daily Command Center</h2>
+            <p className="text-sm text-gray-500">Checklist • Streak: <span className="font-semibold">{streak} days</span></p>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => quickAdd('Call suppliers')}
+                    className="text-xs px-3 py-1 border rounded-lg hover:bg-gray-50">+ Call suppliers</button>
+            <button onClick={() => quickAdd('Post on Instagram')}
+                    className="text-xs px-3 py-1 border rounded-lg hover:bg-gray-50">+ Post on Instagram</button>
+            <button onClick={() => quickAdd('Confirm deliveries')}
+                    className="text-xs px-3 py-1 border rounded-lg hover:bg-gray-50">+ Confirm deliveries</button>
+            <button onClick={markAllDone}
+                    className="text-xs px-3 py-1 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600">Mark all done</button>
+          </div>
         </div>
-        <div className="bg-white shadow p-4 rounded-lg text-center">
-          <p className="text-gray-500 text-sm">Pending Orders</p>
-          <h2 className="text-xl font-bold">{pendingOrders}</h2>
-        </div>
-        <div className="bg-white shadow p-4 rounded-lg text-center">
-          <p className="text-gray-500 text-sm">Repeat Clients</p>
-          <h2 className="text-xl font-bold">{repeatClients}</h2>
-        </div>
-        <div className="bg-white shadow p-4 rounded-lg text-center">
-          <p className="text-gray-500 text-sm">Delivered Today</p>
-          <h2 className="text-xl font-bold">{deliveredToday}</h2>
-        </div>
-      </div>
 
-      {/* Progress Bar */}
-      <div className="w-full bg-gray-200 rounded-full overflow-hidden mb-4" style={{ height: 20 }}>
-        <div
-          style={{
-            width: `${progressPct}%`,
-            background: progressPct === 100 ? '#22c55e' : '#f97316',
-            borderRadius: '9999px'
-          }}
-          className="h-full transition-all"
-        />
-      </div>
-      <p className="text-sm mb-6">{progressPct}% Complete • Streak: {streak} days</p>
+        {/* Progress */}
+        <div className="w-full bg-gray-200 rounded-full overflow-hidden mb-3" style={{ height: 12 }}>
+          <div
+            style={{ width: `${progressPct}%` }}
+            className={`h-full transition-all ${progressPct === 100 ? 'bg-emerald-500' : 'bg-orange-500'}`}
+          />
+        </div>
+        <p className="text-xs mb-4">{progressPct}% complete today</p>
 
-      {/* Add Task */}
-      <div className="flex gap-2 mb-6">
-        <input
-          value={newTask}
-          onChange={(e) => setNewTask(e.target.value)}
-          placeholder="Add a new task..."
-          className="flex-1 border rounded-lg px-3 py-2"
-        />
-        <button
-          onClick={addTask}
-          className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
-        >
-          Add
-        </button>
-      </div>
+        {/* Add Task */}
+        <div className="flex gap-2 mb-4">
+          <input
+            value={newTask}
+            onChange={(e) => setNewTask(e.target.value)}
+            placeholder="Add a new task..."
+            className="flex-1 border rounded-lg px-3 py-2"
+          />
+          <button onClick={addTask} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800">
+            Add
+          </button>
+        </div>
 
-      {/* Tasks */}
-      <ul className="space-y-3 mb-10">
-        {tasks.map((task, i) => (
-          <li key={i} className="flex items-center gap-3 p-3 border rounded-lg hover:shadow-sm transition">
-            <input type="checkbox" checked={task.completed} onChange={() => toggleTask(i)} className="w-5 h-5" />
-            <span className={`flex-1 ${task.completed ? 'line-through text-gray-500' : ''}`}>{task.title}</span>
-            <button onClick={() => removeTask(i)} className="text-red-500 text-sm hover:underline">Remove</button>
-          </li>
+        {/* Tasks list */}
+        <ul className="space-y-2">
+          {tasks.length === 0 && <li className="text-sm text-gray-500">No tasks yet. Add your first above.</li>}
+          {tasks.map((task, i) => (
+            <li key={i} className="flex items-center gap-3 p-3 border rounded-lg hover:shadow-sm transition">
+              <input type="checkbox" checked={task.completed} onChange={() => toggleTask(i)} className="w-5 h-5" />
+              <span className={`flex-1 ${task.completed ? 'line-through text-gray-500' : ''}`}>{task.title}</span>
+              <button onClick={() => removeTask(i)} className="text-red-500 text-sm hover:underline">Remove</button>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* QUICK NAV (CEO flow) */}
+      <section>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          <Link href="/admin/pos" className="group bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-xl p-4 text-center shadow hover:from-orange-600 hover:to-orange-500">
+            <div className="text-3xl">🛒</div><div className="font-semibold mt-1">POS</div>
+          </Link>
+          <Link href="/admin/inventory" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md">
+            <div className="text-3xl">📦</div><div className="font-semibold mt-1">Inventory</div>
+          </Link>
+          <Link href="/admin/orders" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md">
+            <div className="text-3xl">🧾</div><div className="font-semibold mt-1">Orders</div>
+          </Link>
+          <Link href="/admin/clients" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md">
+            <div className="text-3xl">👥</div><div className="font-semibold mt-1">Clients</div>
+          </Link>
+          <Link href="/admin/analytics" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md">
+            <div className="text-3xl">📊</div><div className="font-semibold mt-1">Analytics</div>
+          </Link>
+          <Link href="/admin/dms" className="group bg-gradient-to-r from-sky-500 to-sky-400 text-white rounded-xl p-4 text-center shadow hover:from-sky-600 hover:to-sky-500">
+            <div className="text-3xl">📂</div><div className="font-semibold mt-1">DMS</div>
+          </Link>
+        </div>
+      </section>
+
+      {/* CEO SNAPSHOT */}
+      <section className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {[
+          { label: 'Today’s Revenue', value: `Rs ${todayRevenue.toLocaleString()}` },
+          { label: 'Orders Today', value: todaysOrdersCount },
+          { label: 'AOV Today', value: aov ? `Rs ${aov.toLocaleString()}` : '—' },
+          { label: 'Pending Orders', value: pendingOrders },
+          { label: 'Efficiency', value: `${efficiencyValue}%` },
+        ].map((s, idx) => (
+          <div key={idx} className="bg-white shadow p-4 rounded-lg text-center">
+            <p className="text-gray-500 text-sm">{s.label}</p>
+            <h2 className="text-xl font-bold">{s.value as any}</h2>
+          </div>
         ))}
-      </ul>
+      </section>
 
-      {/* Order Overview */}
-      <div className="bg-white shadow p-4 rounded-lg mb-8">
+      {/* INSIGHT CARD */}
+      <section className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-4">
+        <div className="text-sm font-semibold">Smart Insight</div>
+        <div className="mt-1">{insight}</div>
+      </section>
+
+      {/* Latest Orders */}
+      <section className="bg-white shadow p-4 rounded-xl">
         <h2 className="text-lg font-bold mb-4">Latest Orders</h2>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b">
-              <th className="py-2 text-left">Client</th>
-              <th className="py-2 text-left">Amount</th>
-              <th className="py-2 text-left">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {latestOrders.map((order, idx) => (
-              <tr key={idx} className="border-b">
-                <td className="py-2">{order.client}</td>
-                <td className="py-2">Rs {order.amount}</td>
-                <td className="py-2">{order.status}</td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b">
+                <th className="py-2 text-left">Client</th>
+                <th className="py-2 text-left">Amount</th>
+                <th className="py-2 text-left">Status</th>
+                <th className="py-2 text-left">Date</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {latestOrders.map((order, idx) => (
+                <tr key={idx} className="border-b">
+                  <td className="py-2">{order.client}</td>
+                  <td className="py-2">Rs {order.amount}</td>
+                  <td className="py-2">{order.status}</td>
+                  <td className="py-2">{order.date}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       {/* Inventory Snapshot */}
-      <div className="bg-white shadow p-4 rounded-lg mb-8">
-        <h2 className="text-lg font-bold mb-4">Inventory Snapshot</h2>
+      <section className="bg-white shadow p-4 rounded-xl">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-bold">Inventory Snapshot</h2>
+          {lowStock.length > 0 && (
+            <div className="text-xs px-3 py-1 bg-red-100 text-red-700 rounded-full">
+              Low stock: {lowStock.map(i => i.size ?? i.id).join(', ')}
+            </div>
+          )}
+        </div>
         <ul>
           {inventory.map((item, idx) => (
             <li key={item.id ?? idx} className="flex justify-between border-b py-2">
@@ -313,13 +321,7 @@ export default function OwnerDashboard() {
             </li>
           ))}
         </ul>
-      </div>
-
-      {/* EV Metric */}
-      <div className="bg-white shadow p-4 rounded-lg text-center">
-        <p className="text-gray-500 text-sm">Efficiency Value</p>
-        <h2 className="text-2xl font-bold">{efficiencyValue}%</h2>
-      </div>
+      </section>
     </main>
   );
 }
