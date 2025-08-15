@@ -1,469 +1,257 @@
-// app/admin/dms/page.tsx  (or components/admin/DMS.tsx)
+// app/admin/dms/page.tsx
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
+import { storage } from '@/lib/firebase';
 import {
-  ref as storageRef,
+  ref,
   listAll,
   getDownloadURL,
-  uploadBytesResumable,
-  deleteObject,
   getMetadata,
-  getBlob,
+  deleteObject,
+  uploadBytesResumable,
 } from 'firebase/storage';
-import { storage } from '@/lib/firebase'; // <-- ensure exported
-import clsx from 'clsx'; // optional; if not installed you can remove clsx usage
-import { FiUploadCloud, FiFolder, FiFileText, FiSearch, FiTrash2, FiEdit2, FiDownload, FiCopy } from 'react-icons/fi';
+import Link from 'next/link';
 
-type DocItem = {
+type FileEntry = {
   name: string;
-  fullPath?: string;
-  isFolder?: boolean;
-  url?: string;
-  ref?: any;
+  url: string;
+  fullPath: string;
+  contentType?: string;
   size?: number;
-  updated?: string | null;
 };
 
-export default function DMSPage() {
-  const [currentPath, setCurrentPath] = useState<string>('documents/');
-  const [items, setItems] = useState<DocItem[]>([]);
-  const [filtered, setFiltered] = useState<DocItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
-  const [uploadingFiles, setUploadingFiles] = useState<Record<string, number>>({});
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+export default function AdminDMSPage() {
+  const [files, setFiles] = useState<FileEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewName, setPreviewName] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [renaming, setRenaming] = useState<{ oldName: string; ref: any } | null>(null);
-  const [creatingFolder, setCreatingFolder] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // Small toast
-  useEffect(() => {
-    if (!message) return;
-    const id = setTimeout(() => setMessage(null), 3500);
-    return () => clearTimeout(id);
-  }, [message]);
+  const storageFolder = 'documents/';
 
   useEffect(() => {
-    listCurrent();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPath]);
+    listFiles();
+  }, []);
 
-  useEffect(() => {
-    if (!search) {
-      setFiltered(items);
-      return;
-    }
-    const q = search.trim().toLowerCase();
-    setFiltered(items.filter(i => i.name.toLowerCase().includes(q)));
-  }, [search, items]);
-
-  async function listCurrent() {
+  async function listFiles() {
+    setError(null);
     setLoading(true);
     try {
-      const ref = storageRef(storage, currentPath);
-      const res = await listAll(ref);
+      const listRef = ref(storage, storageFolder);
+      const res = await listAll(listRef);
 
-      // gather file data
-      const entries: DocItem[] = [];
+      const items = await Promise.all(
+        res.items.map(async (itemRef) => {
+          const url = await getDownloadURL(itemRef);
+          const meta = await getMetadata(itemRef);
+          return {
+            name: itemRef.name,
+            url,
+            fullPath: itemRef.fullPath,
+            contentType: meta.contentType,
+            size: meta.size,
+          } as FileEntry;
+        })
+      );
 
-      // prefixes are 'folders'
-      for (const prefix of res.prefixes) {
-        entries.push({
-          name: prefix.name,
-          fullPath: `${prefix.fullPath}`,
-          isFolder: true,
-          ref: prefix,
-        });
-      }
-
-      // items are files
-      const filePromises = res.items.map(async (it: any) => {
-        const url = await getDownloadURL(it);
-        let meta;
-        try {
-          meta = await getMetadata(it);
-        } catch (e) {
-          meta = null;
-        }
-        return {
-          name: it.name,
-          fullPath: it.fullPath,
-          isFolder: false,
-          url,
-          size: meta?.size,
-          updated: meta?.timeCreated ?? null,
-          ref: it,
-        } as DocItem;
-      });
-
-      const fileEntries = await Promise.all(filePromises);
-      const combined = [...entries, ...fileEntries];
-      setItems(combined);
-      setFiltered(combined);
+      // sort by name or date (optional)
+      items.sort((a, b) => a.name.localeCompare(b.name));
+      setFiles(items);
     } catch (err: any) {
-      console.error('list error', err);
-      setMessage({ type: 'err', text: `Failed to list: ${err?.message ?? err}` });
+      console.error('listFiles error', err);
+      setError('Failed to list documents. Check console & Firebase rules.');
     } finally {
       setLoading(false);
     }
   }
 
-  // navigate to folder
-  function openFolder(name: string) {
-    setCurrentPath(prev => `${prev}${name}/`);
+  function handleChooseFile() {
+    inputRef.current?.click();
   }
 
-  // go up
-  function navigateUp() {
-    if (currentPath === 'documents/') return;
-    const parts = currentPath.split('/').filter(Boolean);
-    parts.pop();
-    const newPath = parts.length ? `${parts.join('/')}/` : 'documents/';
-    setCurrentPath(newPath);
-  }
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  // create folder (create placeholder .keep)
-  async function createFolder() {
-    const folderName = prompt('Enter new folder name (no slashes):');
-    if (!folderName) return;
-    const safe = folderName.replace(/[\/\\]+/g, '');
-    if (!safe) return;
-    setCreatingFolder(true);
-    try {
-      const placeholderRef = storageRef(storage, `${currentPath}${safe}/.keep`);
-      await uploadBytesResumable(placeholderRef, new Blob(['']), {});
-      setMessage({ type: 'ok', text: `Folder "${safe}" created` });
-      await listCurrent();
-    } catch (err: any) {
-      console.error(err);
-      setMessage({ type: 'err', text: `Failed to create folder: ${err?.message ?? err}` });
-    } finally {
-      setCreatingFolder(false);
-    }
-  }
+    const path = `${storageFolder}${file.name}`;
+    const storageRef = ref(storage, path);
 
-  // Upload files
-  function triggerFilePicker() {
-    fileInputRef.current?.click();
-  }
+    setUploading(true);
+    setProgress(0);
 
-  async function handleFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    const arr = Array.from(files);
-    for (const f of arr) {
-      await uploadFile(f);
-    }
-    // reset input
-    (e.target as HTMLInputElement).value = '';
-    await listCurrent();
-  }
-
-  async function uploadFile(file: File) {
-    const fullPath = `${currentPath}${file.name}`;
-    const ref = storageRef(storage, fullPath);
-    const task = uploadBytesResumable(ref, file);
-    setUploadingFiles(prev => ({ ...prev, [file.name]: 0 }));
-
+    const task = uploadBytesResumable(storageRef, file);
     task.on(
       'state_changed',
-      (snapshot) => {
-        const pct = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-        setUploadingFiles(prev => ({ ...prev, [file.name]: pct }));
+      (snap) => {
+        const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+        setProgress(pct);
       },
       (err) => {
-        console.error('upload err', err);
-        setMessage({ type: 'err', text: `Upload failed: ${err?.message ?? err}` });
-        setUploadingFiles(prev => {
-          const copy = { ...prev };
-          delete copy[file.name];
-          return copy;
-        });
+        console.error('upload error', err);
+        setError('Upload failed. See console for details.');
+        setUploading(false);
       },
       async () => {
-        setUploadingFiles(prev => {
-          const copy = { ...prev };
-          delete copy[file.name];
-          return copy;
-        });
-        setMessage({ type: 'ok', text: `Uploaded ${file.name}` });
-        // refresh items
-        await listCurrent();
+        // finished
+        setUploading(false);
+        setProgress(0);
+        // refresh list
+        await listFiles();
       }
     );
-  }
 
-  // delete
-  async function handleDelete(item: DocItem) {
-    const ok = confirm(`Delete "${item.name}" ? This cannot be undone.`);
-    if (!ok) return;
+    // clear input so same filename re-upload works
+    e.currentTarget.value = '';
+  };
+
+  const handleDelete = async (fullPath: string, name: string) => {
+    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
     try {
-      if (item.isFolder) {
-        // remove all files under the folder (listAll) — caution!
-        const folderRef = storageRef(storage, item.fullPath!);
-        const res = await listAll(folderRef);
-        // delete files
-        const promises = res.items.map((it: any) => deleteObject(it));
-        // delete nested files recursively for nested prefixes
-        for (const p of res.prefixes) {
-          const r = await listAll(p);
-          promises.push(...r.items.map((it: any) => deleteObject(it)));
-        }
-        await Promise.all(promises);
-        setMessage({ type: 'ok', text: `Folder ${item.name} deleted` });
-      } else {
-        await deleteObject(storageRef(storage, item.fullPath!));
-        setMessage({ type: 'ok', text: `${item.name} deleted` });
-      }
-      await listCurrent();
-    } catch (err: any) {
-      console.error('delete err', err);
-      setMessage({ type: 'err', text: `Delete failed: ${err?.message ?? err}` });
+      await deleteObject(ref(storage, fullPath));
+      await listFiles();
+      alert('Deleted');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete. Check console & rules.');
+    }
+  };
+
+  // Preview logic: if image, open modal with img; if pdf, open in new tab
+  function handlePreview(f: FileEntry) {
+    if (!f.url) return alert('No URL available');
+    const isImage = f.contentType?.startsWith('image/');
+    if (isImage) {
+      setPreviewUrl(f.url);
+      setPreviewName(f.name);
+    } else {
+      // open pdf/other in new tab
+      window.open(f.url, '_blank');
     }
   }
 
-  // rename: fetch blob and reupload to new name then delete old
-  async function handleRename(item: DocItem) {
-    const newName = prompt('Enter new name', item.name);
-    if (!newName || newName === item.name) return;
-    try {
-      setLoading(true);
-
-      const oldRef = storageRef(storage, item.fullPath!);
-      const blob = await (await fetch(item.url!)).blob();
-      const newRef = storageRef(storage, `${currentPath}${newName}`);
-
-      // upload
-      await uploadBytesResumable(newRef, blob);
-      // delete old
-      await deleteObject(oldRef);
-
-      setMessage({ type: 'ok', text: `Renamed to ${newName}` });
-      await listCurrent();
-    } catch (err: any) {
-      console.error('rename err', err);
-      setMessage({ type: 'err', text: `Rename failed: ${err?.message ?? err}` });
-    } finally {
-      setLoading(false);
-    }
+  function closePreview() {
+    setPreviewUrl(null);
+    setPreviewName(null);
   }
-
-  // preview a file (pdf/image) in modal by opening its download URL
-  function preview(item: DocItem) {
-    if (!item.url) return;
-    setPreviewUrl(item.url);
-    setPreviewName(item.name);
-  }
-
-  // copy share link
-  async function copyLink(item: DocItem) {
-    try {
-      if (!item.url) {
-        const url = await getDownloadURL(storageRef(storage, item.fullPath!));
-        await navigator.clipboard.writeText(url);
-      } else {
-        await navigator.clipboard.writeText(item.url);
-      }
-      setMessage({ type: 'ok', text: 'Download link copied to clipboard' });
-    } catch (err: any) {
-      setMessage({ type: 'err', text: `Failed to copy link: ${err?.message ?? err}` });
-    }
-  }
-
-  // download via anchor
-  function downloadFile(item: DocItem) {
-    const url = item.url;
-    if (!url) return;
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = item.name;
-    a.target = '_blank';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  }
-
-  // breadcrumbs
-  const crumbs = currentPath.replace(/\/$/, '').split('/').filter(Boolean);
 
   return (
-    <main className="min-h-screen p-8 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <main className="min-h-screen max-w-5xl mx-auto p-6">
+      <header className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">DMS — Documents</h1>
-          <p className="text-gray-600">Upload, manage and share PDFs & documents securely</p>
+          <h1 className="text-2xl font-bold">Document Management (DMS)</h1>
+          <p className="text-sm text-gray-600">Upload, preview and manage your business documents.</p>
         </div>
 
         <div className="flex items-center gap-3">
+          <Link href="/admin" className="px-4 py-2 bg-white border rounded shadow hover:bg-gray-50">Back</Link>
+
           <button
-            onClick={() => setCurrentPath('documents/')}
-            className="px-4 py-2 bg-white border rounded shadow hover:bg-gray-50"
+            onClick={handleChooseFile}
+            className="px-4 py-2 bg-sky-500 text-white rounded shadow hover:bg-sky-600"
           >
-            Home
+            Upload Document
           </button>
-          <button
-            onClick={createFolder}
-            className="px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700"
-            disabled={creatingFolder}
-          >
-            <FiFolder className="inline mr-2" /> New Folder
-          </button>
-          <button
-            onClick={triggerFilePicker}
-            className="px-4 py-2 bg-green-600 text-white rounded shadow hover:bg-green-700"
-          >
-            <FiUploadCloud className="inline mr-2" /> Upload
-          </button>
+
+          <input
+            ref={inputRef}
+            type="file"
+            className="hidden"
+            onChange={handleUpload}
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif"
+          />
         </div>
-      </div>
+      </header>
 
-      {/* upload input hidden */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        className="hidden"
-        onChange={handleFilesSelected}
-      />
-
-      {/* breadcrumb + search */}
-      <div className="flex items-center justify-between mb-4 gap-4">
-        <div className="flex items-center gap-2 text-sm text-gray-700">
-          <button onClick={navigateUp} className="px-2 py-1 bg-white border rounded">Up</button>
-          <div className="flex items-center gap-1">
-            <span className="text-gray-400">Path:</span>
-            <nav className="flex gap-1 items-center">
-              <button onClick={() => setCurrentPath('documents/')} className="text-blue-600 hover:underline">documents</button>
-              {crumbs.map((c, idx) => (
-                <span key={idx} className="flex items-center gap-1">
-                  <span className="text-gray-400">/</span>
-                  <button
-                    onClick={() => {
-                      const p = crumbs.slice(0, idx + 1).join('/') + '/';
-                      setCurrentPath(`documents/${p}`);
-                    }}
-                    className="text-blue-600 hover:underline"
-                  >
-                    {c}
-                  </button>
-                </span>
-              ))}
-            </nav>
+      {uploading && (
+        <div className="mb-4">
+          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+            <div className="h-3 bg-sky-500 transition-all" style={{ width: `${progress}%` }} />
           </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <input
-              placeholder="Search documents..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 pr-4 py-2 border rounded w-64"
-            />
-            <FiSearch className="absolute left-3 top-2.5 text-gray-400" />
-          </div>
-        </div>
-      </div>
-
-      {/* toast */}
-      {message && (
-        <div className={clsx(
-          'sticky top-4 py-2 px-4 rounded mb-4 w-fit',
-          message.type === 'ok' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-        )}>
-          {message.text}
+          <p className="text-sm mt-2">Uploading... {progress}%</p>
         </div>
       )}
 
-      {/* uploading progress */}
-      {Object.keys(uploadingFiles).length > 0 && (
-        <div className="mb-4 space-y-2">
-          {Object.entries(uploadingFiles).map(([name, pct]) => (
-            <div key={name}>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="font-medium">{name}</span>
-                <span>{pct}%</span>
-              </div>
-              <div className="w-full bg-gray-200 h-2 rounded">
-                <div style={{ width: `${pct}%` }} className="h-2 bg-green-500 rounded" />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {error && <div className="mb-4 text-red-600">{error}</div>}
 
-      {/* file list */}
-      <div className="bg-white shadow rounded-lg p-4">
+      <section className="bg-white border rounded p-4 shadow">
+        <h2 className="font-semibold mb-3">Documents</h2>
+
         {loading ? (
-          <div className="text-center py-8">Loading documents...</div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">No documents found.</div>
+          <div className="text-gray-500">Loading...</div>
+        ) : files.length === 0 ? (
+          <div className="text-gray-500">No documents yet. Use “Upload Document” to add files.</div>
         ) : (
-          <ul className="space-y-2">
-            {filtered.map((it) => {
-              const isPdf = it.name.toLowerCase().endsWith('.pdf');
-              const isImage = /\.(jpe?g|png|gif|webp)$/i.test(it.name);
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {files.map((f) => {
+              const isImage = f.contentType?.startsWith('image/');
               return (
-                <li key={it.fullPath ?? it.name} className="flex items-center justify-between p-3 border rounded">
+                <li key={f.fullPath} className="flex items-center justify-between gap-4 p-3 border rounded hover:shadow-sm">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 flex items-center justify-center rounded bg-gray-50 border">
-                      {it.isFolder ? <FiFolder className="text-orange-500" size={20} /> : isPdf ? <FiFileText className="text-red-500" size={20} /> : <FiFileText size={20} />}
-                    </div>
+                    {isImage ? (
+                      <img
+                        src={f.url}
+                        alt={f.name}
+                        onClick={() => handlePreview(f)}
+                        style={{ width: 72, height: 72, objectFit: 'cover', cursor: 'pointer', borderRadius: 6 }}
+                      />
+                    ) : (
+                      <div className="w-18 h-18 flex items-center justify-center bg-gray-100 rounded">
+                        <span className="text-sm">{f.name.split('.').pop()?.toUpperCase()}</span>
+                      </div>
+                    )}
+
                     <div>
-                      <div className="font-medium">{it.name}</div>
-                      <div className="text-xs text-gray-500">{it.isFolder ? 'Folder' : `${it.size ? `${Math.round((it.size/1024))} KB` : ''} ${it.updated ? `• ${new Date(it.updated).toLocaleDateString()}` : ''}`}</div>
+                      <div className="font-medium">{f.name}</div>
+                      <div className="text-xs text-gray-500">
+                        {f.contentType ?? '—'} • {f.size ? `${(f.size / 1024).toFixed(1)} KB` : '—'}
+                      </div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {it.isFolder ? (
-                      <button onClick={() => openFolder(it.name)} className="px-3 py-1 bg-blue-50 text-blue-700 rounded">Open</button>
-                    ) : (
-                      <>
-                        <button onClick={() => preview(it)} className="p-2 hover:bg-gray-100 rounded" title="Preview"><FiFileText /></button>
-                        <button onClick={() => downloadFile(it)} className="p-2 hover:bg-gray-100 rounded" title="Download"><FiDownload /></button>
-                        <button onClick={() => copyLink(it)} className="p-2 hover:bg-gray-100 rounded" title="Copy link"><FiCopy /></button>
-                      </>
-                    )}
-
-                    {!it.isFolder && (
-                      <button onClick={() => handleRename(it)} className="p-2 hover:bg-gray-100 rounded" title="Rename"><FiEdit2 /></button>
-                    )}
-                    <button onClick={() => handleDelete(it)} className="p-2 hover:bg-gray-100 rounded text-red-600" title="Delete"><FiTrash2 /></button>
+                    <button
+                      onClick={() => handlePreview(f)}
+                      className="px-3 py-1 rounded border bg-white hover:bg-gray-50"
+                    >
+                      Preview
+                    </button>
+                    <a href={f.url} target="_blank" rel="noreferrer" className="px-3 py-1 rounded border bg-white hover:bg-gray-50">
+                      Download
+                    </a>
+                    <button
+                      onClick={() => handleDelete(f.fullPath, f.name)}
+                      className="px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </li>
               );
             })}
           </ul>
         )}
-      </div>
+      </section>
 
-      {/* Preview modal */}
+      {/* Image preview modal */}
       {previewUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white w-[90%] max-w-5xl h-[90%] rounded overflow-hidden">
-            <div className="flex items-center justify-between p-3 border-b">
+        <div
+          onClick={closePreview}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+        >
+          <div className="bg-white rounded max-w-4xl w-full max-h-[90vh] overflow-auto p-3" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-3">
               <div className="font-semibold">{previewName}</div>
-              <div className="flex gap-2">
-                <button onClick={() => { if (previewUrl) navigator.clipboard.writeText(previewUrl).then(() => setMessage({ type: 'ok', text: 'Link copied' })); }} className="px-3 py-1 bg-blue-600 text-white rounded">Copy Link</button>
-                <button onClick={() => setPreviewUrl(null)} className="px-3 py-1 bg-gray-200 rounded">Close</button>
-              </div>
+              <button className="px-3 py-1 rounded bg-gray-200" onClick={closePreview}>Close</button>
             </div>
-            <div className="h-full">
-              {/* embed PDF or show image */}
-              {previewName?.toLowerCase().endsWith('.pdf') ? (
-                <iframe src={previewUrl} className="w-full h-full" title={previewName} />
-              ) : (
-                <img src={previewUrl} alt={previewName || 'preview'} className="w-full h-full object-contain" />
-              )}
-            </div>
+            <img src={previewUrl} alt={previewName ?? 'preview'} style={{ width: '100%', height: 'auto', borderRadius: 6 }} />
           </div>
         </div>
       )}
-
     </main>
   );
 }
