@@ -11,6 +11,145 @@ import { format } from 'date-fns';
 
 type InvItem = { id?: string; size?: string; qty?: number };
 
+/* -------------------- Calculator Card -------------------- */
+function CalculatorCard() {
+  const [expr, setExpr] = useState<string>('');
+  const [result, setResult] = useState<number | null>(null);
+
+  // Margin / markup helper
+  const [cost, setCost] = useState<string>('');
+  const [price, setPrice] = useState<string>('');
+  const [vat, setVat] = useState<number>(15); // MU VAT default
+
+  const allowed = /^[0-9+\-*/().\s%]*$/;
+
+  const evalExpr = (s: string): number | null => {
+    try {
+      if (!allowed.test(s)) return null;
+      // allow % as *0.01
+      const replaced = s.replace(/%/g, '*0.01');
+      // eslint-disable-next-line no-new-func
+      const val = Function(`"use strict"; return (${replaced})`)();
+      return typeof val === 'number' && isFinite(val) ? val : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const onEquals = () => setResult(evalExpr(expr));
+
+  const push = (t: string) => setExpr((e) => (e + t));
+  const back = () => setExpr((e) => e.slice(0, -1));
+  const clear = () => { setExpr(''); setResult(null); };
+
+  // pricing math
+  const costNum  = Number.parseFloat(cost)  || 0;
+  const priceNum = Number.parseFloat(price) || 0;
+  const profit   = priceNum - costNum;
+  const margin   = priceNum > 0 ? (profit / priceNum) * 100 : 0;
+  const markup   = costNum  > 0 ? (profit / costNum)  * 100 : 0;
+  const priceWithVat = priceNum * (1 + vat / 100);
+
+  return (
+    <div className="bg-white rounded-xl shadow p-4">
+      <h3 className="text-lg font-bold mb-3">Calculator</h3>
+
+      {/* Expression */}
+      <div className="mb-2">
+        <input
+          value={expr}
+          onChange={(e) => setExpr(e.target.value)}
+          placeholder="Type: 1250*3 + 12% - 40"
+          className="w-full border rounded-lg px-3 py-2"
+        />
+        <div className="mt-1 text-sm text-gray-600">
+          {result !== null ? <>Result: <span className="font-semibold">Rs {result.toFixed(2)}</span></> : ' '}
+        </div>
+      </div>
+
+      {/* Keypad */}
+      <div className="grid grid-cols-4 gap-2 mb-3">
+        {['7','8','9','/','4','5','6','*','1','2','3','-','0','.','%','+','(',')','C','='].map((b) => (
+          <button
+            key={b}
+            onClick={() => (b === '=' ? onEquals() : b === 'C' ? clear() : push(b))}
+            className={`py-2 rounded-lg border hover:bg-gray-50 ${b==='=' ? 'col-span-1 bg-black text-white hover:bg-gray-800' : ''}`}
+          >
+            {b}
+          </button>
+        ))}
+        <button onClick={back} className="py-2 rounded-lg border hover:bg-gray-50 col-span-4">⌫ Backspace</button>
+      </div>
+
+      {/* Margin / Markup quicks */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <div className="text-sm font-semibold mb-1">Pricing Helper</div>
+          <div className="flex gap-2 mb-2">
+            <input
+              type="number"
+              inputMode="decimal"
+              value={cost}
+              onChange={(e) => setCost(e.target.value)}
+              placeholder="Cost"
+              className="flex-1 border rounded-lg px-3 py-2"
+            />
+            <input
+              type="number"
+              inputMode="decimal"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="Price"
+              className="flex-1 border rounded-lg px-3 py-2"
+            />
+          </div>
+          <div className="text-xs text-gray-600">
+            Profit: <span className="font-semibold">Rs {profit.toFixed(2)}</span> •
+            {' '}Margin: <span className="font-semibold">{isFinite(margin) ? margin.toFixed(1) : '0.0'}%</span> •
+            {' '}Markup: <span className="font-semibold">{isFinite(markup) ? markup.toFixed(1) : '0.0'}%</span>
+          </div>
+        </div>
+        <div>
+          <div className="text-sm font-semibold mb-1">VAT / Discount</div>
+          <div className="flex items-center gap-2 mb-2">
+            <label className="text-xs text-gray-600">VAT %</label>
+            <input
+              type="number"
+              value={vat}
+              onChange={(e) => setVat(Number(e.target.value) || 0)}
+              className="w-20 border rounded-lg px-2 py-1"
+            />
+            <div className="text-xs text-gray-600 ml-auto">
+              Price + VAT: <span className="font-semibold">Rs {priceWithVat.toFixed(2)}</span>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPrice((p) => {
+                const v = Number.parseFloat(p) || 0;
+                return String((v * 0.9).toFixed(2));
+              })}
+              className="px-3 py-1 border rounded-lg text-sm hover:bg-gray-50"
+            >
+              −10% Discount
+            </button>
+            <button
+              onClick={() => setPrice((p) => {
+                const v = Number.parseFloat(p) || 0;
+                return String((v * 1.1).toFixed(2));
+              })}
+              className="px-3 py-1 border rounded-lg text-sm hover:bg-gray-50"
+            >
+              +10% Markup
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------- Dashboard -------------------- */
 export default function OwnerDashboard() {
   const adminId = 'mo-owner';
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -30,12 +169,10 @@ export default function OwnerDashboard() {
   const [inventory, setInventory] = useState<InvItem[]>([]);
   const [efficiencyValue, setEfficiencyValue] = useState(0);
 
-  // Derived
   const progressPct = tasks.length
     ? Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100)
     : 0;
 
-  // CEO-ish derived numbers
   const { todaysOrdersCount, aov } = useMemo(() => {
     const todays = latestOrders.filter(o => o.date === today);
     const count = todays.length || 0;
@@ -149,7 +286,6 @@ export default function OwnerDashboard() {
     await saveTasks(updated);
   };
 
-  // “Smart” one-liner insight
   const insight = useMemo(() => {
     if (pendingOrders > deliveredToday) return '⚠️ Fulfilment lagging vs. completions — clear the queue.';
     if (aov > 0 && aov >= 1500) return '💡 High AOV today — consider upsell bundles.';
@@ -184,23 +320,16 @@ export default function OwnerDashboard() {
             <p className="text-sm text-gray-500">Checklist • Streak: <span className="font-semibold">{streak} days</span></p>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => quickAdd('Call suppliers')}
-                    className="text-xs px-3 py-1 border rounded-lg hover:bg-gray-50">+ Call suppliers</button>
-            <button onClick={() => quickAdd('Post on Instagram')}
-                    className="text-xs px-3 py-1 border rounded-lg hover:bg-gray-50">+ Post on Instagram</button>
-            <button onClick={() => quickAdd('Confirm deliveries')}
-                    className="text-xs px-3 py-1 border rounded-lg hover:bg-gray-50">+ Confirm deliveries</button>
-            <button onClick={markAllDone}
-                    className="text-xs px-3 py-1 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600">Mark all done</button>
+            <button onClick={() => quickAdd('Call suppliers')} className="text-xs px-3 py-1 border rounded-lg hover:bg-gray-50">+ Call suppliers</button>
+            <button onClick={() => quickAdd('Post on Instagram')} className="text-xs px-3 py-1 border rounded-lg hover:bg-gray-50">+ Post on Instagram</button>
+            <button onClick={() => quickAdd('Confirm deliveries')} className="text-xs px-3 py-1 border rounded-lg hover:bg-gray-50">+ Confirm deliveries</button>
+            <button onClick={markAllDone} className="text-xs px-3 py-1 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600">Mark all done</button>
           </div>
         </div>
 
         {/* Progress */}
         <div className="w-full bg-gray-200 rounded-full overflow-hidden mb-3" style={{ height: 12 }}>
-          <div
-            style={{ width: `${progressPct}%` }}
-            className={`h-full transition-all ${progressPct === 100 ? 'bg-emerald-500' : 'bg-orange-500'}`}
-          />
+          <div style={{ width: `${progressPct}%` }} className={`h-full transition-all ${progressPct === 100 ? 'bg-emerald-500' : 'bg-orange-500'}`} />
         </div>
         <p className="text-xs mb-4">{progressPct}% complete today</p>
 
@@ -212,9 +341,7 @@ export default function OwnerDashboard() {
             placeholder="Add a new task..."
             className="flex-1 border rounded-lg px-3 py-2"
           />
-          <button onClick={addTask} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800">
-            Add
-          </button>
+          <button onClick={addTask} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800">Add</button>
         </div>
 
         {/* Tasks list */}
@@ -230,27 +357,52 @@ export default function OwnerDashboard() {
         </ul>
       </section>
 
-      {/* QUICK NAV (CEO flow) */}
-      <section>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          <Link href="/admin/pos" className="group bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-xl p-4 text-center shadow hover:from-orange-600 hover:to-orange-500">
-            <div className="text-3xl">🛒</div><div className="font-semibold mt-1">POS</div>
-          </Link>
-          <Link href="/admin/inventory" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md">
-            <div className="text-3xl">📦</div><div className="font-semibold mt-1">Inventory</div>
-          </Link>
-          <Link href="/admin/orders" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md">
-            <div className="text-3xl">🧾</div><div className="font-semibold mt-1">Orders</div>
-          </Link>
-          <Link href="/admin/clients" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md">
-            <div className="text-3xl">👥</div><div className="font-semibold mt-1">Clients</div>
-          </Link>
-          <Link href="/admin/analytics" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md">
-            <div className="text-3xl">📊</div><div className="font-semibold mt-1">Analytics</div>
-          </Link>
-          <Link href="/admin/dms" className="group bg-gradient-to-r from-sky-500 to-sky-400 text-white rounded-xl p-4 text-center shadow hover:from-sky-600 hover:to-sky-500">
-            <div className="text-3xl">📂</div><div className="font-semibold mt-1">DMS</div>
-          </Link>
+      {/* CEO NAV — EVERYTHING YOU ASKED FOR */}
+      <section className="space-y-8">
+        {/* RUN OPERATIONS */}
+        <div>
+          <h3 className="text-xs font-semibold tracking-wider text-gray-500 uppercase mb-3">Run Operations</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            <Link href="/admin/pos" className="group bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-xl p-4 text-center shadow hover:from-orange-600 hover:to-orange-500"><div className="text-3xl">🛒</div><div className="font-semibold mt-1">POS</div></Link>
+            <Link href="/admin/inventory" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">📦</div><div className="font-semibold mt-1">Inventory</div></Link>
+            <Link href="/admin/orders" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🧾</div><div className="font-semibold mt-1">Orders</div></Link>
+            <Link href="/admin/production" className="group bg-gradient-to-r from-emerald-500 to-emerald-400 text-white rounded-xl p-4 text-center shadow hover:from-emerald-600 hover:to-emerald-500"><div className="text-3xl">🧵</div><div className="font-semibold mt-1">Production</div></Link>
+            <Link href="/admin/deliveries" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🚚</div><div className="font-semibold mt-1">Deliveries</div></Link>
+            <Link href="/admin/returns" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">♻️</div><div className="font-semibold mt-1">Returns</div></Link>
+            <Link href="/admin/catalog" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🗂️</div><div className="font-semibold mt-1">Catalog</div></Link>
+            <Link href="/admin/purchasing" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🧾</div><div className="font-semibold mt-1">Purchasing</div></Link>
+            <Link href="/admin/suppliers" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🤝</div><div className="font-semibold mt-1">Suppliers</div></Link>
+          </div>
+        </div>
+
+        {/* GROW REVENUE */}
+        <div>
+          <h3 className="text-xs font-semibold tracking-wider text-gray-500 uppercase mb-3">Grow Revenue</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            <Link href="/admin/clients" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">👥</div><div className="font-semibold mt-1">Clients</div></Link>
+            <Link href="/admin/marketing" className="group bg-gradient-to-r from-violet-500 to-violet-400 text-white rounded-xl p-4 text-center shadow hover:from-violet-600 hover:to-violet-500"><div className="text-3xl">📣</div><div className="font-semibold mt-1">Marketing</div></Link>
+            <Link href="/admin/promos" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🏷️</div><div className="font-semibold mt-1">Promotions</div></Link>
+            <Link href="/admin/loyalty" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">💳</div><div className="font-semibold mt-1">Loyalty</div></Link>
+            <Link href="/admin/ecommerce" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🛍️</div><div className="font-semibold mt-1">E-commerce</div></Link>
+            <Link href="/admin/wholesale" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🏬</div><div className="font-semibold mt-1">Wholesale</div></Link>
+          </div>
+        </div>
+
+        {/* CONTROL & INTELLIGENCE */}
+        <div>
+          <h3 className="text-xs font-semibold tracking-wider text-gray-500 uppercase mb-3">Control & Intelligence</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            <Link href="/admin/analytics" className="group bg-gradient-to-r from-sky-500 to-sky-400 text-white rounded-xl p-4 text-center shadow hover:from-sky-600 hover:to-sky-500"><div className="text-3xl">📊</div><div className="font-semibold mt-1">Analytics</div></Link>
+            <Link href="/admin/accounting" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">💼</div><div className="font-semibold mt-1">Accounting</div></Link>
+            <Link href="/admin/automation" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">⚙️</div><div className="font-semibold mt-1">Automations</div></Link>
+            <Link href="/admin/staff" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🧑‍💼</div><div className="font-semibold mt-1">Staff</div></Link>
+            <Link href="/admin/calendar" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🗓️</div><div className="font-semibold mt-1">Calendar</div></Link>
+            <Link href="/admin/dms" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">📂</div><div className="font-semibold mt-1">DMS</div></Link>
+            <Link href="/admin/settings" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">⚙️</div><div className="font-semibold mt-1">Settings</div></Link>
+            <Link href="/admin/audit" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🧭</div><div className="font-semibold mt-1">Audit</div></Link>
+            <Link href="/admin/integrations" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🔌</div><div className="font-semibold mt-1">Integrations</div></Link>
+            <Link href="/admin/reports" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">📑</div><div className="font-semibold mt-1">Reports</div></Link>
+          </div>
         </div>
       </section>
 
@@ -303,24 +455,29 @@ export default function OwnerDashboard() {
         </div>
       </section>
 
-      {/* Inventory Snapshot */}
-      <section className="bg-white shadow p-4 rounded-xl">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold">Inventory Snapshot</h2>
-          {lowStock.length > 0 && (
-            <div className="text-xs px-3 py-1 bg-red-100 text-red-700 rounded-full">
-              Low stock: {lowStock.map(i => i.size ?? i.id).join(', ')}
-            </div>
-          )}
+      {/* Inventory Snapshot + Calculator */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white shadow p-4 rounded-xl">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-bold">Inventory Snapshot</h2>
+            {lowStock.length > 0 && (
+              <div className="text-xs px-3 py-1 bg-red-100 text-red-700 rounded-full">
+                Low stock: {lowStock.map(i => i.size ?? i.id).join(', ')}
+              </div>
+            )}
+          </div>
+          <ul>
+            {inventory.map((item, idx) => (
+              <li key={item.id ?? idx} className="flex justify-between border-b py-2">
+                <span>{item.size ?? item.id}</span>
+                <span>{(item.qty ?? 0).toString()} pcs</span>
+              </li>
+            ))}
+          </ul>
         </div>
-        <ul>
-          {inventory.map((item, idx) => (
-            <li key={item.id ?? idx} className="flex justify-between border-b py-2">
-              <span>{item.size ?? item.id}</span>
-              <span>{(item.qty ?? 0).toString()} pcs</span>
-            </li>
-          ))}
-        </ul>
+
+        {/* Calculator card */}
+        <CalculatorCard />
       </section>
     </main>
   );
