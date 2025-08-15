@@ -21,7 +21,6 @@ function sumDigits(n: number) {
     .reduce((a, b) => a + b, 0);
 }
 function reduceToMaster(n: number) {
-  // keep master numbers 11,22,33
   while (n > 9 && n !== 11 && n !== 22 && n !== 33) {
     n = sumDigits(n);
   }
@@ -30,24 +29,18 @@ function reduceToMaster(n: number) {
 
 /** calcNumerology: returns primary (life path) and secondary (calendar total) */
 function calcNumerology(date: Date) {
-  const day = date.getDate(); // 1..31
-  const month = date.getMonth() + 1; // 1..12
-  const year = date.getFullYear(); // e.g. 2025
+  const day = date.getDate();
+  const month = date.getMonth() + 1;
+  const year = date.getFullYear();
 
-  // Primary (Life Path) — reduce( reduce(day) + reduce(month) + reduce(year) )
   const reducedDay = reduceToMaster(sumDigits(day));
   const reducedMonth = reduceToMaster(sumDigits(month));
   const reducedYear = reduceToMaster(sumDigits(year));
-  const lifePath = reduceToMaster(reducedDay + reducedMonth + reducedYear);
 
-  // Secondary — reduce(day + month + year) (keeps masters)
-  const calendarTotal = reduceToMaster(day + month + year);
+  const lifePath = reduceToMaster(reducedDay + reducedMonth + reducedYear); // primary
+  const calendarTotal = reduceToMaster(day + month + year); // secondary
 
-  return {
-    primary: lifePath,
-    secondary: calendarTotal,
-    parts: { reducedDay, reducedMonth, reducedYear },
-  };
+  return { primary: lifePath, secondary: calendarTotal, parts: { reducedDay, reducedMonth, reducedYear } };
 }
 
 /* -------------------- Calculator Card -------------------- */
@@ -58,14 +51,13 @@ function CalculatorCard() {
   // Margin / markup helper
   const [cost, setCost] = useState<string>('');
   const [price, setPrice] = useState<string>('');
-  const [vat, setVat] = useState<number>(15); // MU VAT default
+  const [vat, setVat] = useState<number>(15);
 
   const allowed = /^[0-9+\-*/().\s%]*$/;
 
   const evalExpr = (s: string): number | null => {
     try {
       if (!allowed.test(s)) return null;
-      // allow % as *0.01
       const replaced = s.replace(/%/g, '*0.01');
       // eslint-disable-next-line no-new-func
       const val = Function(`"use strict"; return (${replaced})`)();
@@ -76,12 +68,10 @@ function CalculatorCard() {
   };
 
   const onEquals = () => setResult(evalExpr(expr));
-
   const push = (t: string) => setExpr((e) => (e + t));
   const back = () => setExpr((e) => e.slice(0, -1));
   const clear = () => { setExpr(''); setResult(null); };
 
-  // pricing math
   const costNum  = Number.parseFloat(cost)  || 0;
   const priceNum = Number.parseFloat(price) || 0;
   const profit   = priceNum - costNum;
@@ -120,7 +110,7 @@ function CalculatorCard() {
         <button onClick={back} className="py-2 rounded-lg border hover:bg-gray-50 col-span-4">⌫ Backspace</button>
       </div>
 
-      {/* Margin / Markup quicks */}
+      {/* Pricing Helper */}
       <div className="grid grid-cols-2 gap-3">
         <div>
           <div className="text-sm font-semibold mb-1">Pricing Helper</div>
@@ -148,6 +138,7 @@ function CalculatorCard() {
             {' '}Markup: <span className="font-semibold">{isFinite(markup) ? markup.toFixed(1) : '0.0'}%</span>
           </div>
         </div>
+
         <div>
           <div className="text-sm font-semibold mb-1">VAT / Discount</div>
           <div className="flex items-center gap-2 mb-2">
@@ -163,24 +154,8 @@ function CalculatorCard() {
             </div>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={() => setPrice((p) => {
-                const v = Number.parseFloat(p) || 0;
-                return String((v * 0.9).toFixed(2));
-              })}
-              className="px-3 py-1 border rounded-lg text-sm hover:bg-gray-50"
-            >
-              −10% Discount
-            </button>
-            <button
-              onClick={() => setPrice((p) => {
-                const v = Number.parseFloat(p) || 0;
-                return String((v * 1.1).toFixed(2));
-              })}
-              className="px-3 py-1 border rounded-lg text-sm hover:bg-gray-50"
-            >
-              +10% Markup
-            </button>
+            <button onClick={() => setPrice((p) => String(((Number(p) || 0) * 0.9).toFixed(2)))} className="px-3 py-1 border rounded-lg text-sm hover:bg-gray-50">−10% Discount</button>
+            <button onClick={() => setPrice((p) => String(((Number(p) || 0) * 1.1).toFixed(2)))} className="px-3 py-1 border rounded-lg text-sm hover:bg-gray-50">+10% Markup</button>
           </div>
         </div>
       </div>
@@ -220,9 +195,7 @@ export default function OwnerDashboard() {
   const [inventory, setInventory] = useState<InvItem[]>([]);
   const [efficiencyValue, setEfficiencyValue] = useState(0);
 
-  const progressPct = tasks.length
-    ? Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100)
-    : 0;
+  const progressPct = tasks.length ? Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100) : 0;
 
   const { todaysOrdersCount, aov } = useMemo(() => {
     const todays = latestOrders.filter(o => o.date === today);
@@ -231,10 +204,7 @@ export default function OwnerDashboard() {
     return { todaysOrdersCount: count, aov: count ? Math.round(rev / count) : 0 };
   }, [latestOrders, today]);
 
-  const lowStock = useMemo(
-    () => inventory.filter(i => (i.qty ?? 0) > 0 && (i.qty as number) < 10).slice(0, 3),
-    [inventory]
-  );
+  const lowStock = useMemo(() => inventory.filter(i => (i.qty ?? 0) > 0 && (i.qty as number) < 10).slice(0, 3), [inventory]);
 
   // INIT: tasks doc
   useEffect(() => {
@@ -252,7 +222,7 @@ export default function OwnerDashboard() {
     })();
   }, [adminId, today]);
 
-  // Orders + EV snapshot
+  // Orders snapshot
   useEffect(() => {
     (async () => {
       const ordersRef = collection(db, 'orders');
@@ -363,14 +333,11 @@ export default function OwnerDashboard() {
           <div className="text-right">
             <div className="text-sm text-gray-300">Local time</div>
             <div className="text-2xl font-bold">{timeString}</div>
-            <div className="text-xs text-gray-400 mt-1">
-              D:{numerology.parts.reducedDay} M:{numerology.parts.reducedMonth} Y:{numerology.parts.reducedYear}
-            </div>
           </div>
         </div>
       </header>
 
-      {/* DAILY COMMAND CENTER — TASKS AT THE TOP */}
+      {/* DAILY COMMAND CENTER */}
       <section className="bg-white rounded-xl shadow p-5">
         <div className="flex items-center justify-between mb-3">
           <div>
@@ -385,13 +352,11 @@ export default function OwnerDashboard() {
           </div>
         </div>
 
-        {/* Progress */}
         <div className="w-full bg-gray-200 rounded-full overflow-hidden mb-3" style={{ height: 12 }}>
           <div style={{ width: `${progressPct}%` }} className={`h-full transition-all ${progressPct === 100 ? 'bg-emerald-500' : 'bg-orange-500'}`} />
         </div>
         <p className="text-xs mb-4">{progressPct}% complete today</p>
 
-        {/* Add Task */}
         <div className="flex gap-2 mb-4">
           <input
             value={newTask}
@@ -402,7 +367,6 @@ export default function OwnerDashboard() {
           <button onClick={addTask} className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800">Add</button>
         </div>
 
-        {/* Tasks list */}
         <ul className="space-y-2">
           {tasks.length === 0 && <li className="text-sm text-gray-500">No tasks yet. Add your first above.</li>}
           {tasks.map((task, i) => (
@@ -415,51 +379,38 @@ export default function OwnerDashboard() {
         </ul>
       </section>
 
-      {/* CEO NAV — EVERYTHING YOU ASKED FOR */}
+      {/* NAV — cleaned: removed Audit/Integrations/Reports/Promotions/Loyalty/E-commerce/Deliveries */}
       <section className="space-y-8">
-        {/* RUN OPERATIONS */}
         <div>
           <h3 className="text-xs font-semibold tracking-wider text-gray-500 uppercase mb-3">Run Operations</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            <Link href="/admin/pos" className="group bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-xl p-4 text-center shadow hover:from-orange-600 hover:to-orange-500"><div className="text-3xl">🛒</div><div className="font-semibold mt-1">POS</div></Link>
-            <Link href="/admin/inventory" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">📦</div><div className="font-semibold mt-1">Inventory</div></Link>
-            <Link href="/admin/orders" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🧾</div><div className="font-semibold mt-1">Orders</div></Link>
-            <Link href="/admin/production" className="group bg-gradient-to-r from-emerald-500 to-emerald-400 text-white rounded-xl p-4 text-center shadow hover:from-emerald-600 hover:to-emerald-500"><div className="text-3xl">🧵</div><div className="font-semibold mt-1">Production</div></Link>
-            <Link href="/admin/deliveries" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🚚</div><div className="font-semibold mt-1">Deliveries</div></Link>
-            <Link href="/admin/returns" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">♻️</div><div className="font-semibold mt-1">Returns</div></Link>
-            <Link href="/admin/catalog" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🗂️</div><div className="font-semibold mt-1">Catalog</div></Link>
-            <Link href="/admin/purchasing" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🧾</div><div className="font-semibold mt-1">Purchasing</div></Link>
-            <Link href="/admin/suppliers" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🤝</div><div className="font-semibold mt-1">Suppliers</div></Link>
+            <Link href="/admin/pos" className="group bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-xl p-4 text-center shadow"><div className="text-3xl">🛒</div><div className="font-semibold mt-1">POS</div></Link>
+            <Link href="/admin/inventory" className="group bg-white border rounded-xl p-4 text-center shadow"><div className="text-3xl">📦</div><div className="font-semibold mt-1">Inventory</div></Link>
+            <Link href="/admin/orders" className="group bg-white border rounded-xl p-4 text-center shadow"><div className="text-3xl">🧾</div><div className="font-semibold mt-1">Orders</div></Link>
+            <Link href="/admin/production" className="group bg-gradient-to-r from-emerald-500 to-emerald-400 text-white rounded-xl p-4 text-center shadow"><div className="text-3xl">🧵</div><div className="font-semibold mt-1">Production</div></Link>
+            <Link href="/admin/returns" className="group bg-white border rounded-xl p-4 text-center shadow"><div className="text-3xl">♻️</div><div className="font-semibold mt-1">Returns</div></Link>
+            <Link href="/admin/catalog" className="group bg-white border rounded-xl p-4 text-center shadow"><div className="text-3xl">🗂️</div><div className="font-semibold mt-1">Catalog</div></Link>
           </div>
         </div>
 
-        {/* GROW REVENUE */}
         <div>
           <h3 className="text-xs font-semibold tracking-wider text-gray-500 uppercase mb-3">Grow Revenue</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            <Link href="/admin/clients" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">👥</div><div className="font-semibold mt-1">Clients</div></Link>
-            <Link href="/admin/marketing" className="group bg-gradient-to-r from-violet-500 to-violet-400 text-white rounded-xl p-4 text-center shadow hover:from-violet-600 hover:to-violet-500"><div className="text-3xl">📣</div><div className="font-semibold mt-1">Marketing</div></Link>
-            <Link href="/admin/promos" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🏷️</div><div className="font-semibold mt-1">Promotions</div></Link>
-            <Link href="/admin/loyalty" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">💳</div><div className="font-semibold mt-1">Loyalty</div></Link>
-            <Link href="/admin/ecommerce" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🛍️</div><div className="font-semibold mt-1">E-commerce</div></Link>
-            <Link href="/admin/wholesale" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🏬</div><div className="font-semibold mt-1">Wholesale</div></Link>
+            <Link href="/admin/clients" className="group bg-white border rounded-xl p-4 text-center shadow"><div className="text-3xl">👥</div><div className="font-semibold mt-1">Clients</div></Link>
+            <Link href="/admin/marketing" className="group bg-gradient-to-r from-violet-500 to-violet-400 text-white rounded-xl p-4 text-center shadow"><div className="text-3xl">📣</div><div className="font-semibold mt-1">Marketing</div></Link>
+            <Link href="/admin/wholesale" className="group bg-white border rounded-xl p-4 text-center shadow"><div className="text-3xl">🏬</div><div className="font-semibold mt-1">Wholesale</div></Link>
           </div>
         </div>
 
-        {/* CONTROL & INTELLIGENCE */}
         <div>
           <h3 className="text-xs font-semibold tracking-wider text-gray-500 uppercase mb-3">Control & Intelligence</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            <Link href="/admin/analytics" className="group bg-gradient-to-r from-sky-500 to-sky-400 text-white rounded-xl p-4 text-center shadow hover:from-sky-600 hover:to-sky-500"><div className="text-3xl">📊</div><div className="font-semibold mt-1">Analytics</div></Link>
-            <Link href="/admin/accounting" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">💼</div><div className="font-semibold mt-1">Accounting</div></Link>
-            <Link href="/admin/automation" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">⚙️</div><div className="font-semibold mt-1">Automations</div></Link>
-            <Link href="/admin/staff" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🧑‍💼</div><div className="font-semibold mt-1">Staff</div></Link>
-            <Link href="/admin/calendar" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🗓️</div><div className="font-semibold mt-1">Calendar</div></Link>
-            <Link href="/admin/dms" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">📂</div><div className="font-semibold mt-1">DMS</div></Link>
-            <Link href="/admin/settings" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">⚙️</div><div className="font-semibold mt-1">Settings</div></Link>
-            <Link href="/admin/audit" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🧭</div><div className="font-semibold mt-1">Audit</div></Link>
-            <Link href="/admin/integrations" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">🔌</div><div className="font-semibold mt-1">Integrations</div></Link>
-            <Link href="/admin/reports" className="group bg-white border rounded-xl p-4 text-center shadow hover:shadow-md"><div className="text-3xl">📑</div><div className="font-semibold mt-1">Reports</div></Link>
+            <Link href="/admin/analytics" className="group bg-gradient-to-r from-sky-500 to-sky-400 text-white rounded-xl p-4 text-center shadow"><div className="text-3xl">📊</div><div className="font-semibold mt-1">Analytics</div></Link>
+            <Link href="/admin/accounting" className="group bg-white border rounded-xl p-4 text-center shadow"><div className="text-3xl">💼</div><div className="font-semibold mt-1">Accounting</div></Link>
+            <Link href="/admin/automation" className="group bg-white border rounded-xl p-4 text-center shadow"><div className="text-3xl">⚙️</div><div className="font-semibold mt-1">Automations</div></Link>
+            <Link href="/admin/staff" className="group bg-white border rounded-xl p-4 text-center shadow"><div className="text-3xl">🧑‍💼</div><div className="font-semibold mt-1">Staff</div></Link>
+            <Link href="/admin/calendar" className="group bg-white border rounded-xl p-4 text-center shadow"><div className="text-3xl">🗓️</div><div className="font-semibold mt-1">Calendar</div></Link>
+            <Link href="/admin/dms" className="group bg-white border rounded-xl p-4 text-center shadow"><div className="text-3xl">📂</div><div className="font-semibold mt-1">DMS</div></Link>
           </div>
         </div>
       </section>
@@ -534,7 +485,6 @@ export default function OwnerDashboard() {
           </ul>
         </div>
 
-        {/* Calculator card */}
         <CalculatorCard />
       </section>
     </main>
