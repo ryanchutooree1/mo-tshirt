@@ -11,26 +11,43 @@ import { format } from 'date-fns';
 
 type InvItem = { id?: string; size?: string; qty?: number };
 
-
 /* -------------------- Numerology Calculation -------------------- */
+/** reduceToMaster: reduces a number to 1..9 but preserves 11,22,33 as masters */
+function sumDigits(n: number) {
+  return n
+    .toString()
+    .split('')
+    .map((d) => Number(d))
+    .reduce((a, b) => a + b, 0);
+}
+function reduceToMaster(n: number) {
+  // keep master numbers 11,22,33
+  while (n > 9 && n !== 11 && n !== 22 && n !== 33) {
+    n = sumDigits(n);
+  }
+  return n;
+}
+
+/** calcNumerology: returns primary (life path) and secondary (calendar total) */
 function calcNumerology(date: Date) {
-  const day = date.getDate();
-  const month = date.getMonth() + 1;
-  const year = date.getFullYear();
+  const day = date.getDate(); // 1..31
+  const month = date.getMonth() + 1; // 1..12
+  const year = date.getFullYear(); // e.g. 2025
 
-  const sumDigits = (n: number) => n.toString().split('').reduce((acc, d) => acc + Number(d), 0);
+  // Primary (Life Path) — reduce( reduce(day) + reduce(month) + reduce(year) )
+  const reducedDay = reduceToMaster(sumDigits(day));
+  const reducedMonth = reduceToMaster(sumDigits(month));
+  const reducedYear = reduceToMaster(sumDigits(year));
+  const lifePath = reduceToMaster(reducedDay + reducedMonth + reducedYear);
 
-  const reduceNum = (n: number) => {
-    while (n > 9 && n !== 11 && n !== 22 && n !== 33) {
-      n = sumDigits(n);
-    }
-    return n;
+  // Secondary — reduce(day + month + year) (keeps masters)
+  const calendarTotal = reduceToMaster(day + month + year);
+
+  return {
+    primary: lifePath,
+    secondary: calendarTotal,
+    parts: { reducedDay, reducedMonth, reducedYear },
   };
-
-  const primary = reduceNum(day + month + year);
-  const secondary = reduceNum(sumDigits(day) + sumDigits(month) + sumDigits(year));
-
-  return { primary, secondary };
 }
 
 /* -------------------- Calculator Card -------------------- */
@@ -175,9 +192,18 @@ function CalculatorCard() {
 export default function OwnerDashboard() {
   const adminId = 'mo-owner';
   const today = format(new Date(), 'yyyy-MM-dd');
-  const now = new Date();
-  const { primary, secondary } = calcNumerology(now);
-  const formattedDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth()+1).padStart(2, '0')}/${now.getFullYear()}`;
+
+  // LIVE clock (updates every second)
+  const [now, setNow] = useState<Date>(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Numerology derived from live `now`
+  const numerology = useMemo(() => calcNumerology(now), [now]);
+  const formattedDate = format(now, 'dd/MM/yyyy');
+  const timeString = format(now, 'HH:mm:ss');
 
   // Checklist
   const [tasks, setTasks] = useState<{ title: string; completed: boolean }[]>([]);
@@ -323,13 +349,24 @@ export default function OwnerDashboard() {
 
   return (
     <main className="min-h-screen px-6 py-8 max-w-7xl mx-auto space-y-8">
-      {/* HERO with numerology */}
+      {/* HERO with numerology + live time on the right */}
       <header className="bg-gradient-to-r from-black to-gray-800 text-white rounded-2xl p-6 shadow">
-        <div>
-          <h1 className="text-3xl font-extrabold">MO T-SHIRT — Owner Dashboard</h1>
-          <p className="opacity-80 mt-1">
-            {formattedDate} • Primary: <span className="text-emerald-400 font-bold">{primary}</span> • Secondary: <span className="text-sky-400 font-bold">{secondary}</span>
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-extrabold">MO T-SHIRT — Owner Dashboard</h1>
+            <p className="opacity-80 mt-1">
+              {formattedDate} • Primary: <span className="text-emerald-400 font-bold">{numerology.primary}</span> • Secondary: <span className="text-sky-400 font-bold">{numerology.secondary}</span>
+            </p>
+          </div>
+
+          {/* Live time on the right */}
+          <div className="text-right">
+            <div className="text-sm text-gray-300">Local time</div>
+            <div className="text-2xl font-bold">{timeString}</div>
+            <div className="text-xs text-gray-400 mt-1">
+              D:{numerology.parts.reducedDay} M:{numerology.parts.reducedMonth} Y:{numerology.parts.reducedYear}
+            </div>
+          </div>
         </div>
       </header>
 
