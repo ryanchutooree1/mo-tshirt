@@ -367,14 +367,14 @@ export default function AnalysisPage() {
           <h1 className="text-3xl font-bold">📈 Business Analysis</h1>
           <p className="text-gray-600">Deep insights powered by your Firestore data</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="text-sm text-gray-500 mr-2">Range:</div>
-          <button onClick={() => setPreset('7d')} className="px-3 py-1.5 rounded-full border hover:bg-gray-50">7D</button>
-          <button onClick={() => setPreset('30d')} className="px-3 py-1.5 rounded-full border hover:bg-gray-50">30D</button>
-          <button onClick={() => setPreset('90d')} className="px-3 py-1.5 rounded-full border hover:bg-gray-50">90D</button>
-          <button onClick={() => setPreset('ytd')} className="px-3 py-1.5 rounded-full border hover:bg-gray-50">YTD</button>
-          <div className="ml-3 text-sm text-gray-500">{format(start,'d MMM yyyy')} — {format(end,'d MMM yyyy')}</div>
-          <button onClick={exportCsv} className="ml-3 px-3 py-1.5 rounded-lg bg-black text-white hover:bg-gray-800">Export CSV</button>
+          <button onClick={() => setPreset('7d')} className="px-3 py-1.5 rounded-full border hover:bg-gray-50 text-sm">7D</button>
+          <button onClick={() => setPreset('30d')} className="px-3 py-1.5 rounded-full border hover:bg-gray-50 text-sm">30D</button>
+          <button onClick={() => setPreset('90d')} className="px-3 py-1.5 rounded-full border hover:bg-gray-50 text-sm">90D</button>
+          <button onClick={() => setPreset('ytd')} className="px-3 py-1.5 rounded-full border hover:bg-gray-50 text-sm">YTD</button>
+          <div className="md:ml-3 text-sm text-gray-500 w-full md:w-auto">{format(start,'d MMM yyyy')} — {format(end,'d MMM yyyy')}</div>
+          <button onClick={exportCsv} className="md:ml-3 px-3 py-1.5 rounded-lg bg-black text-white hover:bg-gray-800 text-sm">Export CSV</button>
         </div>
       </header>
 

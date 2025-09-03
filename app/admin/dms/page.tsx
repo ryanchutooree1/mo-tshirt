@@ -435,16 +435,16 @@ export default function DMSPage() {
 
   return (
     <main className="min-h-screen p-6 max-w-6xl mx-auto">
-      <div className="flex items-start justify-between gap-4 mb-6">
+      <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold">DMS — Documents</h1>
           <p className="text-gray-600">Upload, manage and share PDFs & images securely</p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button onClick={() => setCurrentPath('documents/')} className="px-3 py-2 bg-white border rounded shadow">Home</button>
-          <button onClick={createFolder} className="px-3 py-2 bg-blue-600 text-white rounded shadow"><FiFolder className="inline mr-2" />New Folder</button>
-          <button onClick={triggerFilePicker} className="px-3 py-2 bg-green-600 text-white rounded shadow"><FiUploadCloud className="inline mr-2" />Upload</button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={() => setCurrentPath('documents/')} className="px-3 py-2 bg-white border rounded shadow text-sm">Home</button>
+          <button onClick={createFolder} className="px-3 py-2 bg-blue-600 text-white rounded shadow text-sm"><FiFolder className="inline mr-2" />New Folder</button>
+          <button onClick={triggerFilePicker} className="px-3 py-2 bg-green-600 text-white rounded shadow text-sm"><FiUploadCloud className="inline mr-2" />Upload</button>
         </div>
       </div>
 
@@ -455,9 +455,9 @@ export default function DMSPage() {
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        className={clsx('border-2 rounded p-4 mb-4 flex items-center justify-between gap-4', dragOver ? 'border-dashed border-blue-400 bg-blue-50' : 'border-gray-100')}
+        className={clsx('border-2 rounded p-4 mb-4 flex flex-wrap items-center justify-between gap-4', dragOver ? 'border-dashed border-blue-400 bg-blue-50' : 'border-gray-100')}
       >
-        <div className="flex items-center gap-4 flex-1">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <button onClick={navigateUp} title="Up" className="px-3 py-2 bg-white border rounded">
               <FiChevronLeft />
@@ -476,7 +476,7 @@ export default function DMSPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
@@ -488,14 +488,14 @@ export default function DMSPage() {
             <option value="size">Sort: Size</option>
           </select>
 
-          <div className="relative">
-            <input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 pr-3 py-2 border rounded w-64" />
+          <div className="relative w-full sm:w-auto">
+            <input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 pr-3 py-2 border rounded w-full sm:w-64" />
             <FiSearch className="absolute left-3 top-2.5 text-gray-400" />
           </div>
 
-          <div className="flex items-center gap-2">
-            <button onClick={bulkCopyLinks} className="px-3 py-2 bg-yellow-50 text-yellow-800 border rounded" title="Copy links for selected">Copy Links</button>
-            <button onClick={bulkDelete} className="px-3 py-2 bg-red-50 text-red-700 border rounded" title="Delete selected">Delete</button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button onClick={bulkCopyLinks} className="px-3 py-2 bg-yellow-50 text-yellow-800 border rounded text-sm" title="Copy links for selected">Copy Links</button>
+            <button onClick={bulkDelete} className="px-3 py-2 bg-red-50 text-red-700 border rounded text-sm" title="Delete selected">Delete</button>
           </div>
         </div>
       </div>
@@ -531,8 +531,8 @@ export default function DMSPage() {
                 const pdf = isPdf(it.name);
                 const checked = !!selected[it.fullPath || it.name];
                 return (
-                  <li key={it.fullPath ?? it.name} className="flex items-center justify-between p-3 border rounded">
-                    <div className="flex items-center gap-3">
+                  <li key={it.fullPath ?? it.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <input
                         type="checkbox"
                         checked={checked}
@@ -544,13 +544,13 @@ export default function DMSPage() {
                         {it.isFolder ? <FiFolder className="text-orange-500" size={20} /> : image ? <img src={it.url} alt={it.name} className="w-full h-full object-cover" /> : pdf ? <FiFileText className="text-red-500" size={20} /> : <FiFileText size={20} />}
                       </div>
 
-                      <div>
-                        <div className="font-medium">{it.name}</div>
+                      <div className="min-w-0">
+                        <div className="font-medium truncate max-w-[60vw] sm:max-w-none">{it.name}</div>
                         <div className="text-xs text-gray-500">{it.isFolder ? 'Folder' : `${humanSize(it.size)} ${it.updated ? `• ${new Date(it.updated).toLocaleDateString()}` : ''}`}</div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap sm:justify-end">
                       {it.isFolder ? (
                         <button onClick={() => openFolder(it.name)} className="px-3 py-1 bg-blue-50 text-blue-700 rounded">Open</button>
                       ) : (
