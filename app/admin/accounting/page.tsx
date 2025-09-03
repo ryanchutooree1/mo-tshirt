@@ -395,6 +395,7 @@ export default function AccountingPage() {
           </div>
 
           <div className="overflow-x-auto">
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left">
@@ -419,6 +420,7 @@ export default function AccountingPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           {/* Pagination */}
@@ -465,6 +467,7 @@ export default function AccountingPage() {
             <h3 className="text-lg font-semibold">Journal Entry</h3>
             <button className={classNames("px-3 py-1.5 rounded-lg text-sm", balanced ? "bg-emerald-600 text-white" : "bg-gray-200")} disabled={!balanced}>Post Entry</button>
           </div>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left">
@@ -485,6 +488,7 @@ export default function AccountingPage() {
               ))}
             </tbody>
           </table>
+          </div>
           <div className="flex items-center justify-between mt-2 text-sm">
             <div className="flex gap-2">
               <button onClick={()=> setEntries(rs => [...rs, { account: "", debit: "", credit: "", memo: "" }])} className="px-3 py-1.5 border rounded">Add Line</button>

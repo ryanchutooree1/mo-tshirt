@@ -618,16 +618,16 @@ export default function OrdersPage() {
             Track, update, and fulfill orders with inventory safety checks
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
           <Link
             href="/admin/pos"
-            className="px-3 py-2 bg-orange-500 text-white rounded"
+            className="px-3 py-2 bg-orange-500 text-white rounded text-sm"
           >
             POS
           </Link>
           <Link
             href="/admin/dms"
-            className="px-3 py-2 bg-sky-600 text-white rounded"
+            className="px-3 py-2 bg-sky-600 text-white rounded text-sm"
           >
             DMS
           </Link>
@@ -648,7 +648,7 @@ export default function OrdersPage() {
         <div className="flex flex-wrap items-end gap-3">
           <div className="relative">
             <input
-              className="pl-9 pr-3 py-2 border rounded w-64"
+              className="pl-9 pr-3 py-2 border rounded w-full sm:w-64"
               placeholder="Search name or phone..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -703,7 +703,7 @@ export default function OrdersPage() {
             </select>
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2 flex-wrap">
             <button
               onClick={() => {
                 setSearch("");
@@ -713,7 +713,7 @@ export default function OrdersPage() {
                 setPaymentFilter("");
                 setActiveTab("all");
               }}
-              className="px-3 py-2 rounded border bg-white hover:bg-gray-50"
+              className="px-3 py-2 rounded border bg-white hover:bg-gray-50 text-sm"
               title="Reset filters"
             >
               Reset
@@ -722,7 +722,7 @@ export default function OrdersPage() {
               onClick={() => {
                 setActiveTab("all");
               }}
-              className={`px-3 py-2 rounded border ${
+              className={`px-3 py-2 rounded border text-sm ${
                 activeTab === "all" ? "bg-black text-white" : "bg-white"
               }`}
             >
@@ -732,7 +732,7 @@ export default function OrdersPage() {
               onClick={() => {
                 setActiveTab("completed");
               }}
-              className={`px-3 py-2 rounded border ${
+              className={`px-3 py-2 rounded border text-sm ${
                 activeTab === "completed" ? "bg-black text-white" : "bg-white"
               }`}
             >
@@ -744,7 +744,7 @@ export default function OrdersPage() {
                 setSelectMode((s) => !s);
                 if (selectMode) setSelectedIds(new Set());
               }}
-              className={`px-3 py-2 rounded border ${
+              className={`px-3 py-2 rounded border text-sm ${
                 selectMode ? "bg-gray-900 text-white" : "bg-white"
               }`}
             >
@@ -754,13 +754,13 @@ export default function OrdersPage() {
               <>
                 <button
                   onClick={() => setSelectedIds(new Set(visibleRows.map((d) => d.id)))}
-                  className="px-3 py-2 rounded border bg-white hover:bg-gray-50"
+                  className="px-3 py-2 rounded border bg-white hover:bg-gray-50 text-sm"
                 >
                   Select All
                 </button>
                 <button
                   onClick={() => setSelectedIds(new Set())}
-                  className="px-3 py-2 rounded border bg-white hover:bg-gray-50"
+                  className="px-3 py-2 rounded border bg-white hover:bg-gray-50 text-sm"
                 >
                   Clear
                 </button>
@@ -768,7 +768,7 @@ export default function OrdersPage() {
             )}
             <button
               onClick={exportVisibleToCSV}
-              className="px-3 py-2 rounded border bg-white hover:bg-gray-50"
+              className="px-3 py-2 rounded border bg-white hover:bg-gray-50 text-sm"
               title="Export visible to CSV"
             >
               Export CSV

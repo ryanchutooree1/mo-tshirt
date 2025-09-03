@@ -307,17 +307,19 @@ export default function OwnerDashboard() {
 
                         {/* Expand sizes */}
                         {expandedColor === p.id+c.color && (
-                          <table className="ml-6 mb-2 text-sm">
-                            <thead><tr><th className="pr-4">Size</th><th>Qty</th></tr></thead>
-                            <tbody>
-                              {Object.entries(c.sizes || {}).map(([size, qty]) => (
-                                <tr key={size}>
-                                  <td>{size}</td>
-                                  <td className={qty < 10 ? "text-red-600 font-semibold" : ""}>{qty}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                          <div className="ml-4 mr-2 overflow-x-auto">
+                            <table className="mb-2 text-sm min-w-[280px]">
+                              <thead><tr><th className="pr-4">Size</th><th>Qty</th></tr></thead>
+                              <tbody>
+                                {Object.entries(c.sizes || {}).map(([size, qty]) => (
+                                  <tr key={size}>
+                                    <td>{size}</td>
+                                    <td className={qty < 10 ? "text-red-600 font-semibold" : ""}>{qty}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         )}
                       </div>
                     );
