@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MO T‑Shirt Admin",
-  description: "Admin dashboard for MO T‑Shirt",
+  title: "MO T-SHIRT",
+  description: "Premium vinyl printing in Mauritius",
 };
 
 export default function RootLayout({
@@ -28,12 +28,14 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
-        <footer className="mt-16 border-t bg-white/70 backdrop-blur">
-          <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between text-sm text-gray-600">
-            <div>© 2025 MO T‑Shirt</div>
-            <div>
-              <a href="/login" className="px-3 py-1 border rounded-lg hover:bg-gray-50">Login</a>
-            </div>
+
+        <footer className="mt-16 border-t bg-gradient-to-t from-gray-50 to-white">
+          <div className="max-w-6xl mx-auto px-4 py-10 text-center">
+            <p className="text-sm sm:text-base text-gray-600">
+              <span className="font-medium text-gray-900">© 2025 MO T-SHIRT</span> |
+              {" "}
+              <a href="/login" className="hover:text-gray-900 hover:underline">All Rights Reserved</a>
+            </p>
           </div>
         </footer>
       </body>
