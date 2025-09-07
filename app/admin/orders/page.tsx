@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   collection,
   query,
@@ -57,6 +58,7 @@ const PAGE_SIZE = 20;
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "admin";
 
 export default function OrdersPage() {
+  const searchParams = useSearchParams();
   // filters / ui
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -116,6 +118,23 @@ export default function OrdersPage() {
     const id = setTimeout(() => setDebounced(search.trim().toLowerCase()), 350);
     return () => clearTimeout(id);
   }, [search]);
+
+  // initialize filters from URL (status, range)
+  useEffect(() => {
+    const s = searchParams?.get("status");
+    const range = searchParams?.get("range");
+    if (s) setStatusFilter(s);
+    if (range === "today") {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+      const iso = `${yyyy}-${mm}-${dd}`;
+      setDateFrom(iso);
+      setDateTo(iso);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // initial + whenever filters change
   useEffect(() => {

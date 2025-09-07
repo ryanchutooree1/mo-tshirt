@@ -464,6 +464,14 @@ export default function AnalysisPage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+          <div className="mt-3 text-sm text-blue-600 flex flex-wrap gap-2">
+            {statusData.map((s, i) => (
+              <a key={i} href={`/admin/orders?status=${encodeURIComponent(s.name)}`} className="px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 border border-blue-200">
+                View {s.name}
+              </a>
+            ))}
+            <a href="/admin/orders?range=today" className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 border">Today</a>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow p-5">
@@ -514,11 +522,11 @@ export default function AnalysisPage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className="mt-3 text-sm text-gray-500 flex flex-wrap gap-2">
+          <div className="mt-3 text-sm text-gray-600 flex flex-wrap gap-2">
             {topProducts.map((p, i) => (
-              <span key={i} className="px-2 py-1 rounded bg-gray-100">
+              <a key={i} href={`/admin/inventory`} className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 border">
                 {p.name} · {prettyMoney(Math.round(p.value))}
-              </span>
+              </a>
             ))}
           </div>
         </div>
@@ -535,9 +543,16 @@ export default function AnalysisPage() {
                 <XAxis type="number" />
                 <YAxis dataKey="name" type="category" width={120} />
                 <Tooltip formatter={(v: any) => prettyMoney(Number(v))} />
-                <Bar dataKey="value" fill="#3b82f6" radius={[0,6,6,0]} />
-              </BarChart>
-            </ResponsiveContainer>
+              <Bar dataKey="value" fill="#3b82f6" radius={[0,6,6,0]} />
+            </BarChart>
+          </ResponsiveContainer>
+          </div>
+          <div className="mt-3 text-sm text-blue-600 flex flex-wrap gap-2">
+            {topCustomers.map((c, i) => (
+              <a key={i} href={`/admin/clients`} className="px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 border border-blue-200">
+                {c.name}
+              </a>
+            ))}
           </div>
         </div>
 

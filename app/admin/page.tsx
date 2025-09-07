@@ -16,6 +16,7 @@ import {
 } from "firebase/firestore";
 import { format } from "date-fns";
 import { Info, TrendingUp, Package, RefreshCcw, Clock, Users, IndianRupee } from "lucide-react";
+import { useAdminMetrics } from "@/admin/AdminDataContext";
 
 // ---------- Types ----------
 type SizeMap = Record<string, number>;
@@ -51,6 +52,7 @@ function calcNumerology(date: Date) {
 // ---------- Dashboard ----------
 export default function OwnerDashboard() {
   const adminId = "mo-owner";
+  const global = useAdminMetrics();
   const todayIso = format(new Date(), "yyyy-MM-dd");
 
   // Live clock
@@ -214,27 +216,26 @@ export default function OwnerDashboard() {
       {/* CEO SNAPSHOT */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
         {[
-          { label: "Today’s Revenue", value: `Rs ${todayRevenue.toLocaleString()}`, icon: IndianRupee },
-          { label: "Orders Today", value: todaysOrdersCount, icon: Package },
-          { label: "AOV Today", value: aov ? `Rs ${aov.toLocaleString()}` : "—", icon: TrendingUp },
-          { label: "Pending Orders", value: pendingOrders, icon: Clock },
-          { label: "Repeat Clients", value: repeatClients, icon: Users },
-          { label: "Efficiency", value: `${efficiencyValue}%`, icon: RefreshCcw },
+          { label: "Today’s Revenue", value: `Rs ${(global?.todayRevenue ?? todayRevenue).toLocaleString()}`, icon: IndianRupee, href: "/admin/analytics?preset=7d" },
+          { label: "Orders Today", value: global?.ordersToday ?? todaysOrdersCount, icon: Package, href: "/admin/orders?range=today" },
+          { label: "AOV Today", value: global?.aovToday ? `Rs ${(global?.aovToday ?? aov).toLocaleString()}` : (aov ? `Rs ${aov.toLocaleString()}` : "—"), icon: TrendingUp, href: "/admin/orders?range=today" },
+          { label: "Pending Orders", value: global?.pendingOrders ?? pendingOrders, icon: Clock, href: "/admin/orders?status=Pending" },
+          { label: "Repeat Clients", value: global?.repeatClientsCount ?? repeatClients, icon: Users, href: "/admin/clients?filter=repeat" },
+          { label: "Efficiency", value: `${global?.efficiencyPct ?? efficiencyValue}%`, icon: RefreshCcw, href: "/admin/analytics?view=ev" },
         ].map((s, idx) => {
           const Icon = s.icon;
           return (
-            <div
-              key={idx}
-              className="bg-slate-900/60 border border-slate-800 shadow-lg rounded-xl p-4 flex items-center gap-3"
-            >
-              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
-                <Icon className="w-5 h-5" />
+            <Link key={idx} href={s.href || "#"} className="group">
+              <div className="bg-slate-900/60 border border-slate-800 shadow-lg rounded-xl p-4 flex items-center gap-3 group-hover:border-blue-500/50 group-hover:bg-slate-900/70 transition-colors">
+                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/15">
+                  <Icon className="w-5 h-5" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs uppercase tracking-wide text-slate-400">{s.label}</p>
+                  <h2 className="text-xl font-extrabold text-slate-100">{s.value}</h2>
+                </div>
               </div>
-              <div className="flex-1">
-                <p className="text-xs uppercase tracking-wide text-slate-400">{s.label}</p>
-                <h2 className="text-xl font-extrabold text-slate-100">{s.value}</h2>
-              </div>
-            </div>
+            </Link>
           );
         })}
       </section>
