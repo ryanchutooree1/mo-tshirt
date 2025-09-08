@@ -2,6 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, orderBy, query, Timestamp, where } from "firebase/firestore";
 import {
   LineChart,
   Line,
@@ -57,10 +59,11 @@ import {
   - Bank Reconciliation (imported bank lines vs. books with quick match)
   - Budget vs Actual mini view
 
-  NOTE: This is front-end only with mock data; wire to your backend/Firestore later.
+  Data: Now backed by Firestore (transactions + account). Fallbacks are applied
+  if some collections/fields are missing.
 */
 
-/* ----------------------------- Mock Data ----------------------------- */
+/* ----------------------------- Types ----------------------------- */
 
 type Invoice = {
   id: string;
@@ -86,45 +89,7 @@ type LedgerEntry = {
   memo?: string;
 };
 
-const monthLabels = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-
-const revenueExpenseSeries = monthLabels.map((m, i) => ({
-  month: m,
-  revenue: [90000, 110000, 105000, 120000, 130000, 125000, 138000, 150000, 142000, 148000, 155000, 160000][i],
-  expenses: [60000, 70000, 72000, 74000, 76000, 78000, 80000, 82000, 83000, 85000, 88000, 90000][i],
-})).map((row) => ({
-  ...row,
-  net: row.revenue - row.expenses,
-}));
-
-const cashflowSeries = monthLabels.map((m, i) => ({
-  month: m,
-  operating: [25000, 32000, 28000, 36000, 39000, 35000, 41000, 45000, 43000, 47000, 50000, 52000][i],
-  investing: [-8000, -6000, -7000, -5000, -12000, -4000, -9000, -6000, -3000, -5000, -7000, -6000][i],
-  financing: [0, 0, 10000, 0, 0, 0, 0, 0, 5000, 0, 0, 0][i],
-}));
-
-const expenseBreakdown = [
-  { name: "COGS", value: 420000 },
-  { name: "Payroll", value: 240000 },
-  { name: "Rent", value: 90000 },
-  { name: "Marketing", value: 65000 },
-  { name: "Utilities", value: 24000 },
-  { name: "Misc", value: 11000 },
-];
+const monthLabels = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 const invoicesSeed: Invoice[] = new Array(36).fill(null).map((_, i) => {
   const d = new Date(2025, (i % 12), (i % 27) + 1);
@@ -140,13 +105,34 @@ const invoicesSeed: Invoice[] = new Array(36).fill(null).map((_, i) => {
   };
 });
 
-const bankLinesSeed: BankLine[] = new Array(18).fill(null).map((_, i) => ({
-  id: `BL-${i + 1}`,
-  date: format(new Date(2025, 6, (i % 27) + 1), "yyyy-MM-dd"),
-  description: i % 2 ? "POS Settlement" : "Supplier Payment",
-  amount: i % 2 ? 4200 + (i * 37) : -(3800 + (i * 29)),
-  matched: i % 5 === 0,
-}));
+/* --------------------------- Firestore Fetch -------------------------- */
+
+type TxnDoc = {
+  id: string;
+  invoiceNumber?: string;
+  customerName?: string;
+  phoneNumber?: string;
+  email?: string;
+  amount?: number;
+  products?: { quantity?: number; unitPrice?: number; price?: number }[];
+  status?: string;
+  paymentMethod?: string; // Full Payment | Part Payment
+  transactionDate?: Date | Timestamp | any;
+};
+
+function sumProducts(products?: { quantity?: number; unitPrice?: number; price?: number }[]) {
+  if (!products) return 0;
+  return products.reduce((acc, p) => acc + (typeof p.price === "number" ? p.price : (p.unitPrice || 0) * (p.quantity || 0)), 0);
+}
+
+type AccountDoc = {
+  id: string;
+  amount?: number;
+  type?: "income" | "expense";
+  description?: string;
+  status?: string; // Paid/Unpaid
+  transactionDate?: Date | Timestamp | any;
+};
 
 /* ----------------------------- Helpers ------------------------------ */
 
