@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -57,7 +57,7 @@ type Txn = {
 const PAGE_SIZE = 20;
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "admin";
 
-export default function OrdersPage() {
+function OrdersPageInner() {
   const searchParams = useSearchParams();
   // filters / ui
   const [search, setSearch] = useState("");
@@ -1174,6 +1174,14 @@ export default function OrdersPage() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function OrdersPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen p-6 max-w-7xl mx-auto">Loading…</main>}>
+      <OrdersPageInner />
+    </Suspense>
   );
 }
 
