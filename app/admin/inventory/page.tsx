@@ -59,6 +59,7 @@ export default function InventoryPage() {
     colorIdx?: number;
     sizeKey?: string;
   } | null>(null);
+  const [openColors, setOpenColors] = useState<Record<string, boolean>>({});
 
   // Add product form
   const [npName, setNpName] = useState("");
@@ -547,7 +548,16 @@ export default function InventoryPage() {
                   {p.colors.map((c, cIdx) => (
                     <div key={`${p.id}-${c.color}`} className="border rounded-xl overflow-hidden">
                       <div className="flex items-center justify-between bg-gray-50 px-3 py-2">
-                        <div className="font-medium text-sm">{c.color}</div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            className="text-gray-600 hover:text-gray-900 text-xs"
+                            onClick={() => setOpenColors((prev)=>({ ...prev, [`${p.id}-${cIdx}`]: !prev[`${p.id}-${cIdx}`] }))}
+                            aria-label="Toggle color"
+                          >
+                            {openColors[`${p.id}-${cIdx}`] ? '▾' : '▸'}
+                          </button>
+                          <div className="font-medium text-sm">{c.color}</div>
+                        </div>
                         <div className="flex items-center gap-1">
                           <button
                             className="text-[11px] border px-2 py-1 rounded hover:bg-gray-100"
@@ -566,6 +576,7 @@ export default function InventoryPage() {
                         </div>
                       </div>
 
+                      {openColors[`${p.id}-${cIdx}`] && (
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm table-fixed">
                           <colgroup>
@@ -624,6 +635,7 @@ export default function InventoryPage() {
                           </tbody>
                         </table>
                       </div>
+                      )}
                     </div>
                   ))}
                 </div>
