@@ -175,6 +175,33 @@ function safeFormatDate(input: any, fmt = 'dd MMM yyyy') {
   } catch { return ''; }
 }
 
+// Page-level error boundary to prevent full-page crash overlay
+class PageBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch() {}
+  render() {
+    if (this.state.hasError) {
+      return (
+        <main className="min-h-screen px-6 py-8 max-w-3xl mx-auto">
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm text-center">
+            <h1 className="text-xl font-semibold mb-2">Accounting temporarily unavailable</h1>
+            <p className="text-gray-600 mb-4">Something went wrong while rendering this view. You can still navigate elsewhere.</p>
+            <div className="flex justify-center gap-2">
+              <a href="/admin" className="px-3 py-2 border border-[#bfa37a] rounded-lg text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white transition-colors">Back to Dashboard</a>
+              <button onClick={() => this.setState({ hasError: false })} className="px-3 py-2 border rounded-lg">Retry</button>
+            </div>
+          </div>
+        </main>
+      );
+    }
+    return this.props.children as any;
+  }
+}
+
 function KPI({ label, value, icon, trend, positive = true }: { label: string; value: string | number; icon: React.ReactNode; trend?: string; positive?: boolean; }) {
   return (
     <div className="bg-white rounded-2xl shadow p-4 flex items-center gap-3">
@@ -424,6 +451,7 @@ export default function AccountingPage() {
   /* ----------------------------- UI -------------------------------- */
 
   return (
+    <PageBoundary>
     <main className="min-h-screen px-6 py-8 max-w-7xl mx-auto space-y-8">
       {/* HEADER */}
       <header className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
@@ -708,6 +736,7 @@ export default function AccountingPage() {
         </div>
       </section>
     </main>
+    </PageBoundary>
   );
 }
 
