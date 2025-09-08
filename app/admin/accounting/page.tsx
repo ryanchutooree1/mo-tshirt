@@ -233,7 +233,13 @@ function StatusPill({ s }: { s: Invoice["status"] }) {
 /* ---------------------------- Main Page ---------------------------- */
 
 export default function AccountingPage() {
-  const today = new Date();
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const today = now ?? new Date();
   const yStart = new Date(today.getFullYear(), 0, 1);
   const yEnd = today;
 
@@ -458,7 +464,9 @@ export default function AccountingPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-semibold" style={{ fontFamily: 'var(--font-admin-serif)' }}>Accounting</h1>
-            <p className="text-gray-500 mt-1">Today • {format(new Date(), 'dd MMM yyyy')} • {format(new Date(), 'HH:mm')}</p>
+            <p className="text-gray-500 mt-1" suppressHydrationWarning>
+              Today • {now ? format(now, 'dd MMM yyyy') : ''} • {now ? format(now, 'HH:mm') : ''}
+            </p>
           </div>
           <div className="flex gap-2">
             <Link href="/admin/analytics" className="px-3 py-2 border border-[#bfa37a] rounded-lg text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white transition-colors">Reports</Link>
