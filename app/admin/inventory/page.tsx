@@ -115,9 +115,9 @@ export default function InventoryPage() {
 
   const productStatus = (p: Product) => {
     const { lowCount, outCount } = totals(p);
-    if (outCount > 0) return { badge: "🔴 Out of stock parts", tone: "text-red-600" };
-    if (lowCount > 0) return { badge: "🟠 Low stock", tone: "text-orange-600" };
-    return { badge: "🟢 Healthy", tone: "text-green-600" };
+    if (outCount > 0) return { label: "Out of stock", cls: "bg-rose-50 text-rose-700" };
+    if (lowCount > 0) return { label: "Low stock", cls: "bg-amber-50 text-amber-700" };
+    return { label: "In stock", cls: "bg-emerald-50 text-emerald-700" };
   };
 
   // ---------- Mutations ----------
@@ -281,18 +281,18 @@ export default function InventoryPage() {
               className="border rounded-lg px-3 py-2 w-64"
             />
           </div>
-          <label className="flex items-center gap-2 text-sm bg-white border rounded-lg px-3 py-2">
+          <label className="flex items-center gap-2 text-sm bg-white border rounded-lg px-3 py-2 hover:bg-gray-50">
             <input type="checkbox" checked={showLowOnly} onChange={(e) => setShowLowOnly(e.target.checked)} />
             Low stock
           </label>
-          <label className="flex items-center gap-2 text-sm bg-white border rounded-lg px-3 py-2">
+          <label className="flex items-center gap-2 text-sm bg-white border rounded-lg px-3 py-2 hover:bg-gray-50">
             <input type="checkbox" checked={showOutOnly} onChange={(e) => setShowOutOnly(e.target.checked)} />
             Out of stock
           </label>
-          <button onClick={exportCSV} className="ml-2 bg-gray-900 text-white rounded-lg px-3 py-2">
+          <button onClick={exportCSV} className="ml-2 border border-gray-300 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-50 active:bg-gray-100">
             ⬇️ Export CSV
           </button>
-          <button onClick={() => setShowAddProduct(true)} className="bg-orange-500 hover:bg-orange-600 text-white rounded-lg px-3 py-2">
+          <button onClick={() => setShowAddProduct(true)} className="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-lg px-3 py-2 shadow-sm">
             ➕ Add Product
           </button>
         </div>
@@ -317,15 +317,15 @@ export default function InventoryPage() {
                   )}
                 </div>
                 <div className="flex-1">
-                  <div className="flex items-baseline gap-2">
-                    <input
-                      defaultValue={p.productName}
-                      className="font-semibold text-lg outline-none"
+                    <div className="flex items-baseline gap-2">
+                      <input
+                        defaultValue={p.productName}
+                      className="font-semibold text-xl outline-none"
                       onBlur={(e) => e.target.value !== p.productName && editProductName(p.id, e.target.value)}
                     />
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${status.tone} bg-gray-100`}>{status.badge}</span>
+                    <span className={`text-xs px-2 py-1 rounded-full ${status.cls}`}>{status.label}</span>
                   </div>
-                  <div className="text-sm text-gray-600 mt-1">
+                  <div className="text-sm text-gray-500 mt-1">
                     Units: <strong>{totalUnits}</strong> • Stock value: <strong>{money(totalValue)}</strong>
                   </div>
                 </div>
@@ -335,7 +335,7 @@ export default function InventoryPage() {
                     type="number"
                     defaultValue={p.price ?? ""}
                     placeholder="0"
-                    className="border rounded-md px-2 py-1 w-28 text-right"
+                    className="border border-gray-300 rounded-md px-2 py-1 w-28 text-right bg-gray-50 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
                     onBlur={(e) => editProductPrice(p.id, e.target.value === "" ? "" : Number(e.target.value))}
                   />
                 </div>
@@ -349,16 +349,16 @@ export default function InventoryPage() {
                       <div className="font-medium">{c.color}</div>
                       <div className="flex items-center gap-2">
                         <button
-                          className="text-sm text-blue-600 hover:underline"
+                          className="text-sm border border-gray-300 text-gray-700 px-2 py-1 rounded-md hover:bg-gray-50 active:bg-gray-100"
                           onClick={() => setShowBulkModal({ productId: p.id, colorIdx: cIdx })}
                         >
-                          ✎ Bulk edit
+                          ✎ Edit
                         </button>
                         <button
-                          className="text-sm text-red-600 hover:underline"
+                          className="text-sm border border-rose-300 text-rose-700 px-2 py-1 rounded-md hover:bg-rose-50 active:bg-rose-100"
                           onClick={() => setConfirmDelete({ scope: "color", productId: p.id, colorIdx: cIdx })}
                         >
-                          Delete color
+                          🗑 Delete
                         </button>
                       </div>
                     </div>
@@ -408,10 +408,10 @@ export default function InventoryPage() {
                                   </td>
                                   <td className="px-3 py-2 text-right align-middle">
                                     <button
-                                      className="text-red-600 hover:underline"
+                                      className="border border-rose-300 text-rose-700 px-2 py-1 rounded-md hover:bg-rose-50 active:bg-rose-100"
                                       onClick={() => setConfirmDelete({ scope: "size", productId: p.id, colorIdx: cIdx, sizeKey: size })}
                                     >
-                                      Delete
+                                      🗑 Delete
                                     </button>
                                   </td>
                                 </tr>
@@ -426,7 +426,7 @@ export default function InventoryPage() {
                 {/* Add color/size */}
                 <div className="flex justify-end">
                   <button
-                    className="bg-blue-600 text-white rounded-lg px-3 py-2"
+                    className="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-lg px-3 py-2 shadow-sm"
                     onClick={() => {
                       setShowColorModal({ productId: p.id });
                       setExpanded(p.id);
@@ -440,16 +440,16 @@ export default function InventoryPage() {
               {/* Footer actions */}
               <div className="px-4 pb-4 flex items-center justify-between">
                 <button
-                  className="text-gray-600 hover:underline"
+                  className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md hover:bg-gray-50 active:bg-gray-100"
                   onClick={() => setExpanded(expanded === p.id ? null : p.id)}
                 >
                   {expanded === p.id ? "Collapse" : "Expand details"}
                 </button>
                 <button
-                  className="text-red-600 hover:underline"
+                  className="border border-rose-300 text-rose-700 px-3 py-1.5 rounded-md hover:bg-rose-50 active:bg-rose-100"
                   onClick={() => setConfirmDelete({ scope: "product", productId: p.id })}
                 >
-                  Delete product
+                  🗑 Delete product
                 </button>
               </div>
             </div>
