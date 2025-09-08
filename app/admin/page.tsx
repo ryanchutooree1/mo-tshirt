@@ -229,25 +229,25 @@ export default function OwnerDashboard() {
     return "✅ Systems normal. Keep compounding.";
   }, [pendingOrders, deliveredToday, aov, progressPct, lowStock]);
 
-  if (loading) return <main className="min-h-screen bg-slate-950 p-6 text-slate-200">Loading dashboard...</main>;
+  if (loading) return <main className="min-h-screen bg-white p-6 text-[#1a1a1a]">Loading dashboard...</main>;
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 sm:px-6 py-6 sm:py-8 text-slate-200">
+    <main className="min-h-screen bg-white px-4 sm:px-6 py-6 sm:py-8 text-[#1a1a1a]">
       <div className="max-w-7xl mx-auto space-y-6">
       {/* HERO */}
-      <header className="bg-slate-900/80 border border-slate-800 text-white rounded-2xl p-6 sm:p-7 shadow-xl backdrop-blur">
+      <header className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-7 shadow-sm">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight">MO T-SHIRT — Owner Dashboard</h1>
-          <p className="mt-2 text-sm text-slate-300">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-admin-serif)" }}>MO T-SHIRT — Owner Dashboard</h1>
+          <p className="mt-2 text-sm text-gray-600">
             {formattedDate} • Primary: <span className="text-blue-400 font-semibold">{numerologyToday.primary}</span> • Secondary: <span className="text-emerald-400 font-semibold">{numerologyToday.secondary}</span>
           </p>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-gray-500">
             Tomorrow ({tomorrowCalc.dateStr}) • Primary: <span className="text-blue-300 font-medium">{tomorrowCalc.primary}</span> • Secondary: <span className="text-emerald-300 font-medium">{tomorrowCalc.secondary}</span>
           </p>
         </div>
         <div className="text-right mt-4 sm:mt-0">
-          <div className="text-xs uppercase tracking-wide text-slate-400">Local time</div>
-          <div className="text-2xl sm:text-3xl font-extrabold text-blue-400">{timeString}</div>
+          <div className="text-xs uppercase tracking-wide text-gray-500">Local time</div>
+          <div className="text-2xl sm:text-3xl font-semibold text-[#1a1a1a]" style={{ fontFamily: "var(--font-admin-serif)" }}>{timeString}</div>
         </div>
       </header>
 
@@ -264,13 +264,13 @@ export default function OwnerDashboard() {
           const Icon = s.icon;
           return (
             <Link key={idx} href={s.href || "#"} className="group">
-              <div className="bg-slate-900/60 border border-slate-800 shadow-lg rounded-xl p-4 flex items-center gap-3 group-hover:border-blue-500/50 group-hover:bg-slate-900/70 transition-colors">
-                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/15">
+              <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-4 flex items-center gap-3 transition-all hover:shadow-md">
+                <div className="p-2 rounded-lg bg-[#f5f5f5] text-[#1a1a1a]">
                   <Icon className="w-5 h-5" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-xs uppercase tracking-wide text-slate-400">{s.label}</p>
-                  <h2 className="text-xl font-extrabold text-slate-100">{s.value}</h2>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">{s.label}</p>
+                  <h2 className="text-xl font-semibold text-[#1a1a1a]" style={{ fontFamily: "var(--font-admin-serif)" }}>{s.value}</h2>
                 </div>
               </div>
             </Link>
@@ -279,22 +279,22 @@ export default function OwnerDashboard() {
       </section>
 
       {/* INSIGHT */}
-      <section className="bg-blue-600 text-white rounded-xl p-4 shadow-lg">
+      <section className="bg-[#bfa37a] text-white rounded-xl p-4 shadow-sm">
         <div className="flex items-start gap-3">
           <div className="shrink-0"><Info className="w-5 h-5" /></div>
           <div>
-            <div className="text-sm font-semibold opacity-90">Smart Insight</div>
-            <div className="mt-0.5 font-medium">{insight}</div>
+            <div className="text-sm font-semibold opacity-90" style={{ fontFamily: "var(--font-admin-serif)" }}>Smart Insight</div>
+            <div className="mt-0.5">{insight}</div>
           </div>
         </div>
       </section>
 
       {/* Daily Checklist */}
-      <section className="bg-slate-900/60 border border-slate-800 shadow-lg p-4 rounded-xl">
+      <section className="bg-white border border-gray-200 shadow-sm p-4 rounded-xl">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h2 className="text-lg font-bold text-slate-100">Daily Checklist</h2>
-            <p className="text-xs text-slate-400">Streak: <span className="text-emerald-400 font-semibold">{streak}</span> day{streak === 1 ? '' : 's'}</p>
+            <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-admin-serif)" }}>Daily Checklist</h2>
+            <p className="text-xs text-gray-500">Streak: <span className="text-emerald-600 font-semibold">{streak}</span> day{streak === 1 ? '' : 's'}</p>
           </div>
           <div className="flex items-center gap-2">
             <input
@@ -302,9 +302,9 @@ export default function OwnerDashboard() {
               onChange={(e) => setNewTask(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') addTask(); }}
               placeholder="Add a task..."
-              className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              className="bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-[#1a1a1a] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#bfa37a]/50"
             />
-            <button onClick={addTask} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm flex items-center gap-1">
+            <button onClick={addTask} className="px-3 py-1.5 rounded-lg text-sm flex items-center gap-1 border border-[#bfa37a] text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white transition-colors">
               <Plus className="w-4 h-4" /> Add
             </button>
           </div>
@@ -312,13 +312,13 @@ export default function OwnerDashboard() {
 
         {/* Progress bar */}
         <div className="mb-3">
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
             <span>Progress</span>
-            <span className="text-slate-300 font-medium">{progressPct}%</span>
+            <span className="text-gray-700 font-medium">{progressPct}%</span>
           </div>
-          <div className="w-full h-3 rounded-full bg-slate-800 overflow-hidden">
+          <div className="w-full h-3 rounded-full bg-[#f0f0f0] overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all"
+              className="h-full bg-gradient-to-r from-[#bfa37a] to-[#d8c6a3] transition-all"
               style={{ width: `${progressPct}%` }}
             />
           </div>
@@ -327,19 +327,19 @@ export default function OwnerDashboard() {
         {/* Task list */}
         <ul className="divide-y divide-slate-800">
           {tasks.length === 0 && (
-            <li className="text-sm text-slate-400 py-2">No tasks yet. Add your first task above.</li>
+            <li className="text-sm text-gray-500 py-2">No tasks yet. Add your first task above.</li>
           )}
           {tasks.map((t, idx) => (
             <li key={idx} className="flex items-center justify-between py-2">
               <button onClick={() => toggleTask(idx)} className="flex items-center gap-3 text-left group">
                 {t.completed ? (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                 ) : (
-                  <Circle className="w-5 h-5 text-slate-500 group-hover:text-slate-300" />
+                  <Circle className="w-5 h-5 text-gray-400 group-hover:text-gray-600" />
                 )}
-                <span className={t.completed ? "line-through text-slate-500" : "text-slate-200"}>{t.title}</span>
+                <span className={t.completed ? "line-through text-gray-500" : "text-[#1a1a1a]"}>{t.title}</span>
               </button>
-              <button onClick={() => removeTask(idx)} className="text-slate-400 hover:text-red-400">
+              <button onClick={() => removeTask(idx)} className="text-gray-400 hover:text-red-600 transition-colors">
                 <Trash2 className="w-4 h-4" />
               </button>
             </li>
@@ -348,12 +348,12 @@ export default function OwnerDashboard() {
       </section>
 
       {/* Latest Orders */}
-      <section className="bg-slate-900/60 border border-slate-800 shadow-lg p-4 rounded-xl">
-        <h2 className="text-lg font-bold mb-4 text-slate-100">Latest Orders</h2>
+      <section className="bg-white border border-gray-200 shadow-sm p-4 rounded-xl">
+        <h2 className="text-lg font-semibold mb-4" style={{ fontFamily: "var(--font-admin-serif)" }}>Latest Orders</h2>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-slate-200">
+          <table className="w-full text-sm text-[#1a1a1a]">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-900/80">
+              <tr className="border-b border-gray-200 bg-[#f5f5f5]">
                 <th className="text-left py-2 px-2">Client</th>
                 <th className="text-left py-2 px-2">Amount</th>
                 <th className="text-left py-2 px-2">Status</th>
@@ -362,7 +362,7 @@ export default function OwnerDashboard() {
             </thead>
             <tbody>
               {latestOrders.map((order, idx) => (
-                <tr key={idx} className="border-b border-slate-800 hover:bg-slate-800/40">
+                <tr key={idx} className="border-b border-gray-200 hover:bg-[#f5f5f5]">
                   <td className="py-2 px-2">{order.client}</td>
                   <td className="py-2 px-2">Rs {order.amount}</td>
                   <td className="py-2 px-2">{order.status}</td>
@@ -375,18 +375,18 @@ export default function OwnerDashboard() {
       </section>
 
       {/* Inventory Snapshot */}
-      <section className="bg-slate-900/60 border border-slate-800 shadow-lg p-4 rounded-xl">
+      <section className="bg-white border border-gray-200 shadow-sm p-4 rounded-xl">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold text-slate-100">Inventory Snapshot</h2>
+          <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-admin-serif)" }}>Inventory Snapshot</h2>
           <div className="flex items-center gap-2">
             <input
               placeholder="Search product..."
               value={invSearch}
               onChange={(e) => setInvSearch(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              className="bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-[#1a1a1a] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#bfa37a]/50"
             />
             {lowStock.length > 0 && (
-              <div className="text-xs px-3 py-1.5 bg-red-500/15 text-red-300 border border-red-500/30 rounded-full">
+              <div className="text-xs px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-full">
                 Low: {lowStock.join(", ")}
               </div>
             )}
@@ -398,14 +398,14 @@ export default function OwnerDashboard() {
             (acc, c) => acc + Object.values(c.sizes || {}).reduce((a, b) => a + (b || 0), 0), 0
           );
           return (
-            <div key={p.id} className="border border-slate-800 bg-slate-900/40 rounded-xl mb-3 overflow-hidden">
+            <div key={p.id} className="border border-gray-200 bg-white rounded-xl mb-3 overflow-hidden shadow-sm">
               {/* Product row */}
               <div
                 onClick={() => setExpandedProduct(expandedProduct === p.id ? null : p.id)}
-                className={`cursor-pointer flex justify-between px-3 py-2 ${expandedProduct === p.id ? "bg-slate-800/60" : "bg-slate-900/60"} hover:bg-slate-800/60 transition-colors`}
+                className={`cursor-pointer flex justify-between px-3 py-2 ${expandedProduct === p.id ? "bg-[#f5f5f5]" : "bg-white"} hover:bg-[#f5f5f5] transition-colors`}
               >
-                <span className="font-medium text-slate-100">{p.productName}</span>
-                <span className={totalUnits < 10 ? "text-red-300 font-semibold" : "text-slate-300"}>
+                <span className="font-medium text-[#1a1a1a]">{p.productName}</span>
+                <span className={totalUnits < 10 ? "text-red-700 font-semibold" : "text-gray-600"}>
                   {totalUnits} units
                 </span>
               </div>
@@ -416,13 +416,13 @@ export default function OwnerDashboard() {
                   {p.colors.map((c, cIdx) => {
                     const colorTotal = Object.values(c.sizes || {}).reduce((a, b) => a + (b || 0), 0);
                     return (
-                      <div key={cIdx} className="border-t border-slate-800">
+                      <div key={cIdx} className="border-t border-gray-200">
                         <div
                           onClick={() => setExpandedColor(expandedColor === p.id+c.color ? null : p.id+c.color)}
-                          className="cursor-pointer flex justify-between px-3 py-2 hover:bg-slate-800/40"
+                          className="cursor-pointer flex justify-between px-3 py-2 hover:bg-[#f5f5f5]"
                         >
-                          <span className="text-slate-200">• {c.color}</span>
-                          <span className={colorTotal < 10 ? "text-red-300 font-semibold" : "text-slate-300"}>
+                          <span className="text-[#1a1a1a]">• {c.color}</span>
+                          <span className={colorTotal < 10 ? "text-red-700 font-semibold" : "text-gray-600"}>
                             {colorTotal} units
                           </span>
                         </div>
@@ -430,9 +430,9 @@ export default function OwnerDashboard() {
                         {/* Expand sizes */}
                         {expandedColor === p.id+c.color && (
                           <div className="ml-4 mr-2 overflow-x-auto">
-                            <table className="mb-2 text-sm min-w-[280px] text-slate-200">
+                            <table className="mb-2 text-sm min-w-[280px] text-[#1a1a1a]">
                               <thead>
-                                <tr className="border-b border-slate-800">
+                                <tr className="border-b border-gray-200">
                                   <th className="pr-4 text-left">Size</th>
                                   <th className="text-left">Qty</th>
                                 </tr>
@@ -441,7 +441,7 @@ export default function OwnerDashboard() {
                                 {Object.entries(c.sizes || {}).map(([size, qty]) => (
                                   <tr key={size}>
                                     <td className="py-1">{size}</td>
-                                    <td className={qty < 10 ? "text-red-300 font-semibold" : "text-slate-300"}>{qty}</td>
+                                    <td className={qty < 10 ? "text-red-700 font-semibold" : "text-gray-600"}>{qty}</td>
                                   </tr>
                                 ))}
                               </tbody>

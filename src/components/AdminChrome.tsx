@@ -37,16 +37,16 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
   }, [open]);
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-30 border-b shadow-sm bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
-          {/* Mobile toggle */}
+    <div className="min-h-screen bg-white text-[#1a1a1a]">
+      {/* Mobile top bar */}
+      <div className="md:hidden sticky top-0 z-40 border-b border-gray-200 bg-white/90 backdrop-blur">
+        <div className="px-4 py-3 flex items-center justify-between">
           <button
             type="button"
             aria-label="Open menu"
             aria-expanded={open}
             onClick={() => setOpen((s) => !s)}
-            className="md:hidden inline-flex items-center justify-center rounded-md p-2 text-white hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            className="inline-flex items-center justify-center rounded-md p-2 text-[#1a1a1a] hover:bg-[#f5f5f5]"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
               {open ? (
@@ -56,36 +56,48 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
               )}
             </svg>
           </button>
-
-          <div className="font-extrabold tracking-tight">MO Admin</div>
-          <nav className="hidden md:flex items-center gap-2 ml-4">
-            {nav.map((n) => {
-              const active = pathname === n.href || (n.href !== "/admin" && pathname.startsWith(n.href));
-              return (
-                <Link
-                  key={n.href}
-                  href={n.href}
-                  className={`px-3 py-1.5 rounded-lg text-sm border transition ${
-                    active
-                      ? "bg-white text-slate-900 border-white"
-                      : "border-white/30 text-white/90 hover:bg-white/10"
-                  }`}
-                >
-                  {n.label}
-                </Link>
-              );
-            })}
-          </nav>
-          <div className="ml-auto flex items-center gap-2">
-            <button onClick={logout} className="px-3 py-1.5 rounded-lg text-sm border border-white/40 hover:bg-white/10">
-              Logout
-            </button>
-          </div>
+          <div className="text-lg font-semibold" style={{ fontFamily: "var(--font-admin-serif)" }}>MO Admin</div>
+          <div />
         </div>
-        {/* Mobile menu panel */}
-        {open && (
-          <div className="md:hidden border-t border-white/10 bg-slate-900/95 backdrop-blur supports-[backdrop-filter]:bg-slate-900/80">
-            <nav className="max-w-7xl mx-auto px-4 py-3 grid grid-cols-1 gap-2" aria-label="Mobile Admin">
+      </div>
+
+      {/* Sidebar */}
+      <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 border-r border-gray-200 bg-white px-4 py-6 flex-col">
+        <div className="px-1">
+          <div className="text-2xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-admin-serif)" }}>MO Admin</div>
+          <div className="mt-1 text-sm text-gray-500">Operations</div>
+        </div>
+        <nav className="mt-6 space-y-1 flex-1">
+          {nav.map((n) => {
+            const active = pathname === n.href || (n.href !== "/admin" && pathname.startsWith(n.href));
+            return (
+              <Link
+                key={n.href}
+                href={n.href}
+                className={`block px-3 py-2 rounded-lg transition-colors border ${active ? "border-[#bfa37a] bg-[#f5f5f5]" : "border-transparent hover:border-[#e5e5e5] hover:bg-[#f5f5f5]"}`}
+              >
+                {n.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="pt-4 border-t border-gray-200">
+          <button
+            onClick={logout}
+            className="w-full px-3 py-2 rounded-lg text-sm border border-[#bfa37a] text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white transition-colors"
+          >
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile drawer */}
+      {open && (
+        <div className="md:hidden fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} />
+          <div className="absolute inset-y-0 left-0 w-72 bg-white border-r border-gray-200 p-5 flex flex-col">
+            <div className="text-xl font-semibold" style={{ fontFamily: "var(--font-admin-serif)" }}>MO Admin</div>
+            <nav className="mt-5 space-y-1 flex-1">
               {nav.map((n) => {
                 const active = pathname === n.href || (n.href !== "/admin" && pathname.startsWith(n.href));
                 return (
@@ -93,27 +105,27 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
                     key={n.href}
                     href={n.href}
                     onClick={() => setOpen(false)}
-                    className={`px-3 py-2 rounded-lg text-sm border transition ${
-                      active
-                        ? "bg-white text-slate-900 border-white"
-                        : "border-white/30 text-white/90 hover:bg-white/10"
-                    }`}
+                    className={`block px-3 py-2 rounded-lg transition-colors border ${active ? "border-[#bfa37a] bg-[#f5f5f5]" : "border-transparent hover:border-[#e5e5e5] hover:bg-[#f5f5f5]"}`}
                   >
                     {n.label}
                   </Link>
                 );
               })}
-              <button
-                onClick={() => { setOpen(false); logout(); }}
-                className="px-3 py-2 rounded-lg text-sm border border-white/40 text-white/90 hover:bg-white/10 text-left"
-              >
-                Logout
-              </button>
             </nav>
+            <button
+              onClick={() => { setOpen(false); logout(); }}
+              className="w-full px-3 py-2 rounded-lg text-sm border border-[#bfa37a] text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white transition-colors"
+            >
+              Logout
+            </button>
           </div>
-        )}
-      </header>
-      <div className="pt-2">{children}</div>
+        </div>
+      )}
+
+      {/* Content */}
+      <main className="md:ml-64">
+        <div className="p-4 sm:p-6 lg:p-8 bg-[#ffffff] min-h-screen">{children}</div>
+      </main>
     </div>
   );
 }
