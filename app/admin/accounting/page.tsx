@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, orderBy, query, Timestamp, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, orderBy, query, Timestamp, where } from "firebase/firestore";
 import {
   LineChart,
   Line,
@@ -134,6 +134,14 @@ type AccountDoc = {
   transactionDate?: Date | Timestamp | any;
 };
 
+type BudgetDoc = {
+  year: number;
+  quarter: 1 | 2 | 3 | 4;
+  revenue?: number;
+  cogs?: number;
+  opex?: number;
+};
+
 /* ----------------------------- Helpers ------------------------------ */
 
 const currency = (n: number) => `Rs ${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
@@ -242,12 +250,17 @@ export default function AccountingPage() {
   const today = now ?? new Date();
   const yStart = new Date(today.getFullYear(), 0, 1);
   const yEnd = today;
+  const quarter = Math.floor(today.getMonth() / 3) + 1 as 1|2|3|4;
+  const qStart = new Date(today.getFullYear(), (quarter-1)*3, 1);
+  const qEnd = new Date(today.getFullYear(), (quarter*3)-1, 1);
+  qEnd.setMonth(qEnd.getMonth()+1); qEnd.setDate(0); // end of quarter
 
   // Firestore-backed rows
   const [txnRows, setTxnRows] = useState<TxnDoc[]>([]);
   const [accRows, setAccRows] = useState<AccountDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [budget, setBudget] = useState<BudgetDoc | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -269,15 +282,25 @@ export default function AccountingPage() {
           where("transactionDate", "<=", Timestamp.fromDate(new Date(yEnd.getFullYear(), yEnd.getMonth(), yEnd.getDate(), 23,59,59))),
           orderBy("transactionDate", "desc")
         );
-        const [sTxn, sAcc] = await Promise.allSettled([getDocs(qTxn), getDocs(qAcc)]);
+        // Try to load budget if present (by doc id `YYYY-Q#` in `budget` collection)
+        const budgetId = `${yStart.getFullYear()}-Q${quarter}`;
+        const [sTxn, sAcc, sBudget] = await Promise.allSettled([
+          getDocs(qTxn),
+          getDocs(qAcc),
+          getDoc(doc(db, 'budget', budgetId)),
+        ]);
 
         if (cancelled) return;
 
         const txns: TxnDoc[] = sTxn.status === 'fulfilled' ? sTxn.value.docs.map(d => ({ id: d.id, ...(d.data() as any) })) : [];
         const accs: AccountDoc[] = sAcc.status === 'fulfilled' ? sAcc.value.docs.map(d => ({ id: d.id, ...(d.data() as any) })) : [];
+        const bud: BudgetDoc | null = (sBudget.status === 'fulfilled' && sBudget.value.exists())
+          ? ({ id: sBudget.value.id, ...(sBudget.value.data() as any) } as any)
+          : null;
 
         setTxnRows(txns);
         setAccRows(accs);
+        setBudget(bud);
       } catch (e: any) {
         if (!cancelled) setError(e?.message || 'Failed to load accounting data');
       } finally {
@@ -453,6 +476,26 @@ export default function AccountingPage() {
     return Array.from(map.entries()).map(([name, value]) => ({ name, value }))
       .sort((a,b)=>b.value-a.value).slice(0,8);
   }, [accRows]);
+
+  // Quarter actuals (revenue, cogs, opex, net)
+  const qActuals = useMemo(() => {
+    const inQuarter = (d: any) => {
+      const dt = (d instanceof Timestamp) ? d.toDate() : new Date(d || Date.now());
+      return dt >= qStart && dt <= new Date(qEnd.getFullYear(), qEnd.getMonth(), qEnd.getDate(), 23,59,59);
+    };
+    let revenue = 0, cogs = 0, opex = 0;
+    accRows.forEach(r => {
+      const dt = r.transactionDate as any;
+      if (!inQuarter(dt)) return;
+      const amt = Number(r.amount||0);
+      if ((r.type||'') === 'income') revenue += amt;
+      if ((r.type||'') === 'expense') {
+        const desc = String(r.description||'');
+        if (/cogs|cost\s*of\s*goods/i.test(desc)) cogs += amt; else opex += amt;
+      }
+    });
+    return { revenue, cogs, opex, net: revenue - cogs - opex };
+  }, [accRows, qStart.getTime(), qEnd.getTime()]);
 
   /* ----------------------------- UI -------------------------------- */
 
@@ -722,26 +765,32 @@ export default function AccountingPage() {
       <section className="bg-white rounded-2xl shadow p-4">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-lg font-semibold">Budget vs Actual (Quarter)</h3>
-          <div className="text-xs text-gray-500">Q3 • 2025</div>
+          <div className="text-xs text-gray-500">Q{quarter} • {yStart.getFullYear()}</div>
         </div>
-        <div className="grid md:grid-cols-4 gap-3 text-sm">
-          {[
-            { name: "Revenue", budget: 420000, actual: 440000 },
-            { name: "COGS", budget: 250000, actual: 248000 },
-            { name: "Operating Exp", budget: 140000, actual: 138500 },
-            { name: "Net Profit", budget: 30000, actual: 53500 },
-          ].map((r, i) => {
-            const diff = r.actual - r.budget;
-            const good = (r.name === "Revenue" || r.name === "Net Profit") ? diff >= 0 : diff <= 0;
-            return (
-              <div key={i} className="border rounded-xl p-3">
-                <div className="text-gray-500">{r.name}</div>
-                <div className="font-semibold">{currency(r.actual)} <span className="text-xs text-gray-500">(Budget {currency(r.budget)})</span></div>
-                <div className={classNames("text-xs mt-1", good?"text-emerald-700":"text-rose-700")}>{good?"Ahead":"Behind"} by {currency(Math.abs(diff))}</div>
-              </div>
-            );
-          })}
-        </div>
+        {budget ? (
+          <div className="grid md:grid-cols-4 gap-3 text-sm">
+            {([
+              { key: 'Revenue', actual: qActuals.revenue, budget: Number(budget.revenue||0) },
+              { key: 'COGS', actual: qActuals.cogs, budget: Number(budget.cogs||0) },
+              { key: 'Operating Exp', actual: qActuals.opex, budget: Number(budget.opex||0) },
+              { key: 'Net Profit', actual: qActuals.net, budget: Number((budget.revenue||0) - (budget.cogs||0) - (budget.opex||0)) },
+            ] as {key:string, actual:number, budget:number}[]).map((r, i) => {
+              const diff = r.actual - r.budget;
+              const good = (r.key === 'Revenue' || r.key === 'Net Profit') ? diff >= 0 : diff <= 0;
+              return (
+                <div key={i} className="border rounded-xl p-3">
+                  <div className="text-gray-500">{r.key}</div>
+                  <div className="font-semibold">{currency(r.actual)} <span className="text-xs text-gray-500">(Budget {currency(r.budget)})</span></div>
+                  <div className={classNames("text-xs mt-1", good?"text-emerald-700":"text-rose-700")}>{good?"Ahead":"Behind"} by {currency(Math.abs(diff))}</div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-sm text-gray-600">
+            No budget found for Q{quarter} {yStart.getFullYear()}. Add a document in collection <code className="px-1 bg-gray-100 rounded">budget</code> with id <code className="px-1 bg-gray-100 rounded">{`${yStart.getFullYear()}-Q${quarter}`}</code> and fields <code className="px-1 bg-gray-100 rounded">revenue</code>, <code className="px-1 bg-gray-100 rounded">cogs</code>, <code className="px-1 bg-gray-100 rounded">opex</code> to enable this section.
+          </div>
+        )}
       </section>
     </main>
     </PageBoundary>
