@@ -15,7 +15,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { format } from "date-fns";
-import { Info, TrendingUp, Package, RefreshCcw, Clock, Users, IndianRupee, Plus, Trash2, CheckCircle2, Circle } from "lucide-react";
+import { Info, TrendingUp, Package, RefreshCcw, Clock, Users, Plus, Trash2, CheckCircle2, Circle } from "lucide-react";
 import { useAdminMetrics } from "@/admin/AdminDataContext";
 
 // ---------- Types ----------
@@ -51,6 +51,15 @@ function calcNumerology(date: Date) {
 
 // ---------- Dashboard ----------
 export default function OwnerDashboard() {
+  // Local inline icon for Mauritian Rupees ("Rs")
+  const RsIcon = (props: any) => (
+    <span
+      className={`${props?.className || ""} inline-flex items-center justify-center font-semibold`}
+      style={{ fontFamily: "var(--font-admin-serif)" }}
+    >
+      Rs
+    </span>
+  );
   const adminId = "mo-owner";
   const global = useAdminMetrics();
   const todayIso = format(new Date(), "yyyy-MM-dd");
@@ -254,7 +263,7 @@ export default function OwnerDashboard() {
       {/* CEO SNAPSHOT */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
         {[
-          { label: "Today’s Revenue", value: `Rs ${(global?.todayRevenue ?? todayRevenue).toLocaleString()}`, icon: IndianRupee, href: "/admin/analytics?preset=7d" },
+          { label: "Today’s Revenue", value: `Rs ${(global?.todayRevenue ?? todayRevenue).toLocaleString()}`, icon: RsIcon, href: "/admin/analytics?preset=7d" },
           { label: "Orders Today", value: global?.ordersToday ?? todaysOrdersCount, icon: Package, href: "/admin/orders?range=today" },
           { label: "AOV Today", value: global?.aovToday ? `Rs ${(global?.aovToday ?? aov).toLocaleString()}` : (aov ? `Rs ${aov.toLocaleString()}` : "—"), icon: TrendingUp, href: "/admin/orders?range=today" },
           { label: "Pending Orders", value: global?.pendingOrders ?? pendingOrders, icon: Clock, href: "/admin/orders?status=Pending" },
