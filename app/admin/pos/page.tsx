@@ -72,6 +72,8 @@ export default function POSPage() {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [holdId, setHoldId] = useState<string | null>(null);
+  const [holds, setHolds] = useState<any[]>([]);
   const USER_NAME = 'mo-owner'; // if you want dynamic, pull from auth/session
 
   // ---------- Init: invoice + live products ----------
@@ -99,7 +101,12 @@ export default function POSPage() {
       }
     })();
 
-    return () => unsub();
+    const unsubHolds = onSnapshot(query(collection(db, 'posHolds')), snap => {
+      const list = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+      setHolds(list.sort((a,b)=> (b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).slice(0,20));
+    });
+
+    return () => { unsub(); unsubHolds(); };
   }, []);
 
   // ---------- Derived: colors/sizes for current product ----------
@@ -177,6 +184,64 @@ export default function POSPage() {
     alert('No customer found');
   };
 
+  // ---------- Hold System ----------
+  const saveHold = async () => {
+    if (!cart.length) return alert('Add items to cart before holding.');
+    try {
+      const ref = await addDoc(collection(db, 'posHolds'), {
+        customerName: customerName.trim(),
+        phone: phone.trim(),
+        address: address.trim(),
+        email: email.trim(),
+        items: cart,
+        total: cartTotal,
+        status: 'held',
+        createdAt: serverTimestamp(),
+        reservedBy: USER_NAME,
+      });
+      setHoldId(ref.id);
+      alert('Order put on hold. You can resume from the Holds list.');
+    } catch (e:any) {
+      alert(e?.message || 'Failed to hold');
+    }
+  };
+
+  const loadHold = (h: any) => {
+    setCustomerName(h.customerName || '');
+    setPhone(h.phone || '');
+    setAddress(h.address || '');
+    setEmail(h.email || '');
+    setCart(h.items || []);
+    setHoldId(h.id);
+    setStatus('In Process');
+    setPayment('');
+    setPartAmount('');
+    setDone(false);
+    setPdfUrl(null);
+  };
+
+  const releaseHold = async (h: any) => {
+    try {
+      for (const it of (h.items||[])) {
+        const ref = doc(db, 'products', it.productId);
+        await runTransaction(db, async (tx) => {
+          const snap = await tx.get(ref);
+          if (!snap.exists()) return;
+          const data = snap.data() as ProductDoc;
+          const idx = data.colors.findIndex(c => c.color === it.color);
+          if (idx < 0) return;
+          const cur = Number(data.colors[idx].sizes[it.size] || 0);
+          const copy = JSON.parse(JSON.stringify(data)) as ProductDoc;
+          copy.colors[idx].sizes[it.size] = cur + Number(it.quantity||0);
+          tx.update(ref, { colors: copy.colors });
+        });
+      }
+    } catch { /* ignore */ }
+    try { await updateDoc(doc(db, 'posHolds', h.id), { status: 'released' }); } catch {}
+    if (holdId === h.id) setHoldId(null);
+    alert('Hold released and stock restored.');
+  };
+
   const clearAll = () => {
     setCustomerName('');
     setPhone('');
@@ -193,6 +258,7 @@ export default function POSPage() {
     setPartAmount('');
     setPdfUrl(null);
     setDone(false);
+    setHoldId(null);
   };
 
   // ---------- Add item (with stock-safe decrement) ----------
@@ -334,14 +400,22 @@ export default function POSPage() {
       const txRef = await addDoc(collection(db, 'transactions'), txPayload);
 
       const total = cartTotal;
+      const incomeAmount = payment === 'Part Payment' ? Number(partAmount) : total;
       await setDoc(doc(db, 'account', txRef.id), {
         customerName: customerName.trim(),
         type: 'income',
-        amount: total,
-        description: `POS transaction for invoice #${invoice}`,
+        amount: incomeAmount,
+        description: payment === 'Part Payment'
+          ? `POS part-payment for invoice #${invoice}`
+          : `POS transaction for invoice #${invoice}`,
         transactionDate: serverTimestamp(),
-        status,
+        status: payment === 'Part Payment' ? 'Partially Paid' : 'Completed',
+        paymentMethod: payment,
       });
+
+      if (payment === 'Part Payment') {
+        await updateDoc(txRef, { dueAmount: Number(total) - Number(partAmount || 0) });
+      }
 
       // Increment invoice counter
       await updateDoc(doc(db, 'invoiceSettings', 'currentInvoice'), {
@@ -406,6 +480,31 @@ export default function POSPage() {
   return (
     <main className="min-h-screen px-6 py-8 max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">🧾 POS Transaction</h1>
+
+      {/* Holds bar */}
+      <div className="mb-4 flex flex-col gap-2">
+        <div className="flex gap-2 flex-wrap items-center">
+          <button onClick={saveHold} disabled={done || cart.length===0} className="px-3 py-2 border border-[#bfa37a] rounded-lg text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white disabled:opacity-60">Hold Current</button>
+          {holdId && <span className="text-sm text-gray-600">Current hold id: {holdId}</span>}
+        </div>
+        {holds.length > 0 && (
+          <div className="border rounded-xl p-3 bg-white">
+            <div className="text-sm font-semibold mb-2">Holds ({holds.length})</div>
+            <div className="flex gap-2 overflow-x-auto">
+              {holds.map(h => (
+                <div key={h.id} className="border rounded-lg px-3 py-2 text-sm bg-gray-50">
+                  <div className="font-medium truncate max-w-[160px]" title={h.customerName||'—'}>{h.customerName||'—'}</div>
+                  <div className="text-gray-600">{money(h.total||0)}</div>
+                  <div className="mt-1 flex gap-2">
+                    <button onClick={()=>loadHold(h)} className="px-2 py-0.5 border rounded">Resume</button>
+                    <button onClick={()=>releaseHold(h)} className="px-2 py-0.5 border rounded text-rose-700 border-rose-300">Release</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Invoice number */}
       <div className="mb-6">
