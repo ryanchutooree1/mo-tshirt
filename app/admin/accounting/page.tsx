@@ -461,8 +461,8 @@ export default function AccountingPage() {
             <p className="text-gray-500 mt-1">Today • {format(new Date(), 'dd MMM yyyy')} • {format(new Date(), 'HH:mm')}</p>
           </div>
           <div className="flex gap-2">
-            <Link href="/admin/reports" className="px-3 py-2 border border-[#bfa37a] rounded-lg text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white transition-colors">Reports</Link>
-            <Link href="/admin/accounting/settings" className="px-3 py-2 border border-[#bfa37a] rounded-lg text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white transition-colors">Settings</Link>
+            <Link href="/admin/analytics" className="px-3 py-2 border border-[#bfa37a] rounded-lg text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white transition-colors">Reports</Link>
+            <Link href="/admin" className="px-3 py-2 border border-[#bfa37a] rounded-lg text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white transition-colors">Settings</Link>
           </div>
         </div>
       </header>
