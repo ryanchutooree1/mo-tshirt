@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -21,8 +21,7 @@ type Product = {
   id: string;
   productName: string;
   imageUrl?: string;
-  price?: number;
-  archived?: boolean;
+  price?: number; // per-unit sell price (Rs)
   colors: Color[];
 };
 
@@ -30,12 +29,8 @@ type Product = {
 const money = (v: number) => `Rs ${Number(v || 0).toLocaleString()}`;
 const sum = (obj: Record<string, number> = {}) =>
   Object.values(obj).reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
-const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
+const DEFAULT_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
 const LOW_FALLBACK = 5;
-
-function deepClone<T>(v: T): T {
-  return JSON.parse(JSON.stringify(v));
-}
 
 // ---------- Page ----------
 export default function InventoryPage() {
@@ -46,15 +41,24 @@ export default function InventoryPage() {
   const [search, setSearch] = useState("");
   const [showLowOnly, setShowLowOnly] = useState(false);
   const [showOutOnly, setShowOutOnly] = useState(false);
-  const [showArchived, setShowArchived] = useState(false);
 
   // Modals
   const [showAddProduct, setShowAddProduct] = useState(false);
-  const [addColorTarget, setAddColorTarget] = useState<Product | null>(null);
+  const [showColorModal, setShowColorModal] = useState<{ productId: string } | null>(null);
+  const [showBulkModal, setShowBulkModal] = useState<{ productId: string; colorIdx: number } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ scope: "product"|"color"|"size"; productId: string; colorIdx?: number; sizeKey?: string } | null>(null);
 
-  // CSV import
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Forms
+  const [npName, setNpName] = useState("");
+  const [npImage, setNpImage] = useState("");
+  const [npPrice, setNpPrice] = useState<number | "">("");
+  const [ncColor, setNcColor] = useState("");
+  const [ncSizes, setNcSizes] = useState<Record<string, { qty: number | ""; min: number | "" }>>(
+    Object.fromEntries(DEFAULT_SIZES.map((s) => [s, { qty: "", min: "" }])) as unknown as Record<
+      string,
+      { qty: number | ""; min: number | "" }
+    >
+  );
 
   // Live data
   useEffect(() => {
@@ -66,15 +70,14 @@ export default function InventoryPage() {
     return () => unsub();
   }, []);
 
-  // Derived
+  // Filtering
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return products.filter((p) => {
-      if (!showArchived && p.archived) return false;
-      if (showArchived && !p.archived && term === "__archived_only__") return false;
       const matches = !term || p.productName.toLowerCase().includes(term);
       if (!matches) return false;
 
+      // derive low/out flags
       const allSizes = p.colors.flatMap((c) =>
         Object.entries(c.sizes).map(([k, v]) => {
           const min = c.minStock?.[k] ?? LOW_FALLBACK;
@@ -88,8 +91,9 @@ export default function InventoryPage() {
       if (showLowOnly && !hasLow) return false;
       return true;
     });
-  }, [products, search, showLowOnly, showOutOnly, showArchived]);
+  }, [products, search, showLowOnly, showOutOnly]);
 
+  // ---------- Derived metrics ----------
   const totals = (p: Product) => {
     const totalUnits = p.colors.reduce((acc, c) => acc + sum(c.sizes), 0);
     const totalValue = (p.price || 0) * totalUnits;
@@ -109,66 +113,97 @@ export default function InventoryPage() {
     return { totalUnits, totalValue, lowCount, outCount };
   };
 
-  const overall = useMemo(() => {
-    let totalUnits = 0, totalValue = 0, low = 0, out = 0;
-    filtered.forEach((p) => {
-      const t = totals(p);
-      totalUnits += t.totalUnits;
-      totalValue += t.totalValue;
-      low += t.lowCount;
-      out += t.outCount;
-    });
-    return { totalUnits, totalValue, low, out };
-  }, [filtered]);
-
   const productStatus = (p: Product) => {
     const { lowCount, outCount } = totals(p);
-    if (outCount > 0) return { label: "Out", cls: "bg-rose-100 text-rose-700" };
-    if (lowCount > 0) return { label: "Low", cls: "bg-amber-100 text-amber-700" };
-    return { label: "OK", cls: "bg-emerald-100 text-emerald-700" };
+    if (outCount > 0) return { label: "Out of stock", cls: "bg-rose-50 text-rose-700" };
+    if (lowCount > 0) return { label: "Low stock", cls: "bg-amber-50 text-amber-700" };
+    return { label: "In stock", cls: "bg-emerald-50 text-emerald-700" };
   };
 
   // ---------- Mutations ----------
-  async function updatePrice(productId: string, newPrice: number) {
-    const ref = doc(db, "products", productId);
-    await updateDoc(ref, { price: Number.isFinite(newPrice) ? newPrice : 0 });
-  }
+  const addProduct = async () => {
+    if (!npName.trim()) return;
+    await addDoc(collection(db, "products"), {
+      productName: npName.trim(),
+      imageUrl: npImage.trim() || null,
+      price: npPrice === "" ? null : Number(npPrice),
+      colors: [],
+    });
+    setNpName("");
+    setNpImage("");
+    setNpPrice("");
+    setShowAddProduct(false);
+  };
 
-  async function updateSizeQty(productId: string, colorIdx: number, sizeKey: string, newQty: number) {
+  const editProductPrice = async (productId: string, price: number | "") => {
+    const ref = doc(db, "products", productId);
+    await updateDoc(ref, { price: price === "" ? null : Number(price) });
+  };
+
+  const editProductName = async (productId: string, newName: string) => {
+    if (!newName.trim()) return;
+    const ref = doc(db, "products", productId);
+    await updateDoc(ref, { productName: newName.trim() });
+  };
+
+  const addColorOrSizes = async (productId: string) => {
+    const product = products.find((p) => p.id === productId);
+    if (!product || !ncColor.trim()) return;
+
+    const ref = doc(db, "products", productId);
+    const copy: Product = JSON.parse(JSON.stringify(product));
+    const idx = copy.colors.findIndex((c) => c.color.toLowerCase() === ncColor.trim().toLowerCase());
+
+    const sizesObj: SizeMap = {};
+    const minObj: MinMap = {};
+    Object.entries(ncSizes).forEach(([k, v]) => {
+      if (v.qty !== "" || v.min !== "") {
+        sizesObj[k] = Number(v.qty || 0);
+        if (v.min !== "") minObj[k] = Number(v.min);
+      }
+    });
+
+    if (idx >= 0) {
+      // merge into existing color
+      copy.colors[idx].sizes = { ...copy.colors[idx].sizes, ...sizesObj };
+      copy.colors[idx].minStock = { ...(copy.colors[idx].minStock || {}), ...minObj };
+    } else {
+      copy.colors.push({ color: ncColor.trim(), sizes: sizesObj, minStock: Object.keys(minObj).length ? minObj : undefined });
+    }
+
+    await updateDoc(ref, { colors: copy.colors });
+    // reset form
+    setNcColor("");
+    setNcSizes(
+      Object.fromEntries(DEFAULT_SIZES.map((s) => [s, { qty: "", min: "" }])) as unknown as Record<
+        string,
+        { qty: number | ""; min: number | "" }
+      >
+    );
+    setShowColorModal(null);
+    setExpanded(productId);
+  };
+
+  const updateQty = async (productId: string, colorIdx: number, sizeKey: string, qty: number) => {
     const product = products.find((p) => p.id === productId);
     if (!product) return;
-    const colors = deepClone(product.colors);
-    colors[colorIdx].sizes[sizeKey] = Math.max(0, Math.floor(newQty));
     const ref = doc(db, "products", productId);
+    const colors = JSON.parse(JSON.stringify(product.colors)) as Color[];
+    colors[colorIdx].sizes[sizeKey] = Math.max(0, Number.isFinite(qty) ? qty : 0);
     await updateDoc(ref, { colors });
-  }
+  };
 
-  async function addColorToProduct(product: Product, color: string, initialSizes: SizeMap) {
-    const colors = deepClone(product.colors);
-    colors.push({ color, sizes: initialSizes });
-    await updateDoc(doc(db, "products", product.id), { colors });
-  }
+  const updateMin = async (productId: string, colorIdx: number, sizeKey: string, min: number) => {
+    const product = products.find((p) => p.id === productId);
+    if (!product) return;
+    const ref = doc(db, "products", productId);
+    const colors = JSON.parse(JSON.stringify(product.colors)) as Color[];
+    colors[colorIdx].minStock = colors[colorIdx].minStock || {};
+    colors[colorIdx].minStock![sizeKey] = Math.max(0, Number.isFinite(min) ? min : 0);
+    await updateDoc(ref, { colors });
+  };
 
-  async function duplicateProduct(product: Product) {
-    const copy = deepClone(product);
-    delete (copy as any).id;
-    copy.productName = `${product.productName} Copy`;
-    await addDoc(collection(db, "products"), copy);
-  }
-
-  async function toggleArchive(product: Product) {
-    await updateDoc(doc(db, "products", product.id), { archived: !product.archived });
-  }
-
-  async function resetStock(product: Product) {
-    const colors = deepClone(product.colors).map((c) => ({
-      ...c,
-      sizes: Object.fromEntries(Object.entries(c.sizes).map(([k]) => [k, 0])),
-    }));
-    await updateDoc(doc(db, "products", product.id), { colors });
-  }
-
-  async function deleteItem() {
+  const doDelete = async () => {
     if (!confirmDelete) return;
     const { scope, productId, colorIdx, sizeKey } = confirmDelete;
     const product = products.find((p) => p.id === productId);
@@ -178,7 +213,7 @@ export default function InventoryPage() {
     if (scope === "product") {
       await deleteDoc(ref);
     } else {
-      const colors = deepClone(product.colors);
+      const colors = JSON.parse(JSON.stringify(product.colors)) as Color[];
       if (scope === "color" && typeof colorIdx === "number") {
         colors.splice(colorIdx, 1);
         await updateDoc(ref, { colors });
@@ -190,473 +225,447 @@ export default function InventoryPage() {
       }
     }
     setConfirmDelete(null);
-  }
+  };
 
-  // ---------- CSV ----------
-  function exportCSV() {
-    // Columns: Product,Color,Size,Qty,Price
-    const rows: string[] = [];
-    rows.push(["Product","Color","Size","Qty","Price"].join(","));
-    for (const p of filtered) {
-      for (const c of p.colors) {
-        const sizes = Object.keys(c.sizes).sort((a,b)=>SIZES.indexOf(a)-SIZES.indexOf(b));
-        for (const s of sizes) {
-          rows.push([
-            csvCell(p.productName),
-            csvCell(c.color),
-            csvCell(s),
-            String(c.sizes[s] ?? 0),
-            String(p.price ?? 0),
-          ].join(","));
-        }
-      }
-    }
-    const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8" });
+  // Export CSV (filtered view)
+  const exportCSV = () => {
+    const rows: string[] = [
+      ["Product Name", "Color", "Size", "Qty", "Min", "Price (Rs)", "Total Stock Value (Rs)"].join(","),
+    ];
+
+    filtered.forEach((p) => {
+      const price = p.price || 0;
+      p.colors.forEach((c) => {
+        Object.entries(c.sizes).forEach(([size, qty]) => {
+          const min = c.minStock?.[size] ?? "";
+          const line = [
+            csv(p.productName),
+            csv(c.color),
+            csv(size),
+            String(qty),
+            String(min),
+            String(price),
+            String(qty * price),
+          ].join(",");
+          rows.push(line);
+        });
+      });
+    });
+
+    const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "inventory.csv";
+    a.download = "inventory_export.csv";
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
-  }
-  function csvCell(v: string){ return `"${String(v).replaceAll('"','""')}"`; }
-
-  async function handleImportCSV(file: File) {
-    const text = await file.text();
-    const lines = text.split(/\r?\n/).filter(Boolean);
-    // Expect header: Product,Color,Size,Qty,Price
-    const data = lines.slice(1).map((line) => {
-      const cells = parseCsvLine(line);
-      return {
-        productName: cells[0] || "",
-        color: cells[1] || "",
-        size: cells[2] || "",
-        qty: Number(cells[3] || 0),
-        price: Number(cells[4] || 0),
-      };
-    });
-
-    // Group by product
-    const group = new Map<string, { price?: number; colors: Map<string, Map<string, number>> }>();
-    for (const row of data) {
-      if (!group.has(row.productName)) group.set(row.productName, { colors: new Map() });
-      const g = group.get(row.productName)!;
-      if (Number.isFinite(row.price) && row.price > 0) g.price = row.price;
-      if (!g.colors.has(row.color)) g.colors.set(row.color, new Map());
-      g.colors.get(row.color)!.set(row.size, Math.max(0, Math.floor(row.qty)));
-    }
-
-    // Apply
-    for (const pName of group.keys()) {
-      const existing = products.find((x) => x.productName === pName);
-      const g = group.get(pName)!;
-
-      if (!existing) {
-        // Create new
-        const colors: Color[] = [];
-        for (const color of g.colors.keys()) {
-          const sizeMap: SizeMap = {};
-          for (const size of g.colors.get(color)!.keys()) {
-            sizeMap[size] = g.colors.get(color)!.get(size)!;
-          }
-          colors.push({ color, sizes: sizeMap });
-        }
-        await addDoc(collection(db, "products"), {
-          productName: pName,
-          price: g.price ?? 0,
-          colors,
-        });
-      } else {
-        // Update existing
-        const colors = deepClone(existing.colors);
-        for (const color of g.colors.keys()) {
-          const idx = colors.findIndex((c) => c.color === color);
-          const patch = g.colors.get(color)!;
-          if (idx === -1) {
-            const sizeMap: SizeMap = {};
-            for (const size of patch.keys()) sizeMap[size] = patch.get(size)!;
-            colors.push({ color, sizes: sizeMap });
-          } else {
-            const cur = colors[idx];
-            for (const size of patch.keys()) {
-              cur.sizes[size] = patch.get(size)!;
-            }
-          }
-        }
-        const upd: any = { colors };
-        if (g.price !== undefined) upd.price = g.price;
-        await updateDoc(doc(db, "products", existing.id), upd);
-      }
-    }
-  }
-
-  function parseCsvLine(line: string): string[] {
-    const out: string[] = [];
-    let cur = "";
-    let inQ = false;
-    for (let i=0; i<line.length; i++){
-      const ch = line[i];
-      if (inQ) {
-        if (ch === '"' && line[i+1] === '"'){ cur += '"'; i++; continue; }
-        if (ch === '"'){ inQ = false; continue; }
-        cur += ch;
-      } else {
-        if (ch === ','){ out.push(cur); cur=""; continue; }
-        if (ch === '"'){ inQ = true; continue; }
-        cur += ch;
-      }
-    }
-    out.push(cur);
-    return out;
-  }
+    document.body.removeChild(a);
+  };
+  const csv = (s: string) => `"${String(s).replace(/"/g, '""')}"`;
 
   // ---------- Render ----------
   return (
-    <main className="min-h-screen px-6 py-8 max-w-7xl mx-auto bg-gray-50">
-      {/* Totals */}
-      <div className="mb-6 p-4 bg-white rounded-xl shadow-sm border text-sm flex flex-wrap gap-6">
-        <span>Total units: <strong>{overall.totalUnits}</strong></span>
-        <span>Stock value: <strong>{money(overall.totalValue)}</strong></span>
-        <span className="text-amber-700">Low: {overall.low}</span>
-        <span className="text-rose-700">Out: {overall.out}</span>
-      </div>
-
-      {/* Controls */}
-      <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div className="flex gap-2">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search product"
-            className="border rounded-lg px-3 py-2 w-72 text-sm bg-white"
-          />
-          <label className="flex items-center gap-1 text-xs border rounded-lg px-2 py-1 bg-white">
-            <input type="checkbox" checked={showLowOnly} onChange={(e) => setShowLowOnly(e.target.checked)} /> Low
-          </label>
-          <label className="flex items-center gap-1 text-xs border rounded-lg px-2 py-1 bg-white">
-            <input type="checkbox" checked={showOutOnly} onChange={(e) => setShowOutOnly(e.target.checked)} /> Out
-          </label>
-          <label className="flex items-center gap-1 text-xs border rounded-lg px-2 py-1 bg-white">
-            <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} /> Show archived
-          </label>
+    <main className="min-h-screen px-6 py-10 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">📦 Inventory</h1>
+          <p className="text-gray-600">Enterprise-grade control over products, colors, sizes & alerts.</p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={exportCSV} className="border rounded-lg px-3 py-2 text-sm bg-white hover:bg-gray-50">Export CSV</button>
-          <input ref={fileInputRef} type="file" accept=".csv" className="hidden"
-                 onChange={async (e) => {
-                   const f = e.target.files?.[0];
-                   if (f) await handleImportCSV(f);
-                   if (fileInputRef.current) fileInputRef.current.value = "";
-                 }} />
-          <button onClick={() => fileInputRef.current?.click()} className="border rounded-lg px-3 py-2 text-sm bg-white hover:bg-gray-50">Import CSV</button>
-          <button onClick={() => setShowAddProduct(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-3 py-2 text-sm">Add product</button>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search product…"
+              className="border rounded-lg px-3 py-2 w-64"
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm bg-white border rounded-lg px-3 py-2 hover:bg-gray-50">
+            <input type="checkbox" checked={showLowOnly} onChange={(e) => setShowLowOnly(e.target.checked)} />
+            Low stock
+          </label>
+          <label className="flex items-center gap-2 text-sm bg-white border rounded-lg px-3 py-2 hover:bg-gray-50">
+            <input type="checkbox" checked={showOutOnly} onChange={(e) => setShowOutOnly(e.target.checked)} />
+            Out of stock
+          </label>
+          <button onClick={exportCSV} className="ml-2 border border-gray-300 rounded-lg px-3 py-2 text-gray-700 hover:bg-gray-50 active:bg-gray-100">
+            ⬇️ Export CSV
+          </button>
+          <button onClick={() => setShowAddProduct(true)} className="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-lg px-3 py-2 shadow-sm">
+            ➕ Add Product
+          </button>
         </div>
       </div>
 
-      {/* Grid */}
+      {/* Product Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {filtered.map((p) => {
           const { totalUnits, totalValue } = totals(p);
           const status = productStatus(p);
+
           return (
-            <div key={p.id} className="bg-white border rounded-2xl shadow-sm">
-              <div className="p-4 border-b flex gap-3 items-start">
-                <div className="w-12 h-12 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center">
-                  {p.imageUrl ? <img src={p.imageUrl} alt={p.productName} className="object-cover w-full h-full" /> : <span className="text-xs text-gray-400">No image</span>}
+            <div key={p.id} className="bg-white border rounded-2xl shadow-sm overflow-visible">
+              {/* Card header */}
+              <div className="p-4 flex gap-4 items-center border-b">
+                    <div className="w-16 h-16 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center shrink-0">
+                  {p.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.imageUrl} alt={p.productName} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xl">👕</span>
+                  )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-sm font-medium truncate">{p.productName}</h2>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${status.cls}`}>{status.label}</span>
-                    {p.archived && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">Archived</span>}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-0.5">Units: {totalUnits} · {money(totalValue)}</p>
-                  <div className="flex items-center gap-1 mt-1 text-xs">
-                    <span>Price</span>
-                    <input
-                      type="number"
-                      defaultValue={p.price || 0}
-                      className="border rounded px-2 py-0.5 w-24 text-xs"
-                      onBlur={(e) => updatePrice(p.id, Number(e.target.value))}
+                <div className="flex-1">
+                    <div className="flex items-baseline gap-2">
+                      <input
+                        defaultValue={p.productName}
+                      className="font-semibold text-xl outline-none"
+                      onBlur={(e) => e.target.value !== p.productName && editProductName(p.id, e.target.value)}
                     />
+                    <span className={`text-xs px-2 py-1 rounded-full ${status.cls}`}>{status.label}</span>
+                  </div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    Units: <strong>{totalUnits}</strong> • Stock value: <strong>{money(totalValue)}</strong>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  <button
-                    onClick={() => setExpanded(expanded === p.id ? null : p.id)}
-                    className="text-gray-600 hover:text-gray-900 text-sm"
-                    aria-label="Expand"
-                  >
-                    {expanded === p.id ? "▲" : "▼"}
-                  </button>
-                  <div className="flex gap-1 mt-1">
-                    <button
-                      className="border px-1.5 py-0.5 rounded text-[11px] hover:bg-gray-50"
-                      onClick={() => duplicateProduct(p)}
-                      title="Duplicate"
-                    >
-                      Copy
-                    </button>
-                    <button
-                      className="border px-1.5 py-0.5 rounded text-[11px] hover:bg-gray-50"
-                      onClick={() => toggleArchive(p)}
-                      title={p.archived ? "Unarchive" : "Archive"}
-                    >
-                      {p.archived ? "Unarchive" : "Archive"}
-                    </button>
-                    <button
-                      className="border px-1.5 py-0.5 rounded text-[11px] hover:bg-gray-50"
-                      onClick={() => resetStock(p)}
-                      title="Reset stock"
-                    >
-                      Reset
-                    </button>
-                    <button
-                      className="border border-rose-300 text-rose-700 px-1.5 py-0.5 rounded text-[11px] hover:bg-rose-50"
-                      onClick={() => setConfirmDelete({ scope: "product", productId: p.id })}
-                      title="Delete"
-                    >
-                      Del
-                    </button>
-                  </div>
+                <div className="text-right shrink-0">
+                  <div className="text-xs text-gray-500">Unit price</div>
+                  <input
+                    type="number"
+                    defaultValue={p.price ?? ""}
+                    placeholder="0"
+                    className="border border-gray-300 rounded-md px-2 py-1 w-28 text-right bg-gray-50 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+                    onBlur={(e) => editProductPrice(p.id, e.target.value === "" ? "" : Number(e.target.value))}
+                  />
                 </div>
               </div>
 
-              {expanded === p.id && (
-                <div className="p-3 text-xs">
-                  <div className="flex justify-end mb-2">
-                    <button className="border px-2 py-1 rounded text-xs hover:bg-gray-50"
-                            onClick={() => setAddColorTarget(p)}>
-                      Add color
-                    </button>
-                  </div>
-                  {p.colors.map((c, idx) => (
-                    <div key={idx} className="mb-3 border rounded">
-                      <div className="flex justify-between items-center bg-gray-50 px-2 py-1">
-                        <span className="font-medium">{c.color}</span>
-                        <div className="flex gap-1">
-                          <button
-                            className="px-1 text-[11px] border rounded hover:bg-gray-100"
-                            onClick={() => setConfirmDelete({ scope: "color", productId: p.id, colorIdx: idx })}
-                            title="Delete color"
-                          >
-                            Del
-                          </button>
-                        </div>
-                      </div>
-                      <div className="px-2 py-1">
-                        {Object.keys(c.sizes)
-                          .sort((a, b) => SIZES.indexOf(a) - SIZES.indexOf(b))
-                          .map((size) => (
-                            <div key={size} className="grid grid-cols-3 items-center py-1 border-b last:border-0">
-                              <span>{size}</span>
-                              <input
-                                type="number"
-                                defaultValue={c.sizes[size]}
-                                className="justify-self-end border rounded px-2 py-0.5 w-24 text-right"
-                                onBlur={(e) => updateSizeQty(p.id, idx, size, Number(e.target.value))}
-                              />
-                              <div className="justify-self-end">
-                                <button
-                                  className="text-rose-600 text-[11px]"
-                                  onClick={() =>
-                                    setConfirmDelete({ scope: "size", productId: p.id, colorIdx: idx, sizeKey: size })
-                                  }
-                                  title="Remove size"
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                            </div>
-                          ))}
+              {/* Colors & Sizes */}
+              <div className="p-4 space-y-4">
+                {p.colors.map((c, cIdx) => (
+                  <div key={`${p.id}-${c.color}`} className="border rounded-xl overflow-hidden">
+                    <div className="flex items-center justify-between bg-gray-50 px-3 py-2">
+                      <div className="font-medium">{c.color}</div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="text-sm border border-gray-300 text-gray-700 px-2 py-1 rounded-md hover:bg-gray-50 active:bg-gray-100"
+                          onClick={() => setShowBulkModal({ productId: p.id, colorIdx: cIdx })}
+                        >
+                          ✎ Edit
+                        </button>
+                        <button
+                          className="text-sm border border-rose-300 text-rose-700 px-2 py-1 rounded-md hover:bg-rose-50 active:bg-rose-100"
+                          onClick={() => setConfirmDelete({ scope: "color", productId: p.id, colorIdx: cIdx })}
+                        >
+                          🗑 Delete
+                        </button>
                       </div>
                     </div>
-                  ))}
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm table-fixed">
+                        <colgroup>
+                          <col className="w-[40%]" />
+                          <col className="w-[20%]" />
+                          <col className="w-[20%]" />
+                          <col className="w-[20%]" />
+                        </colgroup>
+                        <thead>
+                          <tr className="bg-gray-100">
+                            <th className="text-left px-3 py-2">Size</th>
+                            <th className="text-right px-3 py-2">Qty</th>
+                            <th className="text-right px-3 py-2">Min</th>
+                            <th className="px-3 py-2 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.entries(c.sizes)
+                            .sort((a, b) => DEFAULT_SIZES.indexOf(a[0]) - DEFAULT_SIZES.indexOf(b[0]))
+                            .map(([size, qty]) => {
+                              const min = c.minStock?.[size] ?? LOW_FALLBACK;
+                              const tone = qty <= 0 ? "text-red-600" : qty <= min ? "text-orange-600" : "text-green-700";
+                              return (
+                                <tr key={`${p.id}-${c.color}-${size}`} className="border-t">
+                                  <td className="px-3 py-2">{size}</td>
+                                  <td className="px-3 py-2 text-right align-middle">
+                                    <input
+                                      type="number"
+                                      value={qty}
+                                      onChange={(e) => updateQty(p.id, cIdx, size, parseInt(e.target.value) || 0)}
+                                      className={`w-24 max-w-full border rounded px-2 h-9 text-base leading-none text-right ${tone}`}
+                                      style={{ fontVariantNumeric: 'tabular-nums lining-nums' as any }}
+                                    />
+                                  </td>
+                                  <td className="px-3 py-2 text-right align-middle">
+                                    <input
+                                      type="number"
+                                      value={min}
+                                      onChange={(e) => updateMin(p.id, cIdx, size, parseInt(e.target.value) || 0)}
+                                      className="w-24 max-w-full border rounded px-2 h-9 text-base leading-none text-right"
+                                      style={{ fontVariantNumeric: 'tabular-nums lining-nums' as any }}
+                                    />
+                                  </td>
+                                  <td className="px-3 py-2 text-right align-middle">
+                                    <button
+                                      className="border border-rose-300 text-rose-700 px-2 py-1 rounded-md hover:bg-rose-50 active:bg-rose-100"
+                                      onClick={() => setConfirmDelete({ scope: "size", productId: p.id, colorIdx: cIdx, sizeKey: size })}
+                                    >
+                                      🗑 Delete
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Add color/size */}
+                <div className="flex justify-end">
+                  <button
+                    className="bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-lg px-3 py-2 shadow-sm"
+                    onClick={() => {
+                      setShowColorModal({ productId: p.id });
+                      setExpanded(p.id);
+                    }}
+                  >
+                    🎨 Add color / sizes
+                  </button>
                 </div>
-              )}
+              </div>
+
+              {/* Footer actions */}
+              <div className="px-4 pb-4 flex items-center justify-between">
+                <button
+                  className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md hover:bg-gray-50 active:bg-gray-100"
+                  onClick={() => setExpanded(expanded === p.id ? null : p.id)}
+                >
+                  {expanded === p.id ? "Collapse" : "Expand details"}
+                </button>
+                <button
+                  className="border border-rose-300 text-rose-700 px-3 py-1.5 rounded-md hover:bg-rose-50 active:bg-rose-100"
+                  onClick={() => setConfirmDelete({ scope: "product", productId: p.id })}
+                >
+                  🗑 Delete product
+                </button>
+              </div>
             </div>
           );
         })}
       </div>
 
-      {/* Add Product Modal */}
-      {showAddProduct && (
-        <AddProductModal
-          onClose={() => setShowAddProduct(false)}
-          onCreate={async (payload) => {
-            await addDoc(collection(db, "products"), payload);
-            setShowAddProduct(false);
-          }}
-        />
+      {filtered.length === 0 && (
+        <p className="text-gray-500 text-center mt-12">No products match your filters.</p>
       )}
 
-      {/* Add Color Modal */}
-      {addColorTarget && (
-        <AddColorModal
-          product={addColorTarget}
-          onClose={() => setAddColorTarget(null)}
-          onCreate={async (color, sizes) => {
-            await addColorToProduct(addColorTarget, color, sizes);
-            setAddColorTarget(null);
-          }}
+      {/* ---------- Modals ---------- */}
+
+      {/* Add Product */}
+      {showAddProduct && (
+        <Modal onClose={() => setShowAddProduct(false)} title="Add Product">
+          <div className="space-y-3">
+            <label className="block">
+              <span className="text-sm text-gray-600">Product name</span>
+              <input value={npName} onChange={(e) => setNpName(e.target.value)} className="w-full border rounded-lg px-3 py-2" />
+            </label>
+            <label className="block">
+              <span className="text-sm text-gray-600">Image URL (optional)</span>
+              <input value={npImage} onChange={(e) => setNpImage(e.target.value)} className="w-full border rounded-lg px-3 py-2" />
+            </label>
+            <label className="block">
+              <span className="text-sm text-gray-600">Unit price (Rs)</span>
+              <input
+                type="number"
+                value={npPrice}
+                onChange={(e) => setNpPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                className="w-full border rounded-lg px-3 py-2"
+              />
+            </label>
+          </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <button className="px-3 py-2" onClick={() => setShowAddProduct(false)}>Cancel</button>
+            <button className="bg-orange-600 text-white rounded-lg px-3 py-2" onClick={addProduct}>Save</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Add Color / Sizes */}
+      {showColorModal && (
+        <Modal onClose={() => setShowColorModal(null)} title="Add Color & Sizes">
+          <div className="space-y-3">
+            <label className="block">
+              <span className="text-sm text-gray-600">Color</span>
+              <input value={ncColor} onChange={(e) => setNcColor(e.target.value)} className="w-full border rounded-lg px-3 py-2" />
+            </label>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {DEFAULT_SIZES.map((s) => (
+                <div key={s} className="flex gap-2 items-center">
+                  <span className="w-10 text-sm text-gray-600">{s}</span>
+                  <input
+                    type="number"
+                    placeholder="Qty"
+                    value={ncSizes[s].qty}
+                    onChange={(e) =>
+                      setNcSizes((prev) => ({ ...prev, [s]: { ...prev[s], qty: e.target.value === "" ? "" : Number(e.target.value) } }))
+                    }
+                    className="border rounded px-2 py-1 w-20"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    value={ncSizes[s].min}
+                    onChange={(e) =>
+                      setNcSizes((prev) => ({ ...prev, [s]: { ...prev[s], min: e.target.value === "" ? "" : Number(e.target.value) } }))
+                    }
+                    className="border rounded px-2 py-1 w-20"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <button className="px-3 py-2" onClick={() => setShowColorModal(null)}>Cancel</button>
+            <button
+              className="bg-blue-600 text-white rounded-lg px-3 py-2"
+              onClick={() => addColorOrSizes(showColorModal.productId)}
+            >
+              Save
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Bulk Edit for a Color */}
+      {showBulkModal && (
+        <BulkEditModal
+          products={products}
+          showBulkModal={showBulkModal}
+          onClose={() => setShowBulkModal(null)}
         />
       )}
 
       {/* Confirm Delete */}
       {confirmDelete && (
-        <Modal title="Confirm delete" onClose={() => setConfirmDelete(null)}>
-          <p className="text-sm text-gray-600 mb-4">Type DELETE to confirm.</p>
-          <ConfirmDelete onCancel={() => setConfirmDelete(null)} onConfirm={deleteItem} />
+        <Modal onClose={() => setConfirmDelete(null)} title="Confirm delete">
+          <p className="text-sm text-gray-700 mb-4">
+            Type <strong>DELETE</strong> to confirm this action.
+          </p>
+          <ConfirmDelete onCancel={() => setConfirmDelete(null)} onConfirm={doDelete} />
         </Modal>
       )}
     </main>
   );
 }
 
-// ---------- Modals ----------
+// ---------- Reusable Modal ----------
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
-      <div className="bg-white w-full max-w-md rounded-xl shadow-lg">
-        <div className="flex justify-between items-center border-b px-4 py-3">
-          <h3 className="font-semibold text-sm">{title}</h3>
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl">
+        <div className="px-5 py-4 border-b flex items-center justify-between">
+          <h3 className="font-semibold">{title}</h3>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-800">✕</button>
         </div>
-        <div className="p-4">{children}</div>
+        <div className="px-5 py-4">{children}</div>
       </div>
     </div>
   );
 }
 
+// ---------- Confirm Delete with code ----------
 function ConfirmDelete({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => void }) {
   const [code, setCode] = useState("");
+  const REQUIRED = process.env.NEXT_PUBLIC_DELETE_CODE || "DELETE";
   return (
-    <div className="flex items-center gap-2">
-      <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="DELETE" className="border rounded px-3 py-2 w-full" />
-      <button onClick={onCancel} className="border px-3 py-2 rounded hover:bg-gray-50">Cancel</button>
-      <button disabled={code !== "DELETE"} onClick={onConfirm} className="bg-red-600 text-white rounded px-3 py-2 disabled:opacity-50">
+    <div className="flex items-center justify-end gap-2">
+      <input
+        value={code}
+        onChange={(e) => setCode(e.target.value)}
+        placeholder={REQUIRED}
+        className="border rounded-lg px-3 py-2"
+      />
+      <button className="px-3 py-2" onClick={onCancel}>Cancel</button>
+      <button
+        className="bg-red-600 text-white rounded-lg px-3 py-2 disabled:opacity-60"
+        disabled={code !== REQUIRED}
+        onClick={onConfirm}
+      >
         Delete
       </button>
     </div>
   );
 }
 
-function AddProductModal({
+// ---------- Bulk Edit Modal (separate component to respect Hooks rules) ----------
+function BulkEditModal({
+  products,
+  showBulkModal,
   onClose,
-  onCreate,
 }: {
+  products: Product[];
+  showBulkModal: { productId: string; colorIdx: number };
   onClose: () => void;
-  onCreate: (payload: { productName: string; price: number; imageUrl?: string; colors: Color[] }) => Promise<void>;
 }) {
-  const [productName, setProductName] = useState("");
-  const [price, setPrice] = useState<number>(0);
-  const [imageUrl, setImageUrl] = useState<string>("");
-  const [rows, setRows] = useState<{ color: string; sizes: SizeMap }[]>([
-    { color: "", sizes: Object.fromEntries(SIZES.map((s) => [s, 0])) as SizeMap },
-  ]);
+  const p = products.find((x) => x.id === showBulkModal.productId);
+  const color = p?.colors[showBulkModal.colorIdx];
+  const [local, setLocal] = useState<Record<string, { qty: number; min: number }>>(() => {
+    if (!p || !color) return Object.fromEntries(DEFAULT_SIZES.map((s) => [s, { qty: 0, min: LOW_FALLBACK }]));
+    return Object.fromEntries(
+      DEFAULT_SIZES.map((s) => [
+        s,
+        {
+          qty: Number.isFinite(color.sizes[s]) ? (color.sizes[s] as number) : 0,
+          min: Number.isFinite(color.minStock?.[s] ?? NaN) ? (color.minStock?.[s] as number) : LOW_FALLBACK,
+        },
+      ])
+    );
+  });
 
-  function updateSize(rowIdx: number, size: string, val: number) {
-    const next = rows.map((r, i) => (i === rowIdx ? { ...r, sizes: { ...r.sizes, [size]: Math.max(0, Math.floor(val)) } } : r));
-    setRows(next);
-  }
-
-  function addRow() {
-    setRows((x) => [...x, { color: "", sizes: Object.fromEntries(SIZES.map((s) => [s, 0])) as SizeMap }]);
-  }
-
-  function removeRow(idx: number) {
-    setRows((x) => x.filter((_, i) => i !== idx));
-  }
+  if (!p || !color) return null;
 
   return (
-    <Modal title="Add product" onClose={onClose}>
-      <div className="space-y-3">
-        <input className="border rounded px-3 py-2 w-full text-sm" placeholder="Product name" value={productName} onChange={(e)=>setProductName(e.target.value)} />
-        <div className="flex gap-2">
-          <input className="border rounded px-3 py-2 w-40 text-sm" placeholder="Price" type="number" value={price} onChange={(e)=>setPrice(Number(e.target.value))} />
-          <input className="border rounded px-3 py-2 flex-1 text-sm" placeholder="Image URL (optional)" value={imageUrl} onChange={(e)=>setImageUrl(e.target.value)} />
-        </div>
-        <div className="border rounded">
-          <div className="flex justify-between items-center bg-gray-50 px-3 py-2 text-sm">
-            <span>Colors and sizes</span>
-            <button className="border px-2 py-1 rounded text-xs hover:bg-gray-100" onClick={addRow}>Add color</button>
+    <Modal onClose={onClose} title={`Bulk edit • ${p.productName} • ${color.color}`}>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {DEFAULT_SIZES.map((s) => (
+          <div key={s} className="flex gap-2 items-center">
+            <span className="w-10 text-sm text-gray-600">{s}</span>
+            <input
+              type="number"
+              value={local[s].qty}
+              onChange={(e) => setLocal((pr) => ({ ...pr, [s]: { ...pr[s], qty: parseInt(e.target.value) || 0 } }))}
+              className="border rounded px-2 py-1 w-20"
+            />
+            <input
+              type="number"
+              value={local[s].min}
+              onChange={(e) => setLocal((pr) => ({ ...pr, [s]: { ...pr[s], min: parseInt(e.target.value) || 0 } }))}
+              className="border rounded px-2 py-1 w-20"
+            />
           </div>
-          <div className="divide-y">
-            {rows.map((r, idx) => (
-              <div key={idx} className="p-3 space-y-2">
-                <div className="flex items-center gap-2">
-                  <input className="border rounded px-2 py-1 text-sm w-48" placeholder="Color" value={r.color} onChange={(e)=>{
-                    const next = [...rows]; next[idx].color = e.target.value; setRows(next);
-                  }} />
-                  <button className="ml-auto text-rose-600 text-xs" onClick={()=>removeRow(idx)}>Remove</button>
-                </div>
-                <div className="grid grid-cols-7 gap-2">
-                  {SIZES.map((s)=>(
-                    <div key={s} className="flex flex-col">
-                      <span className="text-[11px] text-gray-600">{s}</span>
-                      <input type="number" className="border rounded px-2 py-1 text-sm"
-                             value={r.sizes[s]} onChange={(e)=>updateSize(idx, s, Number(e.target.value))}/>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="border px-3 py-2 rounded hover:bg-gray-50 text-sm">Cancel</button>
-          <button
-            onClick={() =>
-              onCreate({
-                productName: productName.trim(),
-                price: Number.isFinite(price) ? price : 0,
-                imageUrl: imageUrl.trim() || undefined,
-                colors: rows
-                  .filter((r) => r.color.trim())
-                  .map((r) => ({ color: r.color.trim(), sizes: r.sizes })),
-              })
-            }
-            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded px-3 py-2 text-sm"
-          >
-            Create
-          </button>
-        </div>
+        ))}
       </div>
-    </Modal>
-  );
-}
-
-function AddColorModal({
-  product,
-  onClose,
-  onCreate,
-}: {
-  product: Product;
-  onClose: () => void;
-  onCreate: (color: string, sizes: SizeMap) => Promise<void>;
-}) {
-  const [color, setColor] = useState("");
-  const [sizes, setSizes] = useState<SizeMap>(Object.fromEntries(SIZES.map((s) => [s, 0])) as SizeMap);
-
-  return (
-    <Modal title={`Add color to ${product.productName}`} onClose={onClose}>
-      <div className="space-y-3">
-        <input className="border rounded px-3 py-2 w-full text-sm" placeholder="Color" value={color} onChange={(e)=>setColor(e.target.value)} />
-        <div className="grid grid-cols-7 gap-2">
-          {SIZES.map((s)=>(
-            <div key={s} className="flex flex-col">
-              <span className="text-[11px] text-gray-600">{s}</span>
-              <input type="number" className="border rounded px-2 py-1 text-sm"
-                     value={sizes[s]} onChange={(e)=>setSizes({...sizes, [s]: Math.max(0, Math.floor(Number(e.target.value)))})}/>
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="border px-3 py-2 rounded hover:bg-gray-50 text-sm">Cancel</button>
-          <button onClick={() => onCreate(color.trim(), sizes)} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded px-3 py-2 text-sm">
-            Add
-          </button>
-        </div>
+      <div className="mt-5 flex justify-end gap-2">
+        <button className="px-3 py-2" onClick={onClose}>Cancel</button>
+        <button
+          className="bg-blue-600 text-white rounded-lg px-3 py-2"
+          onClick={async () => {
+            const ref = doc(db, "products", p.id);
+            const colors = JSON.parse(JSON.stringify(p.colors)) as Color[];
+            DEFAULT_SIZES.forEach((s) => {
+              colors[showBulkModal.colorIdx].sizes[s] = local[s].qty;
+              colors[showBulkModal.colorIdx].minStock = colors[showBulkModal.colorIdx].minStock || {};
+              colors[showBulkModal.colorIdx].minStock![s] = local[s].min;
+            });
+            await updateDoc(ref, { colors });
+            onClose();
+          }}
+        >
+          Save all
+        </button>
       </div>
     </Modal>
   );
