@@ -487,9 +487,9 @@ export default function AccountingPage() {
             </ResponsiveContainer>
           </div>
           <ul className="grid grid-cols-2 gap-2 text-sm mt-2">
-            {expenseBreakdown.map((e, i) => (
+            {expenseBreakdownData.map((e, i) => (
               <li key={i} className="flex items-center justify-between border rounded px-2 py-1">
-                <span>{e.name}</span>
+                <span className="inline-flex items-center gap-2 truncate"><span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: pieColors[i % pieColors.length] }} /> {e.name}</span>
                 <span className="font-medium">{currency(e.value)}</span>
               </li>
             ))}
