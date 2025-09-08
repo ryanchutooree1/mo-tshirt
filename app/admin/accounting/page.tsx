@@ -20,7 +20,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { format } from "date-fns";
+import { format, isValid as isValidDateFn } from "date-fns";
 import {
   FileText,
   ReceiptText,
@@ -150,6 +150,30 @@ function agingBucket(days: number) {
 function classNames(...xs: (string | false | undefined)[]) { return xs.filter(Boolean).join(" "); }
 
 /* ------------------------- Subcomponents --------------------------- */
+
+// Error boundary to isolate chart crashes (e.g., malformed data)
+class ChartBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch() {}
+  render() {
+    if (this.state.hasError) {
+      return <div className="h-64 flex items-center justify-center text-sm text-gray-500">Chart unavailable</div>;
+    }
+    return this.props.children as any;
+  }
+}
+
+function safeFormatDate(input: any, fmt = 'dd MMM yyyy') {
+  try {
+    const d = input instanceof Date ? input : new Date(input);
+    if (!isValidDateFn(d)) return '';
+    return format(d, fmt);
+  } catch { return ''; }
+}
 
 function KPI({ label, value, icon, trend, positive = true }: { label: string; value: string | number; icon: React.ReactNode; trend?: string; positive?: boolean; }) {
   return (
@@ -433,17 +457,19 @@ export default function AccountingPage() {
             <div className="text-xs text-gray-500">Monthly</div>
           </div>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={revExpMonthly}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip formatter={(v: any) => currency(Number(v))} />
-                <Bar dataKey="revenue" />
-                <Bar dataKey="expenses" />
-                <Line type="monotone" dataKey="net" stroke="#000" dot={false} />
-              </BarChart>
-            </ResponsiveContainer>
+            <ChartBoundary>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={revExpMonthly}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip formatter={(v: any) => currency(Number(v))} />
+                  <Bar dataKey="revenue" fill="#16a34a" />
+                  <Bar dataKey="expenses" fill="#ef4444" />
+                  <Line type="monotone" dataKey="net" stroke="#111827" dot={false} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartBoundary>
           </div>
         </div>
 
@@ -454,17 +480,19 @@ export default function AccountingPage() {
             <div className="text-xs text-gray-500">Operating / Investing / Financing</div>
           </div>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={cashflowMonthly}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip formatter={(v: any) => currency(Number(v))} />
-                <Area type="monotone" dataKey="operating" />
-                <Area type="monotone" dataKey="investing" />
-                <Area type="monotone" dataKey="financing" />
-              </AreaChart>
-            </ResponsiveContainer>
+            <ChartBoundary>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={cashflowMonthly}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip formatter={(v: any) => currency(Number(v))} />
+                  <Area type="monotone" dataKey="operating" stroke="#2563eb" fill="#93c5fd" />
+                  <Area type="monotone" dataKey="investing" stroke="#10b981" fill="#a7f3d0" />
+                  <Area type="monotone" dataKey="financing" stroke="#f59e0b" fill="#fde68a" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </ChartBoundary>
           </div>
         </div>
 
@@ -475,16 +503,18 @@ export default function AccountingPage() {
             <div className="text-xs text-gray-500">YTD</div>
           </div>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Tooltip formatter={(v: any) => currency(Number(v))} />
-                <Pie data={expenseBreakdownData} dataKey="value" nameKey="name" outerRadius={90}>
-                  {expenseBreakdownData.map((_, i) => (
-                    <Cell key={i} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
+            <ChartBoundary>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Tooltip formatter={(v: any) => currency(Number(v))} />
+                  <Pie data={expenseBreakdownData} dataKey="value" nameKey="name" outerRadius={90}>
+                    {expenseBreakdownData.map((_, i) => (
+                      <Cell key={i} fill={pieColors[i % pieColors.length]} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </ChartBoundary>
           </div>
           <ul className="grid grid-cols-2 gap-2 text-sm mt-2">
             {expenseBreakdownData.map((e, i) => (
@@ -537,7 +567,7 @@ export default function AccountingPage() {
               <tbody>
                 {pageRows.map((inv) => (
                   <tr key={inv.id} className="border-b hover:bg-gray-50">
-                    <td className="py-2 pr-2">{format(new Date(inv.date), "dd MMM yyyy")}</td>
+                    <td className="py-2 pr-2">{safeFormatDate(inv.date, 'dd MMM yyyy')}</td>
                     <td className="py-2 pr-2 font-medium">{inv.id}</td>
                     <td className="py-2 pr-2">{inv.customer}</td>
                     <td className="py-2 pr-2">{currency(inv.amount)}</td>
