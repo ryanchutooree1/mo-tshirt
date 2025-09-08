@@ -308,7 +308,7 @@ export default function InventoryPage() {
             <div key={p.id} className="bg-white border rounded-2xl shadow-sm overflow-hidden">
               {/* Card header */}
               <div className="p-4 flex gap-4 items-center border-b">
-                <div className="w-16 h-16 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center">
+                    <div className="w-16 h-16 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center shrink-0">
                   {p.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={p.imageUrl} alt={p.productName} className="w-full h-full object-cover" />
@@ -329,13 +329,13 @@ export default function InventoryPage() {
                     Units: <strong>{totalUnits}</strong> • Stock value: <strong>{money(totalValue)}</strong>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right shrink-0">
                   <div className="text-xs text-gray-500">Unit price</div>
                   <input
                     type="number"
                     defaultValue={p.price ?? ""}
                     placeholder="0"
-                    className="border rounded-md px-2 py-1 w-28"
+                    className="border rounded-md px-2 py-1 w-28 text-right"
                     onBlur={(e) => editProductPrice(p.id, e.target.value === "" ? "" : Number(e.target.value))}
                   />
                 </div>
@@ -364,13 +364,19 @@ export default function InventoryPage() {
                     </div>
 
                     <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
+                      <table className="w-full text-sm table-fixed">
+                        <colgroup>
+                          <col className="w-[40%]" />
+                          <col className="w-[20%]" />
+                          <col className="w-[20%]" />
+                          <col className="w-[20%]" />
+                        </colgroup>
                         <thead>
                           <tr className="bg-gray-100">
                             <th className="text-left px-3 py-2">Size</th>
                             <th className="text-right px-3 py-2">Qty</th>
                             <th className="text-right px-3 py-2">Min</th>
-                            <th className="px-3 py-2"></th>
+                            <th className="px-3 py-2 text-right">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -382,23 +388,23 @@ export default function InventoryPage() {
                               return (
                                 <tr key={`${p.id}-${c.color}-${size}`} className="border-t">
                                   <td className="px-3 py-2">{size}</td>
-                                  <td className="px-3 py-2 text-right">
+                                  <td className="px-3 py-2 text-right align-middle">
                                     <input
                                       type="number"
                                       value={qty}
                                       onChange={(e) => updateQty(p.id, cIdx, size, parseInt(e.target.value) || 0)}
-                                      className={`w-20 border rounded px-2 py-1 text-right ${tone}`}
+                                      className={`w-24 max-w-full border rounded px-2 py-1 text-right ${tone}`}
                                     />
                                   </td>
-                                  <td className="px-3 py-2 text-right">
+                                  <td className="px-3 py-2 text-right align-middle">
                                     <input
                                       type="number"
                                       value={min}
                                       onChange={(e) => updateMin(p.id, cIdx, size, parseInt(e.target.value) || 0)}
-                                      className="w-20 border rounded px-2 py-1 text-right"
+                                      className="w-24 max-w-full border rounded px-2 py-1 text-right"
                                     />
                                   </td>
-                                  <td className="px-3 py-2 text-right">
+                                  <td className="px-3 py-2 text-right align-middle">
                                     <button
                                       className="text-red-600 hover:underline"
                                       onClick={() => setConfirmDelete({ scope: "size", productId: p.id, colorIdx: cIdx, sizeKey: size })}
@@ -662,4 +668,3 @@ function BulkEditModal({
     </Modal>
   );
 }
-
