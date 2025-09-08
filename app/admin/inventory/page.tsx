@@ -305,7 +305,7 @@ export default function InventoryPage() {
           const status = productStatus(p);
 
           return (
-            <div key={p.id} className="bg-white border rounded-2xl shadow-sm overflow-hidden">
+            <div key={p.id} className="bg-white border rounded-2xl shadow-sm overflow-visible">
               {/* Card header */}
               <div className="p-4 flex gap-4 items-center border-b">
                     <div className="w-16 h-16 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center shrink-0">
@@ -393,7 +393,8 @@ export default function InventoryPage() {
                                       type="number"
                                       value={qty}
                                       onChange={(e) => updateQty(p.id, cIdx, size, parseInt(e.target.value) || 0)}
-                                      className={`w-24 max-w-full border rounded px-2 py-1 text-right ${tone}`}
+                                      className={`w-24 max-w-full border rounded px-2 h-9 text-base leading-none text-right ${tone}`}
+                                      style={{ fontVariantNumeric: 'tabular-nums lining-nums' as any }}
                                     />
                                   </td>
                                   <td className="px-3 py-2 text-right align-middle">
@@ -401,7 +402,8 @@ export default function InventoryPage() {
                                       type="number"
                                       value={min}
                                       onChange={(e) => updateMin(p.id, cIdx, size, parseInt(e.target.value) || 0)}
-                                      className="w-24 max-w-full border rounded px-2 py-1 text-right"
+                                      className="w-24 max-w-full border rounded px-2 h-9 text-base leading-none text-right"
+                                      style={{ fontVariantNumeric: 'tabular-nums lining-nums' as any }}
                                     />
                                   </td>
                                   <td className="px-3 py-2 text-right align-middle">
