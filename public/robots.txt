@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://mo-tshirt.mu
+
+# Sitemaps
+Sitemap: https://mo-tshirt.mu/sitemap.xml
