@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { db } from "@/lib/firebase";
-import { collection, doc, getDoc, getDocs, orderBy, query, Timestamp, where } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, Timestamp, updateDoc, where } from "firebase/firestore";
 import {
   LineChart,
   Line,
@@ -477,6 +477,114 @@ export default function AccountingPage() {
       .sort((a,b)=>b.value-a.value).slice(0,8);
   }, [accRows]);
 
+  // ---------------------- Account Ledger (Search/Filter/CRUD) ----------------------
+  const [accQuery, setAccQuery] = useState("");
+  const [accFrom, setAccFrom] = useState<string>(""); // yyyy-mm-dd
+  const [accTo, setAccTo] = useState<string>("");   // yyyy-mm-dd
+  const accFiltered = useMemo(() => {
+    const q = accQuery.trim().toLowerCase();
+    return accRows.filter(r => {
+      const m = r as any;
+      const bag = `${m.description||''} ${m.customerName||''} ${m.phoneNumber||''} ${m.email||''}`.toLowerCase();
+      if (q && !bag.includes(q)) return false;
+      if (accFrom) {
+        const d = (m.transactionDate instanceof Timestamp) ? (m.transactionDate as Timestamp).toDate() : new Date(m.transactionDate||Date.now());
+        const from = new Date(accFrom);
+        if (d < from) return false;
+      }
+      if (accTo) {
+        const d = (m.transactionDate instanceof Timestamp) ? (m.transactionDate as Timestamp).toDate() : new Date(m.transactionDate||Date.now());
+        const to = new Date(accTo);
+        to.setHours(23,59,59,999);
+        if (d > to) return false;
+      }
+      return true;
+    });
+  }, [accRows, accQuery, accFrom, accTo]);
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<{ amount: string; type: 'income'|'expense' | ''; description: string; customerName: string; phoneNumber: string; email: string; date: string; }>(
+    { amount: '', type: '', description: '', customerName: '', phoneNumber: '', email: '', date: '' }
+  );
+
+  function openNew() {
+    setEditingId(null);
+    const d = new Date();
+    const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    setForm({ amount: '', type: '' as any, description: '', customerName: '', phoneNumber: '', email: '', date: iso });
+    setEditOpen(true);
+  }
+
+  function openEdit(id: string) {
+    const row = accRows.find(r => (r as any).id === id) as any;
+    if (!row) return;
+    const dt = (row.transactionDate instanceof Timestamp) ? (row.transactionDate as Timestamp).toDate() : new Date(row.transactionDate||Date.now());
+    const iso = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+    setForm({
+      amount: String(row.amount||''),
+      type: (row.type||'') as any,
+      description: row.description||'',
+      customerName: row.customerName||'',
+      phoneNumber: row.phoneNumber||'',
+      email: row.email||'',
+      date: iso,
+    });
+    setEditingId(id);
+    setEditOpen(true);
+  }
+
+  async function saveForm() {
+    const amt = Number(form.amount);
+    if (!Number.isFinite(amt) || !form.type || !form.description.trim()) return;
+    const when = new Date(form.date||new Date());
+    if (editingId) {
+      await updateDoc(doc(db, 'account', editingId), {
+        amount: amt,
+        type: form.type,
+        description: form.description,
+        customerName: form.customerName,
+        phoneNumber: form.phoneNumber,
+        email: form.email,
+        transactionDate: when,
+      });
+    } else {
+      await addDoc(collection(db, 'account'), {
+        amount: amt,
+        type: form.type,
+        description: form.description,
+        customerName: form.customerName || (form.phoneNumber||form.email||'') || 'Unknown',
+        phoneNumber: form.phoneNumber,
+        email: form.email,
+        transactionDate: when,
+      });
+    }
+    setEditOpen(false);
+  }
+
+  async function removeRow(id: string) {
+    const pwd = window.prompt('Enter admin password to delete');
+    const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'admin';
+    if ((pwd||'') !== ADMIN_PASSWORD) return;
+    await deleteDoc(doc(db, 'account', id));
+    setEditOpen(false);
+  }
+
+  function exportAccCsv() {
+    const rows: string[] = [];
+    rows.push(['id','type','amount','description','customerName','phoneNumber','email','status','paymentMethod','transactionDate'].join(','));
+    accFiltered.forEach((r:any) => {
+      const dt = (r.transactionDate instanceof Timestamp) ? (r.transactionDate as Timestamp).toDate() : new Date(r.transactionDate||Date.now());
+      const vals = [r.id, r.type||'', String(r.amount||0), (r.description||'').replaceAll(',', ' '), (r.customerName||'').replaceAll(',', ' '), r.phoneNumber||'', r.email||'', r.status||'', r.paymentMethod||'', dt.toISOString()];
+      rows.push(vals.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','));
+    });
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `account_${yStart.getFullYear()}_Q${quarter}.csv`;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }
+
   // Quarter actuals (revenue, cogs, opex, net)
   const qActuals = useMemo(() => {
     const inQuarter = (d: any) => {
@@ -604,6 +712,114 @@ export default function AccountingPage() {
             ))}
           </ul>
         </div>
+      </section>
+
+      {/* Account Ledger (Search / Filter / Export / CRUD) */}
+      <section className="bg-white rounded-2xl shadow p-4">
+        <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+          <div>
+            <h3 className="text-lg font-semibold">Account Ledger</h3>
+            <p className="text-sm text-gray-500">Entries from collection “account”</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <input value={accQuery} onChange={e=>setAccQuery(e.target.value)} placeholder="Search description/customer/phone/email" className="border rounded px-2 py-1 text-sm w-64" />
+            <input type="date" value={accFrom} onChange={e=>setAccFrom(e.target.value)} className="border rounded px-2 py-1 text-sm" />
+            <span className="text-gray-400">→</span>
+            <input type="date" value={accTo} onChange={e=>setAccTo(e.target.value)} className="border rounded px-2 py-1 text-sm" />
+            <button onClick={exportAccCsv} className="px-3 py-1.5 border border-[#bfa37a] rounded-lg text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white text-sm">Export CSV</button>
+            <button onClick={openNew} className="px-3 py-1.5 border border-[#bfa37a] rounded-lg text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white text-sm">Add Entry</button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left">
+                <th className="py-2 pr-2">Date</th>
+                <th className="py-2 pr-2">Type</th>
+                <th className="py-2 pr-2">Amount</th>
+                <th className="py-2 pr-2">Description</th>
+                <th className="py-2 pr-2">Customer</th>
+                <th className="py-2 pr-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {accFiltered.slice(0,150).map((r:any) => {
+                const dt = (r.transactionDate instanceof Timestamp) ? (r.transactionDate as Timestamp).toDate() : new Date(r.transactionDate||Date.now());
+                return (
+                  <tr key={r.id} className="border-b hover:bg-gray-50">
+                    <td className="py-2 pr-2">{format(dt, 'dd MMM yyyy')}</td>
+                    <td className="py-2 pr-2">{String(r.type||'').toUpperCase()}</td>
+                    <td className="py-2 pr-2">{currency(Number(r.amount||0))}</td>
+                    <td className="py-2 pr-2 truncate max-w-[320px]" title={r.description||''}>{r.description||''}</td>
+                    <td className="py-2 pr-2 truncate max-w-[200px]" title={r.customerName||r.phoneNumber||r.email||''}>{r.customerName||r.phoneNumber||r.email||''}</td>
+                    <td className="py-2 pr-2">
+                      <button onClick={()=>openEdit(r.id)} className="px-2 py-1 border rounded text-xs">Edit</button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {accFiltered.length===0 && (
+                <tr><td className="py-4 text-gray-500" colSpan={6}>No entries.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Edit / Add modal */}
+        {editOpen && (
+          <div className="fixed inset-0 z-50">
+            <div className="absolute inset-0 bg-black/30" onClick={()=>setEditOpen(false)} />
+            <div className="absolute inset-0 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl shadow-lg w-full max-w-lg p-4">
+                <h4 className="font-semibold mb-3">{editingId? 'Edit Entry' : 'Add Entry'}</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500">Amount</label>
+                    <input value={form.amount} onChange={e=>setForm({...form, amount: e.target.value})} className="w-full border rounded px-2 py-1" placeholder="0" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Type</label>
+                    <select value={form.type} onChange={e=>setForm({...form, type: e.target.value as any})} className="w-full border rounded px-2 py-1">
+                      <option value="">Select</option>
+                      <option value="income">Income</option>
+                      <option value="expense">Expense</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="text-xs text-gray-500">Description</label>
+                    <input value={form.description} onChange={e=>setForm({...form, description: e.target.value})} className="w-full border rounded px-2 py-1" placeholder="Description" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Customer Name</label>
+                    <input value={form.customerName} onChange={e=>setForm({...form, customerName: e.target.value})} className="w-full border rounded px-2 py-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Phone</label>
+                    <input value={form.phoneNumber} onChange={e=>setForm({...form, phoneNumber: e.target.value})} className="w-full border rounded px-2 py-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Email</label>
+                    <input value={form.email} onChange={e=>setForm({...form, email: e.target.value})} className="w-full border rounded px-2 py-1" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500">Date</label>
+                    <input type="date" value={form.date} onChange={e=>setForm({...form, date: e.target.value})} className="w-full border rounded px-2 py-1" />
+                  </div>
+                </div>
+                <div className="mt-4 flex justify-between">
+                  {editingId ? (
+                    <button onClick={()=>removeRow(editingId)} className="px-3 py-1.5 border rounded text-rose-700 border-rose-300 hover:bg-rose-50">Delete</button>
+                  ) : <span />}
+                  <div className="flex gap-2">
+                    <button onClick={()=>setEditOpen(false)} className="px-3 py-1.5 border rounded">Cancel</button>
+                    <button onClick={saveForm} className="px-3 py-1.5 border border-[#bfa37a] rounded text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white">Save</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* INVOICES & RECEIPTS */}
