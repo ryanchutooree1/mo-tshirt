@@ -183,9 +183,85 @@ function StatusPill({ s }: { s: Invoice["status"] }) {
 
 export default function AccountingPage() {
   const today = new Date();
+  const yStart = new Date(today.getFullYear(), 0, 1);
+  const yEnd = today;
+
+  // Firestore-backed rows
+  const [txnRows, setTxnRows] = useState<TxnDoc[]>([]);
+  const [accRows, setAccRows] = useState<AccountDoc[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function run() {
+      setLoading(true);
+      setError(null);
+      try {
+        // Transactions (orders)
+        const qTxn = query(
+          collection(db, "transactions"),
+          where("transactionDate", ">=", Timestamp.fromDate(yStart)),
+          where("transactionDate", "<=", Timestamp.fromDate(new Date(yEnd.getFullYear(), yEnd.getMonth(), yEnd.getDate(), 23,59,59))),
+          orderBy("transactionDate", "desc")
+        );
+        // Account rows (income/expense) if present
+        const qAcc = query(
+          collection(db, "account"),
+          where("transactionDate", ">=", Timestamp.fromDate(yStart)),
+          where("transactionDate", "<=", Timestamp.fromDate(new Date(yEnd.getFullYear(), yEnd.getMonth(), yEnd.getDate(), 23,59,59))),
+          orderBy("transactionDate", "desc")
+        );
+        const [sTxn, sAcc] = await Promise.allSettled([getDocs(qTxn), getDocs(qAcc)]);
+
+        if (cancelled) return;
+
+        const txns: TxnDoc[] = sTxn.status === 'fulfilled' ? sTxn.value.docs.map(d => ({ id: d.id, ...(d.data() as any) })) : [];
+        const accs: AccountDoc[] = sAcc.status === 'fulfilled' ? sAcc.value.docs.map(d => ({ id: d.id, ...(d.data() as any) })) : [];
+
+        setTxnRows(txns);
+        setAccRows(accs);
+      } catch (e: any) {
+        if (!cancelled) setError(e?.message || 'Failed to load accounting data');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    run();
+    return () => { cancelled = true; };
+  }, [yStart.getTime(), yEnd.getTime()]);
+
+  // Invoices view (derived from transactions)
+  const invoicesDerived: Invoice[] = useMemo(() => {
+    return txnRows.map((m) => {
+      const dt: Date = (m.transactionDate instanceof Timestamp)
+        ? (m.transactionDate as Timestamp).toDate()
+        : new Date(m.transactionDate || Date.now());
+      const amt = typeof m.amount === 'number' ? m.amount : sumProducts(m.products);
+      // status mapping: Paid / Partially Paid / Unpaid / Overdue
+      let status: Invoice["status"] = 'Unpaid';
+      const pm = (m.paymentMethod || '').toLowerCase();
+      const st = (m.status || '').toLowerCase();
+      if (pm.includes('full')) status = 'Paid';
+      else if (pm.includes('part')) status = 'Partially Paid';
+      else if (st === 'completed' || st === 'delivered') status = 'Paid';
+      // Overdue if older than 30 days and not paid
+      const days = Math.floor((today.getTime() - dt.getTime()) / (1000*60*60*24));
+      if (status !== 'Paid' && days > 30) status = 'Overdue';
+      return {
+        id: (m.invoiceNumber as string) || m.id,
+        date: format(dt, 'yyyy-MM-dd'),
+        customer: (m.customerName || m.phoneNumber || m.email || 'Unknown') as string,
+        amount: Number(amt || 0),
+        vat: 15,
+        status,
+      };
+    });
+  }, [txnRows, today]);
 
   // Invoices state (filter/search/pagination)
-  const [invoices, setInvoices] = useState<Invoice[]>(invoicesSeed);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  useEffect(() => { setInvoices(invoicesDerived); }, [invoicesDerived]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<Invoice["status"] | "All">("All");
   const [page, setPage] = useState(1);
@@ -205,14 +281,22 @@ export default function AccountingPage() {
   const pageRows = useMemo(() => filteredInvoices.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [filteredInvoices, page]);
 
   // KPI calcs
-  const mtdRevenue = useMemo(() => revenueExpenseSeries.slice(0, today.getMonth() + 1).reduce((a, r) => a + r.revenue, 0), []);
-  const mtdExpenses = useMemo(() => revenueExpenseSeries.slice(0, today.getMonth() + 1).reduce((a, r) => a + r.expenses, 0), []);
-  const netProfitYtd = mtdRevenue - mtdExpenses;
+  const ytdRevenue = useMemo(() => {
+    // Prefer account income sum; fallback to transactions total
+    const accIncome = accRows.filter(r => (r.type||'') === 'income');
+    const revAcc = accIncome.reduce((a, r) => a + (Number(r.amount)||0), 0);
+    if (revAcc > 0) return revAcc;
+    return invoicesDerived.reduce((a, i) => a + (i.amount||0), 0);
+  }, [accRows, invoicesDerived]);
+  const ytdExpenses = useMemo(() => accRows.filter(r => (r.type||'') === 'expense').reduce((a, r) => a + (Number(r.amount)||0), 0), [accRows]);
+  const netProfitYtd = ytdRevenue - ytdExpenses;
 
   const ar = useMemo(() => invoices.filter(i => i.status !== "Paid"), [invoices]);
   const arTotal = useMemo(() => sum(ar.map(i => i.amount)), [ar]);
-  const apTotal = 185_000; // mock
-  const cashBalance = 420_500; // mock
+  // AP: expenses in account that are not Paid (if status exists)
+  const apTotal = useMemo(() => accRows.filter(r => (r.type||'')==='expense' && (String(r.status||'').toLowerCase() !== 'paid')).reduce((a, r) => a + (Number(r.amount)||0), 0), [accRows]);
+  // Cash balance approximation (income - expenses YTD)
+  const cashBalance = ytdRevenue - ytdExpenses;
 
   // AR aging
   const aging = useMemo(() => {
@@ -225,7 +309,24 @@ export default function AccountingPage() {
   }, [ar, today]);
 
   // Bank lines (mock) & matching
-  const [bankLines, setBankLines] = useState<BankLine[]>(bankLinesSeed);
+  const [bankLines, setBankLines] = useState<BankLine[]>([]);
+  useEffect(() => {
+    // Derive bank lines from account rows (income positive, expense negative)
+    const lines: BankLine[] = accRows.slice(0, 50).map((r, idx) => {
+      const dt: Date = (r.transactionDate instanceof Timestamp)
+        ? (r.transactionDate as Timestamp).toDate()
+        : new Date(r.transactionDate || Date.now());
+      const amt = Number(r.amount||0);
+      return {
+        id: r.id || String(idx),
+        date: format(dt, 'yyyy-MM-dd'),
+        description: (r.description || (r.type==='income'?'Income':'Expense')) as string,
+        amount: (r.type === 'expense' ? -Math.abs(amt) : Math.abs(amt)),
+        matched: String(r.status||'').toLowerCase() === 'paid',
+      };
+    });
+    setBankLines(lines);
+  }, [accRows]);
   const unmatched = bankLines.filter(b => !b.matched);
 
   // Journal entry composer
@@ -256,31 +357,71 @@ export default function AccountingPage() {
   // Expense pie colors (11-color palette, will repeat if needed)
   const pieColors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf", "#4e79a7"];
 
+  // Monthly aggregations from account rows (real data if available)
+  const revExpMonthly = useMemo(() => {
+    return monthLabels.map((m, i) => {
+      const income = accRows.filter(r => (r.type||'')==='income').reduce((a, r) => {
+        const dt = (r.transactionDate instanceof Timestamp) ? (r.transactionDate as Timestamp).toDate() : new Date(r.transactionDate||Date.now());
+        return dt.getMonth()===i ? a + (Number(r.amount)||0) : a;
+      }, 0);
+      const expense = accRows.filter(r => (r.type||'')==='expense').reduce((a, r) => {
+        const dt = (r.transactionDate instanceof Timestamp) ? (r.transactionDate as Timestamp).toDate() : new Date(r.transactionDate||Date.now());
+        return dt.getMonth()===i ? a + (Number(r.amount)||0) : a;
+      }, 0);
+      return { month: m, revenue: income, expenses: expense, net: income - expense };
+    });
+  }, [accRows]);
+
+  const cashflowMonthly = useMemo(() => {
+    return monthLabels.map((m, i) => {
+      const income = accRows.filter(r => (r.type||'')==='income').reduce((a, r) => {
+        const dt = (r.transactionDate instanceof Timestamp) ? (r.transactionDate as Timestamp).toDate() : new Date(r.transactionDate||Date.now());
+        return dt.getMonth()===i ? a + (Number(r.amount)||0) : a;
+      }, 0);
+      const expense = accRows.filter(r => (r.type||'')==='expense').reduce((a, r) => {
+        const dt = (r.transactionDate instanceof Timestamp) ? (r.transactionDate as Timestamp).toDate() : new Date(r.transactionDate||Date.now());
+        return dt.getMonth()===i ? a + (Number(r.amount)||0) : a;
+      }, 0);
+      const operating = income - expense;
+      return { month: m, operating, investing: 0, financing: 0 };
+    });
+  }, [accRows]);
+
+  const expenseBreakdownData = useMemo(() => {
+    const map = new Map<string, number>();
+    accRows.filter(r => (r.type||'')==='expense').forEach(r => {
+      const key = (r.description || 'Expense') as string;
+      map.set(key, (map.get(key)||0) + (Number(r.amount)||0));
+    });
+    return Array.from(map.entries()).map(([name, value]) => ({ name, value }))
+      .sort((a,b)=>b.value-a.value).slice(0,8);
+  }, [accRows]);
+
   /* ----------------------------- UI -------------------------------- */
 
   return (
     <main className="min-h-screen px-6 py-8 max-w-7xl mx-auto space-y-8">
       {/* HEADER */}
-      <header className="bg-gradient-to-r from-gray-900 to-gray-700 text-white rounded-2xl p-6 shadow">
+      <header className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-extrabold">Accounting</h1>
-            <p className="opacity-80 mt-1">Today • {format(new Date(), "dd MMM yyyy")} • {format(new Date(), "HH:mm")}</p>
+            <h1 className="text-3xl font-semibold" style={{ fontFamily: 'var(--font-admin-serif)' }}>Accounting</h1>
+            <p className="text-gray-500 mt-1">Today • {format(new Date(), 'dd MMM yyyy')} • {format(new Date(), 'HH:mm')}</p>
           </div>
           <div className="flex gap-2">
-            <Link href="/admin/reports" className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg">Reports</Link>
-            <Link href="/admin/accounting/settings" className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg">Settings</Link>
+            <Link href="/admin/reports" className="px-3 py-2 border border-[#bfa37a] rounded-lg text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white transition-colors">Reports</Link>
+            <Link href="/admin/accounting/settings" className="px-3 py-2 border border-[#bfa37a] rounded-lg text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white transition-colors">Settings</Link>
           </div>
         </div>
       </header>
 
       {/* KPIs */}
       <section className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <KPI label="Revenue YTD" value={currency(mtdRevenue)} icon={<DollarSign className="w-5 h-5" />} trend="↑ 12% YoY" positive />
-        <KPI label="Net Profit YTD" value={currency(netProfitYtd)} icon={<Banknote className="w-5 h-5" />} trend="↑ 8% vs plan" positive />
-        <KPI label="Cash" value={currency(cashBalance)} icon={<Wallet className="w-5 h-5" />} trend="Stable" />
-        <KPI label="A/R Outstanding" value={currency(arTotal)} icon={<ReceiptText className="w-5 h-5" />} trend="↓ 5% WoW" positive={false} />
-        <KPI label="A/P" value={currency(apTotal)} icon={<FileText className="w-5 h-5" />} trend="On track" />
+        <KPI label="Revenue YTD" value={currency(ytdRevenue)} icon={<DollarSign className="w-5 h-5" />} trend={undefined} positive />
+        <KPI label="Net Profit YTD" value={currency(netProfitYtd)} icon={<Banknote className="w-5 h-5" />} trend={undefined} positive={netProfitYtd>=0} />
+        <KPI label="Cash (approx)" value={currency(cashBalance)} icon={<Wallet className="w-5 h-5" />} trend={undefined} />
+        <KPI label="A/R Outstanding" value={currency(arTotal)} icon={<ReceiptText className="w-5 h-5" />} trend={undefined} positive={false} />
+        <KPI label="A/P (unpaid exp)" value={currency(apTotal)} icon={<FileText className="w-5 h-5" />} trend={undefined} />
       </section>
 
       {/* CHARTS ROW */}
@@ -293,7 +434,7 @@ export default function AccountingPage() {
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={revenueExpenseSeries}>
+              <BarChart data={revExpMonthly}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
@@ -314,7 +455,7 @@ export default function AccountingPage() {
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={cashflowSeries}>
+              <AreaChart data={cashflowMonthly}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
@@ -337,8 +478,8 @@ export default function AccountingPage() {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Tooltip formatter={(v: any) => currency(Number(v))} />
-                <Pie data={expenseBreakdown} dataKey="value" nameKey="name" outerRadius={90}>
-                  {expenseBreakdown.map((_, i) => (
+                <Pie data={expenseBreakdownData} dataKey="value" nameKey="name" outerRadius={90}>
+                  {expenseBreakdownData.map((_, i) => (
                     <Cell key={i} />
                   ))}
                 </Pie>
