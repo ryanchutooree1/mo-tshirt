@@ -15,7 +15,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { format } from "date-fns";
-import { Info, TrendingUp, Package, RefreshCcw, Clock, Users, IndianRupee } from "lucide-react";
+import { Info, TrendingUp, Package, RefreshCcw, Clock, Users, IndianRupee, Plus, Trash2, CheckCircle2, Circle } from "lucide-react";
 import { useAdminMetrics } from "@/admin/AdminDataContext";
 
 // ---------- Types ----------
@@ -163,6 +163,44 @@ export default function OwnerDashboard() {
     })();
   }, []);
 
+  // Checklist actions/state
+  const [newTask, setNewTask] = useState("");
+  const checklistRef = useMemo(() => doc(db, "users", adminId, "checklists", todayIso), [adminId, todayIso]);
+
+  async function persistChecklist(updatedTasks: { title: string; completed: boolean }[], nextStreak = streak) {
+    try {
+      await setDoc(checklistRef, { tasks: updatedTasks, streak: nextStreak }, { merge: true });
+    } catch (err) {
+      console.error("checklist persist error", err);
+    }
+  }
+
+  const addTask = async () => {
+    const title = newTask.trim();
+    if (!title) return;
+    const updated = [...tasks, { title, completed: false }];
+    setTasks(updated);
+    setNewTask("");
+    await persistChecklist(updated, streak);
+  };
+
+  const toggleTask = async (idx: number) => {
+    const updated = tasks.map((t, i) => (i === idx ? { ...t, completed: !t.completed } : t));
+    setTasks(updated);
+    const wasAllDone = tasks.length > 0 && tasks.every((t) => t.completed);
+    const isAllDone = updated.length > 0 && updated.every((t) => t.completed);
+    let nextStreak = streak;
+    if (!wasAllDone && isAllDone) nextStreak = streak + 1;
+    setStreak(nextStreak);
+    await persistChecklist(updated, nextStreak);
+  };
+
+  const removeTask = async (idx: number) => {
+    const updated = tasks.filter((_, i) => i !== idx);
+    setTasks(updated);
+    await persistChecklist(updated, streak);
+  };
+
   // Search + low stock
   const [invSearch, setInvSearch] = useState("");
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
@@ -249,6 +287,64 @@ export default function OwnerDashboard() {
             <div className="mt-0.5 font-medium">{insight}</div>
           </div>
         </div>
+      </section>
+
+      {/* Daily Checklist */}
+      <section className="bg-slate-900/60 border border-slate-800 shadow-lg p-4 rounded-xl">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-lg font-bold text-slate-100">Daily Checklist</h2>
+            <p className="text-xs text-slate-400">Streak: <span className="text-emerald-400 font-semibold">{streak}</span> day{streak === 1 ? '' : 's'}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              value={newTask}
+              onChange={(e) => setNewTask(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') addTask(); }}
+              placeholder="Add a task..."
+              className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            />
+            <button onClick={addTask} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm flex items-center gap-1">
+              <Plus className="w-4 h-4" /> Add
+            </button>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="mb-3">
+          <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+            <span>Progress</span>
+            <span className="text-slate-300 font-medium">{progressPct}%</span>
+          </div>
+          <div className="w-full h-3 rounded-full bg-slate-800 overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Task list */}
+        <ul className="divide-y divide-slate-800">
+          {tasks.length === 0 && (
+            <li className="text-sm text-slate-400 py-2">No tasks yet. Add your first task above.</li>
+          )}
+          {tasks.map((t, idx) => (
+            <li key={idx} className="flex items-center justify-between py-2">
+              <button onClick={() => toggleTask(idx)} className="flex items-center gap-3 text-left group">
+                {t.completed ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                ) : (
+                  <Circle className="w-5 h-5 text-slate-500 group-hover:text-slate-300" />
+                )}
+                <span className={t.completed ? "line-through text-slate-500" : "text-slate-200"}>{t.title}</span>
+              </button>
+              <button onClick={() => removeTask(idx)} className="text-slate-400 hover:text-red-400">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
       </section>
 
       {/* Latest Orders */}
