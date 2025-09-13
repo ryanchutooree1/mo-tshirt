@@ -13,8 +13,35 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MO T-SHIRT",
-  description: "Premium vinyl printing in Mauritius",
+  title: "MO T-SHIRT PRINTING 🇲🇺",
+  description:
+    "⭐ Mauritius’ trusted name in custom T-Shirts, Poloshirts & Hoodies✨. Worn by top restaurants, gyms, and businesses. Serving 50+ companies island-wide with fast delivery 🚀 ⭐",
+  metadataBase: new URL("https://mo-tshirt.mu"),
+  icons: {
+    icon: [
+      { url: "/icon.png", type: "image/png" },
+      { url: "/favicon-512.png", type: "image/png", sizes: "512x512" },
+    ],
+    shortcut: ["/favicon-512.png"],
+    apple: ["/favicon-512.png"],
+  },
+  openGraph: {
+    title: "MO T-SHIRT PRINTING 🇲🇺",
+    description:
+      "⭐ Mauritius’ trusted name in custom T-Shirts, Poloshirts & Hoodies✨. Worn by top restaurants, gyms, and businesses. Serving 50+ companies island-wide with fast delivery 🚀 ⭐",
+    url: "https://mo-tshirt.mu",
+    siteName: "MO T-SHIRT",
+    images: [{ url: "/all_products.png" }],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MO T-SHIRT PRINTING 🇲🇺",
+    description:
+      "⭐ Mauritius’ trusted name in custom T-Shirts, Poloshirts & Hoodies✨. Worn by top restaurants, gyms, and businesses. Serving 50+ companies island-wide with fast delivery 🚀 ⭐",
+    images: ["/all_products.png"],
+  },
 };
 
 export default function RootLayout({
