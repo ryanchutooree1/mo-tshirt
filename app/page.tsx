@@ -5,6 +5,7 @@ import Problems from "@/components/Problems";
 import MapCard from "@/components/MapCard";
 import { getWhatsAppUrl, CONTACT_EMAIL, CONTACT_TEL, CONTACT_PHONE_DISPLAY } from "@/data/work";
 import HowToOrder from "@/components/HowToOrder";
+import Pricing from "@/components/Pricing";
 
 export default function HomePage() {
   return (
@@ -14,20 +15,7 @@ export default function HomePage() {
       <main className="flex-1">
         <Hero />
 
-        {/* Pricing anchor section */}
-        <section id="pricing" className="py-12 lg:py-20 bg-gray-50">
-          <div className="mx-auto max-w-6xl px-4 text-center">
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Clear & Fair Pricing</h2>
-            <p className="mt-3 text-base sm:text-lg text-gray-600">
-              Pricing depends on size, colors, and quantity. Send us your logo for a quick quote.
-            </p>
-            <div className="mt-6">
-              <a href="#contact" className="text-sm font-semibold text-gray-700 hover:text-gray-900">
-                See contact options →
-              </a>
-            </div>
-          </div>
-        </section>
+        <Pricing />
 
         {/* How to Order */}
         <HowToOrder />
