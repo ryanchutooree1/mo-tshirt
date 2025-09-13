@@ -18,12 +18,7 @@ export const metadata: Metadata = {
     "⭐ Mauritius’ trusted name in custom T-Shirts, Poloshirts & Hoodies✨. Worn by top restaurants, gyms, and businesses. Serving 50+ companies island-wide with fast delivery 🚀 ⭐",
   metadataBase: new URL("https://mo-tshirt.mu"),
   icons: {
-    icon: [
-      { url: "/icon.png", type: "image/png" },
-      { url: "/favicon-512.png", type: "image/png", sizes: "512x512" },
-    ],
-    shortcut: ["/favicon-512.png"],
-    apple: ["/favicon-512.png"],
+    icon: [{ url: "/icon.png", type: "image/png" }],
   },
   openGraph: {
     title: "MO T-SHIRT PRINTING 🇲🇺",
