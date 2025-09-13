@@ -8,9 +8,11 @@ export default function Hero() {
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-gray-900">
           Trying to be #1 in Mauritius.
         </h1>
-        <p className="mt-4 text-base sm:text-lg text-gray-600">
-          Premium vinyl printing on T-shirts, polo shirts, caps, and hoodies.
-          Fast. Professional. Trusted.
+        <p className="mt-4 text-base sm:text-lg text-gray-700">
+          Want prints that look pro and last? ✨
+        </p>
+        <p className="mt-1 text-base sm:text-lg text-gray-600">
+          We’ll print T‑Shirts, Poloshirts, Caps & Hoodies fast. Trusted by 80+ businesses across Mauritius and Reunion Island.
         </p>
 
         {/* Buttons */}
