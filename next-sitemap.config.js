@@ -4,6 +4,8 @@ const siteUrl = "https://mo-tshirt.mu";
 module.exports = {
   siteUrl,
   generateRobotsTxt: true,
+  // Avoid daily diffs by omitting dynamic lastmod timestamps
+  autoLastmod: false,
   robotsTxtOptions: {
     policies: [{ userAgent: "*", allow: "/" }],
   },
@@ -22,7 +24,6 @@ module.exports = {
       loc: path,
       changefreq: config.changefreq ?? "weekly",
       priority,
-      lastmod: new Date().toISOString(),
       alternateRefs: config.alternateRefs ?? [],
     };
   },
