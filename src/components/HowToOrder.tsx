@@ -19,7 +19,7 @@ export default function HowToOrder() {
   ];
 
   return (
-    <section className="py-12 lg:py-20 bg-white">
+    <section id="how-to-order" className="py-12 lg:py-20 bg-white">
       <div className="mx-auto max-w-6xl px-4">
         <h2 className="text-center text-3xl sm:text-4xl font-bold tracking-tight text-gray-900">How to Order</h2>
         <p className="mt-3 text-center text-base sm:text-lg text-gray-600">Simple steps to get prints you’ll love.</p>
@@ -43,4 +43,3 @@ export default function HowToOrder() {
     </section>
   );
 }
-

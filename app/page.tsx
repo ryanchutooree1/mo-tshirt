@@ -45,8 +45,8 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Problems Section */}
-        <section className="py-12 lg:py-20 bg-gray-50 border-t border-gray-200">
+        {/* Benefits Section */}
+        <section id="benefits" className="py-12 lg:py-20 bg-gray-50 border-t border-gray-200">
           <div className="mx-auto max-w-6xl px-4">
             <Problems />
           </div>
