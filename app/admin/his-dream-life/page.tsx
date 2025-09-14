@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, doc, getDocs, setDoc } from "firebase/firestore";
+import { collection, doc, getDocs, setDoc, writeBatch } from "firebase/firestore";
 
 type Sector = { key: string; label: string };
 type Task = { id: string; text: string; done: boolean };
@@ -122,7 +122,21 @@ export default function HisDreamLifePage() {
     return copy;
   });
 
-  const resetAll = () => setTasks(SECTORS.map(() => [...DEFAULT_TASKS]));
+  const resetAll = async () => {
+    const fresh = SECTORS.map(() => [...DEFAULT_TASKS]);
+    setTasks(fresh);
+    try {
+      const batch = writeBatch(db);
+      SECTORS.forEach((s, si) => batch.set(doc(db, COLLECTION, s.key), { tasks: fresh[si] }));
+      await batch.commit();
+      setToast("All reset");
+      setTimeout(() => setToast(null), 1500);
+    } catch (e) {
+      console.error(e);
+      setToast("Reset failed");
+      setTimeout(() => setToast(null), 2000);
+    }
+  };
 
   // SVG helpers
   const radius = 260; const cx = 320; const cy = 320; const size = 640; const padding = 100; const angleStep = 360 / SECTORS.length;
@@ -149,17 +163,17 @@ export default function HisDreamLifePage() {
           </g>
         </svg>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {SECTORS.map((s, si) => (
-          <div key={s.key} className="rounded-lg border p-3">
-            <h2 className="mb-2 text-sm font-semibold tracking-wide text-blue-600">{s.label}</h2>
-            <ul className="space-y-2">
+          <div key={s.key} className="rounded-xl border shadow-sm overflow-hidden">
+            <div className="bg-gray-100 px-3 py-2 text-sm font-semibold tracking-wide text-gray-700 sticky top-0">{s.label}</div>
+            <ul className="divide-y divide-gray-200">
               {tasks[si].map((t, ti) => { const st = saveState[keyFor(si, ti)] ?? "idle"; return (
-                <li key={t.id} className="flex items-center gap-2 group">
-                  <input type="checkbox" checked={t.done} onChange={() => toggleTask(si, ti)} className="h-4 w-4" />
-                  <input value={t.text} onChange={(e) => updateTaskText(si, ti, e.target.value)} className="flex-1 rounded border px-2 py-1 text-sm" />
-                  <button onClick={() => saveRow(si, ti, tasks)} disabled={st === "saving"} className="text-xs rounded border px-2 py-1 hover:bg-gray-50 disabled:opacity-60">{st === "saving" ? "Saving…" : st === "saved" ? "Saved" : "Done"}</button>
-                  {st === "error" && <span className="text-xs text-red-600 ml-1">Error. Try again.</span>}
+                <li key={t.id} className={`flex items-center gap-3 px-3 py-2 transition ${t.done ? "bg-green-50 border-l-4 border-green-400" : ""}`}>
+                  <input type="checkbox" checked={t.done} onChange={() => toggleTask(si, ti)} className="h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500" />
+                  <input value={t.text} onChange={(e) => updateTaskText(si, ti, e.target.value)} className="flex-1 rounded border px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-400" />
+                  <button onClick={() => saveRow(si, ti, tasks)} disabled={st === "saving"} className={`text-xs rounded px-3 py-1 font-medium transition ${st === "saved" ? "bg-green-500 text-white" : st === "saving" ? "bg-gray-300 text-gray-700" : "border border-gray-300 hover:bg-gray-50"}`}>{st === "saving" ? "..." : st === "saved" ? "✓" : "Done"}</button>
+                  {st === "error" && <span className="text-xs text-red-600 ml-2">Save failed</span>}
                 </li>
               ); })}
             </ul>
@@ -169,4 +183,3 @@ export default function HisDreamLifePage() {
     </div>
   );
 }
-
