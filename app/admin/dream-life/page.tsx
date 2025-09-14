@@ -25,25 +25,40 @@ const DEFAULT_SECTORS: Omit<Sector, "checked" | "note">[] = [
 ];
 
 const STORAGE_KEY = "dream-life-v1";
+type Cell = { text: string; checked: boolean };
 
 export default function DreamLifePage() {
   const year = new Date().getFullYear();
   const [sectors, setSectors] = useState<Sector[]>(() =>
     DEFAULT_SECTORS.map((s) => ({ ...s, checked: false, note: "" }))
   );
+  // 3 annular bands like the screenshot
+  const bands = 3;
+  const [cells, setCells] = useState<Cell[][]>(() =>
+    Array.from({ length: bands }, () =>
+      Array.from({ length: DEFAULT_SECTORS.length }, () => ({ text: "", checked: false }))
+    )
+  );
 
   // Load/save state
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setSectors(JSON.parse(raw));
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.sectors) setSectors(parsed.sectors);
+        if (parsed?.cells) setCells(parsed.cells);
+      }
     } catch {}
   }, []);
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sectors));
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ sectors, cells })
+      );
     } catch {}
-  }, [sectors]);
+  }, [sectors, cells]);
 
   const radius = 260;
   const rings = 10;
@@ -62,7 +77,10 @@ export default function DreamLifePage() {
   const updateNote = (i: number, note: string) =>
     setSectors((arr) => arr.map((s, idx) => (idx === i ? { ...s, note } : s)));
 
-  const reset = () => setSectors(DEFAULT_SECTORS.map((s) => ({ ...s, checked: false, note: "" })));
+  const reset = () => {
+    setSectors(DEFAULT_SECTORS.map((s) => ({ ...s, checked: false, note: "" })));
+    setCells(Array.from({ length: bands }, () => Array.from({ length: DEFAULT_SECTORS.length }, () => ({ text: "", checked: false }))));
+  };
 
   const angleStep = 360 / sectors.length;
 
@@ -72,13 +90,22 @@ export default function DreamLifePage() {
     [sectors.length]
   );
 
+  const annularPath = (r0: number, r1: number, a0: number, a1: number) => {
+    const p0 = polarToXY(r0, a0);
+    const p1 = polarToXY(r0, a1);
+    const p2 = polarToXY(r1, a1);
+    const p3 = polarToXY(r1, a0);
+    const large = a1 - a0 > 180 ? 1 : 0;
+    return `M ${p0.x} ${p0.y} A ${r0} ${r0} 0 ${large} 1 ${p1.x} ${p1.y} L ${p2.x} ${p2.y} A ${r1} ${r1} 0 ${large} 0 ${p3.x} ${p3.y} Z`;
+  };
+
   return (
     <div className="mx-auto max-w-5xl">
       <header className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">DESIGNING MY DREAM LIFE</h1>
           <p className="mt-2 text-sm text-gray-600 max-w-2xl">
-            Assess where you see yourself today in relation to your ideal level in each area. Click a circle to mark a weekly task as done (turns green). Add a note inside each circle. Use Reset to clear.
+            Assess where you see yourself today. Type inside each ring segment (like A, B, C…) and click to mark it green. Use Reset to clear.
           </p>
         </div>
         <button onClick={reset} className="rounded-md border px-3 py-2 text-sm font-semibold hover:bg-gray-50">
@@ -155,6 +182,58 @@ export default function DreamLifePage() {
               </g>
             );
           })}
+
+          {/* Annular segmented cells (3 bands x 12 sectors) */}
+          {cells.map((row, b) => {
+            const r1 = radius - 20 - b * (radius / 4);
+            const r0 = r1 - (radius / 4) + 10;
+            return (
+              <g key={`band-${b}`}>
+                {row.map((cell, i) => {
+                  const a0 = i * angleStep + 2;
+                  const a1 = (i + 1) * angleStep - 2;
+                  const d = annularPath(r0, r1, a0, a1);
+                  const midA = (a0 + a1) / 2;
+                  const midR = (r0 + r1) / 2;
+                  const w = Math.max(40, (Math.PI * (a1 - a0) / 180) * midR * 0.6);
+                  const h = 22;
+                  const c = polarToXY(midR, midA);
+                  return (
+                    <g key={`cell-${b}-${i}`}>
+                      <path d={d} fill={cell.checked ? "#bbf7d0" : "#ffffff"} stroke="#d1d5db" onClick={() => {
+                        setCells((prev) => prev.map((r, rb) => r.map((col, ci) => (rb === b && ci === i ? { ...col, checked: !col.checked } : col))));
+                      }} style={{ cursor: "pointer" }} />
+                      <foreignObject x={c.x - w / 2} y={c.y - h / 2} width={w} height={h}>
+                        <div
+                          xmlns="http://www.w3.org/1999/xhtml"
+                          contentEditable
+                          onInput={(e) => {
+                            const val = (e.target as HTMLDivElement).innerText.slice(0, 12);
+                            setCells((prev) => prev.map((r, rb) => r.map((col, ci) => (rb === b && ci === i ? { ...col, text: val } : col))));
+                          }}
+                          suppressContentEditableWarning
+                          style={{
+                            width: `${w}px`,
+                            height: `${h}px`,
+                            overflow: "hidden",
+                            display: "grid",
+                            placeItems: "center",
+                            textAlign: "center",
+                            fontSize: "12px",
+                            lineHeight: 1.1,
+                            color: "#111827",
+                            background: "transparent",
+                          }}
+                        >
+                          {cell.text}
+                        </div>
+                      </foreignObject>
+                    </g>
+                  );
+                })}
+              </g>
+            );
+          })}
         </svg>
       </div>
 
@@ -206,8 +285,8 @@ export default function DreamLifePage() {
           </ul>
         </div>
         <div>
-          <div className="font-semibold text-gray-800 mb-2">COLOR</div>
-          <p className="text-gray-500">Use the green circles on the wheel to mark completion. Notes can be written inside each circle or in the list.</p>
+          <div className="font-semibold text-gray-800 mb-2">RESET</div>
+          <p className="text-gray-500">Click any segment to toggle green. Type short text (e.g., “9×4”) inside segments like in your sample.</p>
         </div>
       </div>
     </div>
