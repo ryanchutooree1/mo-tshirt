@@ -46,39 +46,34 @@ export default function HisDreamLifePage() {
   );
 
   useEffect(() => {
-    const ensureNine = (arr: any[]): Task[] => {
-      const base = DEFAULT_TASKS.map((t) => ({ ...t }));
-      if (!Array.isArray(arr)) return base;
-      const normalized: Task[] = [];
-      for (let i = 0; i < 9; i++) {
-        const item = arr[i];
-        if (item && typeof item === "object") {
-          normalized.push({
-            id: String(item.id ?? `task-${i + 1}`),
-            text: String(item.text ?? `Task ${i + 1}`),
-            done: Boolean(item.done),
-          });
-        } else {
-          normalized.push({ ...base[i] });
-        }
+    const normalizeToBands = (arr: any[]): Task[] => {
+      const out: Task[] = [];
+      const len = Math.max(Array.isArray(arr) ? arr.length : 0, 9);
+      for (let i = 0; i < len; i++) {
+        const item = Array.isArray(arr) ? arr[i] : undefined;
+        out.push({
+          id: String(item?.id ?? `task-${i + 1}`),
+          text: String(item?.text ?? `Task ${i + 1}`),
+          done: Boolean(item?.done ?? false),
+        });
       }
-      return normalized;
+      return out;
     };
 
     const load = async () => {
       try {
         const colRef = collection(db, COLLECTION);
         const snapshot = await getDocs(colRef);
-        const merged: Task[][] = SECTORS.map(() =>
-          DEFAULT_TASKS.map((t) => ({ ...t }))
-        );
+        const merged: Task[][] = SECTORS.map(() => DEFAULT_TASKS());
         const seen = new Set<string>();
         snapshot.forEach((docSnap) => {
           const id = docSnap.id;
           const idx = SECTORS.findIndex((s) => s.key === id);
           if (idx >= 0) {
             const saved = (docSnap.data() as any)?.tasks;
-            merged[idx] = ensureNine(saved);
+            merged[idx] = Array.isArray(saved) && saved.length
+              ? normalizeToBands(saved)
+              : DEFAULT_TASKS();
             seen.add(id);
           }
         });
