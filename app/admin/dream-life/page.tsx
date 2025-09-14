@@ -157,8 +157,9 @@ export default function DreamLifePage() {
                   const d = annularPath(r0, r1, a0, a1);
                   const midA = (a0 + a1) / 2;
                   const midR = (r0 + r1) / 2;
-                  const w = Math.max(40, (Math.PI * (a1 - a0) / 180) * midR * 0.6);
-                  const h = 22;
+                  // Make editable box larger and easier to type into
+                  const w = Math.max(80, (Math.PI * (a1 - a0) / 180) * midR * 0.8);
+                  const h = 42;
                   const c = polarToXY(midR, midA);
                   return (
                     <g key={`cell-${b}-${i}`}>
@@ -170,7 +171,7 @@ export default function DreamLifePage() {
                           xmlns="http://www.w3.org/1999/xhtml"
                           contentEditable
                           onInput={(e) => {
-                            const val = (e.target as HTMLDivElement).innerText.slice(0, 12);
+                            const val = (e.target as HTMLDivElement).innerText.slice(0, 60);
                             setCells((prev) => prev.map((r, rb) => r.map((col, ci) => (rb === b && ci === i ? { ...col, text: val } : col))));
                           }}
                           suppressContentEditableWarning
@@ -178,13 +179,17 @@ export default function DreamLifePage() {
                             width: `${w}px`,
                             height: `${h}px`,
                             overflow: "hidden",
-                            display: "grid",
-                            placeItems: "center",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            padding: "4px 6px",
                             textAlign: "center",
-                            fontSize: "12px",
-                            lineHeight: 1.1,
+                            fontSize: "13px",
+                            lineHeight: 1.2,
                             color: "#111827",
                             background: "transparent",
+                            direction: "ltr",
+                            whiteSpace: "pre-wrap",
                           }}
                         >
                           {cell.text}
