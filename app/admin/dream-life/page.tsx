@@ -110,6 +110,18 @@ export default function DreamLifePage() {
   }, [tasks]);
 
   // --- Task helpers
+  const [justSaved, setJustSaved] = useState<Record<string, boolean>>({});
+  const [locked, setLocked] = useState<Record<string, boolean>>({});
+
+  const saveSector = async (si: number, sectorTasks: Task[]) => {
+    try {
+      const key = SECTORS[si].key;
+      await setDoc(doc(db, "dreamLife", key), { tasks: sectorTasks }, { merge: true });
+    } catch (e) {
+      console.error("Save error:", e);
+    }
+  };
+
   const updateTaskText = (si: number, ti: number, text: string) =>
     setTasks((all) => {
       const copy = all.map((arr) => [...arr]);
@@ -121,6 +133,8 @@ export default function DreamLifePage() {
     setTasks((all) => {
       const copy = all.map((arr) => [...arr]);
       copy[si][ti] = { ...copy[si][ti], done: !copy[si][ti].done };
+      // Save immediately for this sector
+      void saveSector(si, copy[si]);
       return copy;
     });
 
@@ -157,8 +171,22 @@ export default function DreamLifePage() {
       if (copy[si][b]) {
         copy[si][b] = { ...copy[si][b], done: !copy[si][b].done };
       }
+      // Save immediately for this sector
+      void saveSector(si, copy[si]);
       return copy;
     });
+
+  const markDone = async (si: number, ti: number) => {
+    // Persist current tasks for that sector
+    await saveSector(si, tasks[si]);
+    const key = `${si}-${ti}`;
+    setLocked((m) => ({ ...m, [key]: true }));
+    setJustSaved((m) => ({ ...m, [key]: true }));
+    setTimeout(() => {
+      setJustSaved((m) => ({ ...m, [key]: false }));
+      setLocked((m) => ({ ...m, [key]: false }));
+    }, 1500);
+  };
 
   return (
     <div className="mx-auto max-w-7xl p-4">
@@ -291,23 +319,13 @@ export default function DreamLifePage() {
                     value={t.text}
                     onChange={(e) => updateTaskText(si, ti, e.target.value)}
                     className="flex-1 rounded border px-2 py-1 text-sm"
+                    readOnly={Boolean(locked[`${si}-${ti}`])}
                   />
-                  {/* Delete only on hover */}
                   <button
-                    onClick={() =>
-                      setTasks((all) => {
-                        const copy = all.map((arr) => [...arr]);
-                        copy[si][ti] = {
-                          ...copy[si][ti],
-                          text: "",
-                          done: false,
-                        };
-                        return copy;
-                      })
-                    }
-                    className="text-xs text-red-600 hover:underline opacity-0 group-hover:opacity-100 transition"
+                    onClick={() => markDone(si, ti)}
+                    className="text-xs rounded border px-2 py-1 hover:bg-gray-50"
                   >
-                    Delete
+                    {justSaved[`${si}-${ti}`] ? "✅ Done" : "Done"}
                   </button>
                 </li>
               ))}
