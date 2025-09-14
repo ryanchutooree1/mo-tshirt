@@ -31,7 +31,7 @@ const DEFAULT_TASKS = (count = 9): Task[] =>
   }));
 
 // --- Reusable LifeWheel ---
-function LifeWheel({
+export function LifeWheel({
   who,
   color,
 }: {
@@ -222,4 +222,3 @@ export default function OurDreamPage() {
     </div>
   );
 }
-

@@ -14,7 +14,9 @@ const DEFAULT_TOP: NavItem[] = [
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/accounting", label: "Accounting" },
   { href: "/admin/dms", label: "DMS" },
-  { href: "/admin/dream-life", label: "Dream Life" },
+  { href: "/admin/his-dream-life", label: "His Dream Life" },
+  { href: "/admin/her-dream-life", label: "Her Dream Life" },
+  { href: "/admin/our-dream", label: "Our Dream Life" },
 ];
 
 const DEFAULT_MORE: NavItem[] = [
