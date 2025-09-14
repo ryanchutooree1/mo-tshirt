@@ -28,6 +28,7 @@ const SECTORS: Sector[] = [
   { key: "finances", label: "FINANCES" },
 ];
 
+// 👇 make sure this is a FUNCTION, not a static array
 const DEFAULT_TASKS = (count = 9): Task[] =>
   Array.from({ length: count }, (_, i) => ({
     id: `task-${i + 1}`,
@@ -43,10 +44,10 @@ export default function HisDreamLifePage() {
   const bands = rings - 1;
 
   const [tasks, setTasks] = useState<Task[][]>(
-    SECTORS.map(() => DEFAULT_TASKS())
+    SECTORS.map(() => DEFAULT_TASKS()) // ✅ fresh tasks per sector
   );
 
-  // --- Load from Firestore ---
+  // --- Load from Firebase ---
   useEffect(() => {
     const load = async () => {
       try {
@@ -143,7 +144,7 @@ export default function HisDreamLifePage() {
     }
   };
 
-  // --- SVG helpers ---
+  // --- SVG helpers (same as hers) ---
   const radius = 260;
   const cx = 320;
   const cy = 320;
