@@ -274,7 +274,10 @@ export default function DreamLifePage() {
       {/* Task Lists */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {SECTORS.map((s, si) => (
-          <div key={s.key} className="rounded-xl border shadow-sm overflow-hidden">
+          <div
+            key={s.key}
+            className="rounded-xl border shadow-sm overflow-hidden"
+          >
             <div className="bg-gray-100 px-3 py-2 text-sm font-semibold tracking-wide text-gray-700 sticky top-0">
               {s.label}
             </div>

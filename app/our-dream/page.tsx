@@ -145,10 +145,17 @@ export function LifeWheel({
 
           {SECTORS.map((s, i) => {
             const angle = (i + 0.5) * angleStep;
-            const pt = polarToXY(radius + 40, angle);
+            const p = polarToXY(radius + 40, angle);
+            const pt = { ...p };
+            // Manual fine-tuning
+            if (s.key === "romance") pt.x -= 10;
+            if (s.key === "career") pt.x += 10;
+            if (s.key === "spiritual") pt.x += 10;
             let anchor: "start" | "end" | "middle" = "middle";
-            if (angle > 90 && angle < 270) anchor = "end";
-            else if (angle < 90 || angle > 270) anchor = "start";
+            if (angle >= 75 && angle <= 105) anchor = "middle";
+            else if (angle > 105 && angle < 255) anchor = "end";
+            else if (angle >= 255 && angle <= 285) anchor = "middle";
+            else anchor = "start";
             return (
               <text
                 key={s.key}
