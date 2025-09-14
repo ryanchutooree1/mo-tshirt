@@ -121,7 +121,7 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
           <div className="mt-1 text-sm text-gray-500">Operations</div>
         </div>
         <nav className="mt-6 space-y-1 flex-1">
-          {nav.map((n) => {
+          {topNav.map((n) => {
             const active = pathname === n.href || (n.href !== "/admin" && pathname.startsWith(n.href));
             return (
               <Link
