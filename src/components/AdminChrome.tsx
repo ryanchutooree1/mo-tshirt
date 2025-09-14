@@ -16,6 +16,7 @@ const nav: NavItem[] = [
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/accounting", label: "Accounting" },
   { href: "/admin/dms", label: "DMS" },
+  { href: "/admin/dream-life", label: "Dream Life" },
 ];
 
 export default function AdminChrome({ children }: { children: React.ReactNode }) {
