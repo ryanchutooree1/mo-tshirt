@@ -109,9 +109,11 @@ export default function DreamLifePage() {
     save();
   }, [tasks]);
 
-  // --- Task helpers
-  const [justSaved, setJustSaved] = useState<Record<string, boolean>>({});
-  const [locked, setLocked] = useState<Record<string, boolean>>({});
+  // --- Task helpers & save feedback
+  const [saveState, setSaveState] = useState<Record<string, "idle" | "saving" | "saved" | "error">>({});
+  const [toast, setToast] = useState<string | null>(null);
+
+  const keyFor = (si: number, ti: number) => `${si}-${ti}`;
 
   const saveSector = async (si: number, sectorTasks: Task[]) => {
     try {
@@ -133,8 +135,25 @@ export default function DreamLifePage() {
     setTasks((all) => {
       const copy = all.map((arr) => [...arr]);
       copy[si][ti] = { ...copy[si][ti], done: !copy[si][ti].done };
-      // Save immediately for this sector
-      void saveSector(si, copy[si]);
+      // Save immediately for this sector and show status on this row
+      void (async () => {
+        const k = keyFor(si, ti);
+        setSaveState((s) => ({ ...s, [k]: "saving" }));
+        try {
+          await setDoc(doc(db, "dreamLife", SECTORS[si].key), { tasks: copy[si] }, { merge: true });
+          setSaveState((s) => ({ ...s, [k]: "saved" }));
+          setToast("Saved to Firebase");
+          setTimeout(() => {
+            setSaveState((s) => ({ ...s, [k]: "idle" }));
+            setToast(null);
+          }, 1500);
+        } catch (e) {
+          console.error(e);
+          setSaveState((s) => ({ ...s, [k]: "error" }));
+          setToast("Save failed");
+          setTimeout(() => setToast(null), 2000);
+        }
+      })();
       return copy;
     });
 
@@ -171,25 +190,53 @@ export default function DreamLifePage() {
       if (copy[si][b]) {
         copy[si][b] = { ...copy[si][b], done: !copy[si][b].done };
       }
-      // Save immediately for this sector
-      void saveSector(si, copy[si]);
+      // Save immediately for this sector and show toast/row status
+      void (async () => {
+        const k = keyFor(si, b);
+        setSaveState((s) => ({ ...s, [k]: "saving" }));
+        try {
+          await setDoc(doc(db, "dreamLife", SECTORS[si].key), { tasks: copy[si] }, { merge: true });
+          setSaveState((s) => ({ ...s, [k]: "saved" }));
+          setToast("Saved to Firebase");
+          setTimeout(() => {
+            setSaveState((s) => ({ ...s, [k]: "idle" }));
+            setToast(null);
+          }, 1500);
+        } catch (e) {
+          console.error(e);
+          setSaveState((s) => ({ ...s, [k]: "error" }));
+          setToast("Save failed");
+          setTimeout(() => setToast(null), 2000);
+        }
+      })();
       return copy;
     });
-
-  const markDone = async (si: number, ti: number) => {
-    // Persist current tasks for that sector
-    await saveSector(si, tasks[si]);
-    const key = `${si}-${ti}`;
-    setLocked((m) => ({ ...m, [key]: true }));
-    setJustSaved((m) => ({ ...m, [key]: true }));
-    setTimeout(() => {
-      setJustSaved((m) => ({ ...m, [key]: false }));
-      setLocked((m) => ({ ...m, [key]: false }));
-    }, 1500);
+  const saveTaskRow = async (si: number, ti: number) => {
+    const k = keyFor(si, ti);
+    setSaveState((s) => ({ ...s, [k]: "saving" }));
+    try {
+      await setDoc(doc(db, "dreamLife", SECTORS[si].key), { tasks: tasks[si] }, { merge: true });
+      setSaveState((s) => ({ ...s, [k]: "saved" }));
+      setToast("Saved to Firebase");
+      setTimeout(() => {
+        setSaveState((s) => ({ ...s, [k]: "idle" }));
+        setToast(null);
+      }, 1500);
+    } catch (e) {
+      console.error(e);
+      setSaveState((s) => ({ ...s, [k]: "error" }));
+      setToast("Save failed");
+      setTimeout(() => setToast(null), 2000);
+    }
   };
 
   return (
     <div className="mx-auto max-w-7xl p-4">
+      {toast && (
+        <div className="fixed top-4 right-4 rounded bg-black text-white text-sm px-3 py-2 shadow-lg z-50">
+          {toast}
+        </div>
+      )}
       <header className="mb-6 flex items-center justify-between">
         <h1 className="text-xl md:text-2xl font-bold">
           DESIGNING MY DREAM LIFE
@@ -319,14 +366,21 @@ export default function DreamLifePage() {
                     value={t.text}
                     onChange={(e) => updateTaskText(si, ti, e.target.value)}
                     className="flex-1 rounded border px-2 py-1 text-sm"
-                    readOnly={Boolean(locked[`${si}-${ti}`])}
                   />
-                  <button
-                    onClick={() => markDone(si, ti)}
-                    className="text-xs rounded border px-2 py-1 hover:bg-gray-50"
-                  >
-                    {justSaved[`${si}-${ti}`] ? "✅ Done" : "Done"}
-                  </button>
+                  {(() => { const st = saveState[keyFor(si, ti)] ?? "idle"; return (
+                    <>
+                      <button
+                        onClick={() => saveTaskRow(si, ti)}
+                        disabled={st === "saving"}
+                        className="text-xs rounded border px-2 py-1 hover:bg-gray-50 disabled:opacity-60"
+                      >
+                        {st === "saving" ? "Saving…" : st === "saved" ? "Saved" : "Done"}
+                      </button>
+                      {st === "error" && (
+                        <span className="text-xs text-red-600 ml-1">Error. Try again.</span>
+                      )}
+                    </>
+                  ); })()}
                 </li>
               ))}
             </ul>
