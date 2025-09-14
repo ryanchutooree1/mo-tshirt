@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 type Sector = { key: string; label: string };
 type Task = { id: string; text: string; done: boolean };
 
-const SECTORS: Sector[] = [
+const DEFAULT_SECTORS: Sector[] = [
   { key: "health", label: "HEALTH & FITNESS" },
   { key: "selfdev", label: "SELF DEVELOPMENT" },
   { key: "lifestyle", label: "LIFESTYLE" },
@@ -20,7 +20,7 @@ const SECTORS: Sector[] = [
   { key: "finances", label: "FINANCES" },
 ];
 
-const STORAGE_KEY = "dream-life-v2";
+const STORAGE_KEY = "dream-life-v4";
 
 export default function DreamLifePage() {
   const year = new Date().getFullYear();
@@ -28,32 +28,36 @@ export default function DreamLifePage() {
   const rings = 10;
   const bands = rings - 1;
 
-  const [tasks, setTasks] = useState<Task[][]>(() =>
-    SECTORS.map(() => [])
-  );
+  // dynamic sectors order
+  const [sectors, setSectors] = useState<Sector[]>(() => DEFAULT_SECTORS);
+  // tasks per sector
+  const [tasks, setTasks] = useState<Task[][]>(() => DEFAULT_SECTORS.map(() => []));
 
+  // Load
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed?.sectors)) setSectors(parsed.sectors);
         if (Array.isArray(parsed?.tasks)) setTasks(parsed.tasks);
       }
     } catch {}
   }, []);
 
+  // Save
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks, sectors }));
     } catch {}
-  }, [tasks]);
+  }, [tasks, sectors]);
 
   // --- SVG helpers ---
-  const radius = 260;
-  const cx = 320;
-  const cy = 320;
-  const size = 640;
-  const angleStep = 360 / SECTORS.length;
+  const size = 900; // bigger canvas
+  const cx = size / 2;
+  const cy = size / 2;
+  const radius = 320;
+  const angleStep = 360 / sectors.length;
 
   const polarToXY = (r: number, angleDeg: number) => {
     const a = (angleDeg - 90) * (Math.PI / 180);
@@ -73,7 +77,7 @@ export default function DreamLifePage() {
   const addTask = (si: number) =>
     setTasks((all) => {
       const copy = all.map((arr) => arr.slice());
-      if (copy[si].length >= bands) return all; // maxed
+      if (copy[si].length >= bands) return all;
       copy[si].push({
         id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
         text: `Task ${copy[si].length + 1}`,
@@ -103,7 +107,7 @@ export default function DreamLifePage() {
       return copy;
     });
 
-  const resetAll = () => setTasks(SECTORS.map(() => []));
+  const resetAll = () => setTasks(sectors.map(() => []));
 
   const toggleBySegment = (si: number, b: number) => {
     setTasks((all) => {
@@ -120,8 +124,33 @@ export default function DreamLifePage() {
     });
   };
 
+  // move a sector and its tasks relative by delta (-1 left, +1 right)
+  function moveSector(index: number, delta: number) {
+    const len = sectors.length;
+    const newIndex = (index + delta + len) % len;
+    setSectors((prev) => {
+      const next = prev.slice();
+      const [item] = next.splice(index, 1);
+      next.splice(newIndex, 0, item);
+      return next;
+    });
+    setTasks((prev) => {
+      const next = prev.slice();
+      const [item] = next.splice(index, 1);
+      next.splice(newIndex, 0, item);
+      return next;
+    });
+  }
+
+  function resetOrder() {
+    // Reorder sectors back to defaults, carrying along current tasks by sector key
+    const map = new Map(sectors.map((s, i) => [s.key, i] as const));
+    setSectors(DEFAULT_SECTORS);
+    setTasks((prev) => DEFAULT_SECTORS.map((s) => prev[map.get(s.key) ?? 0] ?? []));
+  }
+
   return (
-    <div className="mx-auto max-w-6xl p-4">
+    <div className="mx-auto max-w-7xl p-4">
       <header className="mb-4 flex items-center justify-between">
         <h1 className="text-xl md:text-2xl font-bold">DESIGNING MY DREAM LIFE</h1>
         <button
@@ -132,14 +161,36 @@ export default function DreamLifePage() {
         </button>
       </header>
 
+      {/* Reorder chips (top, keeps wheel at the top area) */}
+      <div className="mb-4 rounded border p-3 bg-white">
+        <div className="text-xs font-semibold text-gray-700 mb-2">Reorder sectors — changes their position around the wheel</div>
+        <div className="flex flex-wrap gap-2">
+          {sectors.map((s, i) => (
+            <div key={s.key} className="flex items-center gap-1 rounded-full border px-2 py-1 text-xs">
+              <button
+                aria-label="Move left"
+                onClick={() => moveSector(i, -1)}
+                className="h-6 w-6 inline-flex items-center justify-center rounded-full border hover:bg-gray-50"
+              >
+                ◀
+              </button>
+              <span className="px-1 whitespace-nowrap">{s.label}</span>
+              <button
+                aria-label="Move right"
+                onClick={() => moveSector(i, +1)}
+                className="h-6 w-6 inline-flex items-center justify-center rounded-full border hover:bg-gray-50"
+              >
+                ▶
+              </button>
+            </div>
+          ))}
+          <button onClick={resetOrder} className="ml-auto text-xs underline">Reset order</button>
+        </div>
+      </div>
+
       {/* Circle */}
       <div className="flex justify-center mb-10">
-        <svg
-          width={size}
-          height={size}
-          viewBox={`0 0 ${size} ${size}`}
-          className="mx-auto block"
-        >
+        <svg width={size} height={size}>
           {/* guide rings */}
           {[...Array(rings)].map((_, i) => (
             <circle
@@ -153,7 +204,7 @@ export default function DreamLifePage() {
           ))}
 
           {/* spokes */}
-          {SECTORS.map((_, i) => {
+          {sectors.map((_, i) => {
             const { x, y } = polarToXY(radius, i * angleStep);
             return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="#e5e7eb" />;
           })}
@@ -172,17 +223,23 @@ export default function DreamLifePage() {
           </text>
 
           {/* sector labels */}
-          {SECTORS.map((s, i) => {
-            const midA = (i + 0.5) * angleStep;
-            const pt = polarToXY(radius + 50, midA);
+          {sectors.map((s, i) => {
+            const angle = (i + 0.5) * angleStep;
+            const pt = polarToXY(radius + 100, angle); // push labels further out
+
+            let anchor: "start" | "end" | "middle" = "middle";
+            if (angle > 90 && angle < 270) anchor = "end";
+            else if (angle < 90 || angle > 270) anchor = "start";
+
             return (
               <text
                 key={s.key}
                 x={pt.x}
                 y={pt.y}
-                textAnchor="middle"
-                fontSize="12"
-                className="fill-gray-800 font-bold"
+                textAnchor={anchor}
+                fontSize="13"
+                fontWeight="600"
+                className="fill-gray-800"
               >
                 {s.label}
               </text>
@@ -195,7 +252,7 @@ export default function DreamLifePage() {
             const r0 = radius - ((b + 1) * radius) / bands;
             return (
               <g key={`band-${b}`}>
-                {SECTORS.map((_, si) => {
+                {sectors.map((_, si) => {
                   const a0 = si * angleStep + 2;
                   const a1 = (si + 1) * angleStep - 2;
                   const d = annularPath(r0, r1, a0, a1);
@@ -219,9 +276,9 @@ export default function DreamLifePage() {
         </svg>
       </div>
 
-      {/* Task Lists in 4 columns (3 vertical sectors each) */}
+      {/* Task Lists */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {SECTORS.map((s, si) => (
+        {sectors.map((s, si) => (
           <div key={s.key} className="rounded-lg border p-3">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-sm font-semibold tracking-wide">{s.label}</h2>
@@ -261,12 +318,6 @@ export default function DreamLifePage() {
                   </li>
                 ))}
               </ul>
-            )}
-
-            {tasks[si].length > 0 && (
-              <p className="mt-2 text-[11px] text-gray-500">
-                Order maps to rings from outside to inside.
-              </p>
             )}
           </div>
         ))}
