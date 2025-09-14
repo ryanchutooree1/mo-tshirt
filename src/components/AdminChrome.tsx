@@ -17,6 +17,13 @@ const nav: NavItem[] = [
   { href: "/admin/dream-life", label: "Dream Life" },
 ];
 
+// Keep these accessible via the drawer only, to preserve full-width pages
+const hiddenNav: NavItem[] = [
+  { href: "/admin", label: "Dashboard" },
+  { href: "/admin/orders", label: "Orders" },
+  { href: "/admin/inventory", label: "Inventory" },
+];
+
 export default function AdminChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -98,6 +105,20 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
             <div className="text-xl font-semibold" style={{ fontFamily: "var(--font-admin-serif)" }}>MO Admin</div>
             <nav className="mt-5 space-y-1 flex-1">
               {nav.map((n) => {
+                const active = pathname === n.href || (n.href !== "/admin" && pathname.startsWith(n.href));
+                return (
+                  <Link
+                    key={n.href}
+                    href={n.href}
+                    onClick={() => setOpen(false)}
+                    className={`block px-3 py-2 rounded-lg transition-colors border ${active ? "border-[#bfa37a] bg-[#f5f5f5]" : "border-transparent hover:border-[#e5e5e5] hover:bg-[#f5f5f5]"}`}
+                  >
+                    {n.label}
+                  </Link>
+                );
+              })}
+              <div className="mt-6 pt-4 border-t text-xs uppercase tracking-wide text-gray-500">More</div>
+              {hiddenNav.map((n) => {
                 const active = pathname === n.href || (n.href !== "/admin" && pathname.startsWith(n.href));
                 return (
                   <Link
