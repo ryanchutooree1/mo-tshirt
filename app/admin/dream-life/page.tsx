@@ -112,7 +112,6 @@ export default function DreamLifePage() {
             const pin = polarToXY(radius - 25, angle);
             const color = s.checked ? "#22c55e" : "#ffffff";
             const stroke = s.checked ? "#16a34a" : "#d1d5db";
-            const textColor = s.checked ? "#065f46" : "#374151";
             return (
               <g key={s.key}>
                 {/* label around edge */}
@@ -129,18 +128,30 @@ export default function DreamLifePage() {
                   onClick={() => toggleSector(i)}
                   style={{ cursor: "pointer" }}
                 />
-                {/* text inside the circle using foreignObject */}
-                <foreignObject x={pin.x - 14} y={pin.y - 10} width={28} height={20}>
-                  <input
-                    value={s.note}
-                    onChange={(e) => updateNote(i, e.target.value)}
-                    className="w-full h-full text-[10px] text-center bg-transparent outline-none"
-                    placeholder=""/>
+                {/* editable content fully inside the circle */}
+                <foreignObject x={pin.x - 16} y={pin.y - 16} width={32} height={32}>
+                  <div
+                    xmlns="http://www.w3.org/1999/xhtml"
+                    contentEditable
+                    onInput={(e) => updateNote(i, (e.target as HTMLDivElement).innerText.slice(0, 6))}
+                    suppressContentEditableWarning
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "9999px",
+                      overflow: "hidden",
+                      display: "grid",
+                      placeItems: "center",
+                      textAlign: "center",
+                      lineHeight: 1.1,
+                      fontSize: "10px",
+                      color: s.checked ? "#ffffff" : "#111827",
+                      background: "transparent",
+                    }}
+                  >
+                    {s.note}
+                  </div>
                 </foreignObject>
-                {/* check mark when checked */}
-                {s.checked && (
-                  <text x={pin.x} y={pin.y + 3} textAnchor="middle" fontSize="14" fill="#ffffff" fontWeight="700">✓</text>
-                )}
               </g>
             );
           })}
@@ -202,4 +213,3 @@ export default function DreamLifePage() {
     </div>
   );
 }
-
