@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, doc, getDocs, setDoc } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDocs,
+  setDoc,
+  writeBatch,
+} from "firebase/firestore";
 
 type Sector = { key: string; label: string };
 type Task = { id: string; text: string; done: boolean };
@@ -22,108 +28,98 @@ const SECTORS: Sector[] = [
   { key: "finances", label: "FINANCES" },
 ];
 
-// Default 9 tasks
-const DEFAULT_TASKS = Array.from({ length: 9 }, (_, i) => ({
-  id: `task-${i + 1}`,
-  text: `Task ${i + 1}`,
-  done: false,
-}));
+const DEFAULT_TASKS = (count = 9): Task[] =>
+  Array.from({ length: count }, (_, i) => ({
+    id: `task-${i + 1}`,
+    text: `Task ${i + 1}`,
+    done: false,
+  }));
 
 export default function DreamLifePage() {
   const year = new Date().getFullYear();
-
   const rings = 10;
   const bands = rings - 1;
 
   const [tasks, setTasks] = useState<Task[][]>(
-    SECTORS.map(() => [...DEFAULT_TASKS])
+    SECTORS.map(() => DEFAULT_TASKS())
   );
+  const [saveState, setSaveState] = useState<
+    Record<string, "idle" | "saving" | "saved" | "error">
+  >({});
+  const [toast, setToast] = useState<string | null>(null);
 
-  // --- Load from Firebase and seed missing sectors ---
+  const keyFor = (si: number, ti: number) => `${si}-${ti}`;
+
+  // --- Load from Firebase ---
   useEffect(() => {
-    const ensureNine = (arr: any[]): Task[] => {
-      const base = DEFAULT_TASKS.map((t) => ({ ...t }));
-      if (!Array.isArray(arr)) return base;
-      const normalized: Task[] = [];
-      for (let i = 0; i < 9; i++) {
-        const item = arr[i];
-        if (item && typeof item === "object") {
-          normalized.push({
-            id: String(item.id ?? `task-${i + 1}`),
-            text: String(item.text ?? `Task ${i + 1}`),
-            done: Boolean(item.done),
-          });
-        } else {
-          normalized.push({ ...base[i] });
-        }
-      }
-      return normalized;
-    };
-
     const load = async () => {
       try {
-        const colRef = collection(db, "dreamLife");
-        const snapshot = await getDocs(colRef);
+        const snapshot = await getDocs(collection(db, "dreamLife"));
+        if (snapshot.empty) return;
 
-        // Start with defaults for all sectors
-        const merged: Task[][] = SECTORS.map(() => DEFAULT_TASKS.map((t) => ({ ...t })));
-        const seen = new Set<string>();
-
+        const merged: Task[][] = SECTORS.map(() => DEFAULT_TASKS());
         snapshot.forEach((docSnap) => {
-          const id = docSnap.id;
-          const idx = SECTORS.findIndex((s) => s.key === id);
+          const idx = SECTORS.findIndex((s) => s.key === docSnap.id);
           if (idx >= 0) {
-            const saved = (docSnap.data() as any)?.tasks;
-            merged[idx] = ensureNine(saved);
-            seen.add(id);
+            const saved = (docSnap.data() as any)?.tasks || [];
+            merged[idx] = DEFAULT_TASKS().map((def, i) => ({
+              id: String(saved[i]?.id ?? def.id),
+              text: String(saved[i]?.text ?? def.text),
+              done: Boolean(saved[i]?.done ?? def.done),
+            }));
           }
         });
-
         setTasks(merged);
-
-        // Seed any missing sector docs so all 12 exist going forward
-        const missingWrites = SECTORS.filter((s) => !seen.has(s.key)).map((s, si) =>
-          setDoc(doc(db, "dreamLife", s.key), { tasks: merged[si] }, { merge: true })
-        );
-        if (missingWrites.length) await Promise.all(missingWrites);
       } catch (e) {
-        console.error("Error loading from Firebase:", e);
+        console.error("Error loading tasks:", e);
       }
     };
     load();
   }, []);
 
-  // --- Save to Firebase (merge) ---
-  useEffect(() => {
-    const save = async () => {
-      try {
-        await Promise.all(
-          SECTORS.map((s, si) =>
-            setDoc(doc(db, "dreamLife", s.key), { tasks: tasks[si] }, { merge: true })
-          )
-        );
-      } catch (e) {
-        console.error("Error saving to Firebase:", e);
-      }
-    };
-    save();
-  }, [tasks]);
-
-  // --- Task helpers & save feedback
-  const [saveState, setSaveState] = useState<Record<string, "idle" | "saving" | "saved" | "error">>({});
-  const [toast, setToast] = useState<string | null>(null);
-
-  const keyFor = (si: number, ti: number) => `${si}-${ti}`;
-
+  // --- Save sector ---
   const saveSector = async (si: number, sectorTasks: Task[]) => {
+    await setDoc(doc(db, "dreamLife", SECTORS[si].key), { tasks: sectorTasks });
+  };
+
+  // --- Save per row ---
+  const saveTaskRow = async (si: number, ti: number, updatedTasks = tasks) => {
+    const k = keyFor(si, ti);
+    setSaveState((s) => ({ ...s, [k]: "saving" }));
     try {
-      const key = SECTORS[si].key;
-      await setDoc(doc(db, "dreamLife", key), { tasks: sectorTasks }, { merge: true });
-    } catch (e) {
-      console.error("Save error:", e);
+      await saveSector(si, updatedTasks[si]);
+      setSaveState((s) => ({ ...s, [k]: "saved" }));
+      setToast("Saved to Firebase");
+      setTimeout(() => {
+        setSaveState((s) => ({ ...s, [k]: "idle" }));
+        setToast(null);
+      }, 1500);
+    } catch {
+      setSaveState((s) => ({ ...s, [k]: "error" }));
+      setToast("Save failed");
+      setTimeout(() => setToast(null), 2000);
     }
   };
 
+  // --- Reset all ---
+  const resetAll = async () => {
+    const fresh = SECTORS.map(() => DEFAULT_TASKS());
+    setTasks(fresh);
+    try {
+      const batch = writeBatch(db);
+      SECTORS.forEach((s, si) => {
+        batch.set(doc(db, "dreamLife", s.key), { tasks: fresh[si] });
+      });
+      await batch.commit();
+      setToast("All reset");
+      setTimeout(() => setToast(null), 1500);
+    } catch {
+      setToast("Reset failed");
+      setTimeout(() => setToast(null), 2000);
+    }
+  };
+
+  // --- Task handlers ---
   const updateTaskText = (si: number, ti: number, text: string) =>
     setTasks((all) => {
       const copy = all.map((arr) => [...arr]);
@@ -131,35 +127,21 @@ export default function DreamLifePage() {
       return copy;
     });
 
-  const toggleTask = (si: number, ti: number) =>
-    setTasks((all) => {
-      const copy = all.map((arr) => [...arr]);
-      copy[si][ti] = { ...copy[si][ti], done: !copy[si][ti].done };
-      // Save immediately for this sector and show status on this row
-      void (async () => {
-        const k = keyFor(si, ti);
-        setSaveState((s) => ({ ...s, [k]: "saving" }));
-        try {
-          await setDoc(doc(db, "dreamLife", SECTORS[si].key), { tasks: copy[si] }, { merge: true });
-          setSaveState((s) => ({ ...s, [k]: "saved" }));
-          setToast("Saved to Firebase");
-          setTimeout(() => {
-            setSaveState((s) => ({ ...s, [k]: "idle" }));
-            setToast(null);
-          }, 1500);
-        } catch (e) {
-          console.error(e);
-          setSaveState((s) => ({ ...s, [k]: "error" }));
-          setToast("Save failed");
-          setTimeout(() => setToast(null), 2000);
-        }
-      })();
-      return copy;
-    });
+  const toggleTask = async (si: number, ti: number) => {
+    const copy = tasks.map((arr) => [...arr]);
+    copy[si][ti] = { ...copy[si][ti], done: !copy[si][ti].done };
+    setTasks(copy);
+    await saveTaskRow(si, ti, copy);
+  };
 
-  const resetAll = () => setTasks(SECTORS.map(() => [...DEFAULT_TASKS]));
+  const toggleBySegment = async (si: number, b: number) => {
+    const copy = tasks.map((arr) => [...arr]);
+    copy[si][b] = { ...copy[si][b], done: !copy[si][b].done };
+    setTasks(copy);
+    await saveTaskRow(si, b, copy);
+  };
 
-  // --- SVG helpers
+  // --- SVG helpers ---
   const radius = 260;
   const cx = 320;
   const cy = 320;
@@ -169,10 +151,9 @@ export default function DreamLifePage() {
 
   const polarToXY = (r: number, angleDeg: number) => {
     const a = (angleDeg - 90) * (Math.PI / 180);
-    const x = cx + r * Math.cos(a);
-    const y = cy + r * Math.sin(a);
-    // round to avoid floating-point mismatch
-    return { x: Math.round(x * 1000) / 1000, y: Math.round(y * 1000) / 1000 };
+    const x = Math.round((cx + r * Math.cos(a)) * 1000) / 1000;
+    const y = Math.round((cy + r * Math.sin(a)) * 1000) / 1000;
+    return { x, y };
   };
 
   const annularPath = (r0: number, r1: number, a0: number, a1: number) => {
@@ -184,52 +165,6 @@ export default function DreamLifePage() {
     return `M ${p0.x} ${p0.y} A ${r0} ${r0} 0 ${large} 1 ${p1.x} ${p1.y} L ${p2.x} ${p2.y} A ${r1} ${r1} 0 ${large} 0 ${p3.x} ${p3.y} Z`;
   };
 
-  const toggleBySegment = (si: number, b: number) =>
-    setTasks((all) => {
-      const copy = all.map((arr) => [...arr]);
-      if (copy[si][b]) {
-        copy[si][b] = { ...copy[si][b], done: !copy[si][b].done };
-      }
-      // Save immediately for this sector and show toast/row status
-      void (async () => {
-        const k = keyFor(si, b);
-        setSaveState((s) => ({ ...s, [k]: "saving" }));
-        try {
-          await setDoc(doc(db, "dreamLife", SECTORS[si].key), { tasks: copy[si] }, { merge: true });
-          setSaveState((s) => ({ ...s, [k]: "saved" }));
-          setToast("Saved to Firebase");
-          setTimeout(() => {
-            setSaveState((s) => ({ ...s, [k]: "idle" }));
-            setToast(null);
-          }, 1500);
-        } catch (e) {
-          console.error(e);
-          setSaveState((s) => ({ ...s, [k]: "error" }));
-          setToast("Save failed");
-          setTimeout(() => setToast(null), 2000);
-        }
-      })();
-      return copy;
-    });
-  const saveTaskRow = async (si: number, ti: number) => {
-    const k = keyFor(si, ti);
-    setSaveState((s) => ({ ...s, [k]: "saving" }));
-    try {
-      await setDoc(doc(db, "dreamLife", SECTORS[si].key), { tasks: tasks[si] }, { merge: true });
-      setSaveState((s) => ({ ...s, [k]: "saved" }));
-      setToast("Saved to Firebase");
-      setTimeout(() => {
-        setSaveState((s) => ({ ...s, [k]: "idle" }));
-        setToast(null);
-      }, 1500);
-    } catch (e) {
-      console.error(e);
-      setSaveState((s) => ({ ...s, [k]: "error" }));
-      setToast("Save failed");
-      setTimeout(() => setToast(null), 2000);
-    }
-  };
-
   return (
     <div className="mx-auto max-w-7xl p-4">
       {toast && (
@@ -237,6 +172,7 @@ export default function DreamLifePage() {
           {toast}
         </div>
       )}
+
       <header className="mb-6 flex items-center justify-between">
         <h1 className="text-xl md:text-2xl font-bold">
           DESIGNING MY DREAM LIFE
@@ -257,7 +193,6 @@ export default function DreamLifePage() {
           viewBox={`0 0 ${size + padding * 2} ${size + padding * 2}`}
         >
           <g transform={`translate(${padding}, ${padding})`}>
-            {/* guide rings */}
             {[...Array(rings)].map((_, i) => (
               <circle
                 key={i}
@@ -268,16 +203,12 @@ export default function DreamLifePage() {
                 stroke="#e5e7eb"
               />
             ))}
-
-            {/* spokes */}
             {SECTORS.map((_, i) => {
               const { x, y } = polarToXY(radius, i * angleStep);
               return (
                 <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="#e5e7eb" />
               );
             })}
-
-            {/* center year */}
             <circle cx={cx} cy={cy} r={60} fill="#ffffff" stroke="#e5e7eb" />
             <text
               x={cx}
@@ -289,16 +220,14 @@ export default function DreamLifePage() {
             >
               {year}
             </text>
-
-            {/* sector labels */}
             {SECTORS.map((s, i) => {
               const angle = (i + 0.5) * angleStep;
-              const pt = polarToXY(radius + 50, angle);
-
+              const pt = polarToXY(radius + 60, angle);
               let anchor: "start" | "end" | "middle" = "middle";
-              if (angle > 90 && angle < 270) anchor = "end";
-              else if (angle < 90 || angle > 270) anchor = "start";
-
+              if (angle >= 75 && angle <= 105) anchor = "middle";
+              else if (angle > 105 && angle < 255) anchor = "end";
+              else if (angle >= 255 && angle <= 285) anchor = "middle";
+              else anchor = "start";
               return (
                 <text
                   key={s.key}
@@ -313,8 +242,6 @@ export default function DreamLifePage() {
                 </text>
               );
             })}
-
-            {/* task segments */}
             {[...Array(bands)].map((_, b) => {
               const r1 = radius - (b * radius) / bands;
               const r0 = radius - ((b + 1) * radius) / bands;
@@ -326,7 +253,6 @@ export default function DreamLifePage() {
                     const d = annularPath(r0, r1, a0, a1);
                     const task = tasks[si][b];
                     const checked = Boolean(task?.done);
-
                     return (
                       <path
                         key={`seg-${b}-${si}`}
@@ -346,43 +272,54 @@ export default function DreamLifePage() {
       </div>
 
       {/* Task Lists */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {SECTORS.map((s, si) => (
-          <div key={s.key} className="rounded-lg border p-3">
-            <h2 className="mb-2 text-sm font-semibold tracking-wide">
+          <div key={s.key} className="rounded-xl border shadow-sm overflow-hidden">
+            <div className="bg-gray-100 px-3 py-2 text-sm font-semibold tracking-wide text-gray-700 sticky top-0">
               {s.label}
-            </h2>
-
-            <ul className="space-y-2">
-              {tasks[si].map((t, ti) => (
-                <li key={t.id} className="flex items-center gap-2 group">
-                  <input
-                    type="checkbox"
-                    checked={t.done}
-                    onChange={() => toggleTask(si, ti)}
-                    className="h-4 w-4"
-                  />
-                  <input
-                    value={t.text}
-                    onChange={(e) => updateTaskText(si, ti, e.target.value)}
-                    className="flex-1 rounded border px-2 py-1 text-sm"
-                  />
-                  {(() => { const st = saveState[keyFor(si, ti)] ?? "idle"; return (
-                    <>
-                      <button
-                        onClick={() => saveTaskRow(si, ti)}
-                        disabled={st === "saving"}
-                        className="text-xs rounded border px-2 py-1 hover:bg-gray-50 disabled:opacity-60"
-                      >
-                        {st === "saving" ? "Saving…" : st === "saved" ? "Saved" : "Done"}
-                      </button>
-                      {st === "error" && (
-                        <span className="text-xs text-red-600 ml-1">Error. Try again.</span>
-                      )}
-                    </>
-                  ); })()}
-                </li>
-              ))}
+            </div>
+            <ul className="divide-y divide-gray-200">
+              {tasks[si].map((t, ti) => {
+                const st = saveState[keyFor(si, ti)] ?? "idle";
+                return (
+                  <li
+                    key={t.id}
+                    className={`flex items-center gap-3 px-3 py-2 transition ${
+                      t.done ? "bg-green-50 border-l-4 border-green-400" : ""
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={t.done}
+                      onChange={() => toggleTask(si, ti)}
+                      className="h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    />
+                    <input
+                      value={t.text}
+                      onChange={(e) => updateTaskText(si, ti, e.target.value)}
+                      className="flex-1 rounded border px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-green-400"
+                    />
+                    <button
+                      onClick={() => saveTaskRow(si, ti)}
+                      disabled={st === "saving"}
+                      className={`text-xs rounded px-3 py-1 font-medium transition ${
+                        st === "saved"
+                          ? "bg-green-500 text-white"
+                          : st === "saving"
+                          ? "bg-gray-300 text-gray-700"
+                          : "border border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      {st === "saving" ? "..." : st === "saved" ? "✓" : "Done"}
+                    </button>
+                    {st === "error" && (
+                      <span className="text-xs text-red-600 ml-2">
+                        Save failed
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}
