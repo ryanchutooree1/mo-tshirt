@@ -6,8 +6,8 @@ import { useEffect, useState } from "react";
 
 type NavItem = { href: string; label: string };
 
-// Hide Dashboard, Orders, Inventory from the nav for a cleaner workspace
-const nav: NavItem[] = [
+// Default nav groupings
+const DEFAULT_TOP: NavItem[] = [
   { href: "/admin/pos", label: "POS" },
   { href: "/admin/clients", label: "Clients" },
   { href: "/admin/contracts", label: "Contracts" },
@@ -17,17 +17,64 @@ const nav: NavItem[] = [
   { href: "/admin/dream-life", label: "Dream Life" },
 ];
 
-// Keep these accessible via the drawer only, to preserve full-width pages
-const hiddenNav: NavItem[] = [
+const DEFAULT_MORE: NavItem[] = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/inventory", label: "Inventory" },
 ];
 
+const NAV_STORAGE = "admin-nav-v1";
+
 export default function AdminChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [topNav, setTopNav] = useState<NavItem[]>(DEFAULT_TOP);
+  const [moreNav, setMoreNav] = useState<NavItem[]>(DEFAULT_MORE);
+
+  // Load custom order
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(NAV_STORAGE);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed?.top)) setTopNav(parsed.top);
+        if (Array.isArray(parsed?.more)) setMoreNav(parsed.more);
+      }
+    } catch {}
+  }, []);
+
+  // Persist order
+  useEffect(() => {
+    try {
+      localStorage.setItem(NAV_STORAGE, JSON.stringify({ top: topNav, more: moreNav }));
+    } catch {}
+  }, [topNav, moreNav]);
+
+  // Helpers to reorder
+  function moveWithin(list: "top" | "more", index: number, delta: number) {
+    const arr = list === "top" ? topNav : moreNav;
+    const next = arr.slice();
+    const newIndex = (index + delta + next.length) % next.length;
+    const [item] = next.splice(index, 1);
+    next.splice(newIndex, 0, item);
+    list === "top" ? setTopNav(next) : setMoreNav(next);
+  }
+
+  function moveBetween(from: "top" | "more", index: number) {
+    if (from === "top") {
+      const src = topNav.slice();
+      const [item] = src.splice(index, 1);
+      setTopNav(src);
+      setMoreNav((m) => [...m, item]);
+    } else {
+      const src = moreNav.slice();
+      const [item] = src.splice(index, 1);
+      setMoreNav(src);
+      setTopNav((t) => [...t, item]);
+    }
+  }
 
   async function logout() {
     await fetch("/api/logout", { method: "POST" });
@@ -101,12 +148,27 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
       {open && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} />
-          <div className="absolute inset-y-0 left-0 w-72 bg-white border-r border-gray-200 p-5 flex flex-col">
-            <div className="text-xl font-semibold" style={{ fontFamily: "var(--font-admin-serif)" }}>MO Admin</div>
+          <div className="absolute inset-y-0 left-0 w-80 bg-white border-r border-gray-200 p-5 flex flex-col">
+            <div className="flex items-center justify-between">
+              <div className="text-xl font-semibold" style={{ fontFamily: "var(--font-admin-serif)" }}>MO Admin</div>
+              <button
+                onClick={() => setEditing((e) => !e)}
+                className="text-xs rounded border px-2 py-1 hover:bg-gray-50"
+              >
+                {editing ? "Done" : "Edit"}
+              </button>
+            </div>
             <nav className="mt-5 space-y-1 flex-1">
-              {nav.map((n) => {
+              {topNav.map((n, i) => {
                 const active = pathname === n.href || (n.href !== "/admin" && pathname.startsWith(n.href));
-                return (
+                return editing ? (
+                  <div key={n.href} className="flex items-center gap-2 px-1 py-1">
+                    <button aria-label="Up" onClick={() => moveWithin("top", i, -1)} className="h-6 w-6 rounded border">▲</button>
+                    <button aria-label="Down" onClick={() => moveWithin("top", i, +1)} className="h-6 w-6 rounded border">▼</button>
+                    <button aria-label="Move to More" onClick={() => moveBetween("top", i)} className="h-6 w-6 rounded border">→</button>
+                    <span className="flex-1 px-2 py-2 rounded border bg-gray-50">{n.label}</span>
+                  </div>
+                ) : (
                   <Link
                     key={n.href}
                     href={n.href}
@@ -118,9 +180,16 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
                 );
               })}
               <div className="mt-6 pt-4 border-t text-xs uppercase tracking-wide text-gray-500">More</div>
-              {hiddenNav.map((n) => {
+              {moreNav.map((n, i) => {
                 const active = pathname === n.href || (n.href !== "/admin" && pathname.startsWith(n.href));
-                return (
+                return editing ? (
+                  <div key={n.href} className="flex items-center gap-2 px-1 py-1">
+                    <button aria-label="Up" onClick={() => moveWithin("more", i, -1)} className="h-6 w-6 rounded border">▲</button>
+                    <button aria-label="Down" onClick={() => moveWithin("more", i, +1)} className="h-6 w-6 rounded border">▼</button>
+                    <button aria-label="Move to Top" onClick={() => moveBetween("more", i)} className="h-6 w-6 rounded border">←</button>
+                    <span className="flex-1 px-2 py-2 rounded border bg-gray-50">{n.label}</span>
+                  </div>
+                ) : (
                   <Link
                     key={n.href}
                     href={n.href}
