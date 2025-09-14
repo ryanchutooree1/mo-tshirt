@@ -1,15 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-type Sector = {
-  key: string;
-  label: string;
-  checked: boolean;
-  note: string;
-};
+type Sector = { key: string; label: string };
+type Task = { id: string; text: string; done: boolean };
 
-const DEFAULT_SECTORS: Omit<Sector, "checked" | "note">[] = [
+const SECTORS: Sector[] = [
   { key: "health", label: "HEALTH & FITNESS" },
   { key: "selfdev", label: "SELF DEVELOPMENT" },
   { key: "lifestyle", label: "LIFESTYLE" },
@@ -24,71 +20,45 @@ const DEFAULT_SECTORS: Omit<Sector, "checked" | "note">[] = [
   { key: "finances", label: "FINANCES" },
 ];
 
-const STORAGE_KEY = "dream-life-v1";
-type Cell = { text: string; checked: boolean };
+const STORAGE_KEY = "dream-life-v2";
 
 export default function DreamLifePage() {
   const year = new Date().getFullYear();
-  const [sectors, setSectors] = useState<Sector[]>(() =>
-    DEFAULT_SECTORS.map((s) => ({ ...s, checked: false, note: "" }))
-  );
-  // 3 annular bands like the screenshot
-  const bands = 3;
-  const [cells, setCells] = useState<Cell[][]>(() =>
-    Array.from({ length: bands }, () =>
-      Array.from({ length: DEFAULT_SECTORS.length }, () => ({ text: "", checked: false }))
-    )
+
+  const rings = 10;
+  const bands = rings - 1;
+
+  const [tasks, setTasks] = useState<Task[][]>(() =>
+    SECTORS.map(() => [])
   );
 
-  // Load/save state
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed?.sectors) setSectors(parsed.sectors);
-        if (parsed?.cells) setCells(parsed.cells);
+        if (Array.isArray(parsed?.tasks)) setTasks(parsed.tasks);
       }
     } catch {}
   }, []);
+
   useEffect(() => {
     try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ sectors, cells })
-      );
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks }));
     } catch {}
-  }, [sectors, cells]);
+  }, [tasks]);
 
+  // --- SVG helpers ---
   const radius = 260;
-  const rings = 10;
   const cx = 320;
   const cy = 320;
   const size = 640;
+  const angleStep = 360 / SECTORS.length;
 
   const polarToXY = (r: number, angleDeg: number) => {
     const a = (angleDeg - 90) * (Math.PI / 180);
     return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
   };
-
-  const toggleSector = (i: number) =>
-    setSectors((arr) => arr.map((s, idx) => (idx === i ? { ...s, checked: !s.checked } : s)));
-
-  const updateNote = (i: number, note: string) =>
-    setSectors((arr) => arr.map((s, idx) => (idx === i ? { ...s, note } : s)));
-
-  const reset = () => {
-    setSectors(DEFAULT_SECTORS.map((s) => ({ ...s, checked: false, note: "" })));
-    setCells(Array.from({ length: bands }, () => Array.from({ length: DEFAULT_SECTORS.length }, () => ({ text: "", checked: false }))));
-  };
-
-  const angleStep = 360 / sectors.length;
-
-  // Precompute label positions
-  const labelPositions = useMemo(
-    () => sectors.map((_, i) => polarToXY(radius + 30, i * angleStep)),
-    [sectors.length]
-  );
 
   const annularPath = (r0: number, r1: number, a0: number, a1: number) => {
     const p0 = polarToXY(r0, a0);
@@ -99,103 +69,148 @@ export default function DreamLifePage() {
     return `M ${p0.x} ${p0.y} A ${r0} ${r0} 0 ${large} 1 ${p1.x} ${p1.y} L ${p2.x} ${p2.y} A ${r1} ${r1} 0 ${large} 0 ${p3.x} ${p3.y} Z`;
   };
 
+  // --- task helpers ---
+  const addTask = (si: number) =>
+    setTasks((all) => {
+      const copy = all.map((arr) => arr.slice());
+      if (copy[si].length >= bands) return all; // maxed
+      copy[si].push({
+        id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        text: `Task ${copy[si].length + 1}`,
+        done: false,
+      });
+      return copy;
+    });
+
+  const updateTaskText = (si: number, ti: number, text: string) =>
+    setTasks((all) => {
+      const copy = all.map((arr) => arr.slice());
+      copy[si][ti] = { ...copy[si][ti], text: text.slice(0, 60) };
+      return copy;
+    });
+
+  const toggleTask = (si: number, ti: number) =>
+    setTasks((all) => {
+      const copy = all.map((arr) => arr.slice());
+      copy[si][ti] = { ...copy[si][ti], done: !copy[si][ti].done };
+      return copy;
+    });
+
+  const removeTask = (si: number, ti: number) =>
+    setTasks((all) => {
+      const copy = all.map((arr) => arr.slice());
+      copy[si].splice(ti, 1);
+      return copy;
+    });
+
+  const resetAll = () => setTasks(SECTORS.map(() => []));
+
+  const toggleBySegment = (si: number, b: number) => {
+    setTasks((all) => {
+      const copy = all.map((arr) => arr.slice());
+      while (copy[si].length <= b && copy[si].length < bands) {
+        copy[si].push({
+          id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          text: `Task ${copy[si].length + 1}`,
+          done: false,
+        });
+      }
+      if (copy[si][b]) copy[si][b] = { ...copy[si][b], done: !copy[si][b].done };
+      return copy;
+    });
+  };
+
   return (
-    <div className="mx-auto max-w-5xl">
-      <header className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">DESIGNING MY DREAM LIFE</h1>
-          <p className="mt-2 text-sm text-gray-600 max-w-2xl">
-            Type inside each ring segment (like A, B, C…) and click to mark it green. Use Reset to clear.
-          </p>
-        </div>
-        <button onClick={reset} className="rounded-md border px-3 py-2 text-sm font-semibold hover:bg-gray-50">
+    <div className="mx-auto max-w-6xl p-4">
+      <header className="mb-4 flex items-center justify-between">
+        <h1 className="text-xl md:text-2xl font-bold">DESIGNING MY DREAM LIFE</h1>
+        <button
+          onClick={resetAll}
+          className="rounded-md border px-3 py-2 text-sm font-semibold hover:bg-gray-50"
+        >
           Reset
         </button>
       </header>
 
-      <div className="overflow-auto">
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="mx-auto block">
-          {/* Background rings */}
+      {/* Circle */}
+      <div className="flex justify-center mb-10">
+        <svg
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+          className="mx-auto block"
+        >
+          {/* guide rings */}
           {[...Array(rings)].map((_, i) => (
-            <circle key={i} cx={cx} cy={cy} r={(radius / rings) * (i + 1)} fill="none" stroke="#e5e7eb" />
+            <circle
+              key={i}
+              cx={cx}
+              cy={cy}
+              r={(radius / rings) * (i + 1)}
+              fill="none"
+              stroke="#e5e7eb"
+            />
           ))}
 
-          {/* Spokes */}
-          {sectors.map((_, i) => {
+          {/* spokes */}
+          {SECTORS.map((_, i) => {
             const { x, y } = polarToXY(radius, i * angleStep);
             return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="#e5e7eb" />;
           })}
 
-          {/* Center year */}
+          {/* center year */}
           <circle cx={cx} cy={cy} r={60} fill="#ffffff" stroke="#e5e7eb" />
-          <text x={cx} y={cy + 6} textAnchor="middle" className="fill-gray-800" fontSize="20" fontWeight="700">
+          <text
+            x={cx}
+            y={cy + 6}
+            textAnchor="middle"
+            className="fill-gray-800"
+            fontSize="20"
+            fontWeight="700"
+          >
             {year}
           </text>
 
-          {/* Sector labels (around the edge) */}
-          {sectors.map((s, i) => {
-            const angle = i * angleStep;
-            const pt = polarToXY(radius + 10, angle);
+          {/* sector labels */}
+          {SECTORS.map((s, i) => {
+            const midA = (i + 0.5) * angleStep;
+            const pt = polarToXY(radius + 50, midA);
             return (
-              <g key={s.key}>
-                <text x={pt.x} y={pt.y} textAnchor="middle" fontSize="10" className="fill-gray-500" transform={`rotate(${angle}, ${pt.x}, ${pt.y})`}>
-                  {s.label}
-                </text>
-              </g>
+              <text
+                key={s.key}
+                x={pt.x}
+                y={pt.y}
+                textAnchor="middle"
+                fontSize="12"
+                className="fill-gray-800 font-bold"
+              >
+                {s.label}
+              </text>
             );
           })}
 
-          {/* Annular segmented cells (3 bands x 12 sectors) */}
-          {cells.map((row, b) => {
-            const r1 = radius - 20 - b * (radius / 4);
-            const r0 = r1 - (radius / 4) + 10;
+          {/* task segments */}
+          {[...Array(bands)].map((_, b) => {
+            const r1 = radius - (b * radius) / bands;
+            const r0 = radius - ((b + 1) * radius) / bands;
             return (
               <g key={`band-${b}`}>
-                {row.map((cell, i) => {
-                  const a0 = i * angleStep + 2;
-                  const a1 = (i + 1) * angleStep - 2;
+                {SECTORS.map((_, si) => {
+                  const a0 = si * angleStep + 2;
+                  const a1 = (si + 1) * angleStep - 2;
                   const d = annularPath(r0, r1, a0, a1);
-                  const midA = (a0 + a1) / 2;
-                  const midR = (r0 + r1) / 2;
-                  // Make editable box larger and easier to type into
-                  const w = Math.max(80, (Math.PI * (a1 - a0) / 180) * midR * 0.8);
-                  const h = 42;
-                  const c = polarToXY(midR, midA);
+                  const task = tasks[si][b];
+                  const checked = Boolean(task?.done);
+
                   return (
-                    <g key={`cell-${b}-${i}`}>
-                      <path d={d} fill={cell.checked ? "#bbf7d0" : "#ffffff"} stroke="#d1d5db" onClick={() => {
-                        setCells((prev) => prev.map((r, rb) => r.map((col, ci) => (rb === b && ci === i ? { ...col, checked: !col.checked } : col))));
-                      }} style={{ cursor: "pointer" }} />
-                      <foreignObject x={c.x - w / 2} y={c.y - h / 2} width={w} height={h}>
-                        <div
-                          xmlns="http://www.w3.org/1999/xhtml"
-                          contentEditable
-                          onInput={(e) => {
-                            const val = (e.target as HTMLDivElement).innerText.slice(0, 60);
-                            setCells((prev) => prev.map((r, rb) => r.map((col, ci) => (rb === b && ci === i ? { ...col, text: val } : col))));
-                          }}
-                          suppressContentEditableWarning
-                          style={{
-                            width: `${w}px`,
-                            height: `${h}px`,
-                            overflow: "hidden",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            padding: "4px 6px",
-                            textAlign: "center",
-                            fontSize: "13px",
-                            lineHeight: 1.2,
-                            color: "#111827",
-                            background: "transparent",
-                            direction: "ltr",
-                            whiteSpace: "pre-wrap",
-                          }}
-                        >
-                          {cell.text}
-                        </div>
-                      </foreignObject>
-                    </g>
+                    <path
+                      key={`seg-${b}-${si}`}
+                      d={d}
+                      fill={checked ? "#bbf7d0" : "#ffffff"}
+                      stroke="#d1d5db"
+                      onClick={() => toggleBySegment(si, b)}
+                      style={{ cursor: "pointer" }}
+                    />
                   );
                 })}
               </g>
@@ -204,7 +219,58 @@ export default function DreamLifePage() {
         </svg>
       </div>
 
-      {/* Removed SCORE lists and text fields per request */}
+      {/* Task Lists in 4 columns (3 vertical sectors each) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {SECTORS.map((s, si) => (
+          <div key={s.key} className="rounded-lg border p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-sm font-semibold tracking-wide">{s.label}</h2>
+              <button
+                onClick={() => addTask(si)}
+                className="text-xs rounded border px-2 py-1 hover:bg-gray-50"
+                disabled={tasks[si].length >= bands}
+              >
+                Add Task
+              </button>
+            </div>
+
+            {tasks[si].length === 0 ? (
+              <p className="text-xs text-gray-500">No tasks yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {tasks[si].map((t, ti) => (
+                  <li key={t.id} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={t.done}
+                      onChange={() => toggleTask(si, ti)}
+                      className="h-4 w-4"
+                    />
+                    <input
+                      value={t.text}
+                      onChange={(e) => updateTaskText(si, ti, e.target.value)}
+                      className="flex-1 rounded border px-2 py-1 text-sm"
+                      placeholder={`Task ${ti + 1}`}
+                    />
+                    <button
+                      onClick={() => removeTask(si, ti)}
+                      className="text-xs text-red-600 hover:underline"
+                    >
+                      Delete
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {tasks[si].length > 0 && (
+              <p className="mt-2 text-[11px] text-gray-500">
+                Order maps to rings from outside to inside.
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

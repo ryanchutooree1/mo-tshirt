@@ -6,10 +6,8 @@ import { useEffect, useState } from "react";
 
 type NavItem = { href: string; label: string };
 
+// Hide Dashboard, Orders, Inventory from the nav for a cleaner workspace
 const nav: NavItem[] = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/orders", label: "Orders" },
-  { href: "/admin/inventory", label: "Inventory" },
   { href: "/admin/pos", label: "POS" },
   { href: "/admin/clients", label: "Clients" },
   { href: "/admin/contracts", label: "Contracts" },
@@ -39,8 +37,8 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-white text-[#1a1a1a]">
-      {/* Mobile top bar */}
-      <div className="md:hidden sticky top-0 z-40 border-b border-gray-200 bg-white/90 backdrop-blur">
+      {/* Top bar (always visible) */}
+      <div className="sticky top-0 z-40 border-b border-gray-200 bg-white/90 backdrop-blur">
         <div className="px-4 py-3 flex items-center justify-between">
           <button
             type="button"
@@ -62,8 +60,8 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
         </div>
       </div>
 
-      {/* Sidebar */}
-      <aside className="hidden md:flex fixed inset-y-0 left-0 w-64 border-r border-gray-200 bg-white px-4 py-6 flex-col">
+      {/* Sidebar removed for full-width pages; use drawer menu instead */}
+      <aside className="hidden fixed inset-y-0 left-0 w-64 border-r border-gray-200 bg-white px-4 py-6 flex-col">
         <div className="px-1">
           <div className="text-2xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-admin-serif)" }}>MO Admin</div>
           <div className="mt-1 text-sm text-gray-500">Operations</div>
@@ -92,9 +90,9 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      {/* Mobile drawer */}
+      {/* Drawer menu (works on all sizes) */}
       {open && (
-        <div className="md:hidden fixed inset-0 z-50">
+        <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} />
           <div className="absolute inset-y-0 left-0 w-72 bg-white border-r border-gray-200 p-5 flex flex-col">
             <div className="text-xl font-semibold" style={{ fontFamily: "var(--font-admin-serif)" }}>MO Admin</div>
@@ -124,7 +122,7 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
       )}
 
       {/* Content */}
-      <main className="md:ml-64">
+      <main className="ml-0">
         <div className="p-4 sm:p-6 lg:p-8 bg-[#ffffff] min-h-screen">{children}</div>
       </main>
     </div>
