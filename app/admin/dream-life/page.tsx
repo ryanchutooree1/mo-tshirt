@@ -105,7 +105,7 @@ export default function DreamLifePage() {
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">DESIGNING MY DREAM LIFE</h1>
           <p className="mt-2 text-sm text-gray-600 max-w-2xl">
-            Assess where you see yourself today. Type inside each ring segment (like A, B, C…) and click to mark it green. Use Reset to clear.
+            Type inside each ring segment (like A, B, C…) and click to mark it green. Use Reset to clear.
           </p>
         </div>
         <button onClick={reset} className="rounded-md border px-3 py-2 text-sm font-semibold hover:bg-gray-50">
@@ -132,53 +132,15 @@ export default function DreamLifePage() {
             {year}
           </text>
 
-          {/* Sector labels and interactive circles */}
+          {/* Sector labels (around the edge) */}
           {sectors.map((s, i) => {
             const angle = i * angleStep;
             const pt = polarToXY(radius + 10, angle);
-            const pin = polarToXY(radius - 25, angle);
-            const color = s.checked ? "#22c55e" : "#ffffff";
-            const stroke = s.checked ? "#16a34a" : "#d1d5db";
             return (
               <g key={s.key}>
-                {/* label around edge */}
                 <text x={pt.x} y={pt.y} textAnchor="middle" fontSize="10" className="fill-gray-500" transform={`rotate(${angle}, ${pt.x}, ${pt.y})`}>
                   {s.label}
                 </text>
-                {/* clickable small circle */}
-                <circle
-                  cx={pin.x}
-                  cy={pin.y}
-                  r={16}
-                  fill={color}
-                  stroke={stroke}
-                  onClick={() => toggleSector(i)}
-                  style={{ cursor: "pointer" }}
-                />
-                {/* editable content fully inside the circle */}
-                <foreignObject x={pin.x - 16} y={pin.y - 16} width={32} height={32}>
-                  <div
-                    xmlns="http://www.w3.org/1999/xhtml"
-                    contentEditable
-                    onInput={(e) => updateNote(i, (e.target as HTMLDivElement).innerText.slice(0, 6))}
-                    suppressContentEditableWarning
-                    style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "9999px",
-                      overflow: "hidden",
-                      display: "grid",
-                      placeItems: "center",
-                      textAlign: "center",
-                      lineHeight: 1.1,
-                      fontSize: "10px",
-                      color: s.checked ? "#ffffff" : "#111827",
-                      background: "transparent",
-                    }}
-                  >
-                    {s.note}
-                  </div>
-                </foreignObject>
               </g>
             );
           })}
@@ -237,58 +199,7 @@ export default function DreamLifePage() {
         </svg>
       </div>
 
-      {/* Legend inputs similar to screenshot */}
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-        <div>
-          <div className="font-semibold text-gray-800 mb-2">SCORE</div>
-          <ul className="space-y-2">
-            {sectors.slice(0, 6).map((s, i) => (
-              <li key={s.key} className="flex items-center gap-2">
-                <button
-                  onClick={() => toggleSector(i)}
-                  className={`h-4 w-4 rounded-sm border ${s.checked ? "bg-green-500 border-green-600" : "bg-white border-gray-300"}`}
-                  aria-label={`Toggle ${s.label}`}
-                />
-                <span className="text-gray-700">{s.label}</span>
-                <input
-                  value={s.note}
-                  onChange={(e) => updateNote(i, e.target.value)}
-                  className="ml-auto w-16 border rounded px-2 py-1 text-xs"
-                  placeholder="note"
-                />
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <div className="font-semibold text-gray-800 mb-2">SCORE</div>
-          <ul className="space-y-2">
-            {sectors.slice(6, 12).map((s, idx) => {
-              const i = idx + 6;
-              return (
-                <li key={s.key} className="flex items-center gap-2">
-                  <button
-                    onClick={() => toggleSector(i)}
-                    className={`h-4 w-4 rounded-sm border ${s.checked ? "bg-green-500 border-green-600" : "bg-white border-gray-300"}`}
-                    aria-label={`Toggle ${s.label}`}
-                  />
-                  <span className="text-gray-700">{s.label}</span>
-                  <input
-                    value={s.note}
-                    onChange={(e) => updateNote(i, e.target.value)}
-                    className="ml-auto w-16 border rounded px-2 py-1 text-xs"
-                    placeholder="note"
-                  />
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-        <div>
-          <div className="font-semibold text-gray-800 mb-2">RESET</div>
-          <p className="text-gray-500">Click any segment to toggle green. Type short text (e.g., “9×4”) inside segments like in your sample.</p>
-        </div>
-      </div>
+      {/* Removed SCORE lists and text fields per request */}
     </div>
   );
 }
