@@ -28,11 +28,12 @@ const SECTORS: Sector[] = [
   { key: "finances", label: "FINANCES" },
 ];
 
-const DEFAULT_TASKS = Array.from({ length: 9 }, (_, i) => ({
-  id: `task-${i + 1}`,
-  text: `Task ${i + 1}`,
-  done: false,
-}));
+const DEFAULT_TASKS = (count = 9): Task[] =>
+  Array.from({ length: count }, (_, i) => ({
+    id: `task-${i + 1}`,
+    text: `Task ${i + 1}`,
+    done: false,
+  }));
 
 const COLLECTION = "dreamLife_her";
 
@@ -42,100 +43,59 @@ export default function HerDreamLifePage() {
   const bands = rings - 1;
 
   const [tasks, setTasks] = useState<Task[][]>(
-    SECTORS.map(() => [...DEFAULT_TASKS])
+    SECTORS.map(() => DEFAULT_TASKS())
   );
 
-  // Load + seed
+  // --- Load from Firebase ---
   useEffect(() => {
-    const normalizeToBands = (arr: any[]): Task[] => {
-      const out: Task[] = [];
-      const len = Math.max(Array.isArray(arr) ? arr.length : 0, 9);
-      for (let i = 0; i < len; i++) {
-        const item = Array.isArray(arr) ? arr[i] : undefined;
-        out.push({
-          id: String(item?.id ?? `task-${i + 1}`),
-          text: String(item?.text ?? `Task ${i + 1}`),
-          done: Boolean(item?.done ?? false),
-        });
-      }
-      return out;
-    };
-
     const load = async () => {
       try {
-        const colRef = collection(db, COLLECTION);
-        const snapshot = await getDocs(colRef);
-        const merged: Task[][] = SECTORS.map(() => DEFAULT_TASKS());
-        const seen = new Set<string>();
+        const snapshot = await getDocs(collection(db, COLLECTION));
+        if (snapshot.empty) return;
+
+        const loaded: Task[][] = SECTORS.map(() => DEFAULT_TASKS());
+
         snapshot.forEach((docSnap) => {
-          const id = docSnap.id;
-          const idx = SECTORS.findIndex((s) => s.key === id);
+          const idx = SECTORS.findIndex((s) => s.key === docSnap.id);
           if (idx >= 0) {
-            const saved = (docSnap.data() as any)?.tasks;
-            merged[idx] = Array.isArray(saved) && saved.length
-              ? normalizeToBands(saved)
-              : DEFAULT_TASKS();
-            seen.add(id);
+            const saved = (docSnap.data() as any)?.tasks || [];
+            loaded[idx] = DEFAULT_TASKS().map((def, i) => ({
+              id: saved[i]?.id ?? def.id,
+              text: saved[i]?.text ?? def.text,
+              done: saved[i]?.done ?? def.done,
+            }));
           }
         });
-        setTasks(merged);
-        const missing = SECTORS.filter((s) => !seen.has(s.key)).map((s, si) =>
-          setDoc(
-            doc(db, COLLECTION, s.key),
-            { tasks: merged[si] },
-            { merge: true }
-          )
-        );
-        if (missing.length) await Promise.all(missing);
+
+        setTasks(loaded);
       } catch (e) {
-        console.error(e);
+        console.error("Error loading tasks:", e);
       }
     };
+
     load();
   }, []);
 
-  // Merge safeguard
-  useEffect(() => {
-    const save = async () => {
-      try {
-        await Promise.all(
-          SECTORS.map((s, si) =>
-            setDoc(
-              doc(db, COLLECTION, s.key),
-              { tasks: tasks[si] },
-              { merge: true }
-            )
-          )
-        );
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    save();
-  }, [tasks]);
-
-  // Row save + toast
+  // --- Helpers ---
   const [saveState, setSaveState] = useState<
     Record<string, "idle" | "saving" | "saved" | "error">
   >({});
   const [toast, setToast] = useState<string | null>(null);
   const keyFor = (si: number, ti: number) => `${si}-${ti}`;
 
-  const updateTaskText = (si: number, ti: number, text: string) =>
-    setTasks((all) => {
-      const copy = all.map((arr) => [...arr]);
-      copy[si][ti] = { ...copy[si][ti], text };
-      return copy;
-    });
+  const saveSector = async (si: number, sectorTasks: Task[]) => {
+    await setDoc(
+      doc(db, COLLECTION, SECTORS[si].key),
+      { tasks: sectorTasks },
+      { merge: true }
+    );
+  };
+
   const saveRow = async (si: number, ti: number, updated: Task[][]) => {
     const k = keyFor(si, ti);
     setSaveState((s) => ({ ...s, [k]: "saving" }));
     try {
-      await setDoc(
-        doc(db, COLLECTION, SECTORS[si].key),
-        { tasks: updated[si] },
-        { merge: true }
-      );
+      await saveSector(si, updated[si]);
       setSaveState((s) => ({ ...s, [k]: "saved" }));
       setToast("Saved to Firebase");
       setTimeout(() => {
@@ -149,6 +109,14 @@ export default function HerDreamLifePage() {
       setTimeout(() => setToast(null), 2000);
     }
   };
+
+  const updateTaskText = (si: number, ti: number, text: string) =>
+    setTasks((all) => {
+      const copy = all.map((arr) => [...arr]);
+      copy[si][ti] = { ...copy[si][ti], text };
+      return copy;
+    });
+
   const toggleTask = (si: number, ti: number) =>
     setTasks((all) => {
       const copy = all.map((arr) => [...arr]);
@@ -156,8 +124,9 @@ export default function HerDreamLifePage() {
       void saveRow(si, ti, copy);
       return copy;
     });
+
   const resetAll = async () => {
-    const fresh = SECTORS.map(() => [...DEFAULT_TASKS]);
+    const fresh = SECTORS.map(() => DEFAULT_TASKS());
     setTasks(fresh);
     try {
       const batch = writeBatch(db);
@@ -174,7 +143,7 @@ export default function HerDreamLifePage() {
     }
   };
 
-  // SVG helpers
+  // --- SVG helpers ---
   const radius = 260;
   const cx = 320;
   const cy = 320;
@@ -204,6 +173,7 @@ export default function HerDreamLifePage() {
           {toast}
         </div>
       )}
+
       <header className="mb-6 flex items-center justify-between">
         <h1 className="text-xl md:text-2xl font-bold text-pink-600">
           Her Dream Life
@@ -215,6 +185,8 @@ export default function HerDreamLifePage() {
           Reset
         </button>
       </header>
+
+      {/* Circle */}
       <div className="flex justify-center mb-10">
         <svg
           width={size + padding * 2}
@@ -251,23 +223,13 @@ export default function HerDreamLifePage() {
             </text>
             {SECTORS.map((s, i) => {
               const angle = (i + 0.5) * angleStep;
-              const p = polarToXY(radius + 50, angle);
-              const pt = { ...p };
-              // Manual fine-tuning
-              if (s.key === "romance") pt.x -= 10;
-              if (s.key === "career") pt.x += 10;
-              if (s.key === "spiritual") pt.x += 10;
-              let anchor: "start" | "end" | "middle" = "middle";
-              if (angle >= 75 && angle <= 105) anchor = "middle";
-              else if (angle > 105 && angle < 255) anchor = "end";
-              else if (angle >= 255 && angle <= 285) anchor = "middle";
-              else anchor = "start";
+              const pt = polarToXY(radius + 50, angle);
               return (
                 <text
                   key={s.key}
                   x={pt.x}
                   y={pt.y}
-                  textAnchor={anchor}
+                  textAnchor="middle"
                   fontSize="12"
                   fontWeight="600"
                   className="fill-pink-600"
@@ -304,12 +266,11 @@ export default function HerDreamLifePage() {
           </g>
         </svg>
       </div>
+
+      {/* Task Lists */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {SECTORS.map((s, si) => (
-          <div
-            key={s.key}
-            className="rounded-xl border shadow-sm overflow-hidden"
-          >
+          <div key={s.key} className="rounded-xl border shadow-sm overflow-hidden">
             <div className="bg-gray-100 px-3 py-2 text-sm font-semibold tracking-wide text-gray-700 sticky top-0">
               {s.label}
             </div>
