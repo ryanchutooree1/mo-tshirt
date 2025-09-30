@@ -1,5 +1,5 @@
 export const WHATSAPP_PHONE = "23059883880"; // Owner's WhatsApp number (E.164 without +)
-export const WHATSAPP_TEXT = "Hi, I need printing.";
+export const WHATSAPP_TEXT = "Hi, i need printing. What’s your price?";
 export const CONTACT_EMAIL = "motshirtmauritius@gmail.com";
 export const CONTACT_PHONE_DISPLAY = "+230 5988 3880";
 export const CONTACT_TEL = "+23059883880";

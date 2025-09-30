@@ -38,14 +38,14 @@ function ActionButtons() {
   return (
     <div className="mt-8 mx-auto flex w-full max-w-md flex-wrap items-center gap-3 sm:flex-nowrap sm:justify-between">
       <a
-        href={getWhatsAppUrl("Hi, I need printing. What's your price for this?")}
-        className="inline-flex flex-1 items-center justify-center rounded-full bg-green-600 px-6 py-3 text-sm font-medium text-white transition hover:bg-green-700"
+        href={getWhatsAppUrl()}
+        className="inline-flex flex-1 items-center justify-center rounded-full bg-[#FF6600] px-6 py-3 text-sm font-medium text-white transition hover:bg-orange-600"
       >
         WhatsApp
       </a>
       <a
         href="#contact"
-        className="inline-flex flex-1 items-center justify-center rounded-full bg-[#FF6600] px-6 py-3 text-sm font-medium text-white transition hover:bg-orange-600"
+        className="inline-flex flex-1 items-center justify-center rounded-full border border-black px-6 py-3 text-sm font-medium text-black transition hover:bg-black hover:text-white"
       >
         Get a Quote
       </a>
@@ -96,22 +96,9 @@ export default function HomePage() {
                 alt="Custom T-shirt flat lay"
                 width={1536}
                 height={1024}
-                className="h-[360px] w-full rounded-[32px] border border-[#EAEAEA] object-cover shadow-sm sm:h-[460px] lg:h-[560px]"
+                className="h-auto w-full rounded-[32px] border border-[#EAEAEA] object-cover shadow-sm"
                 priority
               />
-            </div>
-          </div>
-        </section>
-
-        {/* Our Work */}
-        <section id="our-work" className="px-6 py-24">
-          <div className="mx-auto max-w-6xl text-center">
-            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Our Work</h2>
-            <p className="mt-4 text-base text-neutral-600">
-              Recent prints for local teams, events, and businesses.
-            </p>
-            <div className="mt-12">
-              <Gallery />
             </div>
           </div>
         </section>
@@ -140,6 +127,19 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Our Work */}
+        <section id="our-work" className="px-6 py-24">
+          <div className="mx-auto max-w-6xl text-center">
+            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Our Work</h2>
+            <p className="mt-4 text-base text-neutral-600">
+              Recent prints for local teams, events, and businesses.
+            </p>
+            <div className="mt-12">
+              <Gallery />
+            </div>
+          </div>
+        </section>
+
         {/* Contact */}
         <section id="contact" className="px-6 py-24">
           <div className="mx-auto max-w-4xl rounded-[32px] border border-[#EAEAEA] bg-white p-12 text-center shadow-sm">
@@ -156,7 +156,7 @@ export default function HomePage() {
                 Call {CONTACT_PHONE_DISPLAY}
               </a>
               <a
-                href={getWhatsAppUrl("Hi MO T-SHIRT, I’d like to start a custom print order.")}
+                href={getWhatsAppUrl()}
                 className="inline-flex items-center justify-center rounded-full bg-[#FF6600] px-6 py-3 text-sm font-medium text-white transition hover:bg-orange-600"
               >
                 WhatsApp us
@@ -180,6 +180,9 @@ export default function HomePage() {
             <a href="#" className="transition hover:text-black">Privacy</a>
             <a href="https://www.instagram.com/mo_tshirt_printing/" target="_blank" rel="noopener noreferrer" className="transition hover:text-black">
               Instagram
+            </a>
+            <a href="https://www.tiktok.com/@mo_tshirt_mauritius" target="_blank" rel="noopener noreferrer" className="transition hover:text-black">
+              TikTok
             </a>
             <a href={getWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="transition hover:text-black">
               WhatsApp

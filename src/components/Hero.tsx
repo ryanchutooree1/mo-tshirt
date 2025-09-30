@@ -2,7 +2,7 @@ import { getWhatsAppUrl } from "@/data/work";
 
 export default function Hero() {
   return (
-    <section className="relative bg-white py-12 lg:py-20">
+    <section className="relative bg-white pt-12 pb-16 sm:pt-16 sm:pb-20 lg:pt-20 lg:pb-24">
       <div className="mx-auto max-w-6xl px-4 text-center">
         {/* Heading */}
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-gray-900">
@@ -34,11 +34,11 @@ export default function Hero() {
         </div>
 
         {/* Products Image */}
-        <div className="mt-10">
+        <div className="mt-8 sm:mt-10">
           <img
             src="/all_products.png"
             alt="MO T-SHIRT Products"
-            className="mx-auto rounded-xl shadow-sm"
+            className="mx-auto block h-auto w-full max-w-5xl lg:max-w-6xl rounded-2xl shadow-sm object-contain"
           />
         </div>
       </div>
