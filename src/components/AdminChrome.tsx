@@ -92,7 +92,7 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
   }, [open]);
 
   return (
-    <div className="min-h-screen bg-white text-[#1a1a1a]">
+    <div className="min-h-screen bg-[#F5F5F7] text-[#1a1a1a]">
       {/* Top bar (always visible) */}
       <div className="sticky top-0 z-40 border-b border-gray-200 bg-white/90 backdrop-blur">
         <div className="px-4 py-3 flex items-center justify-between">

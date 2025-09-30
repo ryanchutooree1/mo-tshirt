@@ -101,6 +101,8 @@ export default function OwnerDashboard() {
     return { todaysOrdersCount: count, aov: count ? Math.round(rev / count) : 0 };
   }, [latestOrders, todayIso]);
 
+  const panelClass = "rounded-[28px] border border-[#EAEAEA] bg-white shadow-sm";
+
   // Checklist init
   useEffect(() => {
     (async () => {
@@ -238,13 +240,13 @@ export default function OwnerDashboard() {
     return "✅ Systems normal. Keep compounding.";
   }, [pendingOrders, deliveredToday, aov, progressPct, lowStock]);
 
-  if (loading) return <main className="min-h-screen bg-white p-6 text-[#1a1a1a]">Loading dashboard...</main>;
+  if (loading) return <main className="min-h-screen bg-[#F5F5F7] p-6 text-[#1a1a1a] grid place-items-center">Loading dashboard...</main>;
 
   return (
-    <main className="min-h-screen bg-white px-4 sm:px-6 py-6 sm:py-8 text-[#1a1a1a]">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <main className="min-h-screen bg-[#F5F5F7] px-4 sm:px-6 py-10 text-[#1a1a1a]">
+      <div className="mx-auto flex max-w-7xl flex-col gap-10">
       {/* HERO */}
-      <header className="bg-white border border-gray-200 rounded-2xl p-6 sm:p-7 shadow-sm">
+      <header className={`${panelClass} grid gap-6 sm:grid-cols-[minmax(0,1fr)_auto] p-8`}>
         <div>
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-admin-serif)" }}>MO T-SHIRT — Owner Dashboard</h1>
           <p className="mt-2 text-sm text-gray-600">
@@ -254,14 +256,14 @@ export default function OwnerDashboard() {
             Tomorrow ({tomorrowCalc.dateStr}) • Primary: <span className="text-blue-300 font-medium">{tomorrowCalc.primary}</span> • Secondary: <span className="text-emerald-300 font-medium">{tomorrowCalc.secondary}</span>
           </p>
         </div>
-        <div className="text-right mt-4 sm:mt-0">
+        <div className="text-right">
           <div className="text-xs uppercase tracking-wide text-gray-500">Local time</div>
           <div className="text-2xl sm:text-3xl font-semibold text-[#1a1a1a]" style={{ fontFamily: "var(--font-admin-serif)" }}>{timeString}</div>
         </div>
       </header>
 
       {/* CEO SNAPSHOT */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6 lg:gap-5">
         {[
           { label: "Today’s Revenue", value: `Rs ${(global?.todayRevenue ?? todayRevenue).toLocaleString()}`, icon: RsIcon, href: "/admin/analytics?preset=7d" },
           { label: "Orders Today", value: global?.ordersToday ?? todaysOrdersCount, icon: Package, href: "/admin/orders?range=today" },
@@ -273,8 +275,8 @@ export default function OwnerDashboard() {
           const Icon = s.icon;
           return (
             <Link key={idx} href={s.href || "#"} className="group">
-              <div className="bg-white border border-gray-200 shadow-sm rounded-xl p-4 flex items-center gap-3 transition-all hover:shadow-md">
-                <div className="p-2 rounded-lg bg-[#f5f5f5] text-[#1a1a1a]">
+              <div className={`${panelClass} flex items-center gap-3 p-5 transition-all hover:shadow-md`}>
+                <div className="p-2 rounded-xl bg-[#F5F5F7] text-[#1a1a1a]">
                   <Icon className="w-5 h-5" />
                 </div>
                 <div className="flex-1">
@@ -288,7 +290,7 @@ export default function OwnerDashboard() {
       </section>
 
       {/* INSIGHT */}
-      <section className="bg-[#bfa37a] text-white rounded-xl p-4 shadow-sm">
+      <section className="rounded-[28px] bg-[#0F172A] p-6 text-white shadow-sm">
         <div className="flex items-start gap-3">
           <div className="shrink-0"><Info className="w-5 h-5" /></div>
           <div>
@@ -299,7 +301,7 @@ export default function OwnerDashboard() {
       </section>
 
       {/* Daily Checklist */}
-      <section className="bg-white border border-gray-200 shadow-sm p-4 rounded-xl">
+      <section className={`${panelClass} p-6`}>
         <div className="flex items-center justify-between mb-3">
           <div>
             <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-admin-serif)" }}>Daily Checklist</h2>
@@ -311,7 +313,7 @@ export default function OwnerDashboard() {
               onChange={(e) => setNewTask(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') addTask(); }}
               placeholder="Add a task..."
-              className="bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-[#1a1a1a] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#bfa37a]/50"
+              className="bg-white border border-[#EAEAEA] rounded-xl px-3 py-1.5 text-sm text-[#1a1a1a] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#bfa37a]/50"
             />
             <button onClick={addTask} className="px-3 py-1.5 rounded-lg text-sm flex items-center gap-1 border border-[#bfa37a] text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white transition-colors">
               <Plus className="w-4 h-4" /> Add
@@ -334,7 +336,7 @@ export default function OwnerDashboard() {
         </div>
 
         {/* Task list */}
-        <ul className="divide-y divide-slate-800">
+        <ul className="divide-y divide-[#EAEAEA]">
           {tasks.length === 0 && (
             <li className="text-sm text-gray-500 py-2">No tasks yet. Add your first task above.</li>
           )}
@@ -357,8 +359,8 @@ export default function OwnerDashboard() {
       </section>
 
       {/* Latest Orders */}
-      <section className="bg-white border border-gray-200 shadow-sm p-4 rounded-xl">
-        <h2 className="text-lg font-semibold mb-4" style={{ fontFamily: "var(--font-admin-serif)" }}>Latest Orders</h2>
+      <section className={`${panelClass} p-6`}>
+        <h2 className="text-lg font-semibold mb-6" style={{ fontFamily: "var(--font-admin-serif)" }}>Latest Orders</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-[#1a1a1a]">
             <thead>
@@ -384,15 +386,15 @@ export default function OwnerDashboard() {
       </section>
 
       {/* Inventory Snapshot */}
-      <section className="bg-white border border-gray-200 shadow-sm p-4 rounded-xl">
-        <div className="flex items-center justify-between mb-3">
+      <section className={`${panelClass} p-6`}>
+        <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-admin-serif)" }}>Inventory Snapshot</h2>
           <div className="flex items-center gap-2">
             <input
               placeholder="Search product..."
               value={invSearch}
               onChange={(e) => setInvSearch(e.target.value)}
-              className="bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-[#1a1a1a] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#bfa37a]/50"
+              className="bg-white border border-[#EAEAEA] rounded-xl px-3 py-1.5 text-sm text-[#1a1a1a] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#bfa37a]/50"
             />
             {lowStock.length > 0 && (
               <div className="text-xs px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-full">
@@ -407,7 +409,7 @@ export default function OwnerDashboard() {
             (acc, c) => acc + Object.values(c.sizes || {}).reduce((a, b) => a + (b || 0), 0), 0
           );
           return (
-            <div key={p.id} className="border border-gray-200 bg-white rounded-xl mb-3 overflow-hidden shadow-sm">
+            <div key={p.id} className="mb-3 overflow-hidden rounded-2xl border border-[#EAEAEA] bg-white shadow-sm">
               {/* Product row */}
               <div
                 onClick={() => setExpandedProduct(expandedProduct === p.id ? null : p.id)}
