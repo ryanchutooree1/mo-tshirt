@@ -12,6 +12,16 @@ export const metadata: Metadata = {
   title: "MO T-SHIRT PRINTING 🇲🇺",
   description:
     "⭐ Mauritius’ trusted name in custom T-Shirts, Poloshirts & Hoodies✨. Worn by top restaurants, gyms, and businesses. Serving 50+ companies island-wide with fast delivery 🚀 ⭐",
+  keywords: [
+    "t-shirt printing Mauritius",
+    "polo shirt printing",
+    "custom hoodies",
+    "cap printing",
+    "Mauritius custom printing",
+    "MO T-SHIRT",
+    "business uniforms",
+    "fast t-shirt printing",
+  ],
   metadataBase: new URL("https://mo-tshirt.mu"),
   icons: {
     icon: [
