@@ -1,5 +1,7 @@
+"use client";
+
 const MAP_EMBED =
-  "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3736.8418246168653!2d57.50495967609165!3d-20.512709481010575!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f7.8!3m3!1m2!1s0x217c65c1340e173b%3A0x41a86ddefff3db6a!2sMO%20T-SHIRT%20-%20Business%20Printing%20(Mauritius)!5e0!3m2!1sen!2smu!4v1756908939206!5m2!1sen!2smu";
+  "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3736.8418241534987!2d57.50753460000001!3d-20.512709499999996!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x217c65c1340e173b%3A0x41a86ddefff3db6a!2sMO%20T-SHIRT%20-%20Business%20Printing%20(Mauritius)!5e0!3m2!1sen!2smu!4v1761069000215!5m2!1sen!2smu";
 
 export default function MapCard() {
   return (

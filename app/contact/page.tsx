@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import MapCard from "@/components/MapCard";
 
 export default function ContactPage() {
   const [name, setName] = useState("");
@@ -36,7 +37,7 @@ export default function ContactPage() {
     } finally {
       setLoading(false);
     }
-}
+  }
 
   return (
     <section className="px-6 md:px-8 py-20 mx-auto max-w-3xl">
@@ -126,6 +127,10 @@ export default function ContactPage() {
           <p className="text-sm text-gray-600">Phone / WhatsApp: +230 5988 3880</p>
           <p className="text-sm text-gray-600">Email: hello@mo-tshirt.example</p>
         </aside>
+      </div>
+
+      <div className="mt-10">
+        <MapCard />
       </div>
     </section>
   );

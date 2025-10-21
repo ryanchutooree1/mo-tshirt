@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getWhatsAppUrl, CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL } from "@/data/work";
 import { HiOutlineCheckBadge, HiOutlineBolt, HiOutlineGlobeAlt, HiOutlineSparkles } from "react-icons/hi2";
 import Gallery from "@/components/Gallery";
+import MapCard from "@/components/MapCard";
 
 const navLinks = [
   { label: "Home", href: "#hero" },
@@ -168,6 +169,10 @@ export default function HomePage() {
                 Email us
               </a>
             </div>
+          </div>
+
+          <div className="mx-auto mt-12 max-w-5xl">
+            <MapCard />
           </div>
         </section>
       </main>
