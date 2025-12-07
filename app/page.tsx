@@ -153,15 +153,6 @@ export default function HomePage() {
               <p className="mt-4 text-base text-neutral-600">
                 Tell us what you need and get a fast quote. WhatsApp for rush jobs.
               </p>
-              <div className="mt-6 flex justify-center">
-                <a
-                  href="#location"
-                  className="group inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-black shadow-sm transition hover:border-black hover:shadow"
-                >
-                  <HiOutlineArrowDownCircle className="h-5 w-5 text-orange-500 transition group-hover:translate-y-0.5" />
-                  <span>Jump to Location</span>
-                </a>
-              </div>
             </div>
 
             <div className="grid gap-8 lg:grid-cols-2">
@@ -170,7 +161,7 @@ export default function HomePage() {
                   <div>
                     <p className="text-xs uppercase tracking-[0.08em] text-orange-500">Quote form</p>
                     <h3 className="text-2xl font-semibold text-black">Get pricing in hours</h3>
-                    <p className="text-sm text-neutral-600">Share quantities, garments, and deadline. We reply fast.</p>
+                    <p className="text-sm text-neutral-600">Share quantities, garments, and deadline. Collect at Surinam or Postage nationwide.</p>
                   </div>
                   <span className="hidden rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-600 sm:inline-block">
                     48h rush available
@@ -219,7 +210,7 @@ export default function HomePage() {
             </div>
 
             <div id="location" className="mx-auto mt-12 max-w-5xl">
-              <h3 className="text-center text-xl font-semibold text-black mb-4">Our Location</h3>
+              <h2 className="text-center text-3xl font-semibold text-black mb-4 sm:text-4xl">Our Location</h2>
               <MapCard />
             </div>
           </div>
