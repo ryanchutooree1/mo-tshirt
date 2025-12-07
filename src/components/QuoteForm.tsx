@@ -16,10 +16,12 @@ type FormState = {
   garment: string;
   deadline: string;
   notes: string;
+  delivery: string;
 };
 
 const garmentOptions = ["T-Shirt", "Polo Shirt", "Hoodie", "Cap", "Other"];
 const printMethods = ["Screen Print", "DTF", "Heat Transfer", "Not sure"];
+const deliveryOptions = ["Collect at Surinam", "Postage", "Delivery (Need to arrange first)"];
 
 export default function QuoteForm({ source = "Website", className }: QuoteFormProps) {
   const [form, setForm] = useState<FormState>({
@@ -30,6 +32,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     garment: garmentOptions[0],
     deadline: "",
     notes: "",
+    delivery: deliveryOptions[0],
   });
   const [printMethod, setPrintMethod] = useState<string>(printMethods[3]);
   const [file, setFile] = useState<File | null>(null);
@@ -72,6 +75,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
       `Print method: ${printMethod}`,
       `Quantity: ${form.quantity}`,
       `Deadline: ${form.deadline || "n/a"}`,
+      `Delivery: ${form.delivery}`,
       `Notes: ${form.notes || "n/a"}`,
     ];
 
@@ -86,6 +90,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     payload.append("deadline", form.deadline);
     payload.append("notes", form.notes);
     payload.append("source", source);
+    payload.append("delivery", form.delivery);
     if (file) payload.append("file", file);
 
     try {
@@ -104,6 +109,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           garment: garmentOptions[0],
           deadline: "",
           notes: "",
+          delivery: deliveryOptions[0],
         });
         setPrintMethod(printMethods[3]);
         setFile(null);
@@ -229,6 +235,19 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
             className="mt-1 h-[86px] w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
             placeholder="Describe the print: front chest 1-color, back 2-color, sleeve logo, sizes, deadlines…"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-neutral-700">Delivery preference</label>
+          <select
+            value={form.delivery}
+            onChange={(e) => update("delivery", e.target.value)}
+            className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
+          >
+            {deliveryOptions.map((opt) => (
+              <option key={opt}>{opt}</option>
+            ))}
+          </select>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">

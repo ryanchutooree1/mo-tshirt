@@ -12,6 +12,7 @@ type ParsedPayload = {
   notes?: string;
   source?: string;
   file?: File | null;
+  delivery?: string;
 };
 
 function isValidEmail(email: string) {
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
       payload = json;
     }
 
-    const { name, email, message, phone, garment, printMethod, quantity, deadline, notes, source, file } = payload;
+    const { name, email, message, phone, garment, printMethod, quantity, deadline, notes, source, file, delivery } = payload;
 
     if (!name || !email || !message) {
       return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
@@ -89,6 +90,7 @@ export async function POST(req: Request) {
       `Deadline: ${deadline || "n/a"}`,
       `Notes: ${notes || "n/a"}`,
       `Source: ${source || "n/a"}`,
+      `Delivery: ${delivery || "n/a"}`,
     ].join("\n");
 
     if (host && user && pass) {

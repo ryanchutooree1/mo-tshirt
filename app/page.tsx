@@ -161,7 +161,7 @@ export default function HomePage() {
                   <div>
                     <p className="text-xs uppercase tracking-[0.08em] text-orange-500">Quote form</p>
                     <h3 className="text-2xl font-semibold text-black">Get pricing in hours</h3>
-                    <p className="text-sm text-neutral-600">Share quantities, garments, and deadline. Collect at Surinam or Postage nationwide.</p>
+                    <p className="text-sm text-neutral-600">Share quantities, garments, deadline, and delivery preference.</p>
                   </div>
                   <span className="hidden rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-600 sm:inline-block">
                     48h rush available
@@ -211,7 +211,14 @@ export default function HomePage() {
 
             <div id="location" className="mx-auto mt-12 max-w-5xl">
               <h2 className="text-center text-3xl font-semibold text-black mb-4 sm:text-4xl">Our Location</h2>
-              <MapCard />
+              <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+                <MapCard />
+                <div className="border-t border-neutral-200 bg-neutral-50 px-4 py-3 text-center text-sm font-semibold text-neutral-700 sm:text-base">
+                  <span className="mr-3">Email: <a className="underline hover:text-black" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></span>
+                  <span className="text-neutral-400">|</span>
+                  <span className="ml-3">Phone: <a className="underline hover:text-black" href={`tel:${CONTACT_TEL}`}>{CONTACT_PHONE_DISPLAY}</a></span>
+                </div>
+              </div>
             </div>
           </div>
         </section>
