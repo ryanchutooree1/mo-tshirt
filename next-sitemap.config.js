@@ -1,5 +1,5 @@
 /** @type {import('next-sitemap').IConfig} */
-const siteUrl = "https://mo-tshirt.mu";
+const siteUrl = "https://www.mo-tshirt.mu";
 
 module.exports = {
   siteUrl,
