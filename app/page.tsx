@@ -213,11 +213,21 @@ export default function HomePage() {
               <h2 className="text-center text-3xl font-semibold text-black mb-4 sm:text-4xl">Our Location</h2>
               <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
                 <MapCard />
-                <div className="border-t border-neutral-200 bg-neutral-50 px-4 py-3 text-center text-sm font-semibold text-neutral-700 sm:text-base">
-                  <span className="mr-3">Email: <a className="underline hover:text-black" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></span>
-                  <span className="text-neutral-400">|</span>
-                  <span className="ml-3">Phone: <a className="underline hover:text-black" href={`tel:${CONTACT_TEL}`}>{CONTACT_PHONE_DISPLAY}</a></span>
-                </div>
+              </div>
+              <div className="mt-4 flex flex-col items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-center text-sm font-semibold text-neutral-700 shadow-sm sm:flex-row sm:text-base">
+                <span>
+                  Email:{" "}
+                  <a className="underline hover:text-black" href={`mailto:${CONTACT_EMAIL}`}>
+                    {CONTACT_EMAIL}
+                  </a>
+                </span>
+                <span className="hidden text-neutral-400 sm:inline">|</span>
+                <span>
+                  Phone:{" "}
+                  <a className="underline hover:text-black" href={`tel:${CONTACT_TEL}`}>
+                    {CONTACT_PHONE_DISPLAY}
+                  </a>
+                </span>
               </div>
             </div>
           </div>
