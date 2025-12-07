@@ -6,7 +6,6 @@ import Gallery from "@/components/Gallery";
 import MapCard from "@/components/MapCard";
 import QuoteForm from "@/components/QuoteForm";
 import PricingEstimator from "@/components/PricingEstimator";
-import { HiOutlineArrowDownCircle } from "react-icons/hi2";
 
 const navLinks = [
   { label: "Home", href: "#hero" },
