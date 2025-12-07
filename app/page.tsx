@@ -1,11 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { getWhatsAppUrl, CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL } from "@/data/work";
-import { HiOutlineCheckBadge, HiOutlineBolt, HiOutlineGlobeAlt, HiOutlineSparkles } from "react-icons/hi2";
+import { HiOutlineCheckBadge, HiOutlineBolt, HiOutlineGlobeAlt, HiOutlineSparkles, HiOutlineArrowDownCircle } from "react-icons/hi2";
 import Gallery from "@/components/Gallery";
 import MapCard from "@/components/MapCard";
 import QuoteForm from "@/components/QuoteForm";
 import PricingEstimator from "@/components/PricingEstimator";
+import { HiOutlineArrowDownCircle } from "react-icons/hi2";
 
 const navLinks = [
   { label: "Home", href: "#hero" },
@@ -151,6 +152,15 @@ export default function HomePage() {
               <p className="mt-4 text-base text-neutral-600">
                 Tell us what you need and get a fast quote. WhatsApp for rush jobs.
               </p>
+              <div className="mt-6 flex justify-center">
+                <a
+                  href="#location"
+                  className="group inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-black shadow-sm transition hover:border-black hover:shadow"
+                >
+                  <HiOutlineArrowDownCircle className="h-5 w-5 text-orange-500 transition group-hover:translate-y-0.5" />
+                  <span>Jump to Location</span>
+                </a>
+              </div>
             </div>
 
             <div className="grid gap-8 lg:grid-cols-2">
@@ -207,7 +217,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="mx-auto mt-12 max-w-5xl">
+            <div id="location" className="mx-auto mt-12 max-w-5xl">
               <MapCard />
             </div>
           </div>
