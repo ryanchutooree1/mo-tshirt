@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
 
 type QuoteFormProps = {
@@ -18,8 +18,8 @@ type FormState = {
   notes: string;
 };
 
-const garmentOptions = ["T-Shirt", "Polo Shirt", "Hoodie", "Cap", "Jacket", "Other"];
-const printMethods = ["Screen Print", "DTF", "Embroidery", "Heat Transfer", "Not sure"];
+const garmentOptions = ["T-Shirt", "Polo Shirt", "Hoodie", "Cap", "Other"];
+const printMethods = ["Screen Print", "DTF", "Heat Transfer", "Not sure"];
 
 export default function QuoteForm({ source = "Website", className }: QuoteFormProps) {
   const [form, setForm] = useState<FormState>({
@@ -31,12 +31,31 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     deadline: "",
     notes: "",
   });
-  const [printMethod, setPrintMethod] = useState<string>(printMethods[4]);
+  const [printMethod, setPrintMethod] = useState<string>(printMethods[3]);
+  const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function handleEmailChange(e: ChangeEvent<HTMLInputElement>) {
+    const next = e.target.value;
+    setForm((prev) => ({ ...prev, email: next }));
+    if (!next) {
+      setEmailError("Email is required.");
+    } else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(next)) {
+      setEmailError("Enter a valid email.");
+    } else {
+      setEmailError(null);
+    }
+  }
+
+  function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0] || null;
+    setFile(f);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -56,15 +75,23 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
       `Notes: ${form.notes || "n/a"}`,
     ];
 
+    const payload = new FormData();
+    payload.append("name", form.name);
+    payload.append("email", form.email);
+    payload.append("message", lines.join("\n"));
+    payload.append("phone", form.phone);
+    payload.append("garment", form.garment);
+    payload.append("printMethod", printMethod);
+    payload.append("quantity", String(form.quantity));
+    payload.append("deadline", form.deadline);
+    payload.append("notes", form.notes);
+    payload.append("source", source);
+    if (file) payload.append("file", file);
+
     try {
       const res = await fetch("/api/contact", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          message: lines.join("\n"),
-        }),
+        body: payload,
       });
       const body = await res.json();
       if (res.ok) {
@@ -78,7 +105,9 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           deadline: "",
           notes: "",
         });
-        setPrintMethod(printMethods[4]);
+        setPrintMethod(printMethods[3]);
+        setFile(null);
+        setEmailError(null);
       } else {
         setResult({ ok: false, msg: body?.error || "Something went wrong." });
       }
@@ -109,10 +138,13 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
               required
               type="email"
               value={form.email}
-              onChange={(e) => update("email", e.target.value)}
-              className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
+              onChange={handleEmailChange}
+              className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none ${
+                emailError ? "border-red-400 focus:border-red-500" : "border-neutral-200 focus:border-black"
+              }`}
               placeholder="you@example.com"
             />
+            {emailError && <p className="mt-1 text-xs text-red-600">{emailError}</p>}
           </div>
         </div>
 
@@ -178,20 +210,31 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
             <p className="mt-1 text-xs text-neutral-500">Better pricing kicks in above 50 units.</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Upload / notes</label>
-            <textarea
-              value={form.notes}
-              onChange={(e) => update("notes", e.target.value)}
-              className="mt-1 h-[86px] w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
-              placeholder="Link to artwork, sizes, placement, colors…"
+            <label className="block text-sm font-medium text-neutral-700">Upload logo (PNG, JPG, JPEG, PDF)</label>
+            <input
+              type="file"
+              accept=".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf"
+              onChange={handleFileChange}
+              className="mt-1 w-full cursor-pointer rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
             />
+            <p className="mt-1 text-xs text-neutral-500">Attach your logo for an exact proof and pricing.</p>
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-neutral-700">Notes</label>
+          <textarea
+            value={form.notes}
+            onChange={(e) => update("notes", e.target.value)}
+            className="mt-1 h-[86px] w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
+            placeholder="Describe the print: front chest 1-color, back 2-color, sleeve logo, sizes, deadlines…"
+          />
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || Boolean(emailError)}
             className="inline-flex items-center justify-center rounded-full bg-black px-5 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:opacity-60"
           >
             {loading ? "Sending…" : "Get my quote"}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ChangeEvent } from "react";
 import MapCard from "@/components/MapCard";
 
 export default function ContactClient() {
@@ -9,6 +9,19 @@ export default function ContactClient() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<null | { ok: boolean; msg: string }>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+
+  function handleEmailChange(e: ChangeEvent<HTMLInputElement>) {
+    const next = e.target.value;
+    setEmail(next);
+    if (!next) {
+      setEmailError("Email is required.");
+    } else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(next)) {
+      setEmailError("Enter a valid email.");
+    } else {
+      setEmailError(null);
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -63,10 +76,11 @@ export default function ContactClient() {
               required
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2"
+              onChange={handleEmailChange}
+              className={`w-full border rounded-lg px-3 py-2 ${emailError ? "border-red-400 focus:border-red-500" : ""}`}
               placeholder="you@example.com"
             />
+            {emailError && <p className="mt-1 text-xs text-red-600">{emailError}</p>}
           </div>
 
           <div className="md:col-span-2">
@@ -83,8 +97,8 @@ export default function ContactClient() {
           <div className="flex items-center gap-3">
             <button
               type="submit"
-              disabled={loading}
-              className="px-5 py-2 bg-orange-500 text-white rounded-full shadow hover:bg-orange-600 transition"
+              disabled={loading || Boolean(emailError)}
+              className="px-5 py-2 bg-orange-500 text-white rounded-full shadow hover:bg-orange-600 transition disabled:opacity-60"
             >
               {loading ? "Sending..." : "Send message"}
             </button>
