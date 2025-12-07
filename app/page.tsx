@@ -6,6 +6,7 @@ import Gallery from "@/components/Gallery";
 import MapCard from "@/components/MapCard";
 import QuoteForm from "@/components/QuoteForm";
 import PricingEstimator from "@/components/PricingEstimator";
+import LocationJump from "@/components/LocationJump";
 
 const navLinks = [
   { label: "Home", href: "#hero" },
@@ -59,6 +60,7 @@ function ActionButtons() {
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-white text-black">
+      <LocationJump />
       <header className="sticky top-0 z-40 border-b border-[#EAEAEA] bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-6">
           <Link href="#hero" className="flex items-center" aria-label="MO T-SHIRT Home">
@@ -217,6 +219,7 @@ export default function HomePage() {
             </div>
 
             <div id="location" className="mx-auto mt-12 max-w-5xl">
+              <h3 className="text-center text-xl font-semibold text-black mb-4">Our Location</h3>
               <MapCard />
             </div>
           </div>
