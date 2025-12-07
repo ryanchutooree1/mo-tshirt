@@ -22,7 +22,8 @@ export const metadata: Metadata = {
     "business uniforms",
     "fast t-shirt printing",
   ],
-  metadataBase: new URL("https://mo-tshirt.mu"),
+  // Use canonical www host to avoid mixed-domain canonicals/sitemaps
+  metadataBase: new URL("https://www.mo-tshirt.mu"),
   icons: {
     icon: [
       { url: "/favicon-16x16.png", type: "image/png", sizes: "16x16" },
