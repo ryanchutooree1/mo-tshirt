@@ -10,6 +10,7 @@ import "swiper/css";
 export default function Gallery() {
   const images = useMemo(() => workImages, []);
   const [errors, setErrors] = useState<Set<number>>(new Set());
+  const fallbackSrc = "/all_products.jpg";
 
   return (
     <Swiper
@@ -30,11 +31,17 @@ export default function Gallery() {
         <SwiperSlide key={idx} className="px-1 sm:px-0">
           <div className="relative h-[620px] sm:h-[680px] lg:h-[740px] w-full overflow-hidden rounded-3xl border border-[#EAEAEA] bg-white shadow-sm">
             {errors.has(idx) ? (
-              <div className="h-full w-full grid place-items-center text-gray-400 text-xs">Image placeholder</div>
+              <Image
+                src={fallbackSrc}
+                alt="Custom T-shirt printing in Mauritius"
+                fill
+                sizes="(max-width: 768px) 90vw, (max-width: 1024px) 45vw, 30vw"
+                className="object-cover"
+              />
             ) : (
               <Image
                 src={src}
-                alt={`Our work ${idx + 1}`}
+                alt={`T-shirt printing in Mauritius example ${idx + 1}`}
                 fill
                 sizes="(max-width: 768px) 90vw, (max-width: 1024px) 45vw, 30vw"
                 className="object-cover"

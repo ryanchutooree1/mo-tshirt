@@ -65,43 +65,45 @@ const benefits = [
   },
 ];
 
+const faqItems = [
+  {
+    question: "What is the turnaround time for custom T-shirt printing?",
+    answer:
+      "Standard turnaround is 5-7 working days across Mauritius. 48-hour rush is possible when slots are open.",
+  },
+  {
+    question: "What is your minimum order?",
+    answer: "We can print small batches, but best pricing starts at 50+ units.",
+  },
+  {
+    question: "Do you offer delivery or collection?",
+    answer: "Pickup is available in Surinam, Mauritius. We deliver island-wide via Mauritius Post.",
+  },
+  {
+    question: "Which print method should I choose: Vinyl or DTF?",
+    answer: "Vinyl is best for simple logos and 1-3 colors. DTF works best for full-color artwork and photos.",
+  },
+  {
+    question: "Which file formats do you accept?",
+    answer: "Send AI, EPS, or PDF files when possible. High-resolution PNG or JPG also works.",
+  },
+  {
+    question: "Do you print polos for teams and uniforms?",
+    answer: "Yes. We do polo shirt printing in Mauritius and can recommend the best fabric and finish.",
+  },
+];
+
 const faqLd = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
-  mainEntity: [
-    {
-      "@type": "Question",
-      name: "What is the turnaround time for custom T-shirt printing?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Standard turnaround is 5-7 working days across Mauritius. 48-hour rush is possible when production slots are open.",
-      },
+  mainEntity: faqItems.map((item) => ({
+    "@type": "Question",
+    name: item.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: item.answer,
     },
-    {
-      "@type": "Question",
-      name: "What is your minimum order?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "We can print small batches, but best pricing starts at 50+ units.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Do you offer delivery or collection?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Pickup is available in Surinam, Mauritius. We deliver island-wide via Mauritius Post.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "Which file formats do you accept?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "Send AI, EPS, or PDF files when possible. High-resolution PNG or JPG also works.",
-      },
-    },
-  ],
+  })),
 };
 
 function ActionButtons() {
@@ -304,47 +306,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* FAQs */}
-        <section id="faqs" className="bg-[#F9F9F9] px-6 py-24">
-          <div className="mx-auto max-w-6xl">
-            <div className="text-center">
-              <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                FAQs for T-shirt printing in Mauritius
-              </h2>
-              <p className="mt-4 text-base text-neutral-600">
-                Short, clear answers to common printing questions.
-              </p>
-            </div>
-
-            <div className="mt-12 grid gap-6 md:grid-cols-2">
-              <div className="rounded-2xl border border-[#EAEAEA] bg-white p-6 shadow-sm">
-                <h3 className="text-base font-semibold text-black">Turnaround time</h3>
-                <p className="mt-2 text-sm text-neutral-600">
-                  Standard turnaround is 5-7 working days. 48-hour rush is possible when slots are open.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-[#EAEAEA] bg-white p-6 shadow-sm">
-                <h3 className="text-base font-semibold text-black">Minimum order</h3>
-                <p className="mt-2 text-sm text-neutral-600">
-                  We can print small batches, but best pricing starts at 50+ units.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-[#EAEAEA] bg-white p-6 shadow-sm">
-                <h3 className="text-base font-semibold text-black">Delivery or collection</h3>
-                <p className="mt-2 text-sm text-neutral-600">
-                  Pickup in Surinam, Mauritius, or delivery island-wide via Mauritius Post.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-[#EAEAEA] bg-white p-6 shadow-sm">
-                <h3 className="text-base font-semibold text-black">File formats</h3>
-                <p className="mt-2 text-sm text-neutral-600">
-                  Send AI, EPS, or PDF files when possible. High-resolution PNG or JPG also works.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* Contact */}
         <section id="contact" className="px-6 py-24">
           <div className="mx-auto max-w-6xl">
@@ -430,6 +391,29 @@ export default function HomePage() {
                 </span>
               </div>
             </div>
+
+            <section id="faqs" className="mx-auto mt-12 max-w-6xl">
+              <div className="rounded-3xl border border-[#EAEAEA] bg-white p-8 shadow-sm">
+                <div className="text-center">
+                  <p className="text-xs uppercase tracking-[0.08em] text-orange-500">FAQ</p>
+                  <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+                    FAQs for T-shirt printing in Mauritius
+                  </h2>
+                  <p className="mt-4 text-base text-neutral-600">
+                    Straight answers on timelines, minimums, delivery, and print methods.
+                  </p>
+                </div>
+
+                <div className="mt-10 grid gap-6 md:grid-cols-2">
+                  {faqItems.map((item) => (
+                    <div key={item.question} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5 shadow-sm">
+                      <h3 className="text-base font-semibold text-black">{item.question}</h3>
+                      <p className="mt-2 text-sm text-neutral-600">{item.answer}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
           </div>
         </section>
       </main>
