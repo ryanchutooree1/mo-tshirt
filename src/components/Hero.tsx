@@ -36,8 +36,8 @@ export default function Hero() {
         {/* Products Image */}
         <div className="mt-8 sm:mt-10">
           <img
-            src="/all_products.png"
-            alt="MO T-SHIRT Products"
+            src="/all_products.jpg"
+            alt="Custom T-shirt printing in Mauritius"
             className="mx-auto block h-auto w-full max-w-5xl lg:max-w-6xl rounded-2xl shadow-sm object-contain"
           />
         </div>

@@ -1,12 +1,39 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { getWhatsAppUrl, CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL } from "@/data/work";
-import { HiOutlineCheckBadge, HiOutlineBolt, HiOutlineGlobeAlt, HiOutlineSparkles, HiOutlineArrowDownCircle } from "react-icons/hi2";
+import { HiOutlineCheckBadge, HiOutlineBolt, HiOutlineGlobeAlt, HiOutlineSparkles } from "react-icons/hi2";
 import Gallery from "@/components/Gallery";
 import MapCard from "@/components/MapCard";
 import QuoteForm from "@/components/QuoteForm";
 import PricingEstimator from "@/components/PricingEstimator";
 import LocationJump from "@/components/LocationJump";
+
+const pageTitle = "T-shirt printing Mauritius | Custom T-shirts & polos | MO T-SHIRT";
+const pageDescription =
+  "Custom T-shirt printing for businesses and events in Mauritius. Polo shirt printing in Mauritius with fast turnaround and quality printing, Vinyl or DTF options, plus FAQs on turnaround time, minimum order, delivery/collection, and file formats.";
+
+export const metadata: Metadata = {
+  title: pageTitle,
+  description: pageDescription,
+  alternates: {
+    canonical: "https://www.mo-tshirt.mu/",
+  },
+  openGraph: {
+    title: pageTitle,
+    description: pageDescription,
+    url: "https://www.mo-tshirt.mu/",
+    siteName: "MO T-SHIRT",
+    images: [{ url: "/all_products.jpg" }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: pageTitle,
+    description: pageDescription,
+    images: ["/all_products.jpg"],
+  },
+};
 
 const navLinks = [
   { label: "Home", href: "#hero" },
@@ -18,25 +45,64 @@ const navLinks = [
 const benefits = [
   {
     icon: HiOutlineCheckBadge,
-    title: "High-quality materials",
-    copy: "Soft, durable garments sourced with care.",
+    title: "Quality T-shirts",
+    copy: "Soft, durable tees and polos that print cleanly.",
   },
   {
     icon: HiOutlineBolt,
-    title: "Fast printing & delivery",
-    copy: "Turnarounds tuned for launches and deadlines.",
+    title: "Fast turnaround",
+    copy: "Standard 5-7 days, with 48-hour rush slots.",
   },
   {
     icon: HiOutlineSparkles,
-    title: "Trusted by top brands",
-    copy: "Worn by Mauritius’ events, gyms, and teams.",
+    title: "Built for business",
+    copy: "Uniforms, events, and brand launches.",
   },
   {
     icon: HiOutlineGlobeAlt,
     title: "Made in Mauritius",
-    copy: "Local craft, island-wide service and support.",
+    copy: "Local production with island-wide delivery.",
   },
 ];
+
+const faqLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "What is the turnaround time for custom T-shirt printing?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Standard turnaround is 5-7 working days across Mauritius. 48-hour rush is possible when production slots are open.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "What is your minimum order?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "We can print small batches, but best pricing starts at 50+ units.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Do you offer delivery or collection?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Pickup is available in Surinam, Mauritius. We deliver island-wide via Mauritius Post.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Which file formats do you accept?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Send AI, EPS, or PDF files when possible. High-resolution PNG or JPG also works.",
+      },
+    },
+  ],
+};
 
 function ActionButtons() {
   return (
@@ -83,27 +149,58 @@ export default function HomePage() {
       </header>
 
       <main>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
         {/* Hero */}
         <section id="hero" className="flex min-h-[80vh] items-center justify-center px-6 pt-14 pb-24 sm:pt-20 sm:pb-32">
           <div className="mx-auto flex w-full max-w-5xl flex-col items-center text-center">
             <h1 className="text-4xl font-semibold tracking-tight text-black sm:text-5xl">
-              Trying to be #1 in Mauritius.
+              T-shirt printing in Mauritius for businesses and events.
             </h1>
             <p className="mt-4 text-lg text-neutral-600">
-              We’ll print T‑Shirts, Poloshirts, Caps & Hoodies fast. Trusted by 80+ businesses across Mauritius and Reunion Island.
+              Custom T-shirt printing for businesses and events in Mauritius. Fast turnaround and quality printing, with clear advice on Vinyl vs DTF.
+            </p>
+            <p className="mt-2 text-base text-neutral-600">
+              Trusted by 80+ Mauritius businesses. Polo shirt printing in Mauritius is available for uniforms and teams.
             </p>
 
             <ActionButtons />
 
             <div className="mt-16 w-full max-w-5xl lg:max-w-6xl">
               <Image
-                src="/all_products.png"
-                alt="Custom T-shirt flat lay"
-                width={1536}
-                height={1024}
+                src="/all_products.jpg"
+                alt="Custom T-shirt printing in Mauritius"
+                width={1600}
+                height={628}
                 className="h-auto w-full rounded-[32px] border border-[#EAEAEA] object-cover shadow-sm"
                 priority
               />
+            </div>
+          </div>
+        </section>
+
+        {/* Printing Options */}
+        <section id="printing-options" className="px-6 py-24">
+          <div className="mx-auto max-w-6xl text-center">
+            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+              Vinyl or DTF for custom T-shirt printing?
+            </h2>
+            <p className="mt-4 text-base text-neutral-600">
+              Two fast options in Mauritius. We help you pick the right finish.
+            </p>
+
+            <div className="mt-12 grid gap-6 md:grid-cols-2">
+              <div className="rounded-2xl border border-[#EAEAEA] bg-white p-6 text-left shadow-sm">
+                <h3 className="text-lg font-semibold text-black">Vinyl printing</h3>
+                <p className="mt-2 text-sm text-neutral-600">
+                  Best for logos, names, and 1-3 colors with crisp edges. Ideal for small runs and workwear.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-[#EAEAEA] bg-white p-6 text-left shadow-sm">
+                <h3 className="text-lg font-semibold text-black">DTF printing</h3>
+                <p className="mt-2 text-sm text-neutral-600">
+                  Best for full-color artwork, gradients, and photos. Soft feel and durable on tees or polos.
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -113,7 +210,7 @@ export default function HomePage() {
           <div className="mx-auto max-w-6xl text-center">
             <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Why choose MO T-SHIRT</h2>
             <p className="mt-4 text-base text-neutral-600">
-              Craftsmanship, precision, and support from a Mauritius-born team.
+              Craftsmanship, precision, and support for Mauritius businesses.
             </p>
 
             <div className="mt-16 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
@@ -132,15 +229,118 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Polo Printing */}
+        <section id="polo-printing" className="bg-white px-6 py-24">
+          <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-2">
+            <div>
+              <p className="text-xs uppercase tracking-[0.08em] text-orange-500">Uniforms</p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+                Polo shirt printing in Mauritius
+              </h2>
+              <p className="mt-4 text-base text-neutral-600">
+                Clean, professional polos for staff, teams, and events. We match the right fabric and print method for your brand.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <a
+                  href="#contact"
+                  className="inline-flex items-center justify-center rounded-full bg-[#FF6600] px-5 py-2 text-sm font-semibold text-white transition hover:bg-orange-600"
+                >
+                  Get a polo quote
+                </a>
+                <a
+                  href="#our-work"
+                  className="inline-flex items-center justify-center rounded-full border border-black px-5 py-2 text-sm font-semibold text-black transition hover:bg-black hover:text-white"
+                >
+                  See recent work
+                </a>
+              </div>
+            </div>
+            <div className="relative h-[520px] w-full overflow-hidden rounded-3xl border border-[#EAEAEA] bg-white shadow-sm">
+              <Image
+                src="/work/work-02.JPG"
+                alt="Polo shirt printing in Mauritius"
+                fill
+                sizes="(max-width: 1024px) 90vw, 45vw"
+                className="object-cover"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Other Apparel */}
+        <section className="px-6 pb-16">
+          <div className="mx-auto max-w-6xl rounded-2xl border border-neutral-200 bg-neutral-50 p-6 text-center shadow-sm">
+            <h3 className="text-lg font-semibold text-black">Other apparel we print</h3>
+            <p className="mt-2 text-sm text-neutral-600">
+              Hoodies and caps are available too. Share your logo and we will recommend the best print method.
+            </p>
+            <div className="mt-4 flex flex-wrap justify-center gap-3">
+              <Link
+                href="/work"
+                className="inline-flex items-center justify-center rounded-full border border-black px-4 py-2 text-sm font-semibold text-black transition hover:bg-black hover:text-white"
+              >
+                See examples
+              </Link>
+              <a
+                href="#contact"
+                className="inline-flex items-center justify-center rounded-full bg-[#FF6600] px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600"
+              >
+                Get a quote
+              </a>
+            </div>
+          </div>
+        </section>
+
         {/* Our Work */}
         <section id="our-work" className="px-6 py-24">
           <div className="mx-auto max-w-6xl text-center">
             <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Our Work</h2>
             <p className="mt-4 text-base text-neutral-600">
-              Recent prints for local teams, events, and businesses.
+              Recent T-shirt printing for local teams, events, and businesses in Mauritius.
             </p>
             <div className="mt-12">
               <Gallery />
+            </div>
+          </div>
+        </section>
+
+        {/* FAQs */}
+        <section id="faqs" className="bg-[#F9F9F9] px-6 py-24">
+          <div className="mx-auto max-w-6xl">
+            <div className="text-center">
+              <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                FAQs for T-shirt printing in Mauritius
+              </h2>
+              <p className="mt-4 text-base text-neutral-600">
+                Short, clear answers to common printing questions.
+              </p>
+            </div>
+
+            <div className="mt-12 grid gap-6 md:grid-cols-2">
+              <div className="rounded-2xl border border-[#EAEAEA] bg-white p-6 shadow-sm">
+                <h3 className="text-base font-semibold text-black">Turnaround time</h3>
+                <p className="mt-2 text-sm text-neutral-600">
+                  Standard turnaround is 5-7 working days. 48-hour rush is possible when slots are open.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-[#EAEAEA] bg-white p-6 shadow-sm">
+                <h3 className="text-base font-semibold text-black">Minimum order</h3>
+                <p className="mt-2 text-sm text-neutral-600">
+                  We can print small batches, but best pricing starts at 50+ units.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-[#EAEAEA] bg-white p-6 shadow-sm">
+                <h3 className="text-base font-semibold text-black">Delivery or collection</h3>
+                <p className="mt-2 text-sm text-neutral-600">
+                  Pickup in Surinam, Mauritius, or delivery island-wide via Mauritius Post.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-[#EAEAEA] bg-white p-6 shadow-sm">
+                <h3 className="text-base font-semibold text-black">File formats</h3>
+                <p className="mt-2 text-sm text-neutral-600">
+                  Send AI, EPS, or PDF files when possible. High-resolution PNG or JPG also works.
+                </p>
+              </div>
             </div>
           </div>
         </section>

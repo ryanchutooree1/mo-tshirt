@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import MapCard from "@/components/MapCard";
 
@@ -55,6 +56,13 @@ export default function ContactClient() {
       <h1 className="text-3xl font-extrabold mb-4">Contact us</h1>
       <p className="text-gray-700 mb-6">
         Send us your artwork or questions. We reply quickly. Or message us on WhatsApp.
+      </p>
+      <p className="text-sm text-gray-600 mb-8">
+        Need a quick overview? See{" "}
+        <Link href="/" className="underline decoration-orange-400 underline-offset-4 hover:text-black">
+          Custom T-shirts Mauritius
+        </Link>{" "}
+        on our homepage.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">

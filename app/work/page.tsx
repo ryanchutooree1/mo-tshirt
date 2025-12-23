@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Gallery from "@/components/Gallery";
 import PricingEstimator from "@/components/PricingEstimator";
 import QuoteForm from "@/components/QuoteForm";
@@ -11,6 +12,13 @@ export default function WorkIndexPage() {
         <h1 className="text-3xl md:text-4xl font-extrabold">Recent work for Mauritius teams & brands</h1>
         <p className="mx-auto max-w-3xl text-neutral-700">
           Uniforms, merch, launch drops, and event tees. Tell us what you need—we’ll recommend the best print method and deliver fast.
+        </p>
+        <p className="mx-auto max-w-3xl text-sm text-neutral-600">
+          Looking for{" "}
+          <Link href="/" className="underline decoration-orange-400 underline-offset-4 hover:text-black">
+            T-shirt printing in Mauritius
+          </Link>
+          ? Start on our homepage for pricing, print options, and FAQs.
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           <a
