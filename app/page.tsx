@@ -277,30 +277,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Other Apparel */}
-        <section className="px-6 pb-16">
-          <div className="mx-auto max-w-6xl rounded-2xl border border-neutral-200 bg-neutral-50 p-6 text-center shadow-sm">
-            <h3 className="text-lg font-semibold text-black">Other apparel we print</h3>
-            <p className="mt-2 text-sm text-neutral-600">
-              Hoodies and caps are available too. Share your logo and we will recommend the best print method.
-            </p>
-            <div className="mt-4 flex flex-wrap justify-center gap-3">
-              <Link
-                href="/work"
-                className="inline-flex items-center justify-center rounded-full border border-black px-4 py-2 text-sm font-semibold text-black transition hover:bg-black hover:text-white"
-              >
-                See examples
-              </Link>
-              <a
-                href="#contact"
-                className="inline-flex items-center justify-center rounded-full bg-[#FF6600] px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600"
-              >
-                Get a quote
-              </a>
-            </div>
-          </div>
-        </section>
-
         {/* Our Work */}
         <section id="our-work" className="px-6 py-24">
           <div className="mx-auto max-w-6xl text-center">
@@ -383,17 +359,17 @@ export default function HomePage() {
               <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
                 <MapCard />
               </div>
-              <div className="mt-4 flex flex-col items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-center text-sm font-semibold text-neutral-700 shadow-sm sm:flex-row sm:text-base">
-                <span>
-                  Email:{" "}
-                  <a className="underline hover:text-black" href={`mailto:${CONTACT_EMAIL}`}>
+              <div className="mt-4 flex flex-col items-center justify-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-4 text-center text-sm font-semibold text-neutral-700 shadow-sm sm:flex-row sm:gap-6 sm:text-base">
+                <span className="inline-flex items-center gap-2">
+                  <span className="text-neutral-500">Email</span>
+                  <a className="underline decoration-orange-400 underline-offset-4 hover:text-black" href={`mailto:${CONTACT_EMAIL}`}>
                     {CONTACT_EMAIL}
                   </a>
                 </span>
-                <span className="hidden text-neutral-400 sm:inline">|</span>
-                <span>
-                  Phone:{" "}
-                  <a className="underline hover:text-black" href={`tel:${CONTACT_TEL}`}>
+                <span className="hidden h-6 w-px bg-neutral-300 sm:inline-block" aria-hidden="true" />
+                <span className="inline-flex items-center gap-2">
+                  <span className="text-neutral-500">Phone</span>
+                  <a className="underline decoration-orange-400 underline-offset-4 hover:text-black" href={`tel:${CONTACT_TEL}`}>
                     {CONTACT_PHONE_DISPLAY}
                   </a>
                 </span>
