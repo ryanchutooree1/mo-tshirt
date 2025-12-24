@@ -108,7 +108,7 @@ const faqLd = {
 
 function ActionButtons() {
   return (
-    <div className="mt-6 mx-auto flex w-full max-w-md flex-wrap items-center justify-center gap-3 sm:mt-8 sm:flex-nowrap sm:justify-between">
+    <div className="mt-8 mx-auto flex w-full max-w-md flex-wrap items-center gap-3 sm:flex-nowrap sm:justify-between">
       <a
         href={getWhatsAppUrl()}
         className="inline-flex flex-1 items-center justify-center rounded-full bg-[#FF6600] px-6 py-3 text-sm font-medium text-white transition hover:bg-orange-600"
@@ -171,7 +171,7 @@ export default function HomePage() {
 
             <ActionButtons />
 
-            <div className="mt-10 w-full max-w-5xl sm:mt-12 lg:max-w-6xl">
+            <div className="mt-16 w-full max-w-5xl lg:max-w-6xl">
               <Image
                 src="/all_products.jpg"
                 alt="Custom T-shirt printing in Mauritius"
