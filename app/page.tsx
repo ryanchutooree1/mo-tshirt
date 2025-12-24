@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { getWhatsAppUrl, CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL, workImages } from "@/data/work";
+import { getWhatsAppUrl, CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL } from "@/data/work";
 import { HiOutlineCheckBadge, HiOutlineBolt, HiOutlineGlobeAlt, HiOutlineSparkles } from "react-icons/hi2";
 import Gallery from "@/components/Gallery";
 import MapCard from "@/components/MapCard";
@@ -186,26 +186,36 @@ export default function HomePage() {
 
         {/* Printing Options */}
         <section id="printing-options" className="px-6 py-24">
-          <div className="mx-auto max-w-6xl text-center">
-            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              Vinyl or DTF for custom T-shirt printing?
-            </h2>
-            <p className="mt-4 text-base text-neutral-600">
-              Two fast options in Mauritius. We help you pick the right finish.
-            </p>
+          <div className="mx-auto max-w-6xl">
+            <div className="relative overflow-hidden rounded-[32px] border border-[#EAEAEA] bg-gradient-to-br from-[#FFF3E8] via-white to-[#F6F7FB] p-8 text-center shadow-sm">
+              <div className="pointer-events-none absolute -top-12 right-0 h-32 w-32 rounded-full bg-orange-100/70 blur-3xl" aria-hidden="true" />
+              <div className="pointer-events-none absolute -bottom-14 left-4 h-32 w-32 rounded-full bg-orange-100/60 blur-3xl" aria-hidden="true" />
 
-            <div className="mt-12 grid gap-6 md:grid-cols-2">
-              <div className="rounded-2xl border border-[#EAEAEA] bg-white p-6 text-left shadow-sm">
-                <h3 className="text-lg font-semibold text-black">Vinyl printing</h3>
-                <p className="mt-2 text-sm text-neutral-600">
-                  Best for logos, names, and 1-3 colors with crisp edges. Ideal for small runs and workwear.
+              <div className="relative">
+                <p className="text-xs uppercase tracking-[0.08em] text-orange-500">Print methods</p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-black sm:text-4xl">
+                  Vinyl or DTF for custom T-shirt printing?
+                </h2>
+                <p className="mt-4 text-base text-neutral-600">
+                  Two fast options in Mauritius. We help you pick the right finish.
                 </p>
               </div>
-              <div className="rounded-2xl border border-[#EAEAEA] bg-white p-6 text-left shadow-sm">
-                <h3 className="text-lg font-semibold text-black">DTF printing</h3>
-                <p className="mt-2 text-sm text-neutral-600">
-                  Best for full-color artwork, gradients, and photos. Soft feel and durable on tees or polos.
-                </p>
+
+              <div className="relative mt-10 grid gap-6 md:grid-cols-2">
+                <div className="rounded-2xl border border-[#EAEAEA] bg-white/90 p-6 text-left shadow-sm">
+                  <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">Vinyl</p>
+                  <h3 className="mt-2 text-lg font-semibold text-black">Crisp logos and names</h3>
+                  <p className="mt-2 text-sm text-neutral-600">
+                    Best for 1-3 colors with sharp edges. Ideal for small runs, uniforms, and workwear.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-[#EAEAEA] bg-white/90 p-6 text-left shadow-sm">
+                  <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">DTF</p>
+                  <h3 className="mt-2 text-lg font-semibold text-black">Full-color artwork</h3>
+                  <p className="mt-2 text-sm text-neutral-600">
+                    Best for gradients and photos. Soft feel and durable on tees or polos.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -229,52 +239,6 @@ export default function HomePage() {
                     <h3 className="text-lg font-semibold text-black">{title}</h3>
                     <p className="text-sm text-neutral-600">{copy}</p>
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Polo Printing */}
-        <section id="polo-printing" className="bg-white px-6 py-24">
-          <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-2">
-            <div>
-              <p className="text-xs uppercase tracking-[0.08em] text-orange-500">Uniforms</p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-                Polo shirt printing in Mauritius
-              </h2>
-              <p className="mt-4 text-base text-neutral-600">
-                Clean, professional polos for staff, teams, and events. We match the right fabric and print method for your brand.
-              </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <a
-                  href="#contact"
-                  className="inline-flex items-center justify-center rounded-full bg-[#FF6600] px-5 py-2 text-sm font-semibold text-white transition hover:bg-orange-600"
-                >
-                  Get a polo quote
-                </a>
-                <a
-                  href="#our-work"
-                  className="inline-flex items-center justify-center rounded-full border border-black px-5 py-2 text-sm font-semibold text-black transition hover:bg-black hover:text-white"
-                >
-                  See recent work
-                </a>
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {workImages.map((src, idx) => (
-                <div
-                  key={src}
-                  className="relative h-[220px] w-full overflow-hidden rounded-2xl border border-[#EAEAEA] bg-white shadow-sm"
-                >
-                  <Image
-                    src={src}
-                    alt={`T-shirt printing in Mauritius example ${idx + 1}`}
-                    fill
-                    unoptimized
-                    sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 30vw"
-                    className="object-cover"
-                  />
                 </div>
               ))}
             </div>
