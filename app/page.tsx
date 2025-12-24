@@ -130,13 +130,13 @@ export default function HomePage() {
     <div className="min-h-screen bg-white text-black">
       <LocationJump />
       <header className="sticky top-0 z-40 border-b border-[#EAEAEA] bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-20 max-w-6xl items-center justify-between gap-4 px-6">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-6 py-3 sm:h-20 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-0">
           <Link href="#hero" className="flex items-center" aria-label="MO T-SHIRT Home">
             <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={150} height={60} priority className="h-9 w-auto sm:h-12" />
           </Link>
           <nav
             aria-label="Primary"
-            className="flex max-w-[60vw] flex-nowrap items-center justify-end gap-3 overflow-x-auto text-xs font-semibold text-black/70 sm:max-w-none sm:gap-6 sm:text-sm sm:font-medium"
+            className="flex w-full flex-wrap items-center justify-center gap-4 text-xs font-semibold text-black/70 sm:w-auto sm:justify-end sm:gap-6 sm:text-sm sm:font-medium"
           >
             {navLinks.map((link) => (
               <a
@@ -363,20 +363,30 @@ export default function HomePage() {
               <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
                 <MapCard />
               </div>
-              <div className="mt-4 flex flex-col items-center justify-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-4 text-center text-sm font-semibold text-neutral-700 shadow-sm sm:flex-row sm:gap-6 sm:text-base">
-                <span className="inline-flex items-center gap-2">
-                  <span className="text-neutral-500">Email</span>
-                  <a className="underline decoration-orange-400 underline-offset-4 hover:text-black" href={`mailto:${CONTACT_EMAIL}`}>
-                    {CONTACT_EMAIL}
-                  </a>
-                </span>
-                <span className="hidden h-6 w-px bg-neutral-300 sm:inline-block" aria-hidden="true" />
-                <span className="inline-flex items-center gap-2">
-                  <span className="text-neutral-500">Phone</span>
-                  <a className="underline decoration-orange-400 underline-offset-4 hover:text-black" href={`tel:${CONTACT_TEL}`}>
-                    {CONTACT_PHONE_DISPLAY}
-                  </a>
-                </span>
+              <div className="relative mt-5 overflow-hidden rounded-[28px] border border-[#EAEAEA] bg-gradient-to-br from-[#FFF3E8] via-white to-[#F6F7FB] px-5 py-5 text-center shadow-sm">
+                <div className="pointer-events-none absolute -top-10 right-6 h-24 w-24 rounded-full bg-orange-100/70 blur-2xl" aria-hidden="true" />
+                <div className="pointer-events-none absolute -bottom-10 left-6 h-24 w-24 rounded-full bg-orange-100/60 blur-2xl" aria-hidden="true" />
+                <div className="relative flex flex-col items-center justify-center gap-4 text-sm font-semibold text-neutral-700 sm:flex-row sm:gap-8 sm:text-base">
+                  <div className="text-center">
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-neutral-400">Email</p>
+                    <a
+                      className="mt-1 inline-block text-base font-semibold text-black underline decoration-orange-400 underline-offset-4 hover:text-black sm:text-lg"
+                      href={`mailto:${CONTACT_EMAIL}`}
+                    >
+                      {CONTACT_EMAIL}
+                    </a>
+                  </div>
+                  <span className="hidden h-8 w-px bg-neutral-200 sm:inline-block" aria-hidden="true" />
+                  <div className="text-center">
+                    <p className="text-[11px] uppercase tracking-[0.24em] text-neutral-400">Phone</p>
+                    <a
+                      className="mt-1 inline-block text-base font-semibold text-black underline decoration-orange-400 underline-offset-4 hover:text-black sm:text-lg"
+                      href={`tel:${CONTACT_TEL}`}
+                    >
+                      {CONTACT_PHONE_DISPLAY}
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
 
