@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { getWhatsAppUrl, CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL } from "@/data/work";
+import { getWhatsAppUrl, CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL, workImages } from "@/data/work";
 import { HiOutlineCheckBadge, HiOutlineBolt, HiOutlineGlobeAlt, HiOutlineSparkles } from "react-icons/hi2";
 import Gallery from "@/components/Gallery";
 import MapCard from "@/components/MapCard";
@@ -257,14 +257,21 @@ export default function HomePage() {
                 </a>
               </div>
             </div>
-            <div className="relative h-[520px] w-full overflow-hidden rounded-3xl border border-[#EAEAEA] bg-white shadow-sm">
-              <Image
-                src="/work/work-02.JPG"
-                alt="Polo shirt printing in Mauritius"
-                fill
-                sizes="(max-width: 1024px) 90vw, 45vw"
-                className="object-cover"
-              />
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {workImages.map((src, idx) => (
+                <div
+                  key={src}
+                  className="relative h-[220px] w-full overflow-hidden rounded-2xl border border-[#EAEAEA] bg-white shadow-sm"
+                >
+                  <Image
+                    src={src}
+                    alt={`T-shirt printing in Mauritius example ${idx + 1}`}
+                    fill
+                    sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 30vw"
+                    className="object-cover"
+                  />
+                </div>
+              ))}
             </div>
           </div>
         </section>
