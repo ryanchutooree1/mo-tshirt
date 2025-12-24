@@ -162,6 +162,10 @@ export default function HomePage() {
               We’ll print T‑Shirts, Poloshirts, Caps & Hoodies fast. Trusted by 80+ businesses across Mauritius and Reunion Island.
             </p>
 
+            <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-orange-700">
+              For businesses and events
+            </div>
+
             <ActionButtons />
 
             <div className="mt-16 w-full max-w-5xl lg:max-w-6xl">
