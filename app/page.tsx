@@ -267,6 +267,7 @@ export default function HomePage() {
                     src={src}
                     alt={`T-shirt printing in Mauritius example ${idx + 1}`}
                     fill
+                    unoptimized
                     sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 30vw"
                     className="object-cover"
                   />
