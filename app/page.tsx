@@ -9,9 +9,9 @@ import QuoteForm from "@/components/QuoteForm";
 import PricingEstimator from "@/components/PricingEstimator";
 import LocationJump from "@/components/LocationJump";
 
-const pageTitle = "T-shirt printing Mauritius | Custom T-shirts & polos | MO T-SHIRT";
+const pageTitle = "T-shirt printing Mauritius | MO T-SHIRT";
 const pageDescription =
-  "Custom T-shirt printing for businesses and events in Mauritius. Polo shirt printing in Mauritius with fast turnaround and quality printing, Vinyl or DTF options, plus FAQs on turnaround time, minimum order, delivery/collection, and file formats.";
+  "T-shirt printing in Mauritius for businesses and events. Fast custom T-shirts, Poloshirts, Caps & Hoodies trusted by 80+ local businesses.";
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -159,10 +159,10 @@ export default function HomePage() {
         <section id="hero" className="flex min-h-[80vh] items-center justify-center px-6 pt-14 pb-24 sm:pt-20 sm:pb-32">
           <div className="mx-auto flex w-full max-w-5xl flex-col items-center text-center">
             <h1 className="text-4xl font-semibold tracking-tight text-black sm:text-5xl">
-              Trying to be #1 in Mauritius.
+              Trying to be #1 in Mauritius for T-shirt printing.
             </h1>
             <p className="mt-4 text-lg text-neutral-600">
-              We’ll print T‑Shirts, Poloshirts, Caps & Hoodies fast. Trusted by 80+ businesses across Mauritius and Reunion Island.
+              We’ll print T‑Shirts, Poloshirts, Caps & Hoodies fast for businesses and events. Trusted by 80+ businesses across Mauritius and Reunion Island.
             </p>
 
             <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-orange-700">
