@@ -66,23 +66,14 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     setLoading(true);
     setResult(null);
 
-    const lines = [
-      `Source: ${source}`,
-      `Name: ${form.name}`,
-      `Email: ${form.email}`,
-      `Phone: ${form.phone || "n/a"}`,
-      `Garment: ${form.garment}`,
-      `Print method: ${printMethod}`,
-      `Quantity: ${form.quantity}`,
-      `Deadline: ${form.deadline || "n/a"}`,
-      `Delivery: ${form.delivery}`,
-      `Notes: ${form.notes || "n/a"}`,
-    ];
+    const summaryMessage = form.notes.trim()
+      ? "Notes are included in the details above."
+      : "Quote request submitted via the website.";
 
     const payload = new FormData();
     payload.append("name", form.name);
     payload.append("email", form.email);
-    payload.append("message", lines.join("\n"));
+    payload.append("message", summaryMessage);
     payload.append("phone", form.phone);
     payload.append("garment", form.garment);
     payload.append("printMethod", printMethod);

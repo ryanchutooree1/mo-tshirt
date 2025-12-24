@@ -37,6 +37,7 @@ export async function POST(req: Request) {
         deadline: form.get("deadline")?.toString(),
         notes: form.get("notes")?.toString(),
         source: form.get("source")?.toString(),
+        delivery: form.get("delivery")?.toString(),
         file: form.get("file") instanceof File ? (form.get("file") as File) : null,
       };
     } else {
