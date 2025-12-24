@@ -130,16 +130,19 @@ export default function HomePage() {
     <div className="min-h-screen bg-white text-black">
       <LocationJump />
       <header className="sticky top-0 z-40 border-b border-[#EAEAEA] bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-20 max-w-6xl items-center justify-between px-6">
+        <div className="mx-auto flex h-20 max-w-6xl items-center justify-between gap-4 px-6">
           <Link href="#hero" className="flex items-center" aria-label="MO T-SHIRT Home">
-            <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={150} height={60} priority className="h-12 w-auto" />
+            <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={150} height={60} priority className="h-9 w-auto sm:h-12" />
           </Link>
-          <nav aria-label="Primary" className="flex flex-wrap items-center justify-end gap-6 text-sm font-medium text-black/70">
+          <nav
+            aria-label="Primary"
+            className="flex max-w-[60vw] flex-nowrap items-center justify-end gap-3 overflow-x-auto text-xs font-semibold text-black/70 sm:max-w-none sm:gap-6 sm:text-sm sm:font-medium"
+          >
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
-                className="transition hover:text-black"
+                className="whitespace-nowrap transition hover:text-black"
                 target={link.label === "WhatsApp" ? "_blank" : undefined}
                 rel={link.label === "WhatsApp" ? "noopener noreferrer" : undefined}
               >
@@ -378,24 +381,60 @@ export default function HomePage() {
             </div>
 
             <section id="faqs" className="mx-auto mt-12 max-w-6xl">
-              <div className="rounded-3xl border border-[#EAEAEA] bg-white p-8 shadow-sm">
-                <div className="text-center">
-                  <p className="text-xs uppercase tracking-[0.08em] text-orange-500">FAQ</p>
-                  <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-                    FAQs for T-shirt printing in Mauritius
-                  </h2>
-                  <p className="mt-4 text-base text-neutral-600">
-                    Straight answers on timelines, minimums, delivery, and print methods.
-                  </p>
-                </div>
+              <div className="relative overflow-hidden rounded-[32px] border border-[#EAEAEA] bg-gradient-to-br from-[#FFF3E8] via-white to-[#F6F7FB] p-8 shadow-sm">
+                <div className="pointer-events-none absolute -top-16 right-0 h-40 w-40 rounded-full bg-orange-100/70 blur-3xl" aria-hidden="true" />
+                <div className="pointer-events-none absolute -bottom-16 left-4 h-40 w-40 rounded-full bg-orange-100/60 blur-3xl" aria-hidden="true" />
 
-                <div className="mt-10 grid gap-6 md:grid-cols-2">
-                  {faqItems.map((item) => (
-                    <div key={item.question} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5 shadow-sm">
-                      <h3 className="text-base font-semibold text-black">{item.question}</h3>
-                      <p className="mt-2 text-sm text-neutral-600">{item.answer}</p>
+                <div className="relative grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.08em] text-orange-500">FAQ</p>
+                    <h2 className="mt-3 text-3xl font-semibold tracking-tight text-black sm:text-4xl">
+                      Fast answers for T-shirt printing in Mauritius
+                    </h2>
+                    <p className="mt-4 text-base text-neutral-600">
+                      Everything you need to decide quickly, from rush timelines to print method choices.
+                    </p>
+                    <div className="mt-6 flex flex-wrap gap-2">
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-neutral-700 shadow-sm">
+                        5-7 day standard
+                      </span>
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-neutral-700 shadow-sm">
+                        48h rush slots
+                      </span>
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-neutral-700 shadow-sm">
+                        Island-wide delivery
+                      </span>
                     </div>
-                  ))}
+                    <div className="mt-6 rounded-2xl border border-orange-100 bg-white/80 p-4">
+                      <p className="text-sm font-semibold text-black">Want a fast answer?</p>
+                      <p className="mt-1 text-sm text-neutral-600">
+                        Message us on WhatsApp and we’ll recommend the right print method for your logo.
+                      </p>
+                      <a
+                        href={getWhatsAppUrl("Hi! I have a quick question about my T-shirt print.")}
+                        className="mt-3 inline-flex items-center justify-center rounded-full bg-[#FF6600] px-4 py-2 text-xs font-semibold text-white transition hover:bg-orange-600"
+                      >
+                        Ask on WhatsApp
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {faqItems.map((item) => (
+                      <details
+                        key={item.question}
+                        className="group rounded-2xl border border-neutral-200 bg-white/90 p-5 shadow-sm transition hover:shadow-md"
+                      >
+                        <summary className="flex cursor-pointer list-none items-center justify-between text-base font-semibold text-black">
+                          <span>{item.question}</span>
+                          <span className="ml-4 inline-flex h-6 w-6 items-center justify-center rounded-full border border-neutral-200 text-xs text-neutral-500 transition group-open:rotate-45">
+                            +
+                          </span>
+                        </summary>
+                        <p className="mt-3 text-sm text-neutral-600">{item.answer}</p>
+                      </details>
+                    ))}
+                  </div>
                 </div>
               </div>
             </section>
