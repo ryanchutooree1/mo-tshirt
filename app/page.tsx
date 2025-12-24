@@ -9,7 +9,7 @@ import QuoteForm from "@/components/QuoteForm";
 import PricingEstimator from "@/components/PricingEstimator";
 import LocationJump from "@/components/LocationJump";
 
-const pageTitle = "T-shirt printing Mauritius | MO T-SHIRT";
+const pageTitle = "MO T-SHIRT PRINTING | Fastest in Mauritius";
 const pageDescription =
   "T-shirt printing in Mauritius for businesses and events. Fast custom T-shirts, Poloshirts, Caps & Hoodies trusted by 80+ local businesses.";
 
