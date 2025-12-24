@@ -1,7 +1,6 @@
 "use client";
 
-import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { workImages } from "@/data/work";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
@@ -9,7 +8,6 @@ import "swiper/css";
 
 export default function Gallery() {
   const images = useMemo(() => workImages, []);
-  const [errors, setErrors] = useState<Set<number>>(new Set());
   const fallbackSrc = "/all_products.jpg";
 
   return (
@@ -30,24 +28,19 @@ export default function Gallery() {
       {images.map((src, idx) => (
         <SwiperSlide key={idx} className="px-1 sm:px-0">
           <div className="relative h-[620px] sm:h-[680px] lg:h-[740px] w-full overflow-hidden rounded-3xl border border-[#EAEAEA] bg-white shadow-sm">
-            {errors.has(idx) ? (
-              <Image
-                src={fallbackSrc}
-                alt="Custom T-shirt printing in Mauritius"
-                fill
-                sizes="(max-width: 768px) 90vw, (max-width: 1024px) 45vw, 30vw"
-                className="object-cover"
-              />
-            ) : (
-              <Image
-                src={src}
-                alt={`T-shirt printing in Mauritius example ${idx + 1}`}
-                fill
-                sizes="(max-width: 768px) 90vw, (max-width: 1024px) 45vw, 30vw"
-                className="object-cover"
-                onError={() => setErrors((prev) => new Set(prev).add(idx))}
-              />
-            )}
+            <img
+              src={src}
+              alt={`T-shirt printing in Mauritius example ${idx + 1}`}
+              loading="lazy"
+              decoding="async"
+              className="absolute inset-0 h-full w-full object-cover"
+              onError={(event) => {
+                const target = event.currentTarget;
+                if (target.dataset.fallbackApplied) return;
+                target.dataset.fallbackApplied = "true";
+                target.src = fallbackSrc;
+              }}
+            />
           </div>
         </SwiperSlide>
       ))}
