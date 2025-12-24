@@ -86,7 +86,7 @@ export default function WorkIndexPage() {
               </a>
             </div>
             <ul className="mt-4 space-y-2 text-sm text-neutral-600">
-              <li>• Screen print for bulk, DTF for small batches, embroidery for polos.</li>
+              <li>• Screen print for bulk, DTF for small batches, vinyl for polos.</li>
               <li>• Delivery nationwide via Mauritius Post or pickup Surinam.</li>
               <li>• Bulk discounts above 50 units.</li>
             </ul>

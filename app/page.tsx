@@ -399,9 +399,9 @@ export default function HomePage() {
                         key={item.question}
                         className="group rounded-2xl border border-neutral-200 bg-white/90 p-5 shadow-sm transition hover:shadow-md"
                       >
-                        <summary className="flex cursor-pointer list-none items-center justify-between text-base font-semibold text-black">
+                        <summary className="flex cursor-pointer list-none items-start justify-between gap-4 text-base font-semibold text-black">
                           <span>{item.question}</span>
-                          <span className="ml-4 inline-flex h-6 w-6 items-center justify-center rounded-full border border-neutral-200 text-xs text-neutral-500 transition group-open:rotate-45">
+                          <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-neutral-200 text-sm leading-none text-neutral-500 transition group-open:rotate-45 sm:h-6 sm:w-6 sm:text-xs">
                             +
                           </span>
                         </summary>

@@ -139,7 +139,7 @@ export default function PricingEstimator() {
       </div>
 
       <ul className="mt-6 space-y-2 text-sm text-neutral-600">
-        <li>• Embroidery and multiple print locations may adjust pricing.</li>
+        <li>• Multiple print locations may adjust pricing.</li>
         <li>• Add a rush fee for urgent jobs; standard turnaround is 5–7 working days.</li>
         <li>• Bulk orders (500+) get custom pricing—ask us.</li>
       </ul>
