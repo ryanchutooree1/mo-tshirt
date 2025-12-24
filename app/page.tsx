@@ -156,13 +156,10 @@ export default function HomePage() {
         <section id="hero" className="flex min-h-[80vh] items-center justify-center px-6 pt-14 pb-24 sm:pt-20 sm:pb-32">
           <div className="mx-auto flex w-full max-w-5xl flex-col items-center text-center">
             <h1 className="text-4xl font-semibold tracking-tight text-black sm:text-5xl">
-              T-shirt printing in Mauritius for businesses and events.
+              Trying to be #1 in Mauritius.
             </h1>
             <p className="mt-4 text-lg text-neutral-600">
-              Custom T-shirt printing for businesses and events in Mauritius. Fast turnaround and quality printing, with clear advice on Vinyl vs DTF.
-            </p>
-            <p className="mt-2 text-base text-neutral-600">
-              Trusted by 80+ Mauritius businesses. Polo shirt printing in Mauritius is available for uniforms and teams.
+              We’ll print T‑Shirts, Poloshirts, Caps & Hoodies fast. Trusted by 80+ businesses across Mauritius and Reunion Island.
             </p>
 
             <ActionButtons />
