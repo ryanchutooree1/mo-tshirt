@@ -11,7 +11,7 @@ export function getWhatsAppUrl(message: string = WHATSAPP_TEXT, phone: string = 
 
 // Gallery images (put placeholders in /public/work)
 export const workImages: string[] = [
-  "/work/work-02.JPG",
+  "/work/work-01.JPG",
   "/work/work-02.JPG",
   "/work/work-03.JPG",
   "/work/work-04.JPG",
