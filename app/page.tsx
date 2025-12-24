@@ -322,7 +322,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div id="location" className="mx-auto mt-12 max-w-5xl">
+            <div id="location" className="mx-auto mt-12 max-w-5xl scroll-mt-24 sm:scroll-mt-28">
               <h2 className="text-center text-3xl font-semibold text-black mb-4 sm:text-4xl">Our Location</h2>
               <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
                 <MapCard />

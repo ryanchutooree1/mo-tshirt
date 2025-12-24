@@ -12,7 +12,7 @@ type FormState = {
   name: string;
   email: string;
   phone: string;
-  quantity: number;
+  quantity: string;
   garment: string;
   deadline: string;
   notes: string;
@@ -28,7 +28,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     name: "",
     email: "",
     phone: "",
-    quantity: 50,
+    quantity: "50",
     garment: garmentOptions[0],
     deadline: "",
     notes: "",
@@ -77,7 +77,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     payload.append("phone", form.phone);
     payload.append("garment", form.garment);
     payload.append("printMethod", printMethod);
-    payload.append("quantity", String(form.quantity));
+    payload.append("quantity", form.quantity);
     payload.append("deadline", form.deadline);
     payload.append("notes", form.notes);
     payload.append("source", source);
@@ -96,7 +96,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           name: "",
           email: "",
           phone: "",
-          quantity: 50,
+          quantity: "50",
           garment: garmentOptions[0],
           deadline: "",
           notes: "",
@@ -201,7 +201,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
               type="number"
               min={1}
               value={form.quantity}
-              onChange={(e) => update("quantity", Number(e.target.value) || 0)}
+              onChange={(e) => update("quantity", e.target.value)}
               className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
             />
             <p className="mt-1 text-xs text-neutral-500">Better pricing kicks in above 50 units.</p>
