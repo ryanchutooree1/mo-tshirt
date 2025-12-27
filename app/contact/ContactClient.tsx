@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import MapCard from "@/components/MapCard";
+import { CONTACT_EMAIL } from "@/data/work";
 
 export default function ContactClient() {
   const [name, setName] = useState("");
@@ -139,7 +140,7 @@ export default function ContactClient() {
 
           <h3 className="font-semibold mt-4 mb-2">Quick contact</h3>
           <p className="text-sm text-gray-600">Phone / WhatsApp: +230 5988 3880</p>
-          <p className="text-sm text-gray-600">Email: hello@mo-tshirt.example</p>
+          <p className="text-sm text-gray-600">Email: {CONTACT_EMAIL}</p>
         </aside>
       </div>
 
