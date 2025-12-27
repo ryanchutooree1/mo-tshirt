@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import AiChatWidget from "@/components/AiChatWidget";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -112,7 +111,6 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessLd) }}
         />
         {children}
-        <AiChatWidget />
       </body>
     </html>
   );
