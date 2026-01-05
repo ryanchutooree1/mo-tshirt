@@ -241,7 +241,12 @@ export default function ShopClient() {
 
                 <div className="mt-4 space-y-3">
                   <div>
-                    <h2 className="text-lg font-semibold text-black">{`${displayColor} ${item.title}`}</h2>
+                    <h2 className="flex flex-wrap items-center gap-2 text-lg font-semibold text-black">
+                      <span className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
+                        {displayColor}
+                      </span>
+                      <span>{item.title}</span>
+                    </h2>
                     <p className="text-xs text-neutral-500">
                       Collection point: {collectionPoint}
                     </p>
