@@ -208,8 +208,12 @@ export default function ShopClient() {
                 quantity: 1,
                 deliveryMethod: "Surinam pickup",
               };
-            const minPrice = getMinSizePrice(item);
             const sizePrice = getSizePrice(item, selection.size);
+            const displayColor = selection.color || item.colors[0] || "Color";
+            const colors = [
+              displayColor,
+              ...item.colors.filter((color) => color !== displayColor),
+            ];
             const collectionPoint = item.collectionPoint || DEFAULT_COLLECTION_POINT;
 
             return (
@@ -237,17 +241,13 @@ export default function ShopClient() {
 
                 <div className="mt-4 space-y-3">
                   <div>
-                    <h2 className="text-lg font-semibold text-black">{item.title}</h2>
+                    <h2 className="text-lg font-semibold text-black">{`${displayColor} ${item.title}`}</h2>
                     <p className="text-xs text-neutral-500">
                       Collection point: {collectionPoint}
                     </p>
                   </div>
 
                   <div className="space-y-1 text-sm text-neutral-700">
-                    <div className="flex items-center justify-between">
-                      <span>Base price (from)</span>
-                      <span className="font-semibold">{money(minPrice)}</span>
-                    </div>
                     <div className="flex items-center justify-between">
                       <span>Price (selected size)</span>
                       <span className="font-semibold">{money(sizePrice)}</span>
@@ -261,8 +261,15 @@ export default function ShopClient() {
                   </div>
 
                   <div className="flex flex-wrap gap-2 text-xs text-neutral-600">
-                    {item.colors.map((color) => (
-                      <span key={color} className="rounded-full border border-neutral-200 px-3 py-1">
+                    {colors.map((color) => (
+                      <span
+                        key={color}
+                        className={`rounded-full border px-3 py-1 ${
+                          color === displayColor
+                            ? "border-orange-200 bg-orange-50 text-orange-700"
+                            : "border-neutral-200 text-neutral-600"
+                        }`}
+                      >
                         {color}
                       </span>
                     ))}
