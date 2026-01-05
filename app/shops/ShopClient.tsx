@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getWhatsAppUrl } from "@/data/work";
 import {
   buildShopWhatsAppMessageForLines,
+  formatSizeLabel,
   getMinSizePrice,
   getSizePrice,
   getSizePrices,
@@ -30,7 +31,7 @@ const money = (value: number) => `Rs ${Number(value || 0).toLocaleString()}`;
 type ItemSelection = {
   color: string;
   size: string;
-  quantity: number;
+  quantity: number | "";
 };
 
 export default function ShopClient() {
@@ -234,12 +235,14 @@ export default function ShopClient() {
   function addLineItem(item: ShopItem) {
     const current = selections[item.id];
     if (!current) return;
+    const rawQty = current.quantity === "" ? 1 : Number(current.quantity);
+    const quantity = Number.isFinite(rawQty) ? Math.max(1, rawQty) : 1;
     const line: ShopOrderLine = {
       itemId: item.id,
       title: item.title,
       color: current.color,
       size: current.size,
-      quantity: Math.max(1, Number(current.quantity || 1)),
+      quantity,
     };
     setOrderLines((prev) => {
       const next = prev.slice();
@@ -345,11 +348,11 @@ export default function ShopClient() {
                     className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
                   >
                     <option value="all">All sizes</option>
-                    {availableSizes.map((size) => (
-                      <option key={size} value={size}>{size}</option>
-                    ))}
-                  </select>
-                </label>
+                {availableSizes.map((size) => (
+                  <option key={size} value={size}>{formatSizeLabel(size)}</option>
+                ))}
+              </select>
+            </label>
                 <label className="text-xs font-medium text-neutral-600">
                   Sort
                   <select
@@ -390,7 +393,9 @@ export default function ShopClient() {
                     <div className="mt-3 space-y-2">
                       {group.lines.map((line) => (
                         <div key={`${group.key}-${line.size}`} className="flex items-center justify-between gap-2">
-                          <span className="text-[11px] text-neutral-600">Size: {line.size}</span>
+                          <span className="text-[11px] text-neutral-600">
+                            Size: {formatSizeLabel(line.size)}
+                          </span>
                           <div className="flex items-center gap-2">
                             <input
                               type="number"
@@ -559,7 +564,7 @@ export default function ShopClient() {
                     {sizePrices.length ? (
                       sizePrices.map((entry) => (
                         <span key={entry.size} className="rounded-full border border-neutral-200 px-3 py-1">
-                          {entry.size} {money(entry.price)}
+                          {formatSizeLabel(entry.size)} {money(entry.price)}
                         </span>
                       ))
                     ) : (
@@ -588,7 +593,7 @@ export default function ShopClient() {
                         className="rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
                       >
                         {sizes.map((size) => (
-                          <option key={size} value={size}>{size}</option>
+                          <option key={size} value={size}>{formatSizeLabel(size)}</option>
                         ))}
                       </select>
                     </label>
@@ -600,7 +605,10 @@ export default function ShopClient() {
                         value={selection.quantity}
                         onChange={(e) =>
                           updateSelection(item.id, {
-                            quantity: Math.max(1, Number(e.target.value || 1)),
+                            quantity:
+                              e.target.value === ""
+                                ? ""
+                                : Math.max(1, Number(e.target.value)),
                           })
                         }
                         className="rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"

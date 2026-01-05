@@ -60,6 +60,10 @@ export type ShopOrderLine = {
   quantity: number;
 };
 
+export function formatSizeLabel(size: string): string {
+  return String(size || "").replace(/\s+Old$/i, "").trim();
+}
+
 export type ShopOrderLineWithPrice = ShopOrderLine & {
   unitPrice?: number | null;
   lineTotal?: number | null;
@@ -224,7 +228,7 @@ export function buildShopWhatsAppMessageForLines(
       const parts = [
         `- ${line.title}`,
         `Color: ${line.color}`,
-        `Size: ${line.size}`,
+        `Size: ${formatSizeLabel(line.size)}`,
         `Qty: ${line.quantity}`,
       ];
       if (Number.isFinite(line.unitPrice)) {

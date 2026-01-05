@@ -6,6 +6,7 @@ import { storage } from "@/lib/firebase";
 import {
   DEFAULT_COLLECTION_POINT,
   DEFAULT_PICKUP_POINT,
+  formatSizeLabel,
   getSizePrices,
   SIZE_ORDER,
   type ShopItem,
@@ -406,7 +407,7 @@ export default function AdminShopsPage() {
                                   key={entry.size}
                                   className="flex items-center justify-between rounded-lg border border-neutral-200 bg-white px-2 py-1"
                                 >
-                                  <span className="font-semibold">{entry.size}</span>
+                                  <span className="font-semibold">{formatSizeLabel(entry.size)}</span>
                                   <span>{money(entry.price)}</span>
                                 </div>
                               ))
@@ -519,7 +520,7 @@ export default function AdminShopsPage() {
                       </option>
                       {SIZE_ORDER.map((size) => (
                         <option key={size} value={size}>
-                          {size}
+                          {formatSizeLabel(size)}
                         </option>
                       ))}
                     </select>
