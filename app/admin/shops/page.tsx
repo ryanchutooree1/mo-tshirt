@@ -449,10 +449,14 @@ export default function AdminShopsPage() {
                               sizePrices.map((entry) => (
                                 <div
                                   key={entry.size}
-                                  className="flex items-center justify-between rounded-lg border border-neutral-200 bg-white px-2 py-1"
+                                  className="rounded-lg border border-neutral-200 bg-white px-2 py-1"
                                 >
-                                  <span className="font-semibold">{formatSizeLabel(entry.size)}</span>
-                                  <span>{money(entry.price)}</span>
+                                  <div className="font-semibold leading-tight text-neutral-900">
+                                    {formatSizeLabel(entry.size)}
+                                  </div>
+                                  <div className="text-[10px] font-medium text-neutral-500">
+                                    {money(entry.price)}
+                                  </div>
                                 </div>
                               ))
                             ) : (

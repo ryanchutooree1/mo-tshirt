@@ -394,7 +394,7 @@ export default function ShopClient() {
                       {group.lines.map((line) => (
                         <div key={`${group.key}-${line.size}`} className="flex items-center justify-between gap-2">
                           <span className="text-[11px] text-neutral-600">
-                            Size: {formatSizeLabel(line.size)}
+                            Size {formatSizeLabel(line.size)}
                           </span>
                           <div className="flex items-center gap-2">
                             <input
@@ -596,6 +596,9 @@ export default function ShopClient() {
                           <option key={size} value={size}>{formatSizeLabel(size)}</option>
                         ))}
                       </select>
+                      <span className="text-[11px] text-neutral-500">
+                        Size {formatSizeLabel(selection.size)}
+                      </span>
                     </label>
                     <label className="flex flex-col gap-2">
                       Qty
