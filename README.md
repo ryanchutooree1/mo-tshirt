@@ -34,7 +34,7 @@ ADMIN_PASSWORD=your-strong-password
 ### Data + images
 
 - Shop items are stored in Firestore (collection: `shops`).
-- Item photos upload to Firebase Storage under `shops/` or you can paste a direct image URL in the admin form.
+- Item photos upload to Firebase Storage under `items/` or you can paste a direct image URL in the admin form.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 

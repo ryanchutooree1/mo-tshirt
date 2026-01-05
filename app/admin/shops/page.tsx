@@ -48,6 +48,7 @@ const emptyForm: FormState = {
 };
 
 const money = (value: number) => `Rs ${Number(value || 0).toLocaleString()}`;
+const UPLOAD_PREFIX = "items";
 
 export default function AdminShopsPage() {
   const [items, setItems] = useState<ShopItem[]>([]);
@@ -148,22 +149,19 @@ export default function AdminShopsPage() {
   }
 
   async function uploadPhoto() {
-    if (!file) return;
-    setUploading(true);
+    if (!file) {
+      setNotice("Choose a file first.");
+      return;
+    }
     setNotice(null);
+    setError(null);
     try {
-      const pathSafe = file.name.replace(/\s+/g, "-").toLowerCase();
-      const storageRef = ref(storage, `shops/${Date.now()}-${pathSafe}`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
-      setForm((prev) => ({ ...prev, photoUrl: url }));
-      setFile(null);
-      setNotice("Photo uploaded.");
-    } catch (err) {
-      console.error("upload error", err);
-      setNotice("Upload failed. Use an image URL instead.");
-    } finally {
-      setUploading(false);
+      const url = await uploadFileAndGetUrl();
+      if (url) {
+        setNotice("Photo uploaded. Save the item to apply it.");
+      }
+    } catch (err: any) {
+      setError(err?.message || "Upload failed. Use an image URL instead.");
     }
   }
 
@@ -172,7 +170,7 @@ export default function AdminShopsPage() {
     setUploading(true);
     try {
       const pathSafe = file.name.replace(/\s+/g, "-").toLowerCase();
-      const storageRef = ref(storage, `shops/${Date.now()}-${pathSafe}`);
+      const storageRef = ref(storage, `${UPLOAD_PREFIX}/${Date.now()}-${pathSafe}`);
       await uploadBytes(storageRef, file);
       const url = await getDownloadURL(storageRef);
       setForm((prev) => ({ ...prev, photoUrl: url }));
