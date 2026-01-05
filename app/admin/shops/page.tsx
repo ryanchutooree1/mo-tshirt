@@ -14,6 +14,20 @@ import {
 
 type SizePriceRow = { size: string; price: number | "" };
 
+const SIZE_ORDER_SET = new Set(SIZE_ORDER);
+
+function buildSizeRows(existing: { size: string; price: number }[] = []): SizePriceRow[] {
+  const priceMap = new Map(existing.map((entry) => [entry.size, entry.price]));
+  const ordered = SIZE_ORDER.map((size) => ({
+    size,
+    price: priceMap.get(size) ?? "",
+  }));
+  const extras = existing
+    .filter((entry) => !SIZE_ORDER_SET.has(entry.size))
+    .map((entry) => ({ size: entry.size, price: entry.price }));
+  return [...ordered, ...extras];
+}
+
 type FormState = {
   title: string;
   colors: string;
@@ -28,10 +42,7 @@ type FormState = {
 };
 
 const DEFAULT_SIZE_ROWS: SizePriceRow[] = [
-  { size: "S", price: "" },
-  { size: "M", price: "" },
-  { size: "L", price: "" },
-  { size: "XL", price: "" },
+  ...buildSizeRows(),
 ];
 
 const emptyForm: FormState = {
@@ -100,7 +111,7 @@ export default function AdminShopsPage() {
 
   function resetForm() {
     setEditingId(null);
-    setForm({ ...emptyForm, sizePrices: DEFAULT_SIZE_ROWS.map((row) => ({ ...row })) });
+    setForm({ ...emptyForm, sizePrices: buildSizeRows() });
     setFile(null);
     setNotice(null);
   }
@@ -112,8 +123,8 @@ export default function AdminShopsPage() {
       title: item.title,
       colors: item.colors.join(", "),
       sizePrices: sizePrices.length
-        ? sizePrices.map((entry) => ({ size: entry.size, price: entry.price }))
-        : DEFAULT_SIZE_ROWS.map((row) => ({ ...row })),
+        ? buildSizeRows(sizePrices)
+        : buildSizeRows(),
       buyingPrice: item.buyingPrice ?? "",
       deliveryFee: item.deliveryFee ?? "",
       pickupPoint: item.pickupPoint || DEFAULT_PICKUP_POINT,
@@ -292,12 +303,16 @@ export default function AdminShopsPage() {
                           <p className="mt-2 text-xs text-neutral-600">
                             Colors: {item.colors.join(", ") || "-"}
                           </p>
-                          <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-neutral-700">
+                          <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-neutral-700 sm:grid-cols-3">
                             {sizePrices.length ? (
                               sizePrices.map((entry) => (
-                                <span key={entry.size} className="rounded-full border border-neutral-200 px-2 py-1">
-                                  {entry.size} {money(entry.price)}
-                                </span>
+                                <div
+                                  key={entry.size}
+                                  className="flex items-center justify-between rounded-lg border border-neutral-200 bg-white px-2 py-1"
+                                >
+                                  <span className="font-semibold">{entry.size}</span>
+                                  <span>{money(entry.price)}</span>
+                                </div>
                               ))
                             ) : (
                               <span className="text-neutral-500">No sizes set</span>
@@ -406,7 +421,6 @@ export default function AdminShopsPage() {
                       }
                       className="rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
                       placeholder="Price"
-                      required
                     />
                     <button
                       type="button"
@@ -419,6 +433,7 @@ export default function AdminShopsPage() {
                   </div>
                 ))}
               </div>
+              <p className="text-xs text-neutral-500">Leave price blank if that size is not available.</p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
