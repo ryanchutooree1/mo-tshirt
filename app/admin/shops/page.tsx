@@ -7,16 +7,17 @@ import {
   DEFAULT_COLLECTION_POINT,
   DEFAULT_PICKUP_POINT,
   getDeliveredPrice,
-  getPickupPrice,
+  getMinSizePrice,
+  getSizePrices,
   type ShopItem,
 } from "@/lib/shops";
+
+type SizePriceRow = { size: string; price: number | "" };
 
 type FormState = {
   title: string;
   colors: string;
-  sizes: string;
-  basePrice: number | "";
-  pickupPrice: number | "";
+  sizePrices: SizePriceRow[];
   deliveryFee: number | "";
   deliveredPrice: number | "";
   pickupPoint: string;
@@ -26,12 +27,17 @@ type FormState = {
   inStock: boolean;
 };
 
+const DEFAULT_SIZE_ROWS: SizePriceRow[] = [
+  { size: "S", price: "" },
+  { size: "M", price: "" },
+  { size: "L", price: "" },
+  { size: "XL", price: "" },
+];
+
 const emptyForm: FormState = {
   title: "",
   colors: "",
-  sizes: "",
-  basePrice: "",
-  pickupPrice: "",
+  sizePrices: DEFAULT_SIZE_ROWS,
   deliveryFee: "",
   deliveredPrice: "",
   pickupPoint: DEFAULT_PICKUP_POINT,
@@ -93,19 +99,20 @@ export default function AdminShopsPage() {
 
   function resetForm() {
     setEditingId(null);
-    setForm(emptyForm);
+    setForm({ ...emptyForm, sizePrices: DEFAULT_SIZE_ROWS.map((row) => ({ ...row })) });
     setFile(null);
     setNotice(null);
   }
 
   function startEdit(item: ShopItem) {
+    const sizePrices = getSizePrices(item);
     setEditingId(item.id);
     setForm({
       title: item.title,
       colors: item.colors.join(", "),
-      sizes: item.sizes.join(", "),
-      basePrice: item.basePrice,
-      pickupPrice: item.pickupPrice ?? "",
+      sizePrices: sizePrices.length
+        ? sizePrices.map((entry) => ({ size: entry.size, price: entry.price }))
+        : DEFAULT_SIZE_ROWS.map((row) => ({ ...row })),
       deliveryFee: item.deliveryFee ?? "",
       deliveredPrice: item.deliveredPrice ?? "",
       pickupPoint: item.pickupPoint || DEFAULT_PICKUP_POINT,
@@ -116,6 +123,28 @@ export default function AdminShopsPage() {
     });
     setFile(null);
     setNotice(null);
+  }
+
+  function updateSizeRow(index: number, patch: Partial<SizePriceRow>) {
+    setForm((prev) => {
+      const next = prev.sizePrices.slice();
+      next[index] = { ...next[index], ...patch };
+      return { ...prev, sizePrices: next };
+    });
+  }
+
+  function addSizeRow() {
+    setForm((prev) => ({
+      ...prev,
+      sizePrices: [...prev.sizePrices, { size: "", price: "" }],
+    }));
+  }
+
+  function removeSizeRow(index: number) {
+    setForm((prev) => {
+      const next = prev.sizePrices.filter((_, i) => i !== index);
+      return { ...prev, sizePrices: next.length ? next : [{ size: "", price: "" }] };
+    });
   }
 
   async function uploadPhoto() {
@@ -149,9 +178,7 @@ export default function AdminShopsPage() {
       const payload = {
         title: form.title,
         colors: form.colors,
-        sizes: form.sizes,
-        basePrice: form.basePrice,
-        pickupPrice: form.pickupPrice,
+        sizePrices: form.sizePrices,
         deliveryFee: form.deliveryFee,
         deliveredPrice: form.deliveredPrice,
         pickupPoint: form.pickupPoint,
@@ -219,8 +246,9 @@ export default function AdminShopsPage() {
           ) : (
             <ul className="mt-6 space-y-4">
               {items.map((item) => {
-                const pickupPrice = getPickupPrice(item);
-                const deliveredPrice = getDeliveredPrice(item);
+                const minPrice = getMinSizePrice(item);
+                const deliveredPrice = getDeliveredPrice(item, minPrice);
+                const sizePrices = getSizePrices(item);
                 return (
                   <li key={item.id} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -247,9 +275,19 @@ export default function AdminShopsPage() {
                           <p className="mt-2 text-xs text-neutral-600">
                             Colors: {item.colors.join(", ") || "-"}
                           </p>
-                          <p className="text-xs text-neutral-600">Sizes: {item.sizes.join(", ") || "-"}</p>
+                          <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-neutral-700">
+                            {sizePrices.length ? (
+                              sizePrices.map((entry) => (
+                                <span key={entry.size} className="rounded-full border border-neutral-200 px-2 py-1">
+                                  {entry.size} {money(entry.price)}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-neutral-500">No sizes set</span>
+                            )}
+                          </div>
                           <p className="mt-2 text-xs text-neutral-600">
-                            Base {money(item.basePrice)} - Pickup {money(pickupPrice)}{" "}
+                            From {money(minPrice)}{" "}
                             {deliveredPrice !== null ? `- Delivered ${money(deliveredPrice)}` : ""}
                           </p>
                         </div>
@@ -308,44 +346,57 @@ export default function AdminShopsPage() {
                   placeholder="Black, White, Navy"
                 />
               </div>
-              <div>
-                <label className="text-sm font-medium text-neutral-800">Sizes *</label>
-                <input
-                  required
-                  value={form.sizes}
-                  onChange={(e) => setForm((prev) => ({ ...prev, sizes: e.target.value }))}
-                  className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
-                  placeholder="S, M, L, XL"
-                />
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-neutral-800">Size prices *</label>
+                <button
+                  type="button"
+                  onClick={addSizeRow}
+                  className="rounded-full border border-black px-3 py-1 text-xs font-semibold text-black transition hover:bg-black hover:text-white"
+                >
+                  Add size
+                </button>
+              </div>
+              <div className="space-y-3">
+                {form.sizePrices.map((row, index) => (
+                  <div key={`${row.size}-${index}`} className="grid grid-cols-[1fr_1fr_auto] gap-3">
+                    <input
+                      value={row.size}
+                      onChange={(e) => updateSizeRow(index, { size: e.target.value })}
+                      className="rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
+                      placeholder="Size (e.g. M)"
+                      required
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={row.price}
+                      onChange={(e) =>
+                        updateSizeRow(index, {
+                          price: e.target.value === "" ? "" : Number(e.target.value),
+                        })
+                      }
+                      className="rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
+                      placeholder="Price"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeSizeRow(index)}
+                      className="rounded-full border border-neutral-300 px-3 text-xs font-semibold text-neutral-600 transition hover:bg-neutral-100"
+                      aria-label="Remove size"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium text-neutral-800">Base price *</label>
-                <input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  required
-                  value={form.basePrice}
-                  onChange={(e) => setForm((prev) => ({ ...prev, basePrice: e.target.value === "" ? "" : Number(e.target.value) }))}
-                  className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
-                  placeholder="200"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-neutral-800">Pickup price</label>
-                <input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={form.pickupPrice}
-                  onChange={(e) => setForm((prev) => ({ ...prev, pickupPrice: e.target.value === "" ? "" : Number(e.target.value) }))}
-                  className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
-                  placeholder="Optional"
-                />
-              </div>
               <div>
                 <label className="text-sm font-medium text-neutral-800">Delivery fee</label>
                 <input

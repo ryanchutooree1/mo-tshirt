@@ -8,6 +8,7 @@ function mapDoc(id: string, data: Record<string, any>): ShopItem {
     id,
     title: String(data.title ?? ""),
     colors: Array.isArray(data.colors) ? data.colors : [],
+    sizePrices: Array.isArray(data.sizePrices) ? data.sizePrices : [],
     sizes: Array.isArray(data.sizes) ? data.sizes : [],
     basePrice: Number(data.basePrice ?? 0),
     pickupPrice: data.pickupPrice ?? null,

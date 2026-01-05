@@ -9,7 +9,10 @@ import {
   DEFAULT_COLLECTION_POINT,
   DEFAULT_PICKUP_POINT,
   getDeliveredPrice,
-  getPickupPrice,
+  getMinSizePrice,
+  getSizePrice,
+  getSizePrices,
+  getSizes,
   type ShopItem,
   type ShopSelection,
 } from "@/lib/shops";
@@ -58,10 +61,11 @@ export default function ShopClient() {
     setSelections((prev) => {
       const next = { ...prev };
       items.forEach((item) => {
+        const sizes = getSizes(item);
         if (!next[item.id]) {
           next[item.id] = {
             color: item.colors[0] || "Default",
-            size: item.sizes[0] || "M",
+            size: sizes[0] || "M",
             quantity: 1,
             deliveryMethod: "Surinam pickup",
           };
@@ -79,7 +83,7 @@ export default function ShopClient() {
 
   const availableSizes = useMemo(() => {
     const set = new Set<string>();
-    items.forEach((item) => item.sizes.forEach((size) => set.add(size)));
+    items.forEach((item) => getSizes(item).forEach((size) => set.add(size)));
     return Array.from(set).sort();
   }, [items]);
 
@@ -89,10 +93,10 @@ export default function ShopClient() {
       next = next.filter((item) => item.colors.includes(selectedColor));
     }
     if (selectedSize !== "all") {
-      next = next.filter((item) => item.sizes.includes(selectedSize));
+      next = next.filter((item) => getSizes(item).includes(selectedSize));
     }
     if (sortOrder === "price-asc") {
-      next = next.sort((a, b) => getPickupPrice(a) - getPickupPrice(b));
+      next = next.sort((a, b) => getMinSizePrice(a) - getMinSizePrice(b));
     }
     return next;
   }, [items, selectedColor, selectedSize, sortOrder]);
@@ -190,15 +194,18 @@ export default function ShopClient() {
 
         <section className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((item) => {
+            const sizes = getSizes(item);
+            const sizePrices = getSizePrices(item);
             const selection =
               selections[item.id] || {
                 color: item.colors[0] || "Default",
-                size: item.sizes[0] || "M",
+                size: sizes[0] || "M",
                 quantity: 1,
                 deliveryMethod: "Surinam pickup",
               };
-            const pickupPrice = getPickupPrice(item);
-            const deliveredPrice = getDeliveredPrice(item);
+            const minPrice = getMinSizePrice(item);
+            const sizePrice = getSizePrice(item, selection.size);
+            const deliveredPrice = getDeliveredPrice(item, sizePrice);
             const showDeliveryFee = deliveredPrice === null && Number.isFinite(item.deliveryFee);
             const pickupPoint = item.pickupPoint || DEFAULT_PICKUP_POINT;
             const collectionPoint = item.collectionPoint || DEFAULT_COLLECTION_POINT;
@@ -236,12 +243,12 @@ export default function ShopClient() {
 
                   <div className="space-y-1 text-sm text-neutral-700">
                     <div className="flex items-center justify-between">
-                      <span>Base price</span>
-                      <span className="font-semibold">{money(item.basePrice)}</span>
+                      <span>Base price (from)</span>
+                      <span className="font-semibold">{money(minPrice)}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span>Pickup price</span>
-                      <span className="font-semibold">{money(pickupPrice)}</span>
+                      <span>Pickup price (selected size)</span>
+                      <span className="font-semibold">{money(sizePrice)}</span>
                     </div>
                     {deliveredPrice !== null && (
                       <div className="flex items-center justify-between">
@@ -265,11 +272,15 @@ export default function ShopClient() {
                     ))}
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs text-neutral-600">
-                    {item.sizes.map((size) => (
-                      <span key={size} className="rounded-full border border-neutral-200 px-3 py-1">
-                        {size}
-                      </span>
-                    ))}
+                    {sizePrices.length ? (
+                      sizePrices.map((entry) => (
+                        <span key={entry.size} className="rounded-full border border-neutral-200 px-3 py-1">
+                          {entry.size} {money(entry.price)}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-neutral-400">Sizes not set</span>
+                    )}
                   </div>
 
                   <div className="grid gap-3 text-xs text-neutral-600 sm:grid-cols-2">
@@ -292,7 +303,7 @@ export default function ShopClient() {
                         onChange={(e) => updateSelection(item.id, { size: e.target.value })}
                         className="rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
                       >
-                        {item.sizes.map((size) => (
+                        {sizes.map((size) => (
                           <option key={size} value={size}>{size}</option>
                         ))}
                       </select>

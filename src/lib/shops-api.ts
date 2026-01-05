@@ -4,6 +4,7 @@ import {
   normalizeList,
   toNumber,
   type ShopItemInput,
+  type ShopSizePrice,
 } from "@/lib/shops";
 
 type ParseResult =
@@ -22,6 +23,33 @@ function cleanString(value: unknown) {
   return value.trim();
 }
 
+function normalizeSizePrices(input: unknown): ShopSizePrice[] {
+  if (Array.isArray(input)) {
+    const list = input
+      .map((entry) => ({
+        size: cleanString((entry as any)?.size),
+        price: toNumber((entry as any)?.price),
+      }))
+      .filter((entry) => entry.size && entry.price !== null && entry.price >= 0) as ShopSizePrice[];
+    const map = new Map<string, number>();
+    list.forEach((entry) => map.set(entry.size, entry.price));
+    return Array.from(map.entries()).map(([size, price]) => ({ size, price }));
+  }
+
+  if (input && typeof input === "object") {
+    const map = new Map<string, number>();
+    Object.entries(input as Record<string, unknown>).forEach(([key, value]) => {
+      const size = cleanString(key);
+      const price = toNumber(value);
+      if (!size || price === null || price < 0) return;
+      map.set(size, price);
+    });
+    return Array.from(map.entries()).map(([size, price]) => ({ size, price }));
+  }
+
+  return [];
+}
+
 export function parseShopPayload(body: unknown): ParseResult {
   const payload = (body ?? {}) as Record<string, unknown>;
 
@@ -31,18 +59,21 @@ export function parseShopPayload(body: unknown): ParseResult {
   const colors = normalizeList(payload.colors);
   if (!colors.length) return { ok: false, error: "Add at least one color." };
 
-  const sizes = normalizeList(payload.sizes);
-  if (!sizes.length) return { ok: false, error: "Add at least one size." };
-
-  const basePrice = toNumber(payload.basePrice);
-  if (basePrice === null || basePrice < 0) {
-    return { ok: false, error: "Base price must be 0 or higher." };
+  let sizePrices = normalizeSizePrices(payload.sizePrices);
+  if (!sizePrices.length) {
+    const sizes = normalizeList(payload.sizes);
+    const fallbackPrice = toNumber(payload.basePrice) ?? toNumber(payload.pickupPrice);
+    if (sizes.length && fallbackPrice !== null && fallbackPrice >= 0) {
+      sizePrices = sizes.map((size) => ({ size, price: fallbackPrice }));
+    }
   }
 
-  const pickupPrice = toNumber(payload.pickupPrice);
-  if (pickupPrice !== null && pickupPrice < 0) {
-    return { ok: false, error: "Pickup price must be 0 or higher." };
+  if (!sizePrices.length) {
+    return { ok: false, error: "Add at least one size with a price." };
   }
+
+  const sizes = sizePrices.map((entry) => entry.size);
+  const basePrice = Math.min(...sizePrices.map((entry) => entry.price));
 
   const deliveryFee = toNumber(payload.deliveryFee);
   if (deliveryFee !== null && deliveryFee < 0) {
@@ -70,8 +101,8 @@ export function parseShopPayload(body: unknown): ParseResult {
     title,
     colors,
     sizes,
+    sizePrices,
     basePrice,
-    pickupPrice: pickupPrice ?? null,
     deliveryFee: deliveryFee ?? null,
     deliveredPrice: deliveredPrice ?? null,
     pickupPoint,
