@@ -203,68 +203,165 @@ export default function ShopClient() {
       </header>
 
       <main className="mx-auto w-full max-w-6xl px-6 py-14">
-        <section className="space-y-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-orange-500">Shops</p>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Plain T-shirts ready to order</h1>
-          <p className="max-w-2xl text-sm text-neutral-600">
-            Choose your color and size, then confirm delivery or pickup. Orders are confirmed via WhatsApp.
-          </p>
-        </section>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+          <div className="space-y-8">
+            <section className="space-y-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-orange-500">Shops</p>
+              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Plain T-shirts ready to order</h1>
+              <p className="max-w-2xl text-sm text-neutral-600">
+                Choose your color and size, then confirm delivery or pickup. Orders are confirmed via WhatsApp.
+              </p>
+            </section>
 
-        <section className="mt-8 flex flex-col gap-4 rounded-[28px] border border-neutral-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
-          <div>
-            <p className="text-sm font-medium text-neutral-800">Filters</p>
-            <p className="text-xs text-neutral-500">Refine by color, size, or price.</p>
-          </div>
-          <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-3">
-            <label className="text-xs font-medium text-neutral-600">
-              Color
-              <select
-                value={selectedColor}
-                onChange={(e) => setSelectedColor(e.target.value)}
-                className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
-              >
-                <option value="all">All colors</option>
-                {availableColors.map((color) => (
-                  <option key={color} value={color}>{color}</option>
-                ))}
-              </select>
-            </label>
-            <label className="text-xs font-medium text-neutral-600">
-              Size
-              <select
-                value={selectedSize}
-                onChange={(e) => setSelectedSize(e.target.value)}
-                className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
-              >
-                <option value="all">All sizes</option>
-                {availableSizes.map((size) => (
-                  <option key={size} value={size}>{size}</option>
-                ))}
-              </select>
-            </label>
-            <label className="text-xs font-medium text-neutral-600">
-              Sort
-              <select
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value as SortOrder)}
-                className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
-              >
-                <option value="default">Default</option>
-                <option value="price-asc">Price: low to high</option>
-              </select>
-            </label>
-          </div>
-        </section>
+            <section className="flex flex-col gap-4 rounded-[28px] border border-neutral-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+              <div>
+                <p className="text-sm font-medium text-neutral-800">Filters</p>
+                <p className="text-xs text-neutral-500">Refine by color, size, or price.</p>
+              </div>
+              <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-3">
+                <label className="text-xs font-medium text-neutral-600">
+                  Color
+                  <select
+                    value={selectedColor}
+                    onChange={(e) => setSelectedColor(e.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="all">All colors</option>
+                    {availableColors.map((color) => (
+                      <option key={color} value={color}>{color}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-xs font-medium text-neutral-600">
+                  Size
+                  <select
+                    value={selectedSize}
+                    onChange={(e) => setSelectedSize(e.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="all">All sizes</option>
+                    {availableSizes.map((size) => (
+                      <option key={size} value={size}>{size}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-xs font-medium text-neutral-600">
+                  Sort
+                  <select
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+                    className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="default">Default</option>
+                    <option value="price-asc">Price: low to high</option>
+                  </select>
+                </label>
+              </div>
+            </section>
 
-        {error && (
-          <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-            {error}
+            {error && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                {error}
+              </div>
+            )}
           </div>
-        )}
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <section className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+          <aside className="h-fit rounded-[28px] border border-neutral-200 bg-white p-5 shadow-sm lg:sticky lg:top-24">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold">Order list</h3>
+              <span className="text-xs text-neutral-500">
+                {orderLines.length
+                  ? `${orderLines.length} item${orderLines.length === 1 ? "" : "s"} · ${totalQty} qty`
+                  : "0 items"}
+              </span>
+            </div>
+            <div className="mt-4 space-y-3 text-xs text-neutral-700">
+              {orderLines.length ? (
+                orderLines.map((line, index) => (
+                  <div
+                    key={`${line.itemId}-${line.color}-${line.size}-${index}`}
+                    className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-orange-200 bg-orange-50 px-2 py-1 text-[11px] font-semibold text-orange-700">
+                        {line.color}
+                      </span>
+                      <span className="text-sm font-semibold text-black">{line.title}</span>
+                    </div>
+                    <p className="mt-2 text-[11px] text-neutral-500">Size: {line.size}</p>
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <input
+                        type="number"
+                        min={1}
+                        value={line.quantity}
+                        onChange={(e) => updateLineQty(index, Number(e.target.value || 1))}
+                        className="w-16 rounded-xl border border-neutral-200 bg-white px-2 py-1 text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeLineItem(index)}
+                        className="rounded-full border border-neutral-300 px-3 py-1 text-[11px] font-semibold text-neutral-600 transition hover:bg-neutral-100"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-neutral-200 px-4 py-6 text-center text-xs text-neutral-500">
+                  Add colors and sizes from the cards to build your WhatsApp order.
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5">
+              <label className="text-xs font-medium text-neutral-600">
+                Delivery
+                <select
+                  value={deliveryMethod}
+                  onChange={(e) => setDeliveryMethod(e.target.value as ShopSelection["deliveryMethod"])}
+                  className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+                >
+                  {DELIVERY_METHODS.map((method) => (
+                    <option key={method} value={method}>
+                      {method}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              <a
+                href={getWhatsAppUrl(orderMessage)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
+                  orderLines.length
+                    ? "bg-[#FF6600] text-white hover:bg-orange-600"
+                    : "cursor-not-allowed bg-neutral-200 text-neutral-500"
+                }`}
+                aria-disabled={!orderLines.length}
+                onClick={(e) => {
+                  if (!orderLines.length) e.preventDefault();
+                }}
+              >
+                Order on WhatsApp
+              </a>
+              {!!orderLines.length && (
+                <button
+                  type="button"
+                  onClick={clearLineItems}
+                  className="inline-flex w-full items-center justify-center rounded-full border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-600 transition hover:bg-neutral-100"
+                >
+                  Clear list
+                </button>
+              )}
+            </div>
+          </aside>
+        </div>
+
+        <section className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((item) => {
             const sizes = getSizes(item);
             const sizePrices = getSizePrices(item);
@@ -394,102 +491,7 @@ export default function ShopClient() {
               </article>
             );
           })}
-          </section>
-
-          <aside className="h-fit rounded-[28px] border border-neutral-200 bg-white p-5 shadow-sm lg:sticky lg:top-24">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold">Order list</h3>
-              <span className="text-xs text-neutral-500">
-                {orderLines.length
-                  ? `${orderLines.length} item${orderLines.length === 1 ? "" : "s"} · ${totalQty} qty`
-                  : "0 items"}
-              </span>
-            </div>
-            <div className="mt-4 space-y-3 text-xs text-neutral-700">
-              {orderLines.length ? (
-                orderLines.map((line, index) => (
-                  <div
-                    key={`${line.itemId}-${line.color}-${line.size}-${index}`}
-                    className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full border border-orange-200 bg-orange-50 px-2 py-1 text-[11px] font-semibold text-orange-700">
-                        {line.color}
-                      </span>
-                      <span className="text-sm font-semibold text-black">{line.title}</span>
-                    </div>
-                    <p className="mt-2 text-[11px] text-neutral-500">Size: {line.size}</p>
-                    <div className="mt-3 flex items-center justify-between gap-2">
-                      <input
-                        type="number"
-                        min={1}
-                        value={line.quantity}
-                        onChange={(e) => updateLineQty(index, Number(e.target.value || 1))}
-                        className="w-16 rounded-xl border border-neutral-200 bg-white px-2 py-1 text-xs"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeLineItem(index)}
-                        className="rounded-full border border-neutral-300 px-3 py-1 text-[11px] font-semibold text-neutral-600 transition hover:bg-neutral-100"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-dashed border-neutral-200 px-4 py-6 text-center text-xs text-neutral-500">
-                  Add colors and sizes from the cards to build your WhatsApp order.
-                </div>
-              )}
-            </div>
-
-            <div className="mt-5">
-              <label className="text-xs font-medium text-neutral-600">
-                Delivery
-                <select
-                  value={deliveryMethod}
-                  onChange={(e) => setDeliveryMethod(e.target.value as ShopSelection["deliveryMethod"])}
-                  className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
-                >
-                  {DELIVERY_METHODS.map((method) => (
-                    <option key={method} value={method}>
-                      {method}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              <a
-                href={getWhatsAppUrl(orderMessage)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
-                  orderLines.length
-                    ? "bg-[#FF6600] text-white hover:bg-orange-600"
-                    : "cursor-not-allowed bg-neutral-200 text-neutral-500"
-                }`}
-                aria-disabled={!orderLines.length}
-                onClick={(e) => {
-                  if (!orderLines.length) e.preventDefault();
-                }}
-              >
-                Order on WhatsApp
-              </a>
-              {!!orderLines.length && (
-                <button
-                  type="button"
-                  onClick={clearLineItems}
-                  className="inline-flex w-full items-center justify-center rounded-full border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-600 transition hover:bg-neutral-100"
-                >
-                  Clear list
-                </button>
-              )}
-            </div>
-          </aside>
-        </div>
+        </section>
 
         {!filtered.length && !error && (
           <div className="mt-12 rounded-[24px] border border-neutral-200 bg-neutral-50 px-6 py-10 text-center text-sm text-neutral-600">
