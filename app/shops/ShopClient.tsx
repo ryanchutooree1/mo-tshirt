@@ -7,7 +7,6 @@ import { getWhatsAppUrl } from "@/data/work";
 import {
   buildShopWhatsAppMessageForLines,
   formatSizeLabel,
-  getMinSizePrice,
   getSizePrice,
   getSizePrices,
   getSizes,
@@ -19,7 +18,6 @@ import {
   type ShopSelection,
 } from "@/lib/shops";
 
-type SortOrder = "default" | "price-asc";
 const DELIVERY_FEE = 100;
 const DELIVERY_METHODS = [
   { value: "Surinam pickup", label: "Surinam pickup (Free)" },
@@ -41,7 +39,7 @@ export default function ShopClient() {
 
   const [selectedColor, setSelectedColor] = useState("all");
   const [selectedSize, setSelectedSize] = useState("all");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("default");
+  const [selectedProduct, setSelectedProduct] = useState("all");
 
   const [selections, setSelections] = useState<Record<string, ItemSelection>>({});
   const [orderLines, setOrderLines] = useState<ShopOrderLine[]>([]);
@@ -93,6 +91,14 @@ export default function ShopClient() {
     });
   }, [items]);
 
+  const availableProducts = useMemo(() => {
+    const set = new Set<string>();
+    items.forEach((item) => {
+      if (item.title) set.add(item.title);
+    });
+    return Array.from(set).sort();
+  }, [items]);
+
   const availableColors = useMemo(() => {
     const set = new Set<string>();
     items.forEach((item) => item.colors.forEach((color) => set.add(color)));
@@ -108,17 +114,17 @@ export default function ShopClient() {
   const filtered = useMemo(() => {
     let next = items.slice();
     next.sort((a, b) => (b.position || 0) - (a.position || 0));
+    if (selectedProduct !== "all") {
+      next = next.filter((item) => item.title === selectedProduct);
+    }
     if (selectedColor !== "all") {
       next = next.filter((item) => item.colors.includes(selectedColor));
     }
     if (selectedSize !== "all") {
       next = next.filter((item) => getSizes(item).includes(selectedSize));
     }
-    if (sortOrder === "price-asc") {
-      next = next.sort((a, b) => getMinSizePrice(a) - getMinSizePrice(b));
-    }
     return next;
-  }, [items, selectedColor, selectedSize, sortOrder]);
+  }, [items, selectedProduct, selectedColor, selectedSize]);
 
   const totalQty = useMemo(
     () => orderLines.reduce((sum, line) => sum + line.quantity, 0),
@@ -315,18 +321,31 @@ export default function ShopClient() {
           <div className="space-y-8">
             <section className="space-y-4">
               <p className="text-xs uppercase tracking-[0.2em] text-orange-500">Shops</p>
-              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Plain T-shirts ready to order</h1>
+              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Ready-to-order essentials</h1>
               <p className="max-w-2xl text-sm text-neutral-600">
-                Choose your color and size, then confirm delivery or pickup. Orders are confirmed via WhatsApp.
+                Browse T-shirts, polos, hoodies, and caps. Choose color and size, then confirm delivery or pickup via WhatsApp.
               </p>
             </section>
 
             <section className="flex flex-col gap-4 rounded-[28px] border border-neutral-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <div>
                 <p className="text-sm font-medium text-neutral-800">Filters</p>
-                <p className="text-xs text-neutral-500">Refine by color, size, or price.</p>
+                <p className="text-xs text-neutral-500">Refine by product, color, or size.</p>
               </div>
               <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-3">
+                <label className="text-xs font-medium text-neutral-600">
+                  Product
+                  <select
+                    value={selectedProduct}
+                    onChange={(e) => setSelectedProduct(e.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="all">All products</option>
+                    {availableProducts.map((product) => (
+                      <option key={product} value={product}>{product}</option>
+                    ))}
+                  </select>
+                </label>
                 <label className="text-xs font-medium text-neutral-600">
                   Color
                   <select
@@ -348,20 +367,9 @@ export default function ShopClient() {
                     className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
                   >
                     <option value="all">All sizes</option>
-                {availableSizes.map((size) => (
-                  <option key={size} value={size}>{formatSizeLabel(size)}</option>
-                ))}
-              </select>
-            </label>
-                <label className="text-xs font-medium text-neutral-600">
-                  Sort
-                  <select
-                    value={sortOrder}
-                    onChange={(e) => setSortOrder(e.target.value as SortOrder)}
-                    className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
-                  >
-                    <option value="default">Default</option>
-                    <option value="price-asc">Price: low to high</option>
+                    {availableSizes.map((size) => (
+                      <option key={size} value={size}>{formatSizeLabel(size)}</option>
+                    ))}
                   </select>
                 </label>
               </div>
