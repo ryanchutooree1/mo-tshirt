@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from "react";
 import { getWhatsAppUrl } from "@/data/work";
 import {
   buildShopWhatsAppMessageForLines,
-  DEFAULT_COLLECTION_POINT,
   getMinSizePrice,
   getSizePrice,
   getSizePrices,
@@ -449,8 +448,6 @@ export default function ShopClient() {
               };
             const sizePrice = getSizePrice(item, selection.size);
             const displayColor = selection.color || item.colors[0] || "Color";
-            const collectionPoint = item.collectionPoint || DEFAULT_COLLECTION_POINT;
-
             return (
               <article key={item.id} className="group rounded-[28px] border border-neutral-200 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
                 <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-neutral-100">
@@ -482,22 +479,6 @@ export default function ShopClient() {
                       </span>
                       <span>{item.title}</span>
                     </h2>
-                    <p className="text-xs text-neutral-500">
-                      Collection point: {collectionPoint}
-                    </p>
-                  </div>
-
-                  <div className="space-y-1 text-sm text-neutral-700">
-                    <div className="flex items-center justify-between">
-                      <span>Price (selected size)</span>
-                      <span className="font-semibold">{money(sizePrice)}</span>
-                    </div>
-                    {Number.isFinite(item.deliveryFee) && (
-                      <div className="flex items-center justify-between">
-                        <span>Postal delivery fee</span>
-                        <span className="font-semibold">{money(item.deliveryFee as number)}</span>
-                      </div>
-                    )}
                   </div>
 
                   <div className="flex flex-wrap gap-2 text-xs text-neutral-600">
@@ -551,6 +532,12 @@ export default function ShopClient() {
                         className="rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
                       />
                     </label>
+                    <div className="flex flex-col gap-2">
+                      <span>Price (selected size)</span>
+                      <div className="flex items-center rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm font-semibold text-neutral-900">
+                        {money(sizePrice)}
+                      </div>
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
