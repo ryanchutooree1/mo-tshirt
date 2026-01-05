@@ -378,7 +378,7 @@ export default function AdminShopsPage() {
                   <li key={item.id} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex items-start gap-4">
-                        <div className="h-20 w-20 overflow-hidden rounded-xl bg-white border border-neutral-200">
+                        <div className="h-16 w-16 overflow-hidden rounded-xl bg-white border border-neutral-200">
                           {item.photoUrl ? (
                             <img src={item.photoUrl} alt={item.title} className="h-full w-full object-cover" />
                           ) : (
