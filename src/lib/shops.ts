@@ -1,14 +1,14 @@
 export const DEFAULT_PICKUP_POINT = "Nouvelle France";
 export const DEFAULT_COLLECTION_POINT = "Surinam";
 export const SIZE_ORDER = [
-  "1 Yr Old",
-  "2 Yrs Old",
-  "4 Yrs Old",
-  "6 Yrs Old",
-  "8 Yrs Old",
-  "10 Yrs Old",
-  "12 Yrs Old",
-  "14 Yrs Old",
+  "1 Yr",
+  "2 Yrs",
+  "4 Yrs",
+  "6 Yrs",
+  "8 Yrs",
+  "10 Yrs",
+  "12 Yrs",
+  "14 Yrs",
   "XS",
   "S",
   "M",
@@ -60,8 +60,12 @@ export type ShopOrderLine = {
   quantity: number;
 };
 
-export function formatSizeLabel(size: string): string {
+export function normalizeSizeLabel(size: string): string {
   return String(size || "").replace(/\s+Old$/i, "").trim();
+}
+
+export function formatSizeLabel(size: string): string {
+  return normalizeSizeLabel(size);
 }
 
 export type ShopOrderLineWithPrice = ShopOrderLine & {
@@ -108,7 +112,7 @@ export function toNumber(value: unknown): number | null {
 function uniqueSizePrices(list: ShopSizePrice[]): ShopSizePrice[] {
   const map = new Map<string, ShopSizePrice>();
   list.forEach((entry) => {
-    const size = String(entry.size || "").trim();
+    const size = normalizeSizeLabel(String(entry.size || "").trim());
     const price = Number(entry.price);
     if (!size || !Number.isFinite(price) || price < 0) return;
     map.set(size, {
@@ -123,25 +127,36 @@ function uniqueSizePrices(list: ShopSizePrice[]): ShopSizePrice[] {
 }
 
 const sizeOrderMap = new Map<string, number>(
-  SIZE_ORDER.map((label, index) => [label, index])
+  SIZE_ORDER.map((label, index) => [normalizeSizeLabel(label), index])
 );
 
 export function sortSizePrices(list: ShopSizePrice[]): ShopSizePrice[] {
   return list
     .map((entry, index) => ({
-      entry,
-      order: sizeOrderMap.has(entry.size) ? sizeOrderMap.get(entry.size)! : SIZE_ORDER.length + index,
+      entry: { ...entry, size: normalizeSizeLabel(entry.size) },
+      order: sizeOrderMap.has(normalizeSizeLabel(entry.size))
+        ? sizeOrderMap.get(normalizeSizeLabel(entry.size))!
+        : SIZE_ORDER.length + index,
     }))
     .sort((a, b) => a.order - b.order)
     .map(({ entry }) => entry);
 }
 
 export function sortSizes(list: string[]): string[] {
+  const seen = new Set<string>();
   return list
     .map((size, index) => ({
-      size,
-      order: sizeOrderMap.has(size) ? sizeOrderMap.get(size)! : SIZE_ORDER.length + index,
+      size: normalizeSizeLabel(size),
+      order: sizeOrderMap.has(normalizeSizeLabel(size))
+        ? sizeOrderMap.get(normalizeSizeLabel(size))!
+        : SIZE_ORDER.length + index,
     }))
+    .filter((entry) => {
+      if (!entry.size) return false;
+      if (seen.has(entry.size)) return false;
+      seen.add(entry.size);
+      return true;
+    })
     .sort((a, b) => a.order - b.order)
     .map(({ size }) => size);
 }

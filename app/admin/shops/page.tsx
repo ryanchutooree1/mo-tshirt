@@ -94,6 +94,7 @@ export default function AdminShopsPage() {
   const [items, setItems] = useState<ShopItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [normalizing, setNormalizing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -138,6 +139,16 @@ export default function AdminShopsPage() {
   const selectedItem = useMemo(
     () => items.find((item) => item.id === editingId) || null,
     [items, editingId]
+  );
+
+  const needsNormalization = useMemo(
+    () =>
+      items.some(
+        (item) =>
+          item.sizePrices?.some((entry) => /\s+Old$/i.test(entry.size)) ||
+          item.sizes?.some((size) => /\s+Old$/i.test(size))
+      ),
+    [items]
   );
 
   function resetForm() {
@@ -317,6 +328,28 @@ export default function AdminShopsPage() {
     }
   }
 
+  async function normalizeSizes() {
+    if (normalizing) return;
+    setNormalizing(true);
+    setNotice(null);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/shops/normalize-sizes", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Failed to normalize sizes.");
+      await refresh();
+      setNotice(
+        Number.isFinite(data?.updated)
+          ? `Normalized ${data.updated} item${data.updated === 1 ? "" : "s"}.`
+          : "Size labels normalized."
+      );
+    } catch (err: any) {
+      setError(err?.message || "Failed to normalize sizes.");
+    } finally {
+      setNormalizing(false);
+    }
+  }
+
   async function moveItem(index: number, direction: "up" | "down") {
     const targetIndex = direction === "up" ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= items.length) return;
@@ -353,12 +386,23 @@ export default function AdminShopsPage() {
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Shops catalog</h1>
           <p className="text-sm text-neutral-600">Add, edit, and publish plain T-shirt listings.</p>
         </div>
-        <button
-          onClick={resetForm}
-          className="inline-flex items-center justify-center rounded-full border border-black px-4 py-2 text-sm font-semibold text-black transition hover:bg-black hover:text-white"
-        >
-          Add item
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          {needsNormalization && (
+            <button
+              onClick={normalizeSizes}
+              disabled={normalizing}
+              className="inline-flex items-center justify-center rounded-full border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {normalizing ? "Normalizing..." : "Normalize sizes"}
+            </button>
+          )}
+          <button
+            onClick={resetForm}
+            className="inline-flex items-center justify-center rounded-full border border-black px-4 py-2 text-sm font-semibold text-black transition hover:bg-black hover:text-white"
+          >
+            Add item
+          </button>
+        </div>
       </header>
 
       <section className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">

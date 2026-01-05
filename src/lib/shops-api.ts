@@ -1,7 +1,9 @@
 import {
   DEFAULT_COLLECTION_POINT,
   DEFAULT_PICKUP_POINT,
+  normalizeSizeLabel,
   normalizeList,
+  sortSizes,
   sortSizePrices,
   toNumber,
   type ShopItemInput,
@@ -28,7 +30,7 @@ function normalizeSizePrices(input: unknown): ShopSizePrice[] {
   if (Array.isArray(input)) {
     const list = input
       .map((entry) => ({
-        size: cleanString((entry as any)?.size),
+        size: normalizeSizeLabel(cleanString((entry as any)?.size)),
         price: toNumber((entry as any)?.price),
         buyingPrice: toNumber((entry as any)?.buyingPrice),
         profit: toNumber((entry as any)?.profit),
@@ -46,7 +48,7 @@ function normalizeSizePrices(input: unknown): ShopSizePrice[] {
   if (input && typeof input === "object") {
     const map = new Map<string, number>();
     Object.entries(input as Record<string, unknown>).forEach(([key, value]) => {
-      const size = cleanString(key);
+      const size = normalizeSizeLabel(cleanString(key));
       const price = toNumber(value);
       if (!size || price === null || price < 0) return;
       map.set(size, price);
@@ -68,7 +70,9 @@ export function parseShopPayload(body: unknown): ParseResult {
 
   let sizePrices = normalizeSizePrices(payload.sizePrices);
   if (!sizePrices.length) {
-    const sizes = normalizeList(payload.sizes);
+    const sizes = sortSizes(
+      normalizeList(payload.sizes).map((size) => normalizeSizeLabel(size))
+    );
     const fallbackPrice = toNumber(payload.basePrice) ?? toNumber(payload.pickupPrice);
     if (sizes.length && fallbackPrice !== null && fallbackPrice >= 0) {
       sizePrices = sizes.map((size) => ({ size, price: fallbackPrice }));
