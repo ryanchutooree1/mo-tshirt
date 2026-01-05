@@ -422,9 +422,9 @@ export default function AdminShopsPage() {
                   <li key={item.id} className="rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm">
                     <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                       <div className="flex min-w-0 items-start gap-5">
-                        <div className="h-24 w-24 overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-100 shadow-sm">
+                        <div className="h-24 w-24 rounded-2xl border border-neutral-200 bg-white p-2 shadow-sm">
                           {item.photoUrl ? (
-                            <img src={item.photoUrl} alt={item.title} className="h-full w-full object-cover" />
+                            <img src={item.photoUrl} alt={item.title} className="h-full w-full object-contain" />
                           ) : (
                             <div className="flex h-full w-full items-center justify-center text-[10px] text-neutral-400">
                               No photo
