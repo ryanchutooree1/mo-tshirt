@@ -596,9 +596,6 @@ export default function ShopClient() {
                           <option key={size} value={size}>{formatSizeLabel(size)}</option>
                         ))}
                       </select>
-                      <span className="text-[11px] text-neutral-500">
-                        Size {formatSizeLabel(selection.size)}
-                      </span>
                     </label>
                     <label className="flex flex-col gap-2">
                       Qty
