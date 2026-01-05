@@ -18,7 +18,11 @@ import {
 } from "@/lib/shops";
 
 type SortOrder = "default" | "price-asc";
-const DELIVERY_METHODS = ["Surinam pickup", "Post Office delivery"] as const;
+const DELIVERY_FEE = 100;
+const DELIVERY_METHODS = [
+  { value: "Surinam pickup", label: "Surinam pickup (Free)" },
+  { value: "Post Office delivery", label: `Post Office Delivery (Rs ${DELIVERY_FEE})` },
+] as const;
 
 const money = (value: number) => `Rs ${Number(value || 0).toLocaleString()}`;
 
@@ -113,6 +117,58 @@ export default function ShopClient() {
     () => orderLines.reduce((sum, line) => sum + line.quantity, 0),
     [orderLines]
   );
+
+  const itemsById = useMemo(() => {
+    const map = new Map<string, ShopItem>();
+    items.forEach((item) => map.set(item.id, item));
+    return map;
+  }, [items]);
+
+  const subtotal = useMemo(() => {
+    return orderLines.reduce((sum, line) => {
+      const item = itemsById.get(line.itemId);
+      if (!item) return sum;
+      const price = getSizePrice(item, line.size);
+      return sum + price * line.quantity;
+    }, 0);
+  }, [orderLines, itemsById]);
+
+  const deliveryFeeTotal =
+    orderLines.length > 0 && deliveryMethod === "Post Office delivery"
+      ? DELIVERY_FEE
+      : 0;
+  const totalPrice = subtotal + deliveryFeeTotal;
+
+  const groupedOrderLines = useMemo(() => {
+    const groups = new Map<
+      string,
+      {
+        key: string;
+        title: string;
+        color: string;
+        lines: { size: string; quantity: number; index: number }[];
+      }
+    >();
+    orderLines.forEach((line, index) => {
+      const key = `${line.itemId}:${line.color}`;
+      const group = groups.get(key) || {
+        key,
+        title: line.title,
+        color: line.color,
+        lines: [],
+      };
+      group.lines.push({ size: line.size, quantity: line.quantity, index });
+      groups.set(key, group);
+    });
+    return Array.from(groups.values()).map((group) => {
+      const order = sortSizes(group.lines.map((entry) => entry.size));
+      const bySize = new Map(group.lines.map((entry) => [entry.size, entry]));
+      return {
+        ...group,
+        lines: order.map((size) => bySize.get(size) || { size, quantity: 0, index: -1 }),
+      };
+    });
+  }, [orderLines]);
 
   const orderMessage = useMemo(
     () => buildShopWhatsAppMessageForLines(orderLines, deliveryMethod),
@@ -277,33 +333,36 @@ export default function ShopClient() {
             </div>
             <div className="mt-4 space-y-3 text-xs text-neutral-700">
               {orderLines.length ? (
-                orderLines.map((line, index) => (
-                  <div
-                    key={`${line.itemId}-${line.color}-${line.size}-${index}`}
-                    className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full border border-orange-200 bg-orange-50 px-2 py-1 text-[11px] font-semibold text-orange-700">
-                        {line.color}
-                      </span>
-                      <span className="text-sm font-semibold text-black">{line.title}</span>
+                groupedOrderLines.map((group) => (
+                  <div key={group.key} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
+                    <div className="text-sm font-semibold text-black">
+                      {group.color} {group.title}
                     </div>
-                    <p className="mt-2 text-[11px] text-neutral-500">Size: {line.size}</p>
-                    <div className="mt-3 flex items-center justify-between gap-2">
-                      <input
-                        type="number"
-                        min={1}
-                        value={line.quantity}
-                        onChange={(e) => updateLineQty(index, Number(e.target.value || 1))}
-                        className="w-16 rounded-xl border border-neutral-200 bg-white px-2 py-1 text-xs"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeLineItem(index)}
-                        className="rounded-full border border-neutral-300 px-3 py-1 text-[11px] font-semibold text-neutral-600 transition hover:bg-neutral-100"
-                      >
-                        Remove
-                      </button>
+                    <div className="mt-3 space-y-2">
+                      {group.lines.map((line) => (
+                        <div key={`${group.key}-${line.size}`} className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] text-neutral-600">Size: {line.size}</span>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min={1}
+                              value={line.quantity}
+                              onChange={(e) =>
+                                line.index >= 0 &&
+                                updateLineQty(line.index, Number(e.target.value || 1))
+                              }
+                              className="w-12 rounded-xl border border-neutral-200 bg-white px-2 py-1 text-center text-xs"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => line.index >= 0 && removeLineItem(line.index)}
+                              className="rounded-full border border-neutral-300 px-3 py-1 text-[11px] font-semibold text-neutral-600 transition hover:bg-neutral-100"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))
@@ -312,6 +371,23 @@ export default function ShopClient() {
                   Add colors and sizes from the cards to build your WhatsApp order.
                 </div>
               )}
+            </div>
+
+            <div className="mt-4 space-y-2 text-xs text-neutral-700">
+              <div className="flex items-center justify-between">
+                <span>Subtotal</span>
+                <span className="font-semibold">{money(subtotal)}</span>
+              </div>
+              {deliveryFeeTotal > 0 && (
+                <div className="flex items-center justify-between">
+                  <span>Post Office Delivery</span>
+                  <span className="font-semibold">{money(deliveryFeeTotal)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between text-sm font-semibold text-black">
+                <span>Total</span>
+                <span>{money(totalPrice)}</span>
+              </div>
             </div>
 
             <div className="mt-5">
@@ -323,8 +399,8 @@ export default function ShopClient() {
                   className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
                 >
                   {DELIVERY_METHODS.map((method) => (
-                    <option key={method} value={method}>
-                      {method}
+                    <option key={method.value} value={method.value}>
+                      {method.label}
                     </option>
                   ))}
                 </select>
@@ -377,7 +453,7 @@ export default function ShopClient() {
 
             return (
               <article key={item.id} className="group rounded-[28px] border border-neutral-200 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
-                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-neutral-100">
+                <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-neutral-100">
                   {item.photoUrl ? (
                     <Image
                       src={item.photoUrl}
