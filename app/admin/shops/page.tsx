@@ -505,7 +505,7 @@ export default function AdminShopsPage() {
                   Add size
                 </button>
               </div>
-              <div className="hidden sm:grid grid-cols-[1.1fr_1fr_1fr_1fr_auto] gap-3 text-[11px] uppercase tracking-[0.2em] text-neutral-500">
+              <div className="hidden sm:grid grid-cols-[1.1fr_0.85fr_0.85fr_0.85fr_auto] gap-3 text-[10px] uppercase tracking-[0.2em] text-neutral-500">
                 <span>Size</span>
                 <span>Selling price</span>
                 <span>Buying price</span>
@@ -516,12 +516,12 @@ export default function AdminShopsPage() {
                 {form.sizePrices.map((row, index) => (
                   <div
                     key={`${row.size}-${index}`}
-                    className="grid grid-cols-2 gap-3 sm:grid-cols-[1.1fr_1fr_1fr_1fr_auto] sm:items-center"
+                    className="grid grid-cols-2 gap-3 sm:grid-cols-[1.1fr_0.85fr_0.85fr_0.85fr_auto] sm:items-center"
                   >
                     <select
                       value={row.size}
                       onChange={(e) => updateSizeRow(index, { size: e.target.value })}
-                      className="col-span-2 rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm sm:col-span-1"
+                      className="col-span-2 rounded-xl border border-neutral-200 bg-white px-3 py-1.5 text-xs sm:col-span-1"
                       required
                     >
                       <option value="" disabled>
@@ -543,7 +543,7 @@ export default function AdminShopsPage() {
                           price: e.target.value === "" ? "" : Number(e.target.value),
                         })
                       }
-                      className="rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
+                      className="rounded-xl border border-neutral-200 bg-white px-3 py-1.5 text-xs"
                       placeholder="Selling price"
                     />
                     <input
@@ -556,7 +556,7 @@ export default function AdminShopsPage() {
                           buyingPrice: e.target.value === "" ? "" : Number(e.target.value),
                         })
                       }
-                      className="rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
+                      className="rounded-xl border border-neutral-200 bg-white px-3 py-1.5 text-xs"
                       placeholder="Buying price"
                     />
                     <input
@@ -568,7 +568,7 @@ export default function AdminShopsPage() {
                           profit: e.target.value === "" ? "" : Number(e.target.value),
                         })
                       }
-                      className="rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
+                      className="rounded-xl border border-neutral-200 bg-white px-3 py-1.5 text-xs"
                       placeholder="Profit"
                     />
                     <button

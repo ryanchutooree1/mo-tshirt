@@ -52,6 +52,12 @@ export type ShopSelection = {
   deliveryMethod: "Surinam pickup" | "Post Office delivery";
 };
 
+export type ShopOrderLine = {
+  color: string;
+  size: string;
+  quantity: number;
+};
+
 export function normalizeList(input: unknown): string[] {
   if (Array.isArray(input)) {
     return Array.from(
@@ -182,4 +188,25 @@ export function buildShopWhatsAppMessage(item: ShopItem, selection: ShopSelectio
     `Quantity: ${selection.quantity}`,
     `Delivery: ${selection.deliveryMethod}`,
   ].join("\n");
+}
+
+export function buildShopWhatsAppMessageForLines(
+  item: ShopItem,
+  lines: ShopOrderLine[],
+  deliveryMethod: ShopSelection["deliveryMethod"]
+) {
+  const cleaned = lines.filter(
+    (line) => line.color && line.size && Number.isFinite(line.quantity) && line.quantity > 0
+  );
+  const message: string[] = [`Hi! I'd like to order:`, `Product: ${item.title}`];
+  if (cleaned.length) {
+    message.push("Items:");
+    cleaned.forEach((line) => {
+      message.push(
+        `- Color: ${line.color}, Size: ${line.size}, Qty: ${line.quantity}`
+      );
+    });
+  }
+  message.push(`Delivery: ${deliveryMethod}`);
+  return message.join("\n");
 }
