@@ -53,6 +53,8 @@ export type ShopSelection = {
 };
 
 export type ShopOrderLine = {
+  itemId: string;
+  title: string;
   color: string;
   size: string;
   quantity: number;
@@ -191,19 +193,23 @@ export function buildShopWhatsAppMessage(item: ShopItem, selection: ShopSelectio
 }
 
 export function buildShopWhatsAppMessageForLines(
-  item: ShopItem,
   lines: ShopOrderLine[],
   deliveryMethod: ShopSelection["deliveryMethod"]
 ) {
   const cleaned = lines.filter(
-    (line) => line.color && line.size && Number.isFinite(line.quantity) && line.quantity > 0
+    (line) =>
+      line.title &&
+      line.color &&
+      line.size &&
+      Number.isFinite(line.quantity) &&
+      line.quantity > 0
   );
-  const message: string[] = [`Hi! I'd like to order:`, `Product: ${item.title}`];
+  const message: string[] = [`Hi! I'd like to order:`];
   if (cleaned.length) {
     message.push("Items:");
     cleaned.forEach((line) => {
       message.push(
-        `- Color: ${line.color}, Size: ${line.size}, Qty: ${line.quantity}`
+        `- ${line.title} | Color: ${line.color} | Size: ${line.size} | Qty: ${line.quantity}`
       );
     });
   }
