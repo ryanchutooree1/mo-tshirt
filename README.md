@@ -18,6 +18,24 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## Shops admin
+
+- Public catalog: `http://localhost:3000/shops`
+- Admin: `http://localhost:3000/admin/shops` (protected by password)
+
+### Environment
+
+Set the admin password in `.env.local`:
+
+```
+ADMIN_PASSWORD=your-strong-password
+```
+
+### Data + images
+
+- Shop items are stored in Firestore (collection: `shops`).
+- Item photos upload to Firebase Storage under `shops/` or you can paste a direct image URL in the admin form.
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More

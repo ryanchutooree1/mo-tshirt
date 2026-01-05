@@ -37,6 +37,7 @@ export const metadata: Metadata = {
 
 const navLinks = [
   { label: "Home", href: "#hero" },
+  { label: "Shops", href: "/shops" },
   { label: "Our Work", href: "#our-work" },
   { label: "Contact", href: "#contact" },
   { label: "WhatsApp", href: getWhatsAppUrl() },

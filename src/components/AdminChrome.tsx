@@ -21,6 +21,7 @@ const DEFAULT_TOP: NavItem[] = [
 
 const DEFAULT_MORE: NavItem[] = [
   { href: "/admin", label: "Dashboard" },
+  { href: "/admin/shops", label: "Shops" },
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/inventory", label: "Inventory" },
 ];
