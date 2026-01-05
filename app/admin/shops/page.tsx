@@ -6,7 +6,6 @@ import { storage } from "@/lib/firebase";
 import {
   DEFAULT_COLLECTION_POINT,
   DEFAULT_PICKUP_POINT,
-  getMinSizePrice,
   getSizePrices,
   SIZE_ORDER,
   type ShopItem,
@@ -65,7 +64,6 @@ type FormState = {
   title: string;
   colors: string;
   sizePrices: SizePriceRow[];
-  deliveryFee: number | "";
   pickupPoint: string;
   collectionPoint: string;
   photoUrl: string;
@@ -81,7 +79,6 @@ const emptyForm: FormState = {
   title: "",
   colors: "",
   sizePrices: DEFAULT_SIZE_ROWS,
-  deliveryFee: "",
   pickupPoint: DEFAULT_PICKUP_POINT,
   collectionPoint: DEFAULT_COLLECTION_POINT,
   photoUrl: "",
@@ -158,7 +155,6 @@ export default function AdminShopsPage() {
       sizePrices: sizePrices.length
         ? buildSizeRows(sizePrices)
         : buildSizeRows(),
-      deliveryFee: item.deliveryFee ?? "",
       pickupPoint: item.pickupPoint || DEFAULT_PICKUP_POINT,
       collectionPoint: item.collectionPoint || DEFAULT_COLLECTION_POINT,
       photoUrl: item.photoUrl || "",
@@ -283,7 +279,6 @@ export default function AdminShopsPage() {
         title: form.title,
         colors: form.colors,
         sizePrices,
-        deliveryFee: form.deliveryFee,
         pickupPoint: form.pickupPoint,
         collectionPoint: form.collectionPoint,
         photoUrl,
@@ -377,13 +372,12 @@ export default function AdminShopsPage() {
           ) : (
             <ul className="mt-6 space-y-4">
               {items.map((item, index) => {
-                const minPrice = getMinSizePrice(item);
                 const sizePrices = getSizePrices(item);
                 return (
                   <li key={item.id} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex items-start gap-4">
-                        <div className="h-16 w-16 overflow-hidden rounded-xl bg-white border border-neutral-200">
+                        <div className="h-20 w-20 overflow-hidden rounded-xl bg-white border border-neutral-200">
                           {item.photoUrl ? (
                             <img src={item.photoUrl} alt={item.title} className="h-full w-full object-cover" />
                           ) : (
@@ -420,10 +414,6 @@ export default function AdminShopsPage() {
                               <span className="text-neutral-500">No sizes set</span>
                             )}
                           </div>
-                          <p className="mt-2 text-xs text-neutral-600">
-                            From {money(minPrice)}{" "}
-                            {item.deliveryFee ? `- Postal delivery fee ${money(item.deliveryFee)}` : ""}
-                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -583,19 +573,6 @@ export default function AdminShopsPage() {
                 ))}
               </div>
               <p className="text-xs text-neutral-500">Leave selling price blank if that size is not available.</p>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-neutral-800">Postal delivery fee</label>
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                value={form.deliveryFee}
-                onChange={(e) => setForm((prev) => ({ ...prev, deliveryFee: e.target.value === "" ? "" : Number(e.target.value) }))}
-                className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
-                placeholder="Optional"
-              />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
