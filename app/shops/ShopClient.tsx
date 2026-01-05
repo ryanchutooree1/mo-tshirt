@@ -124,9 +124,15 @@ export default function ShopClient() {
             <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={140} height={48} className="h-9 w-auto" />
           </Link>
           <nav className="flex items-center gap-4 text-xs font-semibold text-neutral-600 sm:text-sm">
-            <Link href="/work" className="transition hover:text-black">Work</Link>
+            <Link href="/" className="transition hover:text-black">Home</Link>
+            <Link href="/shops" className="rounded-full bg-[#FF6600] px-3 py-1 text-white shadow-sm hover:bg-orange-600">
+              Plain Shops
+            </Link>
+            <Link href="/work" className="transition hover:text-black">Our Work</Link>
             <Link href="/contact" className="transition hover:text-black">Contact</Link>
-            <Link href="/shops" className="text-black">Shops</Link>
+            <a href={getWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="transition hover:text-black">
+              WhatsApp
+            </a>
           </nav>
         </div>
       </header>

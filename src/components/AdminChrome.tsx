@@ -96,13 +96,13 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
     <div className="min-h-screen bg-[#F5F5F7] text-[#1a1a1a]">
       {/* Top bar (always visible) */}
       <div className="sticky top-0 z-40 border-b border-gray-200 bg-white/90 backdrop-blur">
-        <div className="px-4 py-3 flex items-center justify-between">
+        <div className="px-4 py-3 grid grid-cols-3 items-center">
           <button
             type="button"
             aria-label="Open menu"
             aria-expanded={open}
             onClick={() => setOpen((s) => !s)}
-            className="inline-flex items-center justify-center rounded-md p-2 text-[#1a1a1a] hover:bg-[#f5f5f5]"
+            className="inline-flex items-center justify-center rounded-md p-2 text-[#1a1a1a] hover:bg-[#f5f5f5] justify-self-start"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
               {open ? (
@@ -112,8 +112,13 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
               )}
             </svg>
           </button>
-          <div className="text-lg font-semibold" style={{ fontFamily: "var(--font-admin-serif)" }}>MO Admin</div>
-          <div />
+          <div className="text-lg font-semibold justify-self-center" style={{ fontFamily: "var(--font-admin-serif)" }}>MO Admin</div>
+          <Link
+            href="/admin/shops"
+            className="justify-self-end inline-flex items-center rounded-full bg-[#FF6600] px-3 py-1 text-xs font-semibold text-white shadow-sm hover:bg-orange-600"
+          >
+            Shops
+          </Link>
         </div>
       </div>
 

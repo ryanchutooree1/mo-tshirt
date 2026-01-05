@@ -37,7 +37,7 @@ export const metadata: Metadata = {
 
 const navLinks = [
   { label: "Home", href: "#hero" },
-  { label: "Shops", href: "/shops" },
+  { label: "Plain Shops", href: "/shops", highlight: true },
   { label: "Our Work", href: "#our-work" },
   { label: "Contact", href: "#contact" },
   { label: "WhatsApp", href: getWhatsAppUrl() },
@@ -143,7 +143,11 @@ export default function HomePage() {
               <a
                 key={link.label}
                 href={link.href}
-                className="whitespace-nowrap transition hover:text-black"
+                className={`whitespace-nowrap transition ${
+                  link.highlight
+                    ? "rounded-full bg-[#FF6600] px-3 py-1 text-white shadow-sm hover:bg-orange-600"
+                    : "text-black/70 hover:text-black"
+                }`}
                 target={link.label === "WhatsApp" ? "_blank" : undefined}
                 rel={link.label === "WhatsApp" ? "noopener noreferrer" : undefined}
               >

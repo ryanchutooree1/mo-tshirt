@@ -167,6 +167,25 @@ export default function AdminShopsPage() {
     }
   }
 
+  async function uploadFileAndGetUrl() {
+    if (!file) return form.photoUrl;
+    setUploading(true);
+    try {
+      const pathSafe = file.name.replace(/\s+/g, "-").toLowerCase();
+      const storageRef = ref(storage, `shops/${Date.now()}-${pathSafe}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      setForm((prev) => ({ ...prev, photoUrl: url }));
+      setFile(null);
+      return url;
+    } catch (err) {
+      console.error("upload error", err);
+      throw new Error("Photo upload failed. Paste an image URL instead.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function saveItem(e: React.FormEvent) {
     e.preventDefault();
     if (saving) return;
@@ -175,6 +194,7 @@ export default function AdminShopsPage() {
     setError(null);
 
     try {
+      const photoUrl = await uploadFileAndGetUrl();
       const payload = {
         title: form.title,
         colors: form.colors,
@@ -183,7 +203,7 @@ export default function AdminShopsPage() {
         deliveredPrice: form.deliveredPrice,
         pickupPoint: form.pickupPoint,
         collectionPoint: form.collectionPoint,
-        photoUrl: form.photoUrl,
+        photoUrl,
         isActive: form.isActive,
         inStock: form.inStock,
       };
