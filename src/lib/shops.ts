@@ -60,6 +60,17 @@ export type ShopOrderLine = {
   quantity: number;
 };
 
+export type ShopOrderLineWithPrice = ShopOrderLine & {
+  unitPrice?: number | null;
+  lineTotal?: number | null;
+};
+
+export type DeliveryInfo = {
+  name: string;
+  address: string;
+  phone: string;
+};
+
 export function normalizeList(input: unknown): string[] {
   if (Array.isArray(input)) {
     return Array.from(
@@ -193,8 +204,10 @@ export function buildShopWhatsAppMessage(item: ShopItem, selection: ShopSelectio
 }
 
 export function buildShopWhatsAppMessageForLines(
-  lines: ShopOrderLine[],
-  deliveryMethod: ShopSelection["deliveryMethod"]
+  lines: ShopOrderLineWithPrice[],
+  deliveryMethod: ShopSelection["deliveryMethod"],
+  totals?: { subtotal?: number; deliveryFee?: number; total?: number },
+  deliveryInfo?: DeliveryInfo | null
 ) {
   const cleaned = lines.filter(
     (line) =>
@@ -208,11 +221,38 @@ export function buildShopWhatsAppMessageForLines(
   if (cleaned.length) {
     message.push("Items:");
     cleaned.forEach((line) => {
-      message.push(
-        `- ${line.title} | Color: ${line.color} | Size: ${line.size} | Qty: ${line.quantity}`
-      );
+      const parts = [
+        `- ${line.title}`,
+        `Color: ${line.color}`,
+        `Size: ${line.size}`,
+        `Qty: ${line.quantity}`,
+      ];
+      if (Number.isFinite(line.unitPrice)) {
+        parts.push(`Price: Rs ${Number(line.unitPrice || 0).toLocaleString()}`);
+      }
+      if (Number.isFinite(line.lineTotal)) {
+        parts.push(`Line total: Rs ${Number(line.lineTotal || 0).toLocaleString()}`);
+      }
+      message.push(parts.join(" | "));
     });
   }
   message.push(`Delivery: ${deliveryMethod}`);
+  if (deliveryMethod === "Post Office delivery" && deliveryInfo) {
+    message.push("Delivery Info:");
+    message.push(`Name: ${deliveryInfo.name}`);
+    message.push(`Address: ${deliveryInfo.address}`);
+    message.push(`Phone: ${deliveryInfo.phone}`);
+  }
+  if (totals) {
+    if (Number.isFinite(totals.subtotal)) {
+      message.push(`Subtotal: Rs ${Number(totals.subtotal || 0).toLocaleString()}`);
+    }
+    if (Number.isFinite(totals.deliveryFee) && (totals.deliveryFee || 0) > 0) {
+      message.push(`Post Office Delivery: Rs ${Number(totals.deliveryFee || 0).toLocaleString()}`);
+    }
+    if (Number.isFinite(totals.total)) {
+      message.push(`Total: Rs ${Number(totals.total || 0).toLocaleString()}`);
+    }
+  }
   return message.join("\n");
 }

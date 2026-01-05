@@ -11,8 +11,10 @@ import {
   getSizePrices,
   getSizes,
   sortSizes,
+  type DeliveryInfo,
   type ShopItem,
   type ShopOrderLine,
+  type ShopOrderLineWithPrice,
   type ShopSelection,
 } from "@/lib/shops";
 
@@ -43,6 +45,11 @@ export default function ShopClient() {
   const [selections, setSelections] = useState<Record<string, ItemSelection>>({});
   const [orderLines, setOrderLines] = useState<ShopOrderLine[]>([]);
   const [deliveryMethod, setDeliveryMethod] = useState<ShopSelection["deliveryMethod"]>("Surinam pickup");
+  const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo>({
+    name: "",
+    address: "",
+    phone: "",
+  });
 
   useEffect(() => {
     let active = true;
@@ -132,6 +139,21 @@ export default function ShopClient() {
     }, 0);
   }, [orderLines, itemsById]);
 
+  const orderLinesWithPrice = useMemo<ShopOrderLineWithPrice[]>(() => {
+    return orderLines.map((line) => {
+      const item = itemsById.get(line.itemId);
+      if (!item) {
+        return { ...line, unitPrice: null, lineTotal: null };
+      }
+      const unitPrice = getSizePrice(item, line.size);
+      return {
+        ...line,
+        unitPrice,
+        lineTotal: unitPrice * line.quantity,
+      };
+    });
+  }, [orderLines, itemsById]);
+
   const deliveryFeeTotal =
     orderLines.length > 0 && deliveryMethod === "Post Office delivery"
       ? DELIVERY_FEE
@@ -169,9 +191,37 @@ export default function ShopClient() {
     });
   }, [orderLines]);
 
+  const deliveryInfoRequired = deliveryMethod === "Post Office delivery";
+  const deliveryInfoValid =
+    !deliveryInfoRequired ||
+    Boolean(
+      deliveryInfo.name.trim() &&
+        deliveryInfo.address.trim() &&
+        deliveryInfo.phone.trim()
+    );
+  const canOrder = orderLines.length > 0 && deliveryInfoValid;
+
   const orderMessage = useMemo(
-    () => buildShopWhatsAppMessageForLines(orderLines, deliveryMethod),
-    [orderLines, deliveryMethod]
+    () =>
+      buildShopWhatsAppMessageForLines(
+        orderLinesWithPrice,
+        deliveryMethod,
+        {
+          subtotal,
+          deliveryFee: deliveryFeeTotal,
+          total: totalPrice,
+        },
+        deliveryInfoRequired ? deliveryInfo : null
+      ),
+    [
+      orderLinesWithPrice,
+      deliveryMethod,
+      subtotal,
+      deliveryFeeTotal,
+      totalPrice,
+      deliveryInfo,
+      deliveryInfoRequired,
+    ]
   );
 
   function updateSelection(id: string, patch: Partial<ItemSelection>) {
@@ -406,19 +456,43 @@ export default function ShopClient() {
               </label>
             </div>
 
+            {deliveryInfoRequired && (
+              <div className="mt-4 space-y-3">
+                <p className="text-xs font-semibold text-neutral-700">Delivery Info</p>
+                <input
+                  value={deliveryInfo.name}
+                  onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, name: e.target.value }))}
+                  className="w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+                  placeholder="Your Name"
+                />
+                <input
+                  value={deliveryInfo.address}
+                  onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, address: e.target.value }))}
+                  className="w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+                  placeholder="Your Address"
+                />
+                <input
+                  value={deliveryInfo.phone}
+                  onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, phone: e.target.value }))}
+                  className="w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+                  placeholder="Your Phone Number"
+                />
+              </div>
+            )}
+
             <div className="mt-5 space-y-3">
               <a
                 href={getWhatsAppUrl(orderMessage)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
-                  orderLines.length
+                  canOrder
                     ? "bg-[#FF6600] text-white hover:bg-orange-600"
                     : "cursor-not-allowed bg-neutral-200 text-neutral-500"
                 }`}
-                aria-disabled={!orderLines.length}
+                aria-disabled={!canOrder}
                 onClick={(e) => {
-                  if (!orderLines.length) e.preventDefault();
+                  if (!canOrder) e.preventDefault();
                 }}
               >
                 Order on WhatsApp
