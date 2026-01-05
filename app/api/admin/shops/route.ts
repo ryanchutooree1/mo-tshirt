@@ -9,6 +9,14 @@ function isAdmin() {
   return cookies().get("admin-auth")?.value === "1";
 }
 
+function getPositionValue(data: Record<string, any>) {
+  if (Number.isFinite(data.position)) return Number(data.position);
+  const createdAt = data.createdAt;
+  if (createdAt?.toMillis) return createdAt.toMillis();
+  if (Number.isFinite(createdAt)) return Number(createdAt);
+  return 0;
+}
+
 function mapDoc(id: string, data: Record<string, any>): ShopItem {
   return {
     id,
@@ -23,6 +31,7 @@ function mapDoc(id: string, data: Record<string, any>): ShopItem {
     pickupPoint: data.pickupPoint ?? null,
     collectionPoint: data.collectionPoint ?? null,
     photoUrl: data.photoUrl ?? null,
+    position: getPositionValue(data),
     isActive: Boolean(data.isActive),
     inStock: data.inStock !== false,
   };
@@ -36,6 +45,7 @@ export async function GET() {
   try {
     const snap = await getDocs(query(collection(db, "shops"), orderBy("createdAt", "desc")));
     const items = snap.docs.map((doc) => mapDoc(doc.id, doc.data()));
+    items.sort((a, b) => (b.position || 0) - (a.position || 0));
     return NextResponse.json({ items });
   } catch (error) {
     console.error("shops:admin:get", error);
@@ -57,6 +67,7 @@ export async function POST(req: Request) {
 
     const payload = {
       ...parsed.data,
+      position: Date.now(),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };

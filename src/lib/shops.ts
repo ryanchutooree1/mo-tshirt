@@ -37,6 +37,7 @@ export type ShopItem = {
   pickupPoint?: string | null;
   collectionPoint?: string | null;
   photoUrl?: string | null;
+  position?: number;
   isActive: boolean;
   inStock: boolean;
 };

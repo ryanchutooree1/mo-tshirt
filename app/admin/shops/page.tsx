@@ -91,7 +91,9 @@ export default function AdminShopsPage() {
       const res = await fetch("/api/admin/shops");
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to load shops.");
-      setItems(Array.isArray(data?.items) ? data.items : []);
+      const list = Array.isArray(data?.items) ? data.items : [];
+      list.sort((a, b) => (b.position || 0) - (a.position || 0));
+      setItems(list);
       setError(null);
     } catch (err: any) {
       setError(err?.message || "Failed to load shops.");
@@ -108,6 +110,16 @@ export default function AdminShopsPage() {
     () => items.find((item) => item.id === editingId) || null,
     [items, editingId]
   );
+
+  const maxPosition = useMemo(() => {
+    if (!items.length) return 0;
+    return items.reduce((acc, item) => Math.max(acc, item.position || 0), 0);
+  }, [items]);
+
+  const minPosition = useMemo(() => {
+    if (!items.length) return 0;
+    return items.reduce((acc, item) => Math.min(acc, item.position || 0), 0);
+  }, [items]);
 
   function resetForm() {
     setEditingId(null);
@@ -247,6 +259,24 @@ export default function AdminShopsPage() {
     }
   }
 
+  async function moveItem(id: string, direction: "top" | "bottom") {
+    const item = items.find((entry) => entry.id === id);
+    if (!item) return;
+    const position = direction === "top" ? maxPosition + 1 : minPosition - 1;
+    try {
+      const res = await fetch("/api/admin/shops/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, position }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Failed to reorder item.");
+      await refresh();
+    } catch (err: any) {
+      setError(err?.message || "Failed to reorder item.");
+    }
+  }
+
   return (
     <main className="mx-auto w-full max-w-6xl px-6 py-10 space-y-8">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -325,6 +355,18 @@ export default function AdminShopsPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => moveItem(item.id, "top")}
+                          className="rounded-full border border-neutral-300 px-3 py-1.5 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-100"
+                        >
+                          Top
+                        </button>
+                        <button
+                          onClick={() => moveItem(item.id, "bottom")}
+                          className="rounded-full border border-neutral-300 px-3 py-1.5 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-100"
+                        >
+                          Bottom
+                        </button>
                         <button
                           onClick={() => startEdit(item)}
                           className="rounded-full border border-black px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-black hover:text-white"

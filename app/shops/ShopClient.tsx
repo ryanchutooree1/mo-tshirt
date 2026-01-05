@@ -88,6 +88,7 @@ export default function ShopClient() {
 
   const filtered = useMemo(() => {
     let next = items.slice();
+    next.sort((a, b) => (b.position || 0) - (a.position || 0));
     if (selectedColor !== "all") {
       next = next.filter((item) => item.colors.includes(selectedColor));
     }
@@ -210,10 +211,6 @@ export default function ShopClient() {
               };
             const sizePrice = getSizePrice(item, selection.size);
             const displayColor = selection.color || item.colors[0] || "Color";
-            const colors = [
-              displayColor,
-              ...item.colors.filter((color) => color !== displayColor),
-            ];
             const collectionPoint = item.collectionPoint || DEFAULT_COLLECTION_POINT;
 
             return (
@@ -265,20 +262,6 @@ export default function ShopClient() {
                     )}
                   </div>
 
-                  <div className="flex flex-wrap gap-2 text-xs text-neutral-600">
-                    {colors.map((color) => (
-                      <span
-                        key={color}
-                        className={`rounded-full border px-3 py-1 ${
-                          color === displayColor
-                            ? "border-orange-200 bg-orange-50 text-orange-700"
-                            : "border-neutral-200 text-neutral-600"
-                        }`}
-                      >
-                        {color}
-                      </span>
-                    ))}
-                  </div>
                   <div className="flex flex-wrap gap-2 text-xs text-neutral-600">
                     {sizePrices.length ? (
                       sizePrices.map((entry) => (

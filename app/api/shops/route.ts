@@ -3,6 +3,14 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { ShopItem } from "@/lib/shops";
 
+function getPositionValue(data: Record<string, any>) {
+  if (Number.isFinite(data.position)) return Number(data.position);
+  const createdAt = data.createdAt;
+  if (createdAt?.toMillis) return createdAt.toMillis();
+  if (Number.isFinite(createdAt)) return Number(createdAt);
+  return 0;
+}
+
 function mapDoc(id: string, data: Record<string, any>): ShopItem {
   return {
     id,
@@ -17,6 +25,7 @@ function mapDoc(id: string, data: Record<string, any>): ShopItem {
     pickupPoint: null,
     collectionPoint: data.collectionPoint ?? null,
     photoUrl: data.photoUrl ?? null,
+    position: getPositionValue(data),
     isActive: Boolean(data.isActive),
     inStock: data.inStock !== false,
   };
@@ -28,6 +37,7 @@ export async function GET() {
       query(collection(db, "shops"), where("isActive", "==", true))
     );
     const items = snap.docs.map((doc) => mapDoc(doc.id, doc.data()));
+    items.sort((a, b) => (b.position || 0) - (a.position || 0));
     return NextResponse.json({ items });
   } catch (error) {
     console.error("shops:get", error);
