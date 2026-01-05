@@ -12,27 +12,59 @@ import {
   type ShopItem,
 } from "@/lib/shops";
 
-type SizePriceRow = { size: string; price: number | "" };
+type SizePriceRow = {
+  size: string;
+  price: number | "";
+  buyingPrice: number | "";
+  profit: number | "";
+  profitAuto: boolean;
+};
 
 const SIZE_ORDER_SET = new Set(SIZE_ORDER);
 
-function buildSizeRows(existing: { size: string; price: number }[] = []): SizePriceRow[] {
-  const priceMap = new Map(existing.map((entry) => [entry.size, entry.price]));
+function buildSizeRows(
+  existing: { size: string; price: number; buyingPrice?: number | null; profit?: number | null }[] = []
+): SizePriceRow[] {
+  const rowMap = new Map<string, { price: number; buyingPrice: number | ""; profit: number | ""; profitAuto: boolean }>();
+  existing.forEach((entry) => {
+    rowMap.set(entry.size, {
+      price: entry.price,
+      buyingPrice:
+        Number.isFinite(entry.buyingPrice) ? (entry.buyingPrice as number) : "",
+      profit: Number.isFinite(entry.profit) ? (entry.profit as number) : "",
+      profitAuto: !Number.isFinite(entry.profit),
+    });
+  });
   const ordered = SIZE_ORDER.map((size) => ({
     size,
-    price: priceMap.get(size) ?? "",
+    price: rowMap.get(size)?.price ?? "",
+    buyingPrice: rowMap.get(size)?.buyingPrice ?? "",
+    profit: rowMap.get(size)?.profit ?? "",
+    profitAuto: rowMap.get(size)?.profitAuto ?? true,
   }));
   const extras = existing
     .filter((entry) => !SIZE_ORDER_SET.has(entry.size))
-    .map((entry) => ({ size: entry.size, price: entry.price }));
-  return [...ordered, ...extras];
+    .map((entry) => ({
+      size: entry.size,
+      price: entry.price,
+      buyingPrice:
+        Number.isFinite(entry.buyingPrice) ? (entry.buyingPrice as number) : "",
+      profit: Number.isFinite(entry.profit) ? (entry.profit as number) : "",
+      profitAuto: !Number.isFinite(entry.profit),
+    }));
+  const merged = [...ordered, ...extras];
+  return merged.map((row) => {
+    if (row.profitAuto && row.price !== "" && row.buyingPrice !== "") {
+      return { ...row, profit: Number(row.price) - Number(row.buyingPrice) };
+    }
+    return row;
+  });
 }
 
 type FormState = {
   title: string;
   colors: string;
   sizePrices: SizePriceRow[];
-  buyingPrice: number | "";
   deliveryFee: number | "";
   pickupPoint: string;
   collectionPoint: string;
@@ -49,7 +81,6 @@ const emptyForm: FormState = {
   title: "",
   colors: "",
   sizePrices: DEFAULT_SIZE_ROWS,
-  buyingPrice: "",
   deliveryFee: "",
   pickupPoint: DEFAULT_PICKUP_POINT,
   collectionPoint: DEFAULT_COLLECTION_POINT,
@@ -111,16 +142,6 @@ export default function AdminShopsPage() {
     [items, editingId]
   );
 
-  const maxPosition = useMemo(() => {
-    if (!items.length) return 0;
-    return items.reduce((acc, item) => Math.max(acc, item.position || 0), 0);
-  }, [items]);
-
-  const minPosition = useMemo(() => {
-    if (!items.length) return 0;
-    return items.reduce((acc, item) => Math.min(acc, item.position || 0), 0);
-  }, [items]);
-
   function resetForm() {
     setEditingId(null);
     setForm({ ...emptyForm, sizePrices: buildSizeRows() });
@@ -137,7 +158,6 @@ export default function AdminShopsPage() {
       sizePrices: sizePrices.length
         ? buildSizeRows(sizePrices)
         : buildSizeRows(),
-      buyingPrice: item.buyingPrice ?? "",
       deliveryFee: item.deliveryFee ?? "",
       pickupPoint: item.pickupPoint || DEFAULT_PICKUP_POINT,
       collectionPoint: item.collectionPoint || DEFAULT_COLLECTION_POINT,
@@ -149,10 +169,24 @@ export default function AdminShopsPage() {
     setNotice(null);
   }
 
+  function computeProfitValue(price: number | "", buyingPrice: number | "") {
+    if (price === "" || buyingPrice === "") return "";
+    if (!Number.isFinite(price) || !Number.isFinite(buyingPrice)) return "";
+    return Number(price) - Number(buyingPrice);
+  }
+
   function updateSizeRow(index: number, patch: Partial<SizePriceRow>) {
     setForm((prev) => {
       const next = prev.sizePrices.slice();
-      next[index] = { ...next[index], ...patch };
+      const current = next[index];
+      const merged = { ...current, ...patch };
+      if (Object.prototype.hasOwnProperty.call(patch, "profit")) {
+        merged.profitAuto = patch.profit === "";
+      }
+      if (merged.profitAuto) {
+        merged.profit = computeProfitValue(merged.price, merged.buyingPrice);
+      }
+      next[index] = merged;
       return { ...prev, sizePrices: next };
     });
   }
@@ -160,14 +194,22 @@ export default function AdminShopsPage() {
   function addSizeRow() {
     setForm((prev) => ({
       ...prev,
-      sizePrices: [...prev.sizePrices, { size: "", price: "" }],
+      sizePrices: [
+        ...prev.sizePrices,
+        { size: "", price: "", buyingPrice: "", profit: "", profitAuto: true },
+      ],
     }));
   }
 
   function removeSizeRow(index: number) {
     setForm((prev) => {
       const next = prev.sizePrices.filter((_, i) => i !== index);
-      return { ...prev, sizePrices: next.length ? next : [{ size: "", price: "" }] };
+      return {
+        ...prev,
+        sizePrices: next.length
+          ? next
+          : [{ size: "", price: "", buyingPrice: "", profit: "", profitAuto: true }],
+      };
     });
   }
 
@@ -216,11 +258,31 @@ export default function AdminShopsPage() {
 
     try {
       const photoUrl = await uploadFileAndGetUrl();
+      const sizePrices = form.sizePrices
+        .filter((row) => row.size && row.price !== "" && Number.isFinite(row.price))
+        .map((row) => {
+          const buyingPrice =
+            row.buyingPrice === "" || !Number.isFinite(row.buyingPrice)
+              ? null
+              : Number(row.buyingPrice);
+          const profit =
+            row.profit === "" || !Number.isFinite(row.profit)
+              ? row.profitAuto && buyingPrice !== null && row.price !== ""
+                ? Number(row.price) - Number(buyingPrice)
+                : null
+              : Number(row.profit);
+          return {
+            size: row.size,
+            price: Number(row.price),
+            buyingPrice,
+            profit,
+          };
+        });
+
       const payload = {
         title: form.title,
         colors: form.colors,
-        sizePrices: form.sizePrices,
-        buyingPrice: form.buyingPrice,
+        sizePrices,
         deliveryFee: form.deliveryFee,
         pickupPoint: form.pickupPoint,
         collectionPoint: form.collectionPoint,
@@ -259,15 +321,25 @@ export default function AdminShopsPage() {
     }
   }
 
-  async function moveItem(id: string, direction: "top" | "bottom") {
-    const item = items.find((entry) => entry.id === id);
-    if (!item) return;
-    const position = direction === "top" ? maxPosition + 1 : minPosition - 1;
+  async function moveItem(index: number, direction: "up" | "down") {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= items.length) return;
+    const current = items[index];
+    const target = items[targetIndex];
+    if (!current || !target) return;
+
+    const currentPos = Number.isFinite(current.position) ? (current.position as number) : index;
+    const targetPos = Number.isFinite(target.position) ? (target.position as number) : targetIndex;
     try {
       const res = await fetch("/api/admin/shops/reorder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, position }),
+        body: JSON.stringify({
+          items: [
+            { id: current.id, position: targetPos },
+            { id: target.id, position: currentPos },
+          ],
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Failed to reorder item.");
@@ -304,7 +376,7 @@ export default function AdminShopsPage() {
             <div className="mt-6 text-sm text-neutral-500">Loading items...</div>
           ) : (
             <ul className="mt-6 space-y-4">
-              {items.map((item) => {
+              {items.map((item, index) => {
                 const minPrice = getMinSizePrice(item);
                 const sizePrices = getSizePrices(item);
                 return (
@@ -356,16 +428,16 @@ export default function AdminShopsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => moveItem(item.id, "top")}
+                          onClick={() => moveItem(index, "up")}
                           className="rounded-full border border-neutral-300 px-3 py-1.5 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-100"
                         >
-                          Top
+                          Up
                         </button>
                         <button
-                          onClick={() => moveItem(item.id, "bottom")}
+                          onClick={() => moveItem(index, "down")}
                           className="rounded-full border border-neutral-300 px-3 py-1.5 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-100"
                         >
-                          Bottom
+                          Down
                         </button>
                         <button
                           onClick={() => startEdit(item)}
@@ -433,13 +505,23 @@ export default function AdminShopsPage() {
                   Add size
                 </button>
               </div>
+              <div className="hidden sm:grid grid-cols-[1.1fr_1fr_1fr_1fr_auto] gap-3 text-[11px] uppercase tracking-[0.2em] text-neutral-500">
+                <span>Size</span>
+                <span>Selling price</span>
+                <span>Buying price</span>
+                <span>Profit</span>
+                <span className="sr-only">Remove</span>
+              </div>
               <div className="space-y-3">
                 {form.sizePrices.map((row, index) => (
-                  <div key={`${row.size}-${index}`} className="grid grid-cols-[1fr_1fr_auto] gap-3">
+                  <div
+                    key={`${row.size}-${index}`}
+                    className="grid grid-cols-2 gap-3 sm:grid-cols-[1.1fr_1fr_1fr_1fr_auto] sm:items-center"
+                  >
                     <select
                       value={row.size}
                       onChange={(e) => updateSizeRow(index, { size: e.target.value })}
-                      className="rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
+                      className="col-span-2 rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm sm:col-span-1"
                       required
                     >
                       <option value="" disabled>
@@ -462,12 +544,37 @@ export default function AdminShopsPage() {
                         })
                       }
                       className="rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
-                      placeholder="Price"
+                      placeholder="Selling price"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={row.buyingPrice}
+                      onChange={(e) =>
+                        updateSizeRow(index, {
+                          buyingPrice: e.target.value === "" ? "" : Number(e.target.value),
+                        })
+                      }
+                      className="rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
+                      placeholder="Buying price"
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={row.profit}
+                      onChange={(e) =>
+                        updateSizeRow(index, {
+                          profit: e.target.value === "" ? "" : Number(e.target.value),
+                        })
+                      }
+                      className="rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
+                      placeholder="Profit"
                     />
                     <button
                       type="button"
                       onClick={() => removeSizeRow(index)}
-                      className="rounded-full border border-neutral-300 px-3 text-xs font-semibold text-neutral-600 transition hover:bg-neutral-100"
+                      className="col-span-2 rounded-full border border-neutral-300 px-3 text-xs font-semibold text-neutral-600 transition hover:bg-neutral-100 sm:col-span-1"
                       aria-label="Remove size"
                     >
                       Remove
@@ -475,34 +582,20 @@ export default function AdminShopsPage() {
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-neutral-500">Leave price blank if that size is not available.</p>
+              <p className="text-xs text-neutral-500">Leave selling price blank if that size is not available.</p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="text-sm font-medium text-neutral-800">Buying price</label>
-                <input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={form.buyingPrice}
-                  onChange={(e) => setForm((prev) => ({ ...prev, buyingPrice: e.target.value === "" ? "" : Number(e.target.value) }))}
-                  className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
-                  placeholder="Optional"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-neutral-800">Postal delivery fee</label>
-                <input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={form.deliveryFee}
-                  onChange={(e) => setForm((prev) => ({ ...prev, deliveryFee: e.target.value === "" ? "" : Number(e.target.value) }))}
-                  className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
-                  placeholder="Optional"
-                />
-              </div>
+            <div>
+              <label className="text-sm font-medium text-neutral-800">Postal delivery fee</label>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={form.deliveryFee}
+                onChange={(e) => setForm((prev) => ({ ...prev, deliveryFee: e.target.value === "" ? "" : Number(e.target.value) }))}
+                className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
+                placeholder="Optional"
+              />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">

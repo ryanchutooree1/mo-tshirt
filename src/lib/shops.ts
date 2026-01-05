@@ -22,6 +22,8 @@ export const SIZE_ORDER = [
 export type ShopSizePrice = {
   size: string;
   price: number;
+  buyingPrice?: number | null;
+  profit?: number | null;
 };
 
 export type ShopItem = {
@@ -32,7 +34,6 @@ export type ShopItem = {
   sizes?: string[];
   basePrice?: number;
   pickupPrice?: number | null;
-  buyingPrice?: number | null;
   deliveryFee?: number | null;
   pickupPoint?: string | null;
   collectionPoint?: string | null;
@@ -82,14 +83,20 @@ export function toNumber(value: unknown): number | null {
 }
 
 function uniqueSizePrices(list: ShopSizePrice[]): ShopSizePrice[] {
-  const map = new Map<string, number>();
+  const map = new Map<string, ShopSizePrice>();
   list.forEach((entry) => {
     const size = String(entry.size || "").trim();
     const price = Number(entry.price);
     if (!size || !Number.isFinite(price) || price < 0) return;
-    map.set(size, price);
+    map.set(size, {
+      size,
+      price,
+      buyingPrice:
+        Number.isFinite(entry.buyingPrice) ? (entry.buyingPrice as number) : null,
+      profit: Number.isFinite(entry.profit) ? (entry.profit as number) : null,
+    });
   });
-  return Array.from(map.entries()).map(([size, price]) => ({ size, price }));
+  return Array.from(map.values());
 }
 
 const sizeOrderMap = new Map<string, number>(

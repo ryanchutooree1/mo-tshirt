@@ -20,7 +20,6 @@ function mapDoc(id: string, data: Record<string, any>): ShopItem {
     sizes: Array.isArray(data.sizes) ? data.sizes : [],
     basePrice: Number(data.basePrice ?? 0),
     pickupPrice: data.pickupPrice ?? null,
-    buyingPrice: null,
     deliveryFee: data.deliveryFee ?? null,
     pickupPoint: null,
     collectionPoint: data.collectionPoint ?? null,

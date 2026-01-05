@@ -30,11 +30,17 @@ function normalizeSizePrices(input: unknown): ShopSizePrice[] {
       .map((entry) => ({
         size: cleanString((entry as any)?.size),
         price: toNumber((entry as any)?.price),
+        buyingPrice: toNumber((entry as any)?.buyingPrice),
+        profit: toNumber((entry as any)?.profit),
       }))
       .filter((entry) => entry.size && entry.price !== null && entry.price >= 0) as ShopSizePrice[];
-    const map = new Map<string, number>();
-    list.forEach((entry) => map.set(entry.size, entry.price));
-    return Array.from(map.entries()).map(([size, price]) => ({ size, price }));
+    return list.map((entry) => ({
+      size: entry.size,
+      price: entry.price as number,
+      buyingPrice:
+        entry.buyingPrice !== null && entry.buyingPrice >= 0 ? entry.buyingPrice : null,
+      profit: Number.isFinite(entry.profit) ? (entry.profit as number) : null,
+    }));
   }
 
   if (input && typeof input === "object") {
@@ -76,10 +82,6 @@ export function parseShopPayload(body: unknown): ParseResult {
   sizePrices = sortSizePrices(sizePrices);
   const sizes = sizePrices.map((entry) => entry.size);
   const basePrice = Math.min(...sizePrices.map((entry) => entry.price));
-  const buyingPrice = toNumber(payload.buyingPrice);
-  if (buyingPrice !== null && buyingPrice < 0) {
-    return { ok: false, error: "Buying price must be 0 or higher." };
-  }
 
   const deliveryFee = toNumber(payload.deliveryFee);
   if (deliveryFee !== null && deliveryFee < 0) {
@@ -100,7 +102,6 @@ export function parseShopPayload(body: unknown): ParseResult {
     sizes,
     sizePrices,
     basePrice,
-    buyingPrice: buyingPrice ?? null,
     deliveryFee: deliveryFee ?? null,
     pickupPoint,
     collectionPoint,
