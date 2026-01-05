@@ -1,5 +1,23 @@
 export const DEFAULT_PICKUP_POINT = "Nouvelle France";
 export const DEFAULT_COLLECTION_POINT = "Surinam";
+export const SIZE_ORDER = [
+  "1 Yr Old",
+  "2 Yrs Old",
+  "4 Yrs Old",
+  "6 Yrs Old",
+  "8 Yrs Old",
+  "10 Yrs Old",
+  "12 Yrs Old",
+  "14 Yrs Old",
+  "XS",
+  "S",
+  "M",
+  "L",
+  "XL",
+  "2XL",
+  "3XL",
+  "4XL",
+] as const;
 
 export type ShopSizePrice = {
   size: string;
@@ -14,8 +32,8 @@ export type ShopItem = {
   sizes?: string[];
   basePrice?: number;
   pickupPrice?: number | null;
+  buyingPrice?: number | null;
   deliveryFee?: number | null;
-  deliveredPrice?: number | null;
   pickupPoint?: string | null;
   collectionPoint?: string | null;
   photoUrl?: string | null;
@@ -73,9 +91,33 @@ function uniqueSizePrices(list: ShopSizePrice[]): ShopSizePrice[] {
   return Array.from(map.entries()).map(([size, price]) => ({ size, price }));
 }
 
+const sizeOrderMap = new Map<string, number>(
+  SIZE_ORDER.map((label, index) => [label, index])
+);
+
+export function sortSizePrices(list: ShopSizePrice[]): ShopSizePrice[] {
+  return list
+    .map((entry, index) => ({
+      entry,
+      order: sizeOrderMap.has(entry.size) ? sizeOrderMap.get(entry.size)! : SIZE_ORDER.length + index,
+    }))
+    .sort((a, b) => a.order - b.order)
+    .map(({ entry }) => entry);
+}
+
+export function sortSizes(list: string[]): string[] {
+  return list
+    .map((size, index) => ({
+      size,
+      order: sizeOrderMap.has(size) ? sizeOrderMap.get(size)! : SIZE_ORDER.length + index,
+    }))
+    .sort((a, b) => a.order - b.order)
+    .map(({ size }) => size);
+}
+
 export function getSizePrices(item: ShopItem): ShopSizePrice[] {
   if (Array.isArray(item.sizePrices) && item.sizePrices.length) {
-    const cleaned = uniqueSizePrices(item.sizePrices);
+    const cleaned = sortSizePrices(uniqueSizePrices(item.sizePrices));
     if (cleaned.length) return cleaned;
   }
 
@@ -86,10 +128,11 @@ export function getSizePrices(item: ShopItem): ShopSizePrice[] {
     0;
 
   if (sizes.length) {
-    return sizes
-      .map((size) => String(size || "").trim())
-      .filter(Boolean)
-      .map((size) => ({ size, price: fallbackPrice }));
+    return sortSizes(
+      sizes
+        .map((size) => String(size || "").trim())
+        .filter(Boolean)
+    ).map((size) => ({ size, price: fallbackPrice }));
   }
 
   if (Number.isFinite(fallbackPrice)) {
@@ -116,14 +159,8 @@ export function getMinSizePrice(item: ShopItem): number {
   return list.reduce((acc, entry) => (entry.price < acc ? entry.price : acc), list[0].price);
 }
 
-export function getPickupPrice(item: ShopItem, size?: string): number {
-  if (size) return getSizePrice(item, size);
-  return getMinSizePrice(item);
-}
-
 export function getDeliveredPrice(item: ShopItem, sizePrice?: number): number | null {
   const base = Number.isFinite(sizePrice) ? (sizePrice as number) : getMinSizePrice(item);
-  if (Number.isFinite(item.deliveredPrice)) return item.deliveredPrice as number;
   if (Number.isFinite(item.deliveryFee)) return base + (item.deliveryFee as number);
   return null;
 }

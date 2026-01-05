@@ -2,6 +2,7 @@ import {
   DEFAULT_COLLECTION_POINT,
   DEFAULT_PICKUP_POINT,
   normalizeList,
+  sortSizePrices,
   toNumber,
   type ShopItemInput,
   type ShopSizePrice,
@@ -72,21 +73,17 @@ export function parseShopPayload(body: unknown): ParseResult {
     return { ok: false, error: "Add at least one size with a price." };
   }
 
+  sizePrices = sortSizePrices(sizePrices);
   const sizes = sizePrices.map((entry) => entry.size);
   const basePrice = Math.min(...sizePrices.map((entry) => entry.price));
+  const buyingPrice = toNumber(payload.buyingPrice);
+  if (buyingPrice !== null && buyingPrice < 0) {
+    return { ok: false, error: "Buying price must be 0 or higher." };
+  }
 
   const deliveryFee = toNumber(payload.deliveryFee);
   if (deliveryFee !== null && deliveryFee < 0) {
-    return { ok: false, error: "Delivery fee must be 0 or higher." };
-  }
-
-  const deliveredPrice = toNumber(payload.deliveredPrice);
-  if (deliveredPrice !== null && deliveredPrice < 0) {
-    return { ok: false, error: "Delivered price must be 0 or higher." };
-  }
-
-  if (deliveredPrice === null && deliveryFee === null) {
-    return { ok: false, error: "Provide a delivered price or a delivery fee." };
+    return { ok: false, error: "Postal delivery fee must be 0 or higher." };
   }
 
   const pickupPoint = cleanString(payload.pickupPoint) || DEFAULT_PICKUP_POINT;
@@ -103,8 +100,8 @@ export function parseShopPayload(body: unknown): ParseResult {
     sizes,
     sizePrices,
     basePrice,
+    buyingPrice: buyingPrice ?? null,
     deliveryFee: deliveryFee ?? null,
-    deliveredPrice: deliveredPrice ?? null,
     pickupPoint,
     collectionPoint,
     photoUrl,

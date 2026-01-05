@@ -7,12 +7,11 @@ import { getWhatsAppUrl } from "@/data/work";
 import {
   buildShopWhatsAppMessage,
   DEFAULT_COLLECTION_POINT,
-  DEFAULT_PICKUP_POINT,
-  getDeliveredPrice,
   getMinSizePrice,
   getSizePrice,
   getSizePrices,
   getSizes,
+  sortSizes,
   type ShopItem,
   type ShopSelection,
 } from "@/lib/shops";
@@ -84,7 +83,7 @@ export default function ShopClient() {
   const availableSizes = useMemo(() => {
     const set = new Set<string>();
     items.forEach((item) => getSizes(item).forEach((size) => set.add(size)));
-    return Array.from(set).sort();
+    return sortSizes(Array.from(set));
   }, [items]);
 
   const filtered = useMemo(() => {
@@ -211,9 +210,6 @@ export default function ShopClient() {
               };
             const minPrice = getMinSizePrice(item);
             const sizePrice = getSizePrice(item, selection.size);
-            const deliveredPrice = getDeliveredPrice(item, sizePrice);
-            const showDeliveryFee = deliveredPrice === null && Number.isFinite(item.deliveryFee);
-            const pickupPoint = item.pickupPoint || DEFAULT_PICKUP_POINT;
             const collectionPoint = item.collectionPoint || DEFAULT_COLLECTION_POINT;
 
             return (
@@ -243,7 +239,7 @@ export default function ShopClient() {
                   <div>
                     <h2 className="text-lg font-semibold text-black">{item.title}</h2>
                     <p className="text-xs text-neutral-500">
-                      Pickup: {pickupPoint} | Collection: {collectionPoint}
+                      Collection point: {collectionPoint}
                     </p>
                   </div>
 
@@ -253,18 +249,12 @@ export default function ShopClient() {
                       <span className="font-semibold">{money(minPrice)}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span>Pickup price (selected size)</span>
+                      <span>Price (selected size)</span>
                       <span className="font-semibold">{money(sizePrice)}</span>
                     </div>
-                    {deliveredPrice !== null && (
+                    {Number.isFinite(item.deliveryFee) && (
                       <div className="flex items-center justify-between">
-                        <span>Delivered price</span>
-                        <span className="font-semibold">{money(deliveredPrice)}</span>
-                      </div>
-                    )}
-                    {showDeliveryFee && (
-                      <div className="flex items-center justify-between">
-                        <span>Delivery fee</span>
+                        <span>Postal delivery fee</span>
                         <span className="font-semibold">{money(item.deliveryFee as number)}</span>
                       </div>
                     )}

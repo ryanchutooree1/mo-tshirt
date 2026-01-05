@@ -6,9 +6,9 @@ import { storage } from "@/lib/firebase";
 import {
   DEFAULT_COLLECTION_POINT,
   DEFAULT_PICKUP_POINT,
-  getDeliveredPrice,
   getMinSizePrice,
   getSizePrices,
+  SIZE_ORDER,
   type ShopItem,
 } from "@/lib/shops";
 
@@ -18,8 +18,8 @@ type FormState = {
   title: string;
   colors: string;
   sizePrices: SizePriceRow[];
+  buyingPrice: number | "";
   deliveryFee: number | "";
-  deliveredPrice: number | "";
   pickupPoint: string;
   collectionPoint: string;
   photoUrl: string;
@@ -38,8 +38,8 @@ const emptyForm: FormState = {
   title: "",
   colors: "",
   sizePrices: DEFAULT_SIZE_ROWS,
+  buyingPrice: "",
   deliveryFee: "",
-  deliveredPrice: "",
   pickupPoint: DEFAULT_PICKUP_POINT,
   collectionPoint: DEFAULT_COLLECTION_POINT,
   photoUrl: "",
@@ -114,8 +114,8 @@ export default function AdminShopsPage() {
       sizePrices: sizePrices.length
         ? sizePrices.map((entry) => ({ size: entry.size, price: entry.price }))
         : DEFAULT_SIZE_ROWS.map((row) => ({ ...row })),
+      buyingPrice: item.buyingPrice ?? "",
       deliveryFee: item.deliveryFee ?? "",
-      deliveredPrice: item.deliveredPrice ?? "",
       pickupPoint: item.pickupPoint || DEFAULT_PICKUP_POINT,
       collectionPoint: item.collectionPoint || DEFAULT_COLLECTION_POINT,
       photoUrl: item.photoUrl || "",
@@ -197,8 +197,8 @@ export default function AdminShopsPage() {
         title: form.title,
         colors: form.colors,
         sizePrices: form.sizePrices,
+        buyingPrice: form.buyingPrice,
         deliveryFee: form.deliveryFee,
-        deliveredPrice: form.deliveredPrice,
         pickupPoint: form.pickupPoint,
         collectionPoint: form.collectionPoint,
         photoUrl,
@@ -265,7 +265,6 @@ export default function AdminShopsPage() {
             <ul className="mt-6 space-y-4">
               {items.map((item) => {
                 const minPrice = getMinSizePrice(item);
-                const deliveredPrice = getDeliveredPrice(item, minPrice);
                 const sizePrices = getSizePrices(item);
                 return (
                   <li key={item.id} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
@@ -306,7 +305,7 @@ export default function AdminShopsPage() {
                           </div>
                           <p className="mt-2 text-xs text-neutral-600">
                             From {money(minPrice)}{" "}
-                            {deliveredPrice !== null ? `- Delivered ${money(deliveredPrice)}` : ""}
+                            {item.deliveryFee ? `- Postal delivery fee ${money(item.deliveryFee)}` : ""}
                           </p>
                         </div>
                       </div>
@@ -380,13 +379,21 @@ export default function AdminShopsPage() {
               <div className="space-y-3">
                 {form.sizePrices.map((row, index) => (
                   <div key={`${row.size}-${index}`} className="grid grid-cols-[1fr_1fr_auto] gap-3">
-                    <input
+                    <select
                       value={row.size}
                       onChange={(e) => updateSizeRow(index, { size: e.target.value })}
                       className="rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
-                      placeholder="Size (e.g. M)"
                       required
-                    />
+                    >
+                      <option value="" disabled>
+                        Select size
+                      </option>
+                      {SIZE_ORDER.map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
                     <input
                       type="number"
                       min={0}
@@ -416,7 +423,19 @@ export default function AdminShopsPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="text-sm font-medium text-neutral-800">Delivery fee</label>
+                <label className="text-sm font-medium text-neutral-800">Buying price</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={form.buyingPrice}
+                  onChange={(e) => setForm((prev) => ({ ...prev, buyingPrice: e.target.value === "" ? "" : Number(e.target.value) }))}
+                  className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
+                  placeholder="Optional"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-neutral-800">Postal delivery fee</label>
                 <input
                   type="number"
                   min={0}
@@ -426,19 +445,6 @@ export default function AdminShopsPage() {
                   className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
                   placeholder="Optional"
                 />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-neutral-800">Delivered price</label>
-                <input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={form.deliveredPrice}
-                  onChange={(e) => setForm((prev) => ({ ...prev, deliveredPrice: e.target.value === "" ? "" : Number(e.target.value) }))}
-                  className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-2 text-sm"
-                  placeholder="Optional"
-                />
-                <p className="mt-1 text-xs text-neutral-500">Delivered price overrides delivery fee.</p>
               </div>
             </div>
 
