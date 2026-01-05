@@ -563,9 +563,18 @@ export default function ShopClient() {
                   <div className="flex flex-wrap gap-2 text-xs text-neutral-600">
                     {sizePrices.length ? (
                       sizePrices.map((entry) => (
-                        <span key={entry.size} className="rounded-full border border-neutral-200 px-3 py-1">
+                        <button
+                          key={entry.size}
+                          type="button"
+                          onClick={() => updateSelection(item.id, { size: entry.size })}
+                          className={`rounded-full border px-3 py-1 transition ${
+                            selection.size === entry.size
+                              ? "border-black bg-black text-white"
+                              : "border-neutral-200 hover:border-neutral-400"
+                          }`}
+                        >
                           {formatSizeLabel(entry.size)} {money(entry.price)}
-                        </span>
+                        </button>
                       ))
                     ) : (
                       <span className="text-neutral-400">Sizes not set</span>
