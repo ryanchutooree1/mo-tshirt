@@ -6,7 +6,6 @@ import { HiOutlineCheckBadge, HiOutlineBolt, HiOutlineGlobeAlt, HiOutlineSparkle
 import Gallery from "@/components/Gallery";
 import MapCard from "@/components/MapCard";
 import QuoteForm from "@/components/QuoteForm";
-import PricingEstimator from "@/components/PricingEstimator";
 import LocationJump from "@/components/LocationJump";
 
 const pageTitle = "MO T-SHIRT PRINTING | Fastest in Mauritius";
@@ -189,43 +188,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Printing Options */}
-        <section id="printing-options" className="px-6 py-24">
-          <div className="mx-auto max-w-6xl">
-            <div className="relative overflow-hidden rounded-[32px] border border-[#EAEAEA] bg-gradient-to-br from-[#FFF3E8] via-white to-[#F6F7FB] p-8 text-center shadow-sm">
-              <div className="pointer-events-none absolute -top-12 right-0 h-32 w-32 rounded-full bg-orange-100/70 blur-3xl" aria-hidden="true" />
-              <div className="pointer-events-none absolute -bottom-14 left-4 h-32 w-32 rounded-full bg-orange-100/60 blur-3xl" aria-hidden="true" />
-
-              <div className="relative">
-                <p className="text-xs uppercase tracking-[0.08em] text-orange-500">Print methods</p>
-                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-black sm:text-4xl">
-                  Vinyl or DTF for custom T-shirt printing?
-                </h2>
-                <p className="mt-4 text-base text-neutral-600">
-                  Two fast options in Mauritius. We help you pick the right finish.
-                </p>
-              </div>
-
-              <div className="relative mt-10 grid gap-6 md:grid-cols-2">
-                <div className="rounded-2xl border border-[#EAEAEA] bg-white/90 p-6 text-left shadow-sm">
-                  <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">Vinyl</p>
-                  <h3 className="mt-2 text-lg font-semibold text-black">Crisp logos and names</h3>
-                  <p className="mt-2 text-sm text-neutral-600">
-                    Best for 1-3 colors with sharp edges. Ideal for small runs, uniforms, and workwear.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-[#EAEAEA] bg-white/90 p-6 text-left shadow-sm">
-                  <p className="text-xs uppercase tracking-[0.14em] text-neutral-400">DTF</p>
-                  <h3 className="mt-2 text-lg font-semibold text-black">Full-color artwork</h3>
-                  <p className="mt-2 text-sm text-neutral-600">
-                    Best for gradients and photos. Soft feel and durable on tees or polos.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* Why Choose Us */}
         <section id="why" className="bg-[#F9F9F9] px-6 py-24">
           <div className="mx-auto max-w-6xl text-center">
@@ -273,7 +235,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="grid gap-8 lg:grid-cols-2">
+            <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.75fr)] lg:items-stretch">
               <div className="rounded-[24px] border border-[#EAEAEA] bg-white p-8 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div>
@@ -281,49 +243,20 @@ export default function HomePage() {
                     <h3 className="text-2xl font-semibold text-black">Get pricing in hours</h3>
                     <p className="text-sm text-neutral-600">Share quantities, garments, deadline, and delivery preference.</p>
                   </div>
-                  <span className="hidden rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-600 sm:inline-block">
-                    48h rush available
-                  </span>
                 </div>
                 <div className="mt-6">
                   <QuoteForm source="Home contact" />
                 </div>
               </div>
-
-              <div className="space-y-6">
-                <PricingEstimator />
-
-                <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-6">
-                  <h3 className="text-lg font-semibold text-black">Prefer to talk?</h3>
-                  <p className="mt-2 text-sm text-neutral-700">
-                    Call, email, or WhatsApp. We can help pick fabrics, recommend print methods, and organise pickup/delivery.
-                  </p>
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <a
-                      href={`tel:${CONTACT_TEL}`}
-                      className="inline-flex items-center justify-center rounded-full border border-black px-4 py-2 text-sm font-semibold text-black transition hover:bg-black hover:text-white"
-                    >
-                      Call {CONTACT_PHONE_DISPLAY}
-                    </a>
-                    <a
-                      href={getWhatsAppUrl()}
-                      className="inline-flex items-center justify-center rounded-full bg-[#FF6600] px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600"
-                    >
-                      WhatsApp
-                    </a>
-                    <a
-                      href={`mailto:${CONTACT_EMAIL}`}
-                      className="inline-flex items-center justify-center rounded-full border border-black px-4 py-2 text-sm font-semibold text-black transition hover:bg-black hover:text-white"
-                    >
-                      Email us
-                    </a>
-                  </div>
-                  <ul className="mt-4 space-y-2 text-sm text-neutral-600">
-                    <li>• Pickup Surinam, Mauritius. Delivery via Mauritius Post.</li>
-                    <li>• Standard turnaround 5–7 working days; rush in 48h on request.</li>
-                    <li>• Bulk discounts kick in at 50+ units.</li>
-                  </ul>
-                </div>
+              <div className="relative overflow-hidden rounded-[24px] border border-[#EAEAEA] bg-neutral-50 shadow-sm">
+                <Image
+                  src="/boss_imagine.png"
+                  alt="MO T-SHIRT team"
+                  width={1024}
+                  height={1536}
+                  className="block h-auto w-full object-contain"
+                  sizes="(max-width: 1024px) 100vw, 40vw"
+                />
               </div>
             </div>
 

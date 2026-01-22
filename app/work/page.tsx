@@ -1,6 +1,5 @@
 import Link from "next/link";
 import Gallery from "@/components/Gallery";
-import PricingEstimator from "@/components/PricingEstimator";
 import QuoteForm from "@/components/QuoteForm";
 import { CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
 
@@ -65,7 +64,6 @@ export default function WorkIndexPage() {
         </div>
 
         <div className="space-y-6">
-          <PricingEstimator />
           <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-6">
             <h3 className="text-lg font-semibold text-black">Need advice?</h3>
             <p className="mt-2 text-sm text-neutral-700">

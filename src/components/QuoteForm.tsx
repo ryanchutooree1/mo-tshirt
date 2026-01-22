@@ -126,7 +126,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
               value={form.name}
               onChange={(e) => update("name", e.target.value)}
               className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
-              placeholder="Jane Doe"
+              placeholder="Your Name"
             />
           </div>
           <div>
@@ -152,7 +152,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
               value={form.phone}
               onChange={(e) => update("phone", e.target.value)}
               className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
-              placeholder={CONTACT_PHONE_DISPLAY}
+              placeholder="e.g.,+230 5988 3880"
             />
           </div>
           <div>
@@ -204,7 +204,6 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
               onChange={(e) => update("quantity", e.target.value)}
               className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
             />
-            <p className="mt-1 text-xs text-neutral-500">Better pricing kicks in above 50 units.</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700">Upload logo (PNG, JPG, JPEG, PDF)</label>
@@ -214,7 +213,6 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
               onChange={handleFileChange}
               className="mt-1 w-full cursor-pointer rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
             />
-            <p className="mt-1 text-xs text-neutral-500">Attach your logo for an exact proof and pricing.</p>
           </div>
         </div>
 
