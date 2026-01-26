@@ -49,6 +49,7 @@ export default function ShopClient() {
     address: "",
     phone: "",
   });
+  const [isOrderOpen, setIsOrderOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -90,6 +91,20 @@ export default function ShopClient() {
       return next;
     });
   }, [items]);
+
+  useEffect(() => {
+    if (!isOrderOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsOrderOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOrderOpen]);
 
   const availableProducts = useMemo(() => {
     const set = new Set<string>();
@@ -166,6 +181,9 @@ export default function ShopClient() {
       ? DELIVERY_FEE
       : 0;
   const totalPrice = subtotal + deliveryFeeTotal;
+  const orderItemsSummary = orderLines.length
+    ? `${orderLines.length} item${orderLines.length === 1 ? "" : "s"} · ${totalQty} qty`
+    : "0 items";
 
   const groupedOrderLines = useMemo(() => {
     const groups = new Map<
@@ -268,6 +286,7 @@ export default function ShopClient() {
       }
       return next;
     });
+    setIsOrderOpen(true);
   }
 
   function removeLineItem(index: number) {
@@ -317,8 +336,7 @@ export default function ShopClient() {
       </header>
 
       <main className="mx-auto w-full max-w-6xl px-6 py-14">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
-          <div className="space-y-8">
+        <div className="space-y-8">
             <section className="space-y-4">
               <p className="text-xs uppercase tracking-[0.2em] text-orange-500">Shops</p>
               <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Ready-to-order essentials</h1>
@@ -380,147 +398,6 @@ export default function ShopClient() {
                 {error}
               </div>
             )}
-          </div>
-
-          <aside className="h-fit rounded-[28px] border border-neutral-200 bg-white p-5 shadow-sm lg:sticky lg:top-24">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold">Order list</h3>
-              <span className="text-xs text-neutral-500">
-                {orderLines.length
-                  ? `${orderLines.length} item${orderLines.length === 1 ? "" : "s"} · ${totalQty} qty`
-                  : "0 items"}
-              </span>
-            </div>
-            <div className="mt-4 space-y-3 text-xs text-neutral-700">
-              {orderLines.length ? (
-                groupedOrderLines.map((group) => (
-                  <div key={group.key} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
-                    <div className="text-sm font-semibold text-black">
-                      {group.color} {group.title}
-                    </div>
-                    <div className="mt-3 space-y-2">
-                      {group.lines.map((line) => (
-                        <div key={`${group.key}-${line.size}`} className="flex items-center justify-between gap-2">
-                          <span className="text-[11px] text-neutral-600">
-                            Size {formatSizeLabel(line.size)}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              min={1}
-                              value={line.quantity}
-                              onChange={(e) =>
-                                line.index >= 0 &&
-                                updateLineQty(line.index, Number(e.target.value || 1))
-                              }
-                              className="w-12 rounded-xl border border-neutral-200 bg-white px-2 py-1 text-center text-xs"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => line.index >= 0 && removeLineItem(line.index)}
-                              className="rounded-full border border-neutral-300 px-3 py-1 text-[11px] font-semibold text-neutral-600 transition hover:bg-neutral-100"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-dashed border-neutral-200 px-4 py-6 text-center text-xs text-neutral-500">
-                  Add colors and sizes from the cards to build your WhatsApp order.
-                </div>
-              )}
-            </div>
-
-            <div className="mt-4 space-y-2 text-xs text-neutral-700">
-              <div className="flex items-center justify-between">
-                <span>Subtotal</span>
-                <span className="font-semibold">{money(subtotal)}</span>
-              </div>
-              {deliveryFeeTotal > 0 && (
-                <div className="flex items-center justify-between">
-                  <span>Post Office Delivery</span>
-                  <span className="font-semibold">{money(deliveryFeeTotal)}</span>
-                </div>
-              )}
-              <div className="flex items-center justify-between text-sm font-semibold text-black">
-                <span>Total</span>
-                <span>{money(totalPrice)}</span>
-              </div>
-            </div>
-
-            <div className="mt-5">
-              <label className="text-xs font-medium text-neutral-600">
-                Delivery
-                <select
-                  value={deliveryMethod}
-                  onChange={(e) => setDeliveryMethod(e.target.value as ShopSelection["deliveryMethod"])}
-                  className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
-                >
-                  {DELIVERY_METHODS.map((method) => (
-                    <option key={method.value} value={method.value}>
-                      {method.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            {deliveryInfoRequired && (
-              <div className="mt-4 space-y-3">
-                <p className="text-xs font-semibold text-neutral-700">Delivery Info</p>
-                <input
-                  value={deliveryInfo.name}
-                  onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, name: e.target.value }))}
-                  className="w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
-                  placeholder="Your Name"
-                />
-                <input
-                  value={deliveryInfo.address}
-                  onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, address: e.target.value }))}
-                  className="w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
-                  placeholder="Your Address"
-                />
-                <input
-                  value={deliveryInfo.phone}
-                  onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, phone: e.target.value }))}
-                  className="w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
-                  placeholder="Your Phone Number"
-                />
-              </div>
-            )}
-
-            <div className="mt-5 space-y-3">
-              <a
-                href={getWhatsAppUrl(orderMessage)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
-                  canOrder
-                    ? "bg-[#FF6600] text-white hover:bg-orange-600"
-                    : "cursor-not-allowed bg-neutral-200 text-neutral-500"
-                }`}
-                aria-disabled={!canOrder}
-                onClick={(e) => {
-                  if (!canOrder) e.preventDefault();
-                }}
-              >
-                Order on WhatsApp
-              </a>
-              {!!orderLines.length && (
-                <button
-                  type="button"
-                  onClick={clearLineItems}
-                  className="inline-flex w-full items-center justify-center rounded-full border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-600 transition hover:bg-neutral-100"
-                >
-                  Clear list
-                </button>
-              )}
-            </div>
-          </aside>
         </div>
 
         <section className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -661,6 +538,185 @@ export default function ShopClient() {
           </div>
         )}
       </main>
+
+      <button
+        type="button"
+        onClick={() => setIsOrderOpen(true)}
+        className={`fixed bottom-6 right-6 z-40 flex items-center gap-3 rounded-full bg-black px-4 py-3 text-xs font-semibold text-white shadow-lg shadow-black/30 transition hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${
+          isOrderOpen ? "pointer-events-none opacity-0" : ""
+        }`}
+        aria-label="Open order list"
+      >
+        <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-white/20 px-2 text-[11px]">
+          {totalQty}
+        </span>
+        <span>{orderLines.length ? "View order" : "Start order"}</span>
+        <span className="text-orange-300">{money(totalPrice)}</span>
+      </button>
+
+      <div
+        className={`fixed inset-0 z-50 ${isOrderOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+        aria-hidden={!isOrderOpen}
+      >
+        <div
+          className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${isOrderOpen ? "opacity-100" : "opacity-0"}`}
+          onClick={() => setIsOrderOpen(false)}
+        />
+        <aside
+          role="dialog"
+          aria-modal="true"
+          aria-label="Order list"
+          className={`absolute bottom-0 left-0 right-0 mx-auto w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-t-[32px] bg-white p-5 shadow-2xl transition-transform duration-300 ease-out sm:bottom-auto sm:top-20 sm:right-6 sm:left-auto sm:mx-0 sm:max-w-[380px] sm:rounded-[32px] sm:shadow-xl sm:max-h-[80vh] ${
+            isOrderOpen ? "translate-y-0 sm:translate-x-0" : "translate-y-full sm:translate-x-[120%]"
+          }`}
+        >
+          <div className="mx-auto mb-3 h-1 w-12 rounded-full bg-neutral-200 sm:hidden" />
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-orange-500">Order</p>
+              <h3 className="text-base font-semibold">Order list</h3>
+              <span className="text-xs text-neutral-500">{orderItemsSummary}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsOrderOpen(false)}
+              className="rounded-full border border-neutral-200 px-3 py-1 text-[11px] font-semibold text-neutral-600 transition hover:bg-neutral-100"
+            >
+              Close
+            </button>
+          </div>
+
+          <div className="mt-4 space-y-3 text-xs text-neutral-700">
+            {orderLines.length ? (
+              groupedOrderLines.map((group) => (
+                <div key={group.key} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
+                  <div className="text-sm font-semibold text-black">
+                    {group.color} {group.title}
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {group.lines.map((line) => (
+                      <div key={`${group.key}-${line.size}`} className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] text-neutral-600">
+                          Size {formatSizeLabel(line.size)}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={1}
+                            value={line.quantity}
+                            onChange={(e) =>
+                              line.index >= 0 &&
+                              updateLineQty(line.index, Number(e.target.value || 1))
+                            }
+                            className="w-12 rounded-xl border border-neutral-200 bg-white px-2 py-1 text-center text-xs"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => line.index >= 0 && removeLineItem(line.index)}
+                            className="rounded-full border border-neutral-300 px-3 py-1 text-[11px] font-semibold text-neutral-600 transition hover:bg-neutral-100"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-dashed border-neutral-200 px-4 py-6 text-center text-xs text-neutral-500">
+                Add colors and sizes from the cards to build your WhatsApp order.
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 space-y-2 text-xs text-neutral-700">
+            <div className="flex items-center justify-between">
+              <span>Subtotal</span>
+              <span className="font-semibold">{money(subtotal)}</span>
+            </div>
+            {deliveryFeeTotal > 0 && (
+              <div className="flex items-center justify-between">
+                <span>Post Office Delivery</span>
+                <span className="font-semibold">{money(deliveryFeeTotal)}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between text-sm font-semibold text-black">
+              <span>Total</span>
+              <span>{money(totalPrice)}</span>
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <label className="text-xs font-medium text-neutral-600">
+              Delivery
+              <select
+                value={deliveryMethod}
+                onChange={(e) => setDeliveryMethod(e.target.value as ShopSelection["deliveryMethod"])}
+                className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+              >
+                {DELIVERY_METHODS.map((method) => (
+                  <option key={method.value} value={method.value}>
+                    {method.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          {deliveryInfoRequired && (
+            <div className="mt-4 space-y-3">
+              <p className="text-xs font-semibold text-neutral-700">Delivery Info</p>
+              <input
+                value={deliveryInfo.name}
+                onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, name: e.target.value }))}
+                className="w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+                placeholder="Your Name"
+              />
+              <input
+                value={deliveryInfo.address}
+                onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, address: e.target.value }))}
+                className="w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+                placeholder="Your Address"
+              />
+              <input
+                value={deliveryInfo.phone}
+                onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, phone: e.target.value }))}
+                className="w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+                placeholder="Your Phone Number"
+              />
+            </div>
+          )}
+
+          <div className="mt-5 space-y-3">
+            <a
+              href={getWhatsAppUrl(orderMessage)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
+                canOrder
+                  ? "bg-[#FF6600] text-white hover:bg-orange-600"
+                  : "cursor-not-allowed bg-neutral-200 text-neutral-500"
+              }`}
+              aria-disabled={!canOrder}
+              onClick={(e) => {
+                if (!canOrder) e.preventDefault();
+              }}
+            >
+              Order on WhatsApp
+            </a>
+            {!!orderLines.length && (
+              <button
+                type="button"
+                onClick={clearLineItems}
+                className="inline-flex w-full items-center justify-center rounded-full border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-600 transition hover:bg-neutral-100"
+              >
+                Clear list
+              </button>
+            )}
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
