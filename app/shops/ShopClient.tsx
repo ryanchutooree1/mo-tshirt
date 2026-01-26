@@ -703,7 +703,7 @@ export default function ShopClient() {
                 if (!canOrder) e.preventDefault();
               }}
             >
-              Order on WhatsApp
+              Send Order on WhatsApp
             </a>
             {!!orderLines.length && (
               <button
