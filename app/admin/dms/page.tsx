@@ -17,6 +17,8 @@ import {
   FiUploadCloud,
   FiFolder,
   FiFileText,
+  FiCheckCircle,
+  FiBarChart2,
   FiSearch,
   FiTrash2,
   FiEdit2,
@@ -424,6 +426,14 @@ export default function DMSPage() {
   const isImage = (name = '') => /\.(jpe?g|png|gif|webp)$/i.test(name);
   const isPdf = (name = '') => /\.pdf$/i.test(name);
 
+  const stats = useMemo(() => {
+    const folders = items.filter(i => i.isFolder).length;
+    const files = items.filter(i => !i.isFolder).length;
+    const selectedCount = Object.values(selected).filter(Boolean).length;
+    const totalSize = items.reduce((sum, i) => sum + (i.size || 0), 0);
+    return { folders, files, selectedCount, totalSize };
+  }, [items, selected]);
+
   // keyboard: close preview with Esc
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -434,71 +444,176 @@ export default function DMSPage() {
   }, []);
 
   return (
-    <main className="min-h-screen p-6 max-w-6xl mx-auto">
-      <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
-        <div>
-          <h1 className="text-3xl font-bold">DMS — Documents</h1>
-          <p className="text-gray-600">Upload, manage and share PDFs & images securely</p>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => setCurrentPath('documents/')} className="px-3 py-2 bg-white border rounded shadow text-sm">Home</button>
-          <button onClick={createFolder} className="px-3 py-2 bg-blue-600 text-white rounded shadow text-sm"><FiFolder className="inline mr-2" />New Folder</button>
-          <button onClick={triggerFilePicker} className="px-3 py-2 bg-green-600 text-white rounded shadow text-sm"><FiUploadCloud className="inline mr-2" />Upload</button>
-        </div>
-      </div>
-
-      <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFilesSelected} />
-
-      {/* drag area + search + sort + bulk actions */}
+    <main className="relative min-h-screen">
       <div
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        className={clsx('border-2 rounded p-4 mb-4 flex flex-wrap items-center justify-between gap-4', dragOver ? 'border-dashed border-blue-400 bg-blue-50' : 'border-gray-100')}
-      >
-        <div className="flex items-center gap-4 flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <button onClick={navigateUp} title="Up" className="px-3 py-2 bg-white border rounded">
+        aria-hidden
+        className="pointer-events-none absolute -top-40 right-[-12rem] h-80 w-80 rounded-full bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.35),transparent_70%)] blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-[-10rem] top-48 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.25),transparent_70%)] blur-3xl"
+      />
+      <div className="relative mx-auto max-w-6xl space-y-6 px-6 py-8">
+        {/* Hero */}
+        <section
+          className="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 p-6 shadow-sm backdrop-blur"
+          style={{ animation: 'fadeUp 0.6s ease-out both' }}
+        >
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_60%)]"
+          />
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-sky-600">DMS</p>
+              <h1 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">Documents</h1>
+              <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
+                Upload, manage, and share PDFs & images with clean folders, quick previews, and secure links.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                  <FiUploadCloud className="h-4 w-4" /> Fast uploads
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                  <FiFileText className="h-4 w-4" /> PDF & image preview
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                  Shareable links
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setCurrentPath('documents/')}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+              >
+                Home
+              </button>
+              <button
+                onClick={createFolder}
+                className="inline-flex items-center gap-2 rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
+              >
+                <FiFolder className="h-4 w-4" /> New Folder
+              </button>
+              <button
+                onClick={triggerFilePicker}
+                className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+              >
+                <FiUploadCloud className="h-4 w-4" /> Upload
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* Stats */}
+        <section
+          className="grid grid-cols-2 gap-4 md:grid-cols-4"
+          style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.08s' }}
+        >
+          <StatCard label="Folders" value={stats.folders} tone="sky" icon={<FiFolder className="h-4 w-4" />} />
+          <StatCard label="Files" value={stats.files} tone="slate" icon={<FiFileText className="h-4 w-4" />} />
+          <StatCard label="Selected" value={stats.selectedCount} tone="amber" icon={<FiCheckCircle className="h-4 w-4" />} />
+          <StatCard label="Storage" value={humanSize(stats.totalSize)} tone="emerald" icon={<FiBarChart2 className="h-4 w-4" />} />
+        </section>
+
+        <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFilesSelected} />
+
+        {/* Dropzone */}
+        <section
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          className={clsx(
+            'rounded-3xl border-2 border-dashed p-5 shadow-sm transition',
+            dragOver ? 'border-sky-400 bg-sky-50' : 'border-slate-200 bg-white/90'
+          )}
+          style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.14s' }}
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-sm font-semibold text-slate-800">Drag & drop files here</div>
+              <div className="text-xs text-slate-500">Or use the upload button to choose files.</div>
+            </div>
+            <button
+              onClick={triggerFilePicker}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+            >
+              <FiUploadCloud className="h-4 w-4" /> Choose files
+            </button>
+          </div>
+        </section>
+
+        {/* Filters */}
+        <section
+          className="sticky top-20 z-10 rounded-3xl border border-slate-200/70 bg-white/90 p-4 shadow-sm backdrop-blur"
+          style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.18s' }}
+        >
+          <div className="flex flex-wrap items-start gap-3">
+            <button onClick={navigateUp} title="Up" className="rounded-full border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50">
               <FiChevronLeft />
             </button>
-            <div className="text-sm text-gray-700">Path:
+            <div className="text-xs text-slate-500">
+              Path:
               <span className="ml-2">
-                <button onClick={() => setCurrentPath('documents/')} className="text-blue-600 hover:underline">documents</button>
+                <button onClick={() => setCurrentPath('documents/')} className="text-sky-600 font-semibold hover:underline">
+                  documents
+                </button>
                 {crumbs.map((c, idx) => (
-                  <span key={idx} className="ml-2"> / <button onClick={() => {
-                    const p = crumbs.slice(0, idx + 1).join('/') + '/';
-                    setCurrentPath(`documents/${p}`);
-                  }} className="text-blue-600 hover:underline ml-2">{c}</button></span>
+                  <span key={idx} className="ml-2">
+                    /{' '}
+                    <button
+                      onClick={() => {
+                        const p = crumbs.slice(0, idx + 1).join('/') + '/';
+                        setCurrentPath(`documents/${p}`);
+                      }}
+                      className="text-sky-600 font-semibold hover:underline ml-1"
+                    >
+                      {c}
+                    </button>
+                  </span>
                 ))}
               </span>
             </div>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            className="p-2 border rounded bg-white"
-            aria-label="Sort files"
-          >
-            <option value="name">Sort: Name</option>
-            <option value="date">Sort: Date</option>
-            <option value="size">Sort: Size</option>
-          </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+              aria-label="Sort files"
+            >
+              <option value="name">Sort: Name</option>
+              <option value="date">Sort: Date</option>
+              <option value="size">Sort: Size</option>
+            </select>
 
-          <div className="relative w-full sm:w-auto">
-            <input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 pr-3 py-2 border rounded w-full sm:w-64" />
-            <FiSearch className="absolute left-3 top-2.5 text-gray-400" />
-          </div>
+            <div className="relative w-full sm:w-auto">
+              <input
+                placeholder="Search..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full rounded-full border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-200 sm:w-64"
+              />
+              <FiSearch className="absolute left-3 top-2.5 text-slate-400" />
+            </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={bulkCopyLinks} className="px-3 py-2 bg-yellow-50 text-yellow-800 border rounded text-sm" title="Copy links for selected">Copy Links</button>
-            <button onClick={bulkDelete} className="px-3 py-2 bg-red-50 text-red-700 border rounded text-sm" title="Delete selected">Delete</button>
+            <div className="ml-auto flex items-center gap-2 flex-wrap">
+              <button
+                onClick={bulkCopyLinks}
+                className="rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 shadow-sm hover:border-amber-300 hover:bg-amber-100"
+                title="Copy links for selected"
+              >
+                Copy Links
+              </button>
+              <button
+                onClick={bulkDelete}
+                className="rounded-full border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 shadow-sm hover:border-rose-300 hover:bg-rose-100"
+                title="Delete selected"
+              >
+                Delete
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
+        </section>
 
       {/* upload progress */}
       {Object.keys(uploadingFiles).length > 0 && (
@@ -509,7 +624,7 @@ export default function DMSPage() {
                 <span className="font-medium">{name}</span>
                 <span>{pct}%</span>
               </div>
-              <div className="w-full bg-gray-200 h-2 rounded">
+              <div className="w-full bg-slate-200 h-2 rounded">
                 <div style={{ width: `${pct}%` }} className="h-2 bg-green-500 rounded" />
               </div>
             </div>
@@ -518,11 +633,11 @@ export default function DMSPage() {
       )}
 
       {/* file list */}
-      <div className="bg-white shadow rounded-lg p-4">
+      <div className="rounded-3xl border border-slate-200/70 bg-white/90 p-4 shadow-sm">
         {loading ? (
-          <div className="text-center py-8">Loading documents...</div>
+          <div className="text-center py-8 text-slate-500">Loading documents...</div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">No documents found.</div>
+          <div className="text-center py-8 text-slate-500">No documents found.</div>
         ) : (
           <>
             <ul className="space-y-2">
@@ -531,7 +646,7 @@ export default function DMSPage() {
                 const pdf = isPdf(it.name);
                 const checked = !!selected[it.fullPath || it.name];
                 return (
-                  <li key={it.fullPath ?? it.name} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded gap-3">
+                  <li key={it.fullPath ?? it.name} className="flex flex-col sm:flex-row sm:items-center justify-between rounded-2xl border border-slate-200 bg-white p-3 gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <input
                         type="checkbox"
@@ -539,32 +654,33 @@ export default function DMSPage() {
                         onChange={(e) => {
                           setSelected(prev => ({ ...prev, [it.fullPath || it.name]: e.target.checked }));
                         }}
+                        className="h-4 w-4 rounded border-slate-300 text-sky-600"
                       />
-                      <div className="w-12 h-12 flex items-center justify-center rounded bg-gray-50 border overflow-hidden">
-                        {it.isFolder ? <FiFolder className="text-orange-500" size={20} /> : image ? <img src={it.url} alt={it.name} className="w-full h-full object-cover" /> : pdf ? <FiFileText className="text-red-500" size={20} /> : <FiFileText size={20} />}
+                      <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-slate-50 border border-slate-200 overflow-hidden">
+                        {it.isFolder ? <FiFolder className="text-orange-500" size={20} /> : image ? <img src={it.url} alt={it.name} className="w-full h-full object-cover" /> : pdf ? <FiFileText className="text-rose-500" size={20} /> : <FiFileText size={20} className="text-slate-400" />}
                       </div>
 
                       <div className="min-w-0">
-                        <div className="font-medium truncate max-w-[60vw] sm:max-w-none">{it.name}</div>
-                        <div className="text-xs text-gray-500">{it.isFolder ? 'Folder' : `${humanSize(it.size)} ${it.updated ? `• ${new Date(it.updated).toLocaleDateString()}` : ''}`}</div>
+                        <div className="font-semibold text-slate-800 truncate max-w-[60vw] sm:max-w-none">{it.name}</div>
+                        <div className="text-xs text-slate-500">{it.isFolder ? 'Folder' : `${humanSize(it.size)} ${it.updated ? `• ${new Date(it.updated).toLocaleDateString()}` : ''}`}</div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap sm:justify-end">
                       {it.isFolder ? (
-                        <button onClick={() => openFolder(it.name)} className="px-3 py-1 bg-blue-50 text-blue-700 rounded">Open</button>
+                        <button onClick={() => openFolder(it.name)} className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">Open</button>
                       ) : (
                         <>
-                          <button onClick={() => preview(it)} className="p-2 hover:bg-gray-100 rounded" title="Preview"><FiEye /></button>
-                          <button onClick={() => downloadFile(it)} className="p-2 hover:bg-gray-100 rounded" title="Download"><FiDownload /></button>
-                          <button onClick={() => copyLink(it)} className="p-2 hover:bg-gray-100 rounded" title="Copy link"><FiCopy /></button>
+                          <button onClick={() => preview(it)} className="p-2 hover:bg-slate-100 rounded" title="Preview"><FiEye /></button>
+                          <button onClick={() => downloadFile(it)} className="p-2 hover:bg-slate-100 rounded" title="Download"><FiDownload /></button>
+                          <button onClick={() => copyLink(it)} className="p-2 hover:bg-slate-100 rounded" title="Copy link"><FiCopy /></button>
                         </>
                       )}
 
                       {!it.isFolder && (
-                        <button onClick={() => handleRename(it)} className="p-2 hover:bg-gray-100 rounded" title="Rename"><FiEdit2 /></button>
+                        <button onClick={() => handleRename(it)} className="p-2 hover:bg-slate-100 rounded" title="Rename"><FiEdit2 /></button>
                       )}
-                      <button onClick={() => handleDelete(it)} className="p-2 hover:bg-gray-100 rounded text-red-600" title="Delete"><FiTrash2 /></button>
+                      <button onClick={() => handleDelete(it)} className="p-2 hover:bg-slate-100 rounded text-rose-600" title="Delete"><FiTrash2 /></button>
                     </div>
                   </li>
                 );
@@ -578,8 +694,8 @@ export default function DMSPage() {
                   onClick={loadMore}
                   disabled={paging}
                   className={clsx(
-                    'px-4 py-2 rounded-lg border',
-                    paging ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-50'
+                    'px-4 py-2 rounded-full border border-slate-200 text-sm font-semibold text-slate-600 shadow-sm',
+                    paging ? 'opacity-70 cursor-not-allowed' : 'hover:border-slate-300 hover:bg-slate-50'
                   )}
                 >
                   {paging ? 'Loading…' : 'Load more'}
@@ -592,26 +708,26 @@ export default function DMSPage() {
 
       {/* preview modal */}
       {previewUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-6">
-          <div className="bg-white w-full max-w-6xl h-[90vh] rounded overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between p-3 border-b">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6">
+          <div className="bg-white w-full max-w-6xl h-[90vh] rounded-2xl overflow-hidden flex flex-col border border-slate-200 shadow-2xl">
+            <div className="flex items-center justify-between p-3 border-b border-slate-200">
               <div className="flex items-center gap-3">
-                <div className="font-semibold truncate max-w-lg">{previewName}</div>
+                <div className="font-semibold truncate max-w-lg text-slate-800">{previewName}</div>
               </div>
 
               <div className="flex items-center gap-2">
-                <button onClick={() => { navigator.clipboard.writeText(previewUrl || '').then(() => setMessage({ type: 'ok', text: 'Link copied' })); }} className="px-3 py-1 bg-blue-600 text-white rounded">Copy Link</button>
-                <button onClick={() => { if (previewUrl) window.open(previewUrl, '_blank'); }} className="px-3 py-1 bg-gray-200 rounded">Open</button>
-                <button onClick={() => { if (previewUrl) { const a = document.createElement('a'); a.href = previewUrl; a.download = previewName || 'file'; a.click(); } }} className="px-3 py-1 bg-green-600 text-white rounded">Download</button>
-                <button onClick={() => setPreviewUrl(null)} className="px-3 py-1 bg-red-50 text-red-700 rounded"><FiX /></button>
+                <button onClick={() => { navigator.clipboard.writeText(previewUrl || '').then(() => setMessage({ type: 'ok', text: 'Link copied' })); }} className="px-3 py-1 rounded-full bg-sky-600 text-white text-xs font-semibold">Copy Link</button>
+                <button onClick={() => { if (previewUrl) window.open(previewUrl, '_blank'); }} className="px-3 py-1 rounded-full bg-slate-200 text-xs font-semibold text-slate-700">Open</button>
+                <button onClick={() => { if (previewUrl) { const a = document.createElement('a'); a.href = previewUrl; a.download = previewName || 'file'; a.click(); } }} className="px-3 py-1 rounded-full bg-emerald-600 text-white text-xs font-semibold">Download</button>
+                <button onClick={() => setPreviewUrl(null)} className="px-3 py-1 rounded-full bg-rose-50 text-rose-700"><FiX /></button>
               </div>
             </div>
 
             <div className="flex-1 overflow-hidden bg-black flex items-center justify-center relative">
               {/* controls */}
-              <div className="absolute top-4 left-4 z-50 flex gap-2 bg-black/40 p-2 rounded">
-                <button onClick={() => setZoom(z => Math.min(3, +(z + 0.2).toFixed(2)))} title="Zoom in" className="p-2 bg-white/10 rounded text-white"><FiZoomIn /></button>
-                <button onClick={() => setZoom(z => Math.max(0.4, +(z - 0.2).toFixed(2)))} title="Zoom out" className="p-2 bg-white/10 rounded text-white"><FiZoomOut /></button>
+              <div className="absolute top-4 left-4 z-50 flex gap-2 bg-black/40 p-2 rounded-2xl">
+                <button onClick={() => setZoom(z => Math.min(3, +(z + 0.2).toFixed(2)))} title="Zoom in" className="p-2 bg-white/10 rounded-xl text-white"><FiZoomIn /></button>
+                <button onClick={() => setZoom(z => Math.max(0.4, +(z - 0.2).toFixed(2)))} title="Zoom out" className="p-2 bg-white/10 rounded-xl text-white"><FiZoomOut /></button>
                 <div className="px-2 text-sm text-white">Zoom: {Math.round(zoom * 100)}%</div>
               </div>
 
@@ -632,10 +748,88 @@ export default function DMSPage() {
 
       {/* toast */}
       {message && (
-        <div className={clsx('fixed right-6 bottom-6 py-2 px-4 rounded shadow-lg', message.type === 'ok' ? 'bg-green-600 text-white' : 'bg-red-600 text-white')}>
+        <div className={clsx('fixed right-6 bottom-6 py-2 px-4 rounded-full shadow-lg text-sm font-semibold', message.type === 'ok' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white')}>
           {message.text}
         </div>
       )}
+      <style jsx>{`
+        @keyframes fadeUp {
+          from {
+            opacity: 0;
+            transform: translateY(14px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+      </div>
     </main>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  tone = 'slate',
+  icon,
+}: {
+  label: string;
+  value: string | number;
+  tone?: 'slate' | 'sky' | 'emerald' | 'amber';
+  icon?: React.ReactNode;
+}) {
+  const tones = {
+    slate: {
+      border: 'border-slate-200',
+      bg: 'from-slate-50 via-white to-white',
+      accent: 'bg-slate-100 text-slate-700',
+      glow: 'bg-slate-200/40',
+      value: 'text-slate-900',
+    },
+    sky: {
+      border: 'border-sky-100',
+      bg: 'from-sky-50 via-white to-white',
+      accent: 'bg-sky-100 text-sky-700',
+      glow: 'bg-sky-200/40',
+      value: 'text-slate-900',
+    },
+    emerald: {
+      border: 'border-emerald-100',
+      bg: 'from-emerald-50 via-white to-white',
+      accent: 'bg-emerald-100 text-emerald-700',
+      glow: 'bg-emerald-200/40',
+      value: 'text-slate-900',
+    },
+    amber: {
+      border: 'border-amber-100',
+      bg: 'from-amber-50 via-white to-white',
+      accent: 'bg-amber-100 text-amber-700',
+      glow: 'bg-amber-200/40',
+      value: 'text-slate-900',
+    },
+  } as const;
+  const theme = tones[tone] ?? tones.slate;
+  const displayValue = typeof value === 'number' ? value.toLocaleString() : value;
+
+  return (
+    <div className={`relative overflow-hidden rounded-2xl border ${theme.border} bg-gradient-to-br ${theme.bg} p-4 shadow-sm`}>
+      <div className="flex items-center justify-between">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+          {label}
+        </div>
+        {icon && (
+          <span className={`flex h-9 w-9 items-center justify-center rounded-full ${theme.accent}`}>
+            {icon}
+          </span>
+        )}
+      </div>
+      <div className={`mt-3 text-2xl font-semibold ${theme.value}`}>{displayValue}</div>
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full blur-2xl ${theme.glow}`}
+      />
+    </div>
   );
 }
