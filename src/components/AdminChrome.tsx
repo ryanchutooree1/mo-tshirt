@@ -124,7 +124,7 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
             aria-label="Open menu"
             aria-expanded={open}
             onClick={() => setOpen((s) => !s)}
-            className="inline-flex items-center justify-center rounded-md p-2 text-[#1a1a1a] hover:bg-[#f5f5f5] justify-self-start"
+            className="inline-flex items-center justify-center rounded-xl border border-transparent p-2 text-[#1a1a1a] transition hover:border-slate-200 hover:bg-slate-50 justify-self-start"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
               {open ? (
@@ -134,7 +134,11 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
               )}
             </svg>
           </button>
-          <div className="text-lg font-semibold justify-self-center">MO Admin</div>
+          <div className="justify-self-center text-xs font-semibold uppercase tracking-[0.32em] text-slate-600">MO Admin</div>
+          <div className="justify-self-end hidden sm:flex items-center gap-2 text-xs text-slate-500">
+            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            Live
+          </div>
         </div>
       </div>
 
@@ -171,63 +175,104 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
       {/* Drawer menu (works on all sizes) */}
       {open && (
         <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} />
-          <div className="absolute inset-y-0 left-0 w-80 bg-white border-r border-gray-200 p-5 flex flex-col">
-            <div className="flex items-center justify-between">
-              <div className="text-xl font-semibold">MO Admin</div>
-              <button
-                onClick={() => setEditing((e) => !e)}
-                className="text-xs rounded border px-2 py-1 hover:bg-gray-50"
-              >
-                {editing ? "Done" : "Edit"}
-              </button>
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            style={{ animation: "fadeIn 0.2s ease-out both" }}
+            onClick={() => setOpen(false)}
+          />
+          <div
+            className="absolute inset-y-0 left-0 w-[22rem] bg-white border-r border-slate-200 p-5 flex flex-col shadow-2xl rounded-r-3xl"
+            style={{ animation: "drawerIn 0.25s ease-out both" }}
+          >
+            <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div
+                aria-hidden
+                className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.12),transparent_60%)]"
+              />
+              <div className="relative flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">MO Admin</div>
+                  <div className="mt-2 text-lg font-semibold text-slate-900">Command Center</div>
+                  <div className="mt-1 text-xs text-slate-500">Tap to jump between modules.</div>
+                </div>
+                <button
+                  onClick={() => setEditing((e) => !e)}
+                  className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                    editing
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                  }`}
+                >
+                  {editing ? "Done" : "Edit"}
+                </button>
+              </div>
             </div>
-            <nav className="mt-5 space-y-1 flex-1">
+
+            <nav className="mt-5 space-y-3 flex-1">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">Core</div>
               {topNav.map((n, i) => {
                 const active = pathname === n.href || (n.href !== "/admin" && pathname.startsWith(n.href));
                 return editing ? (
-                  <div key={n.href} className="flex items-center gap-2 px-1 py-1">
-                    <button aria-label="Up" onClick={() => moveWithin("top", i, -1)} className="h-6 w-6 rounded border">▲</button>
-                    <button aria-label="Down" onClick={() => moveWithin("top", i, +1)} className="h-6 w-6 rounded border">▼</button>
-                    <button aria-label="Move to More" onClick={() => moveBetween("top", i)} className="h-6 w-6 rounded border">→</button>
-                    <span className="flex-1 px-2 py-2 rounded border bg-gray-50">{n.label}</span>
+                  <div key={n.href} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2 py-2">
+                    <button aria-label="Up" onClick={() => moveWithin("top", i, -1)} className="h-7 w-7 rounded-full border border-slate-200 text-[10px] text-slate-600 hover:bg-slate-50">▲</button>
+                    <button aria-label="Down" onClick={() => moveWithin("top", i, +1)} className="h-7 w-7 rounded-full border border-slate-200 text-[10px] text-slate-600 hover:bg-slate-50">▼</button>
+                    <button aria-label="Move to More" onClick={() => moveBetween("top", i)} className="h-7 w-7 rounded-full border border-slate-200 text-[10px] text-slate-600 hover:bg-slate-50">→</button>
+                    <span className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">{n.label}</span>
                   </div>
                 ) : (
                   <Link
                     key={n.href}
                     href={n.href}
                     onClick={() => setOpen(false)}
-                    className={`block px-3 py-2 rounded-lg transition-colors border ${active ? "border-[#bfa37a] bg-[#f5f5f5]" : "border-transparent hover:border-[#e5e5e5] hover:bg-[#f5f5f5]"}`}
+                    className={`group flex items-center justify-between rounded-2xl border px-3 py-2 text-sm font-semibold transition ${
+                      active
+                        ? "border-slate-900 bg-slate-900 text-white shadow"
+                        : "border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50"
+                    }`}
                   >
-                    {n.label}
+                    <span>{n.label}</span>
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        active ? "bg-emerald-400" : "bg-slate-300 group-hover:bg-slate-400"
+                      }`}
+                    />
                   </Link>
                 );
               })}
-              <div className="mt-6 pt-4 border-t text-xs uppercase tracking-wide text-gray-500">More</div>
+              <div className="pt-4 border-t border-slate-200 text-[11px] uppercase tracking-[0.28em] text-slate-400">More</div>
               {moreNav.map((n, i) => {
                 const active = pathname === n.href || (n.href !== "/admin" && pathname.startsWith(n.href));
                 return editing ? (
-                  <div key={n.href} className="flex items-center gap-2 px-1 py-1">
-                    <button aria-label="Up" onClick={() => moveWithin("more", i, -1)} className="h-6 w-6 rounded border">▲</button>
-                    <button aria-label="Down" onClick={() => moveWithin("more", i, +1)} className="h-6 w-6 rounded border">▼</button>
-                    <button aria-label="Move to Top" onClick={() => moveBetween("more", i)} className="h-6 w-6 rounded border">←</button>
-                    <span className="flex-1 px-2 py-2 rounded border bg-gray-50">{n.label}</span>
+                  <div key={n.href} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2 py-2">
+                    <button aria-label="Up" onClick={() => moveWithin("more", i, -1)} className="h-7 w-7 rounded-full border border-slate-200 text-[10px] text-slate-600 hover:bg-slate-50">▲</button>
+                    <button aria-label="Down" onClick={() => moveWithin("more", i, +1)} className="h-7 w-7 rounded-full border border-slate-200 text-[10px] text-slate-600 hover:bg-slate-50">▼</button>
+                    <button aria-label="Move to Top" onClick={() => moveBetween("more", i)} className="h-7 w-7 rounded-full border border-slate-200 text-[10px] text-slate-600 hover:bg-slate-50">←</button>
+                    <span className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">{n.label}</span>
                   </div>
                 ) : (
                   <Link
                     key={n.href}
                     href={n.href}
                     onClick={() => setOpen(false)}
-                    className={`block px-3 py-2 rounded-lg transition-colors border ${active ? "border-[#bfa37a] bg-[#f5f5f5]" : "border-transparent hover:border-[#e5e5e5] hover:bg-[#f5f5f5]"}`}
+                    className={`group flex items-center justify-between rounded-2xl border px-3 py-2 text-sm font-semibold transition ${
+                      active
+                        ? "border-slate-900 bg-slate-900 text-white shadow"
+                        : "border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50"
+                    }`}
                   >
-                    {n.label}
+                    <span>{n.label}</span>
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        active ? "bg-emerald-400" : "bg-slate-300 group-hover:bg-slate-400"
+                      }`}
+                    />
                   </Link>
                 );
               })}
             </nav>
             <button
               onClick={() => { setOpen(false); logout(); }}
-              className="w-full px-3 py-2 rounded-lg text-sm border border-[#bfa37a] text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white transition-colors"
+              className="w-full rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 shadow-sm transition hover:border-rose-300 hover:bg-rose-100"
             >
               Logout
             </button>
@@ -239,6 +284,26 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
       <main className="ml-0">
         <div className="p-4 sm:p-6 lg:p-8 bg-[#ffffff] min-h-screen">{children}</div>
       </main>
+      <style jsx>{`
+        @keyframes drawerIn {
+          from {
+            opacity: 0;
+            transform: translateX(-12px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 }
