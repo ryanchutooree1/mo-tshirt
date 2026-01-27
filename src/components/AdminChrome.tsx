@@ -208,15 +208,15 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
               </div>
             </div>
 
-            <nav className="mt-5 space-y-3 flex-1">
+            <nav className="mt-5 space-y-3 flex-1 min-h-0 overflow-y-auto pr-1">
               <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">Core</div>
               {topNav.map((n, i) => {
                 const active = pathname === n.href || (n.href !== "/admin" && pathname.startsWith(n.href));
                 return editing ? (
                   <div key={n.href} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2 py-2">
-                    <button aria-label="Up" onClick={() => moveWithin("top", i, -1)} className="h-7 w-7 rounded-full border border-slate-200 text-[10px] text-slate-600 hover:bg-slate-50">▲</button>
-                    <button aria-label="Down" onClick={() => moveWithin("top", i, +1)} className="h-7 w-7 rounded-full border border-slate-200 text-[10px] text-slate-600 hover:bg-slate-50">▼</button>
-                    <button aria-label="Move to More" onClick={() => moveBetween("top", i)} className="h-7 w-7 rounded-full border border-slate-200 text-[10px] text-slate-600 hover:bg-slate-50">→</button>
+                    <button aria-label="Up" onClick={() => moveWithin("top", i, -1)} className="rounded-full border border-slate-200 px-2.5 py-1 text-[10px] font-semibold text-slate-600 hover:bg-slate-50">Up</button>
+                    <button aria-label="Down" onClick={() => moveWithin("top", i, +1)} className="rounded-full border border-slate-200 px-2.5 py-1 text-[10px] font-semibold text-slate-600 hover:bg-slate-50">Down</button>
+                    <button aria-label="Move" onClick={() => moveBetween("top", i)} className="rounded-full border border-slate-200 px-2.5 py-1 text-[10px] font-semibold text-slate-600 hover:bg-slate-50">Move</button>
                     <span className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">{n.label}</span>
                   </div>
                 ) : (
@@ -239,14 +239,13 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
                   </Link>
                 );
               })}
-              <div className="pt-4 border-t border-slate-200 text-[11px] uppercase tracking-[0.28em] text-slate-400">More</div>
               {moreNav.map((n, i) => {
                 const active = pathname === n.href || (n.href !== "/admin" && pathname.startsWith(n.href));
                 return editing ? (
                   <div key={n.href} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2 py-2">
-                    <button aria-label="Up" onClick={() => moveWithin("more", i, -1)} className="h-7 w-7 rounded-full border border-slate-200 text-[10px] text-slate-600 hover:bg-slate-50">▲</button>
-                    <button aria-label="Down" onClick={() => moveWithin("more", i, +1)} className="h-7 w-7 rounded-full border border-slate-200 text-[10px] text-slate-600 hover:bg-slate-50">▼</button>
-                    <button aria-label="Move to Top" onClick={() => moveBetween("more", i)} className="h-7 w-7 rounded-full border border-slate-200 text-[10px] text-slate-600 hover:bg-slate-50">←</button>
+                    <button aria-label="Up" onClick={() => moveWithin("more", i, -1)} className="rounded-full border border-slate-200 px-2.5 py-1 text-[10px] font-semibold text-slate-600 hover:bg-slate-50">Up</button>
+                    <button aria-label="Down" onClick={() => moveWithin("more", i, +1)} className="rounded-full border border-slate-200 px-2.5 py-1 text-[10px] font-semibold text-slate-600 hover:bg-slate-50">Down</button>
+                    <button aria-label="Move" onClick={() => moveBetween("more", i)} className="rounded-full border border-slate-200 px-2.5 py-1 text-[10px] font-semibold text-slate-600 hover:bg-slate-50">Move</button>
                     <span className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">{n.label}</span>
                   </div>
                 ) : (
@@ -270,12 +269,14 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
                 );
               })}
             </nav>
-            <button
-              onClick={() => { setOpen(false); logout(); }}
-              className="w-full rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 shadow-sm transition hover:border-rose-300 hover:bg-rose-100"
-            >
-              Logout
-            </button>
+            <div className="mt-4 pt-4 border-t border-slate-200">
+              <button
+                onClick={() => { setOpen(false); logout(); }}
+                className="w-full rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 shadow-sm transition hover:border-rose-300 hover:bg-rose-100"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       )}
