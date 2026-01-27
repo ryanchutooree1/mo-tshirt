@@ -7,7 +7,6 @@ import {
   doc,
   setDoc,
   getDoc,
-  updateDoc,
   collection,
   query,
   orderBy,
@@ -100,7 +99,54 @@ export default function OwnerDashboard() {
     return { todaysOrdersCount: count, aov: count ? Math.round(rev / count) : 0 };
   }, [latestOrders, todayIso]);
 
-  const panelClass = "rounded-[28px] border border-[#EAEAEA] bg-white shadow-sm";
+  const panelClass = "rounded-3xl border border-slate-200/70 bg-white/90 shadow-sm backdrop-blur";
+  const progressDeg = Math.min(100, Math.max(0, progressPct)) * 3.6;
+  const kpiCards = [
+    { label: "Today’s Revenue", value: `Rs ${(global?.todayRevenue ?? todayRevenue).toLocaleString()}`, icon: RsIcon, href: "/admin/analytics?preset=7d", tone: "sky", sub: "Live revenue" },
+    { label: "Orders Today", value: global?.ordersToday ?? todaysOrdersCount, icon: Package, href: "/admin/orders?range=today", tone: "emerald", sub: "Order velocity" },
+    { label: "AOV Today", value: global?.aovToday ? `Rs ${(global?.aovToday ?? aov).toLocaleString()}` : (aov ? `Rs ${aov.toLocaleString()}` : "—"), icon: TrendingUp, href: "/admin/orders?range=today", tone: "amber", sub: "Average order value" },
+    { label: "Pending Orders", value: global?.pendingOrders ?? pendingOrders, icon: Clock, href: "/admin/orders?status=Pending", tone: "rose", sub: "Need attention" },
+    { label: "Repeat Clients", value: global?.repeatClientsCount ?? repeatClients, icon: Users, href: "/admin/clients?filter=repeat", tone: "violet", sub: "Returning customers" },
+    { label: "Efficiency", value: `${global?.efficiencyPct ?? efficiencyValue}%`, icon: RefreshCcw, href: "/admin/analytics?view=ev", tone: "slate", sub: "Fulfillment pace" },
+  ] as const;
+  const toneMap = {
+    sky: {
+      border: "border-sky-100",
+      bg: "from-sky-50 via-white to-white",
+      accent: "bg-sky-100 text-sky-700",
+      glow: "bg-sky-200/40",
+    },
+    emerald: {
+      border: "border-emerald-100",
+      bg: "from-emerald-50 via-white to-white",
+      accent: "bg-emerald-100 text-emerald-700",
+      glow: "bg-emerald-200/40",
+    },
+    amber: {
+      border: "border-amber-100",
+      bg: "from-amber-50 via-white to-white",
+      accent: "bg-amber-100 text-amber-700",
+      glow: "bg-amber-200/40",
+    },
+    rose: {
+      border: "border-rose-100",
+      bg: "from-rose-50 via-white to-white",
+      accent: "bg-rose-100 text-rose-700",
+      glow: "bg-rose-200/40",
+    },
+    violet: {
+      border: "border-violet-100",
+      bg: "from-violet-50 via-white to-white",
+      accent: "bg-violet-100 text-violet-700",
+      glow: "bg-violet-200/40",
+    },
+    slate: {
+      border: "border-slate-200",
+      bg: "from-slate-50 via-white to-white",
+      accent: "bg-slate-100 text-slate-700",
+      glow: "bg-slate-200/40",
+    },
+  } as const;
 
   // Checklist init
   useEffect(() => {
@@ -242,231 +288,314 @@ export default function OwnerDashboard() {
   if (loading) return <main className="min-h-screen bg-[#F5F5F7] p-6 text-[#1a1a1a] grid place-items-center">Loading dashboard...</main>;
 
   return (
-    <main className="min-h-screen bg-[#F5F5F7] px-4 sm:px-6 py-10 text-[#1a1a1a]">
-      <div className="mx-auto flex max-w-7xl flex-col gap-10">
-      {/* HERO */}
-      <header className={`${panelClass} grid gap-6 sm:grid-cols-[minmax(0,1fr)_auto] p-8`}>
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">MO T-SHIRT — Owner Dashboard</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            {formattedDate} • Primary: <span className="text-blue-400 font-semibold">{numerologyToday.primary}</span> • Secondary: <span className="text-emerald-400 font-semibold">{numerologyToday.secondary}</span>
-          </p>
-          <p className="mt-1 text-xs text-gray-500">
-            Tomorrow ({tomorrowCalc.dateStr}) • Primary: <span className="text-blue-300 font-medium">{tomorrowCalc.primary}</span> • Secondary: <span className="text-emerald-300 font-medium">{tomorrowCalc.secondary}</span>
-          </p>
-        </div>
-        <div className="text-right">
-          <div className="text-xs uppercase tracking-wide text-gray-500">Local time</div>
-          <div className="text-2xl sm:text-3xl font-semibold text-[#1a1a1a]">{timeString}</div>
-        </div>
-      </header>
-
-      {/* CEO SNAPSHOT */}
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6 lg:gap-5">
-        {[
-          { label: "Today’s Revenue", value: `Rs ${(global?.todayRevenue ?? todayRevenue).toLocaleString()}`, icon: RsIcon, href: "/admin/analytics?preset=7d" },
-          { label: "Orders Today", value: global?.ordersToday ?? todaysOrdersCount, icon: Package, href: "/admin/orders?range=today" },
-          { label: "AOV Today", value: global?.aovToday ? `Rs ${(global?.aovToday ?? aov).toLocaleString()}` : (aov ? `Rs ${aov.toLocaleString()}` : "—"), icon: TrendingUp, href: "/admin/orders?range=today" },
-          { label: "Pending Orders", value: global?.pendingOrders ?? pendingOrders, icon: Clock, href: "/admin/orders?status=Pending" },
-          { label: "Repeat Clients", value: global?.repeatClientsCount ?? repeatClients, icon: Users, href: "/admin/clients?filter=repeat" },
-          { label: "Efficiency", value: `${global?.efficiencyPct ?? efficiencyValue}%`, icon: RefreshCcw, href: "/admin/analytics?view=ev" },
-        ].map((s, idx) => {
-          const Icon = s.icon;
-          return (
-            <Link key={idx} href={s.href || "#"} className="group">
-              <div className={`${panelClass} flex items-center gap-3 p-5 transition-all hover:shadow-md`}>
-                <div className="p-2 rounded-xl bg-[#F5F5F7] text-[#1a1a1a]">
-                  <Icon className="w-5 h-5" />
+    <main className="relative min-h-screen bg-[#F5F5F7] text-[#1a1a1a]">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-40 right-[-12rem] h-80 w-80 rounded-full bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.35),transparent_70%)] blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-[-10rem] top-48 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.25),transparent_70%)] blur-3xl"
+      />
+      <div className="relative mx-auto flex max-w-7xl flex-col gap-10 px-4 sm:px-6 py-10">
+        {/* HERO */}
+        <header className={`${panelClass} relative overflow-hidden p-8`} style={{ animation: "fadeUp 0.6s ease-out both" }}>
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_60%)]"
+          />
+          <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-sky-600">Owner Dashboard</p>
+              <h1 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-slate-900">MO T-SHIRT — Owner Dashboard</h1>
+              <p className="mt-2 text-sm text-slate-600">
+                {formattedDate} • Primary: <span className="text-sky-600 font-semibold">{numerologyToday.primary}</span> • Secondary: <span className="text-emerald-600 font-semibold">{numerologyToday.secondary}</span>
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Tomorrow ({tomorrowCalc.dateStr}) • Primary: <span className="text-sky-400 font-medium">{tomorrowCalc.primary}</span> • Secondary: <span className="text-emerald-400 font-medium">{tomorrowCalc.secondary}</span>
+              </p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <Link href="/admin/pos" className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800">
+                  Open POS
+                </Link>
+                <Link href="/admin/orders" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50">
+                  Orders
+                </Link>
+                <Link href="/admin/clients" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50">
+                  Clients
+                </Link>
+                <Link href="/admin/shops" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50">
+                  Shops
+                </Link>
+              </div>
+            </div>
+            <div className="flex flex-col gap-4">
+              <div className="rounded-3xl border border-slate-200/70 bg-white/90 p-5 shadow-sm">
+                <div className="text-xs uppercase tracking-[0.22em] text-slate-500">Local time</div>
+                <div className="mt-2 text-3xl font-semibold text-slate-900">{timeString}</div>
+                <div className="mt-1 text-xs text-slate-500">Live sync • Mauritius</div>
+              </div>
+              <div className="rounded-3xl border border-slate-200/70 bg-slate-900 p-5 text-white shadow-sm">
+                <div className="flex items-start gap-3">
+                  <Info className="w-5 h-5" />
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">Smart Insight</div>
+                    <div className="mt-2 text-sm">{insight}</div>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">{s.label}</p>
-                  <h2 className="text-xl font-semibold text-[#1a1a1a]">{s.value}</h2>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* KPI Snapshot */}
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6" style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.08s" }}>
+          {kpiCards.map((s, idx) => {
+            const Icon = s.icon;
+            const tone = toneMap[s.tone];
+            return (
+              <Link key={idx} href={s.href || "#"} className="group">
+                <div className={`relative overflow-hidden rounded-3xl border ${tone.border} bg-gradient-to-br ${tone.bg} p-5 shadow-sm transition hover:shadow-md`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`flex h-10 w-10 items-center justify-center rounded-full ${tone.accent}`}>
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-slate-400">Live</span>
+                  </div>
+                  <div className="mt-4 text-xs uppercase tracking-[0.2em] text-slate-500">{s.label}</div>
+                  <div className="mt-2 text-2xl font-semibold text-slate-900">{s.value}</div>
+                  <div className="mt-2 text-xs text-slate-500">{s.sub}</div>
+                  <div aria-hidden className={`pointer-events-none absolute -right-8 -top-8 h-20 w-20 rounded-full blur-2xl ${tone.glow}`} />
                 </div>
+              </Link>
+            );
+          })}
+        </section>
+
+        {/* Momentum + Checklist */}
+        <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]" style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.14s" }}>
+          <div className={`${panelClass} p-6`}>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Daily Checklist</h2>
+                <p className="text-xs text-slate-500">Streak: <span className="text-emerald-600 font-semibold">{streak}</span> day{streak === 1 ? "" : "s"}</p>
               </div>
-            </Link>
-          );
-        })}
-      </section>
-
-      {/* INSIGHT */}
-      <section className="rounded-[28px] bg-[#0F172A] p-6 text-white shadow-sm">
-        <div className="flex items-start gap-3">
-          <div className="shrink-0"><Info className="w-5 h-5" /></div>
-          <div>
-            <div className="text-sm font-semibold opacity-90">Smart Insight</div>
-            <div className="mt-0.5">{insight}</div>
-          </div>
-        </div>
-      </section>
-
-      {/* Daily Checklist */}
-      <section className={`${panelClass} p-6`}>
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-lg font-semibold">Daily Checklist</h2>
-            <p className="text-xs text-gray-500">Streak: <span className="text-emerald-600 font-semibold">{streak}</span> day{streak === 1 ? '' : 's'}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              value={newTask}
-              onChange={(e) => setNewTask(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') addTask(); }}
-              placeholder="Add a task..."
-              className="bg-white border border-[#EAEAEA] rounded-xl px-3 py-1.5 text-sm text-[#1a1a1a] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#bfa37a]/50"
-            />
-            <button onClick={addTask} className="px-3 py-1.5 rounded-lg text-sm flex items-center gap-1 border border-[#bfa37a] text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white transition-colors">
-              <Plus className="w-4 h-4" /> Add
-            </button>
-          </div>
-        </div>
-
-        {/* Progress bar */}
-        <div className="mb-3">
-          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-            <span>Progress</span>
-            <span className="text-gray-700 font-medium">{progressPct}%</span>
-          </div>
-          <div className="w-full h-3 rounded-full bg-[#f0f0f0] overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-[#bfa37a] to-[#d8c6a3] transition-all"
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Task list */}
-        <ul className="divide-y divide-[#EAEAEA]">
-          {tasks.length === 0 && (
-            <li className="text-sm text-gray-500 py-2">No tasks yet. Add your first task above.</li>
-          )}
-          {tasks.map((t, idx) => (
-            <li key={idx} className="flex items-center justify-between py-2">
-              <button onClick={() => toggleTask(idx)} className="flex items-center gap-3 text-left group">
-                {t.completed ? (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                ) : (
-                  <Circle className="w-5 h-5 text-gray-400 group-hover:text-gray-600" />
-                )}
-                <span className={t.completed ? "line-through text-gray-500" : "text-[#1a1a1a]"}>{t.title}</span>
-              </button>
-              <button onClick={() => removeTask(idx)} className="text-gray-400 hover:text-red-600 transition-colors">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* Latest Orders */}
-      <section className={`${panelClass} p-6`}>
-        <h2 className="text-lg font-semibold mb-6">Latest Orders</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-[#1a1a1a]">
-            <thead>
-              <tr className="border-b border-gray-200 bg-[#f5f5f5]">
-                <th className="text-left py-2 px-2">Client</th>
-                <th className="text-left py-2 px-2">Amount</th>
-                <th className="text-left py-2 px-2">Status</th>
-                <th className="text-left py-2 px-2">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {latestOrders.map((order, idx) => (
-                <tr key={idx} className="border-b border-gray-200 hover:bg-[#f5f5f5]">
-                  <td className="py-2 px-2">{order.client}</td>
-                  <td className="py-2 px-2">Rs {order.amount}</td>
-                  <td className="py-2 px-2">{order.status}</td>
-                  <td className="py-2 px-2">{order.date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* Inventory Snapshot */}
-      <section className={`${panelClass} p-6`}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Inventory Snapshot</h2>
-          <div className="flex items-center gap-2">
-            <input
-              placeholder="Search product..."
-              value={invSearch}
-              onChange={(e) => setInvSearch(e.target.value)}
-              className="bg-white border border-[#EAEAEA] rounded-xl px-3 py-1.5 text-sm text-[#1a1a1a] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#bfa37a]/50"
-            />
-            {lowStock.length > 0 && (
-              <div className="text-xs px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-full">
-                Low: {lowStock.join(", ")}
+              <div className="flex items-center gap-2">
+                <input
+                  value={newTask}
+                  onChange={(e) => setNewTask(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") addTask(); }}
+                  placeholder="Add a task..."
+                  className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                />
+                <button onClick={addTask} className="px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 border border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white transition-colors">
+                  <Plus className="w-4 h-4" /> Add
+                </button>
               </div>
-            )}
-          </div>
-        </div>
+            </div>
 
-        {filteredProducts.map((p) => {
-          const totalUnits = p.colors.reduce(
-            (acc, c) => acc + Object.values(c.sizes || {}).reduce((a, b) => a + (b || 0), 0), 0
-          );
-          return (
-            <div key={p.id} className="mb-3 overflow-hidden rounded-2xl border border-[#EAEAEA] bg-white shadow-sm">
-              {/* Product row */}
-              <div
-                onClick={() => setExpandedProduct(expandedProduct === p.id ? null : p.id)}
-                className={`cursor-pointer flex justify-between px-3 py-2 ${expandedProduct === p.id ? "bg-[#f5f5f5]" : "bg-white"} hover:bg-[#f5f5f5] transition-colors`}
-              >
-                <span className="font-medium text-[#1a1a1a]">{p.productName}</span>
-                <span className={totalUnits < 10 ? "text-red-700 font-semibold" : "text-gray-600"}>
-                  {totalUnits} units
-                </span>
+            <div className="mt-6 grid gap-6 lg:grid-cols-[120px_1fr]">
+              <div className="flex flex-col items-center justify-center">
+                <div className="relative h-28 w-28">
+                  <div
+                    className="absolute inset-0 rounded-full"
+                    style={{ background: `conic-gradient(#0ea5e9 ${progressDeg}deg, #e2e8f0 0deg)` }}
+                  />
+                  <div className="absolute inset-3 rounded-full bg-white flex items-center justify-center text-xl font-semibold text-slate-900">
+                    {progressPct}%
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-slate-500">Progress</div>
               </div>
-
-              {/* Expand colors */}
-              {expandedProduct === p.id && (
-                <div className="pl-3 pb-2">
-                  {p.colors.map((c, cIdx) => {
-                    const colorTotal = Object.values(c.sizes || {}).reduce((a, b) => a + (b || 0), 0);
-                    return (
-                      <div key={cIdx} className="border-t border-gray-200">
-                        <div
-                          onClick={() => setExpandedColor(expandedColor === p.id+c.color ? null : p.id+c.color)}
-                          className="cursor-pointer flex justify-between px-3 py-2 hover:bg-[#f5f5f5]"
-                        >
-                          <span className="text-[#1a1a1a]">• {c.color}</span>
-                          <span className={colorTotal < 10 ? "text-red-700 font-semibold" : "text-gray-600"}>
-                            {colorTotal} units
-                          </span>
-                        </div>
-
-                        {/* Expand sizes */}
-                        {expandedColor === p.id+c.color && (
-                          <div className="ml-4 mr-2 overflow-x-auto">
-                            <table className="mb-2 text-sm min-w-[280px] text-[#1a1a1a]">
-                              <thead>
-                                <tr className="border-b border-gray-200">
-                                  <th className="pr-4 text-left">Size</th>
-                                  <th className="text-left">Qty</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {Object.entries(c.sizes || {}).map(([size, qty]) => (
-                                  <tr key={size}>
-                                    <td className="py-1">{size}</td>
-                                    <td className={qty < 10 ? "text-red-700 font-semibold" : "text-gray-600"}>{qty}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+              <div>
+                <ul className="divide-y divide-slate-200">
+                  {tasks.length === 0 && (
+                    <li className="text-sm text-slate-500 py-2">No tasks yet. Add your first task above.</li>
+                  )}
+                  {tasks.map((t, idx) => (
+                    <li key={idx} className="flex items-center justify-between py-2">
+                      <button onClick={() => toggleTask(idx)} className="flex items-center gap-3 text-left group">
+                        {t.completed ? (
+                          <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                        ) : (
+                          <Circle className="w-5 h-5 text-slate-400 group-hover:text-slate-600" />
                         )}
-                      </div>
+                        <span className={t.completed ? "line-through text-slate-400" : "text-slate-700"}>{t.title}</span>
+                      </button>
+                      <button onClick={() => removeTask(idx)} className="text-slate-400 hover:text-rose-600 transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-6">
+            <div className={`${panelClass} p-6`}>
+              <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Today Focus</h3>
+              <div className="mt-4 flex flex-col gap-3">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                  Orders today: <span className="font-semibold">{global?.ordersToday ?? todaysOrdersCount}</span>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                  Pending to clear: <span className="font-semibold">{global?.pendingOrders ?? pendingOrders}</span>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                  Low stock signals: <span className="font-semibold">{lowStock.length}</span>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-3xl border border-slate-200/70 bg-gradient-to-br from-slate-900 to-slate-800 p-6 text-white shadow-sm">
+              <div className="text-xs uppercase tracking-[0.2em] text-white/60">Command Pulse</div>
+              <div className="mt-3 text-lg font-semibold">Stay ruthless on execution today.</div>
+              <div className="mt-2 text-sm text-white/70">Next 90 minutes: clear pending queue, confirm top 5 clients, and restock low tees.</div>
+              <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                <span className="rounded-full bg-white/10 px-3 py-1">Ops</span>
+                <span className="rounded-full bg-white/10 px-3 py-1">Sales</span>
+                <span className="rounded-full bg-white/10 px-3 py-1">Inventory</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Orders + Inventory */}
+        <section className="grid gap-6 lg:grid-cols-2" style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.2s" }}>
+          <div className={`${panelClass} p-6`}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-slate-900">Latest Orders</h2>
+              <Link href="/admin/orders" className="text-xs font-semibold text-slate-600 hover:text-slate-900">View all</Link>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-slate-700">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
+                    <th className="text-left py-2 px-2">Client</th>
+                    <th className="text-left py-2 px-2">Amount</th>
+                    <th className="text-left py-2 px-2">Status</th>
+                    <th className="text-left py-2 px-2">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {latestOrders.map((order, idx) => {
+                    const status = order.status || "—";
+                    const statusClass = status === "Delivered" || status === "Completed"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : status === "Pending"
+                      ? "border-amber-200 bg-amber-50 text-amber-700"
+                      : "border-slate-200 bg-slate-50 text-slate-600";
+                    return (
+                      <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
+                        <td className="py-2 px-2 font-semibold text-slate-800">{order.client}</td>
+                        <td className="py-2 px-2">Rs {order.amount}</td>
+                        <td className="py-2 px-2">
+                          <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${statusClass}`}>{status}</span>
+                        </td>
+                        <td className="py-2 px-2 text-slate-500">{order.date}</td>
+                      </tr>
                     );
                   })}
-                </div>
-              )}
+                </tbody>
+              </table>
             </div>
-          );
-        })}
-      </section>
+          </div>
+
+          <div className={`${panelClass} p-6`}>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <h2 className="text-lg font-semibold text-slate-900">Inventory Snapshot</h2>
+              <div className="flex items-center gap-2">
+                <input
+                  placeholder="Search product..."
+                  value={invSearch}
+                  onChange={(e) => setInvSearch(e.target.value)}
+                  className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                />
+                {lowStock.length > 0 && (
+                  <div className="text-xs px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-full">
+                    Low: {lowStock.join(", ")}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {filteredProducts.map((p) => {
+              const totalUnits = p.colors.reduce(
+                (acc, c) => acc + Object.values(c.sizes || {}).reduce((a, b) => a + (b || 0), 0), 0
+              );
+              return (
+                <div key={p.id} className="mb-3 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  {/* Product row */}
+                  <div
+                    onClick={() => setExpandedProduct(expandedProduct === p.id ? null : p.id)}
+                    className={`cursor-pointer flex justify-between px-3 py-2 ${expandedProduct === p.id ? "bg-slate-50" : "bg-white"} hover:bg-slate-50 transition-colors`}
+                  >
+                    <span className="font-medium text-slate-800">{p.productName}</span>
+                    <span className={totalUnits < 10 ? "text-rose-700 font-semibold" : "text-slate-500"}>
+                      {totalUnits} units
+                    </span>
+                  </div>
+
+                  {/* Expand colors */}
+                  {expandedProduct === p.id && (
+                    <div className="pl-3 pb-2">
+                      {p.colors.map((c, cIdx) => {
+                        const colorTotal = Object.values(c.sizes || {}).reduce((a, b) => a + (b || 0), 0);
+                        return (
+                          <div key={cIdx} className="border-t border-slate-200">
+                            <div
+                              onClick={() => setExpandedColor(expandedColor === p.id + c.color ? null : p.id + c.color)}
+                              className="cursor-pointer flex justify-between px-3 py-2 hover:bg-slate-50"
+                            >
+                              <span className="text-slate-700">• {c.color}</span>
+                              <span className={colorTotal < 10 ? "text-rose-700 font-semibold" : "text-slate-500"}>
+                                {colorTotal} units
+                              </span>
+                            </div>
+
+                            {/* Expand sizes */}
+                            {expandedColor === p.id + c.color && (
+                              <div className="ml-4 mr-2 overflow-x-auto">
+                                <table className="mb-2 text-sm min-w-[280px] text-slate-700">
+                                  <thead>
+                                    <tr className="border-b border-slate-200">
+                                      <th className="pr-4 text-left">Size</th>
+                                      <th className="text-left">Qty</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {Object.entries(c.sizes || {}).map(([size, qty]) => (
+                                      <tr key={size}>
+                                        <td className="py-1">{size}</td>
+                                        <td className={qty < 10 ? "text-rose-700 font-semibold" : "text-slate-500"}>{qty}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+        <style jsx>{`
+          @keyframes fadeUp {
+            from {
+              opacity: 0;
+              transform: translateY(14px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `}</style>
       </div>
     </main>
   );
