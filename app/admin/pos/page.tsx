@@ -18,6 +18,18 @@ import {
   where,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import {
+  FiCheckCircle,
+  FiClipboard,
+  FiCreditCard,
+  FiDollarSign,
+  FiFileText,
+  FiPauseCircle,
+  FiPlayCircle,
+  FiShoppingCart,
+  FiTag,
+  FiUser,
+} from 'react-icons/fi';
 
 // If you want to show currency consistently
 const money = (n: number) => `Rs ${Number(n || 0).toFixed(2)}`;
@@ -62,6 +74,7 @@ export default function POSPage() {
   // -------- Cart --------
   const [cart, setCart] = useState<CartItem[]>([]);
   const cartTotal = useMemo(() => cart.reduce((a, c) => a + c.lineTotal, 0), [cart]);
+  const cartItems = useMemo(() => cart.reduce((a, c) => a + c.quantity, 0), [cart]);
 
   // -------- Status & Payment --------
   const [status, setStatus] = useState<'In Process' | 'Urgent' | 'Completed' | ''>('');
@@ -476,210 +489,416 @@ export default function POSPage() {
     }
   };
 
+  const canHold = !done && cart.length > 0;
+
   // ---------- UI ----------
   return (
-    <main className="min-h-screen px-6 py-8 max-w-7xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">🧾 POS Transaction</h1>
+    <main className="relative min-h-screen">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-40 right-[-12rem] h-80 w-80 rounded-full bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.35),transparent_70%)] blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-[-10rem] top-40 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_top,rgba(14,116,144,0.25),transparent_70%)] blur-3xl"
+      />
+      <div className="relative mx-auto max-w-7xl space-y-6 px-6 py-8">
+        {/* Hero */}
+        <section
+          className="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 p-6 shadow-sm backdrop-blur"
+          style={{ animation: 'fadeUp 0.6s ease-out both' }}
+        >
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.08),transparent_60%)]"
+          />
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">
+                POS
+              </p>
+              <h1 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">
+                POS Transaction
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
+                Fast checkout with live stock control, part payments, and instant PDF receipts.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                  <FiShoppingCart className="h-4 w-4" /> Live cart + stock
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                  <FiCreditCard className="h-4 w-4" /> Part payments
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                  <FiFileText className="h-4 w-4" /> PDF receipt
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={saveHold}
+                disabled={!canHold}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60"
+              >
+                <FiPauseCircle className="h-4 w-4" /> Hold Current
+              </button>
+              <button
+                onClick={clearAll}
+                className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+              >
+                <FiPlayCircle className="h-4 w-4" /> New Transaction
+              </button>
+            </div>
+          </div>
+          <div className="relative mt-4 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1">
+              <FiFileText className="h-4 w-4" />
+              {fetchingInvoice
+                ? 'Fetching invoice number…'
+                : `Invoice #${String(invoice || 0).padStart(5, '0')}`}
+            </span>
+            {holdId && (
+              <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700">
+                <FiPauseCircle className="h-4 w-4" /> Hold id: {holdId}
+              </span>
+            )}
+          </div>
+        </section>
 
-      {/* Holds bar */}
-      <div className="mb-4 flex flex-col gap-2">
-        <div className="flex gap-2 flex-wrap items-center">
-          <button onClick={saveHold} disabled={done || cart.length===0} className="px-3 py-2 border border-[#bfa37a] rounded-lg text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white disabled:opacity-60">Hold Current</button>
-          {holdId && <span className="text-sm text-gray-600">Current hold id: {holdId}</span>}
-        </div>
-        {holds.length > 0 && (
-          <div className="border rounded-xl p-3 bg-white">
-            <div className="text-sm font-semibold mb-2">Holds ({holds.length})</div>
-            <div className="flex gap-2 overflow-x-auto">
+        {/* Stats */}
+        <section
+          className="grid grid-cols-2 gap-4 md:grid-cols-4"
+          style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.08s' }}
+        >
+          <StatCard label="Cart items" value={cartItems} tone="sky" icon={<FiShoppingCart className="h-4 w-4" />} />
+          <StatCard label="Cart total" value={money(cartTotal)} tone="emerald" icon={<FiDollarSign className="h-4 w-4" />} />
+          <StatCard label="Active holds" value={holds.length} tone="amber" icon={<FiPauseCircle className="h-4 w-4" />} />
+          <StatCard label="Status" value={status || 'Not set'} tone="slate" icon={<FiClipboard className="h-4 w-4" />} />
+        </section>
+
+        {/* Holds */}
+        <section
+          className="rounded-3xl border border-slate-200/70 bg-white/90 p-4 shadow-sm backdrop-blur"
+          style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.14s' }}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Holds</div>
+              <div className="mt-1 text-sm text-slate-600">Pause a checkout and resume later.</div>
+            </div>
+            <button
+              onClick={saveHold}
+              disabled={!canHold}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60"
+            >
+              <FiPauseCircle className="h-4 w-4" /> Hold Current
+            </button>
+          </div>
+          {holds.length > 0 ? (
+            <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
               {holds.map(h => (
-                <div key={h.id} className="border rounded-lg px-3 py-2 text-sm bg-gray-50">
-                  <div className="font-medium truncate max-w-[160px]" title={h.customerName||'—'}>{h.customerName||'—'}</div>
-                  <div className="text-gray-600">{money(h.total||0)}</div>
-                  <div className="mt-1 flex gap-2">
-                    <button onClick={()=>loadHold(h)} className="px-2 py-0.5 border rounded">Resume</button>
-                    <button onClick={()=>releaseHold(h)} className="px-2 py-0.5 border rounded text-rose-700 border-rose-300">Release</button>
+                <div
+                  key={h.id}
+                  className="min-w-[190px] rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-semibold text-sm text-slate-800 truncate" title={h.customerName || '—'}>
+                      {h.customerName || '—'}
+                    </div>
+                    <span className="text-[11px] font-semibold text-slate-500">{money(h.total || 0)}</span>
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => loadHold(h)}
+                      className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                    >
+                      Resume
+                    </button>
+                    <button
+                      onClick={() => releaseHold(h)}
+                      className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-100"
+                    >
+                      Release
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        )}
-      </div>
+          ) : (
+            <div className="mt-4 text-sm text-slate-500">No holds yet.</div>
+          )}
+        </section>
 
-      {/* Invoice number */}
-      <div className="mb-6">
-        {fetchingInvoice ? (
-          <div className="text-gray-500">Fetching invoice number…</div>
-        ) : (
-          <input
-            readOnly
-            value={`Invoice #${String(invoice || 0).padStart(5, '0')}`}
-            className="border rounded-lg px-3 py-2 w-60 bg-gray-50"
-          />
-        )}
-      </div>
-
-      {/* Grid: Customer | Add Item */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Customer */}
-        <section className="bg-white border rounded-2xl p-5 shadow-sm">
-          <h2 className="font-semibold text-lg mb-3">Customer Information</h2>
-          <div className="space-y-3">
-            <Input label="Customer Name" value={customerName} onChange={setCustomerName} disabled={done} />
-            <Input label="Phone" value={phone} onChange={setPhone} disabled={done} />
-            <Input label="Address" value={address} onChange={setAddress} disabled={done} />
-            <Input label="Email" value={email} onChange={setEmail} disabled={done} />
-          </div>
-
-          {!done && (
-            <div className="mt-4 flex gap-2">
-              <button onClick={searchCustomer} className="bg-blue-600 text-white px-4 py-2 rounded-lg">Search Customer</button>
-              <button onClick={clearAll} className="bg-red-600 text-white px-4 py-2 rounded-lg">Clear</button>
+        {/* Grid: Customer | Add Item */}
+        <section
+          className="grid grid-cols-1 gap-6 lg:grid-cols-2"
+          style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.2s' }}
+        >
+          {/* Customer */}
+          <div className="rounded-3xl border border-slate-200/70 bg-white/90 p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <FiUser className="h-4 w-4" /> Customer Information
             </div>
-          )}
-        </section>
+            <div className="mt-4 space-y-3">
+              <Input label="Customer Name" value={customerName} onChange={setCustomerName} disabled={done} />
+              <Input label="Phone" value={phone} onChange={setPhone} disabled={done} />
+              <Input label="Address" value={address} onChange={setAddress} disabled={done} />
+              <Input label="Email" value={email} onChange={setEmail} disabled={done} />
+            </div>
 
-        {/* Add product */}
-        <section className="bg-white border rounded-2xl p-5 shadow-sm">
-          <h2 className="font-semibold text-lg mb-3">Add Product</h2>
-
-          {!done && (
-            <>
-              {/* Product */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Select
-                  label="Product"
-                  value={selectedProductId || ''}
-                  onChange={(v) => { setSelectedProductId(v || null); setSelectedColor(null); setSelectedSize(null); setSelectedQty(null); }}
-                  options={[{ label: 'Select…', value: '' }, ...products.map(p => ({ label: p.productName, value: p.id }))]}
-                />
-                <Select
-                  label="Color"
-                  value={selectedColor || ''}
-                  onChange={(v) => { setSelectedColor(v || null); setSelectedSize(null); setSelectedQty(null); }}
-                  options={[{ label: 'Select…', value: '' }, ...availableColors.map(c => ({ label: c, value: c }))]}
-                  disabled={!currentProduct}
-                />
-                <Select
-                  label="Size"
-                  value={selectedSize || ''}
-                  onChange={(v) => { setSelectedSize(v || null); setSelectedQty(null); }}
-                  options={[{ label: 'Select…', value: '' }, ...availableSizes.map(s => ({ label: s, value: s }))]}
-                  disabled={!selectedColor}
-                />
-                <Select
-                  label={`Quantity ${availableQty ? `(max ${availableQty})` : ''}`}
-                  value={String(selectedQty ?? '')}
-                  onChange={(v) => setSelectedQty(v ? Number(v) : null)}
-                  options={[{ label: 'Select…', value: '' }, ...Array.from({ length: Math.max(availableQty, 0) }, (_, i) => i + 1).map(n => ({ label: String(n), value: String(n) }))]}
-                  disabled={!selectedSize}
-                />
+            {!done && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button onClick={searchCustomer} className="rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700">
+                  Search Customer
+                </button>
+                <button onClick={clearAll} className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700">
+                  Clear
+                </button>
               </div>
+            )}
+          </div>
 
-              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                <InputNumber label="Unit Price (Rs)" value={unitPrice} onChange={setUnitPrice} disabled={!selectedQty} />
-                <div className="flex items-end">
-                  <button onClick={addToCart} disabled={!selectedQty || unitPrice === ''} className="bg-black text-white px-4 py-2 rounded-lg disabled:opacity-60">
-                    Add to Cart
-                  </button>
+          {/* Add product */}
+          <div className="rounded-3xl border border-slate-200/70 bg-white/90 p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <FiTag className="h-4 w-4" /> Add Product
+            </div>
+
+            {!done && (
+              <>
+                {/* Product */}
+                <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <Select
+                    label="Product"
+                    value={selectedProductId || ''}
+                    onChange={(v) => { setSelectedProductId(v || null); setSelectedColor(null); setSelectedSize(null); setSelectedQty(null); }}
+                    options={[{ label: 'Select…', value: '' }, ...products.map(p => ({ label: p.productName, value: p.id }))]}
+                  />
+                  <Select
+                    label="Color"
+                    value={selectedColor || ''}
+                    onChange={(v) => { setSelectedColor(v || null); setSelectedSize(null); setSelectedQty(null); }}
+                    options={[{ label: 'Select…', value: '' }, ...availableColors.map(c => ({ label: c, value: c }))]}
+                    disabled={!currentProduct}
+                  />
+                  <Select
+                    label="Size"
+                    value={selectedSize || ''}
+                    onChange={(v) => { setSelectedSize(v || null); setSelectedQty(null); }}
+                    options={[{ label: 'Select…', value: '' }, ...availableSizes.map(s => ({ label: s, value: s }))]}
+                    disabled={!selectedColor}
+                  />
+                  <Select
+                    label={`Quantity ${availableQty ? `(max ${availableQty})` : ''}`}
+                    value={String(selectedQty ?? '')}
+                    onChange={(v) => setSelectedQty(v ? Number(v) : null)}
+                    options={[{ label: 'Select…', value: '' }, ...Array.from({ length: Math.max(availableQty, 0) }, (_, i) => i + 1).map(n => ({ label: String(n), value: String(n) }))]}
+                    disabled={!selectedSize}
+                  />
                 </div>
-              </div>
-            </>
-          )}
 
-          {/* Cart list */}
-          <div className="mt-5">
-            <h3 className="font-medium mb-2">Items</h3>
-            {cart.length === 0 ? (
-              <div className="text-gray-500 text-sm">No items yet.</div>
-            ) : (
-              <div className="space-y-2">
-                {cart.map((it, i) => (
-                  <div key={i} className="border rounded-lg px-3 py-2 flex items-center justify-between">
-                    <div className="text-sm">
-                      <div className="font-semibold">{it.productName}</div>
-                      <div className="text-gray-600">Color: {it.color} • Size: {it.size} • Qty: {it.quantity}</div>
-                      <div className="text-green-700">{money(it.lineTotal)} ({money(it.unitPrice)} x {it.quantity})</div>
-                    </div>
-                    {!done && (
-                      <button onClick={() => removeCartItem(i)} className="text-red-600 hover:underline text-sm">Remove</button>
-                    )}
+                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <InputNumber label="Unit Price (Rs)" value={unitPrice} onChange={setUnitPrice} disabled={!selectedQty} />
+                  <div className="flex items-end">
+                    <button onClick={addToCart} disabled={!selectedQty || unitPrice === ''} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-60">
+                      Add to Cart
+                    </button>
                   </div>
-                ))}
-              </div>
+                </div>
+              </>
             )}
 
-            {cart.length > 0 && (
-              <div className="mt-3 text-right font-semibold">
-                Total: {money(cartTotal)}
+            {/* Cart list */}
+            <div className="mt-5">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <FiShoppingCart className="h-4 w-4" /> Items
               </div>
-            )}
+              {cart.length === 0 ? (
+                <div className="mt-3 text-sm text-slate-500">No items yet.</div>
+              ) : (
+                <div className="mt-3 space-y-3">
+                  {cart.map((it, i) => (
+                    <div key={i} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="text-sm">
+                          <div className="font-semibold text-slate-800">{it.productName}</div>
+                          <div className="text-xs text-slate-500">Color: {it.color} • Size: {it.size} • Qty: {it.quantity}</div>
+                          <div className="text-emerald-700 text-xs font-semibold mt-1">{money(it.lineTotal)} ({money(it.unitPrice)} x {it.quantity})</div>
+                        </div>
+                        {!done && (
+                          <button onClick={() => removeCartItem(i)} className="text-rose-600 text-xs font-semibold hover:underline">
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {cart.length > 0 && (
+                <div className="mt-3 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                  <span>Order total</span>
+                  <span>{money(cartTotal)}</span>
+                </div>
+              )}
+            </div>
           </div>
         </section>
+
+        {/* Status / Payment */}
+        {cart.length > 0 && !done && (
+          <section
+            className="rounded-3xl border border-slate-200/70 bg-white/90 p-5 shadow-sm"
+            style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.26s' }}
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <FiClipboard className="h-4 w-4" /> Status & Payment
+            </div>
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+              <Select
+                label="Status"
+                value={status}
+                onChange={(v) => setStatus(v as any)}
+                options={[
+                  { label: 'Select…', value: '' },
+                  { label: 'In Process', value: 'In Process' },
+                  { label: 'Urgent', value: 'Urgent' },
+                  { label: 'Completed', value: 'Completed' },
+                ]}
+              />
+              <Select
+                label="Payment"
+                value={payment}
+                onChange={(v) => setPayment(v as any)}
+                options={[
+                  { label: 'Select…', value: '' },
+                  { label: 'Full Payment', value: 'Full Payment' },
+                  { label: 'Part Payment', value: 'Part Payment' },
+                ]}
+              />
+              {payment === 'Part Payment' && (
+                <InputNumber label="Part Payment Amount (Rs)" value={partAmount} onChange={setPartAmount} />
+              )}
+            </div>
+
+            <div className="mt-4">
+              <button
+                onClick={complete}
+                disabled={busy}
+                className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60"
+              >
+                <FiCheckCircle className="h-4 w-4" />
+                {busy ? 'Saving…' : 'Complete Transaction'}
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* After completion */}
+        {done && (
+          <section
+            className="rounded-3xl border border-emerald-200/70 bg-emerald-50/70 p-5 shadow-sm"
+            style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.26s' }}
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+              <FiCheckCircle className="h-4 w-4" /> Success
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3">
+              {pdfUrl && (
+                <a href={pdfUrl} target="_blank" className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
+                  View / Download Receipt PDF
+                </a>
+              )}
+              <button onClick={sendEmail} disabled={!pdfUrl || busy} className="rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-60">
+                {busy ? 'Sending…' : 'Send Receipt by Email'}
+              </button>
+              <button onClick={clearAll} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800">
+                New Transaction
+              </button>
+            </div>
+          </section>
+        )}
+
+        <style jsx>{`
+          @keyframes fadeUp {
+            from {
+              opacity: 0;
+              transform: translateY(14px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `}</style>
       </div>
-
-      {/* Status / Payment */}
-      {cart.length > 0 && !done && (
-        <section className="bg-white border rounded-2xl p-5 shadow-sm mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Select
-              label="Status"
-              value={status}
-              onChange={(v) => setStatus(v as any)}
-              options={[
-                { label: 'Select…', value: '' },
-                { label: 'In Process', value: 'In Process' },
-                { label: 'Urgent', value: 'Urgent' },
-                { label: 'Completed', value: 'Completed' },
-              ]}
-            />
-            <Select
-              label="Payment"
-              value={payment}
-              onChange={(v) => setPayment(v as any)}
-              options={[
-                { label: 'Select…', value: '' },
-                { label: 'Full Payment', value: 'Full Payment' },
-                { label: 'Part Payment', value: 'Part Payment' },
-              ]}
-            />
-            {payment === 'Part Payment' && (
-              <InputNumber label="Part Payment Amount (Rs)" value={partAmount} onChange={setPartAmount} />
-            )}
-          </div>
-
-          <div className="mt-4">
-            <button
-              onClick={complete}
-              disabled={busy}
-              className="bg-green-600 text-white px-5 py-2 rounded-lg disabled:opacity-60"
-            >
-              {busy ? 'Saving…' : 'Complete Transaction'}
-            </button>
-          </div>
-        </section>
-      )}
-
-      {/* After completion */}
-      {done && (
-        <section className="bg-white border rounded-2xl p-5 shadow-sm mt-6">
-          <h3 className="font-semibold mb-3">Success</h3>
-          <div className="flex flex-wrap gap-3">
-            {pdfUrl && (
-              <a href={pdfUrl} target="_blank" className="bg-green-600 text-white px-4 py-2 rounded-lg">
-                View / Download Receipt PDF
-              </a>
-            )}
-            <button onClick={sendEmail} disabled={!pdfUrl || busy} className="bg-blue-600 text-white px-4 py-2 rounded-lg disabled:opacity-60">
-              {busy ? 'Sending…' : 'Send Receipt by Email'}
-            </button>
-            <button onClick={clearAll} className="bg-gray-900 text-white px-4 py-2 rounded-lg">
-              New Transaction
-            </button>
-          </div>
-        </section>
-      )}
     </main>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  tone = 'slate',
+  icon,
+}: {
+  label: string;
+  value: string | number;
+  tone?: 'slate' | 'sky' | 'emerald' | 'amber';
+  icon?: React.ReactNode;
+}) {
+  const tones = {
+    slate: {
+      border: 'border-slate-200',
+      bg: 'from-slate-50 via-white to-white',
+      accent: 'bg-slate-100 text-slate-700',
+      glow: 'bg-slate-200/40',
+      value: 'text-slate-900',
+    },
+    sky: {
+      border: 'border-sky-100',
+      bg: 'from-sky-50 via-white to-white',
+      accent: 'bg-sky-100 text-sky-700',
+      glow: 'bg-sky-200/40',
+      value: 'text-slate-900',
+    },
+    emerald: {
+      border: 'border-emerald-100',
+      bg: 'from-emerald-50 via-white to-white',
+      accent: 'bg-emerald-100 text-emerald-700',
+      glow: 'bg-emerald-200/40',
+      value: 'text-slate-900',
+    },
+    amber: {
+      border: 'border-amber-100',
+      bg: 'from-amber-50 via-white to-white',
+      accent: 'bg-amber-100 text-amber-700',
+      glow: 'bg-amber-200/40',
+      value: 'text-slate-900',
+    },
+  } as const;
+  const theme = tones[tone] ?? tones.slate;
+
+  return (
+    <div className={`relative overflow-hidden rounded-2xl border ${theme.border} bg-gradient-to-br ${theme.bg} p-4 shadow-sm`}>
+      <div className="flex items-center justify-between">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+          {label}
+        </div>
+        {icon && (
+          <span className={`flex h-9 w-9 items-center justify-center rounded-full ${theme.accent}`}>
+            {icon}
+          </span>
+        )}
+      </div>
+      <div className={`mt-3 text-2xl font-semibold ${theme.value}`}>{value}</div>
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full blur-2xl ${theme.glow}`}
+      />
+    </div>
   );
 }
 
@@ -690,12 +909,12 @@ function Input({ label, value, onChange, disabled=false }:{
 }) {
   return (
     <label className="block">
-      <span className="text-sm text-gray-600">{label}</span>
+      <span className="text-sm font-semibold text-slate-600">{label}</span>
       <input
         value={value}
         onChange={(e)=>onChange(e.target.value)}
         disabled={disabled}
-        className="border rounded-lg px-3 py-2 w-full"
+        className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
       />
     </label>
   );
@@ -706,13 +925,13 @@ function InputNumber({ label, value, onChange, disabled=false }:{
 }) {
   return (
     <label className="block">
-      <span className="text-sm text-gray-600">{label}</span>
+      <span className="text-sm font-semibold text-slate-600">{label}</span>
       <input
         type="number"
         value={value}
         onChange={(e)=>onChange(e.target.value === '' ? '' : Number(e.target.value))}
         disabled={disabled}
-        className="border rounded-lg px-3 py-2 w-full"
+        className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
       />
     </label>
   );
@@ -724,12 +943,12 @@ function Select({ label, value, onChange, options, disabled=false }:{
 }) {
   return (
     <label className="block">
-      <span className="text-sm text-gray-600">{label}</span>
+      <span className="text-sm font-semibold text-slate-600">{label}</span>
       <select
         value={value}
         onChange={(e)=>onChange(e.target.value)}
         disabled={disabled}
-        className="border rounded-lg px-3 py-2 w-full bg-white"
+        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
       >
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
