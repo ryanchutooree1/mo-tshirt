@@ -12,6 +12,19 @@ import {
   doc,
   deleteDoc,
 } from "firebase/firestore";
+import {
+  FiAlertTriangle,
+  FiArchive,
+  FiBox,
+  FiDollarSign,
+  FiDownload,
+  FiLayers,
+  FiPackage,
+  FiPlus,
+  FiSearch,
+  FiUpload,
+  FiXCircle,
+} from "react-icons/fi";
 
 // ---------- Types ----------
 type SizeMap = Record<string, number>;
@@ -142,9 +155,9 @@ export default function InventoryPage() {
 
   const productStatus = (p: Product) => {
     const { lowCount, outCount } = totals(p);
-    if (outCount > 0) return { label: "Out", cls: "bg-rose-50 text-rose-700" };
-    if (lowCount > 0) return { label: "Low", cls: "bg-amber-50 text-amber-700" };
-    return { label: "OK", cls: "bg-emerald-50 text-emerald-700" };
+    if (outCount > 0) return { label: "Out", cls: "border border-rose-200 bg-rose-50 text-rose-700" };
+    if (lowCount > 0) return { label: "Low", cls: "border border-amber-200 bg-amber-50 text-amber-700" };
+    return { label: "OK", cls: "border border-emerald-200 bg-emerald-50 text-emerald-700" };
   };
 
   // ---------- Mutations ----------
@@ -414,346 +427,613 @@ export default function InventoryPage() {
   }
 
   // ---------- Render ----------
+  const togglePill = (active: boolean, activeClass: string) =>
+    `inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm transition ${
+      active
+        ? activeClass
+        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+    }`;
+
   return (
-    <main className="min-h-screen px-6 py-8 max-w-7xl mx-auto bg-gray-50">
-      {/* Totals */}
-      <div className="mb-6 p-4 bg-white rounded-xl shadow-sm border text-sm flex flex-wrap gap-6">
-        <span>Total units: <strong>{overall.totalUnits}</strong></span>
-        <span>Stock value: <strong>{money(overall.totalValue)}</strong></span>
-        <span className="text-amber-700">Low: {overall.low}</span>
-        <span className="text-rose-700">Out: {overall.out}</span>
-      </div>
-
-      {/* Controls */}
-      <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div className="flex gap-2">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search product"
-            className="border rounded-lg px-3 py-2 w-72 text-sm bg-white"
+    <main className="relative min-h-screen">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-40 right-[-12rem] h-80 w-80 rounded-full bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.35),transparent_70%)] blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-[-10rem] top-48 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_top,rgba(14,116,144,0.25),transparent_70%)] blur-3xl"
+      />
+      <div className="relative mx-auto max-w-7xl space-y-6 px-6 py-8">
+        {/* Hero */}
+        <section
+          className="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 p-6 shadow-sm backdrop-blur"
+          style={{ animation: "fadeUp 0.6s ease-out both" }}
+        >
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.08),transparent_60%)]"
           />
-          <label className="flex items-center gap-1 text-xs border rounded-lg px-2 py-1 bg-white">
-            <input type="checkbox" checked={showLowOnly} onChange={(e) => setShowLowOnly(e.target.checked)} /> Low
-          </label>
-          <label className="flex items-center gap-1 text-xs border rounded-lg px-2 py-1 bg-white">
-            <input type="checkbox" checked={showOutOnly} onChange={(e) => setShowOutOnly(e.target.checked)} /> Out
-          </label>
-          <label className="flex items-center gap-1 text-xs border rounded-lg px-2 py-1 bg-white">
-            <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} /> Show archived
-          </label>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={exportCSV} className="border rounded-lg px-3 py-2 text-sm bg-white hover:bg-gray-50">Export CSV</button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv"
-            className="hidden"
-            onChange={async (e) => {
-              const f = e.target.files?.[0];
-              if (f) await importCSV(f);
-              if (fileInputRef.current) fileInputRef.current.value = "";
-            }}
-          />
-          <button onClick={() => fileInputRef.current?.click()} className="border rounded-lg px-3 py-2 text-sm bg-white hover:bg-gray-50">Import CSV</button>
-          <button onClick={() => setShowAddProduct(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-3 py-2 text-sm">
-            Add product
-          </button>
-        </div>
-      </div>
-
-      {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filtered.map((p) => {
-          const { totalUnits, totalValue } = totals(p);
-          const status = productStatus(p);
-
-          return (
-            <div key={p.id} className="bg-white border rounded-2xl shadow-sm">
-              {/* Card header */}
-              <div className="p-4 border-b grid grid-cols-[3rem_1fr_auto_auto] gap-3 items-start">
-                <div className="w-12 h-12 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center">
-                  {p.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.imageUrl} alt={p.productName} className="object-cover w-full h-full" />
-                  ) : (
-                    <div className="text-[11px] text-gray-400">No image</div>
-                  )}
-                </div>
-
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <input
-                      defaultValue={p.productName}
-                      className="text-sm font-medium outline-none w-full"
-                      onBlur={(e) => e.target.value !== p.productName && editProductName(p.id, e.target.value)}
-                    />
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${status.cls}`}>{status.label}</span>
-                    {p.archived && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">Archived</span>}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">Units: {totalUnits} · {money(totalValue)}</p>
-                </div>
-
-                <div className="text-right">
-                  <div className="text-[11px] text-gray-500">Unit price</div>
-                  <input
-                    type="number"
-                    defaultValue={p.price ?? ""}
-                    placeholder="0"
-                    className="border rounded px-2 py-1 w-24 text-right text-sm bg-gray-50 focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
-                    onBlur={(e) => editProductPrice(p.id, e.target.value === "" ? "" : Number(e.target.value))}
-                  />
-                </div>
-
-                <div className="flex flex-col items-end gap-1">
-                  <button
-                    onClick={() => setExpanded(expanded === p.id ? null : p.id)}
-                    className="text-gray-600 hover:text-gray-900 text-sm"
-                    aria-label="Expand"
-                    title={expanded === p.id ? "Collapse" : "Expand"}
-                  >
-                    {expanded === p.id ? "▲" : "▼"}
-                  </button>
-                  <div className="flex gap-1">
-                    <button className="border px-1.5 py-0.5 rounded text-[11px] hover:bg-gray-50" onClick={() => duplicateProduct(p)} title="Duplicate">
-                      Copy
-                    </button>
-                    <button className="border px-1.5 py-0.5 rounded text-[11px] hover:bg-gray-50" onClick={() => toggleArchive(p)} title={p.archived ? "Unarchive" : "Archive"}>
-                      {p.archived ? "Unarchive" : "Archive"}
-                    </button>
-                    <button className="border px-1.5 py-0.5 rounded text-[11px] hover:bg-gray-50" onClick={() => resetStock(p)} title="Reset stock">
-                      Reset
-                    </button>
-                    <button
-                      className="border border-rose-300 text-rose-700 px-1.5 py-0.5 rounded text-[11px] hover:bg-rose-50"
-                      onClick={() => setConfirmDelete({ scope: "product", productId: p.id })}
-                      title="Delete product"
-                    >
-                      Del
-                    </button>
-                  </div>
-                </div>
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">
+                Inventory
+              </p>
+              <h1 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">
+                Inventory Control
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
+                Monitor stock health, prevent shortages, and keep pricing accurate with live inventory safety checks.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                  <FiLayers className="h-4 w-4" /> Live stock levels
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                  <FiAlertTriangle className="h-4 w-4" /> Low stock alerts
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                  CSV import / export
+                </span>
               </div>
-
-              {/* Colors & Sizes (collapsed by default, opens on arrow) */}
-              {expanded === p.id && (
-                <div className="p-4 space-y-4">
-                  <div className="flex justify-end">
-                    <button className="border px-2 py-1 rounded text-xs hover:bg-gray-50" onClick={() => setShowColorModal({ productId: p.id })}>
-                      Add color
-                    </button>
-                  </div>
-
-                  {p.colors.map((c, cIdx) => (
-                    <div key={`${p.id}-${c.color}`} className="border rounded-xl overflow-hidden">
-                      <div className="flex items-center justify-between bg-gray-50 px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <button
-                            className="text-gray-600 hover:text-gray-900 text-xs"
-                            onClick={() => setOpenColors((prev)=>({ ...prev, [`${p.id}-${cIdx}`]: !prev[`${p.id}-${cIdx}`] }))}
-                            aria-label="Toggle color"
-                          >
-                            {openColors[`${p.id}-${cIdx}`] ? '▾' : '▸'}
-                          </button>
-                          <div className="font-medium text-sm">{c.color}</div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button
-                            className="text-[11px] border px-2 py-1 rounded hover:bg-gray-100"
-                            onClick={() => setShowBulkModal({ productId: p.id, colorIdx: cIdx })}
-                            title="Bulk edit"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            className="text-[11px] border px-2 py-1 rounded hover:bg-rose-50 border-rose-300 text-rose-700"
-                            onClick={() => setConfirmDelete({ scope: "color", productId: p.id, colorIdx: cIdx })}
-                            title="Delete color"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-
-                      {openColors[`${p.id}-${cIdx}`] && (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm table-fixed">
-                          <colgroup>
-                            <col className="w-[40%]" />
-                            <col className="w-[20%]" />
-                            <col className="w-[20%]" />
-                            <col className="w-[20%]" />
-                          </colgroup>
-                          <thead>
-                            <tr className="bg-gray-100">
-                              <th className="text-left px-3 py-2">Size</th>
-                              <th className="text-right px-3 py-2">Qty</th>
-                              <th className="text-right px-3 py-2">Min</th>
-                              <th className="px-3 py-2 text-right">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {Object.entries(c.sizes)
-                              .sort((a, b) => DEFAULT_SIZES.indexOf(a[0]) - DEFAULT_SIZES.indexOf(b[0]))
-                              .map(([size, qty]) => {
-                                const min = c.minStock?.[size] ?? LOW_FALLBACK;
-                                const tone =
-                                  qty <= 0 ? "text-rose-700" : qty <= min ? "text-amber-700" : "text-emerald-700";
-                                return (
-                                  <tr key={`${p.id}-${c.color}-${size}`} className="border-t">
-                                    <td className="px-3 py-2">{size}</td>
-                                    <td className="px-3 py-2 text-right align-middle">
-                                      <input
-                                        type="number"
-                                        value={qty}
-                                        onChange={(e) => updateQty(p.id, cIdx, size, parseInt(e.target.value) || 0)}
-                                        className={`w-24 border rounded px-2 h-8 text-right ${tone}`}
-                                      />
-                                    </td>
-                                    <td className="px-3 py-2 text-right align-middle">
-                                      <input
-                                        type="number"
-                                        value={min}
-                                        onChange={(e) => updateMin(p.id, cIdx, size, parseInt(e.target.value) || 0)}
-                                        className="w-24 border rounded px-2 h-8 text-right"
-                                      />
-                                    </td>
-                                    <td className="px-3 py-2 text-right align-middle">
-                                      <button
-                                        className="border border-rose-300 text-rose-700 px-2 py-1 rounded hover:bg-rose-50"
-                                        onClick={() =>
-                                          setConfirmDelete({ scope: "size", productId: p.id, colorIdx: cIdx, sizeKey: size })
-                                        }
-                                      >
-                                        Delete
-                                      </button>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                          </tbody>
-                        </table>
-                      </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
-          );
-        })}
-      </div>
-
-      {filtered.length === 0 && (
-        <p className="text-gray-500 text-center mt-12">No products match your filters.</p>
-      )}
-
-      {/* ---------- Modals ---------- */}
-
-      {/* Add Product */}
-      {showAddProduct && (
-        <Modal onClose={() => setShowAddProduct(false)} title="Add product">
-          <div className="space-y-3">
-            <label className="block">
-              <span className="text-sm text-gray-600">Product name</span>
-              <input value={npName} onChange={(e) => setNpName(e.target.value)} className="w-full border rounded-lg px-3 py-2" />
-            </label>
-            <label className="block">
-              <span className="text-sm text-gray-600">Image URL (optional)</span>
-              <input value={npImage} onChange={(e) => setNpImage(e.target.value)} className="w-full border rounded-lg px-3 py-2" />
-            </label>
-            <label className="block">
-              <span className="text-sm text-gray-600">Unit price (Rs)</span>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={exportCSV}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+              >
+                <FiDownload className="h-4 w-4" /> Export CSV
+              </button>
               <input
-                type="number"
-                value={npPrice}
-                onChange={(e) => setNpPrice(e.target.value === "" ? "" : Number(e.target.value))}
-                className="w-full border rounded-lg px-3 py-2"
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (f) await importCSV(f);
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
               />
-            </label>
-          </div>
-          <div className="mt-5 flex justify-end gap-2">
-            <button className="px-3 py-2" onClick={() => setShowAddProduct(false)}>Cancel</button>
-            <button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-3 py-2" onClick={addProduct}>Save</button>
-          </div>
-        </Modal>
-      )}
-
-      {/* Add Color / Sizes */}
-      {showColorModal && (
-        <Modal onClose={() => setShowColorModal(null)} title="Add color and sizes">
-          <div className="space-y-3">
-            <label className="block">
-              <span className="text-sm text-gray-600">Color</span>
-              <input value={ncColor} onChange={(e) => setNcColor(e.target.value)} className="w-full border rounded-lg px-3 py-2" />
-            </label>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {DEFAULT_SIZES.map((s) => (
-                <div key={s} className="flex gap-2 items-center">
-                  <span className="w-10 text-sm text-gray-600">{s}</span>
-                  <input
-                    type="number"
-                    placeholder="Qty"
-                    value={ncSizes[s].qty}
-                    onChange={(e) =>
-                      setNcSizes((prev) => ({ ...prev, [s]: { ...prev[s], qty: e.target.value === "" ? "" : Number(e.target.value) } }))
-                    }
-                    className="border rounded px-2 py-1 w-20"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Min"
-                    value={ncSizes[s].min}
-                    onChange={(e) =>
-                      setNcSizes((prev) => ({ ...prev, [s]: { ...prev[s], min: e.target.value === "" ? "" : Number(e.target.value) } }))
-                    }
-                    className="border rounded px-2 py-1 w-20"
-                  />
-                </div>
-              ))}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+              >
+                <FiUpload className="h-4 w-4" /> Import CSV
+              </button>
+              <button
+                onClick={() => setShowAddProduct(true)}
+                className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+              >
+                <FiPlus className="h-4 w-4" /> Add product
+              </button>
             </div>
           </div>
-          <div className="mt-5 flex justify-end gap-2">
-            <button className="px-3 py-2" onClick={() => setShowColorModal(null)}>Cancel</button>
-            <button className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-3 py-2" onClick={() => addColorOrSizes(showColorModal.productId)}>
-              Save
+        </section>
+
+        {/* Stats */}
+        <section
+          className="grid grid-cols-2 gap-4 md:grid-cols-5"
+          style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.08s" }}
+        >
+          <StatCard label="Products" value={filtered.length} tone="slate" icon={<FiPackage className="h-4 w-4" />} />
+          <StatCard label="Total Units" value={overall.totalUnits} tone="sky" icon={<FiLayers className="h-4 w-4" />} />
+          <StatCard label="Stock Value" value={money(overall.totalValue)} tone="emerald" icon={<FiDollarSign className="h-4 w-4" />} />
+          <StatCard label="Low Stock" value={overall.low} tone="amber" icon={<FiAlertTriangle className="h-4 w-4" />} />
+          <StatCard label="Out of Stock" value={overall.out} tone="rose" icon={<FiXCircle className="h-4 w-4" />} />
+        </section>
+
+        {/* Filters */}
+        <section
+          className="sticky top-20 z-10 rounded-3xl border border-slate-200/70 bg-white/90 p-4 shadow-sm backdrop-blur"
+          style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.14s" }}
+        >
+          <div className="flex flex-wrap items-start gap-3">
+            <div className="relative">
+              <FiSearch className="absolute left-3 top-2.5 text-slate-400" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search product"
+                className="w-full rounded-full border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-200 sm:w-72"
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                aria-pressed={showLowOnly}
+                onClick={() => setShowLowOnly((v) => !v)}
+                className={togglePill(showLowOnly, "border-amber-200 bg-amber-50 text-amber-700")}
+              >
+                <FiAlertTriangle className="h-4 w-4" /> Low stock
+              </button>
+              <button
+                type="button"
+                aria-pressed={showOutOnly}
+                onClick={() => setShowOutOnly((v) => !v)}
+                className={togglePill(showOutOnly, "border-rose-200 bg-rose-50 text-rose-700")}
+              >
+                <FiXCircle className="h-4 w-4" /> Out of stock
+              </button>
+              <button
+                type="button"
+                aria-pressed={showArchived}
+                onClick={() => setShowArchived((v) => !v)}
+                className={togglePill(showArchived, "border-slate-300 bg-slate-100 text-slate-700")}
+              >
+                <FiArchive className="h-4 w-4" /> Archived
+              </button>
+            </div>
+            <div className="ml-auto text-xs font-semibold text-slate-500">
+              Showing {filtered.length} of {products.length} products
+            </div>
+          </div>
+        </section>
+
+        {/* Grid */}
+        <section
+          className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3"
+          style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.2s" }}
+        >
+          {filtered.map((p) => {
+            const { totalUnits, totalValue } = totals(p);
+            const status = productStatus(p);
+
+            return (
+              <div
+                key={p.id}
+                className="group overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 shadow-sm transition hover:border-emerald-200/70 hover:shadow-md"
+              >
+                {/* Card header */}
+                <div className="border-b border-slate-100/80 p-4">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-wrap items-start gap-4">
+                      <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100/80">
+                        {p.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={p.imageUrl} alt={p.productName} className="h-full w-full object-cover" />
+                        ) : (
+                          <FiBox className="h-5 w-5 text-slate-400" />
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <input
+                            defaultValue={p.productName}
+                            className="w-full bg-transparent text-base font-semibold text-slate-900 outline-none sm:w-auto"
+                            onBlur={(e) => e.target.value !== p.productName && editProductName(p.id, e.target.value)}
+                          />
+                          <span className={`text-[10px] font-semibold uppercase tracking-[0.2em] px-2 py-0.5 rounded-full ${status.cls}`}>
+                            {status.label}
+                          </span>
+                          {p.archived && (
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border border-slate-200 bg-slate-100 text-slate-600">
+                              Archived
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Units: <strong>{totalUnits}</strong> · Value: <strong>{money(totalValue)}</strong>
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col items-start gap-2 sm:items-end">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                          Unit price
+                        </div>
+                        <input
+                          type="number"
+                          defaultValue={p.price ?? ""}
+                          placeholder="0"
+                          className="w-28 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-right text-sm shadow-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                          onBlur={(e) => editProductPrice(p.id, e.target.value === "" ? "" : Number(e.target.value))}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <button
+                        onClick={() => setExpanded(expanded === p.id ? null : p.id)}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm transition ${
+                          expanded === p.id
+                            ? "border-slate-900 bg-slate-900 text-white"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                        }`}
+                        aria-label="Toggle details"
+                      >
+                        {expanded === p.id ? "Hide details" : "Show details"}
+                      </button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                          onClick={() => duplicateProduct(p)}
+                          title="Duplicate"
+                        >
+                          Copy
+                        </button>
+                        <button
+                          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                          onClick={() => toggleArchive(p)}
+                          title={p.archived ? "Unarchive" : "Archive"}
+                        >
+                          {p.archived ? "Unarchive" : "Archive"}
+                        </button>
+                        <button
+                          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                          onClick={() => resetStock(p)}
+                          title="Reset stock"
+                        >
+                          Reset
+                        </button>
+                        <button
+                          className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-100"
+                          onClick={() => setConfirmDelete({ scope: "product", productId: p.id })}
+                          title="Delete product"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Colors & Sizes */}
+                {expanded === p.id && (
+                  <div className="space-y-4 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                        Colors & sizes
+                      </div>
+                      <button
+                        className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                        onClick={() => setShowColorModal({ productId: p.id })}
+                      >
+                        Add color
+                      </button>
+                    </div>
+
+                    {p.colors.length === 0 && (
+                      <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-sm text-slate-500">
+                        No colors yet. Add the first color to start tracking sizes.
+                      </div>
+                    )}
+
+                    {p.colors.map((c, cIdx) => (
+                      <div key={`${p.id}-${c.color}`} className="overflow-hidden rounded-2xl border border-slate-200">
+                        <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <button
+                              className="text-xs font-semibold text-slate-600 hover:text-slate-900"
+                              onClick={() => setOpenColors((prev) => ({ ...prev, [`${p.id}-${cIdx}`]: !prev[`${p.id}-${cIdx}`] }))}
+                              aria-label="Toggle color"
+                            >
+                              {openColors[`${p.id}-${cIdx}`] ? "Hide" : "Show"}
+                            </button>
+                            <div className="font-semibold text-sm text-slate-800">{c.color}</div>
+                            <span className="text-xs text-slate-400">
+                              {Object.keys(c.sizes).length} sizes
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                              onClick={() => setShowBulkModal({ productId: p.id, colorIdx: cIdx })}
+                              title="Bulk edit"
+                            >
+                              Bulk edit
+                            </button>
+                            <button
+                              className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[11px] font-semibold text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-100"
+                              onClick={() => setConfirmDelete({ scope: "color", productId: p.id, colorIdx: cIdx })}
+                              title="Delete color"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+
+                        {openColors[`${p.id}-${cIdx}`] && (
+                          <div className="overflow-x-auto bg-white">
+                            <table className="w-full text-sm table-fixed">
+                              <colgroup>
+                                <col className="w-[40%]" />
+                                <col className="w-[20%]" />
+                                <col className="w-[20%]" />
+                                <col className="w-[20%]" />
+                              </colgroup>
+                              <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-500">
+                                <tr>
+                                  <th className="text-left px-3 py-2">Size</th>
+                                  <th className="text-right px-3 py-2">Qty</th>
+                                  <th className="text-right px-3 py-2">Min</th>
+                                  <th className="px-3 py-2 text-right">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y">
+                                {Object.entries(c.sizes)
+                                  .sort((a, b) => DEFAULT_SIZES.indexOf(a[0]) - DEFAULT_SIZES.indexOf(b[0]))
+                                  .map(([size, qty]) => {
+                                    const min = c.minStock?.[size] ?? LOW_FALLBACK;
+                                    const tone =
+                                      qty <= 0
+                                        ? "border-rose-200 text-rose-700"
+                                        : qty <= min
+                                        ? "border-amber-200 text-amber-700"
+                                        : "border-emerald-200 text-emerald-700";
+                                    return (
+                                      <tr key={`${p.id}-${c.color}-${size}`} className="text-slate-700">
+                                        <td className="px-3 py-2">{size}</td>
+                                        <td className="px-3 py-2 text-right align-middle">
+                                          <input
+                                            type="number"
+                                            value={qty}
+                                            onChange={(e) => updateQty(p.id, cIdx, size, parseInt(e.target.value) || 0)}
+                                            className={`w-24 rounded-lg border px-2 py-1 text-right ${tone} focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200`}
+                                          />
+                                        </td>
+                                        <td className="px-3 py-2 text-right align-middle">
+                                          <input
+                                            type="number"
+                                            value={min}
+                                            onChange={(e) => updateMin(p.id, cIdx, size, parseInt(e.target.value) || 0)}
+                                            className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-right focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                                          />
+                                        </td>
+                                        <td className="px-3 py-2 text-right align-middle">
+                                          <button
+                                            className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-100"
+                                            onClick={() =>
+                                              setConfirmDelete({ scope: "size", productId: p.id, colorIdx: cIdx, sizeKey: size })
+                                            }
+                                          >
+                                            Delete
+                                          </button>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </section>
+
+        {filtered.length === 0 && (
+          <div className="rounded-3xl border border-dashed border-slate-200 bg-white/80 p-10 text-center text-slate-500">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+              <FiSearch className="h-5 w-5" />
+            </div>
+            <div className="mt-3 text-base font-semibold text-slate-700">No products match your filters.</div>
+            <p className="mt-1 text-sm text-slate-500">Try clearing filters or add a new product.</p>
+            <button
+              onClick={() => setShowAddProduct(true)}
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+            >
+              <FiPlus className="h-4 w-4" /> Add product
             </button>
           </div>
-        </Modal>
-      )}
+        )}
 
-      {/* Bulk Edit */}
-      {showBulkModal && (
-        <BulkEditModal
-          products={products}
-          showBulkModal={showBulkModal}
-          onClose={() => setShowBulkModal(null)}
-        />
-      )}
+        {/* ---------- Modals ---------- */}
 
-      {/* Confirm Delete */}
-      {confirmDelete && (
-        <Modal onClose={() => setConfirmDelete(null)} title="Confirm delete">
-          <p className="text-sm text-gray-700 mb-4">
-            Type <strong>DELETE</strong> to confirm.
-          </p>
-          <ConfirmDelete onCancel={() => setConfirmDelete(null)} onConfirm={doDelete} />
-        </Modal>
-      )}
+        {/* Add Product */}
+        {showAddProduct && (
+          <Modal onClose={() => setShowAddProduct(false)} title="Add product">
+            <div className="space-y-3">
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-600">Product name</span>
+                <input
+                  value={npName}
+                  onChange={(e) => setNpName(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-600">Image URL (optional)</span>
+                <input
+                  value={npImage}
+                  onChange={(e) => setNpImage(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-600">Unit price (Rs)</span>
+                <input
+                  type="number"
+                  value={npPrice}
+                  onChange={(e) => setNpPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                />
+              </label>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50" onClick={() => setShowAddProduct(false)}>
+                Cancel
+              </button>
+              <button className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700" onClick={addProduct}>
+                Save
+              </button>
+            </div>
+          </Modal>
+        )}
+
+        {/* Add Color / Sizes */}
+        {showColorModal && (
+          <Modal onClose={() => setShowColorModal(null)} title="Add color and sizes">
+            <div className="space-y-3">
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-600">Color</span>
+                <input
+                  value={ncColor}
+                  onChange={(e) => setNcColor(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                />
+              </label>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {DEFAULT_SIZES.map((s) => (
+                  <div key={s} className="flex gap-2 items-center">
+                    <span className="w-10 text-sm text-slate-500">{s}</span>
+                    <input
+                      type="number"
+                      placeholder="Qty"
+                      value={ncSizes[s].qty}
+                      onChange={(e) =>
+                        setNcSizes((prev) => ({ ...prev, [s]: { ...prev[s], qty: e.target.value === "" ? "" : Number(e.target.value) } }))
+                      }
+                      className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Min"
+                      value={ncSizes[s].min}
+                      onChange={(e) =>
+                        setNcSizes((prev) => ({ ...prev, [s]: { ...prev[s], min: e.target.value === "" ? "" : Number(e.target.value) } }))
+                      }
+                      className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50" onClick={() => setShowColorModal(null)}>
+                Cancel
+              </button>
+              <button className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800" onClick={() => addColorOrSizes(showColorModal.productId)}>
+                Save
+              </button>
+            </div>
+          </Modal>
+        )}
+
+        {/* Bulk Edit */}
+        {showBulkModal && (
+          <BulkEditModal
+            products={products}
+            showBulkModal={showBulkModal}
+            onClose={() => setShowBulkModal(null)}
+          />
+        )}
+
+        {/* Confirm Delete */}
+        {confirmDelete && (
+          <Modal onClose={() => setConfirmDelete(null)} title="Confirm delete">
+            <p className="text-sm text-slate-700 mb-4">
+              Type <strong>DELETE</strong> to confirm.
+            </p>
+            <ConfirmDelete onCancel={() => setConfirmDelete(null)} onConfirm={doDelete} />
+          </Modal>
+        )}
+        <style jsx>{`
+          @keyframes fadeUp {
+            from {
+              opacity: 0;
+              transform: translateY(14px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `}</style>
+      </div>
     </main>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  tone = "slate",
+  icon,
+}: {
+  label: string;
+  value: string | number;
+  tone?: "slate" | "sky" | "emerald" | "amber" | "rose";
+  icon?: React.ReactNode;
+}) {
+  const tones = {
+    slate: {
+      border: "border-slate-200",
+      bg: "from-slate-50 via-white to-white",
+      accent: "bg-slate-100 text-slate-700",
+      glow: "bg-slate-200/40",
+      value: "text-slate-900",
+    },
+    sky: {
+      border: "border-sky-100",
+      bg: "from-sky-50 via-white to-white",
+      accent: "bg-sky-100 text-sky-700",
+      glow: "bg-sky-200/40",
+      value: "text-slate-900",
+    },
+    emerald: {
+      border: "border-emerald-100",
+      bg: "from-emerald-50 via-white to-white",
+      accent: "bg-emerald-100 text-emerald-700",
+      glow: "bg-emerald-200/40",
+      value: "text-slate-900",
+    },
+    amber: {
+      border: "border-amber-100",
+      bg: "from-amber-50 via-white to-white",
+      accent: "bg-amber-100 text-amber-700",
+      glow: "bg-amber-200/40",
+      value: "text-slate-900",
+    },
+    rose: {
+      border: "border-rose-100",
+      bg: "from-rose-50 via-white to-white",
+      accent: "bg-rose-100 text-rose-700",
+      glow: "bg-rose-200/40",
+      value: "text-slate-900",
+    },
+  } as const;
+  const theme = tones[tone] ?? tones.slate;
+
+  return (
+    <div className={`relative overflow-hidden rounded-2xl border ${theme.border} bg-gradient-to-br ${theme.bg} p-4 shadow-sm`}>
+      <div className="flex items-center justify-between">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+          {label}
+        </div>
+        {icon && (
+          <span className={`flex h-9 w-9 items-center justify-center rounded-full ${theme.accent}`}>
+            {icon}
+          </span>
+        )}
+      </div>
+      <div className={`mt-3 text-2xl font-semibold ${theme.value}`}>{value}</div>
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full blur-2xl ${theme.glow}`}
+      />
+    </div>
   );
 }
 
 // ---------- Reusable Modal ----------
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl">
-        <div className="px-5 py-4 border-b flex items-center justify-between">
-          <h3 className="font-semibold text-sm">{title}</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-800">✕</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{title}</h3>
+          <button
+            onClick={onClose}
+            className="rounded-full border border-slate-200 px-2 py-1 text-slate-500 hover:bg-slate-50"
+          >
+            ✕
+          </button>
         </div>
         <div className="px-5 py-4">{children}</div>
       </div>
@@ -771,11 +1051,13 @@ function ConfirmDelete({ onCancel, onConfirm }: { onCancel: () => void; onConfir
         value={code}
         onChange={(e) => setCode(e.target.value)}
         placeholder={REQUIRED}
-        className="border rounded-lg px-3 py-2"
+        className="rounded-full border border-slate-200 px-3 py-2 text-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
       />
-      <button className="px-3 py-2" onClick={onCancel}>Cancel</button>
+      <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50" onClick={onCancel}>
+        Cancel
+      </button>
       <button
-        className="bg-red-600 text-white rounded-lg px-3 py-2 disabled:opacity-60"
+        className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:opacity-60"
         disabled={code !== REQUIRED}
         onClick={onConfirm}
       >
@@ -819,26 +1101,28 @@ function BulkEditModal({
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {DEFAULT_SIZES.map((s) => (
           <div key={s} className="flex gap-2 items-center">
-            <span className="w-10 text-sm text-gray-600">{s}</span>
+            <span className="w-10 text-sm text-slate-600">{s}</span>
             <input
               type="number"
               value={local[s].qty}
               onChange={(e) => setLocal((pr) => ({ ...pr, [s]: { ...pr[s], qty: parseInt(e.target.value) || 0 } }))}
-              className="border rounded px-2 py-1 w-20"
+              className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
             />
             <input
               type="number"
               value={local[s].min}
               onChange={(e) => setLocal((pr) => ({ ...pr, [s]: { ...pr[s], min: parseInt(e.target.value) || 0 } }))}
-              className="border rounded px-2 py-1 w-20"
+              className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
             />
           </div>
         ))}
       </div>
       <div className="mt-5 flex justify-end gap-2">
-        <button className="px-3 py-2" onClick={onClose}>Cancel</button>
+        <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50" onClick={onClose}>
+          Cancel
+        </button>
         <button
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-3 py-2"
+          className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
           onClick={async () => {
             const ref = doc(db, "products", p.id);
             const colors = deepClone(p.colors);
