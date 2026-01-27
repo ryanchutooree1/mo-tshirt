@@ -55,7 +55,6 @@ export default function OwnerDashboard() {
   const RsIcon = (props: any) => (
     <span
       className={`${props?.className || ""} inline-flex items-center justify-center font-semibold`}
-      style={{ fontFamily: "var(--font-admin-serif)" }}
     >
       Rs
     </span>
@@ -248,7 +247,7 @@ export default function OwnerDashboard() {
       {/* HERO */}
       <header className={`${panelClass} grid gap-6 sm:grid-cols-[minmax(0,1fr)_auto] p-8`}>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-admin-serif)" }}>MO T-SHIRT — Owner Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">MO T-SHIRT — Owner Dashboard</h1>
           <p className="mt-2 text-sm text-gray-600">
             {formattedDate} • Primary: <span className="text-blue-400 font-semibold">{numerologyToday.primary}</span> • Secondary: <span className="text-emerald-400 font-semibold">{numerologyToday.secondary}</span>
           </p>
@@ -258,7 +257,7 @@ export default function OwnerDashboard() {
         </div>
         <div className="text-right">
           <div className="text-xs uppercase tracking-wide text-gray-500">Local time</div>
-          <div className="text-2xl sm:text-3xl font-semibold text-[#1a1a1a]" style={{ fontFamily: "var(--font-admin-serif)" }}>{timeString}</div>
+          <div className="text-2xl sm:text-3xl font-semibold text-[#1a1a1a]">{timeString}</div>
         </div>
       </header>
 
@@ -281,7 +280,7 @@ export default function OwnerDashboard() {
                 </div>
                 <div className="flex-1">
                   <p className="text-xs uppercase tracking-wide text-gray-500">{s.label}</p>
-                  <h2 className="text-xl font-semibold text-[#1a1a1a]" style={{ fontFamily: "var(--font-admin-serif)" }}>{s.value}</h2>
+                  <h2 className="text-xl font-semibold text-[#1a1a1a]">{s.value}</h2>
                 </div>
               </div>
             </Link>
@@ -294,7 +293,7 @@ export default function OwnerDashboard() {
         <div className="flex items-start gap-3">
           <div className="shrink-0"><Info className="w-5 h-5" /></div>
           <div>
-            <div className="text-sm font-semibold opacity-90" style={{ fontFamily: "var(--font-admin-serif)" }}>Smart Insight</div>
+            <div className="text-sm font-semibold opacity-90">Smart Insight</div>
             <div className="mt-0.5">{insight}</div>
           </div>
         </div>
@@ -304,7 +303,7 @@ export default function OwnerDashboard() {
       <section className={`${panelClass} p-6`}>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-admin-serif)" }}>Daily Checklist</h2>
+            <h2 className="text-lg font-semibold">Daily Checklist</h2>
             <p className="text-xs text-gray-500">Streak: <span className="text-emerald-600 font-semibold">{streak}</span> day{streak === 1 ? '' : 's'}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -360,7 +359,7 @@ export default function OwnerDashboard() {
 
       {/* Latest Orders */}
       <section className={`${panelClass} p-6`}>
-        <h2 className="text-lg font-semibold mb-6" style={{ fontFamily: "var(--font-admin-serif)" }}>Latest Orders</h2>
+        <h2 className="text-lg font-semibold mb-6">Latest Orders</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-[#1a1a1a]">
             <thead>
@@ -388,7 +387,7 @@ export default function OwnerDashboard() {
       {/* Inventory Snapshot */}
       <section className={`${panelClass} p-6`}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold" style={{ fontFamily: "var(--font-admin-serif)" }}>Inventory Snapshot</h2>
+          <h2 className="text-lg font-semibold">Inventory Snapshot</h2>
           <div className="flex items-center gap-2">
             <input
               placeholder="Search product..."

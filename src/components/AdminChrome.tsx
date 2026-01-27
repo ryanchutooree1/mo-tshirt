@@ -6,11 +6,14 @@ import { useEffect, useState } from "react";
 
 type NavItem = { href: string; label: string };
 
+const SHOP_ITEM: NavItem = { href: "/admin/shops", label: "Shops" };
+
 // Default nav groupings
 const DEFAULT_TOP: NavItem[] = [
   { href: "/admin/pos", label: "POS" },
   { href: "/admin/clients", label: "Clients" },
   { href: "/admin/contracts", label: "Contracts" },
+  SHOP_ITEM,
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/accounting", label: "Accounting" },
   { href: "/admin/dms", label: "DMS" },
@@ -21,12 +24,24 @@ const DEFAULT_TOP: NavItem[] = [
 
 const DEFAULT_MORE: NavItem[] = [
   { href: "/admin", label: "Dashboard" },
-  { href: "/admin/shops", label: "Shops" },
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/inventory", label: "Inventory" },
 ];
 
 const NAV_STORAGE = "admin-nav-v1";
+
+function normalizeNav(top: NavItem[], more: NavItem[]) {
+  const cleanedTop = top.filter((item) => item.href !== SHOP_ITEM.href);
+  const cleanedMore = more.filter((item) => item.href !== SHOP_ITEM.href);
+  const nextTop = cleanedTop.slice();
+  const contractsIndex = nextTop.findIndex((item) => item.href === "/admin/contracts");
+  if (contractsIndex >= 0) {
+    nextTop.splice(contractsIndex + 1, 0, SHOP_ITEM);
+  } else {
+    nextTop.push(SHOP_ITEM);
+  }
+  return { top: nextTop, more: cleanedMore };
+}
 
 export default function AdminChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -42,10 +57,17 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
       const raw = localStorage.getItem(NAV_STORAGE);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed?.top)) setTopNav(parsed.top);
-        if (Array.isArray(parsed?.more)) setMoreNav(parsed.more);
+        const parsedTop = Array.isArray(parsed?.top) ? parsed.top : DEFAULT_TOP;
+        const parsedMore = Array.isArray(parsed?.more) ? parsed.more : DEFAULT_MORE;
+        const normalized = normalizeNav(parsedTop, parsedMore);
+        setTopNav(normalized.top);
+        setMoreNav(normalized.more);
+        return;
       }
     } catch {}
+    const normalized = normalizeNav(DEFAULT_TOP, DEFAULT_MORE);
+    setTopNav(normalized.top);
+    setMoreNav(normalized.more);
   }, []);
 
   // Persist order
@@ -112,20 +134,14 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
               )}
             </svg>
           </button>
-          <div className="text-lg font-semibold justify-self-center" style={{ fontFamily: "var(--font-admin-serif)" }}>MO Admin</div>
-          <Link
-            href="/admin/shops"
-            className="justify-self-end inline-flex items-center rounded-full bg-[#FF6600] px-3 py-1 text-xs font-semibold text-white shadow-sm hover:bg-orange-600"
-          >
-            Shops
-          </Link>
+          <div className="text-lg font-semibold justify-self-center">MO Admin</div>
         </div>
       </div>
 
       {/* Sidebar removed for full-width pages; use drawer menu instead */}
       <aside className="hidden fixed inset-y-0 left-0 w-64 border-r border-gray-200 bg-white px-4 py-6 flex-col">
         <div className="px-1">
-          <div className="text-2xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-admin-serif)" }}>MO Admin</div>
+          <div className="text-2xl font-semibold tracking-tight">MO Admin</div>
           <div className="mt-1 text-sm text-gray-500">Operations</div>
         </div>
         <nav className="mt-6 space-y-1 flex-1">
@@ -158,7 +174,7 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
           <div className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} />
           <div className="absolute inset-y-0 left-0 w-80 bg-white border-r border-gray-200 p-5 flex flex-col">
             <div className="flex items-center justify-between">
-              <div className="text-xl font-semibold" style={{ fontFamily: "var(--font-admin-serif)" }}>MO Admin</div>
+              <div className="text-xl font-semibold">MO Admin</div>
               <button
                 onClick={() => setEditing((e) => !e)}
                 className="text-xs rounded border px-2 py-1 hover:bg-gray-50"

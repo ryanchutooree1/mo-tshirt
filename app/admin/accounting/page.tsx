@@ -614,7 +614,7 @@ export default function AccountingPage() {
       <header className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-semibold" style={{ fontFamily: 'var(--font-admin-serif)' }}>Accounting</h1>
+            <h1 className="text-3xl font-semibold">Accounting</h1>
             <p className="text-gray-500 mt-1" suppressHydrationWarning>
               Today • {now ? format(now, 'dd MMM yyyy') : ''} • {now ? format(now, 'HH:mm') : ''}
             </p>
