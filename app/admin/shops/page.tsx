@@ -827,12 +827,25 @@ export default function AdminShopsPage() {
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
                 <p className="text-sm font-semibold text-slate-700">Photo</p>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    className="text-sm"
-                  />
+                  <div className="flex items-center gap-3">
+                    <input
+                      id="shop-photo-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setFile(e.target.files?.[0] || null)}
+                      className="sr-only"
+                    />
+                    <label
+                      htmlFor="shop-photo-upload"
+                      className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50"
+                    >
+                      <FiImage className="h-4 w-4" />
+                      Choose file
+                    </label>
+                    <span className="text-xs text-slate-500">
+                      {file ? file.name : "No file chosen"}
+                    </span>
+                  </div>
                   <button
                     type="button"
                     onClick={uploadPhoto}
