@@ -13,6 +13,21 @@ import {
   deleteDoc,
   serverTimestamp,
 } from 'firebase/firestore';
+import {
+  FiAlertTriangle,
+  FiDownload,
+  FiEdit2,
+  FiMail,
+  FiMapPin,
+  FiPhone,
+  FiPlus,
+  FiSearch,
+  FiShield,
+  FiStar,
+  FiTag,
+  FiTrash2,
+  FiUsers,
+} from 'react-icons/fi';
 
 // ---------- Types ----------
 type Client = {
@@ -175,194 +190,371 @@ export default function ClientsPage() {
     setConfirmDelete(null);
   };
 
+  const togglePill = (active: boolean, activeClass: string) =>
+    `inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm transition ${
+      active
+        ? activeClass
+        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+    }`;
+
   return (
-    <main className="min-h-screen px-6 py-10 max-w-7xl mx-auto">
-      {/* Header + Actions */}
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">👥 Clients (CRM)</h1>
-          <p className="text-gray-600">Keep your best customers close—fast actions, VIP tagging, and clean data.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, phone, email…"
-            className="border rounded-lg px-3 py-2 w-72"
+    <main className="relative min-h-screen">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-40 right-[-12rem] h-80 w-80 rounded-full bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.35),transparent_70%)] blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-[-10rem] top-48 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.25),transparent_70%)] blur-3xl"
+      />
+      <div className="relative mx-auto max-w-7xl space-y-6 px-6 py-8">
+        {/* Hero */}
+        <section
+          className="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 p-6 shadow-sm backdrop-blur"
+          style={{ animation: 'fadeUp 0.6s ease-out both' }}
+        >
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_60%)]"
           />
-          <select
-            value={minStars}
-            onChange={(e) => setMinStars(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-            className="border rounded-lg px-3 py-2"
-          >
-            <option value="all">All stars</option>
-            <option value={1}>★ 1+</option>
-            <option value={2}>★ 2+</option>
-            <option value={3}>★ 3+</option>
-            <option value={4}>★ 4+</option>
-            <option value={5}>★ 5 only</option>
-          </select>
-          <label className="flex items-center gap-2 text-sm bg-white border rounded-lg px-3 py-2">
-            <input type="checkbox" checked={hasPhoneOnly} onChange={(e) => setHasPhoneOnly(e.target.checked)} />
-            Has phone
-          </label>
-          <label className="flex items-center gap-2 text-sm bg-white border rounded-lg px-3 py-2">
-            <input type="checkbox" checked={hasEmailOnly} onChange={(e) => setHasEmailOnly(e.target.checked)} />
-            Has email
-          </label>
-          <button onClick={exportCSV} className="ml-2 bg-gray-900 text-white rounded-lg px-3 py-2">
-            ⬇️ Export CSV
-          </button>
-          <button
-            onClick={() =>
-              setEditing({
-                id: '',
-                customerName: '',
-                customerEmail: '',
-                customerPhone: '',
-                customerAddress: '',
-                starRating: 3,
-                tags: [],
-              })
-            }
-            className="bg-orange-500 hover:bg-orange-600 text-white rounded-lg px-3 py-2"
-          >
-            ➕ Add Client
-          </button>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Total Clients" value={stats.total} />
-        <StatCard label="VIP (★4+)" value={stats.vip} />
-        <StatCard label="With Phone" value={stats.withPhone} />
-        <StatCard label="New (7d)" value={stats.last7} />
-      </div>
-
-      {/* Clients grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filtered.map((c) => {
-          const phoneDup = c.customerPhone && dupByPhone.get(cleanPhone(c.customerPhone))! > 1;
-          const emailDup = c.customerEmail && dupByEmail.get((c.customerEmail || '').toLowerCase())! > 1;
-
-          return (
-            <div key={c.id} className="bg-white border rounded-2xl shadow-sm overflow-hidden">
-              {/* Header */}
-              <div className="p-4 flex gap-3 items-center border-b">
-                <Avatar name={c.customerName} />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <div className="font-semibold text-lg">{c.customerName}</div>
-                    {(c.starRating || 1) >= 4 && (
-                      <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">VIP</span>
-                    )}
-                    {(phoneDup || emailDup) && (
-                      <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Duplicate?</span>
-                    )}
-                  </div>
-                  <Stars
-                    value={c.starRating || 1}
-                    onChange={(v) => saveClient({ ...c, starRating: v })}
-                  />
-                  <div className="text-xs text-gray-500">
-                    Added: {fmtDate(c.createdAt?.toDate ? c.createdAt.toDate() : undefined)}
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <button
-                    className="text-blue-600 hover:underline text-sm"
-                    onClick={() => setEditing(c)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="text-red-600 hover:underline text-sm"
-                    onClick={() => setConfirmDelete({ id: c.id, name: c.customerName })}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-
-              {/* Body */}
-              <div className="p-4 space-y-2 text-sm">
-                <Row label="Phone">
-                  {c.customerPhone ? (
-                    <div className="flex items-center gap-3">
-                      <a className="text-blue-600 hover:underline" href={telLink(c.customerPhone)}>
-                        {c.customerPhone}
-                      </a>
-                      <a className="text-green-600 hover:underline" href={waLink(c.customerPhone, `Hello ${c.customerName}!`)}>
-                        WhatsApp
-                      </a>
-                    </div>
-                  ) : (
-                    <span className="text-gray-400">—</span>
-                  )}
-                </Row>
-                <Row label="Email">
-                  {c.customerEmail ? (
-                    <a className="text-blue-600 hover:underline" href={emailLink(c.customerEmail)}>
-                      {c.customerEmail}
-                    </a>
-                  ) : (
-                    <span className="text-gray-400">—</span>
-                  )}
-                </Row>
-                <Row label="Address">
-                  {c.customerAddress ? c.customerAddress : <span className="text-gray-400">—</span>}
-                </Row>
-                {c.tags && c.tags.length > 0 && (
-                  <Row label="Tags">
-                    <div className="flex flex-wrap gap-2">
-                      {c.tags.map((t, i) => (
-                        <span key={i} className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">{t}</span>
-                      ))}
-                    </div>
-                  </Row>
-                )}
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-sky-600">
+                Clients
+              </p>
+              <h1 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">
+                Clients (CRM)
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
+                Keep your best customers close with VIP tagging, clean data, and fast contact actions.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                  <FiUsers className="h-4 w-4" /> Smart CRM
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                  <FiShield className="h-4 w-4" /> Duplicate checks
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                  <FiStar className="h-4 w-4" /> VIP prioritization
+                </span>
               </div>
             </div>
-          );
-        })}
-      </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={exportCSV}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+              >
+                <FiDownload className="h-4 w-4" /> Export CSV
+              </button>
+              <button
+                onClick={() =>
+                  setEditing({
+                    id: '',
+                    customerName: '',
+                    customerEmail: '',
+                    customerPhone: '',
+                    customerAddress: '',
+                    starRating: 3,
+                    tags: [],
+                  })
+                }
+                className="inline-flex items-center gap-2 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+              >
+                <FiPlus className="h-4 w-4" /> Add Client
+              </button>
+            </div>
+          </div>
+        </section>
 
-      {filtered.length === 0 && (
-        <p className="text-gray-500 text-center mt-12">No clients match your filters.</p>
-      )}
+        {/* Stats */}
+        <section
+          className="grid grid-cols-2 gap-4 md:grid-cols-4"
+          style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.08s' }}
+        >
+          <StatCard label="Total Clients" value={stats.total} tone="sky" icon={<FiUsers className="h-4 w-4" />} />
+          <StatCard label="VIP (4+ stars)" value={stats.vip} tone="amber" icon={<FiStar className="h-4 w-4" />} />
+          <StatCard label="With Phone" value={stats.withPhone} tone="emerald" icon={<FiPhone className="h-4 w-4" />} />
+          <StatCard label="New (7d)" value={stats.last7} tone="slate" icon={<FiTag className="h-4 w-4" />} />
+        </section>
 
-      {/* Modals */}
-      {editing && (
-        <ClientModal
-          initial={editing}
-          onCancel={() => setEditing(null)}
-          onSave={saveClient}
-        />
-      )}
+        {/* Filters */}
+        <section
+          className="sticky top-20 z-10 rounded-3xl border border-slate-200/70 bg-white/90 p-4 shadow-sm backdrop-blur"
+          style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.14s' }}
+        >
+          <div className="flex flex-wrap items-start gap-3">
+            <div className="relative">
+              <FiSearch className="absolute left-3 top-2.5 text-slate-400" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by name, phone, email…"
+                className="w-full rounded-full border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-200 sm:w-72"
+              />
+            </div>
+            <select
+              value={minStars}
+              onChange={(e) => setMinStars(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+              className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+            >
+              <option value="all">All stars</option>
+              <option value={1}>★ 1+</option>
+              <option value={2}>★ 2+</option>
+              <option value={3}>★ 3+</option>
+              <option value={4}>★ 4+</option>
+              <option value={5}>★ 5 only</option>
+            </select>
+            <button
+              type="button"
+              aria-pressed={hasPhoneOnly}
+              onClick={() => setHasPhoneOnly((v) => !v)}
+              className={togglePill(hasPhoneOnly, 'border-emerald-200 bg-emerald-50 text-emerald-700')}
+            >
+              <FiPhone className="h-4 w-4" /> Has phone
+            </button>
+            <button
+              type="button"
+              aria-pressed={hasEmailOnly}
+              onClick={() => setHasEmailOnly((v) => !v)}
+              className={togglePill(hasEmailOnly, 'border-sky-200 bg-sky-50 text-sky-700')}
+            >
+              <FiMail className="h-4 w-4" /> Has email
+            </button>
+            <div className="ml-auto text-xs font-semibold text-slate-500">
+              Showing {filtered.length} of {clients.length} clients
+            </div>
+          </div>
+        </section>
 
-      {confirmDelete && (
-        <ConfirmDeleteModal
-          name={confirmDelete.name}
-          onCancel={() => setConfirmDelete(null)}
-          onConfirm={(code) => {
-            if (code === DELETE_CODE) {
-              doDelete(confirmDelete.id);
+        {/* Clients grid */}
+        <section
+          className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3"
+          style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.2s' }}
+        >
+          {filtered.map((c) => {
+            const phoneDup = !!cleanPhone(c.customerPhone) && (dupByPhone.get(cleanPhone(c.customerPhone)) || 0) > 1;
+            const emailDup = !!(c.customerEmail || '').trim() && (dupByEmail.get((c.customerEmail || '').toLowerCase()) || 0) > 1;
+
+            return (
+              <div key={c.id} className="overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 shadow-sm transition hover:border-sky-200 hover:shadow-md">
+                {/* Header */}
+                <div className="border-b border-slate-100/80 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <Avatar name={c.customerName} />
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="text-base font-semibold text-slate-900">{c.customerName}</div>
+                          {(c.starRating || 1) >= 4 && (
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-amber-700">
+                              VIP
+                            </span>
+                          )}
+                          {(phoneDup || emailDup) && (
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border border-rose-200 bg-rose-50 text-rose-700">
+                              Duplicate
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-2">
+                          <Stars
+                            value={c.starRating || 1}
+                            onChange={(v) => saveClient({ ...c, starRating: v })}
+                          />
+                        </div>
+                        <div className="mt-2 text-xs text-slate-500">
+                          Added: {fmtDate(c.createdAt?.toDate ? c.createdAt.toDate() : undefined)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                        onClick={() => setEditing(c)}
+                      >
+                        <FiEdit2 className="h-3.5 w-3.5" /> Edit
+                      </button>
+                      <button
+                        className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-100"
+                        onClick={() => setConfirmDelete({ id: c.id, name: c.customerName })}
+                      >
+                        <FiTrash2 className="h-3.5 w-3.5" /> Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Body */}
+                <div className="space-y-3 p-4 text-sm">
+                  <Row label="Phone" icon={<FiPhone className="h-4 w-4 text-slate-400" />}>
+                    {c.customerPhone ? (
+                      <div className="flex flex-wrap items-center gap-3">
+                        <a className="text-sky-600 font-semibold hover:underline" href={telLink(c.customerPhone)}>
+                          {c.customerPhone}
+                        </a>
+                        <a className="text-emerald-600 font-semibold hover:underline" href={waLink(c.customerPhone, `Hello ${c.customerName}!`)}>
+                          WhatsApp
+                        </a>
+                      </div>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </Row>
+                  <Row label="Email" icon={<FiMail className="h-4 w-4 text-slate-400" />}>
+                    {c.customerEmail ? (
+                      <a className="text-sky-600 font-semibold hover:underline" href={emailLink(c.customerEmail)}>
+                        {c.customerEmail}
+                      </a>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </Row>
+                  <Row label="Address" icon={<FiMapPin className="h-4 w-4 text-slate-400" />}>
+                    {c.customerAddress ? c.customerAddress : <span className="text-slate-400">—</span>}
+                  </Row>
+                  {c.tags && c.tags.length > 0 && (
+                    <Row label="Tags" icon={<FiTag className="h-4 w-4 text-slate-400" />}>
+                      <div className="flex flex-wrap gap-2">
+                        {c.tags.map((t, i) => (
+                          <span key={i} className="text-xs bg-slate-100 px-2 py-0.5 rounded-full text-slate-700">
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    </Row>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </section>
+
+        {filtered.length === 0 && (
+          <div className="rounded-3xl border border-dashed border-slate-200 bg-white/80 p-10 text-center text-slate-500">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+              <FiAlertTriangle className="h-5 w-5" />
+            </div>
+            <div className="mt-3 text-base font-semibold text-slate-700">No clients match your filters.</div>
+            <p className="mt-1 text-sm text-slate-500">Try clearing filters or add a new client.</p>
+            <button
+              onClick={() =>
+                setEditing({
+                  id: '',
+                  customerName: '',
+                  customerEmail: '',
+                  customerPhone: '',
+                  customerAddress: '',
+                  starRating: 3,
+                  tags: [],
+                })
+              }
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+            >
+              <FiPlus className="h-4 w-4" /> Add Client
+            </button>
+          </div>
+        )}
+
+        {/* Modals */}
+        {editing && (
+          <ClientModal
+            initial={editing}
+            onCancel={() => setEditing(null)}
+            onSave={saveClient}
+          />
+        )}
+
+        {confirmDelete && (
+          <ConfirmDeleteModal
+            name={confirmDelete.name}
+            onCancel={() => setConfirmDelete(null)}
+            onConfirm={(code) => {
+              if (code === DELETE_CODE) {
+                doDelete(confirmDelete.id);
+              }
+            }}
+            required={DELETE_CODE}
+          />
+        )}
+        <style jsx>{`
+          @keyframes fadeUp {
+            from {
+              opacity: 0;
+              transform: translateY(14px);
             }
-          }}
-          required={DELETE_CODE}
-        />
-      )}
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `}</style>
+      </div>
     </main>
   );
 }
 
 // ---------- UI Bits ----------
-function StatCard({ label, value }: { label: string; value: number }) {
+function StatCard({
+  label,
+  value,
+  tone = 'slate',
+  icon,
+}: {
+  label: string;
+  value: number;
+  tone?: 'slate' | 'sky' | 'emerald' | 'amber';
+  icon?: React.ReactNode;
+}) {
+  const tones = {
+    slate: {
+      border: 'border-slate-200',
+      bg: 'from-slate-50 via-white to-white',
+      accent: 'bg-slate-100 text-slate-700',
+      glow: 'bg-slate-200/40',
+      value: 'text-slate-900',
+    },
+    sky: {
+      border: 'border-sky-100',
+      bg: 'from-sky-50 via-white to-white',
+      accent: 'bg-sky-100 text-sky-700',
+      glow: 'bg-sky-200/40',
+      value: 'text-slate-900',
+    },
+    emerald: {
+      border: 'border-emerald-100',
+      bg: 'from-emerald-50 via-white to-white',
+      accent: 'bg-emerald-100 text-emerald-700',
+      glow: 'bg-emerald-200/40',
+      value: 'text-slate-900',
+    },
+    amber: {
+      border: 'border-amber-100',
+      bg: 'from-amber-50 via-white to-white',
+      accent: 'bg-amber-100 text-amber-700',
+      glow: 'bg-amber-200/40',
+      value: 'text-slate-900',
+    },
+  } as const;
+  const theme = tones[tone] ?? tones.slate;
+
   return (
-    <div className="bg-white shadow p-4 rounded-lg text-center">
-      <p className="text-gray-500 text-sm">{label}</p>
-      <h2 className="text-xl font-bold">{value.toLocaleString()}</h2>
+    <div className={`relative overflow-hidden rounded-2xl border ${theme.border} bg-gradient-to-br ${theme.bg} p-4 shadow-sm`}>
+      <div className="flex items-center justify-between">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+          {label}
+        </div>
+        {icon && (
+          <span className={`flex h-9 w-9 items-center justify-center rounded-full ${theme.accent}`}>
+            {icon}
+          </span>
+        )}
+      </div>
+      <div className={`mt-3 text-2xl font-semibold ${theme.value}`}>{value.toLocaleString()}</div>
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full blur-2xl ${theme.glow}`}
+      />
     </div>
   );
 }
@@ -375,17 +567,20 @@ function Avatar({ name }: { name: string }) {
     .slice(0, 2)
     .toUpperCase();
   return (
-    <div className="w-12 h-12 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold">
+    <div className="h-12 w-12 rounded-full bg-slate-900 text-white flex items-center justify-center font-semibold shadow-sm">
       {initials || 'U'}
     </div>
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({ label, icon, children }: { label: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="flex gap-4">
-      <div className="w-24 text-gray-500">{label}</div>
-      <div className="flex-1">{children}</div>
+    <div className="flex gap-3">
+      <div className="flex w-24 items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-[0.16em]">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <div className="flex-1 text-slate-700">{children}</div>
     </div>
   );
 }
@@ -398,7 +593,7 @@ function Stars({ value, onChange }: { value: number; onChange: (v: number) => vo
           key={i}
           onClick={() => onChange(i)}
           aria-label={`Set ${i} star${i > 1 ? 's' : ''}`}
-          className="text-yellow-500 text-lg"
+          className={`text-lg transition ${i <= value ? 'text-amber-500' : 'text-slate-300 hover:text-amber-400'}`}
           title={`${i} star${i > 1 ? 's' : ''}`}
         >
           {i <= value ? '★' : '☆'}
@@ -430,44 +625,62 @@ function ClientModal({
     <Modal title={isEdit ? 'Edit Client' : 'Add Client'} onClose={onCancel}>
       <div className="space-y-3">
         <label className="block">
-          <span className="text-sm text-gray-600">Name</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} className="w-full border rounded-lg px-3 py-2" />
+          <span className="text-sm font-semibold text-slate-600">Name</span>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+          />
         </label>
         <label className="block">
-          <span className="text-sm text-gray-600">Email</span>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border rounded-lg px-3 py-2" />
+          <span className="text-sm font-semibold text-slate-600">Email</span>
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+          />
         </label>
         <label className="block">
-          <span className="text-sm text-gray-600">Phone</span>
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border rounded-lg px-3 py-2" />
+          <span className="text-sm font-semibold text-slate-600">Phone</span>
+          <input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+          />
         </label>
         <label className="block">
-          <span className="text-sm text-gray-600">Address</span>
-          <input value={address} onChange={(e) => setAddress(e.target.value)} className="w-full border rounded-lg px-3 py-2" />
+          <span className="text-sm font-semibold text-slate-600">Address</span>
+          <input
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+          />
         </label>
 
         <div>
-          <span className="text-sm text-gray-600">Star rating</span>
+          <span className="text-sm font-semibold text-slate-600">Star rating</span>
           <div>
             <Stars value={stars} onChange={setStars} />
           </div>
         </div>
 
         <label className="block">
-          <span className="text-sm text-gray-600">Tags (comma separated)</span>
+          <span className="text-sm font-semibold text-slate-600">Tags (comma separated)</span>
           <input
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             placeholder="vip, school, company"
-            className="w-full border rounded-lg px-3 py-2"
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
           />
         </label>
       </div>
 
       <div className="mt-5 flex justify-end gap-2">
-        <button className="px-3 py-2" onClick={onCancel}>Cancel</button>
+        <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50" onClick={onCancel}>
+          Cancel
+        </button>
         <button
-          className="bg-orange-600 text-white rounded-lg px-3 py-2 disabled:opacity-60"
+          className="rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 disabled:opacity-60"
           disabled={!name.trim()}
           onClick={() =>
             onSave({
@@ -506,7 +719,7 @@ function ConfirmDeleteModal({
   const [code, setCode] = useState('');
   return (
     <Modal title="Confirm Delete" onClose={onCancel}>
-      <p className="text-sm text-gray-700">
+      <p className="text-sm text-slate-700">
         This will permanently delete <strong>{name}</strong>. Type <strong>{required}</strong> to confirm.
       </p>
       <div className="mt-3 flex items-center justify-end gap-2">
@@ -514,11 +727,13 @@ function ConfirmDeleteModal({
           value={code}
           onChange={(e) => setCode(e.target.value)}
           placeholder={required}
-          className="border rounded-lg px-3 py-2"
+          className="rounded-full border border-slate-200 px-3 py-2 text-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
         />
-        <button className="px-3 py-2" onClick={onCancel}>Cancel</button>
+        <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50" onClick={onCancel}>
+          Cancel
+        </button>
         <button
-          className="bg-red-600 text-white rounded-lg px-3 py-2 disabled:opacity-60"
+          className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:opacity-60"
           disabled={code !== required}
           onClick={() => onConfirm(code)}
         >
@@ -532,11 +747,16 @@ function ConfirmDeleteModal({
 // ---------- Base Modal ----------
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl">
-        <div className="px-5 py-4 border-b flex items-center justify-between">
-          <h3 className="font-semibold">{title}</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-800">✕</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{title}</h3>
+          <button
+            onClick={onClose}
+            className="rounded-full border border-slate-200 px-2 py-1 text-slate-500 hover:bg-slate-50"
+          >
+            ✕
+          </button>
         </div>
         <div className="px-5 py-4">{children}</div>
       </div>
