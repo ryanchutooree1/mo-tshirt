@@ -79,6 +79,8 @@ function computeQuote(input) {
   const method = input.method || "Screen";
 
   const blankCost = Number(input.blankCost) || 0;
+  const plainSell = Number(input.plainSell) || 0;
+  const handlingFeePerUnit = Number(input.handlingFeePerUnit) || 0;
   const overheadPerOrder = Number(input.overheadPerOrder) || 0;
   const artworkFee = Number(input.artworkFee) || 0;
   const personalizationFeePerUnit = Number(input.personalizationFeePerUnit) || 0;
@@ -91,23 +93,45 @@ function computeQuote(input) {
   const dtfPackageFrontBack = Number(input.dtfPackageFrontBack) || DTF_PACKAGE_FRONT_BACK;
 
   const overheadUnit = overheadPerOrder / qty;
-  const artworkUnit = plainOrder ? 0 : artworkFee / qty;
-  const personalizationUnit = plainOrder ? 0 : personalization ? personalizationFeePerUnit : 0;
+  const artworkUnit = artworkFee / qty;
+  const personalizationUnit = personalization ? personalizationFeePerUnit : 0;
 
   let unitCostBase = blankCost;
   let decorationCostPerUnit = 0;
   let vinylCostBySize = 0;
 
-  if (!plainOrder) {
-    if (method === "DTF") {
-      unitCostBase = locations === 1 ? dtfPackageFront : dtfPackageFrontBack;
-    } else if (method === "Screen") {
-      decorationCostPerUnit = screenCostPerSideA4 * locations;
-    } else if (method === "Vinyl") {
-      const vinylCosts = getVinylCosts({ rollPrice: vinylRollPrice, wasteFactor: vinylWasteFactor });
-      vinylCostBySize = input.vinylSize === "Large" ? vinylCosts.large : vinylCosts.small;
-      decorationCostPerUnit = vinylCostBySize * locations;
-    }
+  if (plainOrder) {
+    const unitCost = blankCost + handlingFeePerUnit;
+    const suggestedUnitPrice = plainSell;
+    const unitProfit = suggestedUnitPrice - unitCost;
+    const marginPct = suggestedUnitPrice ? unitProfit / suggestedUnitPrice : 0;
+    const quoteTotal = suggestedUnitPrice * qty;
+
+    return {
+      qty,
+      locations,
+      unitCost,
+      unitCostBase,
+      decorationCostPerUnit,
+      vinylCostBySize,
+      overheadUnit: 0,
+      artworkUnit: 0,
+      personalizationUnit: 0,
+      suggestedUnitPrice,
+      unitProfit,
+      marginPct,
+      quoteTotal,
+    };
+  }
+
+  if (method === "DTF") {
+    unitCostBase = locations === 1 ? dtfPackageFront : dtfPackageFrontBack;
+  } else if (method === "Screen") {
+    decorationCostPerUnit = screenCostPerSideA4 * locations;
+  } else if (method === "Vinyl") {
+    const vinylCosts = getVinylCosts({ rollPrice: vinylRollPrice, wasteFactor: vinylWasteFactor });
+    vinylCostBySize = input.vinylSize === "Large" ? vinylCosts.large : vinylCosts.small;
+    decorationCostPerUnit = vinylCostBySize * locations;
   }
 
   const unitCost = unitCostBase + decorationCostPerUnit + overheadUnit + artworkUnit + personalizationUnit;

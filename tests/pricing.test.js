@@ -83,3 +83,31 @@ test("dtf package quote math", () => {
   assert.equal(result.unitCost, 320);
   assert.equal(result.suggestedUnitPrice, 640);
 });
+
+test("plain order quote math", () => {
+  const result = computeQuote({
+    method: "Screen",
+    qty: 1,
+    locations: 1,
+    rush: false,
+    artworkFee: 0,
+    overheadPerOrder: 200,
+    targetMarginPct: 50,
+    rushFeePct: 20,
+    personalizationFeePerUnit: 0,
+    personalization: false,
+    blankCost: 135,
+    plainSell: 175,
+    plainOrder: true,
+    vinylSize: "Small",
+    screenCostPerSideA4: 60,
+    vinylRollPrice: 469,
+    vinylWasteFactor: 1.2,
+    dtfPackageFront: 300,
+    dtfPackageFrontBack: 350,
+  });
+
+  assert.equal(result.unitCost, 135);
+  assert.equal(result.suggestedUnitPrice, 175);
+  assert.ok(result.marginPct > 0);
+});

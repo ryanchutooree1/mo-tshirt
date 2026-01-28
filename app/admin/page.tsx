@@ -258,6 +258,7 @@ export default function OwnerDashboard() {
         quotedUnitPrice: plainSell,
         locations: 1,
         personalization: false,
+        rush: false,
       }));
     }
   }, [quote.plainOrder, plainSell]);
@@ -284,6 +285,7 @@ export default function OwnerDashboard() {
       personalizationFeePerUnit: pricingModel.personalizationPerItem,
       personalization: quote.personalization,
       blankCost,
+      plainSell,
       plainOrder: quote.plainOrder,
       vinylSize: quote.vinylSize,
       screenCostPerSideA4: pricingModel.screenCostPerSideA4,
@@ -300,9 +302,13 @@ export default function OwnerDashboard() {
   const quotedMarginPct = quotedUnit ? quotedProfit / quotedUnit : 0;
   const totalCost = pricingSummary.unitCost * pricingSummary.qty;
   const totalProfit = quotedTotal - totalCost;
-  const fixedCosts = (Number(quote.artworkFee) || 0) + pricingModel.overheadPerOrder;
+  const fixedCosts = quote.plainOrder ? 0 : (Number(quote.artworkFee) || 0) + pricingModel.overheadPerOrder;
   const variableUnit = Math.max(0, pricingSummary.unitCost - fixedCosts / pricingSummary.qty);
-  const breakEvenQty = quotedUnit > variableUnit ? Math.ceil(fixedCosts / (quotedUnit - variableUnit)) : null;
+  const breakEvenQty = quote.plainOrder
+    ? null
+    : quotedUnit > variableUnit
+    ? Math.ceil(fixedCosts / (quotedUnit - variableUnit))
+    : null;
 
   const priceBreaks = useMemo(() => {
     const tiers = [24, 50, 100, 250];
@@ -319,6 +325,7 @@ export default function OwnerDashboard() {
         personalizationFeePerUnit: pricingModel.personalizationPerItem,
         personalization: quote.personalization,
         blankCost,
+        plainSell,
         plainOrder: quote.plainOrder,
         vinylSize: quote.vinylSize,
         screenCostPerSideA4: pricingModel.screenCostPerSideA4,
@@ -726,12 +733,13 @@ export default function OwnerDashboard() {
                     />
                   </label>
                   <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-600">
-                    <label className="inline-flex items-center gap-2">
+                    <label className={`inline-flex items-center gap-2 ${quote.plainOrder ? "opacity-50" : ""}`}>
                       <input
                         type="checkbox"
                         checked={quote.rush}
                         onChange={(e) => setQuote((q) => ({ ...q, rush: e.target.checked }))}
                         className="h-4 w-4 rounded border-slate-300 text-slate-900"
+                        disabled={quote.plainOrder}
                       />
                       Rush order
                     </label>
@@ -873,7 +881,7 @@ export default function OwnerDashboard() {
                   </div>
 
                   <div className="grid gap-2 sm:grid-cols-2">
-                    <label className="grid gap-1">
+                    <label className={`grid gap-1 ${quote.plainOrder ? "opacity-50" : ""}`}>
                       Target margin %
                       <input
                         type="number"
@@ -883,10 +891,10 @@ export default function OwnerDashboard() {
                         value={pricingModel.targetMarginPct}
                         onChange={(e) => setPricingModel((m) => ({ ...m, targetMarginPct: Number(e.target.value) }))}
                         className={costFieldClass}
-                        disabled={costLocked}
+                        disabled={costLocked || quote.plainOrder}
                       />
                     </label>
-                    <label className="grid gap-1">
+                    <label className={`grid gap-1 ${quote.plainOrder ? "opacity-50" : ""}`}>
                       Rush fee %
                       <input
                         type="number"
@@ -896,7 +904,7 @@ export default function OwnerDashboard() {
                         value={pricingModel.rushFeePct}
                         onChange={(e) => setPricingModel((m) => ({ ...m, rushFeePct: Number(e.target.value) }))}
                         className={costFieldClass}
-                        disabled={costLocked}
+                        disabled={costLocked || quote.plainOrder}
                       />
                     </label>
                   </div>
@@ -908,7 +916,7 @@ export default function OwnerDashboard() {
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
                 <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Unit cost</div>
                 <div className="mt-2 text-xl font-semibold text-slate-900">{money(pricingSummary.unitCost)}</div>
-                <div className="text-xs text-slate-500">Blank + production + overhead</div>
+                <div className="text-xs text-slate-500">{quote.plainOrder ? "Blank cost (plain)" : "Blank + production + overhead"}</div>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
                 <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Suggested unit price</div>
