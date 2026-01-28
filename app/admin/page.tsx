@@ -191,7 +191,7 @@ export default function OwnerDashboard() {
     if (input.blankColorFamily === "Standard" || input.blankColorFamily === "Red") next.blankColorFamily = input.blankColorFamily;
     if (typeof input.blankSizeBand === "string") next.blankSizeBand = input.blankSizeBand;
     if (input.pricingMode === "priceBook" || input.pricingMode === "marginEngine") next.pricingMode = input.pricingMode;
-    // plainOrder input removed from UI; keep default false
+    if (typeof input.plainOrder === "boolean") next.plainOrder = input.plainOrder;
     if (input.method === "Screen" || input.method === "Vinyl" || input.method === "DTF") next.method = input.method;
     if (typeof input.printOption === "string") next.printOption = input.printOption;
     if (typeof input.dtfIncludesDelivery === "boolean") next.dtfIncludesDelivery = input.dtfIncludesDelivery;
@@ -923,6 +923,16 @@ export default function OwnerDashboard() {
                       </div>
                     </div>
                   </div>
+
+                  <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={quote.plainOrder}
+                      onChange={(e) => setQuote((q) => ({ ...q, plainOrder: e.target.checked }))}
+                      className="h-4 w-4 rounded border-slate-300 text-slate-900"
+                    />
+                    Plain order (no print)
+                  </label>
 
                   {!quote.plainOrder && (
                     <label className="grid gap-1">
