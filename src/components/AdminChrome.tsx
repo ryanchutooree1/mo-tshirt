@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type NavItem = { href: string; label: string };
+type BusinessDetail = { id: string; title: string; content: string; updatedAt: number };
 
 const SHOP_ITEM: NavItem = { href: "/admin/shops", label: "Shops" };
 const NOTES_ITEM: NavItem = { href: "/admin/business-notes", label: "Business Notes" };
@@ -31,6 +32,25 @@ const DEFAULT_MORE: NavItem[] = [
 ];
 
 const NAV_STORAGE = "admin-nav-v1";
+const DETAILS_STORAGE = "admin-business-details-v1";
+
+const DETAIL_TEMPLATES = [
+  { title: "BRN", content: "BRN: " },
+  { title: "Address", content: "Address: " },
+  { title: "Account Number", content: "Account No: " },
+  {
+    title: "Client Message",
+    content:
+      "Hi! Thanks for reaching out to MO T-Shirt. Share your logo, quantity, and sizes, and we will quote you today.",
+  },
+];
+
+function createId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
 
 function normalizeNav(top: NavItem[], more: NavItem[]) {
   const topHasNotes = top.some((item) => item.href === NOTES_ITEM.href);
@@ -70,6 +90,11 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
   const [editing, setEditing] = useState(false);
   const [topNav, setTopNav] = useState<NavItem[]>(DEFAULT_TOP);
   const [moreNav, setMoreNav] = useState<NavItem[]>(DEFAULT_MORE);
+  const [details, setDetails] = useState<BusinessDetail[]>([]);
+  const [detailTitle, setDetailTitle] = useState("");
+  const [detailContent, setDetailContent] = useState("");
+  const [editingDetailId, setEditingDetailId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Load custom order
   useEffect(() => {
@@ -96,6 +121,32 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
       localStorage.setItem(NAV_STORAGE, JSON.stringify({ top: topNav, more: moreNav }));
     } catch {}
   }, [topNav, moreNav]);
+
+  // Load business details
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DETAILS_STORAGE);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return;
+      const sanitized = parsed
+        .filter((item) => item && typeof item.id === "string" && typeof item.content === "string")
+        .map((item) => ({
+          id: item.id,
+          title: typeof item.title === "string" ? item.title : "",
+          content: item.content,
+          updatedAt: typeof item.updatedAt === "number" ? item.updatedAt : Date.now(),
+        }));
+      setDetails(sanitized);
+    } catch {}
+  }, []);
+
+  // Persist business details
+  useEffect(() => {
+    try {
+      localStorage.setItem(DETAILS_STORAGE, JSON.stringify(details));
+    } catch {}
+  }, [details]);
 
   // Helpers to reorder
   function moveWithin(list: "top" | "more", index: number, delta: number) {
@@ -124,6 +175,61 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
   async function logout() {
     await fetch("/api/logout", { method: "POST" });
     router.replace("/login");
+  }
+
+  function resetDetailDraft() {
+    setDetailTitle("");
+    setDetailContent("");
+    setEditingDetailId(null);
+  }
+
+  function saveDetail() {
+    const title = detailTitle.trim();
+    const content = detailContent.trim();
+    if (!content) return;
+    const now = Date.now();
+    if (editingDetailId) {
+      setDetails((prev) =>
+        prev.map((item) =>
+          item.id === editingDetailId ? { ...item, title, content, updatedAt: now } : item
+        )
+      );
+    } else {
+      setDetails((prev) => [{ id: createId(), title, content, updatedAt: now }, ...prev]);
+    }
+    resetDetailDraft();
+  }
+
+  function editDetail(detail: BusinessDetail) {
+    setEditingDetailId(detail.id);
+    setDetailTitle(detail.title);
+    setDetailContent(detail.content);
+  }
+
+  function deleteDetail(id: string) {
+    setDetails((prev) => prev.filter((item) => item.id !== id));
+    if (editingDetailId === id) {
+      resetDetailDraft();
+    }
+  }
+
+  async function copyDetail(detail: BusinessDetail) {
+    const text = detail.title ? `${detail.title}: ${detail.content}` : detail.content;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      textarea.style.top = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+    setCopiedId(detail.id);
+    window.setTimeout(() => setCopiedId((prev) => (prev === detail.id ? null : prev)), 1400);
   }
 
   // Close menu on escape
@@ -288,6 +394,132 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
                   </Link>
                 );
               })}
+
+              <div className="mt-6 rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-white to-amber-50 p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">Business Details</div>
+                    <div className="mt-2 text-base font-semibold text-slate-900">Copy-ready info</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      Save BRN, address, account details, and everyday client messages.
+                    </div>
+                  </div>
+                  <span className="rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-[10px] font-semibold text-amber-700">
+                    {details.length} saved
+                  </span>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {DETAIL_TEMPLATES.map((template) => (
+                    <button
+                      key={template.title}
+                      onClick={() => {
+                        setEditingDetailId(null);
+                        setDetailTitle(template.title);
+                        setDetailContent(template.content);
+                      }}
+                      className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                    >
+                      + {template.title}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-4 grid gap-3">
+                  <div className="grid gap-1.5">
+                    <label className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                      Title
+                    </label>
+                    <input
+                      value={detailTitle}
+                      onChange={(e) => setDetailTitle(e.target.value)}
+                      placeholder="e.g. BRN, Bank Account, Shipping note"
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <label className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                      Message / Details
+                    </label>
+                    <textarea
+                      value={detailContent}
+                      onChange={(e) => setDetailContent(e.target.value)}
+                      placeholder="Paste your template message or business info here."
+                      rows={3}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={saveDetail}
+                      disabled={!detailContent.trim()}
+                      className="rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-sm transition hover:bg-slate-800 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                    >
+                      {editingDetailId ? "Save changes" : "Add detail"}
+                    </button>
+                    {editingDetailId ? (
+                      <button
+                        onClick={resetDetailDraft}
+                        className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                      >
+                        Cancel
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {details.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-slate-200 bg-white/70 px-3 py-3 text-xs text-slate-500">
+                      No details saved yet. Add your first business note above.
+                    </div>
+                  ) : (
+                    details.map((detail) => (
+                      <div key={detail.id} className="rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-slate-800">
+                              {detail.title || "Untitled detail"}
+                            </div>
+                            <div className="mt-1 text-xs text-slate-500 whitespace-pre-line break-words">
+                              {detail.content}
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <button
+                              onClick={() => copyDetail(detail)}
+                              className="inline-flex items-center justify-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5">
+                                <path d="M16.5 6a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h9Z" />
+                                <path d="M15 3a3 3 0 0 1 3 3v.75a.75.75 0 0 1-1.5 0V6a1.5 1.5 0 0 0-1.5-1.5h-9A1.5 1.5 0 0 0 4.5 6v9A1.5 1.5 0 0 0 6 16.5h.75a.75.75 0 0 1 0 1.5H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h9Z" />
+                              </svg>
+                              Copy
+                            </button>
+                            <button
+                              onClick={() => editDetail(detail)}
+                              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => deleteDetail(detail.id)}
+                              className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[11px] font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                        {copiedId === detail.id ? (
+                          <div className="mt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-600">
+                            Copied
+                          </div>
+                        ) : null}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </nav>
             <div className="mt-4 pt-4 border-t border-slate-200">
               <button
