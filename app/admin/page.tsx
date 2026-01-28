@@ -919,9 +919,13 @@ export default function OwnerDashboard() {
                 <div className="text-xs text-slate-500">{quote.plainOrder ? "Blank cost (plain)" : "Blank + production + overhead"}</div>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Suggested unit price</div>
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                  {quote.plainOrder ? "Plain sell price" : "Suggested unit price"}
+                </div>
                 <div className="mt-2 text-xl font-semibold text-slate-900">{money(pricingSummary.suggestedUnitPrice)}</div>
-                <div className="text-xs text-slate-500">Target margin {pricingModel.targetMarginPct}%</div>
+                <div className="text-xs text-slate-500">
+                  {quote.plainOrder ? "Catalog price benchmark" : `Target margin ${pricingModel.targetMarginPct}%`}
+                </div>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
                 <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Quote total</div>
