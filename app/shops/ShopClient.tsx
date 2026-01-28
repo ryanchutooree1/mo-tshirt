@@ -566,7 +566,7 @@ export default function ShopClient() {
           role="dialog"
           aria-modal="true"
           aria-label="Order list"
-          className={`absolute bottom-0 left-0 right-0 mx-auto w-full max-w-lg max-h-[85vh] max-h-[85svh] overflow-y-auto overflow-x-hidden rounded-t-[32px] bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl transition-transform duration-300 ease-out sm:bottom-auto sm:top-20 sm:right-6 sm:left-auto sm:mx-0 sm:max-w-[380px] sm:rounded-[32px] sm:shadow-xl sm:max-h-[80vh] sm:max-h-[80svh] ${
+          className={`absolute bottom-0 left-0 right-0 mx-auto w-full max-w-lg max-h-[85svh] overflow-y-auto overflow-x-hidden rounded-t-[32px] bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl transition-transform duration-300 ease-out sm:bottom-auto sm:top-20 sm:right-6 sm:left-auto sm:mx-0 sm:max-w-[380px] sm:rounded-[32px] sm:shadow-xl sm:max-h-[80svh] ${
             isOrderOpen ? "translate-y-0 sm:translate-x-0" : "translate-y-full sm:translate-x-[120%]"
           }`}
         >
