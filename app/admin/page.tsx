@@ -193,6 +193,8 @@ export default function OwnerDashboard() {
     },
   } as const;
   const money = (v: number) => `Rs ${Math.round(v || 0).toLocaleString()}`;
+  const pricingFieldClass =
+    "bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200";
 
   const pricing = useMemo(() => {
     const qty = Math.max(1, Number(quote.qty) || 1);
@@ -552,7 +554,7 @@ export default function OwnerDashboard() {
                     <select
                       value={quote.itemType}
                       onChange={(e) => setQuote((q) => ({ ...q, itemType: e.target.value }))}
-                      className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      className={pricingFieldClass}
                     >
                       <option value="T-Shirt">T-Shirt</option>
                       <option value="Polo">Polo</option>
@@ -564,7 +566,7 @@ export default function OwnerDashboard() {
                     <select
                       value={quote.method}
                       onChange={(e) => setQuote((q) => ({ ...q, method: e.target.value }))}
-                      className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      className={pricingFieldClass}
                     >
                       <option value="Screen">Screen printing</option>
                       <option value="DTF">DTF</option>
@@ -580,7 +582,7 @@ export default function OwnerDashboard() {
                         min={1}
                         value={quote.qty}
                         onChange={(e) => setQuote((q) => ({ ...q, qty: Number(e.target.value) }))}
-                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                        className={pricingFieldClass}
                       />
                     </label>
                     <label className="grid gap-1">
@@ -590,7 +592,7 @@ export default function OwnerDashboard() {
                         min={1}
                         value={quote.colors}
                         onChange={(e) => setQuote((q) => ({ ...q, colors: Number(e.target.value) }))}
-                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                        className={pricingFieldClass}
                       />
                     </label>
                     <label className="grid gap-1">
@@ -600,7 +602,7 @@ export default function OwnerDashboard() {
                         min={1}
                         value={quote.locations}
                         onChange={(e) => setQuote((q) => ({ ...q, locations: Number(e.target.value) }))}
-                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                        className={pricingFieldClass}
                       />
                     </label>
                   </div>
@@ -611,7 +613,7 @@ export default function OwnerDashboard() {
                       min={0}
                       value={quote.artworkFee}
                       onChange={(e) => setQuote((q) => ({ ...q, artworkFee: Number(e.target.value) }))}
-                      className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      className={pricingFieldClass}
                     />
                   </label>
                   <label className="grid gap-1">
@@ -621,7 +623,7 @@ export default function OwnerDashboard() {
                       min={0}
                       value={quote.quotedUnitPrice}
                       onChange={(e) => setQuote((q) => ({ ...q, quotedUnitPrice: Number(e.target.value) }))}
-                      className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      className={pricingFieldClass}
                     />
                   </label>
                   <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-600">
@@ -653,167 +655,167 @@ export default function OwnerDashboard() {
                   <div className="grid grid-cols-3 gap-3">
                     <label className="grid gap-1">
                       Tee blank
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        value={pricingModel.blankTee}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, blankTee: Number(e.target.value) }))}
-                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                      />
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      value={pricingModel.blankTee}
+                      onChange={(e) => setPricingModel((m) => ({ ...m, blankTee: Number(e.target.value) }))}
+                      className={pricingFieldClass}
+                    />
                     </label>
                     <label className="grid gap-1">
                       Polo blank
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        value={pricingModel.blankPolo}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, blankPolo: Number(e.target.value) }))}
-                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                      />
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      value={pricingModel.blankPolo}
+                      onChange={(e) => setPricingModel((m) => ({ ...m, blankPolo: Number(e.target.value) }))}
+                      className={pricingFieldClass}
+                    />
                     </label>
                     <label className="grid gap-1">
                       Cap blank
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        value={pricingModel.blankCap}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, blankCap: Number(e.target.value) }))}
-                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                      />
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      value={pricingModel.blankCap}
+                      onChange={(e) => setPricingModel((m) => ({ ...m, blankCap: Number(e.target.value) }))}
+                      className={pricingFieldClass}
+                    />
                     </label>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <label className="grid gap-1">
                       Screen setup / color
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        value={pricingModel.screenSetupPerColor}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, screenSetupPerColor: Number(e.target.value) }))}
-                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                      />
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      value={pricingModel.screenSetupPerColor}
+                      onChange={(e) => setPricingModel((m) => ({ ...m, screenSetupPerColor: Number(e.target.value) }))}
+                      className={pricingFieldClass}
+                    />
                     </label>
                     <label className="grid gap-1">
                       Screen ink / color
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        value={pricingModel.screenInkPerColor}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, screenInkPerColor: Number(e.target.value) }))}
-                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                      />
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      value={pricingModel.screenInkPerColor}
+                      onChange={(e) => setPricingModel((m) => ({ ...m, screenInkPerColor: Number(e.target.value) }))}
+                      className={pricingFieldClass}
+                    />
                     </label>
                     <label className="grid gap-1">
                       DTF / print
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        value={pricingModel.dtfPerPrint}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, dtfPerPrint: Number(e.target.value) }))}
-                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                      />
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      value={pricingModel.dtfPerPrint}
+                      onChange={(e) => setPricingModel((m) => ({ ...m, dtfPerPrint: Number(e.target.value) }))}
+                      className={pricingFieldClass}
+                    />
                     </label>
                     <label className="grid gap-1">
                       DTG / print
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        value={pricingModel.dtgPerPrint}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, dtgPerPrint: Number(e.target.value) }))}
-                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                      />
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      value={pricingModel.dtgPerPrint}
+                      onChange={(e) => setPricingModel((m) => ({ ...m, dtgPerPrint: Number(e.target.value) }))}
+                      className={pricingFieldClass}
+                    />
                     </label>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <label className="grid gap-1">
                       Embroidery / item
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        value={pricingModel.embroideryPerItem}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, embroideryPerItem: Number(e.target.value) }))}
-                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                      />
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      value={pricingModel.embroideryPerItem}
+                      onChange={(e) => setPricingModel((m) => ({ ...m, embroideryPerItem: Number(e.target.value) }))}
+                      className={pricingFieldClass}
+                    />
                     </label>
                     <label className="grid gap-1">
                       Digitize fee
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        value={pricingModel.digitizeFee}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, digitizeFee: Number(e.target.value) }))}
-                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                      />
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      value={pricingModel.digitizeFee}
+                      onChange={(e) => setPricingModel((m) => ({ ...m, digitizeFee: Number(e.target.value) }))}
+                      className={pricingFieldClass}
+                    />
                     </label>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <label className="grid gap-1">
                       Labor / unit
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        value={pricingModel.laborPerUnit}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, laborPerUnit: Number(e.target.value) }))}
-                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                      />
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      value={pricingModel.laborPerUnit}
+                      onChange={(e) => setPricingModel((m) => ({ ...m, laborPerUnit: Number(e.target.value) }))}
+                      className={pricingFieldClass}
+                    />
                     </label>
                     <label className="grid gap-1">
                       Overhead / order
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        value={pricingModel.overheadPerOrder}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, overheadPerOrder: Number(e.target.value) }))}
-                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                      />
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      value={pricingModel.overheadPerOrder}
+                      onChange={(e) => setPricingModel((m) => ({ ...m, overheadPerOrder: Number(e.target.value) }))}
+                      className={pricingFieldClass}
+                    />
                     </label>
                     <label className="grid gap-1">
                       Personalization
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        value={pricingModel.personalizationPerItem}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, personalizationPerItem: Number(e.target.value) }))}
-                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                      />
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      value={pricingModel.personalizationPerItem}
+                      onChange={(e) => setPricingModel((m) => ({ ...m, personalizationPerItem: Number(e.target.value) }))}
+                      className={pricingFieldClass}
+                    />
                     </label>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <label className="grid gap-1">
                       Target margin %
-                      <input
-                        type="number"
-                        min={0}
-                        max={90}
-                        step="1"
-                        value={Math.round(pricingModel.targetMargin * 100)}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, targetMargin: Number(e.target.value) / 100 }))}
-                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                      />
+                    <input
+                      type="number"
+                      min={0}
+                      max={90}
+                      step="1"
+                      value={Math.round(pricingModel.targetMargin * 100)}
+                      onChange={(e) => setPricingModel((m) => ({ ...m, targetMargin: Number(e.target.value) / 100 }))}
+                      className={pricingFieldClass}
+                    />
                     </label>
                     <label className="grid gap-1">
                       Rush fee %
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        step="1"
-                        value={Math.round(pricingModel.rushPct * 100)}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, rushPct: Number(e.target.value) / 100 }))}
-                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                      />
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="1"
+                      value={Math.round(pricingModel.rushPct * 100)}
+                      onChange={(e) => setPricingModel((m) => ({ ...m, rushPct: Number(e.target.value) / 100 }))}
+                      className={pricingFieldClass}
+                    />
                     </label>
                   </div>
                 </div>
