@@ -195,10 +195,6 @@ export default function OwnerDashboard() {
   const money = (v: number) => `Rs ${Math.round(v || 0).toLocaleString()}`;
   const pricingFieldClass =
     "bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200";
-  const pricingRowClass =
-    "flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 min-w-0";
-  const pricingRowInputClass =
-    "w-20 bg-transparent text-right text-[11px] font-semibold text-slate-900 focus:outline-none";
 
   const pricing = useMemo(() => {
     const qty = Math.max(1, Number(quote.qty) || 1);
@@ -579,34 +575,34 @@ export default function OwnerDashboard() {
                     </select>
                   </label>
                   <div className="grid grid-cols-3 gap-2">
-                    <label className={pricingRowClass}>
-                      <span className="truncate">Qty</span>
+                    <label className="grid gap-1 text-[11px] font-semibold text-slate-600">
+                      Qty
                       <input
                         type="number"
                         min={1}
                         value={quote.qty}
                         onChange={(e) => setQuote((q) => ({ ...q, qty: Number(e.target.value) }))}
-                        className={pricingRowInputClass}
+                        className={`${pricingFieldClass} text-right`}
                       />
                     </label>
-                    <label className={pricingRowClass}>
-                      <span className="truncate">Colors</span>
+                    <label className="grid gap-1 text-[11px] font-semibold text-slate-600">
+                      Colors
                       <input
                         type="number"
                         min={1}
                         value={quote.colors}
                         onChange={(e) => setQuote((q) => ({ ...q, colors: Number(e.target.value) }))}
-                        className={pricingRowInputClass}
+                        className={`${pricingFieldClass} text-right`}
                       />
                     </label>
-                    <label className={pricingRowClass}>
-                      <span className="truncate">Locations</span>
+                    <label className="grid gap-1 text-[11px] font-semibold text-slate-600">
+                      Locations
                       <input
                         type="number"
                         min={1}
                         value={quote.locations}
                         onChange={(e) => setQuote((q) => ({ ...q, locations: Number(e.target.value) }))}
-                        className={pricingRowInputClass}
+                        className={`${pricingFieldClass} text-right`}
                       />
                     </label>
                   </div>
@@ -657,37 +653,37 @@ export default function OwnerDashboard() {
                 <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Cost Model</div>
                 <div className="mt-3 grid gap-3 text-xs font-semibold text-slate-600">
                   <div className="grid grid-cols-3 gap-2">
-                    <label className={pricingRowClass}>
-                      <span className="truncate">Tee blank</span>
+                    <label className="grid gap-1 text-[11px] font-semibold text-slate-600">
+                      Tee blank
                       <input
                         type="number"
                         min={0}
                         step="0.1"
                         value={pricingModel.blankTee}
                         onChange={(e) => setPricingModel((m) => ({ ...m, blankTee: Number(e.target.value) }))}
-                        className={pricingRowInputClass}
+                        className={`${pricingFieldClass} text-right`}
                       />
                     </label>
-                    <label className={pricingRowClass}>
-                      <span className="truncate">Polo blank</span>
+                    <label className="grid gap-1 text-[11px] font-semibold text-slate-600">
+                      Polo blank
                       <input
                         type="number"
                         min={0}
                         step="0.1"
                         value={pricingModel.blankPolo}
                         onChange={(e) => setPricingModel((m) => ({ ...m, blankPolo: Number(e.target.value) }))}
-                        className={pricingRowInputClass}
+                        className={`${pricingFieldClass} text-right`}
                       />
                     </label>
-                    <label className={pricingRowClass}>
-                      <span className="truncate">Cap blank</span>
+                    <label className="grid gap-1 text-[11px] font-semibold text-slate-600">
+                      Cap blank
                       <input
                         type="number"
                         min={0}
                         step="0.1"
                         value={pricingModel.blankCap}
                         onChange={(e) => setPricingModel((m) => ({ ...m, blankCap: Number(e.target.value) }))}
-                        className={pricingRowInputClass}
+                        className={`${pricingFieldClass} text-right`}
                       />
                     </label>
                   </div>
@@ -762,37 +758,37 @@ export default function OwnerDashboard() {
                     </label>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    <label className={pricingRowClass}>
-                      <span className="truncate">Labor / unit</span>
+                    <label className="grid gap-1 text-[11px] font-semibold text-slate-600">
+                      Labor / unit
                       <input
                         type="number"
                         min={0}
                         step="0.1"
                         value={pricingModel.laborPerUnit}
                         onChange={(e) => setPricingModel((m) => ({ ...m, laborPerUnit: Number(e.target.value) }))}
-                        className={pricingRowInputClass}
+                        className={`${pricingFieldClass} text-right`}
                       />
                     </label>
-                    <label className={pricingRowClass}>
-                      <span className="truncate">Overhead / order</span>
+                    <label className="grid gap-1 text-[11px] font-semibold text-slate-600">
+                      Overhead / order
                       <input
                         type="number"
                         min={0}
                         step="0.1"
                         value={pricingModel.overheadPerOrder}
                         onChange={(e) => setPricingModel((m) => ({ ...m, overheadPerOrder: Number(e.target.value) }))}
-                        className={pricingRowInputClass}
+                        className={`${pricingFieldClass} text-right`}
                       />
                     </label>
-                    <label className={pricingRowClass}>
-                      <span className="truncate">Personalization</span>
+                    <label className="grid gap-1 text-[11px] font-semibold text-slate-600">
+                      Personalization
                       <input
                         type="number"
                         min={0}
                         step="0.1"
                         value={pricingModel.personalizationPerItem}
                         onChange={(e) => setPricingModel((m) => ({ ...m, personalizationPerItem: Number(e.target.value) }))}
-                        className={pricingRowInputClass}
+                        className={`${pricingFieldClass} text-right`}
                       />
                     </label>
                   </div>
