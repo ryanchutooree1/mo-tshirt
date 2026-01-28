@@ -10,6 +10,7 @@
     "start": "next start",
     "clean": "rm -rf .next",
     "lint": "eslint",
+    "test:pricing": "node --test tests/pricing.test.js",
     "postbuild": "next-sitemap"
   },
   "dependencies": {
