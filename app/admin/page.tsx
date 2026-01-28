@@ -23,6 +23,32 @@ type SizeMap = Record<string, number>;
 type ColorBlock = { color: string; sizes: SizeMap };
 type Product = { id: string; productName: string; colors: ColorBlock[] };
 type Order = { client?: string; amount?: number; status?: string; date?: string };
+type NumericInput = number | "";
+type PricingModelState = {
+  screenCostPerSideA4: NumericInput;
+  vinylRollPrice: NumericInput;
+  vinylWasteFactor: NumericInput;
+  dtfPackageFront: NumericInput;
+  dtfPackageFrontBack: NumericInput;
+  overheadPerOrder: NumericInput;
+  targetMarginPct: NumericInput;
+  rushFeePct: NumericInput;
+  personalizationPerItem: NumericInput;
+};
+type QuoteState = {
+  itemType: "T-Shirt" | "Polo";
+  blankColorFamily: "Standard" | "Red";
+  blankSizeBand: string;
+  plainOrder: boolean;
+  method: "Screen" | "Vinyl" | "DTF";
+  vinylSize: "Small" | "Large";
+  qty: NumericInput;
+  locations: number;
+  rush: boolean;
+  personalization: boolean;
+  artworkFee: NumericInput;
+  quotedUnitPrice: NumericInput;
+};
 
 // ---------- Numerology helpers ----------
 function sumDigits(n: number) {
@@ -92,7 +118,7 @@ export default function OwnerDashboard() {
   const [efficiencyValue, setEfficiencyValue] = useState(0);
 
   // Pricing & profitability studio
-  const [pricingModel, setPricingModel] = useState({
+  const [pricingModel, setPricingModel] = useState<PricingModelState>({
     screenCostPerSideA4: 60,
     vinylRollPrice: 469,
     vinylWasteFactor: 1.2,
@@ -103,7 +129,7 @@ export default function OwnerDashboard() {
     rushFeePct: 20,
     personalizationPerItem: 0,
   });
-  const [quote, setQuote] = useState({
+  const [quote, setQuote] = useState<QuoteState>({
     itemType: "T-Shirt",
     blankColorFamily: "Standard",
     blankSizeBand: "XS-XL",
@@ -121,7 +147,7 @@ export default function OwnerDashboard() {
 
   const normalizePricingModel = (input: any) => {
     if (!input || typeof input !== "object") return {};
-    const next: Record<string, number> = {};
+    const next: Partial<PricingModelState> = {};
     if (typeof input.screenCostPerSideA4 === "number") next.screenCostPerSideA4 = input.screenCostPerSideA4;
     if (typeof input.vinylRollPrice === "number") next.vinylRollPrice = input.vinylRollPrice;
     if (typeof input.vinylWasteFactor === "number") next.vinylWasteFactor = input.vinylWasteFactor;
@@ -138,7 +164,7 @@ export default function OwnerDashboard() {
 
   const normalizeQuote = (input: any) => {
     if (!input || typeof input !== "object") return {};
-    const next: Record<string, any> = {};
+    const next: Partial<QuoteState> = {};
     if (input.itemType === "T-Shirt" || input.itemType === "Polo") next.itemType = input.itemType;
     if (input.blankColorFamily === "Standard" || input.blankColorFamily === "Red") next.blankColorFamily = input.blankColorFamily;
     if (typeof input.blankSizeBand === "string") next.blankSizeBand = input.blankSizeBand;
@@ -233,6 +259,13 @@ export default function OwnerDashboard() {
   const costFieldClass = costLocked
     ? `${pricingFieldClass} bg-slate-100 text-slate-500 cursor-not-allowed`
     : pricingFieldClass;
+  const parseNumericInput = (value: string): NumericInput => {
+    if (value === "") return "";
+    const next = Number(value);
+    return Number.isFinite(next) ? next : "";
+  };
+  const toNumber = (value: number | "" | null | undefined, fallback: number) =>
+    typeof value === "number" && Number.isFinite(value) ? value : fallback;
 
   const sizeBandOptions = useMemo(
     () => pricing.getBlankOptions(quote.itemType, quote.blankColorFamily),
@@ -244,6 +277,21 @@ export default function OwnerDashboard() {
   );
   const blankCost = blankInfo?.cost ?? 0;
   const plainSell = blankInfo?.plainSell ?? 0;
+  const safeQty = Math.max(1, toNumber(quote.qty, 1));
+  const safeLocations = Math.max(1, toNumber(quote.locations, 1));
+  const safeArtworkFee = toNumber(quote.artworkFee, 0);
+  const safeQuotedUnitPrice = toNumber(quote.quotedUnitPrice, 0);
+  const safePricingModel = {
+    screenCostPerSideA4: toNumber(pricingModel.screenCostPerSideA4, 0),
+    vinylRollPrice: toNumber(pricingModel.vinylRollPrice, 0),
+    vinylWasteFactor: toNumber(pricingModel.vinylWasteFactor, 1),
+    dtfPackageFront: toNumber(pricingModel.dtfPackageFront, 0),
+    dtfPackageFrontBack: toNumber(pricingModel.dtfPackageFrontBack, 0),
+    overheadPerOrder: toNumber(pricingModel.overheadPerOrder, 0),
+    targetMarginPct: toNumber(pricingModel.targetMarginPct, 0),
+    rushFeePct: toNumber(pricingModel.rushFeePct, 0),
+    personalizationPerItem: toNumber(pricingModel.personalizationPerItem, 0),
+  };
 
   useEffect(() => {
     if (!sizeBandOptions.includes(quote.blankSizeBand) && sizeBandOptions.length) {
@@ -266,43 +314,60 @@ export default function OwnerDashboard() {
   const vinylCosts = useMemo(
     () =>
       pricing.getVinylCosts({
-        rollPrice: pricingModel.vinylRollPrice,
-        wasteFactor: pricingModel.vinylWasteFactor,
+        rollPrice: safePricingModel.vinylRollPrice,
+        wasteFactor: safePricingModel.vinylWasteFactor,
       }),
-    [pricingModel.vinylRollPrice, pricingModel.vinylWasteFactor]
+    [safePricingModel.vinylRollPrice, safePricingModel.vinylWasteFactor]
   );
 
   const pricingSummary = useMemo(() => {
     return pricing.computeQuote({
       method: quote.method,
-      qty: quote.qty,
-      locations: quote.locations,
+      qty: safeQty,
+      locations: safeLocations,
       rush: quote.rush,
-      artworkFee: quote.artworkFee,
-      overheadPerOrder: pricingModel.overheadPerOrder,
-      targetMarginPct: pricingModel.targetMarginPct,
-      rushFeePct: pricingModel.rushFeePct,
-      personalizationFeePerUnit: pricingModel.personalizationPerItem,
+      artworkFee: safeArtworkFee,
+      overheadPerOrder: safePricingModel.overheadPerOrder,
+      targetMarginPct: safePricingModel.targetMarginPct,
+      rushFeePct: safePricingModel.rushFeePct,
+      personalizationFeePerUnit: safePricingModel.personalizationPerItem,
       personalization: quote.personalization,
       blankCost,
       plainSell,
       plainOrder: quote.plainOrder,
       vinylSize: quote.vinylSize,
-      screenCostPerSideA4: pricingModel.screenCostPerSideA4,
-      vinylRollPrice: pricingModel.vinylRollPrice,
-      vinylWasteFactor: pricingModel.vinylWasteFactor,
-      dtfPackageFront: pricingModel.dtfPackageFront,
-      dtfPackageFrontBack: pricingModel.dtfPackageFrontBack,
+      screenCostPerSideA4: safePricingModel.screenCostPerSideA4,
+      vinylRollPrice: safePricingModel.vinylRollPrice,
+      vinylWasteFactor: safePricingModel.vinylWasteFactor,
+      dtfPackageFront: safePricingModel.dtfPackageFront,
+      dtfPackageFrontBack: safePricingModel.dtfPackageFrontBack,
     });
-  }, [quote, pricingModel, blankCost]);
+  }, [
+    quote,
+    pricingModel,
+    blankCost,
+    safeQty,
+    safeLocations,
+    safeArtworkFee,
+    plainSell,
+    safePricingModel.screenCostPerSideA4,
+    safePricingModel.vinylRollPrice,
+    safePricingModel.vinylWasteFactor,
+    safePricingModel.dtfPackageFront,
+    safePricingModel.dtfPackageFrontBack,
+    safePricingModel.overheadPerOrder,
+    safePricingModel.targetMarginPct,
+    safePricingModel.rushFeePct,
+    safePricingModel.personalizationPerItem,
+  ]);
 
-  const quotedUnit = Number(quote.quotedUnitPrice) > 0 ? Number(quote.quotedUnitPrice) : pricingSummary.suggestedUnitPrice;
+  const quotedUnit = safeQuotedUnitPrice > 0 ? safeQuotedUnitPrice : pricingSummary.suggestedUnitPrice;
   const quotedTotal = quotedUnit * pricingSummary.qty;
   const quotedProfit = quotedUnit - pricingSummary.unitCost;
   const quotedMarginPct = quotedUnit ? quotedProfit / quotedUnit : 0;
   const totalCost = pricingSummary.unitCost * pricingSummary.qty;
   const totalProfit = quotedTotal - totalCost;
-  const fixedCosts = quote.plainOrder ? 0 : (Number(quote.artworkFee) || 0) + pricingModel.overheadPerOrder;
+  const fixedCosts = quote.plainOrder ? 0 : safeArtworkFee + safePricingModel.overheadPerOrder;
   const variableUnit = Math.max(0, pricingSummary.unitCost - fixedCosts / pricingSummary.qty);
   const breakEvenQty = quote.plainOrder
     ? null
@@ -316,40 +381,56 @@ export default function OwnerDashboard() {
       const tier = pricing.computeQuote({
         method: quote.method,
         qty: tierQty,
-        locations: quote.locations,
+        locations: safeLocations,
         rush: quote.rush,
-        artworkFee: quote.artworkFee,
-        overheadPerOrder: pricingModel.overheadPerOrder,
-        targetMarginPct: pricingModel.targetMarginPct,
-        rushFeePct: pricingModel.rushFeePct,
-        personalizationFeePerUnit: pricingModel.personalizationPerItem,
+        artworkFee: safeArtworkFee,
+        overheadPerOrder: safePricingModel.overheadPerOrder,
+        targetMarginPct: safePricingModel.targetMarginPct,
+        rushFeePct: safePricingModel.rushFeePct,
+        personalizationFeePerUnit: safePricingModel.personalizationPerItem,
         personalization: quote.personalization,
         blankCost,
         plainSell,
         plainOrder: quote.plainOrder,
         vinylSize: quote.vinylSize,
-        screenCostPerSideA4: pricingModel.screenCostPerSideA4,
-        vinylRollPrice: pricingModel.vinylRollPrice,
-        vinylWasteFactor: pricingModel.vinylWasteFactor,
-        dtfPackageFront: pricingModel.dtfPackageFront,
-        dtfPackageFrontBack: pricingModel.dtfPackageFrontBack,
+        screenCostPerSideA4: safePricingModel.screenCostPerSideA4,
+        vinylRollPrice: safePricingModel.vinylRollPrice,
+        vinylWasteFactor: safePricingModel.vinylWasteFactor,
+        dtfPackageFront: safePricingModel.dtfPackageFront,
+        dtfPackageFrontBack: safePricingModel.dtfPackageFrontBack,
       });
       return { qty: tierQty, unitCost: tier.unitCost, suggestedUnit: tier.suggestedUnitPrice };
     });
-  }, [quote, pricingModel, blankCost]);
+  }, [
+    quote,
+    pricingModel,
+    blankCost,
+    safeLocations,
+    safeArtworkFee,
+    plainSell,
+    safePricingModel.screenCostPerSideA4,
+    safePricingModel.vinylRollPrice,
+    safePricingModel.vinylWasteFactor,
+    safePricingModel.dtfPackageFront,
+    safePricingModel.dtfPackageFrontBack,
+    safePricingModel.overheadPerOrder,
+    safePricingModel.targetMarginPct,
+    safePricingModel.rushFeePct,
+    safePricingModel.personalizationPerItem,
+  ]);
 
   const methodHint = useMemo(() => {
     if (quote.plainOrder) {
       return "Plain orders use your catalog blank price and plain sell benchmarks.";
     }
-    if (quote.method === "Screen" && quote.qty < 24) {
+    if (quote.method === "Screen" && safeQty < 24) {
       return "Screen printing shines on bigger runs; small batches may favor vinyl or DTF.";
     }
     if (quote.method === "Vinyl") {
       return "Vinyl is best for names, short runs, and quick turnaround jobs.";
     }
     return "DTF packages include the blank and work well for full-color designs.";
-  }, [quote.plainOrder, quote.method, quote.qty]);
+  }, [quote.plainOrder, quote.method, safeQty]);
 
   // Checklist init
   useEffect(() => {
@@ -693,7 +774,7 @@ export default function OwnerDashboard() {
                         type="number"
                         min={1}
                         value={quote.qty}
-                        onChange={(e) => setQuote((q) => ({ ...q, qty: Number(e.target.value) }))}
+                        onChange={(e) => setQuote((q) => ({ ...q, qty: parseNumericInput(e.target.value) }))}
                         className={`${pricingFieldClass} text-right`}
                       />
                     </label>
@@ -717,7 +798,7 @@ export default function OwnerDashboard() {
                       type="number"
                       min={0}
                       value={quote.artworkFee}
-                      onChange={(e) => setQuote((q) => ({ ...q, artworkFee: Number(e.target.value) }))}
+                      onChange={(e) => setQuote((q) => ({ ...q, artworkFee: parseNumericInput(e.target.value) }))}
                       className={`${pricingFieldClass} ${quote.plainOrder ? "bg-slate-100 text-slate-500" : ""}`}
                       disabled={quote.plainOrder}
                     />
@@ -728,7 +809,7 @@ export default function OwnerDashboard() {
                       type="number"
                       min={0}
                       value={quote.quotedUnitPrice}
-                      onChange={(e) => setQuote((q) => ({ ...q, quotedUnitPrice: Number(e.target.value) }))}
+                      onChange={(e) => setQuote((q) => ({ ...q, quotedUnitPrice: parseNumericInput(e.target.value) }))}
                       className={pricingFieldClass}
                     />
                   </label>
@@ -782,7 +863,7 @@ export default function OwnerDashboard() {
                         min={0}
                         step="1"
                         value={pricingModel.screenCostPerSideA4}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, screenCostPerSideA4: Number(e.target.value) }))}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, screenCostPerSideA4: parseNumericInput(e.target.value) }))}
                         className={costFieldClass}
                         disabled={costLocked}
                       />
@@ -794,7 +875,7 @@ export default function OwnerDashboard() {
                         min={0}
                         step="1"
                         value={pricingModel.dtfPackageFront}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, dtfPackageFront: Number(e.target.value) }))}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, dtfPackageFront: parseNumericInput(e.target.value) }))}
                         className={costFieldClass}
                         disabled={costLocked}
                       />
@@ -809,7 +890,7 @@ export default function OwnerDashboard() {
                         min={0}
                         step="1"
                         value={pricingModel.dtfPackageFrontBack}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, dtfPackageFrontBack: Number(e.target.value) }))}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, dtfPackageFrontBack: parseNumericInput(e.target.value) }))}
                         className={costFieldClass}
                         disabled={costLocked}
                       />
@@ -821,7 +902,7 @@ export default function OwnerDashboard() {
                         min={0}
                         step="1"
                         value={pricingModel.vinylRollPrice}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, vinylRollPrice: Number(e.target.value) }))}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, vinylRollPrice: parseNumericInput(e.target.value) }))}
                         className={costFieldClass}
                         disabled={costLocked}
                       />
@@ -836,7 +917,7 @@ export default function OwnerDashboard() {
                         min={1}
                         step="0.1"
                         value={pricingModel.vinylWasteFactor}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, vinylWasteFactor: Number(e.target.value) }))}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, vinylWasteFactor: parseNumericInput(e.target.value) }))}
                         className={costFieldClass}
                         disabled={costLocked}
                       />
@@ -861,7 +942,7 @@ export default function OwnerDashboard() {
                         min={0}
                         step="1"
                         value={pricingModel.overheadPerOrder}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, overheadPerOrder: Number(e.target.value) }))}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, overheadPerOrder: parseNumericInput(e.target.value) }))}
                         className={costFieldClass}
                         disabled={costLocked}
                       />
@@ -873,7 +954,7 @@ export default function OwnerDashboard() {
                         min={0}
                         step="1"
                         value={pricingModel.personalizationPerItem}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, personalizationPerItem: Number(e.target.value) }))}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, personalizationPerItem: parseNumericInput(e.target.value) }))}
                         className={costFieldClass}
                         disabled={costLocked}
                       />
@@ -889,7 +970,7 @@ export default function OwnerDashboard() {
                         max={90}
                         step="1"
                         value={pricingModel.targetMarginPct}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, targetMarginPct: Number(e.target.value) }))}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, targetMarginPct: parseNumericInput(e.target.value) }))}
                         className={costFieldClass}
                         disabled={costLocked || quote.plainOrder}
                       />
@@ -902,7 +983,7 @@ export default function OwnerDashboard() {
                         max={100}
                         step="1"
                         value={pricingModel.rushFeePct}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, rushFeePct: Number(e.target.value) }))}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, rushFeePct: parseNumericInput(e.target.value) }))}
                         className={costFieldClass}
                         disabled={costLocked || quote.plainOrder}
                       />

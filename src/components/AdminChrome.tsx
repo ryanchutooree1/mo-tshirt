@@ -5,10 +5,17 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type NavItem = { href: string; label: string };
-type BusinessDetail = { id: string; title: string; content: string; updatedAt: number };
+type BusinessDetail = {
+  id: string;
+  title: string;
+  content: string;
+  updatedAt: number;
+  category?: string;
+};
 
 const SHOP_ITEM: NavItem = { href: "/admin/shops", label: "Shops" };
 const NOTES_ITEM: NavItem = { href: "/admin/business-notes", label: "Business Notes" };
+const DETAILS_ITEM: NavItem = { href: "/admin/business-details", label: "Business Details" };
 
 // Default nav groupings
 const DEFAULT_TOP: NavItem[] = [
@@ -20,6 +27,7 @@ const DEFAULT_TOP: NavItem[] = [
   { href: "/admin/accounting", label: "Accounting" },
   { href: "/admin/dms", label: "DMS" },
   NOTES_ITEM,
+  DETAILS_ITEM,
   { href: "/admin/his-dream-life", label: "His Dream Life" },
   { href: "/admin/her-dream-life", label: "Her Dream Life" },
   { href: "/admin/our-dream", label: "Our Dream Life" },
@@ -55,15 +63,19 @@ function createId() {
 function normalizeNav(top: NavItem[], more: NavItem[]) {
   const topHasNotes = top.some((item) => item.href === NOTES_ITEM.href);
   const moreHasNotes = more.some((item) => item.href === NOTES_ITEM.href);
+  const topHasDetails = top.some((item) => item.href === DETAILS_ITEM.href);
+  const moreHasDetails = more.some((item) => item.href === DETAILS_ITEM.href);
   const cleanedTop = top.filter(
     (item) =>
       item.href !== SHOP_ITEM.href &&
-      (item.href !== NOTES_ITEM.href || topHasNotes)
+      (item.href !== NOTES_ITEM.href || topHasNotes) &&
+      (item.href !== DETAILS_ITEM.href || topHasDetails)
   );
   const cleanedMore = more.filter(
     (item) =>
       item.href !== SHOP_ITEM.href &&
-      (item.href !== NOTES_ITEM.href || !topHasNotes)
+      (item.href !== NOTES_ITEM.href || !topHasNotes) &&
+      (item.href !== DETAILS_ITEM.href || !topHasDetails)
   );
   const nextTop = cleanedTop.slice();
   const contractsIndex = nextTop.findIndex((item) => item.href === "/admin/contracts");
@@ -78,6 +90,19 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
       nextTop.splice(dmsIndex + 1, 0, NOTES_ITEM);
     } else {
       nextTop.push(NOTES_ITEM);
+    }
+  }
+  if (!topHasDetails && !moreHasDetails) {
+    const notesIndex = nextTop.findIndex((item) => item.href === NOTES_ITEM.href);
+    if (notesIndex >= 0) {
+      nextTop.splice(notesIndex + 1, 0, DETAILS_ITEM);
+    } else {
+      const dmsIndex = nextTop.findIndex((item) => item.href === "/admin/dms");
+      if (dmsIndex >= 0) {
+        nextTop.splice(dmsIndex + 1, 0, DETAILS_ITEM);
+      } else {
+        nextTop.push(DETAILS_ITEM);
+      }
     }
   }
   return { top: nextTop, more: cleanedMore };
@@ -136,6 +161,7 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
           title: typeof item.title === "string" ? item.title : "",
           content: item.content,
           updatedAt: typeof item.updatedAt === "number" ? item.updatedAt : Date.now(),
+          category: typeof item.category === "string" ? item.category : undefined,
         }));
       setDetails(sanitized);
     } catch {}
@@ -403,6 +429,13 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
                     <div className="mt-1 text-xs text-slate-500">
                       Save BRN, address, account details, and everyday client messages.
                     </div>
+                    <Link
+                      href="/admin/business-details"
+                      onClick={() => setOpen(false)}
+                      className="mt-3 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                    >
+                      Open Business Details
+                    </Link>
                   </div>
                   <span className="rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-[10px] font-semibold text-amber-700">
                     {details.length} saved
