@@ -345,6 +345,14 @@ export default function OwnerDashboard() {
   }, [sizeBandOptions, quote.blankSizeBand]);
 
   useEffect(() => {
+    if (!printOptions.length) return;
+    const valid = printOptions.some((opt: any) => opt.value === quote.printOption);
+    if (!valid) {
+      setQuote((q) => ({ ...q, printOption: printOptions[0].value }));
+    }
+  }, [printOptions, quote.printOption]);
+
+  useEffect(() => {
     if (quote.plainOrder) {
       setQuote((q) => ({
         ...q,
@@ -373,34 +381,60 @@ export default function OwnerDashboard() {
   );
 
   const pricingSummary = useMemo(() => {
-    return pricing.computeQuote({
-      method: quote.method,
-      pricingMode: quote.pricingMode,
-      itemType: quote.itemType,
-      sizeBand: quote.blankSizeBand,
-      qty: safeQty,
-      rush: quote.rush,
-      artworkFee: safeArtworkFee,
-      overheadPerOrder: safePricingModel.overheadPerOrder,
-      targetMarginPct: safePricingModel.targetMarginPct,
-      rushFeePct: safePricingModel.rushFeePct,
-      personalizationFeePerUnit: safePricingModel.personalizationPerItem,
-      personalization: quote.personalization,
-      blankCost,
-      plainSell,
-      priceBookPrice,
-      plainOrder: quote.plainOrder,
-      printOption: quote.printOption,
-      screenCostPerSideA4: safePricingModel.screenCostPerSideA4,
-      vinylRollPrice: safePricingModel.vinylRollPrice,
-      vinylWasteFactor: safePricingModel.vinylWasteFactor,
-      vinylLaborSmallPerUnit: safePricingModel.vinylLaborSmallPerUnit,
-      vinylLaborLargePerUnit: safePricingModel.vinylLaborLargePerUnit,
-      dtfPackageFront: safePricingModel.dtfPackageFront,
-      dtfPackageFrontBack: safePricingModel.dtfPackageFrontBack,
-      dtfDeliveryFee: safePricingModel.dtfDeliveryFee,
-      dtfIncludesDelivery: quote.dtfIncludesDelivery,
-    });
+    try {
+      return pricing.computeQuote({
+        method: quote.method,
+        pricingMode: quote.pricingMode,
+        itemType: quote.itemType,
+        sizeBand: quote.blankSizeBand,
+        qty: safeQty,
+        rush: quote.rush,
+        artworkFee: safeArtworkFee,
+        overheadPerOrder: safePricingModel.overheadPerOrder,
+        targetMarginPct: safePricingModel.targetMarginPct,
+        rushFeePct: safePricingModel.rushFeePct,
+        personalizationFeePerUnit: safePricingModel.personalizationPerItem,
+        personalization: quote.personalization,
+        blankCost,
+        plainSell,
+        priceBookPrice,
+        plainOrder: quote.plainOrder,
+        printOption: quote.printOption,
+        screenCostPerSideA4: safePricingModel.screenCostPerSideA4,
+        vinylRollPrice: safePricingModel.vinylRollPrice,
+        vinylWasteFactor: safePricingModel.vinylWasteFactor,
+        vinylLaborSmallPerUnit: safePricingModel.vinylLaborSmallPerUnit,
+        vinylLaborLargePerUnit: safePricingModel.vinylLaborLargePerUnit,
+        dtfPackageFront: safePricingModel.dtfPackageFront,
+        dtfPackageFrontBack: safePricingModel.dtfPackageFrontBack,
+        dtfDeliveryFee: safePricingModel.dtfDeliveryFee,
+        dtfIncludesDelivery: quote.dtfIncludesDelivery,
+      });
+    } catch (err) {
+      console.error("pricing compute error", err);
+      const fallbackSuggested =
+        quote.pricingMode === "priceBook" && !quote.plainOrder ? priceBookPrice : plainSell;
+      return {
+        qty: safeQty,
+        locations: 1,
+        unitCost: 0,
+        unitCostBase: 0,
+        productionCostPerUnit: 0,
+        laborPerUnit: 0,
+        vinylCostBySize: 0,
+        overheadUnit: 0,
+        artworkUnit: 0,
+        personalizationUnit: 0,
+        dtfDeliveryUnit: 0,
+        priceBookPrice,
+        pricingMode: quote.pricingMode,
+        printOption: quote.printOption,
+        suggestedUnitPrice: fallbackSuggested,
+        unitProfit: 0,
+        marginPct: 0,
+        quoteTotal: 0,
+      };
+    }
   }, [
     quote,
     pricingModel,
