@@ -90,6 +90,51 @@ export default function OwnerDashboard() {
   const [products, setProducts] = useState<Product[]>([]);
   const [efficiencyValue, setEfficiencyValue] = useState(0);
 
+  // Pricing & profitability studio
+  const [pricingModel, setPricingModel] = useState({
+    blankTee: 180,
+    blankPolo: 300,
+    blankCap: 200,
+    screenSetupPerColor: 600,
+    screenInkPerColor: 25,
+    dtfPerPrint: 90,
+    dtgPerPrint: 160,
+    embroideryPerItem: 140,
+    digitizeFee: 800,
+    laborPerUnit: 40,
+    overheadPerOrder: 200,
+    personalizationPerItem: 60,
+    targetMargin: 0.5,
+    rushPct: 0.2,
+  });
+  const [quote, setQuote] = useState({
+    itemType: "T-Shirt",
+    method: "Screen",
+    qty: 48,
+    colors: 2,
+    locations: 1,
+    rush: false,
+    personalization: false,
+    artworkFee: 0,
+    quotedUnitPrice: 0,
+  });
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("mo-pricing-v1");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed?.model) setPricingModel((m) => ({ ...m, ...parsed.model }));
+      if (parsed?.quote) setQuote((q) => ({ ...q, ...parsed.quote }));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("mo-pricing-v1", JSON.stringify({ model: pricingModel, quote }));
+    } catch {}
+  }, [pricingModel, quote]);
+
   const progressPct = tasks.length ? Math.round((tasks.filter((t) => t.completed).length / tasks.length) * 100) : 0;
 
   const { todaysOrdersCount, aov } = useMemo(() => {
@@ -147,6 +192,114 @@ export default function OwnerDashboard() {
       glow: "bg-slate-200/40",
     },
   } as const;
+  const money = (v: number) => `Rs ${Math.round(v || 0).toLocaleString()}`;
+
+  const pricing = useMemo(() => {
+    const qty = Math.max(1, Number(quote.qty) || 1);
+    const colors = Math.max(1, Number(quote.colors) || 1);
+    const locations = Math.max(1, Number(quote.locations) || 1);
+    const blankCost = quote.itemType === "Polo"
+      ? pricingModel.blankPolo
+      : quote.itemType === "Cap"
+      ? pricingModel.blankCap
+      : pricingModel.blankTee;
+
+    let printUnit = 0;
+    let setupFee = 0;
+    let extraFixed = 0;
+
+    if (quote.method === "Screen") {
+      printUnit = pricingModel.screenInkPerColor * colors * locations;
+      setupFee = pricingModel.screenSetupPerColor * colors * locations;
+    } else if (quote.method === "DTF") {
+      printUnit = pricingModel.dtfPerPrint * locations;
+    } else if (quote.method === "DTG") {
+      printUnit = pricingModel.dtgPerPrint * locations;
+    } else {
+      printUnit = pricingModel.embroideryPerItem;
+      extraFixed = pricingModel.digitizeFee;
+    }
+
+    const personalization = quote.personalization ? pricingModel.personalizationPerItem : 0;
+    const unitVar = blankCost + printUnit + pricingModel.laborPerUnit + personalization;
+    const fixed = pricingModel.overheadPerOrder + setupFee + extraFixed + (Number(quote.artworkFee) || 0);
+    const unitCost = (unitVar * qty + fixed) / qty;
+    const margin = Math.min(0.9, Math.max(0, pricingModel.targetMargin));
+    const suggestedBase = unitCost / (1 - margin || 1);
+    const rushMultiplier = quote.rush ? 1 + pricingModel.rushPct : 1;
+    const suggestedUnit = suggestedBase * rushMultiplier;
+    const quotedUnit = Number(quote.quotedUnitPrice) > 0 ? Number(quote.quotedUnitPrice) : suggestedUnit;
+    const totalRevenue = quotedUnit * qty;
+    const totalCost = unitVar * qty + fixed;
+    const profit = totalRevenue - totalCost;
+    const marginPct = totalRevenue ? profit / totalRevenue : 0;
+    const breakEvenQty = quotedUnit > unitVar ? Math.ceil(fixed / (quotedUnit - unitVar)) : null;
+    return {
+      qty,
+      colors,
+      locations,
+      blankCost,
+      printUnit,
+      unitVar,
+      fixed,
+      unitCost,
+      suggestedUnit,
+      quotedUnit,
+      totalRevenue,
+      totalCost,
+      profit,
+      marginPct,
+      breakEvenQty,
+      rushMultiplier,
+    };
+  }, [pricingModel, quote]);
+
+  const priceBreaks = useMemo(() => {
+    const tiers = [24, 50, 100, 250];
+    return tiers.map((tierQty) => {
+      const qty = Math.max(1, tierQty);
+      const colors = Math.max(1, Number(quote.colors) || 1);
+      const locations = Math.max(1, Number(quote.locations) || 1);
+      const blankCost = quote.itemType === "Polo"
+        ? pricingModel.blankPolo
+        : quote.itemType === "Cap"
+        ? pricingModel.blankCap
+        : pricingModel.blankTee;
+      let printUnit = 0;
+      let setupFee = 0;
+      let extraFixed = 0;
+      if (quote.method === "Screen") {
+        printUnit = pricingModel.screenInkPerColor * colors * locations;
+        setupFee = pricingModel.screenSetupPerColor * colors * locations;
+      } else if (quote.method === "DTF") {
+        printUnit = pricingModel.dtfPerPrint * locations;
+      } else if (quote.method === "DTG") {
+        printUnit = pricingModel.dtgPerPrint * locations;
+      } else {
+        printUnit = pricingModel.embroideryPerItem;
+        extraFixed = pricingModel.digitizeFee;
+      }
+      const personalization = quote.personalization ? pricingModel.personalizationPerItem : 0;
+      const unitVar = blankCost + printUnit + pricingModel.laborPerUnit + personalization;
+      const fixed = pricingModel.overheadPerOrder + setupFee + extraFixed + (Number(quote.artworkFee) || 0);
+      const unitCost = (unitVar * qty + fixed) / qty;
+      const margin = Math.min(0.9, Math.max(0, pricingModel.targetMargin));
+      const suggestedBase = unitCost / (1 - margin || 1);
+      const rushMultiplier = quote.rush ? 1 + pricingModel.rushPct : 1;
+      const suggestedUnit = suggestedBase * rushMultiplier;
+      return { qty, unitCost, suggestedUnit };
+    });
+  }, [pricingModel, quote]);
+
+  const methodHint = useMemo(() => {
+    if (quote.qty <= 24 && quote.method === "Screen") {
+      return "Small runs usually favor DTF/DTG to avoid screen setup overhead.";
+    }
+    if (quote.qty >= 100 && (quote.method === "DTF" || quote.method === "DTG")) {
+      return "Large runs with simple designs typically favor screen printing once setup is done.";
+    }
+    return "Match method to volume + design: screen for large repeats, DTF/DTG for small or photo-heavy jobs.";
+  }, [quote.qty, quote.method]);
 
   // Checklist init
   useEffect(() => {
@@ -372,8 +525,365 @@ export default function OwnerDashboard() {
           })}
         </section>
 
+        {/* Pricing & Profitability Studio */}
+        <section className="grid gap-6 lg:grid-cols-[1.35fr_0.65fr]" style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.14s" }}>
+          <div className={`${panelClass} p-6`}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Pricing & Profitability Studio</h2>
+                <p className="text-xs text-slate-500">Model quotes for custom tees, polos, and caps with real margin targets.</p>
+              </div>
+              <button
+                onClick={() => {
+                  setQuote((q) => ({ ...q, quotedUnitPrice: 0 }));
+                }}
+                className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+              >
+                Use suggested price
+              </button>
+            </div>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Order Inputs</div>
+                <div className="mt-3 grid gap-3 text-xs font-semibold text-slate-600">
+                  <label className="grid gap-1">
+                    Item type
+                    <select
+                      value={quote.itemType}
+                      onChange={(e) => setQuote((q) => ({ ...q, itemType: e.target.value }))}
+                      className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                    >
+                      <option value="T-Shirt">T-Shirt</option>
+                      <option value="Polo">Polo</option>
+                      <option value="Cap">Cap</option>
+                    </select>
+                  </label>
+                  <label className="grid gap-1">
+                    Decoration method
+                    <select
+                      value={quote.method}
+                      onChange={(e) => setQuote((q) => ({ ...q, method: e.target.value }))}
+                      className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                    >
+                      <option value="Screen">Screen printing</option>
+                      <option value="DTF">DTF</option>
+                      <option value="DTG">DTG</option>
+                      <option value="Embroidery">Embroidery</option>
+                    </select>
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <label className="grid gap-1">
+                      Qty
+                      <input
+                        type="number"
+                        min={1}
+                        value={quote.qty}
+                        onChange={(e) => setQuote((q) => ({ ...q, qty: Number(e.target.value) }))}
+                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      />
+                    </label>
+                    <label className="grid gap-1">
+                      Colors
+                      <input
+                        type="number"
+                        min={1}
+                        value={quote.colors}
+                        onChange={(e) => setQuote((q) => ({ ...q, colors: Number(e.target.value) }))}
+                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      />
+                    </label>
+                    <label className="grid gap-1">
+                      Locations
+                      <input
+                        type="number"
+                        min={1}
+                        value={quote.locations}
+                        onChange={(e) => setQuote((q) => ({ ...q, locations: Number(e.target.value) }))}
+                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      />
+                    </label>
+                  </div>
+                  <label className="grid gap-1">
+                    Artwork fee (Rs)
+                    <input
+                      type="number"
+                      min={0}
+                      value={quote.artworkFee}
+                      onChange={(e) => setQuote((q) => ({ ...q, artworkFee: Number(e.target.value) }))}
+                      className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                    />
+                  </label>
+                  <label className="grid gap-1">
+                    Quoted unit price (Rs)
+                    <input
+                      type="number"
+                      min={0}
+                      value={quote.quotedUnitPrice}
+                      onChange={(e) => setQuote((q) => ({ ...q, quotedUnitPrice: Number(e.target.value) }))}
+                      className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                    />
+                  </label>
+                  <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-600">
+                    <label className="inline-flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={quote.rush}
+                        onChange={(e) => setQuote((q) => ({ ...q, rush: e.target.checked }))}
+                        className="h-4 w-4 rounded border-slate-300 text-slate-900"
+                      />
+                      Rush order
+                    </label>
+                    <label className="inline-flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={quote.personalization}
+                        onChange={(e) => setQuote((q) => ({ ...q, personalization: e.target.checked }))}
+                        className="h-4 w-4 rounded border-slate-300 text-slate-900"
+                      />
+                      Personalization
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Cost Model</div>
+                <div className="mt-3 grid gap-3 text-xs font-semibold text-slate-600">
+                  <div className="grid grid-cols-3 gap-3">
+                    <label className="grid gap-1">
+                      Tee blank
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.1"
+                        value={pricingModel.blankTee}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, blankTee: Number(e.target.value) }))}
+                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      />
+                    </label>
+                    <label className="grid gap-1">
+                      Polo blank
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.1"
+                        value={pricingModel.blankPolo}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, blankPolo: Number(e.target.value) }))}
+                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      />
+                    </label>
+                    <label className="grid gap-1">
+                      Cap blank
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.1"
+                        value={pricingModel.blankCap}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, blankCap: Number(e.target.value) }))}
+                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      />
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="grid gap-1">
+                      Screen setup / color
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.1"
+                        value={pricingModel.screenSetupPerColor}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, screenSetupPerColor: Number(e.target.value) }))}
+                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      />
+                    </label>
+                    <label className="grid gap-1">
+                      Screen ink / color
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.1"
+                        value={pricingModel.screenInkPerColor}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, screenInkPerColor: Number(e.target.value) }))}
+                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      />
+                    </label>
+                    <label className="grid gap-1">
+                      DTF / print
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.1"
+                        value={pricingModel.dtfPerPrint}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, dtfPerPrint: Number(e.target.value) }))}
+                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      />
+                    </label>
+                    <label className="grid gap-1">
+                      DTG / print
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.1"
+                        value={pricingModel.dtgPerPrint}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, dtgPerPrint: Number(e.target.value) }))}
+                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      />
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="grid gap-1">
+                      Embroidery / item
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.1"
+                        value={pricingModel.embroideryPerItem}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, embroideryPerItem: Number(e.target.value) }))}
+                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      />
+                    </label>
+                    <label className="grid gap-1">
+                      Digitize fee
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.1"
+                        value={pricingModel.digitizeFee}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, digitizeFee: Number(e.target.value) }))}
+                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      />
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <label className="grid gap-1">
+                      Labor / unit
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.1"
+                        value={pricingModel.laborPerUnit}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, laborPerUnit: Number(e.target.value) }))}
+                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      />
+                    </label>
+                    <label className="grid gap-1">
+                      Overhead / order
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.1"
+                        value={pricingModel.overheadPerOrder}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, overheadPerOrder: Number(e.target.value) }))}
+                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      />
+                    </label>
+                    <label className="grid gap-1">
+                      Personalization
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.1"
+                        value={pricingModel.personalizationPerItem}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, personalizationPerItem: Number(e.target.value) }))}
+                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      />
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="grid gap-1">
+                      Target margin %
+                      <input
+                        type="number"
+                        min={0}
+                        max={90}
+                        step="1"
+                        value={Math.round(pricingModel.targetMargin * 100)}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, targetMargin: Number(e.target.value) / 100 }))}
+                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      />
+                    </label>
+                    <label className="grid gap-1">
+                      Rush fee %
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step="1"
+                        value={Math.round(pricingModel.rushPct * 100)}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, rushPct: Number(e.target.value) / 100 }))}
+                        className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Unit cost</div>
+                <div className="mt-2 text-xl font-semibold text-slate-900">{money(pricing.unitCost)}</div>
+                <div className="text-xs text-slate-500">Includes setup + overhead</div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Suggested unit price</div>
+                <div className="mt-2 text-xl font-semibold text-slate-900">{money(pricing.suggestedUnit)}</div>
+                <div className="text-xs text-slate-500">Target margin {Math.round(pricingModel.targetMargin * 100)}%</div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Quote total</div>
+                <div className="mt-2 text-xl font-semibold text-slate-900">{money(pricing.totalRevenue)}</div>
+                <div className="text-xs text-slate-500">{pricing.qty} units • {Math.round(pricing.marginPct * 100)}% margin</div>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
+              {methodHint}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-6">
+            <div className={`${panelClass} p-6`}>
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Quote Summary</div>
+              <div className="mt-4 grid gap-3 text-sm">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  Total cost: <span className="font-semibold text-slate-800">{money(pricing.totalCost)}</span>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  Profit: <span className={`font-semibold ${pricing.profit >= 0 ? "text-emerald-700" : "text-rose-600"}`}>{money(pricing.profit)}</span>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  Break-even qty: <span className="font-semibold text-slate-800">{pricing.breakEvenQty ?? "—"}</span>
+                </div>
+              </div>
+              <div className="mt-5">
+                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Price breaks</div>
+                <div className="mt-3 grid gap-2">
+                  {priceBreaks.map((tier) => (
+                    <div key={tier.qty} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                      <span>{tier.qty} units</span>
+                      <span className="font-semibold text-slate-900">{money(tier.suggestedUnit)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-slate-900 p-6 text-white shadow-sm">
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">Pricing Playbook</div>
+              <div className="mt-3 space-y-2 text-sm text-white/80">
+                <div>Proof approval is the gate — delays here shift delivery dates.</div>
+                <div>Screen printing setup costs get cheaper per unit at higher volumes.</div>
+                <div>DTF/DTG shines on small runs or photo-heavy designs.</div>
+                <div>Rush jobs need a premium to protect margin.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Momentum + Checklist */}
-        <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]" style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.14s" }}>
+        <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]" style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.2s" }}>
           <div className={`${panelClass} p-6`}>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -461,7 +971,7 @@ export default function OwnerDashboard() {
         </section>
 
         {/* Orders + Inventory */}
-        <section className="grid gap-6 lg:grid-cols-2" style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.2s" }}>
+        <section className="grid gap-6 lg:grid-cols-2" style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.26s" }}>
           <div className={`${panelClass} p-6`}>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-slate-900">Latest Orders</h2>
