@@ -14,7 +14,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { format } from "date-fns";
-import { Info, TrendingUp, Package, RefreshCcw, Clock, Users, Plus, Trash2, CheckCircle2, Circle } from "lucide-react";
+import { Info, TrendingUp, Package, RefreshCcw, Clock, Users, Plus, Trash2, CheckCircle2, Circle, Lock, Unlock } from "lucide-react";
 import { useAdminMetrics } from "@/admin/AdminDataContext";
 
 // ---------- Types ----------
@@ -118,6 +118,7 @@ export default function OwnerDashboard() {
     artworkFee: 0,
     quotedUnitPrice: 0,
   });
+  const [costLocked, setCostLocked] = useState(true);
 
   useEffect(() => {
     try {
@@ -195,6 +196,9 @@ export default function OwnerDashboard() {
   const money = (v: number) => `Rs ${Math.round(v || 0).toLocaleString()}`;
   const pricingFieldClass =
     "w-full min-w-0 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200";
+  const costFieldClass = costLocked
+    ? `${pricingFieldClass} bg-slate-100 text-slate-500 cursor-not-allowed`
+    : pricingFieldClass;
 
   const pricing = useMemo(() => {
     const qty = Math.max(1, Number(quote.qty) || 1);
@@ -650,7 +654,21 @@ export default function OwnerDashboard() {
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Cost Model</div>
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Cost Model</div>
+                  <button
+                    type="button"
+                    onClick={() => setCostLocked((v) => !v)}
+                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold transition ${
+                      costLocked
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    {costLocked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
+                    {costLocked ? "Locked" : "Unlock"}
+                  </button>
+                </div>
                 <div className="mt-3 grid gap-3 text-xs font-semibold text-slate-600">
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-600">
@@ -661,7 +679,8 @@ export default function OwnerDashboard() {
                         step="0.1"
                         value={pricingModel.blankTee}
                         onChange={(e) => setPricingModel((m) => ({ ...m, blankTee: Number(e.target.value) }))}
-                        className={`${pricingFieldClass} text-right`}
+                        className={`${costFieldClass} text-right`}
+                        disabled={costLocked}
                       />
                     </label>
                     <label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-600">
@@ -672,7 +691,8 @@ export default function OwnerDashboard() {
                         step="0.1"
                         value={pricingModel.blankPolo}
                         onChange={(e) => setPricingModel((m) => ({ ...m, blankPolo: Number(e.target.value) }))}
-                        className={`${pricingFieldClass} text-right`}
+                        className={`${costFieldClass} text-right`}
+                        disabled={costLocked}
                       />
                     </label>
                     <label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-600">
@@ -683,7 +703,8 @@ export default function OwnerDashboard() {
                         step="0.1"
                         value={pricingModel.blankCap}
                         onChange={(e) => setPricingModel((m) => ({ ...m, blankCap: Number(e.target.value) }))}
-                        className={`${pricingFieldClass} text-right`}
+                        className={`${costFieldClass} text-right`}
+                        disabled={costLocked}
                       />
                     </label>
                   </div>
@@ -696,7 +717,8 @@ export default function OwnerDashboard() {
                       step="0.1"
                       value={pricingModel.screenSetupPerColor}
                       onChange={(e) => setPricingModel((m) => ({ ...m, screenSetupPerColor: Number(e.target.value) }))}
-                      className={pricingFieldClass}
+                      className={costFieldClass}
+                      disabled={costLocked}
                     />
                     </label>
                     <label className="grid gap-1">
@@ -707,7 +729,8 @@ export default function OwnerDashboard() {
                       step="0.1"
                       value={pricingModel.screenInkPerColor}
                       onChange={(e) => setPricingModel((m) => ({ ...m, screenInkPerColor: Number(e.target.value) }))}
-                      className={pricingFieldClass}
+                      className={costFieldClass}
+                      disabled={costLocked}
                     />
                     </label>
                     <label className="grid gap-1">
@@ -718,7 +741,8 @@ export default function OwnerDashboard() {
                       step="0.1"
                       value={pricingModel.dtfPerPrint}
                       onChange={(e) => setPricingModel((m) => ({ ...m, dtfPerPrint: Number(e.target.value) }))}
-                      className={pricingFieldClass}
+                      className={costFieldClass}
+                      disabled={costLocked}
                     />
                     </label>
                     <label className="grid gap-1">
@@ -729,7 +753,8 @@ export default function OwnerDashboard() {
                       step="0.1"
                       value={pricingModel.dtgPerPrint}
                       onChange={(e) => setPricingModel((m) => ({ ...m, dtgPerPrint: Number(e.target.value) }))}
-                      className={pricingFieldClass}
+                      className={costFieldClass}
+                      disabled={costLocked}
                     />
                     </label>
                   </div>
@@ -742,7 +767,8 @@ export default function OwnerDashboard() {
                       step="0.1"
                       value={pricingModel.embroideryPerItem}
                       onChange={(e) => setPricingModel((m) => ({ ...m, embroideryPerItem: Number(e.target.value) }))}
-                      className={pricingFieldClass}
+                      className={costFieldClass}
+                      disabled={costLocked}
                     />
                     </label>
                     <label className="grid gap-1">
@@ -753,7 +779,8 @@ export default function OwnerDashboard() {
                       step="0.1"
                       value={pricingModel.digitizeFee}
                       onChange={(e) => setPricingModel((m) => ({ ...m, digitizeFee: Number(e.target.value) }))}
-                      className={pricingFieldClass}
+                      className={costFieldClass}
+                      disabled={costLocked}
                     />
                     </label>
                   </div>
@@ -766,7 +793,8 @@ export default function OwnerDashboard() {
                         step="0.1"
                         value={pricingModel.laborPerUnit}
                         onChange={(e) => setPricingModel((m) => ({ ...m, laborPerUnit: Number(e.target.value) }))}
-                        className={`${pricingFieldClass} text-right`}
+                        className={`${costFieldClass} text-right`}
+                        disabled={costLocked}
                       />
                     </label>
                     <label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-600">
@@ -777,7 +805,8 @@ export default function OwnerDashboard() {
                         step="0.1"
                         value={pricingModel.overheadPerOrder}
                         onChange={(e) => setPricingModel((m) => ({ ...m, overheadPerOrder: Number(e.target.value) }))}
-                        className={`${pricingFieldClass} text-right`}
+                        className={`${costFieldClass} text-right`}
+                        disabled={costLocked}
                       />
                     </label>
                     <label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-600">
@@ -788,7 +817,8 @@ export default function OwnerDashboard() {
                         step="0.1"
                         value={pricingModel.personalizationPerItem}
                         onChange={(e) => setPricingModel((m) => ({ ...m, personalizationPerItem: Number(e.target.value) }))}
-                        className={`${pricingFieldClass} text-right`}
+                        className={`${costFieldClass} text-right`}
+                        disabled={costLocked}
                       />
                     </label>
                   </div>
@@ -802,7 +832,8 @@ export default function OwnerDashboard() {
                       step="1"
                       value={Math.round(pricingModel.targetMargin * 100)}
                       onChange={(e) => setPricingModel((m) => ({ ...m, targetMargin: Number(e.target.value) / 100 }))}
-                      className={pricingFieldClass}
+                      className={costFieldClass}
+                      disabled={costLocked}
                     />
                     </label>
                     <label className="grid gap-1">
@@ -814,7 +845,8 @@ export default function OwnerDashboard() {
                       step="1"
                       value={Math.round(pricingModel.rushPct * 100)}
                       onChange={(e) => setPricingModel((m) => ({ ...m, rushPct: Number(e.target.value) / 100 }))}
-                      className={pricingFieldClass}
+                      className={costFieldClass}
+                      disabled={costLocked}
                     />
                     </label>
                   </div>
