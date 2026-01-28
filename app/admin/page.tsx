@@ -191,7 +191,7 @@ export default function OwnerDashboard() {
     if (input.blankColorFamily === "Standard" || input.blankColorFamily === "Red") next.blankColorFamily = input.blankColorFamily;
     if (typeof input.blankSizeBand === "string") next.blankSizeBand = input.blankSizeBand;
     if (input.pricingMode === "priceBook" || input.pricingMode === "marginEngine") next.pricingMode = input.pricingMode;
-    if (typeof input.plainOrder === "boolean") next.plainOrder = input.plainOrder;
+    // plainOrder input removed from UI; keep default false
     if (input.method === "Screen" || input.method === "Vinyl" || input.method === "DTF") next.method = input.method;
     if (typeof input.printOption === "string") next.printOption = input.printOption;
     if (typeof input.dtfIncludesDelivery === "boolean") next.dtfIncludesDelivery = input.dtfIncludesDelivery;
@@ -337,6 +337,7 @@ export default function OwnerDashboard() {
       }),
     [quote.itemType, quote.blankSizeBand, quote.method, quote.printOption]
   );
+  const priceBookRef = useRef(priceBookPrice);
 
   useEffect(() => {
     if (!sizeBandOptions.includes(quote.blankSizeBand) && sizeBandOptions.length) {
@@ -368,8 +369,18 @@ export default function OwnerDashboard() {
   useEffect(() => {
     if (quote.plainOrder) return;
     if (quote.pricingMode !== "priceBook") return;
-    setQuote((q) => (q.quotedUnitPrice === priceBookPrice ? q : { ...q, quotedUnitPrice: priceBookPrice }));
+    const prevPrice = priceBookRef.current;
+    const current = toNumber(quote.quotedUnitPrice, 0);
+    if (current === 0 || current === prevPrice) {
+      setQuote((q) => (q.quotedUnitPrice === priceBookPrice ? q : { ...q, quotedUnitPrice: priceBookPrice }));
+    }
+    priceBookRef.current = priceBookPrice;
   }, [quote.plainOrder, quote.pricingMode, priceBookPrice]);
+
+  useEffect(() => {
+    if (quote.pricingMode === "priceBook") return;
+    priceBookRef.current = priceBookPrice;
+  }, [quote.pricingMode, priceBookPrice]);
 
   const vinylCosts = useMemo(
     () =>
@@ -460,22 +471,24 @@ export default function OwnerDashboard() {
     safePricingModel.personalizationPerItem,
   ]);
 
-  const quotedUnitBase =
-    quote.pricingMode === "priceBook" && !quote.plainOrder
-      ? priceBookPrice
-      : safeQuotedUnitPrice;
+  const quotedUnitBase = quote.plainOrder
+    ? (safeQuotedUnitPrice > 0 ? safeQuotedUnitPrice : plainSell)
+    : quote.pricingMode === "priceBook"
+    ? (safeQuotedUnitPrice > 0 ? safeQuotedUnitPrice : priceBookPrice)
+    : safeQuotedUnitPrice;
   const quotedUnit = quotedUnitBase > 0 ? quotedUnitBase : pricingSummary.suggestedUnitPrice;
   const quotedTotal = quotedUnit * pricingSummary.qty;
   const quotedProfit = quotedUnit - pricingSummary.unitCost;
   const quotedMarginPct = quotedUnit ? quotedProfit / quotedUnit : 0;
   const profitPerUnit = quotedUnit - pricingSummary.unitCost;
   const isLoss = quotedUnit > 0 && quotedUnit < pricingSummary.unitCost;
-  const quotedUnitInputValue =
-    quote.pricingMode === "priceBook" && !quote.plainOrder
-      ? priceBookPrice
-      : quote.plainOrder
-      ? (safeQuotedUnitPrice > 0 ? safeQuotedUnitPrice : plainSell)
-      : quote.quotedUnitPrice;
+  const quotedUnitInputValue = quote.plainOrder
+    ? (safeQuotedUnitPrice > 0 ? safeQuotedUnitPrice : plainSell)
+    : quote.pricingMode === "priceBook"
+    ? (quote.quotedUnitPrice === "" || toNumber(quote.quotedUnitPrice, 0) === 0
+        ? priceBookPrice
+        : quote.quotedUnitPrice)
+    : quote.quotedUnitPrice;
   const suggestedDisplay =
     quote.pricingMode === "priceBook" && !quote.plainOrder ? quotedUnit : pricingSummary.suggestedUnitPrice;
   const totalCost = pricingSummary.unitCost * pricingSummary.qty;
@@ -911,16 +924,6 @@ export default function OwnerDashboard() {
                     </div>
                   </div>
 
-                  <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600">
-                    <input
-                      type="checkbox"
-                      checked={quote.plainOrder}
-                      onChange={(e) => setQuote((q) => ({ ...q, plainOrder: e.target.checked }))}
-                      className="h-4 w-4 rounded border-slate-300 text-slate-900"
-                    />
-                    Plain order (no print)
-                  </label>
-
                   {!quote.plainOrder && (
                     <label className="grid gap-1">
                       Decoration method
@@ -994,8 +997,8 @@ export default function OwnerDashboard() {
                       min={0}
                       value={quotedUnitInputValue}
                       onChange={(e) => setQuote((q) => ({ ...q, quotedUnitPrice: parseNumericInput(e.target.value) }))}
-                      className={`${pricingFieldClass} ${quote.pricingMode === "priceBook" || quote.plainOrder ? "bg-slate-100 text-slate-500" : ""}`}
-                      disabled={quote.pricingMode === "priceBook" || quote.plainOrder}
+                      className={`${pricingFieldClass} ${quote.plainOrder ? "bg-slate-100 text-slate-500" : ""}`}
+                      disabled={quote.plainOrder}
                     />
                   </label>
                   <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-600">
