@@ -317,6 +317,16 @@ export default function OwnerDashboard() {
     rushFeePct: toNumber(pricingModel.rushFeePct, 0),
     personalizationPerItem: toNumber(pricingModel.personalizationPerItem, 0),
   };
+  const printOptions = useMemo(
+    () =>
+      (pricing.PRINT_OPTIONS || [
+        { value: "FRONT_SMALL", label: "Front small (9x9)" },
+        { value: "FRONT_LARGE", label: "Front large (22x22)" },
+        { value: "FRONT_SMALL_BACK_LARGE", label: "Front small + Back large" },
+        { value: "FRONT_LARGE_BACK_LARGE", label: "Front large + Back large" },
+      ]),
+    []
+  );
   const priceBookPrice = useMemo(
     () =>
       pricing.getPriceBookPrice({
@@ -414,12 +424,22 @@ export default function OwnerDashboard() {
     safePricingModel.personalizationPerItem,
   ]);
 
-  const quotedUnit = safeQuotedUnitPrice > 0 ? safeQuotedUnitPrice : pricingSummary.suggestedUnitPrice;
+  const quotedUnitBase =
+    quote.pricingMode === "priceBook" && !quote.plainOrder
+      ? priceBookPrice
+      : safeQuotedUnitPrice;
+  const quotedUnit = quotedUnitBase > 0 ? quotedUnitBase : pricingSummary.suggestedUnitPrice;
   const quotedTotal = quotedUnit * pricingSummary.qty;
   const quotedProfit = quotedUnit - pricingSummary.unitCost;
   const quotedMarginPct = quotedUnit ? quotedProfit / quotedUnit : 0;
   const profitPerUnit = quotedUnit - pricingSummary.unitCost;
   const isLoss = quotedUnit > 0 && quotedUnit < pricingSummary.unitCost;
+  const quotedUnitInputValue =
+    quote.pricingMode === "priceBook" && !quote.plainOrder
+      ? priceBookPrice
+      : quote.plainOrder
+      ? (safeQuotedUnitPrice > 0 ? safeQuotedUnitPrice : plainSell)
+      : quote.quotedUnitPrice;
   const suggestedDisplay =
     quote.pricingMode === "priceBook" && !quote.plainOrder ? quotedUnit : pricingSummary.suggestedUnitPrice;
   const totalCost = pricingSummary.unitCost * pricingSummary.qty;
@@ -888,7 +908,7 @@ export default function OwnerDashboard() {
                         onChange={(e) => setQuote((q) => ({ ...q, printOption: e.target.value }))}
                         className={pricingFieldClass}
                       >
-                        {pricing.PRINT_OPTIONS.map((option: any) => (
+                        {printOptions.map((option: any) => (
                           <option key={option.value} value={option.value}>
                             {option.label}
                           </option>
@@ -936,9 +956,10 @@ export default function OwnerDashboard() {
                     <input
                       type="number"
                       min={0}
-                      value={quote.quotedUnitPrice}
+                      value={quotedUnitInputValue}
                       onChange={(e) => setQuote((q) => ({ ...q, quotedUnitPrice: parseNumericInput(e.target.value) }))}
-                      className={pricingFieldClass}
+                      className={`${pricingFieldClass} ${quote.pricingMode === "priceBook" && !quote.plainOrder ? "bg-slate-100 text-slate-500" : ""}`}
+                      disabled={quote.pricingMode === "priceBook" && !quote.plainOrder}
                     />
                   </label>
                   <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-600">
