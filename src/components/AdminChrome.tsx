@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 type NavItem = { href: string; label: string };
 
 const SHOP_ITEM: NavItem = { href: "/admin/shops", label: "Shops" };
+const NOTES_ITEM: NavItem = { href: "/admin/business-notes", label: "Business Notes" };
 
 // Default nav groupings
 const DEFAULT_TOP: NavItem[] = [
@@ -17,6 +18,7 @@ const DEFAULT_TOP: NavItem[] = [
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/accounting", label: "Accounting" },
   { href: "/admin/dms", label: "DMS" },
+  NOTES_ITEM,
   { href: "/admin/his-dream-life", label: "His Dream Life" },
   { href: "/admin/her-dream-life", label: "Her Dream Life" },
   { href: "/admin/our-dream", label: "Our Dream Life" },
@@ -31,14 +33,32 @@ const DEFAULT_MORE: NavItem[] = [
 const NAV_STORAGE = "admin-nav-v1";
 
 function normalizeNav(top: NavItem[], more: NavItem[]) {
-  const cleanedTop = top.filter((item) => item.href !== SHOP_ITEM.href);
-  const cleanedMore = more.filter((item) => item.href !== SHOP_ITEM.href);
+  const topHasNotes = top.some((item) => item.href === NOTES_ITEM.href);
+  const moreHasNotes = more.some((item) => item.href === NOTES_ITEM.href);
+  const cleanedTop = top.filter(
+    (item) =>
+      item.href !== SHOP_ITEM.href &&
+      (item.href !== NOTES_ITEM.href || topHasNotes)
+  );
+  const cleanedMore = more.filter(
+    (item) =>
+      item.href !== SHOP_ITEM.href &&
+      (item.href !== NOTES_ITEM.href || !topHasNotes)
+  );
   const nextTop = cleanedTop.slice();
   const contractsIndex = nextTop.findIndex((item) => item.href === "/admin/contracts");
   if (contractsIndex >= 0) {
     nextTop.splice(contractsIndex + 1, 0, SHOP_ITEM);
   } else {
     nextTop.push(SHOP_ITEM);
+  }
+  if (!topHasNotes && !moreHasNotes) {
+    const dmsIndex = nextTop.findIndex((item) => item.href === "/admin/dms");
+    if (dmsIndex >= 0) {
+      nextTop.splice(dmsIndex + 1, 0, NOTES_ITEM);
+    } else {
+      nextTop.push(NOTES_ITEM);
+    }
   }
   return { top: nextTop, more: cleanedMore };
 }
