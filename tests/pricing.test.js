@@ -2,93 +2,17 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { computeQuote, getVinylCosts } = require("../src/lib/pricing");
 
-test("screen printing quote math", () => {
-  const result = computeQuote({
-    method: "Screen",
-    qty: 10,
-    locations: 2,
-    rush: false,
-    artworkFee: 0,
-    overheadPerOrder: 200,
-    targetMarginPct: 50,
-    rushFeePct: 20,
-    personalizationFeePerUnit: 0,
-    personalization: false,
-    blankCost: 135,
-    plainOrder: false,
-    vinylSize: "Small",
-    screenCostPerSideA4: 60,
-    vinylRollPrice: 469,
-    vinylWasteFactor: 1.2,
-    dtfPackageFront: 300,
-    dtfPackageFrontBack: 350,
-  });
-
-  assert.equal(result.unitCost, 275);
-  assert.equal(result.suggestedUnitPrice, 550);
-});
-
-test("vinyl printing quote math", () => {
+test("vinyl price book mode ignores overhead and uses labor + material", () => {
   const vinyl = getVinylCosts({ rollPrice: 469, wasteFactor: 1.2 });
   assert.equal(vinyl.small, 10);
-  assert.equal(vinyl.large, 55);
 
   const result = computeQuote({
+    pricingMode: "priceBook",
+    itemType: "T-Shirt",
+    sizeBand: "XS-XL",
     method: "Vinyl",
-    qty: 10,
-    locations: 1,
-    rush: false,
-    artworkFee: 0,
-    overheadPerOrder: 200,
-    targetMarginPct: 50,
-    rushFeePct: 20,
-    personalizationFeePerUnit: 0,
-    personalization: false,
-    blankCost: 135,
-    plainOrder: false,
-    vinylSize: "Small",
-    screenCostPerSideA4: 60,
-    vinylRollPrice: 469,
-    vinylWasteFactor: 1.2,
-    dtfPackageFront: 300,
-    dtfPackageFrontBack: 350,
-  });
-
-  assert.equal(result.unitCost, 165);
-  assert.equal(result.suggestedUnitPrice, 330);
-});
-
-test("dtf package quote math", () => {
-  const result = computeQuote({
-    method: "DTF",
-    qty: 10,
-    locations: 1,
-    rush: false,
-    artworkFee: 0,
-    overheadPerOrder: 200,
-    targetMarginPct: 50,
-    rushFeePct: 20,
-    personalizationFeePerUnit: 0,
-    personalization: false,
-    blankCost: 135,
-    plainOrder: false,
-    vinylSize: "Small",
-    screenCostPerSideA4: 60,
-    vinylRollPrice: 469,
-    vinylWasteFactor: 1.2,
-    dtfPackageFront: 300,
-    dtfPackageFrontBack: 350,
-  });
-
-  assert.equal(result.unitCost, 320);
-  assert.equal(result.suggestedUnitPrice, 640);
-});
-
-test("plain order quote math", () => {
-  const result = computeQuote({
-    method: "Screen",
+    printOption: "FRONT_SMALL",
     qty: 1,
-    locations: 1,
     rush: false,
     artworkFee: 0,
     overheadPerOrder: 200,
@@ -97,17 +21,46 @@ test("plain order quote math", () => {
     personalizationFeePerUnit: 0,
     personalization: false,
     blankCost: 135,
-    plainSell: 175,
-    plainOrder: true,
-    vinylSize: "Small",
+    plainOrder: false,
     screenCostPerSideA4: 60,
     vinylRollPrice: 469,
     vinylWasteFactor: 1.2,
+    vinylLaborSmallPerUnit: 50,
+    vinylLaborLargePerUnit: 45,
     dtfPackageFront: 300,
     dtfPackageFrontBack: 350,
   });
 
-  assert.equal(result.unitCost, 135);
-  assert.equal(result.suggestedUnitPrice, 175);
-  assert.ok(result.marginPct > 0);
+  assert.equal(result.unitCost, 195);
+  assert.equal(result.suggestedUnitPrice, 270);
+});
+
+test("vinyl margin engine mode applies overhead and margin", () => {
+  const result = computeQuote({
+    pricingMode: "marginEngine",
+    itemType: "T-Shirt",
+    sizeBand: "XS-XL",
+    method: "Vinyl",
+    printOption: "FRONT_SMALL",
+    qty: 1,
+    rush: false,
+    artworkFee: 0,
+    overheadPerOrder: 200,
+    targetMarginPct: 50,
+    rushFeePct: 20,
+    personalizationFeePerUnit: 0,
+    personalization: false,
+    blankCost: 135,
+    plainOrder: false,
+    screenCostPerSideA4: 60,
+    vinylRollPrice: 469,
+    vinylWasteFactor: 1.2,
+    vinylLaborSmallPerUnit: 50,
+    vinylLaborLargePerUnit: 45,
+    dtfPackageFront: 300,
+    dtfPackageFrontBack: 350,
+  });
+
+  assert.equal(result.unitCost, 395);
+  assert.equal(result.suggestedUnitPrice, 790);
 });

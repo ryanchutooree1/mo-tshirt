@@ -70,7 +70,7 @@ export default function BusinessDetailsPage() {
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [draft, setDraft] = useState({ title: "", content: "", category: "Message" });
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedState, setCopiedState] = useState<{ id: string; label: string } | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
 
   useEffect(() => {
@@ -192,11 +192,36 @@ export default function BusinessDetailsPage() {
     }
   };
 
-  const copyDetail = async (detail: BusinessDetail) => {
+  const copyDetailBoth = async (detail: BusinessDetail) => {
     const text = detail.title ? `${detail.title}: ${detail.content}` : detail.content;
     await copyText(text);
-    setCopiedId(detail.id);
-    window.setTimeout(() => setCopiedId((prev) => (prev === detail.id ? null : prev)), 1400);
+    setCopiedState({ id: detail.id, label: "Both" });
+    window.setTimeout(
+      () => setCopiedState((prev) => (prev?.id === detail.id ? null : prev)),
+      1400
+    );
+  };
+
+  const copyDetailTitle = async (detail: BusinessDetail) => {
+    const text = detail.title || "";
+    if (!text.trim()) return;
+    await copyText(text);
+    setCopiedState({ id: detail.id, label: "Title" });
+    window.setTimeout(
+      () => setCopiedState((prev) => (prev?.id === detail.id ? null : prev)),
+      1400
+    );
+  };
+
+  const copyDetailContent = async (detail: BusinessDetail) => {
+    const text = detail.content || "";
+    if (!text.trim()) return;
+    await copyText(text);
+    setCopiedState({ id: detail.id, label: "Message" });
+    window.setTimeout(
+      () => setCopiedState((prev) => (prev?.id === detail.id ? null : prev)),
+      1400
+    );
   };
 
   const copyAll = async () => {
@@ -412,12 +437,28 @@ export default function BusinessDetailsPage() {
                         </div>
                         <div className="flex flex-col items-end gap-2">
                           <button
-                            onClick={() => copyDetail(detail)}
+                            onClick={() => copyDetailBoth(detail)}
                             className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-100"
                           >
                             <Copy className="h-3.5 w-3.5" />
                             Copy
                           </button>
+                          <div className="flex flex-wrap items-center justify-end gap-2">
+                            <button
+                              onClick={() => copyDetailTitle(detail)}
+                              disabled={!detail.title}
+                              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 disabled:text-slate-300"
+                            >
+                              Title
+                            </button>
+                            <button
+                              onClick={() => copyDetailContent(detail)}
+                              disabled={!detail.content}
+                              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 disabled:text-slate-300"
+                            >
+                              Message
+                            </button>
+                          </div>
                           <div className="flex items-center gap-2 opacity-70 transition group-hover:opacity-100">
                             <button
                               onClick={() => editDetail(detail)}
@@ -436,9 +477,9 @@ export default function BusinessDetailsPage() {
                           </div>
                         </div>
                       </div>
-                      {copiedId === detail.id ? (
+                      {copiedState?.id === detail.id ? (
                         <div className="mt-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-600">
-                          Copied
+                          Copied {copiedState.label}
                         </div>
                       ) : null}
                     </div>

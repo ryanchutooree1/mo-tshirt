@@ -28,8 +28,11 @@ type PricingModelState = {
   screenCostPerSideA4: NumericInput;
   vinylRollPrice: NumericInput;
   vinylWasteFactor: NumericInput;
+  vinylLaborSmallPerUnit: NumericInput;
+  vinylLaborLargePerUnit: NumericInput;
   dtfPackageFront: NumericInput;
   dtfPackageFrontBack: NumericInput;
+  dtfDeliveryFee: NumericInput;
   overheadPerOrder: NumericInput;
   targetMarginPct: NumericInput;
   rushFeePct: NumericInput;
@@ -39,11 +42,12 @@ type QuoteState = {
   itemType: "T-Shirt" | "Polo";
   blankColorFamily: "Standard" | "Red";
   blankSizeBand: string;
+  pricingMode: "priceBook" | "marginEngine";
   plainOrder: boolean;
   method: "Screen" | "Vinyl" | "DTF";
-  vinylSize: "Small" | "Large";
+  printOption: string;
+  dtfIncludesDelivery: boolean;
   qty: NumericInput;
-  locations: number;
   rush: boolean;
   personalization: boolean;
   artworkFee: NumericInput;
@@ -133,8 +137,11 @@ export default function OwnerDashboard() {
     screenCostPerSideA4: 60,
     vinylRollPrice: 469,
     vinylWasteFactor: 1.2,
+    vinylLaborSmallPerUnit: 50,
+    vinylLaborLargePerUnit: 45,
     dtfPackageFront: 300,
     dtfPackageFrontBack: 350,
+    dtfDeliveryFee: 0,
     overheadPerOrder: 200,
     targetMarginPct: 50,
     rushFeePct: 20,
@@ -144,11 +151,12 @@ export default function OwnerDashboard() {
     itemType: "T-Shirt",
     blankColorFamily: "Standard",
     blankSizeBand: "XS-XL",
+    pricingMode: "priceBook",
     plainOrder: false,
     method: "Screen",
-    vinylSize: "Small",
+    printOption: "FRONT_SMALL",
+    dtfIncludesDelivery: false,
     qty: 48,
-    locations: 1,
     rush: false,
     personalization: false,
     artworkFee: 0,
@@ -162,8 +170,11 @@ export default function OwnerDashboard() {
     if (typeof input.screenCostPerSideA4 === "number") next.screenCostPerSideA4 = input.screenCostPerSideA4;
     if (typeof input.vinylRollPrice === "number") next.vinylRollPrice = input.vinylRollPrice;
     if (typeof input.vinylWasteFactor === "number") next.vinylWasteFactor = input.vinylWasteFactor;
+    if (typeof input.vinylLaborSmallPerUnit === "number") next.vinylLaborSmallPerUnit = input.vinylLaborSmallPerUnit;
+    if (typeof input.vinylLaborLargePerUnit === "number") next.vinylLaborLargePerUnit = input.vinylLaborLargePerUnit;
     if (typeof input.dtfPackageFront === "number") next.dtfPackageFront = input.dtfPackageFront;
     if (typeof input.dtfPackageFrontBack === "number") next.dtfPackageFrontBack = input.dtfPackageFrontBack;
+    if (typeof input.dtfDeliveryFee === "number") next.dtfDeliveryFee = input.dtfDeliveryFee;
     if (typeof input.overheadPerOrder === "number") next.overheadPerOrder = input.overheadPerOrder;
     if (typeof input.targetMarginPct === "number") next.targetMarginPct = input.targetMarginPct;
     if (typeof input.targetMargin === "number") next.targetMarginPct = Math.round(input.targetMargin * 100);
@@ -179,11 +190,12 @@ export default function OwnerDashboard() {
     if (input.itemType === "T-Shirt" || input.itemType === "Polo") next.itemType = input.itemType;
     if (input.blankColorFamily === "Standard" || input.blankColorFamily === "Red") next.blankColorFamily = input.blankColorFamily;
     if (typeof input.blankSizeBand === "string") next.blankSizeBand = input.blankSizeBand;
+    if (input.pricingMode === "priceBook" || input.pricingMode === "marginEngine") next.pricingMode = input.pricingMode;
     if (typeof input.plainOrder === "boolean") next.plainOrder = input.plainOrder;
     if (input.method === "Screen" || input.method === "Vinyl" || input.method === "DTF") next.method = input.method;
-    if (input.vinylSize === "Large" || input.vinylSize === "Small") next.vinylSize = input.vinylSize;
+    if (typeof input.printOption === "string") next.printOption = input.printOption;
+    if (typeof input.dtfIncludesDelivery === "boolean") next.dtfIncludesDelivery = input.dtfIncludesDelivery;
     if (typeof input.qty === "number") next.qty = input.qty;
-    if (typeof input.locations === "number") next.locations = input.locations;
     if (typeof input.rush === "boolean") next.rush = input.rush;
     if (typeof input.personalization === "boolean") next.personalization = input.personalization;
     if (typeof input.artworkFee === "number") next.artworkFee = input.artworkFee;
@@ -289,20 +301,32 @@ export default function OwnerDashboard() {
   const blankCost = blankInfo?.cost ?? 0;
   const plainSell = blankInfo?.plainSell ?? 0;
   const safeQty = Math.max(1, toNumber(quote.qty, 1));
-  const safeLocations = Math.max(1, toNumber(quote.locations, 1));
   const safeArtworkFee = toNumber(quote.artworkFee, 0);
   const safeQuotedUnitPrice = toNumber(quote.quotedUnitPrice, 0);
   const safePricingModel = {
     screenCostPerSideA4: toNumber(pricingModel.screenCostPerSideA4, 0),
     vinylRollPrice: toNumber(pricingModel.vinylRollPrice, 0),
     vinylWasteFactor: toNumber(pricingModel.vinylWasteFactor, 1),
+    vinylLaborSmallPerUnit: toNumber(pricingModel.vinylLaborSmallPerUnit, 0),
+    vinylLaborLargePerUnit: toNumber(pricingModel.vinylLaborLargePerUnit, 0),
     dtfPackageFront: toNumber(pricingModel.dtfPackageFront, 0),
     dtfPackageFrontBack: toNumber(pricingModel.dtfPackageFrontBack, 0),
+    dtfDeliveryFee: toNumber(pricingModel.dtfDeliveryFee, 0),
     overheadPerOrder: toNumber(pricingModel.overheadPerOrder, 0),
     targetMarginPct: toNumber(pricingModel.targetMarginPct, 0),
     rushFeePct: toNumber(pricingModel.rushFeePct, 0),
     personalizationPerItem: toNumber(pricingModel.personalizationPerItem, 0),
   };
+  const priceBookPrice = useMemo(
+    () =>
+      pricing.getPriceBookPrice({
+        itemType: quote.itemType,
+        sizeBand: quote.blankSizeBand,
+        method: quote.method,
+        printOption: quote.printOption,
+      }),
+    [quote.itemType, quote.blankSizeBand, quote.method, quote.printOption]
+  );
 
   useEffect(() => {
     if (!sizeBandOptions.includes(quote.blankSizeBand) && sizeBandOptions.length) {
@@ -315,12 +339,17 @@ export default function OwnerDashboard() {
       setQuote((q) => ({
         ...q,
         quotedUnitPrice: plainSell,
-        locations: 1,
         personalization: false,
         rush: false,
       }));
     }
   }, [quote.plainOrder, plainSell]);
+
+  useEffect(() => {
+    if (quote.plainOrder) return;
+    if (quote.pricingMode !== "priceBook") return;
+    setQuote((q) => (q.quotedUnitPrice === priceBookPrice ? q : { ...q, quotedUnitPrice: priceBookPrice }));
+  }, [quote.plainOrder, quote.pricingMode, priceBookPrice]);
 
   const vinylCosts = useMemo(
     () =>
@@ -334,8 +363,10 @@ export default function OwnerDashboard() {
   const pricingSummary = useMemo(() => {
     return pricing.computeQuote({
       method: quote.method,
+      pricingMode: quote.pricingMode,
+      itemType: quote.itemType,
+      sizeBand: quote.blankSizeBand,
       qty: safeQty,
-      locations: safeLocations,
       rush: quote.rush,
       artworkFee: safeArtworkFee,
       overheadPerOrder: safePricingModel.overheadPerOrder,
@@ -345,27 +376,38 @@ export default function OwnerDashboard() {
       personalization: quote.personalization,
       blankCost,
       plainSell,
+      priceBookPrice,
       plainOrder: quote.plainOrder,
-      vinylSize: quote.vinylSize,
+      printOption: quote.printOption,
       screenCostPerSideA4: safePricingModel.screenCostPerSideA4,
       vinylRollPrice: safePricingModel.vinylRollPrice,
       vinylWasteFactor: safePricingModel.vinylWasteFactor,
+      vinylLaborSmallPerUnit: safePricingModel.vinylLaborSmallPerUnit,
+      vinylLaborLargePerUnit: safePricingModel.vinylLaborLargePerUnit,
       dtfPackageFront: safePricingModel.dtfPackageFront,
       dtfPackageFrontBack: safePricingModel.dtfPackageFrontBack,
+      dtfDeliveryFee: safePricingModel.dtfDeliveryFee,
+      dtfIncludesDelivery: quote.dtfIncludesDelivery,
     });
   }, [
     quote,
     pricingModel,
     blankCost,
     safeQty,
-    safeLocations,
     safeArtworkFee,
     plainSell,
+    priceBookPrice,
+    quote.printOption,
+    quote.pricingMode,
+    quote.dtfIncludesDelivery,
     safePricingModel.screenCostPerSideA4,
     safePricingModel.vinylRollPrice,
     safePricingModel.vinylWasteFactor,
+    safePricingModel.vinylLaborSmallPerUnit,
+    safePricingModel.vinylLaborLargePerUnit,
     safePricingModel.dtfPackageFront,
     safePricingModel.dtfPackageFrontBack,
+    safePricingModel.dtfDeliveryFee,
     safePricingModel.overheadPerOrder,
     safePricingModel.targetMarginPct,
     safePricingModel.rushFeePct,
@@ -376,11 +418,18 @@ export default function OwnerDashboard() {
   const quotedTotal = quotedUnit * pricingSummary.qty;
   const quotedProfit = quotedUnit - pricingSummary.unitCost;
   const quotedMarginPct = quotedUnit ? quotedProfit / quotedUnit : 0;
+  const profitPerUnit = quotedUnit - pricingSummary.unitCost;
+  const isLoss = quotedUnit > 0 && quotedUnit < pricingSummary.unitCost;
+  const suggestedDisplay =
+    quote.pricingMode === "priceBook" && !quote.plainOrder ? quotedUnit : pricingSummary.suggestedUnitPrice;
   const totalCost = pricingSummary.unitCost * pricingSummary.qty;
   const totalProfit = quotedTotal - totalCost;
-  const fixedCosts = quote.plainOrder ? 0 : safeArtworkFee + safePricingModel.overheadPerOrder;
+  const fixedCosts =
+    quote.plainOrder || quote.pricingMode === "priceBook"
+      ? safeArtworkFee
+      : safeArtworkFee + safePricingModel.overheadPerOrder;
   const variableUnit = Math.max(0, pricingSummary.unitCost - fixedCosts / pricingSummary.qty);
-  const breakEvenQty = quote.plainOrder
+  const breakEvenQty = quote.plainOrder || quote.pricingMode === "priceBook"
     ? null
     : quotedUnit > variableUnit
     ? Math.ceil(fixedCosts / (quotedUnit - variableUnit))
@@ -391,8 +440,10 @@ export default function OwnerDashboard() {
     return tiers.map((tierQty) => {
       const tier = pricing.computeQuote({
         method: quote.method,
+        pricingMode: quote.pricingMode,
+        itemType: quote.itemType,
+        sizeBand: quote.blankSizeBand,
         qty: tierQty,
-        locations: safeLocations,
         rush: quote.rush,
         artworkFee: safeArtworkFee,
         overheadPerOrder: safePricingModel.overheadPerOrder,
@@ -402,13 +453,18 @@ export default function OwnerDashboard() {
         personalization: quote.personalization,
         blankCost,
         plainSell,
+        priceBookPrice,
         plainOrder: quote.plainOrder,
-        vinylSize: quote.vinylSize,
+        printOption: quote.printOption,
         screenCostPerSideA4: safePricingModel.screenCostPerSideA4,
         vinylRollPrice: safePricingModel.vinylRollPrice,
         vinylWasteFactor: safePricingModel.vinylWasteFactor,
+        vinylLaborSmallPerUnit: safePricingModel.vinylLaborSmallPerUnit,
+        vinylLaborLargePerUnit: safePricingModel.vinylLaborLargePerUnit,
         dtfPackageFront: safePricingModel.dtfPackageFront,
         dtfPackageFrontBack: safePricingModel.dtfPackageFrontBack,
+        dtfDeliveryFee: safePricingModel.dtfDeliveryFee,
+        dtfIncludesDelivery: quote.dtfIncludesDelivery,
       });
       return { qty: tierQty, unitCost: tier.unitCost, suggestedUnit: tier.suggestedUnitPrice };
     });
@@ -416,14 +472,17 @@ export default function OwnerDashboard() {
     quote,
     pricingModel,
     blankCost,
-    safeLocations,
     safeArtworkFee,
     plainSell,
+    priceBookPrice,
     safePricingModel.screenCostPerSideA4,
     safePricingModel.vinylRollPrice,
     safePricingModel.vinylWasteFactor,
+    safePricingModel.vinylLaborSmallPerUnit,
+    safePricingModel.vinylLaborLargePerUnit,
     safePricingModel.dtfPackageFront,
     safePricingModel.dtfPackageFrontBack,
+    safePricingModel.dtfDeliveryFee,
     safePricingModel.overheadPerOrder,
     safePricingModel.targetMarginPct,
     safePricingModel.rushFeePct,
@@ -434,6 +493,9 @@ export default function OwnerDashboard() {
     if (quote.plainOrder) {
       return "Plain orders use your catalog blank price and plain sell benchmarks.";
     }
+    if (quote.pricingMode === "priceBook") {
+      return "Price Book mode auto-prices from your MO T-SHIRT price list.";
+    }
     if (quote.method === "Screen" && safeQty < 24) {
       return "Screen printing shines on bigger runs; small batches may favor vinyl or DTF.";
     }
@@ -441,7 +503,7 @@ export default function OwnerDashboard() {
       return "Vinyl is best for names, short runs, and quick turnaround jobs.";
     }
     return "DTF packages include the blank and work well for full-color designs.";
-  }, [quote.plainOrder, quote.method, safeQty]);
+  }, [quote.plainOrder, quote.pricingMode, quote.method, safeQty]);
 
   // Checklist init
   useEffect(() => {
@@ -693,20 +755,56 @@ export default function OwnerDashboard() {
                 <h2 className="text-lg font-semibold text-slate-900">Pricing & Profitability Studio</h2>
                 <p className="text-xs text-slate-500">Mauritius-ready quotes for custom tees and polos with real margin targets.</p>
               </div>
-              <button
-                onClick={() => {
-                  setQuote((q) => ({ ...q, quotedUnitPrice: pricingSummary.suggestedUnitPrice }));
-                }}
-                className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-              >
-                Use suggested price
-              </button>
+              {quote.pricingMode === "marginEngine" && !quote.plainOrder ? (
+                <button
+                  onClick={() => {
+                    setQuote((q) => ({ ...q, quotedUnitPrice: pricingSummary.suggestedUnitPrice }));
+                  }}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                >
+                  Use suggested price
+                </button>
+              ) : quote.plainOrder ? null : (
+                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700">
+                  Auto price from MO T-SHIRT price book
+                </span>
+              )}
             </div>
 
             <div className="mt-5 grid gap-4 lg:grid-cols-2">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Order Inputs</div>
                 <div className="mt-3 grid gap-3 text-xs font-semibold text-slate-600">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-3">
+                    <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Pricing mode</div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => setQuote((q) => ({ ...q, pricingMode: "priceBook" }))}
+                        className={`rounded-full border px-4 py-1 text-[11px] font-semibold transition ${
+                          quote.pricingMode === "priceBook"
+                            ? "border-slate-900 bg-slate-900 text-white"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                        }`}
+                      >
+                        Price Book (recommended)
+                      </button>
+                      <button
+                        onClick={() => setQuote((q) => ({ ...q, pricingMode: "marginEngine" }))}
+                        className={`rounded-full border px-4 py-1 text-[11px] font-semibold transition ${
+                          quote.pricingMode === "marginEngine"
+                            ? "border-slate-900 bg-slate-900 text-white"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                        }`}
+                      >
+                        Margin Engine
+                      </button>
+                      {quote.pricingMode === "priceBook" && !quote.plainOrder ? (
+                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-semibold text-emerald-700">
+                          Auto price from MO T-SHIRT price book
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
                   <label className="grid gap-1">
                     Item type
                     <select
@@ -782,16 +880,19 @@ export default function OwnerDashboard() {
                     </label>
                   )}
 
-                  {!quote.plainOrder && quote.method === "Vinyl" && (
+                  {!quote.plainOrder && (
                     <label className="grid gap-1">
-                      Vinyl print size
+                      Print option
                       <select
-                        value={quote.vinylSize}
-                        onChange={(e) => setQuote((q) => ({ ...q, vinylSize: e.target.value }))}
+                        value={quote.printOption}
+                        onChange={(e) => setQuote((q) => ({ ...q, printOption: e.target.value }))}
                         className={pricingFieldClass}
                       >
-                        <option value="Small">Small (9x9)</option>
-                        <option value="Large">Large (22x22)</option>
+                        {pricing.PRINT_OPTIONS.map((option: any) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
                       </select>
                     </label>
                   )}
@@ -807,20 +908,18 @@ export default function OwnerDashboard() {
                         className={`${pricingFieldClass} text-right`}
                       />
                     </label>
-                    {!quote.plainOrder && (
-                      <label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-600">
-                        Print sides
-                        <select
-                          value={quote.locations}
-                          onChange={(e) => setQuote((q) => ({ ...q, locations: Number(e.target.value) }))}
-                          className={pricingFieldClass}
-                        >
-                          <option value={1}>Front only (1)</option>
-                          <option value={2}>Front + back (2)</option>
-                        </select>
-                      </label>
-                    )}
                   </div>
+                  {!quote.plainOrder && quote.method === "DTF" && (
+                    <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600">
+                      <input
+                        type="checkbox"
+                        checked={quote.dtfIncludesDelivery}
+                        onChange={(e) => setQuote((q) => ({ ...q, dtfIncludesDelivery: e.target.checked }))}
+                        className="h-4 w-4 rounded border-slate-300 text-slate-900"
+                      />
+                      DTF includes delivery
+                    </label>
+                  )}
                   <label className="grid gap-1">
                     Artwork fee (Rs / order)
                     <input
@@ -843,13 +942,13 @@ export default function OwnerDashboard() {
                     />
                   </label>
                   <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-600">
-                    <label className={`inline-flex items-center gap-2 ${quote.plainOrder ? "opacity-50" : ""}`}>
+                    <label className={`inline-flex items-center gap-2 ${quote.plainOrder || quote.pricingMode === "priceBook" ? "opacity-50" : ""}`}>
                       <input
                         type="checkbox"
                         checked={quote.rush}
                         onChange={(e) => setQuote((q) => ({ ...q, rush: e.target.checked }))}
                         className="h-4 w-4 rounded border-slate-300 text-slate-900"
-                        disabled={quote.plainOrder}
+                        disabled={quote.plainOrder || quote.pricingMode === "priceBook"}
                       />
                       Rush order
                     </label>
@@ -965,17 +1064,63 @@ export default function OwnerDashboard() {
 
                   <div className="grid gap-2 sm:grid-cols-2">
                     <label className="grid gap-1">
-                      Overhead / order (Rs)
+                      Vinyl labor small / unit (Rs)
                       <input
                         type="number"
                         min={0}
                         step="1"
-                        value={pricingModel.overheadPerOrder}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, overheadPerOrder: parseNumericInput(e.target.value) }))}
+                        value={pricingModel.vinylLaborSmallPerUnit}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, vinylLaborSmallPerUnit: parseNumericInput(e.target.value) }))}
                         className={costFieldClass}
                         disabled={costLocked}
                       />
                     </label>
+                    <label className="grid gap-1">
+                      Vinyl labor large / unit (Rs)
+                      <input
+                        type="number"
+                        min={0}
+                        step="1"
+                        value={pricingModel.vinylLaborLargePerUnit}
+                        onChange={(e) => setPricingModel((m) => ({ ...m, vinylLaborLargePerUnit: parseNumericInput(e.target.value) }))}
+                        className={costFieldClass}
+                        disabled={costLocked}
+                      />
+                    </label>
+                  </div>
+
+                  <label className="grid gap-1">
+                    DTF delivery / order (Rs)
+                    <input
+                      type="number"
+                      min={0}
+                      step="1"
+                      value={pricingModel.dtfDeliveryFee}
+                      onChange={(e) => setPricingModel((m) => ({ ...m, dtfDeliveryFee: parseNumericInput(e.target.value) }))}
+                      className={costFieldClass}
+                      disabled={costLocked}
+                    />
+                  </label>
+
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {quote.pricingMode === "marginEngine" && !quote.plainOrder ? (
+                      <label className="grid gap-1">
+                        Overhead / order (Rs)
+                        <input
+                          type="number"
+                          min={0}
+                          step="1"
+                          value={pricingModel.overheadPerOrder}
+                          onChange={(e) => setPricingModel((m) => ({ ...m, overheadPerOrder: parseNumericInput(e.target.value) }))}
+                          className={costFieldClass}
+                          disabled={costLocked}
+                        />
+                      </label>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-500">
+                        Overhead is ignored in Price Book mode
+                      </div>
+                    )}
                     <label className="grid gap-1">
                       Personalization / unit (Rs)
                       <input
@@ -990,34 +1135,36 @@ export default function OwnerDashboard() {
                     </label>
                   </div>
 
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <label className={`grid gap-1 ${quote.plainOrder ? "opacity-50" : ""}`}>
-                      Target margin %
-                      <input
-                        type="number"
-                        min={0}
-                        max={90}
-                        step="1"
-                        value={pricingModel.targetMarginPct}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, targetMarginPct: parseNumericInput(e.target.value) }))}
-                        className={costFieldClass}
-                        disabled={costLocked || quote.plainOrder}
-                      />
-                    </label>
-                    <label className={`grid gap-1 ${quote.plainOrder ? "opacity-50" : ""}`}>
-                      Rush fee %
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        step="1"
-                        value={pricingModel.rushFeePct}
-                        onChange={(e) => setPricingModel((m) => ({ ...m, rushFeePct: parseNumericInput(e.target.value) }))}
-                        className={costFieldClass}
-                        disabled={costLocked || quote.plainOrder}
-                      />
-                    </label>
-                  </div>
+                  {quote.pricingMode === "marginEngine" && !quote.plainOrder ? (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <label className="grid gap-1">
+                        Target margin %
+                        <input
+                          type="number"
+                          min={0}
+                          max={90}
+                          step="1"
+                          value={pricingModel.targetMarginPct}
+                          onChange={(e) => setPricingModel((m) => ({ ...m, targetMarginPct: parseNumericInput(e.target.value) }))}
+                          className={costFieldClass}
+                          disabled={costLocked}
+                        />
+                      </label>
+                      <label className="grid gap-1">
+                        Rush fee %
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          step="1"
+                          value={pricingModel.rushFeePct}
+                          onChange={(e) => setPricingModel((m) => ({ ...m, rushFeePct: parseNumericInput(e.target.value) }))}
+                          className={costFieldClass}
+                          disabled={costLocked}
+                        />
+                      </label>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -1026,23 +1173,41 @@ export default function OwnerDashboard() {
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
                 <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Unit cost</div>
                 <div className="mt-2 text-xl font-semibold text-slate-900">{money(pricingSummary.unitCost)}</div>
-                <div className="text-xs text-slate-500">{quote.plainOrder ? "Blank cost (plain)" : "Blank + production + overhead"}</div>
+                <div className="text-xs text-slate-500">
+                  {quote.plainOrder ? "Blank cost (plain)" : quote.pricingMode === "priceBook" ? "Blank + production + labor" : "Blank + production + overhead"}
+                </div>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
                 <div className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                  {quote.plainOrder ? "Plain sell price" : "Suggested unit price"}
+                  {quote.plainOrder
+                    ? "Plain sell price"
+                    : quote.pricingMode === "priceBook"
+                    ? "Quote price"
+                    : "Suggested unit price"}
                 </div>
-                <div className="mt-2 text-xl font-semibold text-slate-900">{money(pricingSummary.suggestedUnitPrice)}</div>
+                <div className="mt-2 text-xl font-semibold text-slate-900">{money(suggestedDisplay)}</div>
                 <div className="text-xs text-slate-500">
-                  {quote.plainOrder ? "Catalog price benchmark" : `Target margin ${pricingModel.targetMarginPct}%`}
+                  {quote.plainOrder
+                    ? "Catalog price benchmark"
+                    : quote.pricingMode === "priceBook"
+                    ? "Same as quote"
+                    : `Target margin ${pricingModel.targetMarginPct}%`}
                 </div>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
                 <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Quote total</div>
                 <div className="mt-2 text-xl font-semibold text-slate-900">{money(quotedTotal)}</div>
-                <div className="text-xs text-slate-500">{pricingSummary.qty} units • {Math.round(quotedMarginPct * 100)}% margin</div>
+                <div className="text-xs text-slate-500">
+                  Profit / unit {money(profitPerUnit)} • {Math.round(quotedMarginPct * 100)}% margin
+                </div>
               </div>
             </div>
+
+            {isLoss ? (
+              <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-semibold text-rose-700">
+                Loss: increase quote
+              </div>
+            ) : null}
 
             <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
               {methodHint}

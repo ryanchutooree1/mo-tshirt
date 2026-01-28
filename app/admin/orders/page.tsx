@@ -124,6 +124,29 @@ function OrdersPageInner() {
     return () => clearTimeout(id);
   }, [search]);
 
+  const formatIsoDate = (date: Date) => date.toISOString().slice(0, 10);
+  const applyQuickRange = (days: number) => {
+    const end = new Date();
+    const start = new Date();
+    if (days > 0) start.setDate(end.getDate() - (days - 1));
+    setDateFrom(formatIsoDate(start));
+    setDateTo(formatIsoDate(end));
+  };
+
+  const activeFilters = useMemo(() => {
+    const list: string[] = [];
+    if (search.trim()) list.push(`Search: ${search.trim()}`);
+    if (statusFilter) list.push(`Status: ${statusFilter}`);
+    if (paymentFilter) list.push(`Payment: ${paymentFilter}`);
+    if (dateFrom || dateTo) {
+      const from = dateFrom || "Any";
+      const to = dateTo || "Any";
+      list.push(`Dates: ${from} → ${to}`);
+    }
+    if (activeTab === "completed") list.push("Tab: Completed");
+    return list;
+  }, [search, statusFilter, paymentFilter, dateFrom, dateTo, activeTab]);
+
   // initialize filters from URL (status, range)
   useEffect(() => {
     const s = searchParams?.get("status");
@@ -658,10 +681,10 @@ function OrdersPageInner() {
                 Order Management
               </p>
               <h1 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">
-                Track, update, and fulfill orders
+                Order Command Center
               </h1>
               <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
-                Track, update, and fulfill orders with inventory safety checks
+                Track, update, and fulfill orders with inventory-safe workflows and clean client handoffs.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="inline-flex items-center gap-2 rounded-full bg-orange-100/70 px-3 py-1 text-xs font-semibold text-orange-700">
@@ -715,138 +738,177 @@ function OrdersPageInner() {
           className="sticky top-20 z-10 rounded-3xl border border-slate-200/70 bg-white/90 p-4 shadow-sm backdrop-blur"
           style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.14s" }}
         >
-          <div className="flex flex-wrap items-start gap-3">
-            <div className="relative">
-              <FiSearch className="absolute left-3 top-2.5 text-slate-400" />
-              <input
-                className="w-full rounded-full border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200 sm:w-64"
-                placeholder="Search name or phone..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative flex-1 min-w-[220px]">
+                <FiSearch className="absolute left-3 top-2.5 text-slate-400" />
+                <input
+                  className="w-full rounded-full border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                  placeholder="Search customer, phone, or invoice..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Quick range</span>
+                <button
+                  onClick={() => applyQuickRange(1)}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  Today
+                </button>
+                <button
+                  onClick={() => applyQuickRange(7)}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  7 days
+                </button>
+                <button
+                  onClick={() => applyQuickRange(30)}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  30 days
+                </button>
+              </div>
+
+              <div className="ml-auto flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => {
+                    setSearch("");
+                    setDateFrom("");
+                    setDateTo("");
+                    setStatusFilter("");
+                    setPaymentFilter("");
+                    setActiveTab("all");
+                  }}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                  title="Reset filters"
+                >
+                  Reset
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab("all");
+                  }}
+                  className={`rounded-full border px-4 py-2 text-xs font-semibold shadow-sm transition ${
+                    activeTab === "all"
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab("completed");
+                  }}
+                  className={`rounded-full border px-4 py-2 text-xs font-semibold shadow-sm transition ${
+                    activeTab === "completed"
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                  }`}
+                >
+                  Completed
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectMode((s) => !s);
+                    if (selectMode) setSelectedIds(new Set());
+                  }}
+                  className={`rounded-full border px-4 py-2 text-xs font-semibold shadow-sm transition ${
+                    selectMode
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                  }`}
+                >
+                  {selectMode ? "Cancel Select" : "Select"}
+                </button>
+                {selectMode && (
+                  <>
+                    <button
+                      onClick={() => setSelectedIds(new Set(visibleRows.map((d) => d.id)))}
+                      className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      onClick={() => setSelectedIds(new Set())}
+                      className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                    >
+                      Clear
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-500">From</label>
-              <input
-                type="date"
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-500">To</label>
-              <input
-                type="date"
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-              />
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500">From</label>
+                <input
+                  type="date"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500">To</label>
+                <input
+                  type="date"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500">Status</label>
+                <select
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="">All</option>
+                  <option>In Process</option>
+                  <option>Urgent</option>
+                  <option>Completed</option>
+                  <option>Pending</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500">Payment</label>
+                <select
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                  value={paymentFilter}
+                  onChange={(e) => setPaymentFilter(e.target.value)}
+                >
+                  <option value="">All</option>
+                  <option>Full Payment</option>
+                  <option>Part Payment</option>
+                </select>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-500">Status</label>
-              <select
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="">All</option>
-                <option>In Process</option>
-                <option>Urgent</option>
-                <option>Completed</option>
-                <option>Pending</option>
-              </select>
+            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+              <div>
+                Showing {visibleRows.length} of {rows.length} loaded
+                {hasMore && " • more available"}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {activeFilters.length === 0 ? (
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
+                    No filters active
+                  </span>
+                ) : (
+                  activeFilters.map((filter) => (
+                    <span key={filter} className="rounded-full border border-slate-200 bg-white px-3 py-1">
+                      {filter}
+                    </span>
+                  ))
+                )}
+              </div>
             </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-500">Payment</label>
-              <select
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
-                value={paymentFilter}
-                onChange={(e) => setPaymentFilter(e.target.value)}
-              >
-                <option value="">All</option>
-                <option>Full Payment</option>
-                <option>Part Payment</option>
-              </select>
-            </div>
-
-            <div className="ml-auto flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => {
-                  setSearch("");
-                  setDateFrom("");
-                  setDateTo("");
-                  setStatusFilter("");
-                  setPaymentFilter("");
-                  setActiveTab("all");
-                }}
-                className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-                title="Reset filters"
-              >
-                Reset
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab("all");
-                }}
-                className={`rounded-full border px-4 py-2 text-xs font-semibold shadow-sm transition ${
-                  activeTab === "all"
-                    ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => {
-                  setActiveTab("completed");
-                }}
-                className={`rounded-full border px-4 py-2 text-xs font-semibold shadow-sm transition ${
-                  activeTab === "completed"
-                    ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                }`}
-              >
-                Completed
-              </button>
-
-              <button
-                onClick={() => {
-                  setSelectMode((s) => !s);
-                  if (selectMode) setSelectedIds(new Set());
-                }}
-                className={`rounded-full border px-4 py-2 text-xs font-semibold shadow-sm transition ${
-                  selectMode
-                    ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                }`}
-              >
-                {selectMode ? "Cancel Select" : "Select"}
-              </button>
-              {selectMode && (
-                <>
-                  <button
-                    onClick={() => setSelectedIds(new Set(visibleRows.map((d) => d.id)))}
-                    className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-                  >
-                    Select All
-                  </button>
-                  <button
-                    onClick={() => setSelectedIds(new Set())}
-                    className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-                  >
-                    Clear
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-          <div className="mt-2 text-xs text-slate-500">
-            Showing {visibleRows.length} of {rows.length} loaded
-            {hasMore && " • more available"}
           </div>
         </section>
 
