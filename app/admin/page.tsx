@@ -194,7 +194,7 @@ export default function OwnerDashboard() {
   } as const;
   const money = (v: number) => `Rs ${Math.round(v || 0).toLocaleString()}`;
   const pricingFieldClass =
-    "bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200";
+    "w-full min-w-0 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-[11px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200";
 
   const pricing = useMemo(() => {
     const qty = Math.max(1, Number(quote.qty) || 1);
@@ -574,8 +574,8 @@ export default function OwnerDashboard() {
                       <option value="Embroidery">Embroidery</option>
                     </select>
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <label className="grid gap-1 text-[11px] font-semibold text-slate-600">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-600">
                       Qty
                       <input
                         type="number"
@@ -585,7 +585,7 @@ export default function OwnerDashboard() {
                         className={`${pricingFieldClass} text-right`}
                       />
                     </label>
-                    <label className="grid gap-1 text-[11px] font-semibold text-slate-600">
+                    <label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-600">
                       Colors
                       <input
                         type="number"
@@ -595,7 +595,7 @@ export default function OwnerDashboard() {
                         className={`${pricingFieldClass} text-right`}
                       />
                     </label>
-                    <label className="grid gap-1 text-[11px] font-semibold text-slate-600">
+                    <label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-600">
                       Locations
                       <input
                         type="number"
@@ -652,8 +652,8 @@ export default function OwnerDashboard() {
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Cost Model</div>
                 <div className="mt-3 grid gap-3 text-xs font-semibold text-slate-600">
-                  <div className="grid grid-cols-3 gap-2">
-                    <label className="grid gap-1 text-[11px] font-semibold text-slate-600">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-600">
                       Tee blank
                       <input
                         type="number"
@@ -664,7 +664,7 @@ export default function OwnerDashboard() {
                         className={`${pricingFieldClass} text-right`}
                       />
                     </label>
-                    <label className="grid gap-1 text-[11px] font-semibold text-slate-600">
+                    <label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-600">
                       Polo blank
                       <input
                         type="number"
@@ -675,7 +675,7 @@ export default function OwnerDashboard() {
                         className={`${pricingFieldClass} text-right`}
                       />
                     </label>
-                    <label className="grid gap-1 text-[11px] font-semibold text-slate-600">
+                    <label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-600">
                       Cap blank
                       <input
                         type="number"
@@ -757,8 +757,8 @@ export default function OwnerDashboard() {
                     />
                     </label>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <label className="grid gap-1 text-[11px] font-semibold text-slate-600">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-600">
                       Labor / unit
                       <input
                         type="number"
@@ -769,7 +769,7 @@ export default function OwnerDashboard() {
                         className={`${pricingFieldClass} text-right`}
                       />
                     </label>
-                    <label className="grid gap-1 text-[11px] font-semibold text-slate-600">
+                    <label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-600">
                       Overhead / order
                       <input
                         type="number"
@@ -780,7 +780,7 @@ export default function OwnerDashboard() {
                         className={`${pricingFieldClass} text-right`}
                       />
                     </label>
-                    <label className="grid gap-1 text-[11px] font-semibold text-slate-600">
+                    <label className="grid min-w-0 gap-1 text-[11px] font-semibold text-slate-600">
                       Personalization
                       <input
                         type="number"
