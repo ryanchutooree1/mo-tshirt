@@ -337,7 +337,6 @@ export default function OwnerDashboard() {
       }),
     [quote.itemType, quote.blankSizeBand, quote.method, quote.printOption]
   );
-  const priceBookRef = useRef(priceBookPrice);
 
   useEffect(() => {
     if (!sizeBandOptions.includes(quote.blankSizeBand) && sizeBandOptions.length) {
@@ -369,18 +368,8 @@ export default function OwnerDashboard() {
   useEffect(() => {
     if (quote.plainOrder) return;
     if (quote.pricingMode !== "priceBook") return;
-    const prevPrice = priceBookRef.current;
-    const current = toNumber(quote.quotedUnitPrice, 0);
-    if (current === 0 || current === prevPrice) {
-      setQuote((q) => (q.quotedUnitPrice === priceBookPrice ? q : { ...q, quotedUnitPrice: priceBookPrice }));
-    }
-    priceBookRef.current = priceBookPrice;
+    setQuote((q) => (q.quotedUnitPrice === priceBookPrice ? q : { ...q, quotedUnitPrice: priceBookPrice }));
   }, [quote.plainOrder, quote.pricingMode, priceBookPrice]);
-
-  useEffect(() => {
-    if (quote.pricingMode === "priceBook") return;
-    priceBookRef.current = priceBookPrice;
-  }, [quote.pricingMode, priceBookPrice]);
 
   const vinylCosts = useMemo(
     () =>
@@ -471,24 +460,22 @@ export default function OwnerDashboard() {
     safePricingModel.personalizationPerItem,
   ]);
 
-  const quotedUnitBase = quote.plainOrder
-    ? (safeQuotedUnitPrice > 0 ? safeQuotedUnitPrice : plainSell)
-    : quote.pricingMode === "priceBook"
-    ? (safeQuotedUnitPrice > 0 ? safeQuotedUnitPrice : priceBookPrice)
-    : safeQuotedUnitPrice;
+  const quotedUnitBase =
+    quote.pricingMode === "priceBook" && !quote.plainOrder
+      ? priceBookPrice
+      : safeQuotedUnitPrice;
   const quotedUnit = quotedUnitBase > 0 ? quotedUnitBase : pricingSummary.suggestedUnitPrice;
   const quotedTotal = quotedUnit * pricingSummary.qty;
   const quotedProfit = quotedUnit - pricingSummary.unitCost;
   const quotedMarginPct = quotedUnit ? quotedProfit / quotedUnit : 0;
   const profitPerUnit = quotedUnit - pricingSummary.unitCost;
   const isLoss = quotedUnit > 0 && quotedUnit < pricingSummary.unitCost;
-  const quotedUnitInputValue = quote.plainOrder
-    ? (safeQuotedUnitPrice > 0 ? safeQuotedUnitPrice : plainSell)
-    : quote.pricingMode === "priceBook"
-    ? (quote.quotedUnitPrice === "" || toNumber(quote.quotedUnitPrice, 0) === 0
-        ? priceBookPrice
-        : quote.quotedUnitPrice)
-    : quote.quotedUnitPrice;
+  const quotedUnitInputValue =
+    quote.pricingMode === "priceBook" && !quote.plainOrder
+      ? priceBookPrice
+      : quote.plainOrder
+      ? (safeQuotedUnitPrice > 0 ? safeQuotedUnitPrice : plainSell)
+      : quote.quotedUnitPrice;
   const suggestedDisplay =
     quote.pricingMode === "priceBook" && !quote.plainOrder ? quotedUnit : pricingSummary.suggestedUnitPrice;
   const totalCost = pricingSummary.unitCost * pricingSummary.qty;
@@ -1007,8 +994,8 @@ export default function OwnerDashboard() {
                       min={0}
                       value={quotedUnitInputValue}
                       onChange={(e) => setQuote((q) => ({ ...q, quotedUnitPrice: parseNumericInput(e.target.value) }))}
-                      className={`${pricingFieldClass} ${quote.plainOrder ? "bg-slate-100 text-slate-500" : ""}`}
-                      disabled={quote.plainOrder}
+                      className={`${pricingFieldClass} ${quote.pricingMode === "priceBook" || quote.plainOrder ? "bg-slate-100 text-slate-500" : ""}`}
+                      disabled={quote.pricingMode === "priceBook" || quote.plainOrder}
                     />
                   </label>
                   <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-600">
