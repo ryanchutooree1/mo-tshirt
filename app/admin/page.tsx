@@ -75,6 +75,17 @@ function calcNumerology(date: Date) {
   };
 }
 
+type TxnProduct = { quantity?: number; unitPrice?: number; price?: number };
+const sumProducts = (products?: TxnProduct[]) => {
+  if (!products) return 0;
+  return products.reduce((acc, p) => {
+    if (typeof p.price === "number") return acc + p.price;
+    const qty = typeof p.quantity === "number" ? p.quantity : 0;
+    const unit = typeof p.unitPrice === "number" ? p.unitPrice : 0;
+    return acc + unit * qty;
+  }, 0);
+};
+
 // ---------- Dashboard ----------
 export default function OwnerDashboard() {
   // Local inline icon for Mauritian Rupees ("Rs")
@@ -457,21 +468,39 @@ export default function OwnerDashboard() {
   useEffect(() => {
     (async () => {
       try {
-        const qy = query(collection(db, "orders"), orderBy("date", "desc"), limit(20));
+        const qy = query(collection(db, "transactions"), orderBy("transactionDate", "desc"), limit(20));
         const qs = await getDocs(qy);
         let revenueToday = 0, pendingCount = 0, deliveredCount = 0, completedCount = 0, totalCount = 0;
         const ordersList: Order[] = [], clientSet = new Set<string>();
 
         qs.forEach((d) => {
-          const data = d.data();
-          ordersList.push(data);
-          if (data.client) clientSet.add(String(data.client));
-          if (data.date === todayIso) {
-            revenueToday += data.amount || 0;
-            if (data.status === "Pending") pendingCount++;
-            if (data.status === "Delivered") deliveredCount++;
+          const data = d.data() as any;
+          const amount = typeof data.amount === "number"
+            ? data.amount
+            : Array.isArray(data.products)
+            ? sumProducts(data.products)
+            : 0;
+          const rawDate = data.transactionDate?.toDate?.() as Date | undefined;
+          const fallbackDate = data.transactionDate ? new Date(data.transactionDate) : data.date ? new Date(data.date) : null;
+          const dateObj = rawDate || fallbackDate;
+          const dateKey = dateObj ? dateObj.toISOString().slice(0, 10) : "";
+          const status = typeof data.status === "string" ? data.status : "—";
+          const statusLower = status.toLowerCase();
+          const client =
+            data.customerName ||
+            data.phoneNumber ||
+            data.email ||
+            data.client ||
+            "Unknown";
+
+          ordersList.push({ client, amount, status, date: dateKey });
+          if (client) clientSet.add(String(client));
+          if (dateKey === todayIso) {
+            revenueToday += amount || 0;
+            if (statusLower === "pending") pendingCount++;
+            if (statusLower === "delivered") deliveredCount++;
           }
-          if (data.status === "Delivered") completedCount++;
+          if (statusLower === "delivered" || statusLower === "completed") completedCount++;
           totalCount++;
         });
 
