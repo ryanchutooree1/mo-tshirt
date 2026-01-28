@@ -348,9 +348,11 @@ export default function OwnerDashboard() {
     if (quote.plainOrder) {
       setQuote((q) => ({
         ...q,
+        pricingMode: "priceBook",
         quotedUnitPrice: plainSell,
         personalization: false,
         rush: false,
+        dtfIncludesDelivery: false,
       }));
     }
   }, [quote.plainOrder, plainSell]);
@@ -958,8 +960,8 @@ export default function OwnerDashboard() {
                       min={0}
                       value={quotedUnitInputValue}
                       onChange={(e) => setQuote((q) => ({ ...q, quotedUnitPrice: parseNumericInput(e.target.value) }))}
-                      className={`${pricingFieldClass} ${quote.pricingMode === "priceBook" && !quote.plainOrder ? "bg-slate-100 text-slate-500" : ""}`}
-                      disabled={quote.pricingMode === "priceBook" && !quote.plainOrder}
+                      className={`${pricingFieldClass} ${quote.pricingMode === "priceBook" || quote.plainOrder ? "bg-slate-100 text-slate-500" : ""}`}
+                      disabled={quote.pricingMode === "priceBook" || quote.plainOrder}
                     />
                   </label>
                   <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-600">
