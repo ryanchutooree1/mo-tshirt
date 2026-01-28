@@ -6,6 +6,14 @@ import { CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work"
 export default function WorkIndexPage() {
   return (
     <main className="px-6 md:px-8 py-20 mx-auto max-w-6xl space-y-16">
+      <div className="flex justify-start">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:border-neutral-300 hover:bg-neutral-50"
+        >
+          ← Back to Home
+        </Link>
+      </div>
       <section className="space-y-4 text-center">
         <p className="text-xs uppercase tracking-[0.08em] text-orange-500">Portfolio</p>
         <h1 className="text-3xl md:text-4xl font-extrabold">Recent work for Mauritius teams & brands</h1>

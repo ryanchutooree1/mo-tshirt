@@ -54,6 +54,14 @@ export default function ContactClient() {
 
   return (
     <section className="px-6 md:px-8 py-20 mx-auto max-w-3xl">
+      <div className="mb-6">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-gray-300 hover:bg-gray-50"
+        >
+          ← Back to Home
+        </Link>
+      </div>
       <h1 className="text-3xl font-extrabold mb-4">Contact us</h1>
       <p className="text-gray-700 mb-6">
         Send us your artwork or questions. We reply quickly. Or message us on WhatsApp.
