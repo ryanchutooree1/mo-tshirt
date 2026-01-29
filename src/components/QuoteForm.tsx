@@ -19,6 +19,7 @@ type FormState = {
   delivery: string;
   deliveryName: string;
   deliveryAddress: string;
+  deliveryPostCode: string;
   deliveryPhone: string;
 };
 
@@ -42,6 +43,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     delivery: deliveryOptions[0],
     deliveryName: "",
     deliveryAddress: "",
+    deliveryPostCode: "",
     deliveryPhone: "",
   });
   const [printMethod, setPrintMethod] = useState<string>(printMethods[3]);
@@ -51,8 +53,10 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
   const [emailError, setEmailError] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [deliveryPhoneError, setDeliveryPhoneError] = useState<string | null>(null);
+  const [deliveryPostCodeError, setDeliveryPostCodeError] = useState<string | null>(null);
 
   const isValidPhone = (value: string) => /^[0-9+()\s-]+$/.test(value);
+  const isValidPostCode = (value: string) => /^\d+$/.test(value);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -93,13 +97,24 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     setDeliveryPhoneError(isValidPhone(value) ? null : "Use only numbers and + ( ) -");
   }
 
+  function handleDeliveryPostCodeChange(value: string) {
+    update("deliveryPostCode", value);
+    if (!value) {
+      setDeliveryPostCodeError(null);
+      return;
+    }
+    setDeliveryPostCodeError(isValidPostCode(value) ? null : "Numbers only");
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const phoneOk = !form.phone || isValidPhone(form.phone);
     const deliveryPhoneOk = !form.deliveryPhone || isValidPhone(form.deliveryPhone);
+    const deliveryPostCodeOk = !form.deliveryPostCode || isValidPostCode(form.deliveryPostCode);
     setPhoneError(phoneOk ? null : "Use only numbers and + ( ) -");
     setDeliveryPhoneError(deliveryPhoneOk ? null : "Use only numbers and + ( ) -");
-    if (!phoneOk || !deliveryPhoneOk) return;
+    setDeliveryPostCodeError(deliveryPostCodeOk ? null : "Numbers only");
+    if (!phoneOk || !deliveryPhoneOk || !deliveryPostCodeOk) return;
     setLoading(true);
     setResult(null);
 
@@ -121,6 +136,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     payload.append("delivery", form.delivery);
     payload.append("deliveryName", form.deliveryName);
     payload.append("deliveryAddress", form.deliveryAddress);
+    payload.append("deliveryPostCode", form.deliveryPostCode);
     payload.append("deliveryPhone", form.deliveryPhone);
     if (file) payload.append("file", file);
 
@@ -143,6 +159,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           delivery: deliveryOptions[0],
           deliveryName: "",
           deliveryAddress: "",
+          deliveryPostCode: "",
           deliveryPhone: "",
         });
         setPrintMethod(printMethods[3]);
@@ -294,14 +311,29 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                 value={form.deliveryName}
                 onChange={(e) => update("deliveryName", e.target.value)}
                 className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
-                placeholder="Your Name"
+                placeholder="Your Full Name"
               />
-              <input
-                value={form.deliveryAddress}
-                onChange={(e) => update("deliveryAddress", e.target.value)}
-                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
-                placeholder="Your Address"
-              />
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_140px]">
+                <div>
+                  <input
+                    value={form.deliveryAddress}
+                    onChange={(e) => update("deliveryAddress", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    placeholder="Your Delivery Address"
+                  />
+                </div>
+                <div>
+                  <input
+                    value={form.deliveryPostCode}
+                    onChange={(e) => handleDeliveryPostCodeChange(e.target.value)}
+                    className={`w-full rounded-lg border bg-white px-3 py-2 text-sm focus:outline-none ${
+                      deliveryPostCodeError ? "border-red-400 focus:border-red-500" : "border-neutral-200 focus:border-black"
+                    }`}
+                    placeholder="Post Code"
+                  />
+                  {deliveryPostCodeError && <p className="mt-1 text-xs text-red-600">{deliveryPostCodeError}</p>}
+                </div>
+              </div>
               <input
                 value={form.deliveryPhone}
                 onChange={(e) => handleDeliveryPhoneChange(e.target.value)}

@@ -15,6 +15,7 @@ type ParsedPayload = {
   delivery?: string;
   deliveryName?: string;
   deliveryAddress?: string;
+  deliveryPostCode?: string;
   deliveryPhone?: string;
 };
 
@@ -52,6 +53,7 @@ export async function POST(req: Request) {
         delivery: form.get("delivery")?.toString(),
         deliveryName: form.get("deliveryName")?.toString(),
         deliveryAddress: form.get("deliveryAddress")?.toString(),
+        deliveryPostCode: form.get("deliveryPostCode")?.toString(),
         deliveryPhone: form.get("deliveryPhone")?.toString(),
         file: form.get("file") instanceof File ? (form.get("file") as File) : null,
       };
@@ -75,6 +77,7 @@ export async function POST(req: Request) {
       delivery,
       deliveryName,
       deliveryAddress,
+      deliveryPostCode,
       deliveryPhone,
     } = payload;
 
@@ -135,6 +138,7 @@ export async function POST(req: Request) {
       "Delivery Info:",
       `  Name: ${formatValue(deliveryName)}`,
       `  Address: ${formatValue(deliveryAddress)}`,
+      `  Post code: ${formatValue(deliveryPostCode)}`,
       `  Phone: ${formatValue(deliveryPhone)}`,
     ];
     const text = textLines.join("\n");
@@ -154,6 +158,7 @@ export async function POST(req: Request) {
     const deliveryRows = [
       ["Delivery name", deliveryName],
       ["Delivery address", deliveryAddress],
+      ["Delivery post code", deliveryPostCode],
       ["Delivery phone", deliveryPhone],
     ];
     const renderRow = (label: string, value: unknown) => {
