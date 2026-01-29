@@ -24,7 +24,11 @@ type FormState = {
 
 const garmentOptions = ["T-Shirt", "Polo Shirt", "Hoodie", "Cap", "Other"];
 const printMethods = ["Screen Print", "DTF", "Heat Transfer", "Not sure"];
-const deliveryOptions = ["Surinam pickup (Free)", "Post Office Delivery (Rs 100)"];
+const deliveryOptions = [
+  "Surinam pickup (Free)",
+  "Post Office Delivery (Rs 100)",
+  "Delivery (Need to arrange first)",
+];
 
 export default function QuoteForm({ source = "Website", className }: QuoteFormProps) {
   const [form, setForm] = useState<FormState>({
@@ -251,7 +255,8 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           </select>
         </div>
 
-        {form.delivery === "Post Office Delivery (Rs 100)" && (
+        {(form.delivery === "Post Office Delivery (Rs 100)" ||
+          form.delivery === "Delivery (Need to arrange first)") && (
           <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4">
             <p className="text-sm font-semibold text-neutral-800">Delivery Info</p>
             <div className="mt-3 grid gap-3">
