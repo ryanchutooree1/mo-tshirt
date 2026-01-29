@@ -239,9 +239,9 @@ export default function HomePage() {
                   <Image
                     src="/Postofficelogo.png"
                     alt="Mauritius Post logo"
-                    width={80}
-                    height={80}
-                    className="h-12 w-12 object-contain"
+                    width={104}
+                    height={104}
+                    className="h-16 w-16 object-contain"
                   />
                 </div>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
