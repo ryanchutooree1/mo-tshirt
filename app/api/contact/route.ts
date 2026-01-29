@@ -131,9 +131,11 @@ export async function POST(req: Request) {
       `Deadline: ${formatValue(deadline)}`,
       `Notes: ${formatValue(notesValue)}`,
       `Delivery: ${formatValue(delivery)}`,
-      `Delivery name: ${formatValue(deliveryName)}`,
-      `Delivery address: ${formatValue(deliveryAddress)}`,
-      `Delivery phone: ${formatValue(deliveryPhone)}`,
+      "",
+      "Delivery Info:",
+      `  Name: ${formatValue(deliveryName)}`,
+      `  Address: ${formatValue(deliveryAddress)}`,
+      `  Phone: ${formatValue(deliveryPhone)}`,
     ];
     const text = textLines.join("\n");
 
@@ -148,26 +150,32 @@ export async function POST(req: Request) {
       ["Deadline", deadline],
       ["Notes", notesValue],
       ["Delivery", delivery],
+    ];
+    const deliveryRows = [
       ["Delivery name", deliveryName],
       ["Delivery address", deliveryAddress],
       ["Delivery phone", deliveryPhone],
     ];
-    const htmlRows = rows
-      .map(([label, value]) => {
-        const safeValue = escapeHtml(formatValue(value)).replace(/\n/g, "<br/>");
-        const isSource = label === "Source";
-        const labelStyle = isSource
-          ? "padding:6px 12px 6px 0; font-weight:700; font-size:16px; vertical-align:top; white-space:nowrap;"
-          : "padding:4px 12px 4px 0; font-weight:700; vertical-align:top; white-space:nowrap;";
-        const valueStyle = isSource
-          ? "padding:6px 0; color:#111; font-size:16px; font-weight:600;"
-          : "padding:4px 0; color:#111;";
-        return `<tr>
+    const renderRow = (label: string, value: unknown) => {
+      const safeValue = escapeHtml(formatValue(value)).replace(/\n/g, "<br/>");
+      const isSource = label === "Source";
+      const labelStyle = isSource
+        ? "padding:6px 12px 6px 0; font-weight:700; font-size:16px; vertical-align:top; white-space:nowrap;"
+        : "padding:4px 12px 4px 0; font-weight:700; vertical-align:top; white-space:nowrap;";
+      const valueStyle = isSource
+        ? "padding:6px 0; color:#111; font-size:16px; font-weight:600;"
+        : "padding:4px 0; color:#111;";
+      return `<tr>
   <td style="${labelStyle}">${escapeHtml(label)}</td>
   <td style="${valueStyle}">${safeValue}</td>
 </tr>`;
-      })
-      .join("");
+    };
+    const htmlRows = [
+      ...rows.map(([label, value]) => renderRow(label, value)),
+      `<tr><td colspan="2" style="height:8px;"></td></tr>`,
+      `<tr><td colspan="2" style="padding:6px 0 4px; font-weight:700; font-size:15px;">Delivery Info</td></tr>`,
+      ...deliveryRows.map(([label, value]) => renderRow(label, value)),
+    ].join("");
     const html = `<div style="font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#111;">
   <div style="margin:0 0 10px; font-size:20px; font-weight:800;">New Quotation Request</div>
   <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
