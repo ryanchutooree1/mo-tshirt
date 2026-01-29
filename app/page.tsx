@@ -232,6 +232,34 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
+
+            <div className="mt-12 flex justify-center">
+              <div className="w-full max-w-3xl rounded-[28px] border border-[#EAEAEA] bg-white px-6 py-6 text-left shadow-sm">
+                <p className="text-xs uppercase tracking-[0.2em] text-orange-500">Track & Trace</p>
+                <h3 className="mt-2 text-2xl font-semibold text-black">Track your Mauritius Post parcel</h3>
+                <p className="mt-2 text-sm text-neutral-600">
+                  Enter your tracking code. Results open on the official Mauritius Post website.
+                </p>
+                <form
+                  action="https://www.mauritiuspost.mu/track-trace/"
+                  method="get"
+                  target="_blank"
+                  className="mt-4 flex flex-col gap-3 sm:flex-row"
+                >
+                  <input
+                    name="tracking_code"
+                    placeholder="Tracking code (e.g., DP512500081MU)"
+                    className="w-full flex-1 rounded-full border border-neutral-200 px-4 py-2 text-sm focus:border-black focus:outline-none"
+                  />
+                  <button
+                    type="submit"
+                    className="inline-flex items-center justify-center rounded-full bg-black px-5 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800"
+                  >
+                    Track parcel
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
         </section>
 
