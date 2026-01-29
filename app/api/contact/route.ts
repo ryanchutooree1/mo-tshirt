@@ -119,7 +119,9 @@ export async function POST(req: Request) {
       return trimmed ? trimmed : "n/a";
     };
     const notesValue = notes && notes.trim() ? notes : message;
+    const sourceValue = formatValue(source);
     const textLines = [
+      `Source: ${sourceValue}`,
       `Name: ${formatValue(name)}`,
       `Email: ${formatValue(email)}`,
       `Phone: ${formatValue(phone)}`,
@@ -128,7 +130,6 @@ export async function POST(req: Request) {
       `Quantity: ${formatValue(quantity)}`,
       `Deadline: ${formatValue(deadline)}`,
       `Notes: ${formatValue(notesValue)}`,
-      `Source: ${formatValue(source)}`,
       `Delivery: ${formatValue(delivery)}`,
       `Delivery name: ${formatValue(deliveryName)}`,
       `Delivery address: ${formatValue(deliveryAddress)}`,
@@ -137,6 +138,7 @@ export async function POST(req: Request) {
     const text = textLines.join("\n");
 
     const rows = [
+      ["Source", source],
       ["Name", name],
       ["Email", email],
       ["Phone", phone],
@@ -145,7 +147,6 @@ export async function POST(req: Request) {
       ["Quantity", quantity],
       ["Deadline", deadline],
       ["Notes", notesValue],
-      ["Source", source],
       ["Delivery", delivery],
       ["Delivery name", deliveryName],
       ["Delivery address", deliveryAddress],
@@ -154,9 +155,16 @@ export async function POST(req: Request) {
     const htmlRows = rows
       .map(([label, value]) => {
         const safeValue = escapeHtml(formatValue(value)).replace(/\n/g, "<br/>");
+        const isSource = label === "Source";
+        const labelStyle = isSource
+          ? "padding:6px 12px 6px 0; font-weight:700; font-size:16px; vertical-align:top; white-space:nowrap;"
+          : "padding:4px 12px 4px 0; font-weight:700; vertical-align:top; white-space:nowrap;";
+        const valueStyle = isSource
+          ? "padding:6px 0; color:#111; font-size:16px; font-weight:600;"
+          : "padding:4px 0; color:#111;";
         return `<tr>
-  <td style="padding:4px 12px 4px 0; font-weight:700; vertical-align:top; white-space:nowrap;">${escapeHtml(label)}</td>
-  <td style="padding:4px 0; color:#111;">${safeValue}</td>
+  <td style="${labelStyle}">${escapeHtml(label)}</td>
+  <td style="${valueStyle}">${safeValue}</td>
 </tr>`;
       })
       .join("");
