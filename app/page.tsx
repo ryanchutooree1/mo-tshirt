@@ -240,9 +240,9 @@ export default function HomePage() {
                     <Image
                       src="/Postman.png"
                       alt="Mauritius Post delivery"
-                      width={96}
-                      height={96}
-                      className="h-20 w-20 rounded-2xl border border-neutral-200 bg-neutral-50 object-contain p-2"
+                      width={384}
+                      height={384}
+                      className="h-80 w-80 object-contain"
                     />
                   </div>
                   <div className="flex-1">
