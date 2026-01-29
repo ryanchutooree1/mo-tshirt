@@ -268,29 +268,28 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
               </div>
               <div>
                 <label className="block text-sm font-medium text-neutral-700">Quantity *</label>
-                <input
-                  required
-                  type="number"
-                  min={1}
-                  value={line.quantity}
-                  onChange={(e) => updateGarmentLine(index, { quantity: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                />
-              </div>
-              {garmentLines.length > 1 ? (
-                <div className="sm:col-span-2">
-                  <button
-                    type="button"
-                    onClick={() => removeGarmentLine(index)}
-                    className="inline-flex items-center gap-2 text-xs font-semibold text-neutral-600 hover:text-neutral-800"
-                  >
-                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600">
+                <div className="mt-1 flex items-center gap-2">
+                  <input
+                    required
+                    type="number"
+                    min={1}
+                    value={line.quantity}
+                    onChange={(e) => updateGarmentLine(index, { quantity: e.target.value })}
+                    className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                  />
+                  {garmentLines.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => removeGarmentLine(index)}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100"
+                      aria-label="Remove garment"
+                      title="Remove garment"
+                    >
                       ×
-                    </span>
-                    Remove garment
-                  </button>
+                    </button>
+                  ) : null}
                 </div>
-              ) : null}
+              </div>
             </div>
           ))}
           <button
