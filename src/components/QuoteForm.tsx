@@ -49,6 +49,10 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [deliveryPhoneError, setDeliveryPhoneError] = useState<string | null>(null);
+
+  const isValidPhone = (value: string) => /^[0-9+()\s-]+$/.test(value);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -71,8 +75,31 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     setFile(f);
   }
 
+  function handlePhoneChange(value: string) {
+    update("phone", value);
+    if (!value) {
+      setPhoneError(null);
+      return;
+    }
+    setPhoneError(isValidPhone(value) ? null : "Use only numbers and + ( ) -");
+  }
+
+  function handleDeliveryPhoneChange(value: string) {
+    update("deliveryPhone", value);
+    if (!value) {
+      setDeliveryPhoneError(null);
+      return;
+    }
+    setDeliveryPhoneError(isValidPhone(value) ? null : "Use only numbers and + ( ) -");
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    const phoneOk = !form.phone || isValidPhone(form.phone);
+    const deliveryPhoneOk = !form.deliveryPhone || isValidPhone(form.deliveryPhone);
+    setPhoneError(phoneOk ? null : "Use only numbers and + ( ) -");
+    setDeliveryPhoneError(deliveryPhoneOk ? null : "Use only numbers and + ( ) -");
+    if (!phoneOk || !deliveryPhoneOk) return;
     setLoading(true);
     setResult(null);
 
@@ -163,13 +190,16 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Phone</label>
+            <label className="block text-sm font-medium text-neutral-700">Phone / WhatsApp</label>
             <input
               value={form.phone}
-              onChange={(e) => update("phone", e.target.value)}
-              className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
+              onChange={(e) => handlePhoneChange(e.target.value)}
+              className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none ${
+                phoneError ? "border-red-400 focus:border-red-500" : "border-neutral-200 focus:border-black"
+              }`}
               placeholder="e.g.,+230 5988 3880"
             />
+            {phoneError && <p className="mt-1 text-xs text-red-600">{phoneError}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700">Deadline</label>
@@ -274,10 +304,13 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
               />
               <input
                 value={form.deliveryPhone}
-                onChange={(e) => update("deliveryPhone", e.target.value)}
-                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                onChange={(e) => handleDeliveryPhoneChange(e.target.value)}
+                className={`w-full rounded-lg border bg-white px-3 py-2 text-sm focus:outline-none ${
+                  deliveryPhoneError ? "border-red-400 focus:border-red-500" : "border-neutral-200 focus:border-black"
+                }`}
                 placeholder="Your Phone Number"
               />
+              {deliveryPhoneError && <p className="text-xs text-red-600">{deliveryPhoneError}</p>}
             </div>
           </div>
         )}
