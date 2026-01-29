@@ -234,7 +234,16 @@ export default function HomePage() {
             </div>
 
             <div className="mt-12 flex justify-center">
-              <div className="w-full max-w-3xl rounded-[28px] border border-[#EAEAEA] bg-white px-6 py-6 text-left shadow-sm">
+              <div className="relative w-full max-w-3xl rounded-[28px] border border-[#EAEAEA] bg-white px-6 py-6 text-left shadow-sm">
+                <div className="absolute right-5 top-5">
+                  <Image
+                    src="/Postofficelogo.png"
+                    alt="Mauritius Post logo"
+                    width={80}
+                    height={80}
+                    className="h-12 w-12 object-contain"
+                  />
+                </div>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                   <div className="flex-shrink-0">
                     <Image
@@ -264,7 +273,7 @@ export default function HomePage() {
                       />
                       <button
                         type="submit"
-                        className="inline-flex items-center justify-center rounded-full bg-black px-5 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800"
+                        className="inline-flex items-center justify-center rounded-full bg-[#F3E54E] px-5 py-2 text-sm font-semibold text-black transition hover:bg-[#EAD93E]"
                       >
                         Track parcel
                       </button>
