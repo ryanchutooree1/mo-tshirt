@@ -255,17 +255,6 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           {garmentLines.map((line, index) => (
             <div key={`${index}-${line.garment}`} className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_1.2fr]">
               <div>
-                <label className="block text-sm font-medium text-neutral-700">Quantity *</label>
-                <input
-                  required
-                  type="number"
-                  min={1}
-                  value={line.quantity}
-                  onChange={(e) => updateGarmentLine(index, { quantity: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                />
-              </div>
-              <div>
                 <label className="block text-sm font-medium text-neutral-700">Garment</label>
                 <select
                   value={line.garment}
@@ -277,13 +266,27 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                   ))}
                 </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700">Quantity *</label>
+                <input
+                  required
+                  type="number"
+                  min={1}
+                  value={line.quantity}
+                  onChange={(e) => updateGarmentLine(index, { quantity: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                />
+              </div>
               {garmentLines.length > 1 ? (
                 <div className="sm:col-span-2">
                   <button
                     type="button"
                     onClick={() => removeGarmentLine(index)}
-                    className="text-xs font-semibold text-neutral-500 hover:text-neutral-700"
+                    className="inline-flex items-center gap-2 text-xs font-semibold text-neutral-600 hover:text-neutral-800"
                   >
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600">
+                      ×
+                    </span>
                     Remove garment
                   </button>
                 </div>
@@ -293,7 +296,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           <button
             type="button"
             onClick={addGarmentLine}
-            className="inline-flex items-center gap-2 rounded-full border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-neutral-400"
+            className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700"
           >
             Add garment
           </button>
