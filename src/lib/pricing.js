@@ -199,6 +199,7 @@ function computeQuote(input) {
   let vinylCostBySize = 0;
 
   if (plainOrder) {
+    const decorationCostPerUnit = 0;
     const unitCost = blankCost + handlingFeePerUnit;
     const suggestedUnitPrice = plainSell;
     const unitProfit = suggestedUnitPrice - unitCost;
