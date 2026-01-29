@@ -124,16 +124,21 @@ export async function POST(req: Request) {
     const notesValue = notes && notes.trim() ? notes : message;
     const sourceValue = formatValue(source);
     const textLines = [
+      "New Quotation Request",
       `Source: ${sourceValue}`,
-      `Name: ${formatValue(name)}`,
-      `Email: ${formatValue(email)}`,
-      `Phone: ${formatValue(phone)}`,
-      `Garment: ${formatValue(garment)}`,
-      `Print method: ${formatValue(printMethod)}`,
-      `Quantity: ${formatValue(quantity)}`,
-      `Deadline: ${formatValue(deadline)}`,
-      `Notes: ${formatValue(notesValue)}`,
-      `Delivery: ${formatValue(delivery)}`,
+      "",
+      "Client Info:",
+      `  Name: ${formatValue(name)}`,
+      `  Email: ${formatValue(email)}`,
+      `  Phone: ${formatValue(phone)}`,
+      "",
+      "Order Details:",
+      `  Garment: ${formatValue(garment)}`,
+      `  Print method: ${formatValue(printMethod)}`,
+      `  Quantity: ${formatValue(quantity)}`,
+      `  Deadline: ${formatValue(deadline)}`,
+      `  Notes: ${formatValue(notesValue)}`,
+      `  Delivery: ${formatValue(delivery)}`,
       "",
       "Delivery Info:",
       `  Name: ${formatValue(deliveryName)}`,
@@ -143,11 +148,12 @@ export async function POST(req: Request) {
     ];
     const text = textLines.join("\n");
 
-    const rows = [
-      ["Source", source],
+    const contactRows = [
       ["Name", name],
       ["Email", email],
       ["Phone", phone],
+    ];
+    const orderRows = [
       ["Garment", garment],
       ["Print method", printMethod],
       ["Quantity", quantity],
@@ -156,34 +162,38 @@ export async function POST(req: Request) {
       ["Delivery", delivery],
     ];
     const deliveryRows = [
-      ["Delivery name", deliveryName],
-      ["Delivery address", deliveryAddress],
-      ["Delivery post code", deliveryPostCode],
-      ["Delivery phone", deliveryPhone],
+      ["Name", deliveryName],
+      ["Address", deliveryAddress],
+      ["Post code", deliveryPostCode],
+      ["Phone", deliveryPhone],
     ];
     const renderRow = (label: string, value: unknown) => {
       const safeValue = escapeHtml(formatValue(value)).replace(/\n/g, "<br/>");
-      const isSource = label === "Source";
-      const labelStyle = isSource
-        ? "padding:6px 12px 6px 0; font-weight:700; font-size:16px; vertical-align:top; white-space:nowrap;"
-        : "padding:4px 12px 4px 0; font-weight:700; vertical-align:top; white-space:nowrap;";
-      const valueStyle = isSource
-        ? "padding:6px 0; color:#111; font-size:16px; font-weight:600;"
-        : "padding:4px 0; color:#111;";
+      const labelStyle = "padding:6px 12px 6px 0; font-weight:700; vertical-align:top; white-space:nowrap;";
+      const valueStyle = "padding:6px 0; color:#111;";
       return `<tr>
   <td style="${labelStyle}">${escapeHtml(label)}</td>
   <td style="${valueStyle}">${safeValue}</td>
 </tr>`;
     };
+    const renderSection = (title: string, rows: [string, unknown][]) => {
+      const sectionHeader = `<tr>
+  <td colspan="2" style="padding:10px 0 6px; font-weight:800; font-size:15px; border-bottom:1px solid #e5e7eb; color:#111;">${escapeHtml(title)}</td>
+</tr>`;
+      const sectionRows = rows.map(([label, value]) => renderRow(label, value)).join("");
+      return `${sectionHeader}${sectionRows}`;
+    };
     const htmlRows = [
-      ...rows.map(([label, value]) => renderRow(label, value)),
-      `<tr><td colspan="2" style="height:8px;"></td></tr>`,
-      `<tr><td colspan="2" style="padding:6px 0 4px; font-weight:700; font-size:15px;">Delivery Info</td></tr>`,
-      ...deliveryRows.map(([label, value]) => renderRow(label, value)),
+      renderSection("Client Info", contactRows),
+      `<tr><td colspan="2" style="height:10px;"></td></tr>`,
+      renderSection("Order Details", orderRows),
+      `<tr><td colspan="2" style="height:10px;"></td></tr>`,
+      renderSection("Delivery Info", deliveryRows),
     ].join("");
     const html = `<div style="font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#111;">
-  <div style="margin:0 0 10px; font-size:20px; font-weight:800;">New Quotation Request</div>
-  <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+  <div style="margin:0 0 6px; font-size:20px; font-weight:800;">New Quotation Request</div>
+  <div style="margin:0 0 14px; font-size:16px; font-weight:700; color:#111;">Source: ${escapeHtml(sourceValue)}</div>
+  <table cellpadding="0" cellspacing="0" style="border-collapse:collapse; width:100%; max-width:520px;">
     ${htmlRows}
   </table>
 </div>`;

@@ -331,7 +331,11 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                     }`}
                     placeholder="Post Code"
                   />
-                  {deliveryPostCodeError && <p className="mt-1 text-xs text-red-600">{deliveryPostCodeError}</p>}
+                  {deliveryPostCodeError ? (
+                    <p className="mt-1 text-xs text-red-600">{deliveryPostCodeError}</p>
+                  ) : (
+                    <p className="mt-1 text-xs text-emerald-600">Optional</p>
+                  )}
                 </div>
               </div>
               <input
@@ -351,7 +355,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           <button
             type="submit"
             disabled={loading || Boolean(emailError)}
-            className="inline-flex items-center justify-center rounded-full bg-black px-5 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800 disabled:opacity-60"
+            className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
           >
             {loading ? "Sending…" : "Get my quote"}
           </button>
