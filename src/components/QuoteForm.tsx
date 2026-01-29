@@ -27,7 +27,12 @@ type GarmentLine = {
 };
 
 const garmentOptions = ["T-Shirt", "Polo Shirt", "Hoodie", "Cap", "Other"];
-const printMethods = ["Screen Print", "DTF", "Vinyl Heat Press", "Not sure"];
+const printMethods = [
+  "Screen Printing ($)",
+  "Vinyl Heat Press Printing ($$)",
+  "Direct-to-Film (DTF) Printing ($$$)",
+  "Not sure",
+];
 const deliveryOptions = [
   "Surinam pickup (Free)",
   "Post Office Delivery (Rs 100)",
