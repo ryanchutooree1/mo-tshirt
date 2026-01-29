@@ -12,8 +12,6 @@ type FormState = {
   name: string;
   email: string;
   phone: string;
-  quantity: string;
-  garment: string;
   deadline: string;
   notes: string;
   delivery: string;
@@ -21,6 +19,11 @@ type FormState = {
   deliveryAddress: string;
   deliveryPostCode: string;
   deliveryPhone: string;
+};
+
+type GarmentLine = {
+  garment: string;
+  quantity: string;
 };
 
 const garmentOptions = ["T-Shirt", "Polo Shirt", "Hoodie", "Cap", "Other"];
@@ -36,8 +39,6 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     name: "",
     email: "",
     phone: "",
-    quantity: "50",
-    garment: garmentOptions[0],
     deadline: "",
     notes: "",
     delivery: deliveryOptions[0],
@@ -46,6 +47,9 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     deliveryPostCode: "",
     deliveryPhone: "",
   });
+  const [garmentLines, setGarmentLines] = useState<GarmentLine[]>([
+    { garment: garmentOptions[0], quantity: "50" },
+  ]);
   const [printMethod, setPrintMethod] = useState<string>(printMethods[3]);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -60,6 +64,23 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function updateGarmentLine(index: number, patch: Partial<GarmentLine>) {
+    setGarmentLines((prev) => {
+      const next = prev.slice();
+      if (!next[index]) return prev;
+      next[index] = { ...next[index], ...patch };
+      return next;
+    });
+  }
+
+  function addGarmentLine() {
+    setGarmentLines((prev) => [...prev, { garment: garmentOptions[0], quantity: "" }]);
+  }
+
+  function removeGarmentLine(index: number) {
+    setGarmentLines((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
   }
 
   function handleEmailChange(e: ChangeEvent<HTMLInputElement>) {
@@ -123,13 +144,15 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
       : "Quote request submitted via the website.";
 
     const payload = new FormData();
+    const primaryLine = garmentLines[0] || { garment: "", quantity: "" };
     payload.append("name", form.name);
     payload.append("email", form.email);
     payload.append("message", summaryMessage);
     payload.append("phone", form.phone);
-    payload.append("garment", form.garment);
+    payload.append("garment", primaryLine.garment);
     payload.append("printMethod", printMethod);
-    payload.append("quantity", form.quantity);
+    payload.append("quantity", primaryLine.quantity);
+    payload.append("garments", JSON.stringify(garmentLines));
     payload.append("deadline", form.deadline);
     payload.append("notes", form.notes);
     payload.append("source", source);
@@ -152,8 +175,6 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           name: "",
           email: "",
           phone: "",
-          quantity: "50",
-          garment: garmentOptions[0],
           deadline: "",
           notes: "",
           delivery: deliveryOptions[0],
@@ -162,6 +183,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           deliveryPostCode: "",
           deliveryPhone: "",
         });
+        setGarmentLines([{ garment: garmentOptions[0], quantity: "50" }]);
         setPrintMethod(printMethods[3]);
         setFile(null);
         setEmailError(null);
@@ -229,18 +251,63 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           </div>
         </div>
 
+        <div className="space-y-3">
+          {garmentLines.map((line, index) => (
+            <div key={`${index}-${line.garment}`} className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_1.2fr]">
+              <div>
+                <label className="block text-sm font-medium text-neutral-700">Quantity *</label>
+                <input
+                  required
+                  type="number"
+                  min={1}
+                  value={line.quantity}
+                  onChange={(e) => updateGarmentLine(index, { quantity: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700">Garment</label>
+                <select
+                  value={line.garment}
+                  onChange={(e) => updateGarmentLine(index, { garment: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                >
+                  {garmentOptions.map((opt) => (
+                    <option key={opt}>{opt}</option>
+                  ))}
+                </select>
+              </div>
+              {garmentLines.length > 1 ? (
+                <div className="sm:col-span-2">
+                  <button
+                    type="button"
+                    onClick={() => removeGarmentLine(index)}
+                    className="text-xs font-semibold text-neutral-500 hover:text-neutral-700"
+                  >
+                    Remove garment
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addGarmentLine}
+            className="inline-flex items-center gap-2 rounded-full border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-neutral-400"
+          >
+            Add garment
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Garment</label>
-            <select
-              value={form.garment}
-              onChange={(e) => update("garment", e.target.value)}
-              className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
-            >
-              {garmentOptions.map((opt) => (
-                <option key={opt}>{opt}</option>
-              ))}
-            </select>
+            <label className="block text-sm font-medium text-neutral-700">Upload logo (PNG, JPG, JPEG, PDF)</label>
+            <input
+              type="file"
+              accept=".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf"
+              onChange={handleFileChange}
+              className="mt-1 w-full cursor-pointer rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-neutral-700">Print method</label>
@@ -253,29 +320,6 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                 <option key={opt}>{opt}</option>
               ))}
             </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium text-neutral-700">Quantity *</label>
-            <input
-              required
-              type="number"
-              min={1}
-              value={form.quantity}
-              onChange={(e) => update("quantity", e.target.value)}
-              className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-neutral-700">Upload logo (PNG, JPG, JPEG, PDF)</label>
-            <input
-              type="file"
-              accept=".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf"
-              onChange={handleFileChange}
-              className="mt-1 w-full cursor-pointer rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
-            />
           </div>
         </div>
 

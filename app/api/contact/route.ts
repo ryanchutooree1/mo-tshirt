@@ -17,6 +17,7 @@ type ParsedPayload = {
   deliveryAddress?: string;
   deliveryPostCode?: string;
   deliveryPhone?: string;
+  garments?: { garment?: string; quantity?: string | number }[] | string;
 };
 
 function isValidEmail(email: string) {
@@ -55,6 +56,7 @@ export async function POST(req: Request) {
         deliveryAddress: form.get("deliveryAddress")?.toString(),
         deliveryPostCode: form.get("deliveryPostCode")?.toString(),
         deliveryPhone: form.get("deliveryPhone")?.toString(),
+        garments: form.get("garments")?.toString(),
         file: form.get("file") instanceof File ? (form.get("file") as File) : null,
       };
     } else {
@@ -79,6 +81,7 @@ export async function POST(req: Request) {
       deliveryAddress,
       deliveryPostCode,
       deliveryPhone,
+      garments,
     } = payload;
 
     if (!name || !email || !message) {
@@ -123,6 +126,25 @@ export async function POST(req: Request) {
     };
     const notesValue = notes && notes.trim() ? notes : message;
     const sourceValue = formatValue(source);
+    const parsedGarments: { garment?: string; quantity?: string | number }[] = (() => {
+      if (!garments) return [];
+      if (Array.isArray(garments)) return garments;
+      if (typeof garments === "string") {
+        try {
+          const parsed = JSON.parse(garments);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    })();
+    const garmentsSummary = parsedGarments.length
+      ? parsedGarments
+          .map((entry) => `${formatValue(entry.garment)} x ${formatValue(entry.quantity)}`)
+          .join(", ")
+      : `${formatValue(garment)} x ${formatValue(quantity)}`;
+
     const textLines = [
       "New Quotation Request",
       `Source: ${sourceValue}`,
@@ -133,9 +155,8 @@ export async function POST(req: Request) {
       `  Phone: ${formatValue(phone)}`,
       "",
       "Order Details:",
-      `  Garment: ${formatValue(garment)}`,
+      `  Garments: ${garmentsSummary}`,
       `  Print method: ${formatValue(printMethod)}`,
-      `  Quantity: ${formatValue(quantity)}`,
       `  Deadline: ${formatValue(deadline)}`,
       `  Notes: ${formatValue(notesValue)}`,
       `  Delivery: ${formatValue(delivery)}`,
@@ -154,9 +175,8 @@ export async function POST(req: Request) {
       ["Phone", phone],
     ];
     const orderRows = [
-      ["Garment", garment],
+      ["Garments", garmentsSummary],
       ["Print method", printMethod],
-      ["Quantity", quantity],
       ["Deadline", deadline],
       ["Notes", notesValue],
       ["Delivery", delivery],
