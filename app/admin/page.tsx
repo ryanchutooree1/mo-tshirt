@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import {
   doc,
@@ -366,19 +366,12 @@ export default function OwnerDashboard() {
       setQuote((q) => ({
         ...q,
         pricingMode: "priceBook",
-        quotedUnitPrice: plainSell,
         personalization: false,
         rush: false,
         dtfIncludesDelivery: false,
       }));
     }
   }, [quote.plainOrder, plainSell]);
-
-  useEffect(() => {
-    if (quote.plainOrder) return;
-    if (quote.pricingMode !== "priceBook") return;
-    setQuote((q) => (q.quotedUnitPrice === priceBookPrice ? q : { ...q, quotedUnitPrice: priceBookPrice }));
-  }, [quote.plainOrder, quote.pricingMode, priceBookPrice]);
 
   const vinylCosts = useMemo(
     () =>
@@ -469,43 +462,19 @@ export default function OwnerDashboard() {
     safePricingModel.personalizationPerItem,
   ]);
 
-  const lastSuggestedRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    const suggested = pricingSummary.suggestedUnitPrice;
-    if (quote.plainOrder || quote.pricingMode !== "marginEngine") {
-      lastSuggestedRef.current = suggested;
-      return;
-    }
-    const current = quote.quotedUnitPrice;
-    const currentNumber = typeof current === "number" ? current : null;
-    const lastSuggested = lastSuggestedRef.current;
-    const shouldSync =
-      current === "" ||
-      currentNumber === 0 ||
-      (typeof currentNumber === "number" && lastSuggested !== null && currentNumber === lastSuggested);
-    if (shouldSync && currentNumber !== suggested) {
-      setQuote((q) => ({ ...q, quotedUnitPrice: suggested }));
-    }
-    lastSuggestedRef.current = suggested;
-  }, [quote.plainOrder, quote.pricingMode, quote.quotedUnitPrice, pricingSummary.suggestedUnitPrice]);
-
-  const quotedUnitBase =
-    quote.pricingMode === "priceBook" && !quote.plainOrder
+  const autoUnitPrice =
+    quote.plainOrder
+      ? plainSell
+      : quote.pricingMode === "priceBook"
       ? priceBookPrice
-      : safeQuotedUnitPrice;
-  const quotedUnit = quotedUnitBase > 0 ? quotedUnitBase : pricingSummary.suggestedUnitPrice;
+      : pricingSummary.suggestedUnitPrice;
+  const quotedUnit = safeQuotedUnitPrice > 0 ? safeQuotedUnitPrice : autoUnitPrice;
   const quotedTotal = quotedUnit * pricingSummary.qty;
   const quotedProfit = quotedUnit - pricingSummary.unitCost;
   const quotedMarginPct = quotedUnit ? quotedProfit / quotedUnit : 0;
   const profitPerUnit = quotedUnit - pricingSummary.unitCost;
   const isLoss = quotedUnit > 0 && quotedUnit < pricingSummary.unitCost;
-  const quotedUnitInputValue =
-    quote.pricingMode === "priceBook" && !quote.plainOrder
-      ? priceBookPrice
-      : quote.plainOrder
-      ? (safeQuotedUnitPrice > 0 ? safeQuotedUnitPrice : plainSell)
-      : quote.quotedUnitPrice;
+  const quotedUnitInputValue = safeQuotedUnitPrice > 0 ? safeQuotedUnitPrice : autoUnitPrice;
   const suggestedDisplay =
     quote.pricingMode === "priceBook" && !quote.plainOrder ? quotedUnit : pricingSummary.suggestedUnitPrice;
   const totalCost = pricingSummary.unitCost * pricingSummary.qty;
@@ -1036,8 +1005,7 @@ export default function OwnerDashboard() {
                       min={0}
                       value={quotedUnitInputValue}
                       onChange={(e) => setQuote((q) => ({ ...q, quotedUnitPrice: parseNumericInput(e.target.value) }))}
-                      className={`${pricingFieldClass} ${quote.pricingMode === "priceBook" || quote.plainOrder ? "bg-slate-100 text-slate-500" : ""}`}
-                      disabled={quote.pricingMode === "priceBook" || quote.plainOrder}
+                      className={pricingFieldClass}
                     />
                   </label>
                   <div className="flex flex-wrap gap-4 text-xs font-medium text-slate-600">
