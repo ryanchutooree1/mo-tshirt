@@ -469,6 +469,14 @@ export default function OwnerDashboard() {
       : quote.pricingMode === "priceBook"
       ? priceBookPrice
       : pricingSummary.suggestedUnitPrice;
+  useEffect(() => {
+    if (!Number.isFinite(autoUnitPrice)) return;
+    setQuote((q) => {
+      if (q.quotedUnitPrice === autoUnitPrice) return q;
+      return { ...q, quotedUnitPrice: autoUnitPrice };
+    });
+  }, [autoUnitPrice]);
+
   const quotedUnit = safeQuotedUnitPrice > 0 ? safeQuotedUnitPrice : autoUnitPrice;
   const quotedTotal = quotedUnit * pricingSummary.qty;
   const quotedProfit = quotedUnit - pricingSummary.unitCost;
