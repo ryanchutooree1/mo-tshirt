@@ -23,7 +23,7 @@ type FormState = {
 };
 
 const garmentOptions = ["T-Shirt", "Polo Shirt", "Hoodie", "Cap", "Other"];
-const printMethods = ["Screen Print", "DTF", "Heat Transfer", "Not sure"];
+const printMethods = ["Screen Print", "DTF", "Vinyl Heat Press", "Not sure"];
 const deliveryOptions = [
   "Surinam pickup (Free)",
   "Post Office Delivery (Rs 100)",
@@ -163,7 +163,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Phone / WhatsApp</label>
+            <label className="block text-sm font-medium text-neutral-700">Phone</label>
             <input
               value={form.phone}
               onChange={(e) => update("phone", e.target.value)}

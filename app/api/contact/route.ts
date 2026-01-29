@@ -169,7 +169,7 @@ export async function POST(req: Request) {
       })
       .join("");
     const html = `<div style="font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#111;">
-  <p style="margin:0 0 12px;">New contact request</p>
+  <div style="margin:0 0 10px; font-size:20px; font-weight:800;">New Quotation Request</div>
   <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
     ${htmlRows}
   </table>
@@ -186,7 +186,7 @@ export async function POST(req: Request) {
           auth: { user, pass },
         });
 
-        const subject = `New contact from ${name}`;
+        const subject = `New Website Quotation from ${name}`;
         const mailOptions: Record<string, unknown> = {
           from,
           to: user,
