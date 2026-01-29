@@ -19,6 +19,15 @@ function isValidEmail(email: string) {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export async function POST(req: Request) {
   try {
     const contentType = req.headers.get("content-type") || "";
@@ -83,16 +92,52 @@ export async function POST(req: Request) {
     const pass = process.env.SMTP_PASS;
     const from = process.env.SMTP_FROM || user || "no-reply@example.com";
 
-    const extraLines = [
-      `Phone: ${phone || "n/a"}`,
-      `Garment: ${garment || "n/a"}`,
-      `Print method: ${printMethod || "n/a"}`,
-      `Quantity: ${quantity || "n/a"}`,
-      `Deadline: ${deadline || "n/a"}`,
-      `Notes: ${notes || "n/a"}`,
-      `Source: ${source || "n/a"}`,
-      `Delivery: ${delivery || "n/a"}`,
-    ].join("\n");
+    const formatValue = (value: string | number | null | undefined) => {
+      const trimmed = value === undefined || value === null ? "" : String(value).trim();
+      return trimmed ? trimmed : "n/a";
+    };
+    const notesValue = notes && notes.trim() ? notes : message;
+    const textLines = [
+      `Name: ${formatValue(name)}`,
+      `Email: ${formatValue(email)}`,
+      `Phone: ${formatValue(phone)}`,
+      `Garment: ${formatValue(garment)}`,
+      `Print method: ${formatValue(printMethod)}`,
+      `Quantity: ${formatValue(quantity)}`,
+      `Deadline: ${formatValue(deadline)}`,
+      `Notes: ${formatValue(notesValue)}`,
+      `Source: ${formatValue(source)}`,
+      `Delivery: ${formatValue(delivery)}`,
+    ];
+    const text = textLines.join("\n");
+
+    const rows = [
+      ["Name", name],
+      ["Email", email],
+      ["Phone", phone],
+      ["Garment", garment],
+      ["Print method", printMethod],
+      ["Quantity", quantity],
+      ["Deadline", deadline],
+      ["Notes", notesValue],
+      ["Source", source],
+      ["Delivery", delivery],
+    ];
+    const htmlRows = rows
+      .map(([label, value]) => {
+        const safeValue = escapeHtml(formatValue(value)).replace(/\n/g, "<br/>");
+        return `<tr>
+  <td style="padding:4px 12px 4px 0; font-weight:700; vertical-align:top; white-space:nowrap;">${escapeHtml(label)}</td>
+  <td style="padding:4px 0; color:#111;">${safeValue}</td>
+</tr>`;
+      })
+      .join("");
+    const html = `<div style="font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#111;">
+  <p style="margin:0 0 12px;">New contact request</p>
+  <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+    ${htmlRows}
+  </table>
+</div>`;
 
     if (host && user && pass) {
       try {
@@ -106,13 +151,13 @@ export async function POST(req: Request) {
         });
 
         const subject = `New contact from ${name}`;
-        const text = `Name: ${name}\nEmail: ${email}\n${extraLines}\n\n${message}`;
         const mailOptions: Record<string, unknown> = {
           from,
           to: user,
           replyTo: email,
           subject,
           text,
+          html,
         };
         if (attachment) {
           mailOptions.attachments = [attachment];
