@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { db } from "@/lib/firebase";
 import {
   doc,
@@ -289,6 +289,15 @@ export default function OwnerDashboard() {
   };
   const toNumber = (value: number | "" | null | undefined, fallback: number) =>
     typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  const getValidSizeBand = (
+    itemType: QuoteState["itemType"],
+    colorFamily: QuoteState["blankColorFamily"],
+    currentBand: string
+  ) => {
+    const options = pricing.getBlankOptions(itemType, colorFamily);
+    if (!options.length) return currentBand;
+    return options.includes(currentBand) ? currentBand : options[0];
+  };
 
   const sizeBandOptions = useMemo(
     () => pricing.getBlankOptions(quote.itemType, quote.blankColorFamily),
@@ -459,6 +468,27 @@ export default function OwnerDashboard() {
     safePricingModel.rushFeePct,
     safePricingModel.personalizationPerItem,
   ]);
+
+  const lastSuggestedRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const suggested = pricingSummary.suggestedUnitPrice;
+    if (quote.plainOrder || quote.pricingMode !== "marginEngine") {
+      lastSuggestedRef.current = suggested;
+      return;
+    }
+    const current = quote.quotedUnitPrice;
+    const currentNumber = typeof current === "number" ? current : null;
+    const lastSuggested = lastSuggestedRef.current;
+    const shouldSync =
+      current === "" ||
+      currentNumber === 0 ||
+      (typeof currentNumber === "number" && lastSuggested !== null && currentNumber === lastSuggested);
+    if (shouldSync && currentNumber !== suggested) {
+      setQuote((q) => ({ ...q, quotedUnitPrice: suggested }));
+    }
+    lastSuggestedRef.current = suggested;
+  }, [quote.plainOrder, quote.pricingMode, quote.quotedUnitPrice, pricingSummary.suggestedUnitPrice]);
 
   const quotedUnitBase =
     quote.pricingMode === "priceBook" && !quote.plainOrder
@@ -865,7 +895,13 @@ export default function OwnerDashboard() {
                     Item type
                     <select
                       value={quote.itemType}
-                      onChange={(e) => setQuote((q) => ({ ...q, itemType: e.target.value }))}
+                      onChange={(e) =>
+                        setQuote((q) => {
+                          const itemType = e.target.value as QuoteState["itemType"];
+                          const blankSizeBand = getValidSizeBand(itemType, q.blankColorFamily, q.blankSizeBand);
+                          return { ...q, itemType, blankSizeBand };
+                        })
+                      }
                       className={pricingFieldClass}
                     >
                       <option value="T-Shirt">T-Shirt</option>
@@ -879,7 +915,13 @@ export default function OwnerDashboard() {
                         Color family
                         <select
                           value={quote.blankColorFamily}
-                          onChange={(e) => setQuote((q) => ({ ...q, blankColorFamily: e.target.value }))}
+                          onChange={(e) =>
+                            setQuote((q) => {
+                              const blankColorFamily = e.target.value as QuoteState["blankColorFamily"];
+                              const blankSizeBand = getValidSizeBand(q.itemType, blankColorFamily, q.blankSizeBand);
+                              return { ...q, blankColorFamily, blankSizeBand };
+                            })
+                          }
                           className={pricingFieldClass}
                         >
                           <option value="Standard">Standard (White/Black/Grey/Navy)</option>
