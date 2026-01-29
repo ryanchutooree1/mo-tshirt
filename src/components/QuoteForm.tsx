@@ -253,7 +253,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
 
         <div className="space-y-3">
           {garmentLines.map((line, index) => (
-            <div key={`${index}-${line.garment}`} className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_1.2fr]">
+            <div key={`${index}-${line.garment}`} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-neutral-700">Garment</label>
                 <select
@@ -268,20 +268,20 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
               </div>
               <div>
                 <label className="block text-sm font-medium text-neutral-700">Quantity *</label>
-                <div className="mt-1 flex items-center gap-2">
+                <div className="relative mt-1">
                   <input
                     required
                     type="number"
                     min={1}
                     value={line.quantity}
                     onChange={(e) => updateGarmentLine(index, { quantity: e.target.value })}
-                    className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    className="w-full rounded-lg border border-neutral-200 px-3 py-2 pr-12 text-sm focus:border-black focus:outline-none"
                   />
                   {garmentLines.length > 1 ? (
                     <button
                       type="button"
                       onClick={() => removeGarmentLine(index)}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100"
+                      className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100"
                       aria-label="Remove garment"
                       title="Remove garment"
                     >
