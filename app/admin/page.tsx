@@ -160,7 +160,7 @@ export default function OwnerDashboard() {
     rush: false,
     personalization: false,
     artworkFee: 0,
-    quotedUnitPrice: 0,
+    quotedUnitPrice: "",
   });
   const [costLocked, setCostLocked] = useState(true);
 
@@ -199,6 +199,7 @@ export default function OwnerDashboard() {
     if (typeof input.rush === "boolean") next.rush = input.rush;
     if (typeof input.personalization === "boolean") next.personalization = input.personalization;
     if (typeof input.artworkFee === "number") next.artworkFee = input.artworkFee;
+    if (input.quotedUnitPrice === "") next.quotedUnitPrice = "";
     if (typeof input.quotedUnitPrice === "number") next.quotedUnitPrice = input.quotedUnitPrice;
     return next;
   };
@@ -474,7 +475,8 @@ export default function OwnerDashboard() {
   const quotedMarginPct = quotedUnit ? quotedProfit / quotedUnit : 0;
   const profitPerUnit = quotedUnit - pricingSummary.unitCost;
   const isLoss = quotedUnit > 0 && quotedUnit < pricingSummary.unitCost;
-  const quotedUnitInputValue = safeQuotedUnitPrice > 0 ? safeQuotedUnitPrice : autoUnitPrice;
+  const quotedUnitInputValue =
+    quote.quotedUnitPrice === "" ? "" : safeQuotedUnitPrice > 0 ? safeQuotedUnitPrice : autoUnitPrice;
   const suggestedDisplay =
     quote.pricingMode === "priceBook" && !quote.plainOrder ? quotedUnit : pricingSummary.suggestedUnitPrice;
   const totalCost = pricingSummary.unitCost * pricingSummary.qty;
