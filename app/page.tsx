@@ -268,7 +268,7 @@ export default function HomePage() {
                     >
                       <input
                         name="tracking_code"
-                        placeholder="Tracking code (e.g., DP512500081MU)"
+                        placeholder="Tracking Code e.g HH123456785MU"
                         className="w-full flex-1 rounded-full border border-neutral-200 px-4 py-2 text-sm focus:border-black focus:outline-none"
                       />
                       <button
