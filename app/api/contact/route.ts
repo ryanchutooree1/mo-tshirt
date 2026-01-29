@@ -13,6 +13,9 @@ type ParsedPayload = {
   source?: string;
   file?: File | null;
   delivery?: string;
+  deliveryName?: string;
+  deliveryAddress?: string;
+  deliveryPhone?: string;
 };
 
 function isValidEmail(email: string) {
@@ -47,6 +50,9 @@ export async function POST(req: Request) {
         notes: form.get("notes")?.toString(),
         source: form.get("source")?.toString(),
         delivery: form.get("delivery")?.toString(),
+        deliveryName: form.get("deliveryName")?.toString(),
+        deliveryAddress: form.get("deliveryAddress")?.toString(),
+        deliveryPhone: form.get("deliveryPhone")?.toString(),
         file: form.get("file") instanceof File ? (form.get("file") as File) : null,
       };
     } else {
@@ -54,7 +60,23 @@ export async function POST(req: Request) {
       payload = json;
     }
 
-    const { name, email, message, phone, garment, printMethod, quantity, deadline, notes, source, file, delivery } = payload;
+    const {
+      name,
+      email,
+      message,
+      phone,
+      garment,
+      printMethod,
+      quantity,
+      deadline,
+      notes,
+      source,
+      file,
+      delivery,
+      deliveryName,
+      deliveryAddress,
+      deliveryPhone,
+    } = payload;
 
     if (!name || !email || !message) {
       return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
@@ -108,6 +130,9 @@ export async function POST(req: Request) {
       `Notes: ${formatValue(notesValue)}`,
       `Source: ${formatValue(source)}`,
       `Delivery: ${formatValue(delivery)}`,
+      `Delivery name: ${formatValue(deliveryName)}`,
+      `Delivery address: ${formatValue(deliveryAddress)}`,
+      `Delivery phone: ${formatValue(deliveryPhone)}`,
     ];
     const text = textLines.join("\n");
 
@@ -122,6 +147,9 @@ export async function POST(req: Request) {
       ["Notes", notesValue],
       ["Source", source],
       ["Delivery", delivery],
+      ["Delivery name", deliveryName],
+      ["Delivery address", deliveryAddress],
+      ["Delivery phone", deliveryPhone],
     ];
     const htmlRows = rows
       .map(([label, value]) => {

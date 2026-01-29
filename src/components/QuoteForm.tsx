@@ -17,11 +17,14 @@ type FormState = {
   deadline: string;
   notes: string;
   delivery: string;
+  deliveryName: string;
+  deliveryAddress: string;
+  deliveryPhone: string;
 };
 
 const garmentOptions = ["T-Shirt", "Polo Shirt", "Hoodie", "Cap", "Other"];
 const printMethods = ["Screen Print", "DTF", "Heat Transfer", "Not sure"];
-const deliveryOptions = ["Collect at Surinam", "Postage", "Delivery (Need to arrange first)"];
+const deliveryOptions = ["Surinam pickup (Free)", "Post Office Delivery (Rs 100)"];
 
 export default function QuoteForm({ source = "Website", className }: QuoteFormProps) {
   const [form, setForm] = useState<FormState>({
@@ -33,6 +36,9 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     deadline: "",
     notes: "",
     delivery: deliveryOptions[0],
+    deliveryName: "",
+    deliveryAddress: "",
+    deliveryPhone: "",
   });
   const [printMethod, setPrintMethod] = useState<string>(printMethods[3]);
   const [file, setFile] = useState<File | null>(null);
@@ -82,6 +88,9 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     payload.append("notes", form.notes);
     payload.append("source", source);
     payload.append("delivery", form.delivery);
+    payload.append("deliveryName", form.deliveryName);
+    payload.append("deliveryAddress", form.deliveryAddress);
+    payload.append("deliveryPhone", form.deliveryPhone);
     if (file) payload.append("file", file);
 
     try {
@@ -101,6 +110,9 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           deadline: "",
           notes: "",
           delivery: deliveryOptions[0],
+          deliveryName: "",
+          deliveryAddress: "",
+          deliveryPhone: "",
         });
         setPrintMethod(printMethods[3]);
         setFile(null);
@@ -227,7 +239,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-neutral-700">Delivery preference</label>
+          <label className="block text-sm font-medium text-neutral-700">Delivery</label>
           <select
             value={form.delivery}
             onChange={(e) => update("delivery", e.target.value)}
@@ -238,6 +250,32 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
             ))}
           </select>
         </div>
+
+        {form.delivery === "Post Office Delivery (Rs 100)" && (
+          <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4">
+            <p className="text-sm font-semibold text-neutral-800">Delivery Info</p>
+            <div className="mt-3 grid gap-3">
+              <input
+                value={form.deliveryName}
+                onChange={(e) => update("deliveryName", e.target.value)}
+                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                placeholder="Your Name"
+              />
+              <input
+                value={form.deliveryAddress}
+                onChange={(e) => update("deliveryAddress", e.target.value)}
+                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                placeholder="Your Address"
+              />
+              <input
+                value={form.deliveryPhone}
+                onChange={(e) => update("deliveryPhone", e.target.value)}
+                className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                placeholder="Your Phone Number"
+              />
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-3">
           <button
