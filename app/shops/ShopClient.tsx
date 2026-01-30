@@ -394,8 +394,13 @@ export default function ShopClient() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-black">
-      <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white/90 backdrop-blur">
+    <div className="min-h-screen bg-[#f8f6f2] text-neutral-900">
+      <div className="relative overflow-hidden">
+        <div className="pointer-events-none absolute -left-32 top-[-12rem] h-72 w-72 rounded-full bg-orange-200/70 blur-3xl" />
+        <div className="pointer-events-none absolute right-[-6rem] top-12 h-80 w-80 rounded-full bg-amber-200/60 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-[-8rem] left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-orange-100/70 blur-3xl" />
+
+        <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white/80 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
           <Link href="/" className="flex items-center gap-2" aria-label="MO T-SHIRT Home">
             <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={140} height={48} className="h-9 w-auto" />
@@ -412,19 +417,36 @@ export default function ShopClient() {
             </a>
           </nav>
         </div>
-      </header>
+        </header>
 
-      <main className="mx-auto w-full max-w-6xl px-6 py-14">
+        <main className="relative z-10 mx-auto w-full max-w-6xl px-6 py-14">
         <div className="space-y-8">
-            <section className="space-y-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-orange-500">Shops</p>
-              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Ready-to-order essentials</h1>
-              <p className="max-w-2xl text-sm text-neutral-600">
-                Browse T-shirts, polos, hoodies, and caps. Choose color and size, then confirm delivery or pickup via WhatsApp.
-              </p>
+            <section className="rounded-[32px] border border-neutral-200 bg-white/80 p-6 shadow-sm sm:p-8">
+              <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                <div className="space-y-4">
+                  <p className="text-xs uppercase tracking-[0.35em] text-orange-500">Shops</p>
+                  <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Ready-to-order essentials</h1>
+                  <p className="max-w-2xl text-sm text-neutral-600">
+                    Browse T-shirts, polos, hoodies, and caps. Choose color and size, then confirm delivery or pickup via WhatsApp.
+                  </p>
+                  <div className="flex flex-wrap gap-2 text-xs font-semibold text-neutral-700">
+                    <span className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1">Fast pickup</span>
+                    <span className="rounded-full border border-neutral-200 bg-white px-3 py-1">WhatsApp confirmation</span>
+                    <span className="rounded-full border border-neutral-200 bg-white px-3 py-1">Local delivery options</span>
+                  </div>
+                </div>
+                <div className="rounded-[24px] border border-orange-100 bg-gradient-to-br from-white via-orange-50 to-amber-100 px-5 py-4 shadow-sm">
+                  <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">How it works</p>
+                  <ol className="mt-3 space-y-2 text-sm text-neutral-700">
+                    <li><span className="font-semibold text-neutral-900">1.</span> Pick item + color</li>
+                    <li><span className="font-semibold text-neutral-900">2.</span> Choose size + qty</li>
+                    <li><span className="font-semibold text-neutral-900">3.</span> Confirm on WhatsApp</li>
+                  </ol>
+                </div>
+              </div>
             </section>
 
-            <section className="flex flex-col gap-4 rounded-[28px] border border-neutral-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <section className="flex flex-col gap-4 rounded-[28px] border border-neutral-200 bg-white/80 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <div>
                 <p className="text-sm font-medium text-neutral-800">Filters</p>
                 <p className="text-xs text-neutral-500">Refine by product, color, or size.</p>
@@ -492,7 +514,7 @@ export default function ShopClient() {
             const sizePrice = getSizePrice(item, selection.size);
             const displayColor = selection.color || item.colors[0] || "Color";
             return (
-              <article key={item.id} className="group rounded-[28px] border border-neutral-200 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+              <article key={item.id} className="group rounded-[28px] border border-neutral-200 bg-white/90 p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
                 <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-neutral-100">
                   {item.photoUrl ? (
                     <Image
