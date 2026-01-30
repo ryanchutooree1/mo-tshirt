@@ -1,4 +1,5 @@
 import { getWhatsAppUrl } from "@/data/work";
+import LoadingImage from "@/components/LoadingImage";
 
 export default function Hero() {
   return (
@@ -35,10 +36,16 @@ export default function Hero() {
 
         {/* Products Image */}
         <div className="mt-8 sm:mt-10">
-          <img
+          <LoadingImage
             src="/all_products.jpg"
             alt="Custom T-shirt printing in Mauritius"
-            className="mx-auto block h-auto w-full max-w-5xl lg:max-w-6xl rounded-2xl shadow-sm object-contain"
+            width={1600}
+            height={628}
+            loading="lazy"
+            decoding="async"
+            className="h-auto w-full object-contain"
+            wrapperClassName="mx-auto block w-full max-w-5xl lg:max-w-6xl rounded-2xl shadow-sm overflow-hidden"
+            statusText="Loading image..."
           />
         </div>
       </div>

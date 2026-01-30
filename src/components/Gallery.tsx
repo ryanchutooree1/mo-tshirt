@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { workImages } from "@/data/work";
+import LoadingImage from "@/components/LoadingImage";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
 import "swiper/css";
@@ -28,18 +29,15 @@ export default function Gallery() {
       {images.map((src, idx) => (
         <SwiperSlide key={idx} className="px-1 sm:px-0">
           <div className="relative h-[620px] sm:h-[680px] lg:h-[740px] w-full overflow-hidden rounded-3xl border border-[#EAEAEA] bg-white shadow-sm">
-            <img
+            <LoadingImage
               src={src}
               alt={`T-shirt printing in Mauritius example ${idx + 1}`}
               loading="lazy"
               decoding="async"
-              className="absolute inset-0 h-full w-full object-cover"
-              onError={(event) => {
-                const target = event.currentTarget;
-                if (target.dataset.fallbackApplied) return;
-                target.dataset.fallbackApplied = "true";
-                target.src = fallbackSrc;
-              }}
+              className="h-full w-full object-cover"
+              wrapperClassName="h-full w-full"
+              fallbackSrc={fallbackSrc}
+              statusText="Loading image..."
             />
           </div>
         </SwiperSlide>
