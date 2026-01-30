@@ -42,7 +42,7 @@ export default function MapCard() {
     }
 
     setShowMapStatus(false);
-    const timer = window.setTimeout(() => setShowMapStatus(true), 600);
+    const timer = window.setTimeout(() => setShowMapStatus(true), 1200);
     return () => window.clearTimeout(timer);
   }, [mapInView, mapLoaded]);
 
@@ -52,8 +52,8 @@ export default function MapCard() {
       <div className="rounded-2xl overflow-hidden shadow-sm border">
         <div ref={mapWrapperRef} className="relative aspect-square w-full" aria-busy={!mapLoaded}>
           {showMapStatus && !mapLoaded && (
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-slate-100/85 text-slate-600 text-sm">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-slate-300 border-t-slate-500 animate-spin" />
+            <div className="absolute bottom-3 left-3 z-10 flex items-center gap-2 rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 backdrop-blur">
+              <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-slate-300 border-t-slate-500 animate-spin" />
               <span>Loading map...</span>
             </div>
           )}

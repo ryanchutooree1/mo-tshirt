@@ -11,6 +11,7 @@ type LoadingImageProps = ImgHTMLAttributes<HTMLImageElement> & {
   fallbackSrc?: string;
   delayMs?: number;
   inViewRootMargin?: string;
+  pollMs?: number;
 };
 
 export default function LoadingImage({
@@ -18,8 +19,10 @@ export default function LoadingImage({
   statusText = "Loading image...",
   errorText = "Image unavailable",
   fallbackSrc,
-  delayMs = 600,
+  delayMs = 1200,
   inViewRootMargin = "200px",
+  pollMs = 300,
+  src,
   className,
   onLoad,
   onError,
@@ -30,6 +33,10 @@ export default function LoadingImage({
   const [inView, setInView] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    setStatus("loading");
+  }, [src]);
 
   useEffect(() => {
     const node = wrapperRef.current;
@@ -55,11 +62,29 @@ export default function LoadingImage({
   }, [inView, inViewRootMargin]);
 
   useEffect(() => {
+    if (status !== "loading") return;
     const node = imgRef.current;
-    if (node && node.complete && node.naturalWidth > 0) {
-      setStatus("loaded");
-    }
-  }, []);
+    if (!node) return;
+
+    let stopped = false;
+    const check = () => {
+      if (stopped) return;
+      if (node.complete) {
+        if (node.naturalWidth > 0) {
+          setStatus("loaded");
+          return;
+        }
+        setStatus("error");
+        return;
+      }
+      window.setTimeout(check, pollMs);
+    };
+
+    check();
+    return () => {
+      stopped = true;
+    };
+  }, [status, pollMs]);
 
   useEffect(() => {
     if (status === "error") {
@@ -94,15 +119,17 @@ export default function LoadingImage({
     onError?.(event);
   };
 
+  const statusTextLabel = status === "error" ? errorText : statusText;
+
   return (
     <div ref={wrapperRef} className={`relative ${wrapperClassName || ""}`} aria-busy={status === "loading"}>
       {showStatus && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-slate-100/85 text-slate-600 text-sm">
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-slate-300 border-t-slate-500 animate-spin" />
-          <span>{status === "error" ? errorText : statusText}</span>
+        <div className="absolute bottom-3 right-3 z-10 flex items-center gap-2 rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 backdrop-blur">
+          <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-slate-300 border-t-slate-500 animate-spin" />
+          <span>{statusTextLabel}</span>
         </div>
       )}
-      <img ref={imgRef} {...props} className={className} onLoad={handleLoad} onError={handleError} />
+      <img ref={imgRef} src={src} {...props} className={className} onLoad={handleLoad} onError={handleError} />
     </div>
   );
 }
