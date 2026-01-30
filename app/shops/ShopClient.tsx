@@ -819,5 +819,6 @@ export default function ShopClient() {
         </aside>
       </div>
     </div>
+  </div>
   );
 }
