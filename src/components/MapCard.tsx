@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import LoadingImage from "@/components/LoadingImage";
 
 const MAP_EMBED =
@@ -8,13 +8,50 @@ const MAP_EMBED =
 
 export default function MapCard() {
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapInView, setMapInView] = useState(false);
+  const [showMapStatus, setShowMapStatus] = useState(false);
+  const mapWrapperRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const node = mapWrapperRef.current;
+    if (!node || mapInView) return;
+
+    if (typeof IntersectionObserver === "undefined") {
+      setMapInView(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setMapInView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [mapInView]);
+
+  useEffect(() => {
+    if (!mapInView || mapLoaded) {
+      setShowMapStatus(false);
+      return;
+    }
+
+    setShowMapStatus(false);
+    const timer = window.setTimeout(() => setShowMapStatus(true), 600);
+    return () => window.clearTimeout(timer);
+  }, [mapInView, mapLoaded]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
       {/* Left: Map Embed */}
       <div className="rounded-2xl overflow-hidden shadow-sm border">
-        <div className="relative aspect-square w-full" aria-busy={!mapLoaded}>
-          {!mapLoaded && (
+        <div ref={mapWrapperRef} className="relative aspect-square w-full" aria-busy={!mapLoaded}>
+          {showMapStatus && !mapLoaded && (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-slate-100/85 text-slate-600 text-sm">
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-slate-300 border-t-slate-500 animate-spin" />
               <span>Loading map...</span>
