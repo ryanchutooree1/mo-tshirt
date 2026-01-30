@@ -42,8 +42,18 @@ export default function MapCard() {
     }
 
     setShowMapStatus(false);
-    const timer = window.setTimeout(() => setShowMapStatus(true), 1200);
-    return () => window.clearTimeout(timer);
+    const showTimer = window.setTimeout(() => setShowMapStatus(true), 1200);
+    const hideTimer = window.setTimeout(() => setShowMapStatus(false), 4200);
+    return () => {
+      window.clearTimeout(showTimer);
+      window.clearTimeout(hideTimer);
+    };
+  }, [mapInView, mapLoaded]);
+
+  useEffect(() => {
+    if (!mapInView || mapLoaded) return;
+    const maxTimer = window.setTimeout(() => setMapLoaded(true), 7000);
+    return () => window.clearTimeout(maxTimer);
   }, [mapInView, mapLoaded]);
 
   return (
