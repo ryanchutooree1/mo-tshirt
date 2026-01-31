@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 type ParsedPayload = {
   name: string;
@@ -145,6 +147,42 @@ export async function POST(req: Request) {
           .join(", ")
       : `${formatValue(garment)} x ${formatValue(quantity)}`;
 
+    const attachmentMeta = file
+      ? {
+          filename: file.name || "attachment",
+          contentType: file.type || "application/octet-stream",
+          size: typeof file.size === "number" ? file.size : null,
+        }
+      : null;
+
+    let quoteId: string | null = null;
+    try {
+      const ref = await addDoc(collection(db, "quotes"), {
+        name,
+        email,
+        phone: phone || "",
+        message,
+        garments: parsedGarments.length ? parsedGarments : [{ garment, quantity }],
+        printMethod: printMethod || "",
+        quantity: quantity || "",
+        deadline: deadline || "",
+        notes: notesValue || "",
+        source: sourceValue || "",
+        delivery: delivery || "",
+        deliveryName: deliveryName || "",
+        deliveryAddress: deliveryAddress || "",
+        deliveryPostCode: deliveryPostCode || "",
+        deliveryPhone: deliveryPhone || "",
+        attachment: attachmentMeta,
+        status: "new",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      quoteId = ref.id;
+    } catch (err) {
+      console.error("quotes:add", err);
+    }
+
     const textLines = [
       "New Quotation Request",
       `Source: ${sourceValue}`,
@@ -242,15 +280,21 @@ export async function POST(req: Request) {
           mailOptions.attachments = [attachment];
         }
         await transporter.sendMail(mailOptions);
-        return NextResponse.json({ message: "Thanks! We received your message." }, { status: 200 });
+        return NextResponse.json(
+          { message: "Thanks! We received your message.", quoteId },
+          { status: 200 }
+        );
       } catch {
         // Fall through to success without email if nodemailer not available
-        return NextResponse.json({ message: "Received. Email not sent (mailer unavailable)." }, { status: 200 });
+        return NextResponse.json(
+          { message: "Received. Email not sent (mailer unavailable).", quoteId },
+          { status: 200 }
+        );
       }
     }
 
     // No SMTP configured; acknowledge without sending
-    return NextResponse.json({ message: "Received. Email disabled." }, { status: 200 });
+    return NextResponse.json({ message: "Received. Email disabled.", quoteId }, { status: 200 });
   } catch {
     return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
   }

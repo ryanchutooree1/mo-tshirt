@@ -9,6 +9,7 @@ type NavItem = { href: string; label: string };
 const SHOP_ITEM: NavItem = { href: "/admin/shops", label: "Shops" };
 const NOTES_ITEM: NavItem = { href: "/admin/business-notes", label: "Business Notes" };
 const DETAILS_ITEM: NavItem = { href: "/admin/business-details", label: "Business Details" };
+const QUOTE_ITEM: NavItem = { href: "/admin/quotation-approval", label: "Quotation Approval" };
 
 // Default nav groupings
 const DEFAULT_TOP: NavItem[] = [
@@ -16,6 +17,7 @@ const DEFAULT_TOP: NavItem[] = [
   { href: "/admin/clients", label: "Clients" },
   { href: "/admin/contracts", label: "Contracts" },
   SHOP_ITEM,
+  QUOTE_ITEM,
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/accounting", label: "Accounting" },
   { href: "/admin/dms", label: "DMS" },
@@ -39,15 +41,19 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
   const moreHasNotes = more.some((item) => item.href === NOTES_ITEM.href);
   const topHasDetails = top.some((item) => item.href === DETAILS_ITEM.href);
   const moreHasDetails = more.some((item) => item.href === DETAILS_ITEM.href);
+  const topHasQuote = top.some((item) => item.href === QUOTE_ITEM.href);
+  const moreHasQuote = more.some((item) => item.href === QUOTE_ITEM.href);
   const cleanedTop = top.filter(
     (item) =>
       item.href !== SHOP_ITEM.href &&
+      item.href !== QUOTE_ITEM.href &&
       (item.href !== NOTES_ITEM.href || topHasNotes) &&
       (item.href !== DETAILS_ITEM.href || topHasDetails)
   );
   const cleanedMore = more.filter(
     (item) =>
       item.href !== SHOP_ITEM.href &&
+      item.href !== QUOTE_ITEM.href &&
       (item.href !== NOTES_ITEM.href || !topHasNotes) &&
       (item.href !== DETAILS_ITEM.href || !topHasDetails)
   );
@@ -57,6 +63,14 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
     nextTop.splice(contractsIndex + 1, 0, SHOP_ITEM);
   } else {
     nextTop.push(SHOP_ITEM);
+  }
+  if (topHasQuote || (!topHasQuote && !moreHasQuote)) {
+    const shopIndex = nextTop.findIndex((item) => item.href === SHOP_ITEM.href);
+    if (shopIndex >= 0) {
+      nextTop.splice(shopIndex + 1, 0, QUOTE_ITEM);
+    } else {
+      nextTop.push(QUOTE_ITEM);
+    }
   }
   if (!topHasNotes && !moreHasNotes) {
     const dmsIndex = nextTop.findIndex((item) => item.href === "/admin/dms");
@@ -79,7 +93,11 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
       }
     }
   }
-  return { top: nextTop, more: cleanedMore };
+  const nextMore = cleanedMore.slice();
+  if (moreHasQuote) {
+    nextMore.push(QUOTE_ITEM);
+  }
+  return { top: nextTop, more: nextMore };
 }
 
 export default function AdminChrome({ children }: { children: React.ReactNode }) {
