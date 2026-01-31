@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import {
   collection,
   doc,
@@ -63,7 +64,7 @@ type QuoteRecord = {
   deliveryAddress?: string;
   deliveryPostCode?: string;
   deliveryPhone?: string;
-  attachment?: { filename?: string; contentType?: string; size?: number | null };
+  attachment?: { filename?: string; contentType?: string; size?: number | null; url?: string };
   status?: QuoteStatus;
   createdAt?: Date | null;
   updatedAt?: Date | null;
@@ -322,6 +323,9 @@ export default function QuotationApprovalPage() {
     () => quotes.find((quote) => quote.id === selectedId) || null,
     [quotes, selectedId]
   );
+
+  const attachment = selected?.attachment;
+  const attachmentIsImage = Boolean(attachment?.contentType?.startsWith("image/"));
 
   useEffect(() => {
     if (!selected) {
@@ -643,6 +647,33 @@ export default function QuotationApprovalPage() {
                         <p className="mt-2 text-sm text-slate-700">
                           <span className="font-semibold">Deadline:</span> {selected.deadline || "n/a"}
                         </p>
+                        {attachment?.url ? (
+                          <div className="mt-4 space-y-2">
+                            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Attachment</p>
+                            <a
+                              href={attachment.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                            >
+                              <FiFileText /> Open file
+                            </a>
+                            {attachmentIsImage && (
+                              <div className="relative h-40 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                                <Image
+                                  src={attachment.url}
+                                  alt={attachment.filename || "Attachment"}
+                                  fill
+                                  className="object-cover"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ) : attachment?.filename ? (
+                          <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white px-3 py-3 text-xs text-slate-500">
+                            Attachment received via email: {attachment.filename}
+                          </div>
+                        ) : null}
                       </div>
                       <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
                         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Delivery</p>

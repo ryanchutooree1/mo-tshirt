@@ -20,6 +20,10 @@ type ParsedPayload = {
   deliveryPostCode?: string;
   deliveryPhone?: string;
   garments?: { garment?: string; quantity?: string | number }[] | string;
+  attachmentUrl?: string;
+  attachmentName?: string;
+  attachmentType?: string;
+  attachmentSize?: string | number;
 };
 
 function isValidEmail(email: string) {
@@ -59,6 +63,10 @@ export async function POST(req: Request) {
         deliveryPostCode: form.get("deliveryPostCode")?.toString(),
         deliveryPhone: form.get("deliveryPhone")?.toString(),
         garments: form.get("garments")?.toString(),
+        attachmentUrl: form.get("attachmentUrl")?.toString(),
+        attachmentName: form.get("attachmentName")?.toString(),
+        attachmentType: form.get("attachmentType")?.toString(),
+        attachmentSize: form.get("attachmentSize")?.toString(),
         file: form.get("file") instanceof File ? (form.get("file") as File) : null,
       };
     } else {
@@ -84,6 +92,10 @@ export async function POST(req: Request) {
       deliveryPostCode,
       deliveryPhone,
       garments,
+      attachmentUrl,
+      attachmentName,
+      attachmentType,
+      attachmentSize,
     } = payload;
 
     if (!name || !email || !message) {
@@ -173,7 +185,19 @@ export async function POST(req: Request) {
         deliveryAddress: deliveryAddress || "",
         deliveryPostCode: deliveryPostCode || "",
         deliveryPhone: deliveryPhone || "",
-        attachment: attachmentMeta,
+        attachment: attachmentUrl
+          ? {
+              url: attachmentUrl,
+              filename: attachmentName || attachmentMeta?.filename || "attachment",
+              contentType: attachmentType || attachmentMeta?.contentType || "application/octet-stream",
+              size:
+                typeof attachmentSize === "string"
+                  ? Number(attachmentSize)
+                  : typeof attachmentSize === "number"
+                    ? attachmentSize
+                    : attachmentMeta?.size || null,
+            }
+          : attachmentMeta,
         status: "new",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),

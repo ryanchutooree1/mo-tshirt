@@ -2,6 +2,8 @@
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { storage } from "@/lib/firebase";
 
 type QuoteFormProps = {
   source?: string;
@@ -166,7 +168,21 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     payload.append("deliveryAddress", form.deliveryAddress);
     payload.append("deliveryPostCode", form.deliveryPostCode);
     payload.append("deliveryPhone", form.deliveryPhone);
-    if (file) payload.append("file", file);
+    if (file) {
+      payload.append("file", file);
+      try {
+        const safeName = file.name.replace(/[^a-z0-9._-]/gi, "_");
+        const uploadRef = ref(storage, `quotes/${Date.now()}-${safeName}`);
+        const snap = await uploadBytes(uploadRef, file);
+        const url = await getDownloadURL(snap.ref);
+        payload.append("attachmentUrl", url);
+        payload.append("attachmentName", file.name);
+        payload.append("attachmentType", file.type);
+        payload.append("attachmentSize", String(file.size || ""));
+      } catch (err) {
+        console.error("quote:upload", err);
+      }
+    }
 
     try {
       const res = await fetch("/api/contact", {
