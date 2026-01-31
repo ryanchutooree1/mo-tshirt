@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { storage } from "@/lib/firebase";
 import {
   collection,
   doc,
@@ -27,6 +29,7 @@ import {
   FiSearch,
   FiSend,
   FiXCircle,
+  FiUpload,
 } from "react-icons/fi";
 import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY } from "@/data/work";
 
@@ -282,6 +285,7 @@ export default function QuotationApprovalPage() {
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, "quotes"), orderBy("createdAt", "desc"));
@@ -484,6 +488,32 @@ export default function QuotationApprovalPage() {
     }
   };
 
+  const handleAttachmentUpload = async (file: File) => {
+    if (!selected) return;
+    setUploadingAttachment(true);
+    setNotice(null);
+    try {
+      const safeName = file.name.replace(/[^a-z0-9._-]/gi, "_");
+      const uploadRef = ref(storage, `quotes/${selected.id}/${Date.now()}-${safeName}`);
+      const snap = await uploadBytes(uploadRef, file);
+      const url = await getDownloadURL(snap.ref);
+      await updateDoc(doc(db, "quotes", selected.id), {
+        attachment: {
+          url,
+          filename: file.name,
+          contentType: file.type,
+          size: file.size,
+        },
+        updatedAt: serverTimestamp(),
+      });
+      setNotice("Attachment uploaded.");
+    } catch {
+      setNotice("Failed to upload attachment.");
+    } finally {
+      setUploadingAttachment(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f7f7fb] text-slate-900">
       <div className="relative overflow-hidden">
@@ -647,33 +677,59 @@ export default function QuotationApprovalPage() {
                         <p className="mt-2 text-sm text-slate-700">
                           <span className="font-semibold">Deadline:</span> {selected.deadline || "n/a"}
                         </p>
-                        {attachment?.url ? (
-                          <div className="mt-4 space-y-2">
-                            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Attachment</p>
-                            <a
-                              href={attachment.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
-                            >
-                              <FiFileText /> Open file
-                            </a>
-                            {attachmentIsImage && (
-                              <div className="relative h-40 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                                <Image
-                                  src={attachment.url}
-                                  alt={attachment.filename || "Attachment"}
-                                  fill
-                                  className="object-cover"
-                                />
-                              </div>
-                            )}
-                          </div>
-                        ) : attachment?.filename ? (
-                          <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white px-3 py-3 text-xs text-slate-500">
-                            Attachment received via email: {attachment.filename}
-                          </div>
-                        ) : null}
+                        <div className="mt-4 space-y-2">
+                          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Attachment</p>
+                          {attachment?.url ? (
+                            <>
+                              <a
+                                href={attachment.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                              >
+                                <FiFileText /> Open file
+                              </a>
+                              {attachmentIsImage && (
+                                <div className="relative h-40 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                                  <Image
+                                    src={attachment.url}
+                                    alt={attachment.filename || "Attachment"}
+                                    fill
+                                    className="object-cover"
+                                  />
+                                </div>
+                              )}
+                            </>
+                          ) : attachment?.filename ? (
+                            <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-3 py-3 text-xs text-slate-500">
+                              Attachment received via email: {attachment.filename}
+                            </div>
+                          ) : (
+                            <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-3 py-3 text-xs text-slate-500">
+                              No attachment uploaded yet.
+                            </div>
+                          )}
+                          <label
+                            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                              uploadingAttachment
+                                ? "border-slate-200 bg-slate-100 text-slate-400"
+                                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+                            }`}
+                          >
+                            <FiUpload /> {uploadingAttachment ? "Uploading..." : attachment?.url ? "Replace file" : "Upload file"}
+                            <input
+                              type="file"
+                              accept="image/*,application/pdf"
+                              className="hidden"
+                              disabled={uploadingAttachment}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleAttachmentUpload(file);
+                                e.currentTarget.value = "";
+                              }}
+                            />
+                          </label>
+                        </div>
                       </div>
                       <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
                         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Delivery</p>
