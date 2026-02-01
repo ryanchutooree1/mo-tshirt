@@ -25,6 +25,7 @@ type FormState = {
 
 type GarmentLine = {
   garment: string;
+  size: string;
   quantity: string;
 };
 
@@ -55,7 +56,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     deliveryPhone: "",
   });
   const [garmentLines, setGarmentLines] = useState<GarmentLine[]>([
-    { garment: garmentOptions[0], quantity: "50" },
+    { garment: garmentOptions[0], size: "", quantity: "50" },
   ]);
   const [printMethod, setPrintMethod] = useState<string>(printMethods[3]);
   const [file, setFile] = useState<File | null>(null);
@@ -83,7 +84,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
   }
 
   function addGarmentLine() {
-    setGarmentLines((prev) => [...prev, { garment: garmentOptions[0], quantity: "" }]);
+    setGarmentLines((prev) => [...prev, { garment: garmentOptions[0], size: "", quantity: "" }]);
   }
 
   function removeGarmentLine(index: number) {
@@ -151,12 +152,13 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
       : "Quote request submitted via the website.";
 
     const payload = new FormData();
-    const primaryLine = garmentLines[0] || { garment: "", quantity: "" };
+    const primaryLine = garmentLines[0] || { garment: "", size: "", quantity: "" };
     payload.append("name", form.name);
     payload.append("email", form.email);
     payload.append("message", summaryMessage);
     payload.append("phone", form.phone);
     payload.append("garment", primaryLine.garment);
+    payload.append("size", primaryLine.size);
     payload.append("printMethod", printMethod);
     payload.append("quantity", primaryLine.quantity);
     payload.append("garments", JSON.stringify(garmentLines));
@@ -204,7 +206,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           deliveryPostCode: "",
           deliveryPhone: "",
         });
-        setGarmentLines([{ garment: garmentOptions[0], quantity: "50" }]);
+        setGarmentLines([{ garment: garmentOptions[0], size: "", quantity: "50" }]);
         setPrintMethod(printMethods[3]);
         setFile(null);
         setEmailError(null);
@@ -274,7 +276,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
 
         <div className="space-y-3">
           {garmentLines.map((line, index) => (
-            <div key={`${index}-${line.garment}`} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div key={`${index}-${line.garment}`} className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div>
                 <label className="block text-sm font-medium text-neutral-700">Garment</label>
                 <select
@@ -288,6 +290,15 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                 </select>
               </div>
               <div>
+                <label className="block text-sm font-medium text-neutral-700">Size</label>
+                <input
+                  value={line.size}
+                  onChange={(e) => updateGarmentLine(index, { size: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                  placeholder="e.g., S, M, L, XL"
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-neutral-700">Quantity *</label>
                 <div className="mt-1 flex items-center gap-3">
                   <input
@@ -296,7 +307,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                     min={1}
                     value={line.quantity}
                     onChange={(e) => updateGarmentLine(index, { quantity: e.target.value })}
-                    className="w-full max-w-[220px] rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
                     placeholder="50"
                   />
                   {garmentLines.length > 1 ? (

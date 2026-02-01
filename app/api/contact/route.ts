@@ -8,6 +8,7 @@ type ParsedPayload = {
   message: string;
   phone?: string;
   garment?: string;
+  size?: string;
   printMethod?: string;
   quantity?: string | number;
   deadline?: string;
@@ -19,7 +20,7 @@ type ParsedPayload = {
   deliveryAddress?: string;
   deliveryPostCode?: string;
   deliveryPhone?: string;
-  garments?: { garment?: string; quantity?: string | number }[] | string;
+  garments?: { garment?: string; size?: string; quantity?: string | number }[] | string;
   attachmentUrl?: string;
   attachmentName?: string;
   attachmentType?: string;
@@ -52,6 +53,7 @@ export async function POST(req: Request) {
         message: String(form.get("message") ?? ""),
         phone: form.get("phone")?.toString(),
         garment: form.get("garment")?.toString(),
+        size: form.get("size")?.toString(),
         printMethod: form.get("printMethod")?.toString(),
         quantity: form.get("quantity")?.toString(),
         deadline: form.get("deadline")?.toString(),
@@ -80,6 +82,7 @@ export async function POST(req: Request) {
       message,
       phone,
       garment,
+      size,
       printMethod,
       quantity,
       deadline,
@@ -147,7 +150,7 @@ export async function POST(req: Request) {
     };
     const notesValue = notes && notes.trim() ? notes : message;
     const sourceValue = formatValue(source);
-    const parsedGarments: { garment?: string; quantity?: string | number }[] = (() => {
+    const parsedGarments: { garment?: string; size?: string; quantity?: string | number }[] = (() => {
       if (!garments) return [];
       if (Array.isArray(garments)) return garments;
       if (typeof garments === "string") {
@@ -160,11 +163,20 @@ export async function POST(req: Request) {
       }
       return [];
     })();
+    const formatGarmentLine = (entry: {
+      garment?: string;
+      size?: string;
+      quantity?: string | number;
+    }) => {
+      const garmentName = formatValue(entry.garment);
+      const sizeValue = formatValue(entry.size);
+      const quantityValue = formatValue(entry.quantity);
+      const sizeLabel = sizeValue !== "n/a" ? ` (${sizeValue})` : "";
+      return `${garmentName}${sizeLabel} x ${quantityValue}`;
+    };
     const garmentsSummary = parsedGarments.length
-      ? parsedGarments
-          .map((entry) => `${formatValue(entry.garment)} x ${formatValue(entry.quantity)}`)
-          .join(", ")
-      : `${formatValue(garment)} x ${formatValue(quantity)}`;
+      ? parsedGarments.map(formatGarmentLine).join(", ")
+      : formatGarmentLine({ garment, size, quantity });
 
     const attachmentMeta = file
       ? {
@@ -181,7 +193,7 @@ export async function POST(req: Request) {
         email,
         phone: phone || "",
         message,
-        garments: parsedGarments.length ? parsedGarments : [{ garment, quantity }],
+        garments: parsedGarments.length ? parsedGarments : [{ garment, size, quantity }],
         printMethod: printMethod || "",
         quantity: quantity || "",
         deadline: deadline || "",

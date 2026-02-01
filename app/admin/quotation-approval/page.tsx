@@ -70,7 +70,7 @@ type QuoteRecord = {
   email: string;
   phone?: string;
   message?: string;
-  garments?: { garment?: string; quantity?: string | number }[];
+  garments?: { garment?: string; size?: string; quantity?: string | number }[];
   printMethod?: string;
   quantity?: string | number;
   deadline?: string;
@@ -213,11 +213,14 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
       unitPrice: safeNumber(line.unitPrice, 0),
     }));
     const fallbackLines =
-      quote.garments?.map((entry) => ({
-        description: entry.garment || "Custom item",
-        quantity: safeNumber(entry.quantity, 0),
-        unitPrice: 0,
-      })) || [];
+      quote.garments?.map((entry) => {
+        const sizeLabel = entry.size ? ` (${entry.size})` : "";
+        return {
+          description: `${entry.garment || "Custom item"}${sizeLabel}`,
+          quantity: safeNumber(entry.quantity, 0),
+          unitPrice: 0,
+        };
+      }) || [];
     const documentType = quote.quote.documentType || "quotation";
     const documentDate = quote.quote.documentDate || fallbackDate;
     const validUntilFallback = format(addDays(new Date(documentDate), 7), "yyyy-MM-dd");
@@ -253,11 +256,14 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
 
   const validUntilFallback = format(addDays(new Date(fallbackDate), 7), "yyyy-MM-dd");
   const fromGarments =
-    quote.garments?.map((entry) => ({
-      description: entry.garment || "Custom item",
-      quantity: safeNumber(entry.quantity, 0),
-      unitPrice: 0,
-    })) || [];
+    quote.garments?.map((entry) => {
+      const sizeLabel = entry.size ? ` (${entry.size})` : "";
+      return {
+        description: `${entry.garment || "Custom item"}${sizeLabel}`,
+        quantity: safeNumber(entry.quantity, 0),
+        unitPrice: 0,
+      };
+    }) || [];
 
   const lines = fromGarments.length
     ? fromGarments
@@ -1225,7 +1231,10 @@ export default function QuotationApprovalPage() {
                         <p className="mt-3 text-sm text-slate-700">
                           <span className="font-semibold">Garments:</span>{" "}
                           {(selected.garments || [])
-                            .map((g) => `${g.garment || "Item"} x ${g.quantity || "0"}`)
+                            .map((g) => {
+                              const sizeLabel = g.size ? ` (${g.size})` : "";
+                              return `${g.garment || "Item"}${sizeLabel} x ${g.quantity || "0"}`;
+                            })
                             .join(", ") || "n/a"}
                         </p>
                         <p className="mt-2 text-sm text-slate-700">
