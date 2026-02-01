@@ -284,11 +284,15 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft) {
   doc.setTextColor(20);
   doc.text(draft.clientCompany || quote.name || "Client", margin, y);
   y += 16;
-  doc.setFont("helvetica", "bold");
-  doc.text("Address:", margin, y);
-  doc.setFont("helvetica", "normal");
-  doc.text(draft.clientAddress || "Address not provided", margin + 55, y);
-  y += 16;
+  const clientAddress = (draft.clientAddress || "").trim();
+  if (clientAddress) {
+    doc.setFont("helvetica", "bold");
+    doc.text("Address:", margin, y);
+    doc.setFont("helvetica", "normal");
+    const addressLines = doc.splitTextToSize(clientAddress, contentWidth - 120);
+    doc.text(addressLines, margin + 55, y);
+    y += addressLines.length * 14;
+  }
   if (draft.clientBrn) {
     doc.setFont("helvetica", "bold");
     doc.text("BRN:", margin, y);
