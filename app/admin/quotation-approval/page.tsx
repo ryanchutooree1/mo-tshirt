@@ -987,8 +987,8 @@ export default function QuotationApprovalPage() {
           <div className="mt-4 rounded-[24px] border border-slate-200 bg-slate-900 px-5 py-4 text-white shadow-sm">
             <p className="text-xs uppercase tracking-[0.35em] text-white/60">MO T-SHIRT flow</p>
             <p className="mt-2 text-sm font-semibold">
-              Quotation -> Invoice (50% advance) -> Receipt (advance paid) -> Production -> Invoice
-              (balance) -> Receipt (final payment)
+              Quotation {"->"} Invoice (50% advance) {"->"} Receipt (advance paid) {"->"} Production {"->"} Invoice
+              (balance) {"->"} Receipt (final payment)
             </p>
           </div>
 
