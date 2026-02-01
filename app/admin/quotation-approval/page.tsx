@@ -465,7 +465,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   doc.setTextColor(255);
   doc.text("TERMS AND CONDITIONS", margin + 6, y + 12);
 
-  y += 26;
+  y += 30;
   doc.setFont("helvetica", "normal");
   doc.setTextColor(40);
   const termsLines = doc.splitTextToSize(draft.terms || DEFAULT_TERMS, contentWidth - 12);
@@ -493,6 +493,8 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   y += 16;
   doc.setTextColor(30);
   doc.text(`${BUSINESS_INFO.name} - Phone: ${BUSINESS_INFO.phone}`, margin, y);
+  y += 14;
+  doc.text(`Website: www.mo-tshirt.mu`, margin, y);
   y += 18;
   doc.setTextColor(0, 120, 255);
   doc.setFont("helvetica", "bold");
