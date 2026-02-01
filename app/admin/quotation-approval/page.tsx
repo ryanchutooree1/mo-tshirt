@@ -271,6 +271,13 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   const parsedDate = Number.isNaN(new Date(documentDate).getTime()) ? now : new Date(documentDate);
   const validUntilDate = draft.validUntil ? new Date(draft.validUntil) : addDays(parsedDate, 7);
   const validUntilSafe = Number.isNaN(validUntilDate.getTime()) ? addDays(parsedDate, 7) : validUntilDate;
+  const statusLabel = draft.documentType === "invoice" ? "Payment status" : "Status";
+  const rawStatus =
+    draft.paymentStatus || (draft.documentType === "invoice" ? "Unpaid" : "Quotation only");
+  const normalizedStatus =
+    draft.documentType === "invoice" && rawStatus.toLowerCase().includes("quotation")
+      ? "Unpaid"
+      : rawStatus;
 
   // Top bar
   doc.setFillColor(accent.r, accent.g, accent.b);
@@ -333,7 +340,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
     align: "right",
   });
   rightInfoY += rightLine;
-  doc.text(`Status: ${draft.paymentStatus || "Quotation only"}`, pageWidth - margin, rightInfoY, {
+  doc.text(`${statusLabel}: ${normalizedStatus}`, pageWidth - margin, rightInfoY, {
     align: "right",
   });
   rightInfoY += rightLine;
@@ -492,9 +499,11 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   doc.text(`If you have any questions about this ${docTitle.toLowerCase()}, please contact`, margin, y);
   y += 16;
   doc.setTextColor(30);
-  doc.text(`${BUSINESS_INFO.name} - Phone: ${BUSINESS_INFO.phone}`, margin, y);
-  y += 14;
-  doc.text(`Website: www.mo-tshirt.mu`, margin, y);
+  doc.text(
+    `${BUSINESS_INFO.name} - ${BUSINESS_INFO.phone} - www.mo-tshirt.mu`,
+    margin,
+    y
+  );
   y += 18;
   doc.setTextColor(0, 120, 255);
   doc.setFont("helvetica", "bold");
