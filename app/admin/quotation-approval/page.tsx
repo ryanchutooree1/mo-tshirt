@@ -457,8 +457,8 @@ export default function QuotationApprovalPage() {
         to: selected.email,
         subject: `Your quotation from MO T-SHIRT`,
         message: draft.notes?.trim()
-          ? `Hi ${clientName},\n\nPlease find your quotation attached.\n\n${draft.notes}\n\n— MO T-SHIRT`
-          : `Hi ${clientName},\n\nPlease find your quotation attached.\n\n— MO T-SHIRT`,
+          ? `Hi ${clientName},\n\nPlease find your quotation attached.\n\n${draft.notes}\n\nBest regards,\nMo T-Shirt Team`
+          : `Hi ${clientName},\n\nPlease find your quotation attached.\n\nBest regards,\nMo T-Shirt Team`,
         pdfBase64: pdfDataUri,
         quote: {
           currency: draft.currency,

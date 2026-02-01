@@ -62,7 +62,7 @@ export async function POST(req: Request) {
     const subject = payload.subject || "Your quotation from MO T-SHIRT";
     const message =
       payload.message ||
-      "Hi! Please find your quotation attached. Let us know if you want any changes.";
+      "Hi! Please find your quotation attached.\n\nBest regards,\nMo T-Shirt Team";
 
     const mailOptions: Record<string, unknown> = {
       from,
@@ -71,7 +71,6 @@ export async function POST(req: Request) {
       text: message,
       html: `<div style="font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#111;">
   <p>${message.replace(/\n/g, "<br/>")}</p>
-  <p style="margin-top:16px;">— MO T-SHIRT</p>
 </div>`,
       attachments: [
         {
