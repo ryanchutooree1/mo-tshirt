@@ -297,6 +297,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                     value={line.quantity}
                     onChange={(e) => updateGarmentLine(index, { quantity: e.target.value })}
                     className="w-full max-w-[220px] rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    placeholder="50"
                   />
                   {garmentLines.length > 1 ? (
                     <button

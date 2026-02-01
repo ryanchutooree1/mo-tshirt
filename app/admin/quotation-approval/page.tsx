@@ -363,10 +363,15 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
     rightInfoY += rightLine;
   }
   const statusColor = statusTone(normalizedStatus);
+  const statusLabelText = `${statusLabel}: `;
+  const statusValueText = normalizedStatus;
+  const statusLabelWidth = doc.getTextWidth(statusLabelText);
+  const statusValueWidth = doc.getTextWidth(statusValueText);
+  const statusStartX = pageWidth - margin - (statusLabelWidth + statusValueWidth);
+  doc.setTextColor(20);
+  doc.text(statusLabelText, statusStartX, rightInfoY);
   doc.setTextColor(statusColor.r, statusColor.g, statusColor.b);
-  doc.text(`${statusLabel}: ${normalizedStatus}`, pageWidth - margin, rightInfoY, {
-    align: "right",
-  });
+  doc.text(statusValueText, statusStartX + statusLabelWidth, rightInfoY);
   doc.setTextColor(100);
   rightInfoY += rightLine;
   doc.text(`Prepared by: ${draft.preparedBy || DEFAULT_PREPARED_BY}`, pageWidth - margin, rightInfoY, {
