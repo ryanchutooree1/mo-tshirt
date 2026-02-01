@@ -146,7 +146,7 @@ const RECEIPT_TERMS = [
 ].join("\n");
 
 const PARTIAL_RECEIPT_TERMS = [
-  "This partial receipt confirms advance payment received by MO T-SHIRT.",
+  "This partial receipt confirms partial payment received by MO T-SHIRT.",
   "The remaining balance is still due before final delivery or collection.",
   "Payments made are non-refundable once production has commenced.",
   "This partial receipt should be retained as proof of payment.",
@@ -1100,7 +1100,7 @@ export default function QuotationApprovalPage() {
           <div className="mt-4 rounded-[24px] border border-slate-200 bg-slate-900 px-5 py-4 text-white shadow-sm">
             <p className="text-xs uppercase tracking-[0.35em] text-white/60">MO T-SHIRT flow</p>
             <p className="mt-2 text-sm font-semibold">
-              Quotation {"->"} Invoice (50% advance) {"->"} Partial receipt (advance paid) {"->"} Production {"->"} Invoice
+              Quotation {"->"} Invoice (50% advance) {"->"} Partial receipt (partial payment) {"->"} Production {"->"} Invoice
               (balance) {"->"} Receipt (final payment)
             </p>
           </div>
