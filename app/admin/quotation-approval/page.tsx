@@ -41,7 +41,7 @@ type QuoteLine = {
   unitPrice: number;
 };
 
-type DocumentType = "quotation" | "invoice" | "receipt";
+type DocumentType = "quotation" | "invoice" | "receipt" | "partial_receipt";
 
 type QuoteDraft = {
   documentType: DocumentType;
@@ -58,6 +58,7 @@ type QuoteDraft = {
   lines: QuoteLine[];
   deliveryFee: number;
   discount: number;
+  amountReceived: number;
   notes: string;
   validUntil: string;
   terms: string;
@@ -99,6 +100,7 @@ type QuoteRecord = {
     lines?: QuoteLine[];
     deliveryFee?: number;
     discount?: number;
+    amountReceived?: number;
     notes?: string;
     validUntil?: string;
     subtotal?: number;
@@ -187,7 +189,13 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
     const documentDate = quote.quote.documentDate || fallbackDate;
     const validUntilFallback = format(addDays(new Date(documentDate), 7), "yyyy-MM-dd");
     const defaultPaymentStatus =
-      documentType === "invoice" ? "Unpaid" : documentType === "receipt" ? "Paid" : "Quotation only";
+      documentType === "invoice"
+        ? "Unpaid"
+        : documentType === "receipt"
+          ? "Paid"
+          : documentType === "partial_receipt"
+            ? "Partially paid"
+            : "Quotation only";
     return {
       documentType,
       documentNumber: quote.quote.documentNumber || fallbackNumber,
@@ -203,6 +211,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
       lines: storedLines.length ? storedLines : fallbackLines,
       deliveryFee: safeNumber(quote.quote.deliveryFee, 0),
       discount: safeNumber(quote.quote.discount, 0),
+      amountReceived: safeNumber(quote.quote.amountReceived, 0),
       notes: quote.quote.notes || "",
       validUntil: quote.quote.validUntil || validUntilFallback,
       terms: quote.quote.terms || DEFAULT_TERMS,
@@ -242,6 +251,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
     lines,
     deliveryFee: quote.delivery?.includes("Post Office") ? 100 : 0,
     discount: 0,
+    amountReceived: 0,
     notes: "",
     validUntil: validUntilFallback,
     terms: DEFAULT_TERMS,
@@ -264,14 +274,18 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   const subtotal = lineTotals.reduce((acc, line) => acc + line.lineTotal, 0);
   const deliveryFee = safeNumber(draft.deliveryFee, 0);
   const discount = safeNumber(draft.discount, 0);
+  const amountReceived = safeNumber(draft.amountReceived, 0);
   const grandTotal = subtotal + deliveryFee - discount;
+  const balanceDue = Math.max(0, grandTotal - amountReceived);
 
   const docTitle =
     draft.documentType === "invoice"
       ? "Invoice"
       : draft.documentType === "receipt"
         ? "Receipt"
-        : "Quotation";
+        : draft.documentType === "partial_receipt"
+          ? "Partial Receipt"
+          : "Quotation";
   const documentDate = draft.documentDate || format(now, "yyyy-MM-dd");
   const parsedDate = Number.isNaN(new Date(documentDate).getTime()) ? now : new Date(documentDate);
   const validUntilDate = draft.validUntil ? new Date(draft.validUntil) : addDays(parsedDate, 7);
@@ -283,13 +297,17 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
       ? "Unpaid"
       : draft.documentType === "receipt"
         ? "Paid"
-        : "Quotation only");
+        : draft.documentType === "partial_receipt"
+          ? "Partially paid"
+          : "Quotation only");
   const normalizedStatusBase = rawStatus === "Half paid" ? "Partially paid" : rawStatus;
   const normalizedStatus =
     draft.documentType !== "quotation" && normalizedStatusBase.toLowerCase().includes("quotation")
       ? draft.documentType === "receipt"
         ? "Paid"
-        : "Unpaid"
+        : draft.documentType === "partial_receipt"
+          ? "Partially paid"
+          : "Unpaid"
       : normalizedStatusBase;
   const statusTone = (status: string) => {
     const lower = status.toLowerCase();
@@ -480,6 +498,20 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   doc.text("Grand Total", pageWidth - margin - 140, y, { align: "left" });
   doc.text(formatMoney(grandTotal, draft.currency), colTotalX, y, { align: "right" });
   doc.setFontSize(10);
+
+  if (draft.documentType === "partial_receipt") {
+    y += 18;
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(50);
+    doc.text("Amount received", pageWidth - margin - 140, y, { align: "left" });
+    doc.text(formatMoney(amountReceived, draft.currency), colTotalX, y, { align: "right" });
+    y += 16;
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(20);
+    doc.text("Balance due", pageWidth - margin - 140, y, { align: "left" });
+    doc.text(formatMoney(balanceDue, draft.currency), colTotalX, y, { align: "right" });
+    doc.setFontSize(10);
+  }
 
   if (draft.notes.trim()) {
     y += 26;
@@ -719,19 +751,22 @@ export default function QuotationApprovalPage() {
   }, [quotes]);
 
   const totals = useMemo(() => {
-    if (!draft) return { subtotal: 0, total: 0 };
+    if (!draft) return { subtotal: 0, total: 0, amountReceived: 0, balanceDue: 0 };
     const subtotal = draft.lines.reduce(
       (acc, line) => acc + safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0),
       0
     );
     const total = subtotal + draft.deliveryFee - draft.discount;
-    return { subtotal, total };
+    const amountReceived = safeNumber(draft.amountReceived, 0);
+    const balanceDue = Math.max(0, total - amountReceived);
+    return { subtotal, total, amountReceived, balanceDue };
   }, [draft]);
 
   const paymentStatusOptions = useMemo(() => {
     if (!draft) return [];
     if (draft.documentType === "quotation") return ["Quotation only"];
     if (draft.documentType === "receipt") return ["Paid"];
+    if (draft.documentType === "partial_receipt") return ["Partially paid"];
     return ["Unpaid", "Partially paid", "Paid"];
   }, [draft?.documentType]);
 
@@ -743,6 +778,10 @@ export default function QuotationApprovalPage() {
     }
     if (draft.documentType === "receipt" && draft.paymentStatus !== "Paid") {
       setDraft({ ...draft, paymentStatus: "Paid" });
+      return;
+    }
+    if (draft.documentType === "partial_receipt" && draft.paymentStatus !== "Partially paid") {
+      setDraft({ ...draft, paymentStatus: "Partially paid" });
       return;
     }
     if (!paymentStatusOptions.includes(draft.paymentStatus)) {
@@ -808,6 +847,7 @@ export default function QuotationApprovalPage() {
         lines: draft.lines,
         deliveryFee: draft.deliveryFee,
         discount: draft.discount,
+        amountReceived: draft.amountReceived,
         notes: draft.notes,
         validUntil: draft.validUntil,
         terms: draft.terms,
@@ -871,6 +911,7 @@ export default function QuotationApprovalPage() {
           lines: draft.lines,
           deliveryFee: draft.deliveryFee,
           discount: draft.discount,
+          amountReceived: draft.amountReceived,
           notes: draft.notes,
           validUntil: draft.validUntil,
           terms: draft.terms,
@@ -1011,7 +1052,7 @@ export default function QuotationApprovalPage() {
           <div className="mt-4 rounded-[24px] border border-slate-200 bg-slate-900 px-5 py-4 text-white shadow-sm">
             <p className="text-xs uppercase tracking-[0.35em] text-white/60">MO T-SHIRT flow</p>
             <p className="mt-2 text-sm font-semibold">
-              Quotation {"->"} Invoice (50% advance) {"->"} Receipt (advance paid) {"->"} Production {"->"} Invoice
+              Quotation {"->"} Invoice (50% advance) {"->"} Partial receipt (advance paid) {"->"} Production {"->"} Invoice
               (balance) {"->"} Receipt (final payment)
             </p>
           </div>
@@ -1255,6 +1296,7 @@ export default function QuotationApprovalPage() {
                               <option value="quotation">Quotation</option>
                               <option value="invoice">Invoice</option>
                               <option value="receipt">Receipt</option>
+                              <option value="partial_receipt">Partial receipt</option>
                             </select>
                           </label>
                           <label className="text-xs font-medium text-slate-600">
@@ -1316,6 +1358,8 @@ export default function QuotationApprovalPage() {
                             ? "Invoice for"
                             : draft.documentType === "receipt"
                               ? "Receipt for"
+                              : draft.documentType === "partial_receipt"
+                                ? "Partial receipt for"
                               : "Quotation for"}
                         </p>
                         <div className="mt-3 grid gap-3">
@@ -1485,6 +1529,26 @@ export default function QuotationApprovalPage() {
                             <span>{formatMoney(totals.total, draft.currency)}</span>
                           </div>
                         </div>
+                        {draft.documentType === "partial_receipt" && (
+                          <div className="mt-4 space-y-3 text-sm text-slate-700">
+                            <label className="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                              Amount received
+                              <input
+                                type="number"
+                                min={0}
+                                value={draft.amountReceived}
+                                onChange={(e) =>
+                                  setDraft({ ...draft, amountReceived: safeNumber(e.target.value, 0) })
+                                }
+                                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                              />
+                            </label>
+                            <div className="flex items-center justify-between text-sm font-semibold text-slate-900">
+                              <span>Balance due</span>
+                              <span>{formatMoney(totals.balanceDue, draft.currency)}</span>
+                            </div>
+                          </div>
+                        )}
                         <div className="mt-5 grid gap-2 sm:grid-cols-2">
                           <button
                             type="button"
