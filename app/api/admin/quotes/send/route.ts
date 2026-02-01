@@ -37,7 +37,14 @@ export async function POST(req: Request) {
     const secure = String(process.env.SMTP_SECURE || "true") === "true";
     const user = process.env.SMTP_USER;
     const pass = process.env.SMTP_PASS;
-    const from = process.env.SMTP_FROM || user || "no-reply@example.com";
+    const rawFrom = process.env.SMTP_FROM;
+    const from = rawFrom
+      ? rawFrom.includes("@")
+        ? rawFrom
+        : user
+          ? `${rawFrom} <${user}>`
+          : rawFrom
+      : user || "no-reply@example.com";
 
     if (!host || !user || !pass) {
       return NextResponse.json({ error: "Email not configured." }, { status: 500 });
