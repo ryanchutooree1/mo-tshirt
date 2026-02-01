@@ -284,12 +284,13 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
       : draft.documentType === "receipt"
         ? "Paid"
         : "Quotation only");
+  const normalizedStatusBase = rawStatus === "Half paid" ? "Partially paid" : rawStatus;
   const normalizedStatus =
-    draft.documentType !== "quotation" && rawStatus.toLowerCase().includes("quotation")
+    draft.documentType !== "quotation" && normalizedStatusBase.toLowerCase().includes("quotation")
       ? draft.documentType === "receipt"
         ? "Paid"
         : "Unpaid"
-      : rawStatus;
+      : normalizedStatusBase;
 
   // Top bar
   doc.setFillColor(accent.r, accent.g, accent.b);
@@ -715,12 +716,20 @@ export default function QuotationApprovalPage() {
   const paymentStatusOptions = useMemo(() => {
     if (!draft) return [];
     if (draft.documentType === "quotation") return ["Quotation only"];
-    if (draft.documentType === "receipt") return ["Paid", "Half paid"];
-    return ["Unpaid", "Half paid", "Paid"];
+    if (draft.documentType === "receipt") return ["Paid"];
+    return ["Unpaid", "Partially paid", "Paid"];
   }, [draft?.documentType]);
 
   useEffect(() => {
     if (!draft || !paymentStatusOptions.length) return;
+    if (draft.paymentStatus === "Half paid" && draft.documentType === "invoice") {
+      setDraft({ ...draft, paymentStatus: "Partially paid" });
+      return;
+    }
+    if (draft.documentType === "receipt" && draft.paymentStatus !== "Paid") {
+      setDraft({ ...draft, paymentStatus: "Paid" });
+      return;
+    }
     if (!paymentStatusOptions.includes(draft.paymentStatus)) {
       setDraft({ ...draft, paymentStatus: paymentStatusOptions[0] });
     }
