@@ -277,8 +277,8 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   doc.rect(margin, 24, contentWidth, 4, "F");
 
   // Header left (company)
-  const maxLogoWidth = 200;
-  const maxLogoHeight = 48;
+  const maxLogoWidth = 180;
+  const maxLogoHeight = 40;
   let logoWidth = 140;
   let logoHeight = 32;
   if (logo?.ratio) {
@@ -289,7 +289,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
       logoWidth = Math.round(logoHeight * logo.ratio);
     }
   }
-  const logoY = 54;
+  const logoY = 58;
   const addressStart = logo?.dataUrl ? logoY + logoHeight + 12 : 82;
 
   if (logo?.dataUrl) {
@@ -445,7 +445,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
     y += noteLines.length * 12;
   }
 
-  y += 26;
+  y += 32;
   doc.setFillColor(accent.r, accent.g, accent.b);
   doc.rect(margin, y, contentWidth, 18, "F");
   doc.setFont("helvetica", "bold");
