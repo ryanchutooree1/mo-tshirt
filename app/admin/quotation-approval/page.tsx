@@ -14,7 +14,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { format, formatDistanceToNow } from "date-fns";
+import { addDays, format, formatDistanceToNow } from "date-fns";
 import { jsPDF } from "jspdf";
 import {
   FiCheckCircle,
@@ -51,6 +51,9 @@ type QuoteDraft = {
   clientAddress: string;
   clientBrn: string;
   clientVat: string;
+  paymentStatus: string;
+  preparedBy: string;
+  showLineItems: boolean;
   currency: string;
   lines: QuoteLine[];
   deliveryFee: number;
@@ -89,6 +92,9 @@ type QuoteRecord = {
     clientAddress?: string;
     clientBrn?: string;
     clientVat?: string;
+    paymentStatus?: string;
+    preparedBy?: string;
+    showLineItems?: boolean;
     currency?: string;
     lines?: QuoteLine[];
     deliveryFee?: number;
@@ -113,11 +119,15 @@ const DEFAULT_TERMS = [
   "2. The remaining 50% is payable on the day of delivery.",
   "3. Orders are processed only after advance payment is received.",
   "Note: MO T-SHIRT is not VAT-registered. This invoice is not subject to VAT.",
-  "",
-  "Cheques or bank transfers should be made payable to:",
-  "Manavshree Chutooree",
-  "Directly at the SBM BANK account number 50300001273751",
 ].join("\n");
+
+const PAYMENT_DETAILS = {
+  payee: "Manavshree Chutooree",
+  bankName: "SBM BANK",
+  accountNumber: "50300001273751",
+};
+
+const DEFAULT_PREPARED_BY = "Mo T-Shirt Team";
 
 const STATUS_LABELS: Record<QuoteStatus, string> = {
   new: "New",
@@ -146,8 +156,12 @@ const parseTimestamp = (value: any) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
-const formatMoney = (value: number, currency = "Rs") =>
-  `${currency} ${Number(value || 0).toLocaleString()}`;
+const formatMoney = (value: number, currency = "Rs") => {
+  const amount = Number(value || 0);
+  const sign = amount < 0 ? "-" : "";
+  const abs = Math.abs(amount);
+  return `${sign}${currency}\u00A0${abs.toLocaleString()}`;
+};
 
 const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
   const fallbackDate = quote.createdAt ? format(quote.createdAt, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
@@ -164,24 +178,33 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
         quantity: safeNumber(entry.quantity, 0),
         unitPrice: 0,
       })) || [];
+    const documentType = quote.quote.documentType || "quotation";
+    const documentDate = quote.quote.documentDate || fallbackDate;
+    const validUntilFallback = format(addDays(new Date(documentDate), 7), "yyyy-MM-dd");
     return {
-      documentType: quote.quote.documentType || "quotation",
+      documentType,
       documentNumber: quote.quote.documentNumber || fallbackNumber,
-      documentDate: quote.quote.documentDate || fallbackDate,
+      documentDate,
       clientCompany: quote.quote.clientCompany || quote.name || "",
       clientAddress: quote.quote.clientAddress || quote.deliveryAddress || "",
       clientBrn: quote.quote.clientBrn || "",
       clientVat: quote.quote.clientVat || "",
+      paymentStatus:
+        quote.quote.paymentStatus ||
+        (documentType === "invoice" ? "Unpaid" : "Quotation only"),
+      preparedBy: quote.quote.preparedBy || DEFAULT_PREPARED_BY,
+      showLineItems: Boolean(quote.quote.showLineItems),
       currency: quote.quote.currency || "Rs",
       lines: storedLines.length ? storedLines : fallbackLines,
       deliveryFee: safeNumber(quote.quote.deliveryFee, 0),
       discount: safeNumber(quote.quote.discount, 0),
       notes: quote.quote.notes || "",
-      validUntil: quote.quote.validUntil || "",
+      validUntil: quote.quote.validUntil || validUntilFallback,
       terms: quote.quote.terms || DEFAULT_TERMS,
     };
   }
 
+  const validUntilFallback = format(addDays(new Date(fallbackDate), 7), "yyyy-MM-dd");
   const fromGarments =
     quote.garments?.map((entry) => ({
       description: entry.garment || "Custom item",
@@ -207,12 +230,15 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
     clientAddress: quote.deliveryAddress || "",
     clientBrn: "",
     clientVat: "",
+    paymentStatus: "Quotation only",
+    preparedBy: DEFAULT_PREPARED_BY,
+    showLineItems: false,
     currency: "Rs",
     lines,
     deliveryFee: quote.delivery?.includes("Post Office") ? 100 : 0,
     discount: 0,
     notes: "",
-    validUntil: "",
+    validUntil: validUntilFallback,
     terms: DEFAULT_TERMS,
   };
 };
@@ -223,30 +249,32 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft) {
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 40;
   const contentWidth = pageWidth - margin * 2;
-  const orange = { r: 255, g: 140, b: 0 };
+  const accent = { r: 242, g: 130, b: 0 };
+  const showLineItems = draft.showLineItems;
 
-  const lineItems: QuoteLine[] = draft.lines.slice();
-  if (draft.deliveryFee > 0) {
-    lineItems.push({ description: "Delivery", quantity: 1, unitPrice: draft.deliveryFee });
-  }
-  if (draft.discount > 0) {
-    lineItems.push({ description: "Discount", quantity: 1, unitPrice: -draft.discount });
-  }
+  const lineTotals = draft.lines.map((line) => ({
+    ...line,
+    lineTotal: safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0),
+  }));
+  const subtotal = lineTotals.reduce((acc, line) => acc + line.lineTotal, 0);
+  const deliveryFee = safeNumber(draft.deliveryFee, 0);
+  const discount = safeNumber(draft.discount, 0);
+  const grandTotal = subtotal + deliveryFee - discount;
 
-  const subtotal = lineItems.reduce(
-    (acc, line) => acc + safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0),
-    0
-  );
-  const total = subtotal;
+  const docTitle = draft.documentType === "invoice" ? "Invoice" : "Quotation";
+  const documentDate = draft.documentDate || format(now, "yyyy-MM-dd");
+  const parsedDate = Number.isNaN(new Date(documentDate).getTime()) ? now : new Date(documentDate);
+  const validUntilDate = draft.validUntil ? new Date(draft.validUntil) : addDays(parsedDate, 7);
+  const validUntilSafe = Number.isNaN(validUntilDate.getTime()) ? addDays(parsedDate, 7) : validUntilDate;
 
   // Top bar
-  doc.setFillColor(orange.r, orange.g, orange.b);
+  doc.setFillColor(accent.r, accent.g, accent.b);
   doc.rect(margin, 24, contentWidth, 4, "F");
 
-  // Header left
+  // Header left (company)
   doc.setFont("helvetica", "bold");
   doc.setFontSize(18);
-  doc.setTextColor(orange.r, orange.g, orange.b);
+  doc.setTextColor(accent.r, accent.g, accent.b);
   doc.text(BUSINESS_INFO.name, margin, 60);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
@@ -257,39 +285,45 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft) {
   doc.text(`Tel: ${BUSINESS_INFO.phone}`, margin, 82 + BUSINESS_INFO.addressLines.length * 14);
   doc.text(`BRN: ${BUSINESS_INFO.brn}`, margin, 82 + BUSINESS_INFO.addressLines.length * 14 + 14);
 
-  // Header right
-  const docTitle = draft.documentType === "invoice" ? "Invoice" : "Quotation";
+  // Header right (quotation info)
   doc.setFont("helvetica", "bold");
   doc.setFontSize(26);
-  doc.setTextColor(orange.r, orange.g, orange.b);
+  doc.setTextColor(accent.r, accent.g, accent.b);
   doc.text(docTitle, pageWidth - margin, 70, { align: "right" });
   doc.setFontSize(11);
   doc.setTextColor(90);
   doc.text(`No ${draft.documentNumber || quote.id}`, pageWidth - margin, 90, { align: "right" });
-  const documentDate = draft.documentDate || format(now, "yyyy-MM-dd");
-  const parsedDate = Number.isNaN(new Date(documentDate).getTime()) ? now : new Date(documentDate);
-  doc.text(`Date ${format(parsedDate, "dd/MM/yyyy")}`, pageWidth - margin, 106, {
+  doc.text(`Date ${format(parsedDate, "dd/MM/yyyy")}`, pageWidth - margin, 106, { align: "right" });
+  doc.text(`Valid until ${format(validUntilSafe, "dd/MM/yyyy")}`, pageWidth - margin, 122, {
+    align: "right",
+  });
+  doc.text(`Status: ${draft.paymentStatus || "Quotation only"}`, pageWidth - margin, 138, {
+    align: "right",
+  });
+  doc.text(`Prepared by: ${draft.preparedBy || DEFAULT_PREPARED_BY}`, pageWidth - margin, 154, {
     align: "right",
   });
 
-  // Invoice for
-  let y = 150;
+  // Client section
+  let y = 176;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  doc.setTextColor(orange.r, orange.g, orange.b);
+  doc.setTextColor(accent.r, accent.g, accent.b);
   doc.text(`${docTitle} for`, margin, y);
-  y += 16;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(11);
+  y += 22;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(15);
   doc.setTextColor(20);
   doc.text(draft.clientCompany || quote.name || "Client", margin, y);
-  y += 16;
+  y += 18;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
   const clientAddress = (draft.clientAddress || "").trim();
   if (clientAddress) {
     doc.setFont("helvetica", "bold");
     doc.text("Address:", margin, y);
     doc.setFont("helvetica", "normal");
-    const addressLines = doc.splitTextToSize(clientAddress, contentWidth - 120);
+    const addressLines = doc.splitTextToSize(clientAddress, contentWidth - 140);
     doc.text(addressLines, margin + 55, y);
     y += addressLines.length * 14;
   }
@@ -311,68 +345,90 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft) {
   y += 10;
   doc.setDrawColor(120);
   doc.line(margin, y, margin + contentWidth, y);
-  y += 24;
+  y += 22;
 
-  // Table header
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(orange.r, orange.g, orange.b);
-  doc.text("Description", margin, y);
-  doc.text("Quantity", pageWidth - margin - 160, y, { align: "right" });
-  doc.text("Price", pageWidth - margin - 70, y, { align: "right" });
-  doc.text("Total Price", pageWidth - margin, y, { align: "right" });
-  y += 12;
+  const descWidth = showLineItems ? pageWidth - margin * 2 - 220 : pageWidth - margin * 2 - 120;
+  const colQtyX = pageWidth - margin - 180;
+  const colUnitX = pageWidth - margin - 95;
+  const colTotalX = pageWidth - margin;
 
-  const descWidth = pageWidth - margin * 2 - 220;
+  if (showLineItems) {
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(accent.r, accent.g, accent.b);
+    doc.text("Description", margin, y);
+    doc.text("Quantity", colQtyX, y, { align: "right" });
+    doc.text("Price", colUnitX, y, { align: "right" });
+    doc.text("Total Price", colTotalX, y, { align: "right" });
+    y += 12;
+  }
+
   doc.setFont("helvetica", "normal");
   doc.setTextColor(30);
-  lineItems.forEach((line, index) => {
-    const rowTop = y + index * 26;
-    doc.setFillColor(245, 245, 245);
-    doc.rect(margin, rowTop - 14, contentWidth, 22, "F");
-
+  let rowY = y;
+  lineTotals.forEach((line) => {
     const descriptionLines = doc.splitTextToSize(line.description || "Item", descWidth);
-    doc.text(descriptionLines, margin + 4, rowTop);
-    doc.text(String(safeNumber(line.quantity, 0)), pageWidth - margin - 160, rowTop, {
-      align: "right",
-    });
-    doc.text(formatMoney(line.unitPrice, draft.currency), pageWidth - margin - 70, rowTop, {
-      align: "right",
-    });
-    doc.text(
-      formatMoney(safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0), draft.currency),
-      pageWidth - margin,
-      rowTop,
-      { align: "right" }
-    );
+    const rowHeight = Math.max(28, descriptionLines.length * 14 + 12);
+    doc.setFillColor(245, 245, 245);
+    doc.rect(margin, rowY - 16, contentWidth, rowHeight, "F");
+    doc.text(descriptionLines, margin + 6, rowY);
+    if (showLineItems) {
+      doc.text(String(safeNumber(line.quantity, 0)), colQtyX, rowY, { align: "right" });
+      doc.text(formatMoney(line.unitPrice, draft.currency), colUnitX, rowY, { align: "right" });
+    }
+    doc.text(formatMoney(line.lineTotal, draft.currency), colTotalX, rowY, { align: "right" });
+    rowY += rowHeight + 6;
   });
 
-  y += lineItems.length * 26 + 6;
+  y = rowY + 6;
   doc.setDrawColor(120);
   doc.line(margin, y, margin + contentWidth, y);
   y += 18;
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(30);
-  doc.text("Grand Total:", pageWidth - margin - 140, y, { align: "left" });
-  doc.text(formatMoney(total, draft.currency), pageWidth - margin, y, { align: "right" });
-
-  y += 18;
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(120);
-  doc.text("Notes:", margin, y);
-  if (draft.notes) {
-    const noteLines = doc.splitTextToSize(draft.notes, contentWidth - 60);
-    doc.text(noteLines, margin + 40, y);
+  doc.setTextColor(50);
+  doc.text("Subtotal", pageWidth - margin - 140, y, { align: "left" });
+  doc.text(formatMoney(subtotal, draft.currency), colTotalX, y, { align: "right" });
+  if (deliveryFee > 0) {
+    y += 16;
+    doc.text("Delivery fee", pageWidth - margin - 140, y, { align: "left" });
+    doc.text(formatMoney(deliveryFee, draft.currency), colTotalX, y, { align: "right" });
+  }
+  if (discount > 0) {
+    y += 16;
+    doc.setTextColor(180, 0, 0);
+    doc.text("Discount", pageWidth - margin - 140, y, { align: "left" });
+    doc.text(formatMoney(-discount, draft.currency), colTotalX, y, { align: "right" });
+    doc.setTextColor(50);
+  }
+  y += 22;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(20);
+  doc.text("Grand Total", pageWidth - margin - 140, y, { align: "left" });
+  doc.text(formatMoney(grandTotal, draft.currency), colTotalX, y, { align: "right" });
+  doc.setFontSize(10);
+
+  if (draft.notes.trim()) {
+    y += 26;
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(80);
+    doc.text("Notes", margin, y);
+    y += 14;
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(60);
+    const noteLines = doc.splitTextToSize(draft.notes, contentWidth - 12);
+    doc.text(noteLines, margin, y);
+    y += noteLines.length * 12;
   }
 
-  y += 40;
-  doc.setFillColor(orange.r, orange.g, orange.b);
+  y += 26;
+  doc.setFillColor(accent.r, accent.g, accent.b);
   doc.rect(margin, y, contentWidth, 18, "F");
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.setTextColor(255);
   doc.text("TERMS AND CONDITIONS", margin + 6, y + 13);
 
-  y += 26;
+  y += 28;
   doc.setFont("helvetica", "normal");
   doc.setTextColor(40);
   const termsLines = doc.splitTextToSize(draft.terms || DEFAULT_TERMS, contentWidth - 12);
@@ -380,7 +436,20 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft) {
     doc.text(line, margin + 6, y + idx * 13);
   });
 
-  y += termsLines.length * 13 + 16;
+  y += termsLines.length * 13 + 18;
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(accent.r, accent.g, accent.b);
+  doc.text("Payment Details", margin, y);
+  y += 16;
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(40);
+  doc.text(`Payee: ${PAYMENT_DETAILS.payee}`, margin, y);
+  y += 14;
+  doc.text(`Bank: ${PAYMENT_DETAILS.bankName}`, margin, y);
+  y += 14;
+  doc.text(`Account No: ${PAYMENT_DETAILS.accountNumber}`, margin, y);
+
+  y += 22;
   doc.setFont("helvetica", "normal");
   doc.setTextColor(80);
   doc.text(`If you have any questions about this ${docTitle.toLowerCase()}, please contact`, margin, y);
@@ -544,6 +613,9 @@ export default function QuotationApprovalPage() {
         clientAddress: draft.clientAddress,
         clientBrn: draft.clientBrn,
         clientVat: draft.clientVat,
+        paymentStatus: draft.paymentStatus,
+        preparedBy: draft.preparedBy,
+        showLineItems: draft.showLineItems,
         currency: draft.currency,
         lines: draft.lines,
         deliveryFee: draft.deliveryFee,
@@ -597,6 +669,9 @@ export default function QuotationApprovalPage() {
           clientAddress: draft.clientAddress,
           clientBrn: draft.clientBrn,
           clientVat: draft.clientVat,
+          paymentStatus: draft.paymentStatus,
+          preparedBy: draft.preparedBy,
+          showLineItems: draft.showLineItems,
           currency: draft.currency,
           lines: draft.lines,
           deliveryFee: draft.deliveryFee,
@@ -937,6 +1012,36 @@ export default function QuotationApprovalPage() {
                               className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                             />
                           </label>
+                          <label className="text-xs font-medium text-slate-600">
+                            Payment status
+                            <select
+                              value={draft.paymentStatus}
+                              onChange={(e) => setDraft({ ...draft, paymentStatus: e.target.value })}
+                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                            >
+                              <option value="Quotation only">Quotation only</option>
+                              <option value="Unpaid">Unpaid</option>
+                            </select>
+                          </label>
+                          <label className="text-xs font-medium text-slate-600">
+                            Prepared by
+                            <input
+                              value={draft.preparedBy}
+                              onChange={(e) => setDraft({ ...draft, preparedBy: e.target.value })}
+                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <label className="text-xs font-medium text-slate-600 sm:col-span-2">
+                            Line items visibility
+                            <div className="mt-2 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={draft.showLineItems}
+                                onChange={(e) => setDraft({ ...draft, showLineItems: e.target.checked })}
+                              />
+                              <span>{draft.showLineItems ? "Detailed line items" : "Client summary view"}</span>
+                            </div>
+                          </label>
                         </div>
                       </div>
 
@@ -1099,7 +1204,7 @@ export default function QuotationApprovalPage() {
                           {draft.discount > 0 && (
                             <div className="flex items-center justify-between text-rose-600">
                               <span>Discount</span>
-                              <span className="font-semibold">- {formatMoney(draft.discount, draft.currency)}</span>
+                              <span className="font-semibold">{formatMoney(-draft.discount, draft.currency)}</span>
                             </div>
                           )}
                           <div className="mt-4 flex items-center justify-between text-base font-semibold text-slate-900">
