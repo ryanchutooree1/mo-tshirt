@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import NextImage from "next/image";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { storage } from "@/lib/firebase";
@@ -121,12 +121,47 @@ const BUSINESS_INFO = {
   brn: "I20009899",
 };
 
-const DEFAULT_TERMS = [
-  "1. A 50% advance payment is required to start production.",
-  "2. The remaining 50% is payable on the day of delivery.",
-  "3. Orders are processed only after advance payment is received.",
+const QUOTATION_TERMS = [
+  "This quotation is valid for a limited period and subject to availability.",
+  "Prices may change if specifications, quantities, or timelines are modified.",
+  "Production will only begin after written acceptance of this quotation.",
+  "Acceptance of this quotation confirms agreement with MO T-SHIRT terms and conditions.",
+  "Note: MO T-SHIRT is not VAT-registered. This quotation is not subject to VAT.",
+].join("\n");
+
+const INVOICE_TERMS = [
+  "A 50% advance payment is required to confirm the order and start production.",
+  "The remaining 50% balance is payable prior to delivery or collection.",
+  "Orders are processed only after receipt of the required advance payment.",
+  "Delays in payment may result in delays in production or delivery.",
   "Note: MO T-SHIRT is not VAT-registered. This invoice is not subject to VAT.",
 ].join("\n");
+
+const RECEIPT_TERMS = [
+  "This receipt confirms payment received by MO T-SHIRT.",
+  "Payments made are non-refundable once production has commenced.",
+  "This receipt should be retained as proof of payment.",
+  "Any discrepancies must be reported within 24 hours of receipt issuance.",
+  "Note: MO T-SHIRT is not VAT-registered. This receipt is not subject to VAT.",
+].join("\n");
+
+const PARTIAL_RECEIPT_TERMS = [
+  "This partial receipt confirms advance payment received by MO T-SHIRT.",
+  "The remaining balance is still due before final delivery or collection.",
+  "Payments made are non-refundable once production has commenced.",
+  "This partial receipt should be retained as proof of payment.",
+  "Any discrepancies must be reported within 24 hours of receipt issuance.",
+  "Note: MO T-SHIRT is not VAT-registered. This receipt is not subject to VAT.",
+].join("\n");
+
+const TERMS_BY_TYPE: Record<DocumentType, string> = {
+  quotation: QUOTATION_TERMS,
+  invoice: INVOICE_TERMS,
+  receipt: RECEIPT_TERMS,
+  partial_receipt: PARTIAL_RECEIPT_TERMS,
+};
+
+const getDefaultTerms = (type: DocumentType) => TERMS_BY_TYPE[type] || QUOTATION_TERMS;
 
 const PAYMENT_DETAILS = {
   payee: "Manavshree Chutooree",
@@ -214,7 +249,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
       amountReceived: safeNumber(quote.quote.amountReceived, 0),
       notes: quote.quote.notes || "",
       validUntil: quote.quote.validUntil || validUntilFallback,
-      terms: quote.quote.terms || DEFAULT_TERMS,
+      terms: quote.quote.terms || getDefaultTerms(documentType),
     };
   }
 
@@ -254,7 +289,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
     amountReceived: 0,
     notes: "",
     validUntil: validUntilFallback,
-    terms: DEFAULT_TERMS,
+    terms: getDefaultTerms("quotation"),
   };
 };
 
@@ -537,7 +572,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   y += 30;
   doc.setFont("helvetica", "normal");
   doc.setTextColor(40);
-  const termsLines = doc.splitTextToSize(draft.terms || DEFAULT_TERMS, contentWidth - 12);
+  const termsLines = doc.splitTextToSize(draft.terms || getDefaultTerms(draft.documentType), contentWidth - 12);
   termsLines.forEach((line, idx) => {
     doc.text(line, margin + 6, y + idx * 13);
   });
@@ -587,6 +622,7 @@ export default function QuotationApprovalPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [logo, setLogo] = useState<LogoAsset | null>(null);
+  const prevDocumentTypeRef = useRef<DocumentType | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -726,6 +762,18 @@ export default function QuotationApprovalPage() {
     }
     setDraft(buildDraftFromQuote(selected));
   }, [selected?.id]);
+
+  useEffect(() => {
+    if (!draft) return;
+    const prevType = prevDocumentTypeRef.current;
+    prevDocumentTypeRef.current = draft.documentType;
+    if (!prevType || prevType === draft.documentType) return;
+    const prevTerms = getDefaultTerms(prevType);
+    const nextTerms = getDefaultTerms(draft.documentType);
+    if (!draft.terms || draft.terms === prevTerms) {
+      setDraft({ ...draft, terms: nextTerms });
+    }
+  }, [draft?.documentType]);
 
   const filtered = useMemo(() => {
     return quotes.filter((quote) => {
