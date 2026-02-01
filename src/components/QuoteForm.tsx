@@ -30,6 +30,24 @@ type GarmentLine = {
 };
 
 const garmentOptions = ["T-Shirt", "Polo Shirt", "Hoodie", "Cap", "Other"];
+const sizeOptions = [
+  "1 yr",
+  "2 yrs",
+  "4",
+  "6",
+  "8",
+  "10",
+  "12",
+  "14",
+  "XS",
+  "S",
+  "M",
+  "L",
+  "XL",
+  "2XL",
+  "3XL",
+  "4XL",
+];
 const printMethods = [
   "Screen Printing ($)",
   "Vinyl Heat Press Printing ($$)",
@@ -56,7 +74,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     deliveryPhone: "",
   });
   const [garmentLines, setGarmentLines] = useState<GarmentLine[]>([
-    { garment: garmentOptions[0], size: "", quantity: "50" },
+    { garment: garmentOptions[0], size: sizeOptions[0], quantity: "50" },
   ]);
   const [printMethod, setPrintMethod] = useState<string>(printMethods[3]);
   const [file, setFile] = useState<File | null>(null);
@@ -84,7 +102,10 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
   }
 
   function addGarmentLine() {
-    setGarmentLines((prev) => [...prev, { garment: garmentOptions[0], size: "", quantity: "" }]);
+    setGarmentLines((prev) => [
+      ...prev,
+      { garment: garmentOptions[0], size: sizeOptions[0], quantity: "" },
+    ]);
   }
 
   function removeGarmentLine(index: number) {
@@ -206,7 +227,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           deliveryPostCode: "",
           deliveryPhone: "",
         });
-        setGarmentLines([{ garment: garmentOptions[0], size: "", quantity: "50" }]);
+        setGarmentLines([{ garment: garmentOptions[0], size: sizeOptions[0], quantity: "50" }]);
         setPrintMethod(printMethods[3]);
         setFile(null);
         setEmailError(null);
@@ -291,12 +312,17 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
               </div>
               <div>
                 <label className="block text-sm font-medium text-neutral-700">Size</label>
-                <input
+                <select
                   value={line.size}
                   onChange={(e) => updateGarmentLine(index, { size: e.target.value })}
                   className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                  placeholder="e.g., S, M, L, XL"
-                />
+                >
+                  {sizeOptions.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-neutral-700">Quantity *</label>
