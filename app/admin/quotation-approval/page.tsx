@@ -781,6 +781,13 @@ export default function QuotationApprovalPage() {
     doc.save(`quotation-${selected.id}.pdf`);
   };
 
+  const handleViewPdf = () => {
+    if (!selected || !draft) return;
+    const doc = buildPdfDoc(selected, draft, logo);
+    const url = doc.output("bloburl");
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   const handleSend = async () => {
     if (!selected || !draft) return;
     setSending(true);
@@ -1157,6 +1164,8 @@ export default function QuotationApprovalPage() {
                             >
                               <option value="Quotation only">Quotation only</option>
                               <option value="Unpaid">Unpaid</option>
+                              <option value="Half paid">Half paid</option>
+                              <option value="Paid">Paid</option>
                             </select>
                           </label>
                           <label className="text-xs font-medium text-slate-600">
@@ -1348,13 +1357,20 @@ export default function QuotationApprovalPage() {
                             <span>{formatMoney(totals.total, draft.currency)}</span>
                           </div>
                         </div>
-                        <div className="mt-5 space-y-2">
+                        <div className="mt-5 grid gap-2 sm:grid-cols-2">
                           <button
                             type="button"
                             onClick={handleDownloadPdf}
                             className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
                           >
                             <FiDownload /> Download PDF
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleViewPdf}
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                          >
+                            <FiFileText /> View PDF
                           </button>
                         </div>
                       </div>
