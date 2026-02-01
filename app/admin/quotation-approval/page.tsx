@@ -254,7 +254,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 40;
   const contentWidth = pageWidth - margin * 2;
-  const accent = { r: 242, g: 130, b: 0 };
+  const accent = { r: 250, g: 115, b: 35 };
   const showLineItems = draft.showLineItems;
 
   const lineTotals = draft.lines.map((line) => ({
@@ -277,6 +277,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   doc.rect(margin, 24, contentWidth, 4, "F");
 
   // Header left (company)
+  const headerTop = 56;
   const maxLogoWidth = 180;
   const maxLogoHeight = 40;
   let logoWidth = 140;
@@ -289,8 +290,8 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
       logoWidth = Math.round(logoHeight * logo.ratio);
     }
   }
-  const logoY = 58;
-  const addressStart = logo?.dataUrl ? logoY + logoHeight + 12 : 82;
+  const logoY = headerTop;
+  const addressStart = logo?.dataUrl ? logoY + logoHeight + 10 : headerTop + 22;
 
   if (logo?.dataUrl) {
     doc.addImage(logo.dataUrl, "PNG", margin, logoY, logoWidth, logoHeight);
@@ -298,7 +299,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
     doc.setFont("helvetica", "bold");
     doc.setFontSize(18);
     doc.setTextColor(accent.r, accent.g, accent.b);
-    doc.text(BUSINESS_INFO.name, margin, 60);
+    doc.text(BUSINESS_INFO.name, margin, headerTop + 4);
   }
 
   doc.setFont("helvetica", "normal");
@@ -312,20 +313,31 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
 
   // Header right (quotation info)
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(26);
+  doc.setFontSize(22);
   doc.setTextColor(accent.r, accent.g, accent.b);
-  doc.text(docTitle, pageWidth - margin, 70, { align: "right" });
-  doc.setFontSize(11);
-  doc.setTextColor(90);
-  doc.text(`No ${draft.documentNumber || quote.id}`, pageWidth - margin, 90, { align: "right" });
-  doc.text(`Date ${format(parsedDate, "dd/MM/yyyy")}`, pageWidth - margin, 106, { align: "right" });
-  doc.text(`Valid until ${format(validUntilSafe, "dd/MM/yyyy")}`, pageWidth - margin, 122, {
+  const rightHeaderY = headerTop + 16;
+  doc.text(docTitle, pageWidth - margin, rightHeaderY, { align: "right" });
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+  const rightLine = 13;
+  let rightInfoY = rightHeaderY + 18;
+  doc.text(`No ${draft.documentNumber || quote.id}`, pageWidth - margin, rightInfoY, {
     align: "right",
   });
-  doc.text(`Status: ${draft.paymentStatus || "Quotation only"}`, pageWidth - margin, 138, {
+  rightInfoY += rightLine;
+  doc.text(`Date ${format(parsedDate, "dd/MM/yyyy")}`, pageWidth - margin, rightInfoY, {
     align: "right",
   });
-  doc.text(`Prepared by: ${draft.preparedBy || DEFAULT_PREPARED_BY}`, pageWidth - margin, 154, {
+  rightInfoY += rightLine;
+  doc.text(`Valid until ${format(validUntilSafe, "dd/MM/yyyy")}`, pageWidth - margin, rightInfoY, {
+    align: "right",
+  });
+  rightInfoY += rightLine;
+  doc.text(`Status: ${draft.paymentStatus || "Quotation only"}`, pageWidth - margin, rightInfoY, {
+    align: "right",
+  });
+  rightInfoY += rightLine;
+  doc.text(`Prepared by: ${draft.preparedBy || DEFAULT_PREPARED_BY}`, pageWidth - margin, rightInfoY, {
     align: "right",
   });
 
