@@ -31,14 +31,14 @@ type GarmentLine = {
 
 const garmentOptions = ["T-Shirt", "Polo Shirt", "Hoodie", "Cap", "Other"];
 const sizeOptions = [
-  "1 yr",
-  "2 yrs",
-  "4",
-  "6",
-  "8",
-  "10",
-  "12",
-  "14",
+  "1 Yr",
+  "2 Yrs",
+  "4 Yrs",
+  "6 Yrs",
+  "8 Yrs",
+  "10 Yrs",
+  "12 Yrs",
+  "14 Yrs",
   "XS",
   "S",
   "M",
@@ -74,7 +74,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     deliveryPhone: "",
   });
   const [garmentLines, setGarmentLines] = useState<GarmentLine[]>([
-    { garment: garmentOptions[0], size: sizeOptions[0], quantity: "50" },
+    { garment: garmentOptions[0], size: sizeOptions[0], quantity: "1" },
   ]);
   const [printMethod, setPrintMethod] = useState<string>(printMethods[3]);
   const [file, setFile] = useState<File | null>(null);
@@ -104,7 +104,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
   function addGarmentLine() {
     setGarmentLines((prev) => [
       ...prev,
-      { garment: garmentOptions[0], size: sizeOptions[0], quantity: "" },
+      { garment: garmentOptions[0], size: sizeOptions[0], quantity: "1" },
     ]);
   }
 
@@ -227,7 +227,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           deliveryPostCode: "",
           deliveryPhone: "",
         });
-        setGarmentLines([{ garment: garmentOptions[0], size: sizeOptions[0], quantity: "50" }]);
+        setGarmentLines([{ garment: garmentOptions[0], size: sizeOptions[0], quantity: "1" }]);
         setPrintMethod(printMethods[3]);
         setFile(null);
         setEmailError(null);
