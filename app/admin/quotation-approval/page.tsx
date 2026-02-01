@@ -1338,8 +1338,8 @@ export default function QuotationApprovalPage() {
                             >
                               <option value="quotation">Quotation</option>
                               <option value="invoice">Invoice</option>
-                              <option value="receipt">Receipt</option>
                               <option value="partial_receipt">Partial receipt</option>
+                              <option value="receipt">Receipt</option>
                             </select>
                           </label>
                           <label className="text-xs font-medium text-slate-600">
