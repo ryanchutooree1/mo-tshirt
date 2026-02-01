@@ -193,7 +193,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
         quote.quote.paymentStatus ||
         (documentType === "invoice" ? "Unpaid" : "Quotation only"),
       preparedBy: quote.quote.preparedBy || DEFAULT_PREPARED_BY,
-      showLineItems: Boolean(quote.quote.showLineItems),
+      showLineItems: quote.quote.showLineItems ?? true,
       currency: quote.quote.currency || "Rs",
       lines: storedLines.length ? storedLines : fallbackLines,
       deliveryFee: safeNumber(quote.quote.deliveryFee, 0),
@@ -232,7 +232,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
     clientVat: "",
     paymentStatus: "Quotation only",
     preparedBy: DEFAULT_PREPARED_BY,
-    showLineItems: false,
+    showLineItems: true,
     currency: "Rs",
     lines,
     deliveryFee: quote.delivery?.includes("Post Office") ? 100 : 0,
