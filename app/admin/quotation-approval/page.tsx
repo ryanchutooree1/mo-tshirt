@@ -277,9 +277,19 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   doc.rect(margin, 24, contentWidth, 4, "F");
 
   // Header left (company)
-  const logoWidth = 140;
-  const logoHeight = logo?.ratio ? Math.min(32, Math.round(logoWidth / logo.ratio)) : 0;
-  const logoY = 56;
+  const maxLogoWidth = 200;
+  const maxLogoHeight = 48;
+  let logoWidth = 140;
+  let logoHeight = 32;
+  if (logo?.ratio) {
+    logoWidth = maxLogoWidth;
+    logoHeight = Math.round(logoWidth / logo.ratio);
+    if (logoHeight > maxLogoHeight) {
+      logoHeight = maxLogoHeight;
+      logoWidth = Math.round(logoHeight * logo.ratio);
+    }
+  }
+  const logoY = 54;
   const addressStart = logo?.dataUrl ? logoY + logoHeight + 12 : 82;
 
   if (logo?.dataUrl) {
@@ -443,7 +453,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   doc.setTextColor(255);
   doc.text("TERMS AND CONDITIONS", margin + 6, y + 12);
 
-  y += 22;
+  y += 26;
   doc.setFont("helvetica", "normal");
   doc.setTextColor(40);
   const termsLines = doc.splitTextToSize(draft.terms || DEFAULT_TERMS, contentWidth - 12);
@@ -498,19 +508,81 @@ export default function QuotationApprovalPage() {
     const img = new window.Image();
     img.onload = () => {
       if (!active) return;
-      const ratio = img.width && img.height ? img.width / img.height : 1;
-      const canvas = document.createElement("canvas");
-      const maxWidth = 180;
-      const width = maxWidth;
-      const height = Math.round(width / ratio);
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL("image/png");
-        setLogo({ dataUrl, ratio });
+      const targetMax = 600;
+      const scale = Math.min(1, targetMax / Math.max(img.width, img.height));
+      const scaledWidth = Math.max(1, Math.round(img.width * scale));
+      const scaledHeight = Math.max(1, Math.round(img.height * scale));
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = scaledWidth;
+      tempCanvas.height = scaledHeight;
+      const tempCtx = tempCanvas.getContext("2d");
+      if (!tempCtx) return;
+      tempCtx.drawImage(img, 0, 0, scaledWidth, scaledHeight);
+
+      const imageData = tempCtx.getImageData(0, 0, scaledWidth, scaledHeight);
+      const data = imageData.data;
+      let minX = scaledWidth;
+      let minY = scaledHeight;
+      let maxX = 0;
+      let maxY = 0;
+      let found = false;
+
+      for (let y = 0; y < scaledHeight; y += 1) {
+        for (let x = 0; x < scaledWidth; x += 1) {
+          const idx = (y * scaledWidth + x) * 4;
+          const r = data[idx];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+          const a = data[idx + 3];
+          const isTransparent = a < 10;
+          const isNearWhite = r > 245 && g > 245 && b > 245;
+          if (isTransparent || isNearWhite) continue;
+          found = true;
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
+        }
       }
+
+      if (!found) {
+        minX = 0;
+        minY = 0;
+        maxX = scaledWidth - 1;
+        maxY = scaledHeight - 1;
+      }
+
+      const pad = 4;
+      minX = Math.max(0, minX - pad);
+      minY = Math.max(0, minY - pad);
+      maxX = Math.min(scaledWidth - 1, maxX + pad);
+      maxY = Math.min(scaledHeight - 1, maxY + pad);
+      const cropWidth = Math.max(1, maxX - minX + 1);
+      const cropHeight = Math.max(1, maxY - minY + 1);
+
+      const finalCanvas = document.createElement("canvas");
+      const finalMaxWidth = 600;
+      const scaleOut = Math.min(1, finalMaxWidth / cropWidth);
+      const finalWidth = Math.max(1, Math.round(cropWidth * scaleOut));
+      const finalHeight = Math.max(1, Math.round(cropHeight * scaleOut));
+      finalCanvas.width = finalWidth;
+      finalCanvas.height = finalHeight;
+      const finalCtx = finalCanvas.getContext("2d");
+      if (!finalCtx) return;
+      finalCtx.drawImage(
+        tempCanvas,
+        minX,
+        minY,
+        cropWidth,
+        cropHeight,
+        0,
+        0,
+        finalWidth,
+        finalHeight
+      );
+      const dataUrl = finalCanvas.toDataURL("image/png");
+      const ratio = finalWidth / finalHeight;
+      setLogo({ dataUrl, ratio });
     };
     img.src = "/MO T-SHIRT BUSINESS PRINTING.PNG";
     return () => {
