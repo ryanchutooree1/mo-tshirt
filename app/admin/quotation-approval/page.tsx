@@ -291,6 +291,13 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
         ? "Paid"
         : "Unpaid"
       : normalizedStatusBase;
+  const statusTone = (status: string) => {
+    const lower = status.toLowerCase();
+    if (lower.includes("unpaid")) return { r: 200, g: 38, b: 38 };
+    if (lower.includes("partially")) return { r: 217, g: 119, b: 6 };
+    if (lower.includes("paid")) return { r: 22, g: 163, b: 74 };
+    return { r: 100, g: 100, b: 100 };
+  };
 
   // Top bar
   doc.setFillColor(accent.r, accent.g, accent.b);
@@ -355,9 +362,12 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
     });
     rightInfoY += rightLine;
   }
+  const statusColor = statusTone(normalizedStatus);
+  doc.setTextColor(statusColor.r, statusColor.g, statusColor.b);
   doc.text(`${statusLabel}: ${normalizedStatus}`, pageWidth - margin, rightInfoY, {
     align: "right",
   });
+  doc.setTextColor(100);
   rightInfoY += rightLine;
   doc.text(`Prepared by: ${draft.preparedBy || DEFAULT_PREPARED_BY}`, pageWidth - margin, rightInfoY, {
     align: "right",
