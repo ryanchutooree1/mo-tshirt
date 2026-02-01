@@ -41,7 +41,7 @@ type QuoteLine = {
   unitPrice: number;
 };
 
-type DocumentType = "quotation" | "invoice";
+type DocumentType = "quotation" | "invoice" | "receipt";
 
 type QuoteDraft = {
   documentType: DocumentType;
@@ -186,6 +186,8 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
     const documentType = quote.quote.documentType || "quotation";
     const documentDate = quote.quote.documentDate || fallbackDate;
     const validUntilFallback = format(addDays(new Date(documentDate), 7), "yyyy-MM-dd");
+    const defaultPaymentStatus =
+      documentType === "invoice" ? "Unpaid" : documentType === "receipt" ? "Paid" : "Quotation only";
     return {
       documentType,
       documentNumber: quote.quote.documentNumber || fallbackNumber,
@@ -194,9 +196,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
       clientAddress: quote.quote.clientAddress || quote.deliveryAddress || "",
       clientBrn: quote.quote.clientBrn || "",
       clientVat: quote.quote.clientVat || "",
-      paymentStatus:
-        quote.quote.paymentStatus ||
-        (documentType === "invoice" ? "Unpaid" : "Quotation only"),
+      paymentStatus: quote.quote.paymentStatus || defaultPaymentStatus,
       preparedBy: quote.quote.preparedBy || DEFAULT_PREPARED_BY,
       showLineItems: quote.quote.showLineItems ?? true,
       currency: quote.quote.currency || "Rs",
@@ -266,17 +266,29 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   const discount = safeNumber(draft.discount, 0);
   const grandTotal = subtotal + deliveryFee - discount;
 
-  const docTitle = draft.documentType === "invoice" ? "Invoice" : "Quotation";
+  const docTitle =
+    draft.documentType === "invoice"
+      ? "Invoice"
+      : draft.documentType === "receipt"
+        ? "Receipt"
+        : "Quotation";
   const documentDate = draft.documentDate || format(now, "yyyy-MM-dd");
   const parsedDate = Number.isNaN(new Date(documentDate).getTime()) ? now : new Date(documentDate);
   const validUntilDate = draft.validUntil ? new Date(draft.validUntil) : addDays(parsedDate, 7);
   const validUntilSafe = Number.isNaN(validUntilDate.getTime()) ? addDays(parsedDate, 7) : validUntilDate;
-  const statusLabel = draft.documentType === "invoice" ? "Payment status" : "Status";
+  const statusLabel = draft.documentType === "quotation" ? "Status" : "Payment status";
   const rawStatus =
-    draft.paymentStatus || (draft.documentType === "invoice" ? "Unpaid" : "Quotation only");
-  const normalizedStatus =
-    draft.documentType === "invoice" && rawStatus.toLowerCase().includes("quotation")
+    draft.paymentStatus ||
+    (draft.documentType === "invoice"
       ? "Unpaid"
+      : draft.documentType === "receipt"
+        ? "Paid"
+        : "Quotation only");
+  const normalizedStatus =
+    draft.documentType !== "quotation" && rawStatus.toLowerCase().includes("quotation")
+      ? draft.documentType === "receipt"
+        ? "Paid"
+        : "Unpaid"
       : rawStatus;
 
   // Top bar
@@ -336,10 +348,12 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
     align: "right",
   });
   rightInfoY += rightLine;
-  doc.text(`Valid until ${format(validUntilSafe, "dd/MM/yyyy")}`, pageWidth - margin, rightInfoY, {
-    align: "right",
-  });
-  rightInfoY += rightLine;
+  if (draft.documentType === "quotation") {
+    doc.text(`Valid until ${format(validUntilSafe, "dd/MM/yyyy")}`, pageWidth - margin, rightInfoY, {
+      align: "right",
+    });
+    rightInfoY += rightLine;
+  }
   doc.text(`${statusLabel}: ${normalizedStatus}`, pageWidth - margin, rightInfoY, {
     align: "right",
   });
@@ -698,6 +712,20 @@ export default function QuotationApprovalPage() {
     return { subtotal, total };
   }, [draft]);
 
+  const paymentStatusOptions = useMemo(() => {
+    if (!draft) return [];
+    if (draft.documentType === "quotation") return ["Quotation only"];
+    if (draft.documentType === "receipt") return ["Paid", "Half paid"];
+    return ["Unpaid", "Half paid", "Paid"];
+  }, [draft?.documentType]);
+
+  useEffect(() => {
+    if (!draft || !paymentStatusOptions.length) return;
+    if (!paymentStatusOptions.includes(draft.paymentStatus)) {
+      setDraft({ ...draft, paymentStatus: paymentStatusOptions[0] });
+    }
+  }, [draft?.documentType, paymentStatusOptions]);
+
   const updateDraftLine = (index: number, patch: Partial<QuoteLine>) => {
     if (!draft) return;
     setDraft((prev) => {
@@ -896,6 +924,72 @@ export default function QuotationApprovalPage() {
                 <FiRefreshCw className="h-4 w-4" /> Refresh
               </button>
             </div>
+          </div>
+
+          <div className="mt-8 grid gap-4 lg:grid-cols-3">
+            {[
+              {
+                title: "Quotation PDF",
+                intro: "Use this before any work starts.",
+                purpose: "Purpose: to inform the client of prices and terms.",
+                status: "Status: not a legal payment document.",
+                uses: [
+                  "Client asks \"how much will it cost?\"",
+                  "You want client approval before production",
+                  "No money received yet",
+                ],
+                key: "Key point: a quotation can expire and can be changed.",
+              },
+              {
+                title: "Invoice PDF",
+                intro: "Use this when you are asking for money.",
+                purpose: "Purpose: to request payment.",
+                status: "Status: official billing document.",
+                uses: [
+                  "Client has accepted the quotation",
+                  "You request 50% advance or full payment",
+                  "Work is about to start or completed",
+                ],
+                key: "Key point: an invoice creates a payment obligation.",
+              },
+              {
+                title: "Receipt PDF",
+                intro: "Use this after money is received.",
+                purpose: "Purpose: to confirm payment received.",
+                status: "Status: proof of payment.",
+                uses: [
+                  "Client pays the advance",
+                  "Client pays the balance",
+                  "Client asks for proof of payment",
+                ],
+                key: "Key point: a receipt always comes after payment, never before.",
+              },
+            ].map((card) => (
+              <div
+                key={card.title}
+                className="rounded-[24px] border border-slate-200 bg-white/90 p-5 shadow-sm"
+              >
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{card.title}</p>
+                <p className="mt-3 text-sm font-semibold text-slate-800">{card.intro}</p>
+                <p className="mt-2 text-sm text-slate-600">{card.purpose}</p>
+                <p className="mt-2 text-sm text-slate-600">{card.status}</p>
+                <p className="mt-3 text-xs uppercase tracking-[0.2em] text-slate-400">Use when</p>
+                <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-slate-600">
+                  {card.uses.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-sm font-medium text-slate-700">{card.key}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 rounded-[24px] border border-slate-200 bg-slate-900 px-5 py-4 text-white shadow-sm">
+            <p className="text-xs uppercase tracking-[0.35em] text-white/60">MO T-SHIRT flow</p>
+            <p className="mt-2 text-sm font-semibold">
+              Quotation -> Invoice (50% advance) -> Receipt (advance paid) -> Production -> Invoice
+              (balance) -> Receipt (final payment)
+            </p>
           </div>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -1136,6 +1230,7 @@ export default function QuotationApprovalPage() {
                             >
                               <option value="quotation">Quotation</option>
                               <option value="invoice">Invoice</option>
+                              <option value="receipt">Receipt</option>
                             </select>
                           </label>
                           <label className="text-xs font-medium text-slate-600">
@@ -1156,16 +1251,17 @@ export default function QuotationApprovalPage() {
                             />
                           </label>
                           <label className="text-xs font-medium text-slate-600">
-                            Payment status
+                            {draft.documentType === "quotation" ? "Status" : "Payment status"}
                             <select
                               value={draft.paymentStatus}
                               onChange={(e) => setDraft({ ...draft, paymentStatus: e.target.value })}
                               className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                             >
-                              <option value="Quotation only">Quotation only</option>
-                              <option value="Unpaid">Unpaid</option>
-                              <option value="Half paid">Half paid</option>
-                              <option value="Paid">Paid</option>
+                              {paymentStatusOptions.map((status) => (
+                                <option key={status} value={status}>
+                                  {status}
+                                </option>
+                              ))}
                             </select>
                           </label>
                           <label className="text-xs font-medium text-slate-600">
@@ -1191,7 +1287,13 @@ export default function QuotationApprovalPage() {
                       </div>
 
                       <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Invoice for</p>
+                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                          {draft.documentType === "invoice"
+                            ? "Invoice for"
+                            : draft.documentType === "receipt"
+                              ? "Receipt for"
+                              : "Quotation for"}
+                        </p>
                         <div className="mt-3 grid gap-3">
                           <label className="text-xs font-medium text-slate-600">
                             Company / Client
@@ -1282,15 +1384,17 @@ export default function QuotationApprovalPage() {
                               className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                             />
                           </label>
-                          <label className="text-xs font-medium text-slate-600">
-                            Valid until
-                            <input
-                              type="date"
-                              value={draft.validUntil}
-                              onChange={(e) => setDraft({ ...draft, validUntil: e.target.value })}
-                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                            />
-                          </label>
+                          {draft.documentType === "quotation" && (
+                            <label className="text-xs font-medium text-slate-600">
+                              Valid until
+                              <input
+                                type="date"
+                                value={draft.validUntil}
+                                onChange={(e) => setDraft({ ...draft, validUntil: e.target.value })}
+                                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                              />
+                            </label>
+                          )}
                           <label className="text-xs font-medium text-slate-600">
                             Delivery fee
                             <input
