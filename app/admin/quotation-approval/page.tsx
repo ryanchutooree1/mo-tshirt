@@ -122,36 +122,34 @@ const BUSINESS_INFO = {
 };
 
 const QUOTATION_TERMS = [
-  "This quotation is valid for a limited period and subject to availability.",
-  "Prices may change if specifications, quantities, or timelines are modified.",
-  "Production will only begin after written acceptance of this quotation.",
+  "This quotation is provided for information purposes only and is valid for a limited period.",
+  "Prices are subject to change if quantities, specifications, or timelines are modified.",
+  "Production will commence only after written acceptance of this quotation.",
   "Acceptance of this quotation confirms agreement with MO T-SHIRT terms and conditions.",
   "Note: MO T-SHIRT is not VAT-registered. This quotation is not subject to VAT.",
 ].join("\n");
 
 const INVOICE_TERMS = [
   "A 50% advance payment is required to confirm the order and start production.",
-  "The remaining 50% balance is payable prior to delivery or collection.",
+  "The remaining 50% balance must be settled prior to delivery or collection.",
   "Orders are processed only after receipt of the required advance payment.",
-  "Delays in payment may result in delays in production or delivery.",
+  "Late payment may result in delays to production or delivery.",
   "Note: MO T-SHIRT is not VAT-registered. This invoice is not subject to VAT.",
 ].join("\n");
 
 const RECEIPT_TERMS = [
-  "This receipt confirms payment received by MO T-SHIRT.",
-  "Payments made are non-refundable once production has commenced.",
-  "This receipt should be retained as proof of payment.",
+  "This receipt confirms full payment received by MO T-SHIRT.",
+  "No outstanding balance remains for the related invoice.",
+  "This receipt serves as official proof of payment.",
   "Any discrepancies must be reported within 24 hours of receipt issuance.",
-  "Note: MO T-SHIRT is not VAT-registered. This receipt is not subject to VAT.",
 ].join("\n");
 
 const PARTIAL_RECEIPT_TERMS = [
-  "This partial receipt confirms partial payment received by MO T-SHIRT.",
-  "The remaining balance is still due before final delivery or collection.",
-  "Payments made are non-refundable once production has commenced.",
-  "This partial receipt should be retained as proof of payment.",
-  "Any discrepancies must be reported within 24 hours of receipt issuance.",
-  "Note: MO T-SHIRT is not VAT-registered. This receipt is not subject to VAT.",
+  "This receipt confirms partial payment received by MO T-SHIRT.",
+  "The amount received represents an advance and does not constitute full settlement.",
+  "Production may commence upon receipt of the required advance payment.",
+  "The remaining balance must be paid prior to delivery or collection.",
+  "This receipt serves as proof of partial payment.",
 ].join("\n");
 
 const TERMS_BY_TYPE: Record<DocumentType, string> = {
@@ -768,11 +766,8 @@ export default function QuotationApprovalPage() {
     const prevType = prevDocumentTypeRef.current;
     prevDocumentTypeRef.current = draft.documentType;
     if (!prevType || prevType === draft.documentType) return;
-    const prevTerms = getDefaultTerms(prevType);
     const nextTerms = getDefaultTerms(draft.documentType);
-    if (!draft.terms || draft.terms === prevTerms) {
-      setDraft({ ...draft, terms: nextTerms });
-    }
+    setDraft({ ...draft, terms: nextTerms });
   }, [draft?.documentType]);
 
   const filtered = useMemo(() => {
