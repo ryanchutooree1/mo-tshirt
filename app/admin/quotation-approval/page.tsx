@@ -277,10 +277,10 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   doc.rect(margin, 24, contentWidth, 4, "F");
 
   // Header left (company)
-  const logoWidth = 170;
-  const logoHeight = logo?.ratio ? Math.min(46, Math.round(logoWidth / logo.ratio)) : 0;
-  const logoY = 52;
-  const addressStart = logo?.dataUrl ? logoY + logoHeight + 10 : 82;
+  const logoWidth = 140;
+  const logoHeight = logo?.ratio ? Math.min(32, Math.round(logoWidth / logo.ratio)) : 0;
+  const logoY = 56;
+  const addressStart = logo?.dataUrl ? logoY + logoHeight + 12 : 82;
 
   if (logo?.dataUrl) {
     doc.addImage(logo.dataUrl, "PNG", margin, logoY, logoWidth, logoHeight);
@@ -441,9 +441,9 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.setTextColor(255);
-  doc.text("TERMS AND CONDITIONS", margin + 6, y + 13);
+  doc.text("TERMS AND CONDITIONS", margin + 6, y + 12);
 
-  y += 18;
+  y += 22;
   doc.setFont("helvetica", "normal");
   doc.setTextColor(40);
   const termsLines = doc.splitTextToSize(draft.terms || DEFAULT_TERMS, contentWidth - 12);
