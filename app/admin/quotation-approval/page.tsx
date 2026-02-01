@@ -107,6 +107,11 @@ type QuoteRecord = {
   };
 };
 
+type LogoAsset = {
+  dataUrl: string;
+  ratio: number;
+};
+
 const BUSINESS_INFO = {
   name: "MO T-SHIRT",
   addressLines: ["School Lane", "Surinam, 60907"],
@@ -243,7 +248,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
   };
 };
 
-function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft) {
+function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | null) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const now = new Date();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -272,18 +277,28 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft) {
   doc.rect(margin, 24, contentWidth, 4, "F");
 
   // Header left (company)
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.setTextColor(accent.r, accent.g, accent.b);
-  doc.text(BUSINESS_INFO.name, margin, 60);
+  const logoWidth = 170;
+  const logoHeight = logo?.ratio ? Math.min(46, Math.round(logoWidth / logo.ratio)) : 0;
+  const logoY = 52;
+  const addressStart = logo?.dataUrl ? logoY + logoHeight + 10 : 82;
+
+  if (logo?.dataUrl) {
+    doc.addImage(logo.dataUrl, "PNG", margin, logoY, logoWidth, logoHeight);
+  } else {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.setTextColor(accent.r, accent.g, accent.b);
+    doc.text(BUSINESS_INFO.name, margin, 60);
+  }
+
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.setTextColor(80);
   BUSINESS_INFO.addressLines.forEach((line, idx) => {
-    doc.text(line, margin, 82 + idx * 14);
+    doc.text(line, margin, addressStart + idx * 14);
   });
-  doc.text(`Tel: ${BUSINESS_INFO.phone}`, margin, 82 + BUSINESS_INFO.addressLines.length * 14);
-  doc.text(`BRN: ${BUSINESS_INFO.brn}`, margin, 82 + BUSINESS_INFO.addressLines.length * 14 + 14);
+  doc.text(`Tel: ${BUSINESS_INFO.phone}`, margin, addressStart + BUSINESS_INFO.addressLines.length * 14);
+  doc.text(`BRN: ${BUSINESS_INFO.brn}`, margin, addressStart + BUSINESS_INFO.addressLines.length * 14 + 14);
 
   // Header right (quotation info)
   doc.setFont("helvetica", "bold");
@@ -428,7 +443,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft) {
   doc.setTextColor(255);
   doc.text("TERMS AND CONDITIONS", margin + 6, y + 13);
 
-  y += 28;
+  y += 18;
   doc.setFont("helvetica", "normal");
   doc.setTextColor(40);
   const termsLines = doc.splitTextToSize(draft.terms || DEFAULT_TERMS, contentWidth - 12);
@@ -476,6 +491,32 @@ export default function QuotationApprovalPage() {
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [logo, setLogo] = useState<LogoAsset | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const img = new Image();
+    img.onload = () => {
+      if (!active) return;
+      const ratio = img.width && img.height ? img.width / img.height : 1;
+      const canvas = document.createElement("canvas");
+      const maxWidth = 180;
+      const width = maxWidth;
+      const height = Math.round(width / ratio);
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/png");
+        setLogo({ dataUrl, ratio });
+      }
+    };
+    img.src = "/MO T-SHIRT BUSINESS PRINTING.PNG";
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     const q = query(collection(db, "quotes"), orderBy("createdAt", "desc"));
@@ -641,7 +682,7 @@ export default function QuotationApprovalPage() {
 
   const handleDownloadPdf = () => {
     if (!selected || !draft) return;
-    const doc = buildPdfDoc(selected, draft);
+    const doc = buildPdfDoc(selected, draft, logo);
     doc.save(`quotation-${selected.id}.pdf`);
   };
 
@@ -650,7 +691,7 @@ export default function QuotationApprovalPage() {
     setSending(true);
     setNotice(null);
     try {
-      const pdfDoc = buildPdfDoc(selected, draft);
+      const pdfDoc = buildPdfDoc(selected, draft, logo);
       const pdfDataUri = pdfDoc.output("datauristring");
       const clientName = selected.name || "there";
       const payload = {
