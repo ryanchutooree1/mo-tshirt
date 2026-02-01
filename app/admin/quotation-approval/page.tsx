@@ -359,7 +359,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft) {
     doc.text("Quantity", colQtyX, y, { align: "right" });
     doc.text("Price", colUnitX, y, { align: "right" });
     doc.text("Total Price", colTotalX, y, { align: "right" });
-    y += 12;
+    y += 20;
   }
 
   doc.setFont("helvetica", "normal");
@@ -367,9 +367,9 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft) {
   let rowY = y;
   lineTotals.forEach((line) => {
     const descriptionLines = doc.splitTextToSize(line.description || "Item", descWidth);
-    const rowHeight = Math.max(28, descriptionLines.length * 14 + 12);
+    const rowHeight = Math.max(30, descriptionLines.length * 14 + 12);
     doc.setFillColor(245, 245, 245);
-    doc.rect(margin, rowY - 16, contentWidth, rowHeight, "F");
+    doc.rect(margin, rowY - 12, contentWidth, rowHeight, "F");
     doc.text(descriptionLines, margin + 6, rowY);
     if (showLineItems) {
       doc.text(String(safeNumber(line.quantity, 0)), colQtyX, rowY, { align: "right" });
