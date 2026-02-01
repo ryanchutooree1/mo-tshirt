@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
+import NextImage from "next/image";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { storage } from "@/lib/firebase";
 import {
@@ -495,7 +495,7 @@ export default function QuotationApprovalPage() {
 
   useEffect(() => {
     let active = true;
-    const img = new Image();
+    const img = new window.Image();
     img.onload = () => {
       if (!active) return;
       const ratio = img.width && img.height ? img.width / img.height : 1;
@@ -944,12 +944,12 @@ export default function QuotationApprovalPage() {
                               </a>
                               {attachmentIsImage && (
                                 <div className="relative h-40 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                                  <Image
-                                    src={attachment.url}
-                                    alt={attachment.filename || "Attachment"}
-                                    fill
-                                    className="object-cover"
-                                  />
+                                <NextImage
+                                  src={attachment.url}
+                                  alt={attachment.filename || "Attachment"}
+                                  fill
+                                  className="object-cover"
+                                />
                                 </div>
                               )}
                             </>
