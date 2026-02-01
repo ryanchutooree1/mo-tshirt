@@ -41,13 +41,23 @@ type QuoteLine = {
   unitPrice: number;
 };
 
+type DocumentType = "quotation" | "invoice";
+
 type QuoteDraft = {
+  documentType: DocumentType;
+  documentNumber: string;
+  documentDate: string;
+  clientCompany: string;
+  clientAddress: string;
+  clientBrn: string;
+  clientVat: string;
   currency: string;
   lines: QuoteLine[];
   deliveryFee: number;
   discount: number;
   notes: string;
   validUntil: string;
+  terms: string;
 };
 
 type QuoteRecord = {
@@ -72,6 +82,13 @@ type QuoteRecord = {
   createdAt?: Date | null;
   updatedAt?: Date | null;
   quote?: {
+    documentType?: DocumentType;
+    documentNumber?: string;
+    documentDate?: string;
+    clientCompany?: string;
+    clientAddress?: string;
+    clientBrn?: string;
+    clientVat?: string;
     currency?: string;
     lines?: QuoteLine[];
     deliveryFee?: number;
@@ -80,8 +97,27 @@ type QuoteRecord = {
     validUntil?: string;
     subtotal?: number;
     total?: number;
+    terms?: string;
   };
 };
+
+const BUSINESS_INFO = {
+  name: "MO T-SHIRT",
+  addressLines: ["School Lane", "Surinam, 60907"],
+  phone: CONTACT_PHONE_DISPLAY,
+  brn: "I20009899",
+};
+
+const DEFAULT_TERMS = [
+  "1. A 50% advance payment is required to start production.",
+  "2. The remaining 50% is payable on the day of delivery.",
+  "3. Orders are processed only after advance payment is received.",
+  "Note: MO T-SHIRT is not VAT-registered. This invoice is not subject to VAT.",
+  "",
+  "Cheques or bank transfers should be made payable to:",
+  "Manavshree Chutooree",
+  "Directly at the SBM BANK account number 50300001273751",
+].join("\n");
 
 const STATUS_LABELS: Record<QuoteStatus, string> = {
   new: "New",
@@ -114,18 +150,35 @@ const formatMoney = (value: number, currency = "Rs") =>
   `${currency} ${Number(value || 0).toLocaleString()}`;
 
 const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
-  if (quote.quote?.lines?.length) {
+  const fallbackDate = quote.createdAt ? format(quote.createdAt, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
+  const fallbackNumber = `Q-${quote.id.slice(-5).toUpperCase()}`;
+  if (quote.quote) {
+    const storedLines = (quote.quote.lines || []).map((line) => ({
+      description: line.description || "",
+      quantity: safeNumber(line.quantity, 0),
+      unitPrice: safeNumber(line.unitPrice, 0),
+    }));
+    const fallbackLines =
+      quote.garments?.map((entry) => ({
+        description: entry.garment || "Custom item",
+        quantity: safeNumber(entry.quantity, 0),
+        unitPrice: 0,
+      })) || [];
     return {
+      documentType: quote.quote.documentType || "quotation",
+      documentNumber: quote.quote.documentNumber || fallbackNumber,
+      documentDate: quote.quote.documentDate || fallbackDate,
+      clientCompany: quote.quote.clientCompany || quote.name || "",
+      clientAddress: quote.quote.clientAddress || quote.deliveryAddress || "",
+      clientBrn: quote.quote.clientBrn || "",
+      clientVat: quote.quote.clientVat || "",
       currency: quote.quote.currency || "Rs",
-      lines: quote.quote.lines.map((line) => ({
-        description: line.description || "",
-        quantity: safeNumber(line.quantity, 0),
-        unitPrice: safeNumber(line.unitPrice, 0),
-      })),
+      lines: storedLines.length ? storedLines : fallbackLines,
       deliveryFee: safeNumber(quote.quote.deliveryFee, 0),
       discount: safeNumber(quote.quote.discount, 0),
       notes: quote.quote.notes || "",
       validUntil: quote.quote.validUntil || "",
+      terms: quote.quote.terms || DEFAULT_TERMS,
     };
   }
 
@@ -147,129 +200,193 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
       ];
 
   return {
+    documentType: "quotation",
+    documentNumber: fallbackNumber,
+    documentDate: fallbackDate,
+    clientCompany: quote.name || "",
+    clientAddress: quote.deliveryAddress || "",
+    clientBrn: "",
+    clientVat: "",
     currency: "Rs",
     lines,
     deliveryFee: quote.delivery?.includes("Post Office") ? 100 : 0,
     discount: 0,
     notes: "",
     validUntil: "",
+    terms: DEFAULT_TERMS,
   };
 };
 
 function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const now = new Date();
-  const totals = draft.lines.reduce(
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 40;
+  const contentWidth = pageWidth - margin * 2;
+  const orange = { r: 255, g: 140, b: 0 };
+
+  const lineItems: QuoteLine[] = draft.lines.slice();
+  if (draft.deliveryFee > 0) {
+    lineItems.push({ description: "Delivery", quantity: 1, unitPrice: draft.deliveryFee });
+  }
+  if (draft.discount > 0) {
+    lineItems.push({ description: "Discount", quantity: 1, unitPrice: -draft.discount });
+  }
+
+  const subtotal = lineItems.reduce(
     (acc, line) => acc + safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0),
     0
   );
-  const subtotal = totals;
-  const total = subtotal + draft.deliveryFee - draft.discount;
+  const total = subtotal;
 
+  // Top bar
+  doc.setFillColor(orange.r, orange.g, orange.b);
+  doc.rect(margin, 24, contentWidth, 4, "F");
+
+  // Header left
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(20);
-  doc.text("Quotation", 40, 48);
-
+  doc.setFontSize(18);
+  doc.setTextColor(orange.r, orange.g, orange.b);
+  doc.text(BUSINESS_INFO.name, margin, 60);
+  doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Quote ID: ${quote.id}`, 40, 64);
-  doc.text(`Date: ${format(now, "dd MMM yyyy")}`, 40, 78);
+  doc.setTextColor(80);
+  BUSINESS_INFO.addressLines.forEach((line, idx) => {
+    doc.text(line, margin, 82 + idx * 14);
+  });
+  doc.text(`Tel: ${BUSINESS_INFO.phone}`, margin, 82 + BUSINESS_INFO.addressLines.length * 14);
+  doc.text(`BRN: ${BUSINESS_INFO.brn}`, margin, 82 + BUSINESS_INFO.addressLines.length * 14 + 14);
 
+  // Header right
+  const docTitle = draft.documentType === "invoice" ? "Invoice" : "Quotation";
   doc.setFont("helvetica", "bold");
-  doc.text("MO T-SHIRT", 400, 48);
-  doc.setFont("helvetica", "normal");
-  doc.text(CONTACT_EMAIL, 400, 64);
-  doc.text(CONTACT_PHONE_DISPLAY, 400, 78);
+  doc.setFontSize(26);
+  doc.setTextColor(orange.r, orange.g, orange.b);
+  doc.text(docTitle, pageWidth - margin, 70, { align: "right" });
+  doc.setFontSize(11);
+  doc.setTextColor(90);
+  doc.text(`No ${draft.documentNumber || quote.id}`, pageWidth - margin, 90, { align: "right" });
+  const documentDate = draft.documentDate || format(now, "yyyy-MM-dd");
+  const parsedDate = Number.isNaN(new Date(documentDate).getTime()) ? now : new Date(documentDate);
+  doc.text(`Date ${format(parsedDate, "dd/MM/yyyy")}`, pageWidth - margin, 106, {
+    align: "right",
+  });
 
-  let y = 110;
+  // Invoice for
+  let y = 150;
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.text("Client", 40, y);
+  doc.setFontSize(11);
+  doc.setTextColor(orange.r, orange.g, orange.b);
+  doc.text(`${docTitle} for`, margin, y);
   y += 16;
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text(quote.name || "—", 40, y);
-  y += 14;
-  doc.text(quote.email || "—", 40, y);
-  y += 14;
-  if (quote.phone) {
-    doc.text(quote.phone, 40, y);
-    y += 14;
+  doc.setFontSize(11);
+  doc.setTextColor(20);
+  doc.text(draft.clientCompany || quote.name || "Client", margin, y);
+  y += 16;
+  doc.setFont("helvetica", "bold");
+  doc.text("Address:", margin, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(draft.clientAddress || "Address not provided", margin + 55, y);
+  y += 16;
+  if (draft.clientBrn) {
+    doc.setFont("helvetica", "bold");
+    doc.text("BRN:", margin, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(draft.clientBrn, margin + 35, y);
+    y += 16;
+  }
+  if (draft.clientVat) {
+    doc.setFont("helvetica", "bold");
+    doc.text("VAT:", margin, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(draft.clientVat, margin + 35, y);
+    y += 16;
   }
 
   y += 10;
-  doc.setFont("helvetica", "bold");
-  doc.text("Request", 40, y);
-  y += 16;
-  doc.setFont("helvetica", "normal");
-  doc.text(`Print method: ${quote.printMethod || "n/a"}`, 40, y);
-  y += 14;
-  doc.text(`Deadline: ${quote.deadline || "n/a"}`, 40, y);
-  y += 14;
-  doc.text(`Delivery: ${quote.delivery || "n/a"}`, 40, y);
-
+  doc.setDrawColor(120);
+  doc.line(margin, y, margin + contentWidth, y);
   y += 24;
-  doc.setFont("helvetica", "bold");
-  doc.setFillColor(245, 245, 245);
-  doc.rect(40, y - 14, 515, 22, "F");
-  doc.text("Description", 48, y);
-  doc.text("Qty", 330, y, { align: "right" });
-  doc.text("Unit", 430, y, { align: "right" });
-  doc.text("Total", 540, y, { align: "right" });
 
-  y += 20;
+  // Table header
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(orange.r, orange.g, orange.b);
+  doc.text("Description", margin, y);
+  doc.text("Quantity", pageWidth - margin - 160, y, { align: "right" });
+  doc.text("Price", pageWidth - margin - 70, y, { align: "right" });
+  doc.text("Total Price", pageWidth - margin, y, { align: "right" });
+  y += 12;
+
+  const descWidth = pageWidth - margin * 2 - 220;
   doc.setFont("helvetica", "normal");
-  draft.lines.forEach((line) => {
-    const lineTotal = safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0);
-    doc.text(line.description || "Item", 48, y);
-    doc.text(String(safeNumber(line.quantity, 0)), 330, y, { align: "right" });
-    doc.text(formatMoney(safeNumber(line.unitPrice, 0), draft.currency), 430, y, { align: "right" });
-    doc.text(formatMoney(lineTotal, draft.currency), 540, y, { align: "right" });
-    y += 18;
-    if (y > 720) {
-      doc.addPage();
-      y = 60;
-    }
+  doc.setTextColor(30);
+  lineItems.forEach((line, index) => {
+    const rowTop = y + index * 26;
+    doc.setFillColor(245, 245, 245);
+    doc.rect(margin, rowTop - 14, contentWidth, 22, "F");
+
+    const descriptionLines = doc.splitTextToSize(line.description || "Item", descWidth);
+    doc.text(descriptionLines, margin + 4, rowTop);
+    doc.text(String(safeNumber(line.quantity, 0)), pageWidth - margin - 160, rowTop, {
+      align: "right",
+    });
+    doc.text(formatMoney(line.unitPrice, draft.currency), pageWidth - margin - 70, rowTop, {
+      align: "right",
+    });
+    doc.text(
+      formatMoney(safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0), draft.currency),
+      pageWidth - margin,
+      rowTop,
+      { align: "right" }
+    );
   });
 
-  y += 8;
-  doc.setDrawColor(200, 200, 200);
-  doc.line(360, y, 540, y);
+  y += lineItems.length * 26 + 6;
+  doc.setDrawColor(120);
+  doc.line(margin, y, margin + contentWidth, y);
   y += 18;
-  doc.text("Subtotal", 430, y, { align: "right" });
-  doc.text(formatMoney(subtotal, draft.currency), 540, y, { align: "right" });
-  y += 16;
-  if (draft.deliveryFee) {
-    doc.text("Delivery", 430, y, { align: "right" });
-    doc.text(formatMoney(draft.deliveryFee, draft.currency), 540, y, { align: "right" });
-    y += 16;
-  }
-  if (draft.discount) {
-    doc.text("Discount", 430, y, { align: "right" });
-    doc.text(`- ${formatMoney(draft.discount, draft.currency)}`, 540, y, { align: "right" });
-    y += 16;
-  }
-
   doc.setFont("helvetica", "bold");
-  doc.text("Total", 430, y, { align: "right" });
-  doc.text(formatMoney(total, draft.currency), 540, y, { align: "right" });
+  doc.setTextColor(30);
+  doc.text("Grand Total:", pageWidth - margin - 140, y, { align: "left" });
+  doc.text(formatMoney(total, draft.currency), pageWidth - margin, y, { align: "right" });
+
+  y += 18;
   doc.setFont("helvetica", "normal");
-
+  doc.setTextColor(120);
+  doc.text("Notes:", margin, y);
   if (draft.notes) {
-    y += 28;
-    doc.setFont("helvetica", "bold");
-    doc.text("Notes", 40, y);
-    y += 14;
-    doc.setFont("helvetica", "normal");
-    const lines = doc.splitTextToSize(draft.notes, 500);
-    doc.text(lines, 40, y);
-    y += lines.length * 12;
+    const noteLines = doc.splitTextToSize(draft.notes, contentWidth - 60);
+    doc.text(noteLines, margin + 40, y);
   }
 
-  if (draft.validUntil) {
-    y += 18;
-    doc.text(`Valid until: ${draft.validUntil}`, 40, y);
-  }
+  y += 40;
+  doc.setFillColor(orange.r, orange.g, orange.b);
+  doc.rect(margin, y, contentWidth, 18, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(255);
+  doc.text("TERMS AND CONDITIONS", margin + 6, y + 13);
+
+  y += 26;
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(40);
+  const termsLines = doc.splitTextToSize(draft.terms || DEFAULT_TERMS, contentWidth - 12);
+  termsLines.forEach((line, idx) => {
+    doc.text(line, margin + 6, y + idx * 13);
+  });
+
+  y += termsLines.length * 13 + 16;
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(80);
+  doc.text(`If you have any questions about this ${docTitle.toLowerCase()}, please contact`, margin, y);
+  y += 16;
+  doc.setTextColor(30);
+  doc.text(`${BUSINESS_INFO.name} - Phone: ${BUSINESS_INFO.phone}`, margin, y);
+  y += 18;
+  doc.setTextColor(0, 120, 255);
+  doc.setFont("helvetica", "bold");
+  doc.text("Thank You For Your Business!", margin + contentWidth / 2, y, { align: "center" });
 
   return doc;
 }
@@ -416,12 +533,20 @@ export default function QuotationApprovalPage() {
     setNotice(null);
     try {
       const payload = {
+        documentType: draft.documentType,
+        documentNumber: draft.documentNumber,
+        documentDate: draft.documentDate,
+        clientCompany: draft.clientCompany,
+        clientAddress: draft.clientAddress,
+        clientBrn: draft.clientBrn,
+        clientVat: draft.clientVat,
         currency: draft.currency,
         lines: draft.lines,
         deliveryFee: draft.deliveryFee,
         discount: draft.discount,
         notes: draft.notes,
         validUntil: draft.validUntil,
+        terms: draft.terms,
         subtotal: totals.subtotal,
         total: totals.total,
       };
@@ -461,12 +586,20 @@ export default function QuotationApprovalPage() {
           : `Hi ${clientName},\n\nPlease find your quotation attached.\n\nBest regards,\nMo T-Shirt Team`,
         pdfBase64: pdfDataUri,
         quote: {
+          documentType: draft.documentType,
+          documentNumber: draft.documentNumber,
+          documentDate: draft.documentDate,
+          clientCompany: draft.clientCompany,
+          clientAddress: draft.clientAddress,
+          clientBrn: draft.clientBrn,
+          clientVat: draft.clientVat,
           currency: draft.currency,
           lines: draft.lines,
           deliveryFee: draft.deliveryFee,
           discount: draft.discount,
           notes: draft.notes,
           validUntil: draft.validUntil,
+          terms: draft.terms,
           subtotal: totals.subtotal,
           total: totals.total,
         },
@@ -752,7 +885,7 @@ export default function QuotationApprovalPage() {
                   <div className="rounded-[28px] border border-slate-200 bg-white/90 p-6 shadow-sm">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Quotation Draft</p>
+                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Quotation / Invoice Draft</p>
                         <h3 className="mt-2 text-lg font-semibold text-slate-900">
                           Price, approve, and send in minutes
                         </h3>
@@ -764,6 +897,84 @@ export default function QuotationApprovalPage() {
                       >
                         <FiPlus className="h-4 w-4" /> Add line
                       </button>
+                    </div>
+
+                    <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Document</p>
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                          <label className="text-xs font-medium text-slate-600">
+                            Type
+                            <select
+                              value={draft.documentType}
+                              onChange={(e) =>
+                                setDraft({ ...draft, documentType: e.target.value as DocumentType })
+                              }
+                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                            >
+                              <option value="quotation">Quotation</option>
+                              <option value="invoice">Invoice</option>
+                            </select>
+                          </label>
+                          <label className="text-xs font-medium text-slate-600">
+                            Number
+                            <input
+                              value={draft.documentNumber}
+                              onChange={(e) => setDraft({ ...draft, documentNumber: e.target.value })}
+                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <label className="text-xs font-medium text-slate-600 sm:col-span-2">
+                            Date
+                            <input
+                              type="date"
+                              value={draft.documentDate}
+                              onChange={(e) => setDraft({ ...draft, documentDate: e.target.value })}
+                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                            />
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Invoice for</p>
+                        <div className="mt-3 grid gap-3">
+                          <label className="text-xs font-medium text-slate-600">
+                            Company / Client
+                            <input
+                              value={draft.clientCompany}
+                              onChange={(e) => setDraft({ ...draft, clientCompany: e.target.value })}
+                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <label className="text-xs font-medium text-slate-600">
+                            Address
+                            <input
+                              value={draft.clientAddress}
+                              onChange={(e) => setDraft({ ...draft, clientAddress: e.target.value })}
+                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                            />
+                          </label>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <label className="text-xs font-medium text-slate-600">
+                              BRN
+                              <input
+                                value={draft.clientBrn}
+                                onChange={(e) => setDraft({ ...draft, clientBrn: e.target.value })}
+                                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                              />
+                            </label>
+                            <label className="text-xs font-medium text-slate-600">
+                              VAT
+                              <input
+                                value={draft.clientVat}
+                                onChange={(e) => setDraft({ ...draft, clientVat: e.target.value })}
+                                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="mt-5 space-y-3">
@@ -855,6 +1066,15 @@ export default function QuotationApprovalPage() {
                             rows={4}
                             className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                             placeholder="Add any extra details or inclusions..."
+                          />
+                        </label>
+                        <label className="text-xs font-medium text-slate-600">
+                          Terms & payment details
+                          <textarea
+                            value={draft.terms}
+                            onChange={(e) => setDraft({ ...draft, terms: e.target.value })}
+                            rows={6}
+                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                           />
                         </label>
                       </div>

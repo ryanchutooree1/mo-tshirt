@@ -9,7 +9,7 @@ type NavItem = { href: string; label: string };
 const SHOP_ITEM: NavItem = { href: "/admin/shops", label: "Shops" };
 const NOTES_ITEM: NavItem = { href: "/admin/business-notes", label: "Business Notes" };
 const DETAILS_ITEM: NavItem = { href: "/admin/business-details", label: "Business Details" };
-const QUOTE_ITEM: NavItem = { href: "/admin/quotation-approval", label: "Quotation Approval" };
+const QUOTE_ITEM: NavItem = { href: "/admin/quotation-approval", label: "Quotation / Invoice" };
 
 // Default nav groupings
 const DEFAULT_TOP: NavItem[] = [
