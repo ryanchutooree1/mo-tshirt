@@ -773,7 +773,7 @@ export default function QuotationApprovalPage() {
     prevDocumentTypeRef.current = draft.documentType;
     if (!prevType || prevType === draft.documentType) return;
     const nextTerms = getDefaultTerms(draft.documentType);
-    setDraft({ ...draft, terms: nextTerms });
+    setDraft((prev) => (prev ? { ...prev, terms: nextTerms } : prev));
   }, [draft?.documentType]);
 
   const filtered = useMemo(() => {
@@ -822,19 +822,21 @@ export default function QuotationApprovalPage() {
   useEffect(() => {
     if (!draft || !paymentStatusOptions.length) return;
     if (draft.paymentStatus === "Half paid" && draft.documentType === "invoice") {
-      setDraft({ ...draft, paymentStatus: "Partially paid" });
+      setDraft((prev) => (prev ? { ...prev, paymentStatus: "Partially paid" } : prev));
       return;
     }
     if (draft.documentType === "receipt" && draft.paymentStatus !== "Paid") {
-      setDraft({ ...draft, paymentStatus: "Paid" });
+      setDraft((prev) => (prev ? { ...prev, paymentStatus: "Paid" } : prev));
       return;
     }
     if (draft.documentType === "partial_receipt" && draft.paymentStatus !== "Partially paid") {
-      setDraft({ ...draft, paymentStatus: "Partially paid" });
+      setDraft((prev) => (prev ? { ...prev, paymentStatus: "Partially paid" } : prev));
       return;
     }
     if (!paymentStatusOptions.includes(draft.paymentStatus)) {
-      setDraft({ ...draft, paymentStatus: paymentStatusOptions[0] });
+      setDraft((prev) =>
+        prev ? { ...prev, paymentStatus: paymentStatusOptions[0] } : prev
+      );
     }
   }, [draft?.documentType, paymentStatusOptions]);
 
