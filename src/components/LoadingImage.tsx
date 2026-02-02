@@ -23,6 +23,7 @@ export default function LoadingImage({
   inViewRootMargin = "200px",
   pollMs = 300,
   src,
+  alt,
   className,
   onLoad,
   onError,
@@ -129,7 +130,15 @@ export default function LoadingImage({
           <span>{statusTextLabel}</span>
         </div>
       )}
-      <img ref={imgRef} src={src} {...props} className={className} onLoad={handleLoad} onError={handleError} />
+      <img
+        ref={imgRef}
+        src={src}
+        alt={typeof alt === "string" ? alt : ""}
+        {...props}
+        className={className}
+        onLoad={handleLoad}
+        onError={handleError}
+      />
     </div>
   );
 }
