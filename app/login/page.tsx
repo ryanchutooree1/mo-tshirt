@@ -38,11 +38,11 @@ function LoginInner() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F9F9F9] px-6 py-16">
-      <div className="mx-auto flex max-w-xl flex-col items-center gap-10">
+    <main className="min-h-screen bg-[#F9F9F9]">
+      <div className="px-6 md:px-8 pt-6">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500 transition hover:text-black self-start"
+          className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500 transition hover:text-black"
           aria-label="Back to Home"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
@@ -50,44 +50,48 @@ function LoginInner() {
           </svg>
           Back to Home
         </Link>
+      </div>
 
-        <div className="w-full rounded-[32px] border border-[#EAEAEA] bg-white p-10 shadow-sm">
-          <div className="flex flex-col items-center text-center">
-            <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={120} height={48} className="h-12 w-auto" />
-            <h1 className="mt-6 text-2xl font-semibold tracking-tight">Admin Access</h1>
-            <p className="mt-2 text-sm text-neutral-600">Sign in with the admin password to manage MO T-SHIRT.</p>
-          </div>
-
-          <form onSubmit={onSubmit} className="mt-8 space-y-6" aria-describedby={error ? "login-error" : undefined}>
-            <div>
-              <label htmlFor="password" className="text-sm font-medium text-neutral-800">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-2 w-full rounded-2xl border border-[#EAEAEA] bg-white px-4 py-3 text-sm text-black shadow-sm focus:border-black focus:outline-none focus:ring-2 focus:ring-black/5"
-                placeholder="••••••••"
-                autoComplete="current-password"
-                required
-                autoFocus
-              />
+      <div className="px-6 md:px-8 py-12">
+        <div className="mx-auto flex max-w-xl flex-col items-center gap-10">
+          <div className="w-full rounded-[32px] border border-[#EAEAEA] bg-white p-10 shadow-sm">
+            <div className="flex flex-col items-center text-center">
+              <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={120} height={48} className="h-12 w-auto" />
+              <h1 className="mt-6 text-2xl font-semibold tracking-tight">Admin Access</h1>
+              <p className="mt-2 text-sm text-neutral-600">Sign in with the admin password to manage MO T-SHIRT.</p>
             </div>
-            {error && (
-              <p id="login-error" role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                {error}
-              </p>
-            )}
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex w-full items-center justify-center rounded-full bg-black px-6 py-3 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:bg-neutral-700"
-            >
-              {submitting ? "Signing in…" : "Sign in"}
-            </button>
-          </form>
+
+            <form onSubmit={onSubmit} className="mt-8 space-y-6" aria-describedby={error ? "login-error" : undefined}>
+              <div>
+                <label htmlFor="password" className="text-sm font-medium text-neutral-800">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-[#EAEAEA] bg-white px-4 py-3 text-sm text-black shadow-sm focus:border-black focus:outline-none focus:ring-2 focus:ring-black/5"
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  required
+                  autoFocus
+                />
+              </div>
+              {error && (
+                <p id="login-error" role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                  {error}
+                </p>
+              )}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex w-full items-center justify-center rounded-full bg-black px-6 py-3 text-sm font-medium text-white transition hover:bg-neutral-800 disabled:cursor-not-allowed disabled:bg-neutral-700"
+              >
+                {submitting ? "Signing in…" : "Sign in"}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </main>

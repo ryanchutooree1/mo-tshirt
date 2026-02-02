@@ -53,28 +53,32 @@ export default function ContactClient() {
   }
 
   return (
-    <section className="px-6 md:px-8 py-20 mx-auto max-w-3xl">
-      <header className="space-y-4 mb-8">
+    <section className="min-h-screen">
+      <div className="px-6 md:px-8 pt-6">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-gray-500 transition hover:text-black"
         >
           ← Back to Home
         </Link>
-        <div className="space-y-3">
-          <h1 className="text-3xl font-extrabold">Contact us</h1>
-          <p className="text-gray-700">
-            Send us your artwork or questions. We reply quickly. Or message us on WhatsApp.
-          </p>
-          <p className="text-sm text-gray-600">
-            Need a quick overview? See{" "}
-            <Link href="/" className="underline decoration-orange-400 underline-offset-4 hover:text-black">
-              Custom T-shirts Mauritius
-            </Link>{" "}
-            on our homepage.
-          </p>
-        </div>
-      </header>
+      </div>
+
+      <div className="px-6 md:px-8 py-14 mx-auto max-w-3xl">
+        <header className="space-y-4 mb-8">
+          <div className="space-y-3">
+            <h1 className="text-3xl font-extrabold">Contact us</h1>
+            <p className="text-gray-700">
+              Send us your artwork or questions. We reply quickly. Or message us on WhatsApp.
+            </p>
+            <p className="text-sm text-gray-600">
+              Need a quick overview? See{" "}
+              <Link href="/" className="underline decoration-orange-400 underline-offset-4 hover:text-black">
+                Custom T-shirts Mauritius
+              </Link>{" "}
+              on our homepage.
+            </p>
+          </div>
+        </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
         <form className="space-y-4" onSubmit={handleSubmit}>
@@ -154,8 +158,9 @@ export default function ContactClient() {
         </aside>
       </div>
 
-      <div className="mt-10">
-        <MapCard />
+        <div className="mt-10">
+          <MapCard />
+        </div>
       </div>
     </section>
   );

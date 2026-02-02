@@ -5,14 +5,17 @@ import { CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work"
 
 export default function WorkIndexPage() {
   return (
-    <main className="px-6 md:px-8 py-20 mx-auto max-w-6xl space-y-16">
-      <header className="space-y-6">
+    <main className="min-h-screen">
+      <div className="px-6 md:px-8 pt-6">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500 transition hover:text-black"
         >
           ← Back to Home
         </Link>
+      </div>
+
+      <div className="px-6 md:px-8 py-14 mx-auto max-w-6xl space-y-16">
         <section className="space-y-4 text-center">
           <p className="text-xs uppercase tracking-[0.08em] text-orange-500">Portfolio</p>
           <h1 className="text-3xl md:text-4xl font-extrabold">Recent work for Mauritius teams & brands</h1>
@@ -41,7 +44,6 @@ export default function WorkIndexPage() {
             </a>
           </div>
         </section>
-      </header>
 
       <section aria-labelledby="gallery-heading" className="space-y-6">
         <div className="flex items-center justify-between">
@@ -59,7 +61,7 @@ export default function WorkIndexPage() {
         <Gallery />
       </section>
 
-      <section id="quote" className="grid gap-8 lg:grid-cols-2">
+        <section id="quote" className="grid gap-8 lg:grid-cols-2">
         <div className="rounded-[24px] border border-neutral-200 bg-white p-8 shadow-sm">
           <p className="text-xs uppercase tracking-[0.08em] text-orange-500">Quote form</p>
           <h2 className="text-2xl font-semibold text-black">Tell us about your order</h2>
@@ -98,7 +100,8 @@ export default function WorkIndexPage() {
             </ul>
           </div>
         </div>
-      </section>
+        </section>
+      </div>
     </main>
   );
 }

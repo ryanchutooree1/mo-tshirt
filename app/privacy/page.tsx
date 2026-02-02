@@ -13,20 +13,24 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <main className="px-6 md:px-8 py-20 mx-auto max-w-3xl space-y-10">
-      <header className="space-y-4">
+    <main className="min-h-screen">
+      <div className="px-6 md:px-8 pt-6">
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500 transition hover:text-black"
         >
           ← Back to Home
         </Link>
-        <h1 className="text-3xl md:text-4xl font-extrabold">Privacy Policy</h1>
-        <p className="text-sm text-neutral-600">Last updated: February 2026</p>
-        <p className="text-neutral-700">
-          MO T-SHIRT respects your privacy. This policy explains how we collect and use your data.
-        </p>
-      </header>
+      </div>
+
+      <div className="px-6 md:px-8 py-14 mx-auto max-w-3xl space-y-10">
+        <header className="space-y-4">
+          <h1 className="text-3xl md:text-4xl font-extrabold">Privacy Policy</h1>
+          <p className="text-sm text-neutral-600">Last updated: February 2026</p>
+          <p className="text-neutral-700">
+            MO T-SHIRT respects your privacy. This policy explains how we collect and use your data.
+          </p>
+        </header>
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">Information We Collect</h2>
@@ -109,21 +113,22 @@ export default function PrivacyPage() {
         </p>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-xl font-semibold">Contact</h2>
-        <p className="text-neutral-700">MO T-SHIRT, Mauritius</p>
-        <ul className="list-disc pl-5 text-neutral-700">
-          <li>
-            Website: <a className="underline" href="https://mo-tshirt.mu">https://mo-tshirt.mu</a>
-          </li>
-          <li>
-            Email: <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
-          </li>
-          <li>
-            Phone: <a className="underline" href={`tel:${CONTACT_TEL}`}>{CONTACT_PHONE_DISPLAY}</a>
-          </li>
-        </ul>
-      </section>
+        <section className="space-y-3">
+          <h2 className="text-xl font-semibold">Contact</h2>
+          <p className="text-neutral-700">MO T-SHIRT, Mauritius</p>
+          <ul className="list-disc pl-5 text-neutral-700">
+            <li>
+              Website: <a className="underline" href="https://mo-tshirt.mu">https://mo-tshirt.mu</a>
+            </li>
+            <li>
+              Email: <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+            </li>
+            <li>
+              Phone: <a className="underline" href={`tel:${CONTACT_TEL}`}>{CONTACT_PHONE_DISPLAY}</a>
+            </li>
+          </ul>
+        </section>
+      </div>
     </main>
   );
 }
