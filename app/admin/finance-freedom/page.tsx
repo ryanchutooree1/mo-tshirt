@@ -47,6 +47,34 @@ export default function FinanceFreedomPage() {
   const [unlocked, setUnlocked] = useState(false);
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [incomes, setIncomes] = useState<MoneyLine[]>([
+    { id: "salary", label: "Salary", amount: 55000 },
+    { id: "business", label: "Business income", amount: 35000 },
+    { id: "rent", label: "Rent income", amount: 12000 },
+  ]);
+  const [expenses, setExpenses] = useState<MoneyLine[]>([
+    { id: "housing", label: "Housing / Mortgage", amount: 20000 },
+    { id: "utilities", label: "Utilities", amount: 4500 },
+    { id: "transport", label: "Transport", amount: 6500 },
+    { id: "food", label: "Food & essentials", amount: 12000 },
+    { id: "staff", label: "Staff / Support", amount: 8000 },
+    { id: "other", label: "Other", amount: 3500 },
+  ]);
+
+  const totalIncome = useMemo(
+    () => incomes.reduce((sum, line) => sum + (Number.isFinite(line.amount) ? line.amount : 0), 0),
+    [incomes]
+  );
+  const totalExpenses = useMemo(
+    () => expenses.reduce((sum, line) => sum + (Number.isFinite(line.amount) ? line.amount : 0), 0),
+    [expenses]
+  );
+  const net = totalIncome - totalExpenses;
+  const coverageRatio = totalExpenses > 0 ? totalIncome / totalExpenses : 0;
+  const freedomScore = totalExpenses > 0 ? Math.max(0, (totalIncome - totalExpenses) / totalExpenses) : 0;
+  const salaryLine = incomes.find((line) => line.label.toLowerCase().includes("salary"));
+  const salaryCovers = salaryLine ? salaryLine.amount >= totalExpenses : false;
+  const monthlySeries = useMemo(() => buildMonthlySeries(totalIncome, totalExpenses), [totalIncome, totalExpenses]);
 
   const handleUnlock = () => {
     if (password.trim() === "godlove") {
@@ -91,35 +119,6 @@ export default function FinanceFreedomPage() {
       </main>
     );
   }
-
-  const [incomes, setIncomes] = useState<MoneyLine[]>([
-    { id: "salary", label: "Salary", amount: 55000 },
-    { id: "business", label: "Business income", amount: 35000 },
-    { id: "rent", label: "Rent income", amount: 12000 },
-  ]);
-  const [expenses, setExpenses] = useState<MoneyLine[]>([
-    { id: "housing", label: "Housing / Mortgage", amount: 20000 },
-    { id: "utilities", label: "Utilities", amount: 4500 },
-    { id: "transport", label: "Transport", amount: 6500 },
-    { id: "food", label: "Food & essentials", amount: 12000 },
-    { id: "staff", label: "Staff / Support", amount: 8000 },
-    { id: "other", label: "Other", amount: 3500 },
-  ]);
-
-  const totalIncome = useMemo(
-    () => incomes.reduce((sum, line) => sum + (Number.isFinite(line.amount) ? line.amount : 0), 0),
-    [incomes]
-  );
-  const totalExpenses = useMemo(
-    () => expenses.reduce((sum, line) => sum + (Number.isFinite(line.amount) ? line.amount : 0), 0),
-    [expenses]
-  );
-  const net = totalIncome - totalExpenses;
-  const coverageRatio = totalExpenses > 0 ? totalIncome / totalExpenses : 0;
-  const freedomScore = totalExpenses > 0 ? Math.max(0, (totalIncome - totalExpenses) / totalExpenses) : 0;
-  const salaryLine = incomes.find((line) => line.label.toLowerCase().includes("salary"));
-  const salaryCovers = salaryLine ? salaryLine.amount >= totalExpenses : false;
-  const monthlySeries = useMemo(() => buildMonthlySeries(totalIncome, totalExpenses), [totalIncome, totalExpenses]);
 
   const updateLine = (
     setter: React.Dispatch<React.SetStateAction<MoneyLine[]>>,
