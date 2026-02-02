@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { FiDownload } from "react-icons/fi";
 import { getWhatsAppUrl } from "@/data/work";
 import {
   buildShopWhatsAppMessageForLines,
@@ -528,6 +529,19 @@ export default function ShopClient() {
                     <div className="flex h-full w-full items-center justify-center text-xs text-neutral-400">
                       No photo
                     </div>
+                  )}
+                  {item.photoUrl && (
+                    <a
+                      href={item.photoUrl}
+                      download
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-neutral-700 shadow-sm ring-1 ring-neutral-200 backdrop-blur transition hover:scale-105 hover:bg-white"
+                      aria-label={`Download ${item.title} photo`}
+                      title="Download image"
+                    >
+                      <FiDownload className="h-4 w-4" />
+                    </a>
                   )}
                   {!item.inStock && (
                     <span className="absolute left-3 top-3 rounded-full bg-black px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white">
