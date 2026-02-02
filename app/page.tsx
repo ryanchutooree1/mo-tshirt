@@ -434,8 +434,8 @@ export default function HomePage() {
         <div className="mx-auto max-w-6xl text-center">
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-neutral-600">
             <a href="#our-work" className="transition hover:text-black">Our Work</a>
-            <a href="#" className="transition hover:text-black">Terms</a>
-            <a href="#" className="transition hover:text-black">Privacy</a>
+            <a href="/terms" className="transition hover:text-black">Terms</a>
+            <a href="/privacy" className="transition hover:text-black">Privacy</a>
             <a href="https://www.instagram.com/mo_tshirt_printing/" target="_blank" rel="noopener noreferrer" className="transition hover:text-black">
               Instagram
             </a>
