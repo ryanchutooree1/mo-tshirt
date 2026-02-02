@@ -10,6 +10,7 @@ const SHOP_ITEM: NavItem = { href: "/admin/shops", label: "Shops" };
 const NOTES_ITEM: NavItem = { href: "/admin/business-notes", label: "Business Notes" };
 const DETAILS_ITEM: NavItem = { href: "/admin/business-details", label: "Business Details" };
 const QUOTE_ITEM: NavItem = { href: "/admin/quotation-approval", label: "Quotation / Invoice" };
+const FINANCE_ITEM: NavItem = { href: "/admin/finance-freedom", label: "Finance Freedom" };
 
 // Default nav groupings
 const DEFAULT_TOP: NavItem[] = [
@@ -20,6 +21,7 @@ const DEFAULT_TOP: NavItem[] = [
   QUOTE_ITEM,
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/accounting", label: "Accounting" },
+  FINANCE_ITEM,
   { href: "/admin/dms", label: "DMS" },
   NOTES_ITEM,
   DETAILS_ITEM,
@@ -43,10 +45,13 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
   const moreHasDetails = more.some((item) => item.href === DETAILS_ITEM.href);
   const topHasQuote = top.some((item) => item.href === QUOTE_ITEM.href);
   const moreHasQuote = more.some((item) => item.href === QUOTE_ITEM.href);
+  const topHasFinance = top.some((item) => item.href === FINANCE_ITEM.href);
+  const moreHasFinance = more.some((item) => item.href === FINANCE_ITEM.href);
   const cleanedTop = top.filter(
     (item) =>
       item.href !== SHOP_ITEM.href &&
       item.href !== QUOTE_ITEM.href &&
+      item.href !== FINANCE_ITEM.href &&
       (item.href !== NOTES_ITEM.href || topHasNotes) &&
       (item.href !== DETAILS_ITEM.href || topHasDetails)
   );
@@ -54,6 +59,7 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
     (item) =>
       item.href !== SHOP_ITEM.href &&
       item.href !== QUOTE_ITEM.href &&
+      item.href !== FINANCE_ITEM.href &&
       (item.href !== NOTES_ITEM.href || !topHasNotes) &&
       (item.href !== DETAILS_ITEM.href || !topHasDetails)
   );
@@ -70,6 +76,14 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
       nextTop.splice(shopIndex + 1, 0, QUOTE_ITEM);
     } else {
       nextTop.push(QUOTE_ITEM);
+    }
+  }
+  if (topHasFinance || (!topHasFinance && !moreHasFinance)) {
+    const accountingIndex = nextTop.findIndex((item) => item.href === "/admin/accounting");
+    if (accountingIndex >= 0) {
+      nextTop.splice(accountingIndex + 1, 0, FINANCE_ITEM);
+    } else {
+      nextTop.push(FINANCE_ITEM);
     }
   }
   if (!topHasNotes && !moreHasNotes) {
@@ -96,6 +110,9 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
   const nextMore = cleanedMore.slice();
   if (moreHasQuote) {
     nextMore.push(QUOTE_ITEM);
+  }
+  if (moreHasFinance) {
+    nextMore.push(FINANCE_ITEM);
   }
   return { top: nextTop, more: nextMore };
 }
