@@ -135,6 +135,28 @@ export default function ShopClient() {
   });
   const [isOrderOpen, setIsOrderOpen] = useState(false);
 
+  const handleDownloadImage = async (url: string, title: string) => {
+    const safeName = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") || "tshirt";
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `${safeName}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      window.location.href = url;
+    }
+  };
+
   useEffect(() => {
     let active = true;
     (async () => {
@@ -531,17 +553,15 @@ export default function ShopClient() {
                     </div>
                   )}
                   {item.photoUrl && (
-                    <a
-                      href={item.photoUrl}
-                      download
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadImage(item.photoUrl, item.title)}
                       className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-neutral-700 shadow-sm ring-1 ring-neutral-200 backdrop-blur transition hover:scale-105 hover:bg-white"
                       aria-label={`Download ${item.title} photo`}
                       title="Download image"
                     >
                       <FiDownload className="h-4 w-4" />
-                    </a>
+                    </button>
                   )}
                   {!item.inStock && (
                     <span className="absolute left-3 top-3 rounded-full bg-black px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white">
