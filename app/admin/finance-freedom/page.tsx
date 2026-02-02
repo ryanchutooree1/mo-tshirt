@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -12,6 +12,8 @@ import {
   YAxis,
 } from "recharts";
 import { FiPlus, FiTrash2 } from "react-icons/fi";
+import { doc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 type MoneyLine = {
   id: string;
@@ -20,8 +22,6 @@ type MoneyLine = {
 };
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-const STORAGE_KEY = "finance-freedom-v1";
 
 const DEFAULT_INCOMES: MoneyLine[] = [
   { id: "salary", label: "Salary", amount: 55000 },
@@ -37,6 +37,8 @@ const DEFAULT_EXPENSES: MoneyLine[] = [
   { id: "staff", label: "Staff / Support", amount: 8000 },
   { id: "other", label: "Other", amount: 3500 },
 ];
+
+const FINANCE_DOC_REF = doc(db, "adminSettings", "financeFreedom");
 
 const formatCurrency = (value: number) => `Rs ${Math.round(value || 0).toLocaleString()}`;
 
@@ -60,13 +62,28 @@ const buildMonthlySeries = (income: number, expenses: number) => {
   });
 };
 
+const normalizeLines = (lines: unknown, fallback: MoneyLine[], prefix: string) => {
+  if (!Array.isArray(lines) || !lines.length) return fallback;
+  return lines.map((line, index) => ({
+    id: String((line as MoneyLine)?.id || `${prefix}-${index}`),
+    label: String((line as MoneyLine)?.label || "Item"),
+    amount: Number.isFinite(Number((line as MoneyLine)?.amount))
+      ? Number((line as MoneyLine)?.amount)
+      : 0,
+  }));
+};
+
 export default function FinanceFreedomPage() {
   const [unlocked, setUnlocked] = useState(false);
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [incomes, setIncomes] = useState<MoneyLine[]>(DEFAULT_INCOMES);
   const [expenses, setExpenses] = useState<MoneyLine[]>(DEFAULT_EXPENSES);
-  const [hydrated, setHydrated] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const hasLoadedRef = useRef(false);
+  const skipSaveRef = useRef(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
 
   const totalIncome = useMemo(
     () => incomes.reduce((sum, line) => sum + (Number.isFinite(line.amount) ? line.amount : 0), 0),
@@ -147,28 +164,58 @@ export default function FinanceFreedomPage() {
   };
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed?.incomes)) {
-          setIncomes(parsed.incomes as MoneyLine[]);
+    const unsub = onSnapshot(
+      FINANCE_DOC_REF,
+      (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          skipSaveRef.current = true;
+          setIncomes(normalizeLines(data?.incomes, DEFAULT_INCOMES, "income"));
+          setExpenses(normalizeLines(data?.expenses, DEFAULT_EXPENSES, "expense"));
         }
-        if (Array.isArray(parsed?.expenses)) {
-          setExpenses(parsed.expenses as MoneyLine[]);
-        }
+        hasLoadedRef.current = true;
+        setSyncStatus("idle");
+      },
+      () => {
+        hasLoadedRef.current = true;
+        setSyncStatus("error");
       }
-    } catch {}
-    setHydrated(true);
+    );
+    return () => unsub();
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ incomes, expenses }));
-    } catch {}
-  }, [hydrated, incomes, expenses]);
+    if (!hasLoadedRef.current) return;
+    if (skipSaveRef.current) {
+      skipSaveRef.current = false;
+      return;
+    }
+    setSyncStatus("saving");
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        await setDoc(
+          FINANCE_DOC_REF,
+          {
+            incomes,
+            expenses,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+        setSyncStatus("saved");
+      } catch {
+        setSyncStatus("error");
+      }
+    }, 600);
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, [incomes, expenses]);
 
   return (
     <main className="min-h-screen bg-[#f7f7fb] text-slate-900">
@@ -186,12 +233,25 @@ export default function FinanceFreedomPage() {
                 Track income streams, compare against monthly bills, and prove that green covers red.
               </p>
             </div>
-            <div className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700">
-              {salaryLine ? (
-                salaryCovers ? "Salary covers every month's expenses" : "Salary does not fully cover expenses"
-              ) : (
-                "Add a salary line to measure coverage"
-              )}
+            <div className="flex flex-col items-end gap-2">
+              <div className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700">
+                {salaryLine ? (
+                  salaryCovers ? "Salary covers every month's expenses" : "Salary does not fully cover expenses"
+                ) : (
+                  "Add a salary line to measure coverage"
+                )}
+              </div>
+              <div
+                className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                  syncStatus === "error"
+                    ? "border-rose-200 bg-rose-50 text-rose-600"
+                    : syncStatus === "saving"
+                      ? "border-amber-200 bg-amber-50 text-amber-700"
+                      : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                }`}
+              >
+                {syncStatus === "saving" ? "Saving..." : syncStatus === "error" ? "Save failed" : "Saved"}
+              </div>
             </div>
           </div>
 
