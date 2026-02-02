@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -20,6 +20,23 @@ type MoneyLine = {
 };
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+const STORAGE_KEY = "finance-freedom-v1";
+
+const DEFAULT_INCOMES: MoneyLine[] = [
+  { id: "salary", label: "Salary", amount: 55000 },
+  { id: "business", label: "Business income", amount: 35000 },
+  { id: "rent", label: "Rent income", amount: 12000 },
+];
+
+const DEFAULT_EXPENSES: MoneyLine[] = [
+  { id: "housing", label: "Housing / Mortgage", amount: 20000 },
+  { id: "utilities", label: "Utilities", amount: 4500 },
+  { id: "transport", label: "Transport", amount: 6500 },
+  { id: "food", label: "Food & essentials", amount: 12000 },
+  { id: "staff", label: "Staff / Support", amount: 8000 },
+  { id: "other", label: "Other", amount: 3500 },
+];
 
 const formatCurrency = (value: number) => `Rs ${Math.round(value || 0).toLocaleString()}`;
 
@@ -47,19 +64,9 @@ export default function FinanceFreedomPage() {
   const [unlocked, setUnlocked] = useState(false);
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [incomes, setIncomes] = useState<MoneyLine[]>([
-    { id: "salary", label: "Salary", amount: 55000 },
-    { id: "business", label: "Business income", amount: 35000 },
-    { id: "rent", label: "Rent income", amount: 12000 },
-  ]);
-  const [expenses, setExpenses] = useState<MoneyLine[]>([
-    { id: "housing", label: "Housing / Mortgage", amount: 20000 },
-    { id: "utilities", label: "Utilities", amount: 4500 },
-    { id: "transport", label: "Transport", amount: 6500 },
-    { id: "food", label: "Food & essentials", amount: 12000 },
-    { id: "staff", label: "Staff / Support", amount: 8000 },
-    { id: "other", label: "Other", amount: 3500 },
-  ]);
+  const [incomes, setIncomes] = useState<MoneyLine[]>(DEFAULT_INCOMES);
+  const [expenses, setExpenses] = useState<MoneyLine[]>(DEFAULT_EXPENSES);
+  const [hydrated, setHydrated] = useState(false);
 
   const totalIncome = useMemo(
     () => incomes.reduce((sum, line) => sum + (Number.isFinite(line.amount) ? line.amount : 0), 0),
@@ -138,6 +145,30 @@ export default function FinanceFreedomPage() {
   const removeLine = (setter: React.Dispatch<React.SetStateAction<MoneyLine[]>>, id: string) => {
     setter((prev) => prev.filter((line) => line.id !== id));
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed?.incomes)) {
+          setIncomes(parsed.incomes as MoneyLine[]);
+        }
+        if (Array.isArray(parsed?.expenses)) {
+          setExpenses(parsed.expenses as MoneyLine[]);
+        }
+      }
+    } catch {}
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ incomes, expenses }));
+    } catch {}
+  }, [hydrated, incomes, expenses]);
 
   return (
     <main className="min-h-screen bg-[#f7f7fb] text-slate-900">
