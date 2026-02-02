@@ -14,16 +14,13 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <main className="px-6 md:px-8 py-20 mx-auto max-w-3xl space-y-10">
-      <div>
+      <header className="space-y-4">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:border-neutral-300 hover:bg-neutral-50"
+          className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500 transition hover:text-black"
         >
           ← Back to Home
         </Link>
-      </div>
-
-      <header className="space-y-3">
         <h1 className="text-3xl md:text-4xl font-extrabold">Privacy Policy</h1>
         <p className="text-sm text-neutral-600">Last updated: February 2026</p>
         <p className="text-neutral-700">

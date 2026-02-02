@@ -54,25 +54,27 @@ export default function ContactClient() {
 
   return (
     <section className="px-6 md:px-8 py-20 mx-auto max-w-3xl">
-      <div className="mb-6">
+      <header className="space-y-4 mb-8">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-gray-300 hover:bg-gray-50"
+          className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-gray-500 transition hover:text-black"
         >
           ← Back to Home
         </Link>
-      </div>
-      <h1 className="text-3xl font-extrabold mb-4">Contact us</h1>
-      <p className="text-gray-700 mb-6">
-        Send us your artwork or questions. We reply quickly. Or message us on WhatsApp.
-      </p>
-      <p className="text-sm text-gray-600 mb-8">
-        Need a quick overview? See{" "}
-        <Link href="/" className="underline decoration-orange-400 underline-offset-4 hover:text-black">
-          Custom T-shirts Mauritius
-        </Link>{" "}
-        on our homepage.
-      </p>
+        <div className="space-y-3">
+          <h1 className="text-3xl font-extrabold">Contact us</h1>
+          <p className="text-gray-700">
+            Send us your artwork or questions. We reply quickly. Or message us on WhatsApp.
+          </p>
+          <p className="text-sm text-gray-600">
+            Need a quick overview? See{" "}
+            <Link href="/" className="underline decoration-orange-400 underline-offset-4 hover:text-black">
+              Custom T-shirts Mauritius
+            </Link>{" "}
+            on our homepage.
+          </p>
+        </div>
+      </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
         <form className="space-y-4" onSubmit={handleSubmit}>
