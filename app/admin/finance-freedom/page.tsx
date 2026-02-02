@@ -44,6 +44,54 @@ const buildMonthlySeries = (income: number, expenses: number) => {
 };
 
 export default function FinanceFreedomPage() {
+  const [unlocked, setUnlocked] = useState(false);
+  const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  const handleUnlock = () => {
+    if (password.trim() === "godlove") {
+      setUnlocked(true);
+      setPassword("");
+      setPasswordError(null);
+      return;
+    }
+    setPasswordError("Incorrect password.");
+  };
+
+  if (!unlocked) {
+    return (
+      <main className="min-h-screen bg-[#f7f7fb] text-slate-900">
+        <div className="flex min-h-screen items-center justify-center px-6">
+          <div className="w-full max-w-sm rounded-[28px] border border-slate-200 bg-white/90 p-6 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Finance Freedom</p>
+            <h1 className="mt-3 text-2xl font-semibold tracking-tight">Enter password</h1>
+            <p className="mt-2 text-sm text-slate-600">This page is protected.</p>
+            <div className="mt-5 space-y-3">
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (passwordError) setPasswordError(null);
+                }}
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-black focus:outline-none"
+                placeholder="Password"
+              />
+              {passwordError && <p className="text-xs text-rose-600">{passwordError}</p>}
+              <button
+                type="button"
+                onClick={handleUnlock}
+                className="inline-flex w-full items-center justify-center rounded-full bg-black px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-900"
+              >
+                Unlock
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   const [incomes, setIncomes] = useState<MoneyLine[]>([
     { id: "salary", label: "Salary", amount: 55000 },
     { id: "business", label: "Business income", amount: 35000 },
