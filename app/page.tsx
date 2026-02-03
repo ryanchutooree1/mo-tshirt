@@ -131,13 +131,13 @@ export default function HomePage() {
     <div id="top" className="min-h-screen bg-white text-black">
       <LocationJump />
       <header className="sticky top-0 z-40 border-b border-[#EAEAEA] bg-white/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-6 py-2 sm:grid sm:grid-cols-[auto,1fr,auto] sm:items-center sm:gap-5 sm:py-2">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-6 py-3 sm:grid sm:grid-cols-[auto,1fr,auto] sm:items-center sm:gap-6 sm:py-4">
           <Link href="#top" className="flex items-center justify-start" aria-label="MO T-SHIRT Home">
-            <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={140} height={48} priority className="h-8 w-auto sm:h-9" />
+            <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={150} height={60} priority className="h-9 w-auto sm:h-12" />
           </Link>
           <nav
             aria-label="Primary"
-            className="flex flex-wrap items-center justify-center gap-3 text-[11px] font-semibold text-black/70 sm:gap-5 sm:text-xs sm:font-medium"
+            className="flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-black/70 sm:gap-6 sm:text-sm sm:font-medium"
           >
             {navLinks.map((link) => (
               <a
@@ -154,7 +154,7 @@ export default function HomePage() {
           <div className="flex items-center justify-center sm:justify-end">
             <a
               href="#contact"
-              className="inline-flex items-center justify-center rounded-full bg-black px-4 py-1.5 text-[11px] font-semibold text-white transition hover:bg-neutral-800 sm:text-xs"
+              className="inline-flex items-center justify-center rounded-full bg-black px-5 py-2 text-xs font-semibold text-white transition hover:bg-neutral-800 sm:text-sm"
             >
               Get a Quote
             </a>

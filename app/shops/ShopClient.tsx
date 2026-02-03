@@ -210,32 +210,6 @@ export default function ShopClient() {
     return sortSizes(Array.from(set));
   }, [items]);
 
-  const stats = [
-    { label: "Styles", value: items.length },
-    { label: "Colors", value: availableColors.length },
-    { label: "Sizes", value: availableSizes.length },
-  ];
-
-  const filtersActive =
-    selectedProduct !== "all" || selectedColor !== "all" || selectedSize !== "all";
-  const activeFilters = [
-    selectedProduct !== "all"
-      ? { type: "Product", value: selectedProduct, onClear: () => setSelectedProduct("all") }
-      : null,
-    selectedColor !== "all"
-      ? { type: "Color", value: selectedColor, onClear: () => setSelectedColor("all") }
-      : null,
-    selectedSize !== "all"
-      ? { type: "Size", value: selectedSize, onClear: () => setSelectedSize("all") }
-      : null,
-  ].filter(Boolean) as { type: string; value: string; onClear: () => void }[];
-
-  const clearFilters = () => {
-    setSelectedProduct("all");
-    setSelectedColor("all");
-    setSelectedSize("all");
-  };
-
   const filtered = useMemo(() => {
     let next = items.slice();
     next.sort((a, b) => (b.position || 0) - (a.position || 0));
@@ -250,8 +224,6 @@ export default function ShopClient() {
     }
     return next;
   }, [items, selectedProduct, selectedColor, selectedSize]);
-
-  const resultsSummary = `${filtered.length} of ${items.length} items`;
 
   const totalQty = useMemo(
     () => orderLines.reduce((sum, line) => sum + line.quantity, 0),
@@ -336,7 +308,6 @@ export default function ShopClient() {
         deliveryInfo.address.trim() &&
         deliveryInfo.phone.trim()
     );
-  const deliveryInfoMissing = deliveryInfoRequired && !deliveryInfoValid;
   const canOrder = orderLines.length > 0 && deliveryInfoValid;
 
   const orderMessage = useMemo(
@@ -431,11 +402,11 @@ export default function ShopClient() {
         <div className="pointer-events-none absolute bottom-[-8rem] left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-slate-100/70 blur-3xl" />
 
         <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white/80 backdrop-blur">
-          <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-6 py-2 sm:grid sm:grid-cols-[auto,1fr,auto] sm:items-center sm:gap-5 sm:py-2">
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-6 py-3 sm:grid sm:grid-cols-[auto,1fr,auto] sm:items-center sm:gap-6 sm:py-4">
             <Link href="/" className="flex items-center justify-start gap-2" aria-label="MO T-SHIRT Home">
-              <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={140} height={48} className="h-8 w-auto sm:h-9" />
+              <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={140} height={48} className="h-9 w-auto" />
             </Link>
-            <nav className="flex flex-wrap items-center justify-center gap-3 text-[11px] font-semibold text-neutral-600 sm:gap-5 sm:text-xs">
+            <nav className="flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-neutral-600 sm:gap-6 sm:text-sm">
               <Link href="/" className="transition hover:text-black">Home</Link>
               <Link href="/shops" className="transition hover:text-black">Plain Shops</Link>
               <Link href="/work" className="transition hover:text-black">Our Work</Link>
@@ -448,7 +419,7 @@ export default function ShopClient() {
               <button
                 type="button"
                 onClick={() => setIsOrderOpen(true)}
-                className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-1.5 text-[11px] font-semibold text-white transition hover:bg-neutral-800 sm:text-xs"
+                className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-xs font-semibold text-white transition hover:bg-neutral-800 sm:text-sm"
               >
                 <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-white/20 px-2 text-[11px]">
                   {totalQty}
@@ -474,14 +445,6 @@ export default function ShopClient() {
                     <span className="rounded-full border border-neutral-200 bg-white px-3 py-1">WhatsApp confirmation</span>
                     <span className="rounded-full border border-neutral-200 bg-white px-3 py-1">Local delivery options</span>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    {stats.map((stat) => (
-                      <div key={stat.label} className="rounded-2xl border border-neutral-200 bg-white px-4 py-3 shadow-sm">
-                        <p className="text-[11px] uppercase tracking-[0.24em] text-neutral-400">{stat.label}</p>
-                        <p className="mt-1 text-lg font-semibold text-neutral-900">{stat.value}</p>
-                      </div>
-                    ))}
-                  </div>
                 </div>
                 <div className="rounded-[24px] border border-neutral-200 bg-gradient-to-br from-white via-slate-50 to-zinc-100 px-5 py-4 shadow-sm">
                   <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">How it works</p>
@@ -494,26 +457,12 @@ export default function ShopClient() {
               </div>
             </section>
 
-            <section className="flex flex-col gap-4 rounded-[28px] border border-neutral-200 bg-white/80 p-4 shadow-sm sm:p-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-neutral-800">Filters</p>
-                  <p className="text-xs text-neutral-500">Refine by product, color, or size.</p>
-                </div>
-                <div className="flex items-center gap-2 text-xs font-semibold text-neutral-600">
-                  <span className="rounded-full bg-neutral-100 px-3 py-1">{resultsSummary}</span>
-                  {filtersActive && (
-                    <button
-                      type="button"
-                      onClick={clearFilters}
-                      className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-[11px] font-semibold text-neutral-600 transition hover:border-neutral-300 hover:bg-neutral-50"
-                    >
-                      Clear filters
-                    </button>
-                  )}
-                </div>
+            <section className="flex flex-col gap-4 rounded-[28px] border border-neutral-200 bg-white/80 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+              <div>
+                <p className="text-sm font-medium text-neutral-800">Filters</p>
+                <p className="text-xs text-neutral-500">Refine by product, color, or size.</p>
               </div>
-              <div className="grid w-full gap-3 sm:grid-cols-3">
+              <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-3">
                 <label className="text-xs font-medium text-neutral-600">
                   Product
                   <select
@@ -554,22 +503,6 @@ export default function ShopClient() {
                   </select>
                 </label>
               </div>
-              {filtersActive && (
-                <div className="flex flex-wrap gap-2 text-xs font-semibold text-neutral-600">
-                  {activeFilters.map((filter) => (
-                    <button
-                      key={`${filter.type}-${filter.value}`}
-                      type="button"
-                      onClick={filter.onClear}
-                      className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1 transition hover:border-neutral-300 hover:bg-neutral-50"
-                    >
-                      <span className="text-[10px] uppercase tracking-[0.2em] text-neutral-400">{filter.type}</span>
-                      <span className="text-neutral-700">{filter.value}</span>
-                      <span className="text-neutral-400">×</span>
-                    </button>
-                  ))}
-                </div>
-              )}
             </section>
 
             {error && (
@@ -591,19 +524,6 @@ export default function ShopClient() {
               };
             const sizePrice = getSizePrice(item, selection.size);
             const displayColor = selection.color || item.colors[0] || "Color";
-            const minPrice = sizePrices.length ? Math.min(...sizePrices.map((entry) => entry.price)) : null;
-            const maxPrice = sizePrices.length ? Math.max(...sizePrices.map((entry) => entry.price)) : null;
-            const priceRange =
-              minPrice === null || maxPrice === null
-                ? sizePrice
-                  ? money(sizePrice)
-                  : "Pricing on request"
-                : minPrice === maxPrice
-                  ? money(minPrice)
-                  : `${money(minPrice)} – ${money(maxPrice)}`;
-            const rawQty = selection.quantity === "" ? 1 : Number(selection.quantity);
-            const qtyValue = Number.isFinite(rawQty) ? Math.max(1, rawQty) : 1;
-            const addLabel = qtyValue > 1 ? `Add ${qtyValue} to order` : "Add to order";
             return (
               <article key={item.id} className="group rounded-[28px] border border-neutral-200 bg-white/90 p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
                 <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-neutral-100">
@@ -637,23 +557,14 @@ export default function ShopClient() {
                   )}
                 </div>
 
-                <div className="mt-4 space-y-4">
-                  <div className="space-y-2">
+                <div className="mt-4 space-y-3">
+                  <div>
                     <h2 className="flex flex-wrap items-center gap-2 text-lg font-semibold text-black">
                       <span className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
                         {displayColor}
                       </span>
                       <span>{item.title}</span>
                     </h2>
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-500">
-                      <span className="uppercase tracking-[0.2em] text-neutral-400">From {priceRange}</span>
-                      <span>{sizes.length} sizes · {item.colors.length || 0} colors</span>
-                    </div>
-                    {!item.inStock && (
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-neutral-400">
-                        Currently out of stock
-                      </p>
-                    )}
                   </div>
 
                   <div className="flex flex-wrap gap-2 text-xs text-neutral-600">
@@ -663,7 +574,6 @@ export default function ShopClient() {
                           key={entry.size}
                           type="button"
                           onClick={() => updateSelection(item.id, { size: entry.size })}
-                          aria-pressed={selection.size === entry.size}
                           className={`rounded-full border px-3 py-1 transition ${
                             selection.size === entry.size
                               ? "border-black bg-black text-white"
@@ -703,52 +613,28 @@ export default function ShopClient() {
                         ))}
                       </select>
                     </label>
-                  </div>
-
-                  <div className="grid gap-3 text-xs text-neutral-600 sm:grid-cols-2">
+                    <label className="flex flex-col gap-2">
+                      Qty
+                      <input
+                        type="number"
+                        min={1}
+                        value={selection.quantity}
+                        onChange={(e) =>
+                          updateSelection(item.id, {
+                            quantity:
+                              e.target.value === ""
+                                ? ""
+                                : Math.max(1, Number(e.target.value)),
+                          })
+                        }
+                        className="rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+                      />
+                    </label>
                     <div className="flex flex-col gap-2">
-                      <span>Qty</span>
-                      <div className="flex items-center justify-between rounded-2xl border border-neutral-200 bg-white px-2 py-2">
-                        <button
-                          type="button"
-                          onClick={() => updateSelection(item.id, { quantity: Math.max(1, qtyValue - 1) })}
-                          disabled={!item.inStock || qtyValue <= 1}
-                          className="h-8 w-8 rounded-full border border-neutral-200 text-sm font-semibold text-neutral-700 transition hover:border-neutral-400 disabled:cursor-not-allowed disabled:opacity-40"
-                          aria-label="Decrease quantity"
-                        >
-                          -
-                        </button>
-                        <input
-                          type="number"
-                          min={1}
-                          value={selection.quantity}
-                          onChange={(e) =>
-                            updateSelection(item.id, {
-                              quantity:
-                                e.target.value === ""
-                                  ? ""
-                                  : Math.max(1, Number(e.target.value)),
-                            })
-                          }
-                          className="w-12 border-0 bg-transparent text-center text-sm font-semibold text-neutral-900 focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => updateSelection(item.id, { quantity: qtyValue + 1 })}
-                          disabled={!item.inStock}
-                          className="h-8 w-8 rounded-full border border-neutral-200 text-sm font-semibold text-neutral-700 transition hover:border-neutral-400 disabled:cursor-not-allowed disabled:opacity-40"
-                          aria-label="Increase quantity"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <span>Selected price</span>
+                      <span>Price (selected size)</span>
                       <div className="flex items-center rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm font-semibold text-neutral-900">
                         {money(sizePrice)}
                       </div>
-                      <span className="text-[11px] text-neutral-400">Est. line total {money(sizePrice * qtyValue)}</span>
                     </div>
                   </div>
 
@@ -757,9 +643,9 @@ export default function ShopClient() {
                       type="button"
                       onClick={() => addLineItem(item)}
                       disabled={!item.inStock}
-                      className="inline-flex w-full items-center justify-center rounded-full border border-black px-4 py-2 text-xs font-semibold text-black transition hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex items-center justify-center rounded-full border border-black px-4 py-2 text-xs font-semibold text-black transition hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {item.inStock ? addLabel : "Out of stock"}
+                      Add to order
                     </button>
                   </div>
                 </div>
@@ -770,16 +656,7 @@ export default function ShopClient() {
 
         {!filtered.length && !error && (
           <div className="mt-12 rounded-[24px] border border-neutral-200 bg-neutral-50 px-6 py-10 text-center text-sm text-neutral-600">
-            <p>No items match those filters yet.</p>
-            {filtersActive && (
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="mt-4 inline-flex items-center justify-center rounded-full border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-100"
-              >
-                Clear filters
-              </button>
-            )}
+            No items match those filters yet.
           </div>
         )}
       </main>
@@ -821,9 +698,6 @@ export default function ShopClient() {
               <p className="text-xs uppercase tracking-[0.2em] text-orange-500">Order</p>
               <h3 className="text-base font-semibold">Order list</h3>
               <span className="text-xs text-neutral-500">{orderItemsSummary}</span>
-              <div className="mt-2 inline-flex items-center rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-[11px] font-semibold text-neutral-600">
-                {deliveryMethod}
-              </div>
             </div>
             <button
               type="button"
@@ -937,11 +811,6 @@ export default function ShopClient() {
           )}
 
           <div className="mt-5 space-y-3">
-            {deliveryInfoMissing && (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700">
-                Add delivery name, address, and phone to continue.
-              </div>
-            )}
             <a
               href={getWhatsAppUrl(orderMessage)}
               target="_blank"
