@@ -337,21 +337,23 @@ export default function HomePage() {
             </div>
 
             <div id="location" className="mx-auto mt-12 max-w-5xl scroll-mt-24 sm:scroll-mt-28">
-              <h2 className="text-center text-3xl font-semibold text-black mb-4 sm:text-4xl">Our Location📍</h2>
-              <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
-                <MapCard />
+              <div className="space-y-6 sm:space-y-7">
+                <h2 className="text-center text-3xl font-semibold text-black sm:text-4xl">Our Location📍</h2>
+                <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+                  <MapCard />
+                </div>
+                <div className="flex justify-center">
+                  <a
+                    href="https://maps.app.goo.gl/dBwPF4mC2xnPYtP2A"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center rounded-full bg-black px-5 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800"
+                  >
+                    Open Google Maps
+                  </a>
+                </div>
               </div>
-              <div className="mt-4 flex justify-center">
-                <a
-                  href="https://maps.app.goo.gl/dBwPF4mC2xnPYtP2A"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center rounded-full bg-black px-5 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800"
-                >
-                  Open Google Maps
-                </a>
-              </div>
-              <div className="relative mt-5 overflow-hidden rounded-[28px] border border-[#EAEAEA] bg-gradient-to-br from-[#FFF3E8] via-white to-[#F6F7FB] px-5 py-5 text-center shadow-sm">
+              <div className="relative mt-8 overflow-hidden rounded-[28px] border border-[#EAEAEA] bg-gradient-to-br from-[#FFF3E8] via-white to-[#F6F7FB] px-5 py-5 text-center shadow-sm">
                 <div className="pointer-events-none absolute -top-10 right-6 h-24 w-24 rounded-full bg-orange-100/70 blur-2xl" aria-hidden="true" />
                 <div className="pointer-events-none absolute -bottom-10 left-6 h-24 w-24 rounded-full bg-orange-100/60 blur-2xl" aria-hidden="true" />
                 <div className="relative flex flex-col items-center justify-center gap-4 text-sm font-semibold text-neutral-700 sm:flex-row sm:gap-8 sm:text-base">
