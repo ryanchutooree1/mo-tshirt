@@ -427,18 +427,15 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                     placeholder="Your Delivery Address"
                   />
                 </div>
-                <div className="relative">
+                <div>
                   <input
                     value={form.deliveryPostCode}
                     onChange={(e) => handleDeliveryPostCodeChange(e.target.value)}
-                    className={`w-full rounded-lg border bg-white px-3 py-2 pr-20 text-sm focus:outline-none ${
+                    className={`w-full rounded-lg border bg-white px-3 py-2 text-sm focus:outline-none ${
                       deliveryPostCodeError ? "border-red-400 focus:border-red-500" : "border-neutral-200 focus:border-black"
                     }`}
-                    placeholder="Post Code"
+                    placeholder="Post Code (optional)"
                   />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-emerald-600">
-                    (Optional)
-                  </span>
                   {deliveryPostCodeError && <p className="mt-1 text-xs text-red-600">{deliveryPostCodeError}</p>}
                 </div>
               </div>
