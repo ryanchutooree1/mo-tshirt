@@ -49,7 +49,11 @@ export type ShopSelection = {
   color: string;
   size: string;
   quantity: number;
-  deliveryMethod: "Surinam pickup" | "Post Office delivery";
+  deliveryMethod:
+    | "Surinam pickup"
+    | "Post Office Postage Delivery"
+    | "Post Office Express Delivery"
+    | "Delivery (Need to arrange first)";
 };
 
 export type ShopOrderLine = {
@@ -256,7 +260,7 @@ export function buildShopWhatsAppMessageForLines(
     });
   }
   message.push(`Delivery: ${deliveryMethod}`);
-  if (deliveryMethod === "Post Office delivery" && deliveryInfo) {
+  if (deliveryMethod !== "Surinam pickup" && deliveryInfo) {
     message.push("Delivery Info:");
     message.push(`Name: ${deliveryInfo.name}`);
     message.push(`Address: ${deliveryInfo.address}`);
@@ -267,7 +271,7 @@ export function buildShopWhatsAppMessageForLines(
       message.push(`Subtotal: Rs ${Number(totals.subtotal || 0).toLocaleString()}`);
     }
     if (Number.isFinite(totals.deliveryFee) && (totals.deliveryFee || 0) > 0) {
-      message.push(`Post Office Delivery: Rs ${Number(totals.deliveryFee || 0).toLocaleString()}`);
+      message.push(`Delivery fee (${deliveryMethod}): Rs ${Number(totals.deliveryFee || 0).toLocaleString()}`);
     }
     if (Number.isFinite(totals.total)) {
       message.push(`Total: Rs ${Number(totals.total || 0).toLocaleString()}`);

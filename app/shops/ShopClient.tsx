@@ -19,10 +19,11 @@ import {
   type ShopSelection,
 } from "@/lib/shops";
 
-const DELIVERY_FEE = 100;
 const DELIVERY_METHODS = [
-  { value: "Surinam pickup", label: "Surinam pickup (Free)" },
-  { value: "Post Office delivery", label: `Post Office Delivery (Rs ${DELIVERY_FEE})` },
+  { value: "Surinam pickup", label: "Surinam Pickup (Free)", fee: 0 },
+  { value: "Post Office Postage Delivery", label: "Post Office Postage Delivery (Rs 100)", fee: 100 },
+  { value: "Post Office Express Delivery", label: "Post Office Express Delivery (Rs 150)", fee: 150 },
+  { value: "Delivery (Need to arrange first)", label: "Delivery (Need to arrange first)", fee: 0 },
 ] as const;
 
 const money = (value: number) => `Rs ${Number(value || 0).toLocaleString()}`;
@@ -260,10 +261,9 @@ export default function ShopClient() {
     });
   }, [orderLines, itemsById]);
 
+  const selectedDelivery = DELIVERY_METHODS.find((method) => method.value === deliveryMethod);
   const deliveryFeeTotal =
-    orderLines.length > 0 && deliveryMethod === "Post Office delivery"
-      ? DELIVERY_FEE
-      : 0;
+    orderLines.length > 0 ? Number(selectedDelivery?.fee || 0) : 0;
   const totalPrice = subtotal + deliveryFeeTotal;
   const orderItemsSummary = orderLines.length
     ? `${orderLines.length} item${orderLines.length === 1 ? "" : "s"} · ${totalQty} qty`
@@ -300,7 +300,7 @@ export default function ShopClient() {
     });
   }, [orderLines]);
 
-  const deliveryInfoRequired = deliveryMethod === "Post Office delivery";
+  const deliveryInfoRequired = deliveryMethod !== "Surinam pickup";
   const deliveryInfoValid =
     !deliveryInfoRequired ||
     Boolean(
@@ -749,7 +749,7 @@ export default function ShopClient() {
             </div>
             {deliveryFeeTotal > 0 && (
               <div className="flex items-center justify-between">
-                <span>Post Office Delivery</span>
+                <span>{deliveryMethod}</span>
                 <span className="font-semibold">{money(deliveryFeeTotal)}</span>
               </div>
             )}
