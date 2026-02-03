@@ -80,6 +80,7 @@ export type ShopOrderLineWithPrice = ShopOrderLine & {
 export type DeliveryInfo = {
   name: string;
   address: string;
+  postCode?: string;
   phone: string;
 };
 
@@ -264,6 +265,9 @@ export function buildShopWhatsAppMessageForLines(
     message.push("Delivery Info:");
     message.push(`Name: ${deliveryInfo.name}`);
     message.push(`Address: ${deliveryInfo.address}`);
+    if (deliveryInfo.postCode?.trim()) {
+      message.push(`Post Code: ${deliveryInfo.postCode}`);
+    }
     message.push(`Phone: ${deliveryInfo.phone}`);
   }
   if (totals) {

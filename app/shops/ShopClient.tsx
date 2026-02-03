@@ -132,6 +132,7 @@ export default function ShopClient() {
   const [deliveryInfo, setDeliveryInfo] = useState<DeliveryInfo>({
     name: "",
     address: "",
+    postCode: "",
     phone: "",
   });
   const [isOrderOpen, setIsOrderOpen] = useState(false);
@@ -790,6 +791,12 @@ export default function ShopClient() {
                 onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, address: e.target.value }))}
                 className="w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
                 placeholder="Your Address"
+              />
+              <input
+                value={deliveryInfo.postCode || ""}
+                onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, postCode: e.target.value }))}
+                className="w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+                placeholder="Post Code (optional)"
               />
               <input
                 value={deliveryInfo.phone}
