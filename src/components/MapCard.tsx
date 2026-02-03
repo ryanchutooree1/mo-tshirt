@@ -59,7 +59,7 @@ export default function MapCard() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
       {/* Left: Map Embed */}
-      <div className="rounded-2xl overflow-hidden shadow-sm border">
+      <div className="rounded-2xl overflow-hidden shadow-sm">
         <div ref={mapWrapperRef} className="relative aspect-square w-full" aria-busy={!mapLoaded}>
           {showMapStatus && !mapLoaded && (
             <div className="absolute bottom-3 left-3 z-10 flex items-center gap-2 rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 backdrop-blur">
@@ -80,7 +80,7 @@ export default function MapCard() {
       </div>
 
       {/* Right: Static Image */}
-      <div className="rounded-2xl overflow-hidden shadow-sm border">
+      <div className="rounded-2xl overflow-hidden shadow-sm">
         <div className="aspect-square w-full">
           <LoadingImage
             src="/on_mauritius_map.png"
