@@ -339,7 +339,7 @@ export default function HomePage() {
             <div id="location" className="mx-auto mt-12 max-w-5xl scroll-mt-24 sm:scroll-mt-28">
               <div className="space-y-6 sm:space-y-7">
                 <h2 className="text-center text-3xl font-semibold text-black sm:text-4xl">Our Location📍</h2>
-                <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+                <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
                   <MapCard />
                 </div>
                 <div className="flex justify-center">
