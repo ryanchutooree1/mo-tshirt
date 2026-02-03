@@ -819,6 +819,14 @@ export default function QuotationApprovalPage() {
     return ["Unpaid", "Partially paid", "Paid"];
   }, [draft?.documentType]);
 
+  const documentTypeLabel = useMemo(() => {
+    if (!draft) return "";
+    if (draft.documentType === "quotation") return "Quotation";
+    if (draft.documentType === "invoice") return "Invoice";
+    if (draft.documentType === "receipt") return "Receipt";
+    return "Partial receipt";
+  }, [draft?.documentType]);
+
   useEffect(() => {
     if (!draft || !paymentStatusOptions.length) return;
     if (draft.paymentStatus === "Half paid" && draft.documentType === "invoice") {
@@ -1255,6 +1263,14 @@ export default function QuotationApprovalPage() {
                           <span className="inline-flex items-center gap-1"><FiMail /> {selected.email}</span>
                           {selected.phone && <span className="inline-flex items-center gap-1"><FiPhone /> {selected.phone}</span>}
                         </div>
+                        <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-slate-500">
+                          <span className="rounded-full border border-slate-200 bg-white px-3 py-1">Source: {selected.source || "Website"}</span>
+                          {selected.delivery && (
+                            <span className="rounded-full border border-slate-200 bg-white px-3 py-1">
+                              Delivery: {selected.delivery}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${STATUS_TONES[selected.status || "new"]}`}>
@@ -1285,6 +1301,9 @@ export default function QuotationApprovalPage() {
                         </p>
                         <p className="mt-2 text-sm text-slate-700">
                           <span className="font-semibold">Deadline:</span> {selected.deadline || "n/a"}
+                        </p>
+                        <p className="mt-2 text-sm text-slate-700">
+                          <span className="font-semibold">Notes:</span> {selected.notes || selected.message || "n/a"}
                         </p>
                         <div className="mt-4 space-y-2">
                           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Attachment</p>
@@ -1342,9 +1361,30 @@ export default function QuotationApprovalPage() {
                       </div>
                       <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
                         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Delivery</p>
-                        <p className="mt-3 text-sm text-slate-700">{selected.delivery || "n/a"}</p>
-                        <p className="mt-2 text-sm text-slate-700">{selected.deliveryAddress || "Address not provided"}</p>
-                        <p className="mt-2 text-sm text-slate-700">{selected.deliveryPhone || "Phone not provided"}</p>
+                        <div className="mt-3 space-y-2 text-sm text-slate-700">
+                          <div>
+                            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Method</p>
+                            <p className="font-medium">{selected.delivery || "n/a"}</p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Recipient</p>
+                            <p>{selected.deliveryName || "Name not provided"}</p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Address</p>
+                            <p>{selected.deliveryAddress || "Address not provided"}</p>
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Post Code</p>
+                              <p>{selected.deliveryPostCode || "—"}</p>
+                            </div>
+                            <div>
+                              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Phone</p>
+                              <p>{selected.deliveryPhone || "Phone not provided"}</p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                       <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-4">
                         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Timeline</p>
@@ -1377,8 +1417,18 @@ export default function QuotationApprovalPage() {
 
                     <div className="mt-5 grid gap-4 lg:grid-cols-2">
                       <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Document</p>
-                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Document setup</p>
+                            <p className="mt-1 text-[11px] text-slate-500">
+                              These details appear on the PDF header.
+                            </p>
+                          </div>
+                          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                            {documentTypeLabel}
+                          </span>
+                        </div>
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
                           <label className="text-xs font-medium text-slate-600">
                             Type
                             <select
@@ -1400,6 +1450,7 @@ export default function QuotationApprovalPage() {
                               value={draft.documentNumber}
                               onChange={(e) => setDraft({ ...draft, documentNumber: e.target.value })}
                               className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                              placeholder="Q-2026-001"
                             />
                           </label>
                           <label className="text-xs font-medium text-slate-600 sm:col-span-2">
@@ -1431,19 +1482,39 @@ export default function QuotationApprovalPage() {
                               value={draft.preparedBy}
                               onChange={(e) => setDraft({ ...draft, preparedBy: e.target.value })}
                               className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                              placeholder="Your name"
                             />
                           </label>
-                          <label className="text-xs font-medium text-slate-600 sm:col-span-2">
-                            Line items visibility
-                            <div className="mt-2 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
-                              <input
-                                type="checkbox"
-                                checked={draft.showLineItems}
-                                onChange={(e) => setDraft({ ...draft, showLineItems: e.target.checked })}
-                              />
-                              <span>{draft.showLineItems ? "Detailed line items" : "Client summary view"}</span>
+                          <div className="sm:col-span-2">
+                            <p className="text-xs font-medium text-slate-600">Line items visibility</p>
+                            <div className="mt-2 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white p-1 text-xs font-semibold">
+                              <button
+                                type="button"
+                                onClick={() => setDraft({ ...draft, showLineItems: true })}
+                                className={`rounded-lg px-3 py-2 transition ${
+                                  draft.showLineItems
+                                    ? "bg-slate-900 text-white"
+                                    : "text-slate-600 hover:bg-slate-50"
+                                }`}
+                              >
+                                Detailed line items
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDraft({ ...draft, showLineItems: false })}
+                                className={`rounded-lg px-3 py-2 transition ${
+                                  !draft.showLineItems
+                                    ? "bg-slate-900 text-white"
+                                    : "text-slate-600 hover:bg-slate-50"
+                                }`}
+                              >
+                                Summary only
+                              </button>
                             </div>
-                          </label>
+                            <p className="mt-2 text-[11px] text-slate-500">
+                              Detailed shows each item and price. Summary hides lines and shows totals only.
+                            </p>
+                          </div>
                         </div>
                       </div>
 
@@ -1457,38 +1528,43 @@ export default function QuotationApprovalPage() {
                                 ? "Partial receipt for"
                               : "Quotation for"}
                         </p>
+                        <p className="mt-1 text-[11px] text-slate-500">Shown on the client section of the PDF.</p>
                         <div className="mt-3 grid gap-3">
                           <label className="text-xs font-medium text-slate-600">
-                            Company / Client
+                            Client / Company name
                             <input
                               value={draft.clientCompany}
                               onChange={(e) => setDraft({ ...draft, clientCompany: e.target.value })}
                               className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                              placeholder={selected?.name || "Client or company name"}
                             />
                           </label>
                           <label className="text-xs font-medium text-slate-600">
-                            Address
+                            Billing address
                             <input
                               value={draft.clientAddress}
                               onChange={(e) => setDraft({ ...draft, clientAddress: e.target.value })}
                               className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                              placeholder="Street, city, postal code"
                             />
                           </label>
                           <div className="grid gap-3 sm:grid-cols-2">
                             <label className="text-xs font-medium text-slate-600">
-                              BRN
+                              BRN (Business Reg. No.)
                               <input
                                 value={draft.clientBrn}
                                 onChange={(e) => setDraft({ ...draft, clientBrn: e.target.value })}
                                 className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                                placeholder="Optional"
                               />
                             </label>
                             <label className="text-xs font-medium text-slate-600">
-                              VAT
+                              VAT (if applicable)
                               <input
                                 value={draft.clientVat}
                                 onChange={(e) => setDraft({ ...draft, clientVat: e.target.value })}
                                 className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                                placeholder="Optional"
                               />
                             </label>
                           </div>
@@ -1497,6 +1573,15 @@ export default function QuotationApprovalPage() {
                     </div>
 
                     <div className="mt-5 space-y-3">
+                      {draft.lines.length > 0 && (
+                        <div className="hidden sm:grid sm:grid-cols-[1fr_110px_120px_120px_auto] gap-3 px-3 text-[11px] uppercase tracking-[0.2em] text-slate-400">
+                          <span>Description</span>
+                          <span className="text-right">Qty</span>
+                          <span className="text-right">Unit price</span>
+                          <span className="text-right">Line total</span>
+                          <span className="text-right">Remove</span>
+                        </div>
+                      )}
                       {draft.lines.map((line, index) => (
                         <div
                           key={`${line.description}-${index}`}
@@ -1506,7 +1591,8 @@ export default function QuotationApprovalPage() {
                             value={line.description}
                             onChange={(e) => updateDraftLine(index, { description: e.target.value })}
                             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                            placeholder="Description"
+                            placeholder="e.g., T-Shirt (M) front print"
+                            aria-label="Line item description"
                           />
                           <input
                             type="number"
@@ -1514,6 +1600,8 @@ export default function QuotationApprovalPage() {
                             value={line.quantity}
                             onChange={(e) => updateDraftLine(index, { quantity: safeNumber(e.target.value, 0) })}
                             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-right"
+                            placeholder="Qty"
+                            aria-label="Quantity"
                           />
                           <input
                             type="number"
@@ -1521,6 +1609,8 @@ export default function QuotationApprovalPage() {
                             value={line.unitPrice}
                             onChange={(e) => updateDraftLine(index, { unitPrice: safeNumber(e.target.value, 0) })}
                             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-right"
+                            placeholder="Unit price"
+                            aria-label="Unit price"
                           />
                           <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-right font-semibold text-slate-800">
                             {formatMoney(line.quantity * line.unitPrice, draft.currency)}
@@ -1528,9 +1618,10 @@ export default function QuotationApprovalPage() {
                           <button
                             type="button"
                             onClick={() => removeDraftLine(index)}
-                            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 transition hover:bg-slate-100"
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+                            aria-label="Remove line item"
                           >
-                            <FiXCircle />
+                            <FiXCircle className="h-4 w-4" />
                           </button>
                         </div>
                       ))}
