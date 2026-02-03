@@ -418,7 +418,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                 className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
                 placeholder="Your Full Name"
               />
-              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_140px]">
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_200px]">
                 <div>
                   <input
                     value={form.deliveryAddress}
