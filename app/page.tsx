@@ -442,26 +442,26 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="border-t border-[#EAEAEA] bg-white px-6 py-12">
+      <footer className="border-t border-orange-200 bg-[#FF6600] px-6 py-12 text-white">
         <div className="mx-auto max-w-6xl text-center">
-          <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-neutral-600">
-            <a href="#our-work" className="transition hover:text-black">Our Work</a>
-            <a href="/terms" className="transition hover:text-black">Terms</a>
-            <a href="/privacy" className="transition hover:text-black">Privacy</a>
-            <a href="https://www.instagram.com/mo_tshirt_printing/" target="_blank" rel="noopener noreferrer" className="transition hover:text-black">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-white/90">
+            <a href="#our-work" className="transition hover:text-white">Our Work</a>
+            <a href="/terms" className="transition hover:text-white">Terms</a>
+            <a href="/privacy" className="transition hover:text-white">Privacy</a>
+            <a href="https://www.instagram.com/mo_tshirt_printing/" target="_blank" rel="noopener noreferrer" className="transition hover:text-white">
               Instagram
             </a>
-            <a href="https://www.tiktok.com/@mo_tshirt_mauritius" target="_blank" rel="noopener noreferrer" className="transition hover:text-black">
+            <a href="https://www.tiktok.com/@mo_tshirt_mauritius" target="_blank" rel="noopener noreferrer" className="transition hover:text-white">
               TikTok
             </a>
-            <a href={getWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="transition hover:text-black">
+            <a href={getWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="transition hover:text-white">
               WhatsApp
             </a>
           </div>
-          <p className="mt-6 text-xs text-neutral-500">
+          <p className="mt-6 text-xs text-white/80">
             © MO T-SHIRT — Mauritius’ trusted name in custom printing.
-            <span className="mx-2 text-neutral-400">|</span>
-            <a href="https://www.mo-tshirt.mu/login" className="transition hover:text-black hover:underline">
+            <span className="mx-2 text-white/70">|</span>
+            <a href="https://www.mo-tshirt.mu/login" className="transition hover:text-white hover:underline">
               All Rights Reserved
             </a>
           </p>
