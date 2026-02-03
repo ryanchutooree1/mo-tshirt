@@ -118,7 +118,7 @@ function ActionButtons() {
       </a>
       <a
         href="#contact"
-        className="inline-flex flex-1 items-center justify-center rounded-full border border-black px-6 py-3 text-sm font-medium text-black transition hover:bg-black hover:text-white"
+        className="inline-flex flex-1 items-center justify-center rounded-full bg-black px-6 py-3 text-sm font-medium text-white transition hover:bg-neutral-800"
       >
         Get a Quote
       </a>
