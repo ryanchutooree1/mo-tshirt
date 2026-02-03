@@ -341,7 +341,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                     <button
                       type="button"
                       onClick={() => removeGarmentLine(index)}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100 aspect-square"
                       aria-label="Remove garment"
                       title="Remove garment"
                     >
