@@ -37,7 +37,7 @@ export const metadata: Metadata = {
 
 const navLinks = [
   { label: "Home", href: "#top" },
-  { label: "Plain Shops", href: "/shops" },
+  { label: "Plain Shops", href: "/shops", highlight: true },
   { label: "Our Work", href: "#our-work" },
   { label: "Contact", href: "#contact" },
   { label: "WhatsApp", href: getWhatsAppUrl() },
@@ -131,19 +131,23 @@ export default function HomePage() {
     <div id="top" className="min-h-screen bg-white text-black">
       <LocationJump />
       <header className="sticky top-0 z-40 border-b border-[#EAEAEA] bg-white/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-6 py-3 sm:grid sm:grid-cols-[auto,1fr,auto] sm:items-center sm:gap-6 sm:py-4">
-          <Link href="#top" className="flex items-center justify-start" aria-label="MO T-SHIRT Home">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-6 py-3 sm:h-20 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-0">
+          <Link href="#top" className="flex items-center" aria-label="MO T-SHIRT Home">
             <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={150} height={60} priority className="h-9 w-auto sm:h-12" />
           </Link>
           <nav
             aria-label="Primary"
-            className="flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-black/70 sm:gap-6 sm:text-sm sm:font-medium"
+            className="flex w-full flex-wrap items-center justify-center gap-4 text-xs font-semibold text-black/70 sm:w-auto sm:justify-end sm:gap-6 sm:text-sm sm:font-medium"
           >
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
-                className="whitespace-nowrap text-black/70 transition hover:text-black"
+                className={`whitespace-nowrap transition ${
+                  link.highlight
+                    ? "rounded-full bg-[#FF6600] px-3 py-1 text-white shadow-sm hover:bg-orange-600"
+                    : "text-black/70 hover:text-black"
+                }`}
                 target={link.label === "WhatsApp" ? "_blank" : undefined}
                 rel={link.label === "WhatsApp" ? "noopener noreferrer" : undefined}
               >
@@ -151,14 +155,6 @@ export default function HomePage() {
               </a>
             ))}
           </nav>
-          <div className="flex items-center justify-center sm:justify-end">
-            <a
-              href="#contact"
-              className="inline-flex items-center justify-center rounded-full bg-black px-5 py-2 text-xs font-semibold text-white transition hover:bg-neutral-800 sm:text-sm"
-            >
-              Get a Quote
-            </a>
-          </div>
         </div>
       </header>
 
