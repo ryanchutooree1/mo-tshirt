@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import Image from "next/image";
 import Link from "next/link";
@@ -16,6 +17,7 @@ import {
   WandSparkles,
 } from "lucide-react";
 import {
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -41,6 +43,27 @@ const PRODUCTS: {
   { id: "polo", label: "Polo", baseUnit: 310, minQty: 10, leadTime: "6-8 working days" },
   { id: "hoodie", label: "Hoodie", baseUnit: 690, minQty: 8, leadTime: "7-10 working days" },
 ];
+
+const PRODUCT_REFERENCES: Record<
+  ProductId,
+  { src: string; alt: string; label: string }[]
+> = {
+  tshirt: [
+    { src: "/work/work-04.JPG", alt: "Agria landscaping printed T-shirts", label: "Front + back print" },
+    { src: "/work/work-06.JPG", alt: "Grey shirt custom prints", label: "Single color print" },
+    { src: "/work/work-03.JPG", alt: "Mauricamp black shirt print", label: "Large chest print" },
+  ],
+  polo: [
+    { src: "/work/work-02.JPG", alt: "Escales des Iles polo prints", label: "Polo embroidery" },
+    { src: "/work/work-07.JPG", alt: "AB car wash polo uniform", label: "Uniform set" },
+    { src: "/work/work-05.JPG", alt: "La Kwizin Mama white polo", label: "Restaurant polo" },
+  ],
+  hoodie: [
+    { src: "/ordering_products.png", alt: "Hoodie and product lineup", label: "Hoodie reference" },
+    { src: "/all_products.jpg", alt: "MO T-SHIRT product range", label: "Material preview" },
+    { src: "/MO T-SHIRT BUSINESS PRINTING.PNG", alt: "MO T-SHIRT brand visual", label: "Brand style" },
+  ],
+};
 
 const COLORS = [
   { id: "jet-black", label: "Jet Black", hex: "#111318", premium: 0 },
@@ -160,6 +183,7 @@ function gradientId(productId: ProductId, side: Side) {
 
 export default function DesignStudioClient() {
   const [productId, setProductId] = useState<ProductId>("tshirt");
+  const [referenceIndex, setReferenceIndex] = useState(0);
   const [colorId, setColorId] = useState<(typeof COLORS)[number]["id"]>("jet-black");
   const [methodId, setMethodId] = useState<MethodId>("dtf");
   const [activeSide, setActiveSide] = useState<Side>("front");
@@ -193,11 +217,28 @@ export default function DesignStudioClient() {
 
   const printAreaRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
+  const logoObjectUrlRef = useRef<string | null>(null);
+
+  const references = PRODUCT_REFERENCES[productId] || PRODUCT_REFERENCES.tshirt;
+  const activeReference = references[Math.min(referenceIndex, references.length - 1)] || references[0];
 
   const activeDesign = designBySide[activeSide];
   const product = PRODUCTS.find((entry) => entry.id === productId) ?? PRODUCTS[0];
   const method = METHODS.find((entry) => entry.id === methodId) ?? METHODS[0];
   const color = COLORS.find((entry) => entry.id === colorId) ?? COLORS[0];
+
+  useEffect(() => {
+    setReferenceIndex(0);
+  }, [productId]);
+
+  useEffect(() => {
+    return () => {
+      if (logoObjectUrlRef.current) {
+        URL.revokeObjectURL(logoObjectUrlRef.current);
+      }
+    };
+  }, []);
 
   const totalQty = useMemo(
     () =>
@@ -227,26 +268,26 @@ export default function DesignStudioClient() {
   const rushFee = Math.round(unitPrice * totalQty * rushRate);
   const totalPrice = unitPrice * totalQty + setupFee + rushFee;
 
-  function patchText(patch: Partial<SideDesign["text"]>) {
+  function patchText(side: Side, patch: Partial<SideDesign["text"]>) {
     setDesignBySide((prev) => ({
       ...prev,
-      [activeSide]: {
-        ...prev[activeSide],
+      [side]: {
+        ...prev[side],
         text: {
-          ...prev[activeSide].text,
+          ...prev[side].text,
           ...patch,
         },
       },
     }));
   }
 
-  function patchLogo(patch: Partial<SideDesign["logo"]>) {
+  function patchLogo(side: Side, patch: Partial<SideDesign["logo"]>) {
     setDesignBySide((prev) => ({
       ...prev,
-      [activeSide]: {
-        ...prev[activeSide],
+      [side]: {
+        ...prev[side],
         logo: {
-          ...prev[activeSide].logo,
+          ...prev[side].logo,
           ...patch,
         },
       },
@@ -258,34 +299,51 @@ export default function DesignStudioClient() {
     setSizeQuantities((prev) => ({ ...prev, [size]: value }));
   }
 
+  function openLogoPicker() {
+    logoInputRef.current?.click();
+  }
+
   function handleLogoUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
+
     if (!file.type.startsWith("image/")) {
-      setResult({ ok: false, text: "Please upload an image file (PNG or JPG)." });
+      setResult({ ok: false, text: "Please upload an image file (PNG, JPG, SVG)." });
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const value = typeof reader.result === "string" ? reader.result : null;
-      setLogoPreview(value);
-      setLogoFile(file);
-      setResult(null);
-      setDesignBySide((prev) => ({
-        ...prev,
-        [activeSide]: {
-          ...prev[activeSide],
-          logo: {
-            ...prev[activeSide].logo,
-            enabled: true,
-          },
+
+    if (file.size > 5 * 1024 * 1024) {
+      setResult({ ok: false, text: "Logo is too large. Please upload a file under 5MB." });
+      return;
+    }
+
+    if (logoObjectUrlRef.current) {
+      URL.revokeObjectURL(logoObjectUrlRef.current);
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    logoObjectUrlRef.current = previewUrl;
+
+    setLogoPreview(previewUrl);
+    setLogoFile(file);
+    setResult(null);
+    setDesignBySide((prev) => ({
+      ...prev,
+      [activeSide]: {
+        ...prev[activeSide],
+        logo: {
+          ...prev[activeSide].logo,
+          enabled: true,
         },
-      }));
-    };
-    reader.readAsDataURL(file);
+      },
+    }));
   }
 
   function clearLogo() {
+    if (logoObjectUrlRef.current) {
+      URL.revokeObjectURL(logoObjectUrlRef.current);
+      logoObjectUrlRef.current = null;
+    }
     setLogoPreview(null);
     setLogoFile(null);
     setDesignBySide((prev) => ({
@@ -333,9 +391,9 @@ export default function DesignStudioClient() {
     const x = clamp(drag.originX + deltaX, -44, 44);
     const y = clamp(drag.originY + deltaY, -44, 44);
     if (drag.layer === "text") {
-      patchText({ x, y });
+      patchText(activeSide, { x, y });
     } else {
-      patchLogo({ x, y });
+      patchLogo(activeSide, { x, y });
     }
   }
 
@@ -454,7 +512,7 @@ export default function DesignStudioClient() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fff9ef] [font-family:var(--font-studio-body)] text-slate-900">
+    <div className="min-h-screen bg-[#fff8ec] [font-family:var(--font-studio-body)] text-slate-900">
       <div className="relative overflow-hidden">
         <div className="pointer-events-none absolute -top-20 left-0 h-80 w-80 rounded-full bg-[#f97316]/20 blur-3xl" />
         <div className="pointer-events-none absolute right-0 top-24 h-80 w-80 rounded-full bg-[#14b8a6]/20 blur-3xl" />
@@ -479,21 +537,21 @@ export default function DesignStudioClient() {
             </p>
           </motion.div>
 
-          <motion.div variants={containerAnim} className="mt-8 max-w-4xl">
+          <motion.div variants={containerAnim} className="mt-8 max-w-5xl">
             <h1 className="text-4xl font-semibold tracking-tight text-slate-900 [font-family:var(--font-studio-display)] sm:text-5xl">
-              Let your clients build their own print-ready order in minutes.
+              Give your clients a premium self-serve order flow.
             </h1>
-            <p className="mt-4 max-w-3xl text-base text-slate-600 sm:text-lg">
-              Live mockup, front/back design control, quantity breakdown, and instant quote request. Built for real production, not just preview.
+            <p className="mt-4 max-w-4xl text-base text-slate-600 sm:text-lg">
+              You run production. Your client selects product, customizes artwork, and submits print-ready details in one clean page.
             </p>
             <div className="mt-5 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
-              <span className="rounded-full bg-white px-3 py-1 shadow-sm">Drag & position layers</span>
-              <span className="rounded-full bg-white px-3 py-1 shadow-sm">Bulk pricing logic</span>
-              <span className="rounded-full bg-white px-3 py-1 shadow-sm">WhatsApp + email ready</span>
+              <span className="rounded-full bg-white px-3 py-1 shadow-sm">Real product references</span>
+              <span className="rounded-full bg-white px-3 py-1 shadow-sm">Live quote estimate</span>
+              <span className="rounded-full bg-white px-3 py-1 shadow-sm">WhatsApp + form conversion</span>
             </div>
           </motion.div>
 
-          <motion.div variants={containerAnim} className="mt-8 grid gap-6 xl:grid-cols-[1.05fr_1.35fr_1fr]">
+          <motion.div variants={containerAnim} className="mt-8 grid gap-6 xl:grid-cols-[1fr_1.45fr_1fr]">
             <article className="rounded-[28px] border border-[#ecdcc8] bg-white/95 p-5 shadow-[0_16px_45px_rgba(15,23,42,0.08)] sm:p-6">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-orange-600">
                 <WandSparkles className="h-4 w-4" />
@@ -580,6 +638,7 @@ export default function DesignStudioClient() {
                   <Palette className="h-4 w-4" />
                   Designer controls
                 </div>
+
                 <div className="mt-3 flex gap-2">
                   {(["front", "back"] as Side[]).map((side) => (
                     <button
@@ -599,17 +658,28 @@ export default function DesignStudioClient() {
 
                 <div className="mt-4 space-y-4">
                   <div>
-                    <label className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Text</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Text</label>
+                      <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600">
+                        <input
+                          type="checkbox"
+                          checked={activeDesign.text.enabled}
+                          onChange={(event) => patchText(activeSide, { enabled: event.target.checked })}
+                          className="h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
+                        />
+                        Enabled
+                      </label>
+                    </div>
                     <input
                       value={activeDesign.text.value}
-                      onChange={(event) => patchText({ value: event.target.value })}
+                      onChange={(event) => patchText(activeSide, { value: event.target.value })}
                       className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-400 focus:outline-none"
                       placeholder="Type text"
                     />
                     <div className="mt-2 grid grid-cols-2 gap-2">
                       <select
                         value={activeDesign.text.font}
-                        onChange={(event) => patchText({ font: event.target.value as FontId })}
+                        onChange={(event) => patchText(activeSide, { font: event.target.value as FontId })}
                         className="w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700 focus:border-slate-400 focus:outline-none"
                       >
                         {FONTS.map((font) => (
@@ -621,7 +691,7 @@ export default function DesignStudioClient() {
                       <input
                         type="color"
                         value={activeDesign.text.color}
-                        onChange={(event) => patchText({ color: event.target.value })}
+                        onChange={(event) => patchText(activeSide, { color: event.target.value })}
                         className="h-10 w-full rounded-xl border border-slate-200 bg-white p-1"
                         aria-label="Text color"
                       />
@@ -632,14 +702,14 @@ export default function DesignStudioClient() {
                         min={22}
                         max={92}
                         value={activeDesign.text.size}
-                        onChange={(event) => patchText({ size: Number(event.target.value) })}
+                        onChange={(event) => patchText(activeSide, { size: Number(event.target.value) })}
                       />
                       <input
                         type="range"
                         min={0}
                         max={360}
                         value={activeDesign.text.rotate}
-                        onChange={(event) => patchText({ rotate: Number(event.target.value) })}
+                        onChange={(event) => patchText(activeSide, { rotate: Number(event.target.value) })}
                       />
                     </div>
                   </div>
@@ -657,11 +727,49 @@ export default function DesignStudioClient() {
                         </button>
                       )}
                     </div>
-                    <label className="mt-1 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-800">
+
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      {(["front", "back"] as Side[]).map((side) => (
+                        <label key={side} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold text-slate-600">
+                          <input
+                            type="checkbox"
+                            checked={designBySide[side].logo.enabled}
+                            onChange={(event) => patchLogo(side, { enabled: event.target.checked })}
+                            className="h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
+                          />
+                          {side}
+                        </label>
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={openLogoPicker}
+                      className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-800"
+                    >
                       <UploadCloud className="h-4 w-4" />
                       Upload logo
-                      <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
-                    </label>
+                    </button>
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/*"
+                      onClick={(event) => {
+                        event.currentTarget.value = "";
+                      }}
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                    />
+
+                    {logoPreview ? (
+                      <div className="mt-2 rounded-xl border border-slate-200 bg-white p-2">
+                        <div className="relative h-16 overflow-hidden rounded-lg">
+                          <img src={logoPreview} alt="Logo preview" className="h-full w-full object-contain" />
+                        </div>
+                        <p className="mt-1 text-[11px] text-slate-500">Tip: transparent PNG gives the cleanest result.</p>
+                      </div>
+                    ) : null}
+
                     {logoPreview && (
                       <div className="mt-2 grid grid-cols-2 gap-2">
                         <input
@@ -669,14 +777,14 @@ export default function DesignStudioClient() {
                           min={30}
                           max={180}
                           value={activeDesign.logo.scale}
-                          onChange={(event) => patchLogo({ scale: Number(event.target.value) })}
+                          onChange={(event) => patchLogo(activeSide, { scale: Number(event.target.value) })}
                         />
                         <input
                           type="range"
                           min={20}
                           max={100}
                           value={activeDesign.logo.opacity}
-                          onChange={(event) => patchLogo({ opacity: Number(event.target.value) })}
+                          onChange={(event) => patchLogo(activeSide, { opacity: Number(event.target.value) })}
                         />
                       </div>
                     )}
@@ -688,7 +796,7 @@ export default function DesignStudioClient() {
             <article className="rounded-[30px] border border-[#d8dde6] bg-[#f7fafc] p-4 shadow-[0_20px_50px_rgba(15,23,42,0.12)] sm:p-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Live mockup</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Studio preview</p>
                   <h2 className="text-2xl font-semibold tracking-tight text-slate-900 [font-family:var(--font-studio-display)]">
                     {product.label} • {activeSide}
                   </h2>
@@ -698,72 +806,106 @@ export default function DesignStudioClient() {
                 </div>
               </div>
 
-              <div className="mt-5 rounded-[28px] border border-slate-200 bg-white p-4 shadow-inner">
-                <div
-                  ref={printAreaRef}
-                  onPointerMove={onPreviewPointerMove}
-                  onPointerUp={onPreviewPointerEnd}
-                  onPointerCancel={onPreviewPointerEnd}
-                  className="relative mx-auto aspect-[4/5] w-full max-w-[420px] overflow-hidden rounded-[24px] bg-[linear-gradient(120deg,#ecfeff_0%,#f8fafc_52%,#fff7ed_100%)] p-4"
-                >
-                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(249,115,22,0.18),transparent_38%),radial-gradient(circle_at_85%_18%,rgba(20,184,166,0.18),transparent_36%),radial-gradient(circle_at_50%_95%,rgba(59,130,246,0.14),transparent_35%)]" />
+              <div className="mt-5 grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Real product photo</p>
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">{activeReference.label}</span>
+                  </div>
 
-                  <Garment
-                    productId={product.id}
-                    side={activeSide}
-                    colorHex={color.hex}
-                  />
+                  <div className="relative mt-2 aspect-[4/5] overflow-hidden rounded-2xl border border-slate-200 bg-black">
+                    <Image src={activeReference.src} alt={activeReference.alt} fill sizes="(max-width: 1024px) 100vw, 35vw" className="object-cover" />
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent p-3">
+                      <p className="text-xs font-medium text-white/95">{activeReference.alt}</p>
+                    </div>
+                  </div>
 
-                  <div className="absolute left-[30%] top-[24%] h-[47%] w-[40%] rounded-xl border border-dashed border-slate-300/70 bg-white/20 backdrop-blur-[1px]">
-                    {activeDesign.text.enabled && activeDesign.text.value.trim().length > 0 && (
-                      <div
-                        onPointerDown={beginDrag("text")}
-                        className="absolute left-1/2 top-1/2 cursor-grab select-none active:cursor-grabbing"
-                        style={{
-                          transform: `translate(calc(-50% + ${activeDesign.text.x}%), calc(-50% + ${activeDesign.text.y}%)) rotate(${activeDesign.text.rotate}deg)`,
-                          color: activeDesign.text.color,
-                          fontFamily: FONTS.find((item) => item.id === activeDesign.text.font)?.value,
-                          fontSize: `${activeDesign.text.size}px`,
-                          fontWeight: activeDesign.text.weight,
-                          textShadow: "0 10px 22px rgba(15,23,42,0.35)",
-                          lineHeight: 1,
-                          whiteSpace: "nowrap",
-                        }}
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    {references.map((reference, index) => (
+                      <button
+                        key={`${reference.src}-${index}`}
+                        type="button"
+                        onClick={() => setReferenceIndex(index)}
+                        className={`rounded-xl border p-1 text-left transition ${
+                          referenceIndex === index ? "border-slate-900 bg-white" : "border-slate-200 bg-slate-50 hover:border-slate-300"
+                        }`}
                       >
-                        {activeDesign.text.value}
-                      </div>
-                    )}
-
-                    {logoPreview ? (
-                      <div
-                        onPointerDown={beginDrag("logo")}
-                        className={`absolute left-1/2 top-1/2 ${activeDesign.logo.enabled ? "cursor-grab active:cursor-grabbing" : "pointer-events-none opacity-40"}`}
-                        style={{
-                          transform: `translate(calc(-50% + ${activeDesign.logo.x}%), calc(-50% + ${activeDesign.logo.y}%)) rotate(${activeDesign.logo.rotate}deg)`,
-                          opacity: activeDesign.logo.opacity / 100,
-                        }}
-                      >
-                        <Image
-                          src={logoPreview}
-                          alt="Uploaded logo preview"
-                          width={512}
-                          height={512}
-                          unoptimized
-                          className="max-h-36 w-auto object-contain drop-shadow-[0_10px_20px_rgba(15,23,42,0.25)]"
-                          style={{
-                            width: `${activeDesign.logo.scale}%`,
-                            maxWidth: "200px",
-                          }}
-                        />
-                      </div>
-                    ) : (
-                      <div className="absolute inset-0 grid place-items-center text-slate-400">
-                        <div className="text-center">
-                          <ImagePlus className="mx-auto h-8 w-8" />
-                          <p className="mt-1 text-xs font-medium">Upload logo to preview here</p>
+                        <div className="relative aspect-[4/5] overflow-hidden rounded-lg bg-slate-100">
+                          <Image src={reference.src} alt={reference.alt} fill sizes="(max-width: 1024px) 33vw, 10vw" className="object-cover" />
                         </div>
-                      </div>
-                    )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-inner">
+                  <div
+                    ref={printAreaRef}
+                    onPointerMove={onPreviewPointerMove}
+                    onPointerUp={onPreviewPointerEnd}
+                    onPointerCancel={onPreviewPointerEnd}
+                    className="relative mx-auto aspect-[4/5] w-full max-w-[420px] overflow-hidden rounded-[24px] bg-[linear-gradient(120deg,#ecfeff_0%,#f8fafc_52%,#fff7ed_100%)] p-4"
+                  >
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(249,115,22,0.18),transparent_38%),radial-gradient(circle_at_85%_18%,rgba(20,184,166,0.18),transparent_36%),radial-gradient(circle_at_50%_95%,rgba(59,130,246,0.14),transparent_35%)]" />
+
+                    <Garment
+                      productId={product.id}
+                      side={activeSide}
+                      colorHex={color.hex}
+                    />
+
+                    <div className="absolute left-[30%] top-[24%] h-[47%] w-[40%] rounded-xl border border-dashed border-slate-300/70 bg-white/20 backdrop-blur-[1px]">
+                      {activeDesign.text.enabled && activeDesign.text.value.trim().length > 0 && (
+                        <div
+                          onPointerDown={beginDrag("text")}
+                          className="absolute left-1/2 top-1/2 cursor-grab select-none active:cursor-grabbing"
+                          style={{
+                            transform: `translate(calc(-50% + ${activeDesign.text.x}%), calc(-50% + ${activeDesign.text.y}%)) rotate(${activeDesign.text.rotate}deg)`,
+                            color: activeDesign.text.color,
+                            fontFamily: FONTS.find((item) => item.id === activeDesign.text.font)?.value,
+                            fontSize: `${activeDesign.text.size}px`,
+                            fontWeight: activeDesign.text.weight,
+                            textShadow: "0 10px 22px rgba(15,23,42,0.35)",
+                            lineHeight: 1,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {activeDesign.text.value}
+                        </div>
+                      )}
+
+                      {logoPreview ? (
+                        <div
+                          onPointerDown={beginDrag("logo")}
+                          className={`absolute left-1/2 top-1/2 ${activeDesign.logo.enabled ? "cursor-grab active:cursor-grabbing" : "pointer-events-none opacity-40"}`}
+                          style={{
+                            transform: `translate(calc(-50% + ${activeDesign.logo.x}%), calc(-50% + ${activeDesign.logo.y}%)) rotate(${activeDesign.logo.rotate}deg)`,
+                            opacity: activeDesign.logo.opacity / 100,
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: `${activeDesign.logo.scale}%`,
+                              maxWidth: "200px",
+                            }}
+                            className="relative aspect-square max-h-36"
+                          >
+                            <img
+                              src={logoPreview}
+                              alt="Uploaded logo preview"
+                              className="h-full w-full object-contain drop-shadow-[0_10px_20px_rgba(15,23,42,0.25)]"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="absolute inset-0 grid place-items-center text-slate-400">
+                          <div className="text-center">
+                            <ImagePlus className="mx-auto h-8 w-8" />
+                            <p className="mt-1 text-xs font-medium">Upload logo to preview here</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -944,16 +1086,16 @@ export default function DesignStudioClient() {
           <motion.div variants={containerAnim} className="mt-8 rounded-3xl border border-slate-200 bg-white/95 p-5 shadow-sm">
             <div className="grid gap-4 text-sm text-slate-600 sm:grid-cols-3">
               <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Why this is better</p>
-                <p className="mt-2 font-semibold text-slate-800">Cleaner UX, fewer clicks, real-time totals.</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Owner control</p>
+                <p className="mt-2 font-semibold text-slate-800">Clients submit cleaner requests with fewer back-and-forth messages.</p>
               </div>
               <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Production-friendly</p>
-                <p className="mt-2 font-semibold text-slate-800">Every request includes method, sizes, and design notes.</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Production-ready</p>
+                <p className="mt-2 font-semibold text-slate-800">Every quote includes size matrix, method, and print-side instructions.</p>
               </div>
               <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Client-ready</p>
-                <p className="mt-2 font-semibold text-slate-800">Clients can self-serve and submit without waiting for chat.</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Sales boost</p>
+                <p className="mt-2 font-semibold text-slate-800">Live estimate + WhatsApp CTA improves conversion for faster closing.</p>
               </div>
             </div>
           </motion.div>
