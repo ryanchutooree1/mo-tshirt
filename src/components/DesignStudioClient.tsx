@@ -1,7 +1,6 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -43,27 +42,6 @@ const PRODUCTS: {
   { id: "polo", label: "Polo", baseUnit: 310, minQty: 10, leadTime: "6-8 working days" },
   { id: "hoodie", label: "Hoodie", baseUnit: 690, minQty: 8, leadTime: "7-10 working days" },
 ];
-
-const PRODUCT_REFERENCES: Record<
-  ProductId,
-  { src: string; alt: string; label: string }[]
-> = {
-  tshirt: [
-    { src: "/work/work-04.JPG", alt: "Agria landscaping printed T-shirts", label: "Front + back print" },
-    { src: "/work/work-06.JPG", alt: "Grey shirt custom prints", label: "Single color print" },
-    { src: "/work/work-03.JPG", alt: "Mauricamp black shirt print", label: "Large chest print" },
-  ],
-  polo: [
-    { src: "/work/work-02.JPG", alt: "Escales des Iles polo prints", label: "Polo embroidery" },
-    { src: "/work/work-07.JPG", alt: "AB car wash polo uniform", label: "Uniform set" },
-    { src: "/work/work-05.JPG", alt: "La Kwizin Mama white polo", label: "Restaurant polo" },
-  ],
-  hoodie: [
-    { src: "/ordering_products.png", alt: "Hoodie and product lineup", label: "Hoodie reference" },
-    { src: "/all_products.jpg", alt: "MO T-SHIRT product range", label: "Material preview" },
-    { src: "/MO T-SHIRT BUSINESS PRINTING.PNG", alt: "MO T-SHIRT brand visual", label: "Brand style" },
-  ],
-};
 
 const COLORS = [
   { id: "jet-black", label: "Jet Black", hex: "#111318", premium: 0 },
@@ -183,7 +161,6 @@ function gradientId(productId: ProductId, side: Side) {
 
 export default function DesignStudioClient() {
   const [productId, setProductId] = useState<ProductId>("tshirt");
-  const [referenceIndex, setReferenceIndex] = useState(0);
   const [colorId, setColorId] = useState<(typeof COLORS)[number]["id"]>("jet-black");
   const [methodId, setMethodId] = useState<MethodId>("dtf");
   const [activeSide, setActiveSide] = useState<Side>("front");
@@ -220,17 +197,10 @@ export default function DesignStudioClient() {
   const logoInputRef = useRef<HTMLInputElement | null>(null);
   const logoObjectUrlRef = useRef<string | null>(null);
 
-  const references = PRODUCT_REFERENCES[productId] || PRODUCT_REFERENCES.tshirt;
-  const activeReference = references[Math.min(referenceIndex, references.length - 1)] || references[0];
-
   const activeDesign = designBySide[activeSide];
   const product = PRODUCTS.find((entry) => entry.id === productId) ?? PRODUCTS[0];
   const method = METHODS.find((entry) => entry.id === methodId) ?? METHODS[0];
   const color = COLORS.find((entry) => entry.id === colorId) ?? COLORS[0];
-
-  useEffect(() => {
-    setReferenceIndex(0);
-  }, [productId]);
 
   useEffect(() => {
     return () => {
@@ -512,7 +482,7 @@ export default function DesignStudioClient() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fff8ec] [font-family:var(--font-studio-body)] text-slate-900">
+    <div className="min-h-screen bg-[linear-gradient(145deg,#fff7ea_0%,#fffdf8_45%,#ecfeff_100%)] [font-family:var(--font-studio-body)] text-slate-900">
       <div className="relative overflow-hidden">
         <div className="pointer-events-none absolute -top-20 left-0 h-80 w-80 rounded-full bg-[#f97316]/20 blur-3xl" />
         <div className="pointer-events-none absolute right-0 top-24 h-80 w-80 rounded-full bg-[#14b8a6]/20 blur-3xl" />
@@ -537,17 +507,18 @@ export default function DesignStudioClient() {
             </p>
           </motion.div>
 
-          <motion.div variants={containerAnim} className="mt-8 max-w-5xl">
-            <h1 className="text-4xl font-semibold tracking-tight text-slate-900 [font-family:var(--font-studio-display)] sm:text-5xl">
-              Give your clients a premium self-serve order flow.
+          <motion.div variants={containerAnim} className="mt-8 max-w-5xl rounded-[28px] border border-white/70 bg-white/70 p-6 shadow-[0_16px_40px_rgba(15,23,42,0.08)] backdrop-blur-sm sm:p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-orange-600">Public Design Studio</p>
+            <h1 className="mt-2 text-4xl font-semibold tracking-tight text-slate-900 [font-family:var(--font-studio-display)] sm:text-6xl">
+              Design your T-Shirt
             </h1>
             <p className="mt-4 max-w-4xl text-base text-slate-600 sm:text-lg">
-              You run production. Your client selects product, customizes artwork, and submits print-ready details in one clean page.
+              Create your style, place your logo, choose sizes, and send your order directly to our team.
             </p>
             <div className="mt-5 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
-              <span className="rounded-full bg-white px-3 py-1 shadow-sm">Real product references</span>
-              <span className="rounded-full bg-white px-3 py-1 shadow-sm">Live quote estimate</span>
-              <span className="rounded-full bg-white px-3 py-1 shadow-sm">WhatsApp + form conversion</span>
+              <span className="rounded-full bg-white px-3 py-1 shadow-sm">Live mockup studio</span>
+              <span className="rounded-full bg-white px-3 py-1 shadow-sm">Instant quote preview</span>
+              <span className="rounded-full bg-white px-3 py-1 shadow-sm">Ready for public orders</span>
             </div>
           </motion.div>
 
@@ -806,47 +777,30 @@ export default function DesignStudioClient() {
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
-                <div>
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Real product photo</p>
-                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">{activeReference.label}</span>
-                  </div>
-
-                  <div className="relative mt-2 aspect-[4/5] overflow-hidden rounded-2xl border border-slate-200 bg-black">
-                    <Image src={activeReference.src} alt={activeReference.alt} fill sizes="(max-width: 1024px) 100vw, 35vw" className="object-cover" />
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent p-3">
-                      <p className="text-xs font-medium text-white/95">{activeReference.alt}</p>
+              <div className="mt-5">
+                <div className="rounded-[28px] border border-slate-200 bg-white/90 p-4 shadow-inner sm:p-6">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
+                        {activeSide} side
+                      </span>
+                      <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">
+                        Live canvas
+                      </span>
                     </div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      Drag text and logo directly on the shirt
+                    </p>
                   </div>
 
-                  <div className="mt-3 grid grid-cols-3 gap-2">
-                    {references.map((reference, index) => (
-                      <button
-                        key={`${reference.src}-${index}`}
-                        type="button"
-                        onClick={() => setReferenceIndex(index)}
-                        className={`rounded-xl border p-1 text-left transition ${
-                          referenceIndex === index ? "border-slate-900 bg-white" : "border-slate-200 bg-slate-50 hover:border-slate-300"
-                        }`}
-                      >
-                        <div className="relative aspect-[4/5] overflow-hidden rounded-lg bg-slate-100">
-                          <Image src={reference.src} alt={reference.alt} fill sizes="(max-width: 1024px) 33vw, 10vw" className="object-cover" />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-inner">
                   <div
                     ref={printAreaRef}
                     onPointerMove={onPreviewPointerMove}
                     onPointerUp={onPreviewPointerEnd}
                     onPointerCancel={onPreviewPointerEnd}
-                    className="relative mx-auto aspect-[4/5] w-full max-w-[420px] overflow-hidden rounded-[24px] bg-[linear-gradient(120deg,#ecfeff_0%,#f8fafc_52%,#fff7ed_100%)] p-4"
+                    className="relative mx-auto aspect-[4/5] w-full max-w-[520px] overflow-hidden rounded-[28px] border border-white/70 bg-[linear-gradient(120deg,#f0fdfa_0%,#f8fafc_45%,#fff7ed_100%)] p-4 sm:p-5"
                   >
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(249,115,22,0.18),transparent_38%),radial-gradient(circle_at_85%_18%,rgba(20,184,166,0.18),transparent_36%),radial-gradient(circle_at_50%_95%,rgba(59,130,246,0.14),transparent_35%)]" />
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(249,115,22,0.2),transparent_36%),radial-gradient(circle_at_82%_18%,rgba(20,184,166,0.2),transparent_34%),radial-gradient(circle_at_50%_95%,rgba(59,130,246,0.14),transparent_35%)]" />
 
                     <Garment
                       productId={product.id}
@@ -892,7 +846,7 @@ export default function DesignStudioClient() {
                           >
                             <img
                               src={logoPreview}
-                              alt="Uploaded logo preview"
+                              alt="Logo layer"
                               className="h-full w-full object-contain drop-shadow-[0_10px_20px_rgba(15,23,42,0.25)]"
                             />
                           </div>
@@ -901,7 +855,7 @@ export default function DesignStudioClient() {
                         <div className="absolute inset-0 grid place-items-center text-slate-400">
                           <div className="text-center">
                             <ImagePlus className="mx-auto h-8 w-8" />
-                            <p className="mt-1 text-xs font-medium">Upload logo to preview here</p>
+                            <p className="mt-1 text-xs font-medium">Upload logo</p>
                           </div>
                         </div>
                       )}
