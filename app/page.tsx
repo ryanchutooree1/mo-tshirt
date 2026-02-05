@@ -37,7 +37,8 @@ export const metadata: Metadata = {
 
 const navLinks = [
   { label: "Home", href: "#top" },
-  { label: "Plain Shops", href: "/shops", highlight: true },
+  { label: "Design Studio", href: "/design-studio", highlight: true },
+  { label: "Plain Shops", href: "/shops" },
   { label: "Our Work", href: "#our-work" },
   { label: "Contact", href: "#contact" },
   { label: "WhatsApp", href: getWhatsAppUrl() },
@@ -109,16 +110,22 @@ const faqLd = {
 
 function ActionButtons() {
   return (
-    <div className="mt-8 mx-auto flex w-full max-w-md flex-wrap items-center gap-3 sm:flex-nowrap sm:justify-between">
+    <div className="mt-8 mx-auto flex w-full max-w-2xl flex-wrap items-center justify-center gap-3">
+      <Link
+        href="/design-studio"
+        className="inline-flex items-center justify-center rounded-full border border-black/20 bg-white px-5 py-3 text-sm font-semibold text-black transition hover:border-black"
+      >
+        Open Design Studio
+      </Link>
       <a
         href={getWhatsAppUrl()}
-        className="inline-flex flex-1 items-center justify-center rounded-full bg-[#FF6600] px-6 py-3 text-sm font-medium text-white transition hover:bg-orange-600"
+        className="inline-flex items-center justify-center rounded-full bg-[#FF6600] px-6 py-3 text-sm font-medium text-white transition hover:bg-orange-600"
       >
         WhatsApp
       </a>
       <a
         href="#contact"
-        className="inline-flex flex-1 items-center justify-center rounded-full bg-black px-6 py-3 text-sm font-medium text-white transition hover:bg-neutral-800"
+        className="inline-flex items-center justify-center rounded-full bg-black px-6 py-3 text-sm font-medium text-white transition hover:bg-neutral-800"
       >
         Get a Quote
       </a>
@@ -445,6 +452,7 @@ export default function HomePage() {
       <footer className="border-t border-orange-200 bg-[#FF6600] px-6 py-12 text-white">
         <div className="mx-auto max-w-6xl text-center">
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-white/90">
+            <a href="/design-studio" className="transition hover:text-white">Design Studio</a>
             <a href="#our-work" className="transition hover:text-white">Our Work</a>
             <a href="/terms" className="transition hover:text-white">Terms</a>
             <a href="/privacy" className="transition hover:text-white">Privacy</a>
