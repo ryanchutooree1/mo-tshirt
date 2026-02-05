@@ -109,18 +109,19 @@ type DragState = {
   originY: number;
 };
 
-const GARMENT_PATHS: Record<ProductId, string> = {
-  tshirt:
-    "M126 226L210 145H430L514 226L560 226L516 350L500 694H140L124 350L80 226H126Z",
-  polo: "M126 228L212 145H428L514 228L560 228L516 352L500 696H140L124 352L80 228H126Z",
-  hoodie:
-    "M134 238L220 154H420L506 238L548 296L514 698H126L92 296L134 238Z",
+const PRINT_ZONES: Record<ProductId, { left: number; top: number; width: number; height: number }> = {
+  tshirt: { left: 30, top: 24, width: 40, height: 49 },
+  polo: { left: 30, top: 25, width: 40, height: 47 },
+  hoodie: { left: 28, top: 27, width: 44, height: 44 },
 };
 
-const HIGHLIGHT_PATHS: Record<ProductId, string> = {
-  tshirt: "M172 210C220 176 420 176 468 210",
-  polo: "M174 211C220 177 420 177 466 211",
-  hoodie: "M220 154C278 108 362 108 420 154",
+const GARMENT_PATHS: Record<ProductId, string> = {
+  tshirt:
+    "M118 236L204 168Q250 132 320 132Q390 132 436 168L522 236L556 332L514 356L482 302L468 700H172L158 302L126 356L84 332L118 236Z",
+  polo:
+    "M126 246L212 176Q262 138 320 138Q378 138 428 176L514 246L548 338L506 362L476 316L462 700H178L164 316L134 362L92 338L126 246Z",
+  hoodie:
+    "M140 258L218 188Q252 156 320 156Q388 156 422 188L500 258L548 334L512 360L488 326L468 700H172L152 326L128 360L92 334L140 258Z",
 };
 
 function createSideDesign(defaultText: string): SideDesign {
@@ -128,7 +129,7 @@ function createSideDesign(defaultText: string): SideDesign {
     text: {
       enabled: true,
       value: defaultText,
-      color: "#ffffff",
+      color: "#0f172a",
       font: "display",
       size: 52,
       weight: 700,
@@ -201,6 +202,7 @@ export default function DesignStudioClient() {
   const product = PRODUCTS.find((entry) => entry.id === productId) ?? PRODUCTS[0];
   const method = METHODS.find((entry) => entry.id === methodId) ?? METHODS[0];
   const color = COLORS.find((entry) => entry.id === colorId) ?? COLORS[0];
+  const printZone = PRINT_ZONES[productId];
 
   useEffect(() => {
     return () => {
@@ -808,7 +810,15 @@ export default function DesignStudioClient() {
                       colorHex={color.hex}
                     />
 
-                    <div className="absolute left-[30%] top-[24%] h-[47%] w-[40%] rounded-xl border border-dashed border-slate-300/70 bg-white/20 backdrop-blur-[1px]">
+                    <div
+                      className="absolute z-30 rounded-xl border border-dashed border-slate-300/70 bg-white/20 backdrop-blur-[1px]"
+                      style={{
+                        left: `${printZone.left}%`,
+                        top: `${printZone.top}%`,
+                        width: `${printZone.width}%`,
+                        height: `${printZone.height}%`,
+                      }}
+                    >
                       {activeDesign.text.enabled && activeDesign.text.value.trim().length > 0 && (
                         <div
                           onPointerDown={beginDrag("text")}
@@ -1069,39 +1079,56 @@ function PreviewStat({ label, value }: { label: string; value: string }) {
 }
 
 function Garment({ productId, colorHex, side }: { productId: ProductId; colorHex: string; side: Side }) {
-  const collar = colorHex.toLowerCase() === "#f9fafb" ? "#d4d4d8" : "#0f172a";
   const path = GARMENT_PATHS[productId];
-  const highlight = HIGHLIGHT_PATHS[productId];
   const id = gradientId(productId, side);
   const light = colorHex.toLowerCase() === "#f9fafb";
+  const lineColor = light ? "#d6dbe4" : "rgba(255,255,255,0.2)";
+  const collar = light ? "#e5e7eb" : "#0b1220";
+  const deepShade = light ? "#eef2f8" : "#0b1220";
 
   return (
-    <svg viewBox="0 0 640 760" className="relative z-10 h-full w-full drop-shadow-[0_26px_28px_rgba(15,23,42,0.22)]">
+    <svg viewBox="0 0 640 760" className="pointer-events-none relative z-10 h-full w-full drop-shadow-[0_28px_30px_rgba(15,23,42,0.23)]">
       <defs>
         <linearGradient id={id} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={light ? "#f8fafc" : colorHex} />
-          <stop offset="68%" stopColor={light ? "#eef2f7" : "#0f172a"} />
+          <stop offset="0%" stopColor={light ? "#ffffff" : colorHex} />
+          <stop offset="70%" stopColor={deepShade} />
         </linearGradient>
       </defs>
 
-      <path d={path} fill={`url(#${id})`} stroke={light ? "#d1d5db" : "#0b1220"} strokeWidth={8} />
-      <path d={highlight} fill="none" stroke={light ? "#d4d4d8" : "rgba(255,255,255,0.25)"} strokeWidth={10} strokeLinecap="round" />
+      <path d={path} fill={`url(#${id})`} stroke={light ? "#d1d5db" : "#0a1324"} strokeWidth={7} />
+      <path d="M198 182Q320 244 442 182" fill="none" stroke={lineColor} strokeWidth={8} strokeLinecap="round" />
+      <path d="M178 694H462" fill="none" stroke={lineColor} strokeWidth={6} strokeLinecap="round" />
+
+      {productId === "tshirt" && (
+        <>
+          <path d="M254 170Q320 126 386 170" fill="none" stroke={lineColor} strokeWidth={11} strokeLinecap="round" />
+          <path d="M160 280L130 340" fill="none" stroke={lineColor} strokeWidth={6} strokeLinecap="round" />
+          <path d="M480 280L510 340" fill="none" stroke={lineColor} strokeWidth={6} strokeLinecap="round" />
+        </>
+      )}
 
       {productId === "polo" && (
         <>
-          <path d="M286 145L320 214L354 145" fill={collar} />
-          <path d="M286 145L320 194L354 145" fill="#111827" />
-        </>
-      )}
-      {productId === "hoodie" && (
-        <>
-          <path d="M222 164C254 116 386 116 418 164L376 240H264L222 164Z" fill={collar} opacity={0.94} />
-          <path d="M320 242L320 328" stroke={light ? "#9ca3af" : "rgba(255,255,255,0.35)"} strokeWidth={7} strokeLinecap="round" />
+          <path d="M278 172L320 238L362 172" fill={collar} />
+          <path d="M278 172L320 214L362 172" fill={light ? "#f5f6fa" : "#111827"} />
+          <path d="M320 226V332" fill="none" stroke={lineColor} strokeWidth={6} strokeLinecap="round" />
+          <circle cx="320" cy="262" r="4.2" fill={light ? "#9ca3af" : "#f8fafc"} />
+          <circle cx="320" cy="286" r="4.2" fill={light ? "#9ca3af" : "#f8fafc"} />
+          <circle cx="320" cy="310" r="4.2" fill={light ? "#9ca3af" : "#f8fafc"} />
         </>
       )}
 
-      {side === "back" && (
-        <path d="M184 246C234 224 406 224 456 246" fill="none" stroke={light ? "#9ca3af" : "rgba(255,255,255,0.2)"} strokeWidth={6} />
+      {productId === "hoodie" && (
+        <>
+          <path d="M218 188Q250 112 320 112Q390 112 422 188L388 250H252L218 188Z" fill={collar} opacity={0.98} />
+          <path d="M320 248V332" fill="none" stroke={lineColor} strokeWidth={6} strokeLinecap="round" />
+          <path d="M243 512H397Q414 512 414 530V602Q414 618 397 618H243Q226 618 226 602V530Q226 512 243 512Z" fill="none" stroke={lineColor} strokeWidth={5} />
+          <path d="M242 530Q320 570 398 530" fill="none" stroke={lineColor} strokeWidth={4} strokeLinecap="round" />
+        </>
+      )}
+
+      {side === "back" && productId !== "hoodie" && (
+        <path d="M196 252Q320 286 444 252" fill="none" stroke={lineColor} strokeWidth={6} strokeLinecap="round" />
       )}
     </svg>
   );
