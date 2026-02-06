@@ -110,18 +110,9 @@ type DragState = {
 };
 
 const PRINT_ZONES: Record<ProductId, { left: number; top: number; width: number; height: number }> = {
-  tshirt: { left: 30, top: 24, width: 40, height: 49 },
-  polo: { left: 30, top: 25, width: 40, height: 47 },
-  hoodie: { left: 28, top: 27, width: 44, height: 44 },
-};
-
-const GARMENT_PATHS: Record<ProductId, string> = {
-  tshirt:
-    "M118 236L204 168Q250 132 320 132Q390 132 436 168L522 236L556 332L514 356L482 302L468 700H172L158 302L126 356L84 332L118 236Z",
-  polo:
-    "M126 246L212 176Q262 138 320 138Q378 138 428 176L514 246L548 338L506 362L476 316L462 700H178L164 316L134 362L92 338L126 246Z",
-  hoodie:
-    "M140 258L218 188Q252 156 320 156Q388 156 422 188L500 258L548 334L512 360L488 326L468 700H172L152 326L128 360L92 334L140 258Z",
+  tshirt: { left: 28, top: 27, width: 44, height: 45 },
+  polo: { left: 28, top: 26, width: 44, height: 46 },
+  hoodie: { left: 27, top: 30, width: 46, height: 42 },
 };
 
 function createSideDesign(defaultText: string): SideDesign {
@@ -156,8 +147,8 @@ function withCommas(value: number) {
   return value.toLocaleString("en-US");
 }
 
-function gradientId(productId: ProductId, side: Side) {
-  return `garment-gradient-${productId}-${side}`;
+function getMockupSrc(productId: ProductId, side: Side) {
+  return `/mockups/${productId}-${side}.png`;
 }
 
 export default function DesignStudioClient() {
@@ -349,7 +340,7 @@ export default function DesignStudioClient() {
         originX: target.x,
         originY: target.y,
       };
-      event.currentTarget.setPointerCapture(event.pointerId);
+      printAreaRef.current?.setPointerCapture(event.pointerId);
     };
   }
 
@@ -373,8 +364,8 @@ export default function DesignStudioClient() {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     dragRef.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
+    if (printAreaRef.current?.hasPointerCapture(event.pointerId)) {
+      printAreaRef.current.releasePointerCapture(event.pointerId);
     }
   }
 
@@ -801,14 +792,17 @@ export default function DesignStudioClient() {
                     onPointerUp={onPreviewPointerEnd}
                     onPointerCancel={onPreviewPointerEnd}
                     className="relative mx-auto aspect-[4/5] w-full max-w-[520px] overflow-hidden rounded-[28px] border border-white/70 bg-[linear-gradient(120deg,#f0fdfa_0%,#f8fafc_45%,#fff7ed_100%)] p-4 sm:p-5"
+                    style={{ touchAction: "none" }}
                   >
                     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(249,115,22,0.2),transparent_36%),radial-gradient(circle_at_82%_18%,rgba(20,184,166,0.2),transparent_34%),radial-gradient(circle_at_50%_95%,rgba(59,130,246,0.14),transparent_35%)]" />
 
-                    <Garment
-                      productId={product.id}
-                      side={activeSide}
-                      colorHex={color.hex}
-                    />
+                    <div className="pointer-events-none absolute inset-5 z-10">
+                      <img
+                        src={getMockupSrc(product.id, activeSide)}
+                        alt={`${product.label} ${activeSide} mockup`}
+                        className="h-full w-full object-contain drop-shadow-[0_28px_30px_rgba(15,23,42,0.22)]"
+                      />
+                    </div>
 
                     <div
                       className="absolute z-30 rounded-xl border border-dashed border-slate-300/70 bg-white/20 backdrop-blur-[1px]"
@@ -1075,61 +1069,5 @@ function PreviewStat({ label, value }: { label: string; value: string }) {
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</p>
       <p className="mt-1 font-semibold text-slate-800">{value}</p>
     </div>
-  );
-}
-
-function Garment({ productId, colorHex, side }: { productId: ProductId; colorHex: string; side: Side }) {
-  const path = GARMENT_PATHS[productId];
-  const id = gradientId(productId, side);
-  const light = colorHex.toLowerCase() === "#f9fafb";
-  const lineColor = light ? "#d6dbe4" : "rgba(255,255,255,0.2)";
-  const collar = light ? "#e5e7eb" : "#0b1220";
-  const deepShade = light ? "#eef2f8" : "#0b1220";
-
-  return (
-    <svg viewBox="0 0 640 760" className="pointer-events-none relative z-10 h-full w-full drop-shadow-[0_28px_30px_rgba(15,23,42,0.23)]">
-      <defs>
-        <linearGradient id={id} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={light ? "#ffffff" : colorHex} />
-          <stop offset="70%" stopColor={deepShade} />
-        </linearGradient>
-      </defs>
-
-      <path d={path} fill={`url(#${id})`} stroke={light ? "#d1d5db" : "#0a1324"} strokeWidth={7} />
-      <path d="M198 182Q320 244 442 182" fill="none" stroke={lineColor} strokeWidth={8} strokeLinecap="round" />
-      <path d="M178 694H462" fill="none" stroke={lineColor} strokeWidth={6} strokeLinecap="round" />
-
-      {productId === "tshirt" && (
-        <>
-          <path d="M254 170Q320 126 386 170" fill="none" stroke={lineColor} strokeWidth={11} strokeLinecap="round" />
-          <path d="M160 280L130 340" fill="none" stroke={lineColor} strokeWidth={6} strokeLinecap="round" />
-          <path d="M480 280L510 340" fill="none" stroke={lineColor} strokeWidth={6} strokeLinecap="round" />
-        </>
-      )}
-
-      {productId === "polo" && (
-        <>
-          <path d="M278 172L320 238L362 172" fill={collar} />
-          <path d="M278 172L320 214L362 172" fill={light ? "#f5f6fa" : "#111827"} />
-          <path d="M320 226V332" fill="none" stroke={lineColor} strokeWidth={6} strokeLinecap="round" />
-          <circle cx="320" cy="262" r="4.2" fill={light ? "#9ca3af" : "#f8fafc"} />
-          <circle cx="320" cy="286" r="4.2" fill={light ? "#9ca3af" : "#f8fafc"} />
-          <circle cx="320" cy="310" r="4.2" fill={light ? "#9ca3af" : "#f8fafc"} />
-        </>
-      )}
-
-      {productId === "hoodie" && (
-        <>
-          <path d="M218 188Q250 112 320 112Q390 112 422 188L388 250H252L218 188Z" fill={collar} opacity={0.98} />
-          <path d="M320 248V332" fill="none" stroke={lineColor} strokeWidth={6} strokeLinecap="round" />
-          <path d="M243 512H397Q414 512 414 530V602Q414 618 397 618H243Q226 618 226 602V530Q226 512 243 512Z" fill="none" stroke={lineColor} strokeWidth={5} />
-          <path d="M242 530Q320 570 398 530" fill="none" stroke={lineColor} strokeWidth={4} strokeLinecap="round" />
-        </>
-      )}
-
-      {side === "back" && productId !== "hoodie" && (
-        <path d="M196 252Q320 286 444 252" fill="none" stroke={lineColor} strokeWidth={6} strokeLinecap="round" />
-      )}
-    </svg>
   );
 }
