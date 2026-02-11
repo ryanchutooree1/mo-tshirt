@@ -7,9 +7,13 @@ import {
   ArrowLeft,
   CheckCircle2,
   Copy,
+  Crosshair,
+  Focus,
   ImagePlus,
   Loader2,
+  Magnet,
   Palette,
+  RotateCcw,
   Send,
   Sparkles,
   UploadCloud,
@@ -115,6 +119,15 @@ const PRINT_ZONES: Record<ProductId, { left: number; top: number; width: number;
   hoodie: { left: 27, top: 30, width: 46, height: 42 },
 };
 
+const GARMENT_PATHS: Record<ProductId, string> = {
+  tshirt:
+    "M118 236L204 168Q250 132 320 132Q390 132 436 168L522 236L556 332L514 356L482 302L468 700H172L158 302L126 356L84 332L118 236Z",
+  polo:
+    "M126 246L212 176Q262 138 320 138Q378 138 428 176L514 246L548 338L506 362L476 316L462 700H178L164 316L134 362L92 338L126 246Z",
+  hoodie:
+    "M140 258L218 188Q252 156 320 156Q388 156 422 188L500 258L548 334L512 360L488 326L468 700H172L152 326L128 360L92 334L140 258Z",
+};
+
 function createSideDesign(defaultText: string): SideDesign {
   return {
     text: {
@@ -131,8 +144,8 @@ function createSideDesign(defaultText: string): SideDesign {
     logo: {
       enabled: false,
       x: 0,
-      y: -18,
-      scale: 90,
+      y: -8,
+      scale: 32,
       rotate: 0,
       opacity: 100,
     },
@@ -147,8 +160,28 @@ function withCommas(value: number) {
   return value.toLocaleString("en-US");
 }
 
-function getMockupSrc(productId: ProductId, side: Side) {
-  return `/mockups/${productId}-${side}.png`;
+function gradientId(productId: ProductId, side: Side) {
+  return `garment-gradient-${productId}-${side}`;
+}
+
+function snapValue(value: number, threshold: number) {
+  return Math.abs(value) <= threshold ? 0 : value;
+}
+
+function estimateTextBounds(text: string, size: number) {
+  const charCount = Math.max(text.trim().length, 2);
+  const width = clamp(18 + (charCount * size) / 11, 26, 92);
+  const height = clamp(size / 2.1 + 8, 16, 56);
+  return { width, height };
+}
+
+function clampPosition(x: number, y: number, boxWidth: number, boxHeight: number) {
+  const maxX = Math.max(0, (100 - boxWidth) / 2);
+  const maxY = Math.max(0, (100 - boxHeight) / 2);
+  return {
+    x: clamp(x, -maxX, maxX),
+    y: clamp(y, -maxY, maxY),
+  };
 }
 
 export default function DesignStudioClient() {
@@ -183,6 +216,9 @@ export default function DesignStudioClient() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [selectedLayer, setSelectedLayer] = useState<"text" | "logo">("text");
+  const [snapToGuides, setSnapToGuides] = useState(true);
+  const [previewZoom, setPreviewZoom] = useState(100);
 
   const printAreaRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -257,6 +293,50 @@ export default function DesignStudioClient() {
     }));
   }
 
+  function placeLayer(side: Side, layer: "text" | "logo", targetX: number, targetY: number) {
+    if (layer === "text") {
+      const textState = designBySide[side].text;
+      const bounds = estimateTextBounds(textState.value, textState.size);
+      const snappedX = snapToGuides ? snapValue(targetX, 2.8) : targetX;
+      const snappedY = snapToGuides ? snapValue(targetY, 2.8) : targetY;
+      const clamped = clampPosition(snappedX, snappedY, bounds.width, bounds.height);
+      patchText(side, clamped);
+      return;
+    }
+
+    const logoState = designBySide[side].logo;
+    const width = clamp(logoState.scale, 20, 78);
+    const height = width;
+    const snappedX = snapToGuides ? snapValue(targetX, 2.4) : targetX;
+    const snappedY = snapToGuides ? snapValue(targetY, 2.4) : targetY;
+    const clamped = clampPosition(snappedX, snappedY, width, height);
+    patchLogo(side, clamped);
+  }
+
+  function centerLayer(layer: "text" | "logo") {
+    placeLayer(activeSide, layer, 0, 0);
+    setSelectedLayer(layer);
+  }
+
+  function applyPreset(layer: "text" | "logo", preset: "leftChest" | "center" | "lower") {
+    const positions: Record<"leftChest" | "center" | "lower", { x: number; y: number }> = {
+      leftChest: { x: -22, y: -20 },
+      center: { x: 0, y: -2 },
+      lower: { x: 0, y: 22 },
+    };
+    const target = positions[preset];
+    placeLayer(activeSide, layer, target.x, target.y);
+    setSelectedLayer(layer);
+  }
+
+  function resetDesigner() {
+    setDesignBySide({
+      front: createSideDesign("MO TEAM"),
+      back: createSideDesign("EST. 2026"),
+    });
+    setSelectedLayer("text");
+  }
+
   function updateQuantity(size: SizeField, value: string) {
     if (!/^\d*$/.test(value)) return;
     setSizeQuantities((prev) => ({ ...prev, [size]: value }));
@@ -290,13 +370,22 @@ export default function DesignStudioClient() {
     setLogoPreview(previewUrl);
     setLogoFile(file);
     setResult(null);
+    setSelectedLayer("logo");
     setDesignBySide((prev) => ({
       ...prev,
       [activeSide]: {
         ...prev[activeSide],
+        text: {
+          ...prev[activeSide].text,
+          y: prev[activeSide].text.enabled ? 18 : prev[activeSide].text.y,
+        },
         logo: {
           ...prev[activeSide].logo,
           enabled: true,
+          x: 0,
+          y: -8,
+          scale: 32,
+          opacity: 100,
         },
       },
     }));
@@ -309,6 +398,7 @@ export default function DesignStudioClient() {
     }
     setLogoPreview(null);
     setLogoFile(null);
+    setSelectedLayer("text");
     setDesignBySide((prev) => ({
       front: {
         ...prev.front,
@@ -331,6 +421,7 @@ export default function DesignStudioClient() {
     return (event: ReactPointerEvent<HTMLDivElement>) => {
       if (layer === "text" && !activeDesign.text.enabled) return;
       if (layer === "logo" && (!activeDesign.logo.enabled || !logoPreview)) return;
+      setSelectedLayer(layer);
       const target = layer === "text" ? activeDesign.text : activeDesign.logo;
       dragRef.current = {
         pointerId: event.pointerId,
@@ -351,13 +442,9 @@ export default function DesignStudioClient() {
     if (!bounds) return;
     const deltaX = ((event.clientX - drag.startX) / bounds.width) * 100;
     const deltaY = ((event.clientY - drag.startY) / bounds.height) * 100;
-    const x = clamp(drag.originX + deltaX, -44, 44);
-    const y = clamp(drag.originY + deltaY, -44, 44);
-    if (drag.layer === "text") {
-      patchText(activeSide, { x, y });
-    } else {
-      patchLogo(activeSide, { x, y });
-    }
+    const x = drag.originX + deltaX;
+    const y = drag.originY + deltaY;
+    placeLayer(activeSide, drag.layer, x, y);
   }
 
   function onPreviewPointerEnd(event: ReactPointerEvent<HTMLDivElement>) {
@@ -620,6 +707,31 @@ export default function DesignStudioClient() {
                   ))}
                 </div>
 
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSnapToGuides((prev) => !prev)}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold ${
+                      snapToGuides ? "bg-emerald-100 text-emerald-800" : "bg-white text-slate-600 ring-1 ring-slate-200"
+                    }`}
+                  >
+                    <Magnet className="h-3.5 w-3.5" />
+                    Snap {snapToGuides ? "ON" : "OFF"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resetDesigner}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 hover:text-slate-900"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Reset
+                  </button>
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold uppercase tracking-[0.1em] text-white">
+                    <Focus className="h-3.5 w-3.5" />
+                    Selected: {selectedLayer}
+                  </span>
+                </div>
+
                 <div className="mt-4 space-y-4">
                   <div>
                     <div className="flex items-center justify-between">
@@ -663,8 +775,8 @@ export default function DesignStudioClient() {
                     <div className="mt-2 grid grid-cols-2 gap-2">
                       <input
                         type="range"
-                        min={22}
-                        max={92}
+                        min={18}
+                        max={86}
                         value={activeDesign.text.size}
                         onChange={(event) => patchText(activeSide, { size: Number(event.target.value) })}
                       />
@@ -675,6 +787,29 @@ export default function DesignStudioClient() {
                         value={activeDesign.text.rotate}
                         onChange={(event) => patchText(activeSide, { rotate: Number(event.target.value) })}
                       />
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => centerLayer("text")}
+                        className="rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:text-slate-900"
+                      >
+                        Center text
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => applyPreset("text", "leftChest")}
+                        className="rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:text-slate-900"
+                      >
+                        Left chest
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => applyPreset("text", "lower")}
+                        className="rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:text-slate-900"
+                      >
+                        Lower print
+                      </button>
                     </div>
                   </div>
 
@@ -738,8 +873,8 @@ export default function DesignStudioClient() {
                       <div className="mt-2 grid grid-cols-2 gap-2">
                         <input
                           type="range"
-                          min={30}
-                          max={180}
+                          min={20}
+                          max={78}
                           value={activeDesign.logo.scale}
                           onChange={(event) => patchLogo(activeSide, { scale: Number(event.target.value) })}
                         />
@@ -750,6 +885,31 @@ export default function DesignStudioClient() {
                           value={activeDesign.logo.opacity}
                           onChange={(event) => patchLogo(activeSide, { opacity: Number(event.target.value) })}
                         />
+                      </div>
+                    )}
+                    {logoPreview && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => centerLayer("logo")}
+                          className="rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:text-slate-900"
+                        >
+                          Center logo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyPreset("logo", "leftChest")}
+                          className="rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:text-slate-900"
+                        >
+                          Left chest
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyPreset("logo", "center")}
+                          className="rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:text-slate-900"
+                        >
+                          Center print
+                        </button>
                       </div>
                     )}
                   </div>
@@ -765,8 +925,9 @@ export default function DesignStudioClient() {
                     {product.label} • {activeSide}
                   </h2>
                 </div>
-                <div className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
-                  Drag text/logo to reposition
+                <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                  <Crosshair className="h-3.5 w-3.5" />
+                  Drag • Snap • Center
                 </div>
               </div>
 
@@ -781,9 +942,18 @@ export default function DesignStudioClient() {
                         Live canvas
                       </span>
                     </div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                      Drag text and logo directly on the shirt
-                    </p>
+                    <div className="flex items-center gap-3">
+                      <label className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                        Zoom
+                        <input
+                          type="range"
+                          min={85}
+                          max={125}
+                          value={previewZoom}
+                          onChange={(event) => setPreviewZoom(Number(event.target.value))}
+                        />
+                      </label>
+                    </div>
                   </div>
 
                   <div
@@ -797,11 +967,12 @@ export default function DesignStudioClient() {
                     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(249,115,22,0.2),transparent_36%),radial-gradient(circle_at_82%_18%,rgba(20,184,166,0.2),transparent_34%),radial-gradient(circle_at_50%_95%,rgba(59,130,246,0.14),transparent_35%)]" />
 
                     <div className="pointer-events-none absolute inset-5 z-10">
-                      <img
-                        src={getMockupSrc(product.id, activeSide)}
-                        alt={`${product.label} ${activeSide} mockup`}
-                        className="h-full w-full object-contain drop-shadow-[0_28px_30px_rgba(15,23,42,0.22)]"
-                      />
+                      <div
+                        className="h-full w-full origin-center transition duration-200"
+                        style={{ transform: `scale(${previewZoom / 100})` }}
+                      >
+                        <Garment productId={product.id} side={activeSide} colorHex={color.hex} />
+                      </div>
                     </div>
 
                     <div
@@ -813,10 +984,20 @@ export default function DesignStudioClient() {
                         height: `${printZone.height}%`,
                       }}
                     >
+                      <div className="pointer-events-none absolute inset-0">
+                        <div className="absolute left-1/2 top-0 h-full border-l border-slate-300/50" />
+                        <div className="absolute left-0 top-1/2 w-full border-t border-slate-300/50" />
+                        <span className="absolute left-2 top-2 rounded bg-white/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                          Print area
+                        </span>
+                      </div>
+
                       {activeDesign.text.enabled && activeDesign.text.value.trim().length > 0 && (
                         <div
                           onPointerDown={beginDrag("text")}
-                          className="absolute left-1/2 top-1/2 cursor-grab select-none active:cursor-grabbing"
+                          className={`absolute left-1/2 top-1/2 cursor-grab select-none rounded-md px-1.5 py-0.5 active:cursor-grabbing ${
+                            selectedLayer === "text" ? "ring-1 ring-blue-400/70" : ""
+                          }`}
                           style={{
                             transform: `translate(calc(-50% + ${activeDesign.text.x}%), calc(-50% + ${activeDesign.text.y}%)) rotate(${activeDesign.text.rotate}deg)`,
                             color: activeDesign.text.color,
@@ -824,8 +1005,10 @@ export default function DesignStudioClient() {
                             fontSize: `${activeDesign.text.size}px`,
                             fontWeight: activeDesign.text.weight,
                             textShadow: "0 10px 22px rgba(15,23,42,0.35)",
-                            lineHeight: 1,
-                            whiteSpace: "nowrap",
+                            lineHeight: 1.1,
+                            whiteSpace: "pre-wrap",
+                            textAlign: "center",
+                            maxWidth: "92%",
                           }}
                         >
                           {activeDesign.text.value}
@@ -835,7 +1018,9 @@ export default function DesignStudioClient() {
                       {logoPreview ? (
                         <div
                           onPointerDown={beginDrag("logo")}
-                          className={`absolute left-1/2 top-1/2 ${activeDesign.logo.enabled ? "cursor-grab active:cursor-grabbing" : "pointer-events-none opacity-40"}`}
+                          className={`absolute left-1/2 top-1/2 rounded-md ${
+                            activeDesign.logo.enabled ? "cursor-grab active:cursor-grabbing" : "pointer-events-none opacity-40"
+                          } ${selectedLayer === "logo" ? "ring-1 ring-blue-400/70" : ""}`}
                           style={{
                             transform: `translate(calc(-50% + ${activeDesign.logo.x}%), calc(-50% + ${activeDesign.logo.y}%)) rotate(${activeDesign.logo.rotate}deg)`,
                             opacity: activeDesign.logo.opacity / 100,
@@ -844,9 +1029,8 @@ export default function DesignStudioClient() {
                           <div
                             style={{
                               width: `${activeDesign.logo.scale}%`,
-                              maxWidth: "200px",
                             }}
-                            className="relative aspect-square max-h-36"
+                            className="relative aspect-square min-w-10"
                           >
                             <img
                               src={logoPreview}
@@ -1069,5 +1253,66 @@ function PreviewStat({ label, value }: { label: string; value: string }) {
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</p>
       <p className="mt-1 font-semibold text-slate-800">{value}</p>
     </div>
+  );
+}
+
+function Garment({ productId, colorHex, side }: { productId: ProductId; colorHex: string; side: Side }) {
+  const path = GARMENT_PATHS[productId];
+  const id = gradientId(productId, side);
+  const textureId = `${id}-texture`;
+  const light = colorHex.toLowerCase() === "#f9fafb";
+  const lineColor = light ? "#d6dbe4" : "rgba(255,255,255,0.2)";
+  const collar = light ? "#e5e7eb" : "#0b1220";
+  const deepShade = light ? "#eef2f8" : "#0b1220";
+
+  return (
+    <svg viewBox="0 0 640 760" className="pointer-events-none relative z-10 h-full w-full drop-shadow-[0_28px_30px_rgba(15,23,42,0.23)]">
+      <defs>
+        <linearGradient id={id} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={light ? "#ffffff" : colorHex} />
+          <stop offset="68%" stopColor={deepShade} />
+        </linearGradient>
+        <pattern id={textureId} patternUnits="userSpaceOnUse" width="8" height="8">
+          <path d="M0 8L8 0" stroke={light ? "rgba(148,163,184,0.15)" : "rgba(255,255,255,0.06)"} strokeWidth="1" />
+        </pattern>
+      </defs>
+
+      <path d={path} fill={`url(#${id})`} stroke={light ? "#d1d5db" : "#0a1324"} strokeWidth={7} />
+      <path d={path} fill={`url(#${textureId})`} opacity={0.55} />
+      <path d="M198 182Q320 244 442 182" fill="none" stroke={lineColor} strokeWidth={8} strokeLinecap="round" />
+      <path d="M178 694H462" fill="none" stroke={lineColor} strokeWidth={6} strokeLinecap="round" />
+
+      {productId === "tshirt" && (
+        <>
+          <path d="M254 170Q320 126 386 170" fill="none" stroke={lineColor} strokeWidth={11} strokeLinecap="round" />
+          <path d="M160 280L130 340" fill="none" stroke={lineColor} strokeWidth={6} strokeLinecap="round" />
+          <path d="M480 280L510 340" fill="none" stroke={lineColor} strokeWidth={6} strokeLinecap="round" />
+        </>
+      )}
+
+      {productId === "polo" && (
+        <>
+          <path d="M278 172L320 238L362 172" fill={collar} />
+          <path d="M278 172L320 214L362 172" fill={light ? "#f5f6fa" : "#111827"} />
+          <path d="M320 226V332" fill="none" stroke={lineColor} strokeWidth={6} strokeLinecap="round" />
+          <circle cx="320" cy="262" r="4.2" fill={light ? "#9ca3af" : "#f8fafc"} />
+          <circle cx="320" cy="286" r="4.2" fill={light ? "#9ca3af" : "#f8fafc"} />
+          <circle cx="320" cy="310" r="4.2" fill={light ? "#9ca3af" : "#f8fafc"} />
+        </>
+      )}
+
+      {productId === "hoodie" && (
+        <>
+          <path d="M218 188Q250 112 320 112Q390 112 422 188L388 250H252L218 188Z" fill={collar} opacity={0.98} />
+          <path d="M320 248V332" fill="none" stroke={lineColor} strokeWidth={6} strokeLinecap="round" />
+          <path d="M243 512H397Q414 512 414 530V602Q414 618 397 618H243Q226 618 226 602V530Q226 512 243 512Z" fill="none" stroke={lineColor} strokeWidth={5} />
+          <path d="M242 530Q320 570 398 530" fill="none" stroke={lineColor} strokeWidth={4} strokeLinecap="round" />
+        </>
+      )}
+
+      {side === "back" && productId !== "hoodie" && (
+        <path d="M196 252Q320 286 444 252" fill="none" stroke={lineColor} strokeWidth={6} strokeLinecap="round" />
+      )}
+    </svg>
   );
 }
