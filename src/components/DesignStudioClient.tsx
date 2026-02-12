@@ -31,7 +31,7 @@ import {
 import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
 
 type ProductId = "tshirt" | "polo" | "hoodie";
-type MethodId = "dtf" | "screen" | "vinyl" | "embroidery";
+type MethodId = "dtf" | "screen" | "vinyl";
 type Side = "front" | "back";
 type FontId = "display" | "body" | "impact" | "script";
 
@@ -62,7 +62,6 @@ const METHODS: { id: MethodId; label: string; add: number; note: string }[] = [
   { id: "dtf", label: "DTF Full Color", add: 60, note: "Best for complex logos and gradients." },
   { id: "screen", label: "Screen Printing", add: 30, note: "Sharp for simple designs and bulk." },
   { id: "vinyl", label: "Vinyl Heat Press", add: 45, note: "Great for names and numbers." },
-  { id: "embroidery", label: "Embroidery", add: 95, note: "Premium stitch finish." },
 ];
 
 const FONTS: { id: FontId; label: string; value: string }[] = [
@@ -81,6 +80,9 @@ const DELIVERY_OPTIONS = [
   "Post Office Express Delivery (Rs 150)",
   "Delivery (Need to arrange first)",
 ];
+
+const LOGO_ALLOWED_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp", "image/svg+xml"]);
+const LOGO_ALLOWED_TEXT = "PNG, JPG, WEBP, or SVG";
 
 type SideDesign = {
   text: {
@@ -128,10 +130,10 @@ const GARMENT_PATHS: Record<ProductId, string> = {
     "M140 258L218 188Q252 156 320 156Q388 156 422 188L500 258L548 334L512 360L488 326L468 700H172L152 326L128 360L92 334L140 258Z",
 };
 
-function createSideDesign(defaultText: string): SideDesign {
+function createSideDesign(defaultText: string, textEnabled = true): SideDesign {
   return {
     text: {
-      enabled: true,
+      enabled: textEnabled,
       value: defaultText,
       color: "#0f172a",
       font: "display",
@@ -190,8 +192,8 @@ export default function DesignStudioClient() {
   const [methodId, setMethodId] = useState<MethodId>("dtf");
   const [activeSide, setActiveSide] = useState<Side>("front");
   const [designBySide, setDesignBySide] = useState<Record<Side, SideDesign>>({
-    front: createSideDesign("MO TEAM"),
-    back: createSideDesign("EST. 2026"),
+    front: createSideDesign("", true),
+    back: createSideDesign("", false),
   });
   const [sizeQuantities, setSizeQuantities] = useState<Record<SizeField, string>>({
     XS: "",
@@ -219,6 +221,7 @@ export default function DesignStudioClient() {
   const [selectedLayer, setSelectedLayer] = useState<"text" | "logo">("text");
   const [snapToGuides, setSnapToGuides] = useState(true);
   const [previewZoom, setPreviewZoom] = useState(100);
+  const [isDragging, setIsDragging] = useState(false);
 
   const printAreaRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -266,6 +269,17 @@ export default function DesignStudioClient() {
   const setupFee = totalQty > 0 && totalQty < product.minQty ? 750 : 0;
   const rushFee = Math.round(unitPrice * totalQty * rushRate);
   const totalPrice = unitPrice * totalQty + setupFee + rushFee;
+  const trimmedEmail = client.email.trim();
+  const trimmedPhone = client.phone.trim();
+  const trimmedName = client.name.trim();
+  const requiresEmail = trimmedPhone.length === 0;
+  const requiresPhone = trimmedEmail.length === 0;
+  const todayIso = useMemo(() => {
+    const now = new Date();
+    const offsetMs = now.getTimezoneOffset() * 60_000;
+    return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10);
+  }, []);
+  const canSubmitQuote = totalQty > 0 && trimmedName.length > 0 && (trimmedEmail.length > 0 || trimmedPhone.length > 0) && !submitting;
 
   function patchText(side: Side, patch: Partial<SideDesign["text"]>) {
     setDesignBySide((prev) => ({
@@ -331,8 +345,8 @@ export default function DesignStudioClient() {
 
   function resetDesigner() {
     setDesignBySide({
-      front: createSideDesign("MO TEAM"),
-      back: createSideDesign("EST. 2026"),
+      front: createSideDesign("", true),
+      back: createSideDesign("", false),
     });
     setSelectedLayer("text");
   }
@@ -350,8 +364,12 @@ export default function DesignStudioClient() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      setResult({ ok: false, text: "Please upload an image file (PNG, JPG, SVG)." });
+    const mimeType = file.type.toLowerCase();
+    const extensionAllowed = /\.(png|jpe?g|webp|svg)$/i.test(file.name);
+    const typeAllowed = mimeType ? LOGO_ALLOWED_MIME_TYPES.has(mimeType) : extensionAllowed;
+
+    if (!typeAllowed) {
+      setResult({ ok: false, text: `Please upload a ${LOGO_ALLOWED_TEXT} logo file.` });
       return;
     }
 
@@ -421,6 +439,7 @@ export default function DesignStudioClient() {
     return (event: ReactPointerEvent<HTMLDivElement>) => {
       if (layer === "text" && !activeDesign.text.enabled) return;
       if (layer === "logo" && (!activeDesign.logo.enabled || !logoPreview)) return;
+      setIsDragging(true);
       setSelectedLayer(layer);
       const target = layer === "text" ? activeDesign.text : activeDesign.logo;
       dragRef.current = {
@@ -451,6 +470,7 @@ export default function DesignStudioClient() {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     dragRef.current = null;
+    setIsDragging(false);
     if (printAreaRef.current?.hasPointerCapture(event.pointerId)) {
       printAreaRef.current.releasePointerCapture(event.pointerId);
     }
@@ -476,11 +496,13 @@ export default function DesignStudioClient() {
       `Sizes: ${sizes}`,
       `Total qty: ${totalQty}`,
       `Estimated total: Rs ${withCommas(totalPrice)}`,
+      `Delivery: ${delivery}`,
+      `Rush: ${rush ? "Yes" : "No"}`,
       client.deadline ? `Deadline: ${client.deadline}` : "",
     ]
       .filter(Boolean)
       .join("\n");
-  }, [client.deadline, color.label, designBySide, logoPreview, method.label, product.label, sizeQuantities, totalPrice, totalQty]);
+  }, [client.deadline, color.label, delivery, designBySide, logoPreview, method.label, product.label, rush, sizeQuantities, totalPrice, totalQty]);
 
   const whatsappUrl = useMemo(() => getWhatsAppUrl(summary), [summary]);
 
@@ -500,6 +522,10 @@ export default function DesignStudioClient() {
       setResult({ ok: false, text: "Add at least one size quantity before sending." });
       return;
     }
+    if (!trimmedEmail && !trimmedPhone) {
+      setResult({ ok: false, text: "Add an email or phone number so we can reply to you." });
+      return;
+    }
     setSubmitting(true);
     setResult(null);
 
@@ -509,10 +535,10 @@ export default function DesignStudioClient() {
     })).filter((entry) => entry.quantity > 0);
 
     const payload = new FormData();
-    payload.append("name", client.name.trim());
-    payload.append("email", client.email.trim());
+    payload.append("name", trimmedName);
+    payload.append("email", trimmedEmail);
     payload.append("message", "Design Studio request submitted via mo-tshirt.mu");
-    payload.append("phone", client.phone.trim());
+    payload.append("phone", trimmedPhone);
     payload.append("garment", product.label);
     payload.append("size", garmentLines[0]?.size || "Mixed");
     payload.append("printMethod", method.label);
@@ -657,7 +683,7 @@ export default function DesignStudioClient() {
               </div>
 
               <div className="mt-6">
-                <p className="text-sm font-semibold text-slate-800">3. Decoration method</p>
+                <p className="text-sm font-semibold text-slate-800">3. Print method</p>
                 <div className="mt-3 space-y-2">
                   {METHODS.map((option) => (
                     <label
@@ -852,7 +878,7 @@ export default function DesignStudioClient() {
                     <input
                       ref={logoInputRef}
                       type="file"
-                      accept="image/*"
+                      accept=".png,.jpg,.jpeg,.webp,.svg,image/png,image/jpeg,image/webp,image/svg+xml"
                       onClick={(event) => {
                         event.currentTarget.value = "";
                       }}
@@ -962,7 +988,7 @@ export default function DesignStudioClient() {
                     onPointerUp={onPreviewPointerEnd}
                     onPointerCancel={onPreviewPointerEnd}
                     className="relative mx-auto aspect-[4/5] w-full max-w-[520px] overflow-hidden rounded-[28px] border border-white/70 bg-[linear-gradient(120deg,#f0fdfa_0%,#f8fafc_45%,#fff7ed_100%)] p-4 sm:p-5"
-                    style={{ touchAction: "none" }}
+                    style={{ touchAction: isDragging ? "none" : "pan-y" }}
                   >
                     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(249,115,22,0.2),transparent_36%),radial-gradient(circle_at_82%_18%,rgba(20,184,166,0.2),transparent_34%),radial-gradient(circle_at_50%_95%,rgba(59,130,246,0.14),transparent_35%)]" />
 
@@ -1129,23 +1155,27 @@ export default function DesignStudioClient() {
                     className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none"
                   />
                   <input
-                    required
                     type="email"
+                    required={requiresEmail}
                     value={client.email}
                     onChange={(event) => setClient((prev) => ({ ...prev, email: event.target.value }))}
-                    placeholder="Client email *"
+                    placeholder="Client email (required if no phone)"
                     className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none"
                   />
                   <input
+                    required={requiresPhone}
+                    type="tel"
                     value={client.phone}
                     onChange={(event) => setClient((prev) => ({ ...prev, phone: event.target.value }))}
-                    placeholder="Phone / WhatsApp"
+                    placeholder="Phone / WhatsApp (required if no email)"
                     className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none"
                   />
                   <input
+                    type="date"
+                    min={todayIso}
                     value={client.deadline}
                     onChange={(event) => setClient((prev) => ({ ...prev, deadline: event.target.value }))}
-                    placeholder="Deadline (optional)"
+                    aria-label="Preferred deadline"
                     className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none"
                   />
                   <select
@@ -1160,15 +1190,16 @@ export default function DesignStudioClient() {
                   <textarea
                     value={client.notes}
                     onChange={(event) => setClient((prev) => ({ ...prev, notes: event.target.value }))}
-                    placeholder="Extra notes (placement details, pantone, embroidery size...)"
+                    placeholder="Extra notes (placement details, pantone, size split...)"
                     rows={3}
                     className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none"
                   />
+                  <p className="text-xs text-slate-500">Provide at least one contact method: email or phone/WhatsApp.</p>
                 </div>
 
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={!canSubmitQuote}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

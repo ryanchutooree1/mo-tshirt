@@ -101,15 +101,33 @@ export async function POST(req: Request) {
       attachmentSize,
     } = payload;
 
-    if (!name || !email || !message) {
+    const safeName = String(name ?? "").trim();
+    const safeEmail = String(email ?? "").trim();
+    const safePhone = String(phone ?? "").trim();
+    const safeMessage = String(message ?? "").trim();
+
+    if (!safeName || !safeMessage) {
       return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
     }
 
-    if (!isValidEmail(email)) {
+    if (!safeEmail && !safePhone) {
+      return NextResponse.json({ error: "Provide an email or phone number." }, { status: 400 });
+    }
+
+    if (safeEmail && !isValidEmail(safeEmail)) {
       return NextResponse.json({ error: "Invalid email." }, { status: 400 });
     }
 
-    const allowedTypes = ["image/png", "image/jpeg", "application/pdf"];
+    const allowedTypes = [
+      "image/png",
+      "image/jpeg",
+      "image/jpg",
+      "image/webp",
+      "image/svg+xml",
+      "image/heic",
+      "image/heif",
+      "application/pdf",
+    ];
     const maxSize = 5 * 1024 * 1024; // 5MB
     let attachment: { filename: string; content: Buffer; contentType?: string } | null = null;
 
@@ -117,7 +135,7 @@ export async function POST(req: Request) {
       const typeOk = allowedTypes.includes(file.type || "");
       const sizeOk = typeof file.size === "number" ? file.size <= maxSize : true;
       if (!typeOk) {
-        return NextResponse.json({ error: "Unsupported file type. Use PNG, JPG, or PDF." }, { status: 400 });
+        return NextResponse.json({ error: "Unsupported file type. Use PNG, JPG, WEBP, SVG, HEIC, or PDF." }, { status: 400 });
       }
       if (!sizeOk) {
         return NextResponse.json({ error: "File too large. Max 5MB." }, { status: 400 });
@@ -148,7 +166,7 @@ export async function POST(req: Request) {
       const trimmed = value === undefined || value === null ? "" : String(value).trim();
       return trimmed ? trimmed : "n/a";
     };
-    const notesValue = notes && notes.trim() ? notes : message;
+    const notesValue = notes && notes.trim() ? notes : safeMessage;
     const sourceValue = formatValue(source);
     const parsedGarments: { garment?: string; size?: string; quantity?: string | number }[] = (() => {
       if (!garments) return [];
@@ -189,10 +207,10 @@ export async function POST(req: Request) {
     let quoteId: string | null = null;
     try {
       const ref = await addDoc(collection(db, "quotes"), {
-        name,
-        email,
-        phone: phone || "",
-        message,
+        name: safeName,
+        email: safeEmail,
+        phone: safePhone,
+        message: safeMessage,
         garments: parsedGarments.length ? parsedGarments : [{ garment, size, quantity }],
         printMethod: printMethod || "",
         quantity: quantity || "",
@@ -231,9 +249,9 @@ export async function POST(req: Request) {
       `Source: ${sourceValue}`,
       "",
       "Client Info:",
-      `  Name: ${formatValue(name)}`,
-      `  Email: ${formatValue(email)}`,
-      `  Phone: ${formatValue(phone)}`,
+      `  Name: ${formatValue(safeName)}`,
+      `  Email: ${formatValue(safeEmail)}`,
+      `  Phone: ${formatValue(safePhone)}`,
       "",
       "Order Details:",
       `  Garments: ${garmentsSummary}`,
@@ -251,9 +269,9 @@ export async function POST(req: Request) {
     const text = textLines.join("\n");
 
     const contactRows = [
-      ["Name", name],
-      ["Email", email],
-      ["Phone", phone],
+      ["Name", safeName],
+      ["Email", safeEmail],
+      ["Phone", safePhone],
     ];
     const orderRows = [
       ["Garments", garmentsSummary],
@@ -310,15 +328,17 @@ export async function POST(req: Request) {
           auth: { user, pass },
         });
 
-        const subject = `New Website Quotation from ${name}`;
+        const subject = `New Website Quotation from ${safeName}`;
         const mailOptions: Record<string, unknown> = {
           from,
           to: user,
-          replyTo: email,
           subject,
           text,
           html,
         };
+        if (safeEmail) {
+          mailOptions.replyTo = safeEmail;
+        }
         if (attachment) {
           mailOptions.attachments = [attachment];
         }

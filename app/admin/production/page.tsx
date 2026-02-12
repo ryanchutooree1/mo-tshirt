@@ -69,7 +69,7 @@ type WorkOrder = {
   size?: string;
   color?: string;
   priority: "Low" | "Normal" | "High" | "Rush";
-  workstation: "DTF" | "DTG" | "Embroidery" | "Vinyl" | "Sewing" | "Finishing";
+  workstation: "DTF" | "DTG" | "Vinyl" | "Sewing" | "Finishing";
   assignee?: string;
   due: string; // yyyy-mm-dd
   status: Status;
@@ -82,9 +82,9 @@ type WorkOrder = {
 
 const seed: WorkOrder[] = [
   { id: "MO-1021", client: "Acme Ltd", item: "Tee — Summer Drop", qty: 120, size: "M/L", color: "Black", priority: "Normal", workstation: "DTF", assignee: "Ravi", due: format(addDays(new Date(), 0), "yyyy-MM-dd"), status: "Queued", elapsedMs: 0 },
-  { id: "MO-1022", client: "Globex", item: "Polo — Corporate", qty: 60, size: "XL", color: "Navy", priority: "High", workstation: "Embroidery", assignee: "Asha", due: format(addDays(new Date(), 1), "yyyy-MM-dd"), status: "In Progress", startedAt: Date.now()- 1000*60*45, elapsedMs: 1000*60*15 },
+  { id: "MO-1022", client: "Globex", item: "Polo — Corporate", qty: 60, size: "XL", color: "Navy", priority: "High", workstation: "Vinyl", assignee: "Asha", due: format(addDays(new Date(), 1), "yyyy-MM-dd"), status: "In Progress", startedAt: Date.now()- 1000*60*45, elapsedMs: 1000*60*15 },
   { id: "MO-1023", client: "Initech", item: "Hoodie — Merch", qty: 35, size: "S-XL", color: "Grey", priority: "Rush", workstation: "DTG", assignee: "Mo", due: format(addDays(new Date(), -1), "yyyy-MM-dd"), status: "On Hold", elapsedMs: 1000*60*40 },
-  { id: "MO-1024", client: "Umbrella", item: "Caps — Launch", qty: 150, size: "—", color: "Red", priority: "Normal", workstation: "Embroidery", assignee: "Dev", due: format(addDays(new Date(), 2), "yyyy-MM-dd"), status: "Queued", elapsedMs: 0 },
+  { id: "MO-1024", client: "Umbrella", item: "Caps — Launch", qty: 150, size: "—", color: "Red", priority: "Normal", workstation: "Finishing", assignee: "Dev", due: format(addDays(new Date(), 2), "yyyy-MM-dd"), status: "Queued", elapsedMs: 0 },
   { id: "MO-1025", client: "Hooli", item: "Aprons — Cafe", qty: 40, size: "—", color: "Forest", priority: "Low", workstation: "Sewing", assignee: "Sara", due: format(addDays(new Date(), 0), "yyyy-MM-dd"), status: "In Progress", startedAt: Date.now()- 1000*60*9, elapsedMs: 0 },
   { id: "MO-1026", client: "Soylent", item: "Tote — Event", qty: 200, size: "—", color: "Natural", priority: "Normal", workstation: "Finishing", assignee: "Jay", due: format(addDays(new Date(), 3), "yyyy-MM-dd"), status: "Done", elapsedMs: 1000*60*55 },
 ];
@@ -115,7 +115,6 @@ function hhmm(ms: number) {
 const WS_COLORS: Record<WorkOrder["workstation"], string> = {
   DTF: "bg-sky-100 text-sky-800",
   DTG: "bg-violet-100 text-violet-800",
-  Embroidery: "bg-amber-100 text-amber-800",
   Vinyl: "bg-emerald-100 text-emerald-800",
   Sewing: "bg-rose-100 text-rose-800",
   Finishing: "bg-gray-100 text-gray-800",
@@ -178,7 +177,7 @@ export default function ProductionPage() {
 
   // Utilization pie per workstation (share of WIP qty)
   const utilData = useMemo(() => {
-    const map: Record<WorkOrder["workstation"], number> = { DTF:0, DTG:0, Embroidery:0, Vinyl:0, Sewing:0, Finishing:0 };
+    const map: Record<WorkOrder["workstation"], number> = { DTF:0, DTG:0, Vinyl:0, Sewing:0, Finishing:0 };
     orders.filter(o=>o.status!=="Done").forEach(o => { map[o.workstation] += o.qty; });
     return Object.entries(map).map(([name, value]) => ({ name, value }));
   }, [orders]);
@@ -288,7 +287,7 @@ export default function ProductionPage() {
             <Search className="absolute left-3 top-2.5 text-gray-400"/>
           </div>
           <select value={wsFilter} onChange={(e)=> setWsFilter(e.target.value as any)} className="p-2 border rounded bg-white">
-            {(["All","DTF","DTG","Embroidery","Vinyl","Sewing","Finishing"] as const).map(x=> <option key={x} value={x}>{x}</option>)}
+            {(["All","DTF","DTG","Vinyl","Sewing","Finishing"] as const).map(x=> <option key={x} value={x}>{x}</option>)}
           </select>
           <select value={prioFilter} onChange={(e)=> setPrioFilter(e.target.value as any)} className="p-2 border rounded bg-white">
             {(["All","Low","Normal","High","Rush"] as const).map(x=> <option key={x} value={x}>{x}</option>)}
@@ -480,7 +479,7 @@ function WOForm({ value, onSave, onCancel }: { value?: WorkOrder; onSave: (v: Pa
         </label>
         <label className="text-sm">Workstation
           <select value={v.workstation as any} onChange={(e)=> setV({...v, workstation: e.target.value as any})} className="mt-1 w-full border rounded px-2 py-1">
-            {(["DTF","DTG","Embroidery","Vinyl","Sewing","Finishing"] as const).map(x=> <option key={x}>{x}</option>)}
+            {(["DTF","DTG","Vinyl","Sewing","Finishing"] as const).map(x=> <option key={x}>{x}</option>)}
           </select>
         </label>
         <label className="text-sm">Assignee
