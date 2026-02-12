@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 import {
   ArrowLeft,
   CheckCircle2,
-  Copy,
   Crosshair,
   Focus,
   ImagePlus,
@@ -80,9 +79,23 @@ const DELIVERY_OPTIONS = [
   "Post Office Express Delivery (Rs 150)",
   "Delivery (Need to arrange first)",
 ];
+const PICKUP_OPTION = DELIVERY_OPTIONS[0];
 
 const LOGO_ALLOWED_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp", "image/svg+xml"]);
 const LOGO_ALLOWED_TEXT = "PNG, JPG, WEBP, or SVG";
+const LOGO_BG_CLEANUP_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp"]);
+
+type ClientState = {
+  name: string;
+  email: string;
+  phone: string;
+  deadline: string;
+  notes: string;
+  deliveryName: string;
+  deliveryAddress: string;
+  deliveryPostCode: string;
+  deliveryPhone: string;
+};
 
 type SideDesign = {
   text: {
@@ -186,6 +199,78 @@ function clampPosition(x: number, y: number, boxWidth: number, boxHeight: number
   };
 }
 
+function isValidPhoneInput(value: string) {
+  return /^[0-9+()\s-]+$/.test(value);
+}
+
+function isValidPostCode(value: string) {
+  return /^\d+$/.test(value);
+}
+
+function renderImageFileToCanvas(file: File, canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
+  return new Promise<void>((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      ctx.drawImage(image, 0, 0);
+      URL.revokeObjectURL(objectUrl);
+      resolve();
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Could not read logo image."));
+    };
+    image.src = objectUrl;
+  });
+}
+
+async function removeNearWhiteBackground(file: File) {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) {
+    throw new Error("Image editor is unavailable in this browser.");
+  }
+
+  await renderImageFileToCanvas(file, canvas, ctx);
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+  const whiteThreshold = 236;
+  const softness = 20;
+  const neutralTolerance = 34;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const alpha = data[i + 3];
+    const brightness = (r + g + b) / 3;
+    const chroma = Math.max(r, g, b) - Math.min(r, g, b);
+
+    if (brightness < whiteThreshold - softness || chroma > neutralTolerance) {
+      continue;
+    }
+
+    const fade = clamp((brightness - (whiteThreshold - softness)) / softness, 0, 1);
+    const nextAlpha = Math.round(alpha * (1 - fade));
+    data[i + 3] = nextAlpha < 8 ? 0 : nextAlpha;
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+
+  const cleanedBlob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, "image/png");
+  });
+  if (!cleanedBlob) {
+    throw new Error("Could not process logo background.");
+  }
+
+  const baseName = file.name.replace(/\.[a-z0-9]+$/i, "");
+  return new File([cleanedBlob], `${baseName}-transparent.png`, { type: "image/png" });
+}
+
 export default function DesignStudioClient() {
   const [productId, setProductId] = useState<ProductId>("tshirt");
   const [colorId, setColorId] = useState<(typeof COLORS)[number]["id"]>("jet-black");
@@ -204,29 +289,38 @@ export default function DesignStudioClient() {
     "2XL": "",
     "3XL": "",
   });
-  const [client, setClient] = useState({
+  const [client, setClient] = useState<ClientState>({
     name: "",
     email: "",
     phone: "",
     deadline: "",
     notes: "",
+    deliveryName: "",
+    deliveryAddress: "",
+    deliveryPostCode: "",
+    deliveryPhone: "",
   });
   const [delivery, setDelivery] = useState(DELIVERY_OPTIONS[0]);
   const [rush, setRush] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoOriginalFile, setLogoOriginalFile] = useState<File | null>(null);
+  const [logoBgRemoved, setLogoBgRemoved] = useState(false);
+  const [processingBgRemoval, setProcessingBgRemoval] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
-  const [copied, setCopied] = useState(false);
   const [selectedLayer, setSelectedLayer] = useState<"text" | "logo">("text");
   const [snapToGuides, setSnapToGuides] = useState(true);
   const [previewZoom, setPreviewZoom] = useState(100);
-  const [isDragging, setIsDragging] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [deliveryPhoneError, setDeliveryPhoneError] = useState<string | null>(null);
+  const [deliveryPostCodeError, setDeliveryPostCodeError] = useState<string | null>(null);
 
   const printAreaRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const logoInputRef = useRef<HTMLInputElement | null>(null);
-  const logoObjectUrlRef = useRef<string | null>(null);
+  const logoOriginalObjectUrlRef = useRef<string | null>(null);
+  const logoProcessedObjectUrlRef = useRef<string | null>(null);
 
   const activeDesign = designBySide[activeSide];
   const product = PRODUCTS.find((entry) => entry.id === productId) ?? PRODUCTS[0];
@@ -234,10 +328,26 @@ export default function DesignStudioClient() {
   const color = COLORS.find((entry) => entry.id === colorId) ?? COLORS[0];
   const printZone = PRINT_ZONES[productId];
 
+  function revokeLogoUrls() {
+    if (logoOriginalObjectUrlRef.current) {
+      URL.revokeObjectURL(logoOriginalObjectUrlRef.current);
+      logoOriginalObjectUrlRef.current = null;
+    }
+    if (logoProcessedObjectUrlRef.current) {
+      URL.revokeObjectURL(logoProcessedObjectUrlRef.current);
+      logoProcessedObjectUrlRef.current = null;
+    }
+  }
+
   useEffect(() => {
     return () => {
-      if (logoObjectUrlRef.current) {
-        URL.revokeObjectURL(logoObjectUrlRef.current);
+      if (logoOriginalObjectUrlRef.current) {
+        URL.revokeObjectURL(logoOriginalObjectUrlRef.current);
+        logoOriginalObjectUrlRef.current = null;
+      }
+      if (logoProcessedObjectUrlRef.current) {
+        URL.revokeObjectURL(logoProcessedObjectUrlRef.current);
+        logoProcessedObjectUrlRef.current = null;
       }
     };
   }, []);
@@ -272,6 +382,9 @@ export default function DesignStudioClient() {
   const trimmedEmail = client.email.trim();
   const trimmedPhone = client.phone.trim();
   const trimmedName = client.name.trim();
+  const trimmedDeliveryPhone = client.deliveryPhone.trim();
+  const trimmedDeliveryPostCode = client.deliveryPostCode.trim();
+  const needsDeliveryDetails = delivery !== PICKUP_OPTION;
   const requiresEmail = trimmedPhone.length === 0;
   const requiresPhone = trimmedEmail.length === 0;
   const todayIso = useMemo(() => {
@@ -279,7 +392,24 @@ export default function DesignStudioClient() {
     const offsetMs = now.getTimezoneOffset() * 60_000;
     return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10);
   }, []);
-  const canSubmitQuote = totalQty > 0 && trimmedName.length > 0 && (trimmedEmail.length > 0 || trimmedPhone.length > 0) && !submitting;
+  const hasValidDeliveryDetails =
+    !needsDeliveryDetails || (client.deliveryName.trim().length > 0 && client.deliveryAddress.trim().length > 0);
+  const canAutoCleanLogo = !!logoOriginalFile && LOGO_BG_CLEANUP_MIME_TYPES.has((logoOriginalFile.type || "").toLowerCase());
+  const hasFieldErrors = Boolean(phoneError || (needsDeliveryDetails && (deliveryPhoneError || deliveryPostCodeError)));
+  const canSubmitQuote =
+    totalQty > 0 &&
+    trimmedName.length > 0 &&
+    (trimmedEmail.length > 0 || trimmedPhone.length > 0) &&
+    hasValidDeliveryDetails &&
+    !hasFieldErrors &&
+    !submitting;
+
+  useEffect(() => {
+    if (!needsDeliveryDetails) {
+      setDeliveryPhoneError(null);
+      setDeliveryPostCodeError(null);
+    }
+  }, [needsDeliveryDetails]);
 
   function patchText(side: Side, patch: Partial<SideDesign["text"]>) {
     setDesignBySide((prev) => ({
@@ -351,9 +481,40 @@ export default function DesignStudioClient() {
     setSelectedLayer("text");
   }
 
+  function updateClient<K extends keyof ClientState>(key: K, value: ClientState[K]) {
+    setClient((prev) => ({ ...prev, [key]: value }));
+  }
+
   function updateQuantity(size: SizeField, value: string) {
     if (!/^\d*$/.test(value)) return;
     setSizeQuantities((prev) => ({ ...prev, [size]: value }));
+  }
+
+  function handlePhoneInput(value: string) {
+    updateClient("phone", value);
+    if (!value) {
+      setPhoneError(null);
+      return;
+    }
+    setPhoneError(isValidPhoneInput(value) ? null : "Use only numbers and + ( ) -");
+  }
+
+  function handleDeliveryPhoneInput(value: string) {
+    updateClient("deliveryPhone", value);
+    if (!value) {
+      setDeliveryPhoneError(null);
+      return;
+    }
+    setDeliveryPhoneError(isValidPhoneInput(value) ? null : "Use only numbers and + ( ) -");
+  }
+
+  function handleDeliveryPostCodeInput(value: string) {
+    updateClient("deliveryPostCode", value);
+    if (!value) {
+      setDeliveryPostCodeError(null);
+      return;
+    }
+    setDeliveryPostCodeError(isValidPostCode(value) ? null : "Numbers only");
   }
 
   function openLogoPicker() {
@@ -378,15 +539,15 @@ export default function DesignStudioClient() {
       return;
     }
 
-    if (logoObjectUrlRef.current) {
-      URL.revokeObjectURL(logoObjectUrlRef.current);
-    }
+    revokeLogoUrls();
 
     const previewUrl = URL.createObjectURL(file);
-    logoObjectUrlRef.current = previewUrl;
+    logoOriginalObjectUrlRef.current = previewUrl;
 
     setLogoPreview(previewUrl);
     setLogoFile(file);
+    setLogoOriginalFile(file);
+    setLogoBgRemoved(false);
     setResult(null);
     setSelectedLayer("logo");
     setDesignBySide((prev) => ({
@@ -409,13 +570,47 @@ export default function DesignStudioClient() {
     }));
   }
 
-  function clearLogo() {
-    if (logoObjectUrlRef.current) {
-      URL.revokeObjectURL(logoObjectUrlRef.current);
-      logoObjectUrlRef.current = null;
+  async function cleanLogoBackground() {
+    if (!logoOriginalFile) return;
+    if (!canAutoCleanLogo) {
+      setResult({ ok: false, text: "Background cleanup works best with PNG, JPG, or WEBP logos." });
+      return;
     }
+
+    setProcessingBgRemoval(true);
+    try {
+      const cleanedFile = await removeNearWhiteBackground(logoOriginalFile);
+      if (logoProcessedObjectUrlRef.current) {
+        URL.revokeObjectURL(logoProcessedObjectUrlRef.current);
+      }
+      const cleanedUrl = URL.createObjectURL(cleanedFile);
+      logoProcessedObjectUrlRef.current = cleanedUrl;
+      setLogoPreview(cleanedUrl);
+      setLogoFile(cleanedFile);
+      setLogoBgRemoved(true);
+      setResult({ ok: true, text: "Logo background cleaned. You can still switch back to the original." });
+    } catch {
+      setResult({ ok: false, text: "Could not remove logo background from this file." });
+    } finally {
+      setProcessingBgRemoval(false);
+    }
+  }
+
+  function useOriginalLogo() {
+    if (!logoOriginalFile || !logoOriginalObjectUrlRef.current) return;
+    setLogoPreview(logoOriginalObjectUrlRef.current);
+    setLogoFile(logoOriginalFile);
+    setLogoBgRemoved(false);
+    setResult(null);
+  }
+
+  function clearLogo() {
+    revokeLogoUrls();
     setLogoPreview(null);
     setLogoFile(null);
+    setLogoOriginalFile(null);
+    setLogoBgRemoved(false);
+    setProcessingBgRemoval(false);
     setSelectedLayer("text");
     setDesignBySide((prev) => ({
       front: {
@@ -439,7 +634,6 @@ export default function DesignStudioClient() {
     return (event: ReactPointerEvent<HTMLDivElement>) => {
       if (layer === "text" && !activeDesign.text.enabled) return;
       if (layer === "logo" && (!activeDesign.logo.enabled || !logoPreview)) return;
-      setIsDragging(true);
       setSelectedLayer(layer);
       const target = layer === "text" ? activeDesign.text : activeDesign.logo;
       dragRef.current = {
@@ -470,7 +664,6 @@ export default function DesignStudioClient() {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     dragRef.current = null;
-    setIsDragging(false);
     if (printAreaRef.current?.hasPointerCapture(event.pointerId)) {
       printAreaRef.current.releasePointerCapture(event.pointerId);
     }
@@ -497,33 +690,56 @@ export default function DesignStudioClient() {
       `Total qty: ${totalQty}`,
       `Estimated total: Rs ${withCommas(totalPrice)}`,
       `Delivery: ${delivery}`,
+      client.deliveryName ? `Delivery name: ${client.deliveryName}` : "",
+      client.deliveryAddress ? `Delivery address: ${client.deliveryAddress}` : "",
+      client.deliveryPhone ? `Delivery phone: ${client.deliveryPhone}` : "",
       `Rush: ${rush ? "Yes" : "No"}`,
       client.deadline ? `Deadline: ${client.deadline}` : "",
     ]
       .filter(Boolean)
       .join("\n");
-  }, [client.deadline, color.label, delivery, designBySide, logoPreview, method.label, product.label, rush, sizeQuantities, totalPrice, totalQty]);
+  }, [
+    client.deadline,
+    client.deliveryAddress,
+    client.deliveryName,
+    client.deliveryPhone,
+    color.label,
+    delivery,
+    designBySide,
+    logoPreview,
+    method.label,
+    product.label,
+    rush,
+    sizeQuantities,
+    totalPrice,
+    totalQty,
+  ]);
 
   const whatsappUrl = useMemo(() => getWhatsAppUrl(summary), [summary]);
 
-  async function handleCopySummary() {
-    try {
-      await navigator.clipboard.writeText(summary);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1400);
-    } catch {
-      setCopied(false);
-    }
-  }
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const phoneOk = !trimmedPhone || isValidPhoneInput(trimmedPhone);
+    const deliveryPhoneOk = !trimmedDeliveryPhone || isValidPhoneInput(trimmedDeliveryPhone);
+    const deliveryPostCodeOk = !trimmedDeliveryPostCode || isValidPostCode(trimmedDeliveryPostCode);
+    setPhoneError(phoneOk ? null : "Use only numbers and + ( ) -");
+    setDeliveryPhoneError(deliveryPhoneOk ? null : "Use only numbers and + ( ) -");
+    setDeliveryPostCodeError(deliveryPostCodeOk ? null : "Numbers only");
+    if (!phoneOk || !deliveryPhoneOk || !deliveryPostCodeOk) {
+      setResult({ ok: false, text: "Please fix contact or delivery field errors before sending." });
+      return;
+    }
+
     if (totalQty <= 0) {
       setResult({ ok: false, text: "Add at least one size quantity before sending." });
       return;
     }
     if (!trimmedEmail && !trimmedPhone) {
       setResult({ ok: false, text: "Add an email or phone number so we can reply to you." });
+      return;
+    }
+    if (needsDeliveryDetails && (!client.deliveryName.trim() || !client.deliveryAddress.trim())) {
+      setResult({ ok: false, text: "Please add delivery name and address for delivery orders." });
       return;
     }
     setSubmitting(true);
@@ -560,6 +776,10 @@ export default function DesignStudioClient() {
     );
     payload.append("source", "Design Studio");
     payload.append("delivery", delivery);
+    payload.append("deliveryName", client.deliveryName.trim());
+    payload.append("deliveryAddress", client.deliveryAddress.trim());
+    payload.append("deliveryPostCode", trimmedDeliveryPostCode);
+    payload.append("deliveryPhone", trimmedDeliveryPhone);
     if (logoFile) {
       payload.append("file", logoFile);
     }
@@ -896,21 +1116,84 @@ export default function DesignStudioClient() {
                     ) : null}
 
                     {logoPreview && (
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        <input
-                          type="range"
-                          min={20}
-                          max={78}
-                          value={activeDesign.logo.scale}
-                          onChange={(event) => patchLogo(activeSide, { scale: Number(event.target.value) })}
-                        />
-                        <input
-                          type="range"
-                          min={20}
-                          max={100}
-                          value={activeDesign.logo.opacity}
-                          onChange={(event) => patchLogo(activeSide, { opacity: Number(event.target.value) })}
-                        />
+                      <div className="mt-2 space-y-2 rounded-xl border border-slate-200 bg-white p-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={cleanLogoBackground}
+                            disabled={!canAutoCleanLogo || processingBgRemoval}
+                            className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-[11px] font-semibold text-slate-700 transition enabled:hover:border-slate-300 enabled:hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {processingBgRemoval ? "Cleaning..." : "Remove white background"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={useOriginalLogo}
+                            disabled={!logoBgRemoved}
+                            className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-[11px] font-semibold text-slate-700 transition enabled:hover:border-slate-300 enabled:hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            Use original
+                          </button>
+                        </div>
+
+                        <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                          Size
+                          <input
+                            type="range"
+                            min={20}
+                            max={78}
+                            value={activeDesign.logo.scale}
+                            onChange={(event) => patchLogo(activeSide, { scale: Number(event.target.value) })}
+                            className="mt-1 w-full"
+                          />
+                        </label>
+                        <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                          Opacity
+                          <input
+                            type="range"
+                            min={20}
+                            max={100}
+                            value={activeDesign.logo.opacity}
+                            onChange={(event) => patchLogo(activeSide, { opacity: Number(event.target.value) })}
+                            className="mt-1 w-full"
+                          />
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                            Horizontal
+                            <input
+                              type="range"
+                              min={-48}
+                              max={48}
+                              value={activeDesign.logo.x}
+                              onChange={(event) => patchLogo(activeSide, { x: Number(event.target.value) })}
+                              className="mt-1 w-full"
+                            />
+                          </label>
+                          <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                            Vertical
+                            <input
+                              type="range"
+                              min={-48}
+                              max={48}
+                              value={activeDesign.logo.y}
+                              onChange={(event) => patchLogo(activeSide, { y: Number(event.target.value) })}
+                              className="mt-1 w-full"
+                            />
+                          </label>
+                        </div>
+                        <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                          Rotation
+                          <input
+                            type="range"
+                            min={-180}
+                            max={180}
+                            value={activeDesign.logo.rotate}
+                            onChange={(event) => patchLogo(activeSide, { rotate: Number(event.target.value) })}
+                            className="mt-1 w-full"
+                          />
+                        </label>
+                        <p className="text-[11px] text-slate-500">Drag logo in the canvas or use sliders for precise placement.</p>
                       </div>
                     )}
                     {logoPreview && (
@@ -988,7 +1271,7 @@ export default function DesignStudioClient() {
                     onPointerUp={onPreviewPointerEnd}
                     onPointerCancel={onPreviewPointerEnd}
                     className="relative mx-auto aspect-[4/5] w-full max-w-[520px] overflow-hidden rounded-[28px] border border-white/70 bg-[linear-gradient(120deg,#f0fdfa_0%,#f8fafc_45%,#fff7ed_100%)] p-4 sm:p-5"
-                    style={{ touchAction: isDragging ? "none" : "pan-y" }}
+                    style={{ touchAction: "none" }}
                   >
                     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(249,115,22,0.2),transparent_36%),radial-gradient(circle_at_82%_18%,rgba(20,184,166,0.2),transparent_34%),radial-gradient(circle_at_50%_95%,rgba(59,130,246,0.14),transparent_35%)]" />
 
@@ -1093,12 +1376,20 @@ export default function DesignStudioClient() {
 
               <form onSubmit={handleSubmit} className="mt-5 space-y-4">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-sm font-semibold text-slate-800">4. Quantities by size</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-slate-800">4. Sizes & quantity</p>
+                    <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                      Min {product.minQty}
+                    </span>
+                  </div>
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     {SIZE_FIELDS.map((size) => (
-                      <label key={size} className="rounded-xl border border-slate-200 bg-white px-2 py-2">
-                        <span className="text-xs font-semibold text-slate-500">{size}</span>
+                      <label key={size} className="rounded-xl border border-slate-200 bg-white px-2 py-2" htmlFor={`size-${size}`}>
+                        <span className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">{size}</span>
                         <input
+                          id={`size-${size}`}
+                          type="number"
+                          min={0}
                           inputMode="numeric"
                           value={sizeQuantities[size]}
                           onChange={(event) => updateQuantity(size, event.target.value)}
@@ -1107,6 +1398,14 @@ export default function DesignStudioClient() {
                         />
                       </label>
                     ))}
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-slate-600">
+                      Total pieces: <span className="font-semibold text-slate-900">{withCommas(totalQty)}</span>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-slate-600">
+                      Recommended: <span className="font-semibold text-slate-900">{product.minQty}+</span>
+                    </div>
                   </div>
                   <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-slate-600">
                     <input
@@ -1146,55 +1445,160 @@ export default function DesignStudioClient() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 gap-3">
-                  <input
-                    required
-                    value={client.name}
-                    onChange={(event) => setClient((prev) => ({ ...prev, name: event.target.value }))}
-                    placeholder="Client name *"
-                    className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none"
-                  />
-                  <input
-                    type="email"
-                    required={requiresEmail}
-                    value={client.email}
-                    onChange={(event) => setClient((prev) => ({ ...prev, email: event.target.value }))}
-                    placeholder="Client email (required if no phone)"
-                    className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none"
-                  />
-                  <input
-                    required={requiresPhone}
-                    type="tel"
-                    value={client.phone}
-                    onChange={(event) => setClient((prev) => ({ ...prev, phone: event.target.value }))}
-                    placeholder="Phone / WhatsApp (required if no email)"
-                    className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none"
-                  />
-                  <input
-                    type="date"
-                    min={todayIso}
-                    value={client.deadline}
-                    onChange={(event) => setClient((prev) => ({ ...prev, deadline: event.target.value }))}
-                    aria-label="Preferred deadline"
-                    className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none"
-                  />
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <p className="text-sm font-semibold text-slate-800">5. Contact details</p>
+                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                      <label htmlFor="client-name" className="block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                        Client name *
+                      </label>
+                      <input
+                        id="client-name"
+                        required
+                        value={client.name}
+                        onChange={(event) => updateClient("name", event.target.value)}
+                        className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none"
+                        placeholder="Your full name"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="client-email" className="block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                        Email
+                      </label>
+                      <input
+                        id="client-email"
+                        type="email"
+                        required={requiresEmail}
+                        value={client.email}
+                        onChange={(event) => updateClient("email", event.target.value)}
+                        className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none"
+                        placeholder="you@example.com"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="client-phone" className="block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                        Phone / WhatsApp
+                      </label>
+                      <input
+                        id="client-phone"
+                        required={requiresPhone}
+                        type="tel"
+                        value={client.phone}
+                        onChange={(event) => handlePhoneInput(event.target.value)}
+                        className={`mt-1 w-full rounded-xl border px-3 py-2 text-sm text-slate-800 focus:outline-none ${
+                          phoneError ? "border-rose-300 focus:border-rose-400" : "border-slate-200 focus:border-slate-400"
+                        }`}
+                        placeholder="+230 5988 3880"
+                      />
+                      {phoneError && <p className="mt-1 text-xs text-rose-600">{phoneError}</p>}
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label htmlFor="client-deadline" className="block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                        Preferred deadline
+                      </label>
+                      <input
+                        id="client-deadline"
+                        type="date"
+                        min={todayIso}
+                        value={client.deadline}
+                        onChange={(event) => updateClient("deadline", event.target.value)}
+                        className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">Provide at least one contact method: email or phone/WhatsApp.</p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <p className="text-sm font-semibold text-slate-800">6. Delivery</p>
+                  <label htmlFor="delivery-option" className="sr-only">
+                    Delivery option
+                  </label>
                   <select
+                    id="delivery-option"
                     value={delivery}
                     onChange={(event) => setDelivery(event.target.value)}
-                    className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none"
+                    className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none"
                   >
                     {DELIVERY_OPTIONS.map((option) => (
                       <option key={option}>{option}</option>
                     ))}
                   </select>
+
+                  {needsDeliveryDetails && (
+                    <div className="mt-3 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <div>
+                        <label htmlFor="delivery-name" className="block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                          Delivery name *
+                        </label>
+                        <input
+                          id="delivery-name"
+                          value={client.deliveryName}
+                          onChange={(event) => updateClient("deliveryName", event.target.value)}
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none"
+                          placeholder="Receiver full name"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="delivery-address" className="block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                          Delivery address *
+                        </label>
+                        <input
+                          id="delivery-address"
+                          value={client.deliveryAddress}
+                          onChange={(event) => updateClient("deliveryAddress", event.target.value)}
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none"
+                          placeholder="Street, area, town"
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div>
+                          <label htmlFor="delivery-postcode" className="block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                            Post code
+                          </label>
+                          <input
+                            id="delivery-postcode"
+                            value={client.deliveryPostCode}
+                            onChange={(event) => handleDeliveryPostCodeInput(event.target.value)}
+                            className={`mt-1 w-full rounded-xl border bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none ${
+                              deliveryPostCodeError ? "border-rose-300 focus:border-rose-400" : "border-slate-200 focus:border-slate-400"
+                            }`}
+                            placeholder="Numbers only"
+                          />
+                          {deliveryPostCodeError && <p className="mt-1 text-xs text-rose-600">{deliveryPostCodeError}</p>}
+                        </div>
+                        <div>
+                          <label htmlFor="delivery-phone" className="block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                            Delivery phone
+                          </label>
+                          <input
+                            id="delivery-phone"
+                            value={client.deliveryPhone}
+                            onChange={(event) => handleDeliveryPhoneInput(event.target.value)}
+                            className={`mt-1 w-full rounded-xl border bg-white px-3 py-2 text-sm text-slate-800 focus:outline-none ${
+                              deliveryPhoneError ? "border-rose-300 focus:border-rose-400" : "border-slate-200 focus:border-slate-400"
+                            }`}
+                            placeholder="+230 ..."
+                          />
+                          {deliveryPhoneError && <p className="mt-1 text-xs text-rose-600">{deliveryPhoneError}</p>}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="client-notes" className="block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+                    Extra notes
+                  </label>
                   <textarea
+                    id="client-notes"
                     value={client.notes}
-                    onChange={(event) => setClient((prev) => ({ ...prev, notes: event.target.value }))}
-                    placeholder="Extra notes (placement details, pantone, size split...)"
+                    onChange={(event) => updateClient("notes", event.target.value)}
+                    placeholder="Placement details, print size, color references, etc."
                     rows={3}
-                    className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none"
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-slate-400 focus:outline-none"
                   />
-                  <p className="text-xs text-slate-500">Provide at least one contact method: email or phone/WhatsApp.</p>
                 </div>
 
                 <button
@@ -1215,15 +1619,6 @@ export default function DesignStudioClient() {
                   <Send className="h-4 w-4" />
                   Continue on WhatsApp
                 </a>
-
-                <button
-                  type="button"
-                  onClick={handleCopySummary}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
-                >
-                  <Copy className="h-4 w-4" />
-                  {copied ? "Copied summary" : "Copy order summary"}
-                </button>
 
                 {result && (
                   <p
@@ -1256,22 +1651,6 @@ export default function DesignStudioClient() {
             </article>
           </motion.div>
 
-          <motion.div variants={containerAnim} className="mt-8 rounded-3xl border border-slate-200 bg-white/95 p-5 shadow-sm">
-            <div className="grid gap-4 text-sm text-slate-600 sm:grid-cols-3">
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Owner control</p>
-                <p className="mt-2 font-semibold text-slate-800">Clients submit cleaner requests with fewer back-and-forth messages.</p>
-              </div>
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Production-ready</p>
-                <p className="mt-2 font-semibold text-slate-800">Every quote includes size matrix, method, and print-side instructions.</p>
-              </div>
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Sales boost</p>
-                <p className="mt-2 font-semibold text-slate-800">Live estimate + WhatsApp CTA improves conversion for faster closing.</p>
-              </div>
-            </div>
-          </motion.div>
         </motion.section>
       </div>
     </div>
