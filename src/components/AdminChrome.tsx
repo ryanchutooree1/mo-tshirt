@@ -10,6 +10,7 @@ const SHOP_ITEM: NavItem = { href: "/admin/shops", label: "Shops" };
 const NOTES_ITEM: NavItem = { href: "/admin/business-notes", label: "Business Notes" };
 const DETAILS_ITEM: NavItem = { href: "/admin/business-details", label: "Business Details" };
 const QUOTE_ITEM: NavItem = { href: "/admin/quotation-approval", label: "Quotation / Invoice" };
+const DESIGN_STUDIO_ITEM: NavItem = { href: "/admin/design-studio", label: "Design Studio" };
 const FINANCE_ITEM: NavItem = { href: "/admin/finance-freedom", label: "Finance Freedom" };
 
 // Default nav groupings
@@ -19,6 +20,7 @@ const DEFAULT_TOP: NavItem[] = [
   { href: "/admin/contracts", label: "Contracts" },
   SHOP_ITEM,
   QUOTE_ITEM,
+  DESIGN_STUDIO_ITEM,
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/accounting", label: "Accounting" },
   FINANCE_ITEM,
@@ -45,12 +47,15 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
   const moreHasDetails = more.some((item) => item.href === DETAILS_ITEM.href);
   const topHasQuote = top.some((item) => item.href === QUOTE_ITEM.href);
   const moreHasQuote = more.some((item) => item.href === QUOTE_ITEM.href);
+  const topHasDesignStudio = top.some((item) => item.href === DESIGN_STUDIO_ITEM.href);
+  const moreHasDesignStudio = more.some((item) => item.href === DESIGN_STUDIO_ITEM.href);
   const topHasFinance = top.some((item) => item.href === FINANCE_ITEM.href);
   const moreHasFinance = more.some((item) => item.href === FINANCE_ITEM.href);
   const cleanedTop = top.filter(
     (item) =>
       item.href !== SHOP_ITEM.href &&
       item.href !== QUOTE_ITEM.href &&
+      item.href !== DESIGN_STUDIO_ITEM.href &&
       item.href !== FINANCE_ITEM.href &&
       (item.href !== NOTES_ITEM.href || topHasNotes) &&
       (item.href !== DETAILS_ITEM.href || topHasDetails)
@@ -59,6 +64,7 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
     (item) =>
       item.href !== SHOP_ITEM.href &&
       item.href !== QUOTE_ITEM.href &&
+      item.href !== DESIGN_STUDIO_ITEM.href &&
       item.href !== FINANCE_ITEM.href &&
       (item.href !== NOTES_ITEM.href || !topHasNotes) &&
       (item.href !== DETAILS_ITEM.href || !topHasDetails)
@@ -76,6 +82,14 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
       nextTop.splice(shopIndex + 1, 0, QUOTE_ITEM);
     } else {
       nextTop.push(QUOTE_ITEM);
+    }
+  }
+  if (topHasDesignStudio || (!topHasDesignStudio && !moreHasDesignStudio)) {
+    const quoteIndex = nextTop.findIndex((item) => item.href === QUOTE_ITEM.href);
+    if (quoteIndex >= 0) {
+      nextTop.splice(quoteIndex + 1, 0, DESIGN_STUDIO_ITEM);
+    } else {
+      nextTop.push(DESIGN_STUDIO_ITEM);
     }
   }
   if (topHasFinance || (!topHasFinance && !moreHasFinance)) {
@@ -110,6 +124,9 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
   const nextMore = cleanedMore.slice();
   if (moreHasQuote) {
     nextMore.push(QUOTE_ITEM);
+  }
+  if (moreHasDesignStudio) {
+    nextMore.push(DESIGN_STUDIO_ITEM);
   }
   if (moreHasFinance) {
     nextMore.push(FINANCE_ITEM);
@@ -159,7 +176,11 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
     const newIndex = (index + delta + next.length) % next.length;
     const [item] = next.splice(index, 1);
     next.splice(newIndex, 0, item);
-    list === "top" ? setTopNav(next) : setMoreNav(next);
+    if (list === "top") {
+      setTopNav(next);
+    } else {
+      setMoreNav(next);
+    }
   }
 
   function moveBetween(from: "top" | "more", index: number) {

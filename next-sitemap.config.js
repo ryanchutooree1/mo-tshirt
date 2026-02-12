@@ -9,7 +9,7 @@ module.exports = {
   robotsTxtOptions: {
     policies: [{ userAgent: "*", allow: "/" }],
   },
-  exclude: ["/login", "/api/*", "/admin/*"],
+  exclude: ["/login", "/api/*", "/admin/*", "/design-studio"],
   changefreq: "weekly",
   priority: 0.7,
   sitemapSize: 5000,

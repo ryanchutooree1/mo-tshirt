@@ -33,6 +33,7 @@ type ProductId = "tshirt" | "polo" | "hoodie";
 type MethodId = "dtf" | "screen" | "vinyl";
 type Side = "front" | "back";
 type FontId = "display" | "body" | "impact" | "script";
+type DesignStudioMode = "public" | "admin";
 
 const PRODUCTS: {
   id: ProductId;
@@ -271,7 +272,20 @@ async function removeNearWhiteBackground(file: File) {
   return new File([cleanedBlob], `${baseName}-transparent.png`, { type: "image/png" });
 }
 
-export default function DesignStudioClient() {
+type DesignStudioClientProps = {
+  mode?: DesignStudioMode;
+};
+
+export default function DesignStudioClient({ mode = "public" }: DesignStudioClientProps) {
+  const isAdminMode = mode === "admin";
+  const backHref = isAdminMode ? "/admin" : "/";
+  const backLabel = isAdminMode ? "Back to admin" : "Back to home";
+  const studioName = isAdminMode ? "MO Admin Design Studio" : "MO T-SHIRT Design Studio";
+  const studioBanner = isAdminMode ? "Admin Design Studio (Testing)" : "Public Design Studio";
+  const sourceLabel = isAdminMode ? "Admin Design Studio" : "Design Studio";
+  const submissionMessage = isAdminMode
+    ? "Design Studio request submitted via mo-tshirt.mu (admin testing)"
+    : "Design Studio request submitted via mo-tshirt.mu";
   const [productId, setProductId] = useState<ProductId>("tshirt");
   const [colorId, setColorId] = useState<(typeof COLORS)[number]["id"]>("jet-black");
   const [methodId, setMethodId] = useState<MethodId>("dtf");
@@ -678,7 +692,7 @@ export default function DesignStudioClient() {
     const frontLogo = front.logo.enabled && logoPreview ? "on" : "off";
     const backLogo = back.logo.enabled && logoPreview ? "on" : "off";
     return [
-      `Hi MO T-SHIRT, I want a quote from Design Studio.`,
+      `Hi MO T-SHIRT, I want a quote from ${sourceLabel}.`,
       `Product: ${product.label}`,
       `Color: ${color.label}`,
       `Print method: ${method.label}`,
@@ -710,6 +724,7 @@ export default function DesignStudioClient() {
     method.label,
     product.label,
     rush,
+    sourceLabel,
     sizeQuantities,
     totalPrice,
     totalQty,
@@ -753,7 +768,7 @@ export default function DesignStudioClient() {
     const payload = new FormData();
     payload.append("name", trimmedName);
     payload.append("email", trimmedEmail);
-    payload.append("message", "Design Studio request submitted via mo-tshirt.mu");
+    payload.append("message", submissionMessage);
     payload.append("phone", trimmedPhone);
     payload.append("garment", product.label);
     payload.append("size", garmentLines[0]?.size || "Mixed");
@@ -774,7 +789,7 @@ export default function DesignStudioClient() {
       "notes",
       [summary, client.notes ? `Client notes:\n${client.notes.trim()}` : "", rush ? "Rush requested: Yes" : "Rush requested: No"].filter(Boolean).join("\n\n")
     );
-    payload.append("source", "Design Studio");
+    payload.append("source", sourceLabel);
     payload.append("delivery", delivery);
     payload.append("deliveryName", client.deliveryName.trim());
     payload.append("deliveryAddress", client.deliveryAddress.trim());
@@ -822,19 +837,19 @@ export default function DesignStudioClient() {
         >
           <motion.div variants={containerAnim} className="flex flex-wrap items-center justify-between gap-4">
             <Link
-              href="/"
+              href={backHref}
               className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to home
+              {backLabel}
             </Link>
             <p className="rounded-full bg-white/90 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-orange-600 shadow-sm">
-              MO T-SHIRT Design Studio
+              {studioName}
             </p>
           </motion.div>
 
           <motion.div variants={containerAnim} className="mt-8 max-w-5xl rounded-[28px] border border-white/70 bg-white/70 p-6 shadow-[0_16px_40px_rgba(15,23,42,0.08)] backdrop-blur-sm sm:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-orange-600">Public Design Studio</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-orange-600">{studioBanner}</p>
             <h1 className="mt-2 text-4xl font-semibold tracking-tight text-slate-900 [font-family:var(--font-studio-display)] sm:text-6xl">
               Design your T-Shirt
             </h1>
@@ -844,7 +859,9 @@ export default function DesignStudioClient() {
             <div className="mt-5 flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">
               <span className="rounded-full bg-white px-3 py-1 shadow-sm">Live mockup studio</span>
               <span className="rounded-full bg-white px-3 py-1 shadow-sm">Instant quote preview</span>
-              <span className="rounded-full bg-white px-3 py-1 shadow-sm">Ready for public orders</span>
+              <span className="rounded-full bg-white px-3 py-1 shadow-sm">
+                {isAdminMode ? "Internal testing mode" : "Ready for public orders"}
+              </span>
             </div>
           </motion.div>
 
