@@ -843,8 +843,8 @@ export default function BusinessValuePage() {
             </article>
           </section>
 
-          <section className="mt-6 grid gap-6">
-            <article className={`${panelClass} order-2 p-4 sm:p-6`}>
+          <section className="mt-6 grid min-w-0 gap-6">
+            <article className={`${panelClass} order-2 min-w-0 p-4 sm:p-6`}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">Assets register</h2>
@@ -1120,8 +1120,8 @@ export default function BusinessValuePage() {
               </div>
             </article>
 
-            <div id="growth-graphs" className="order-1 grid gap-4">
-              <article className={`${panelClass} p-4`}>
+            <div id="growth-graphs" className="order-1 grid min-w-0 gap-4">
+              <article className={`${panelClass} min-w-0 p-4`}>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <h2 className="text-lg font-semibold text-slate-900">Daily valuation trend</h2>
@@ -1206,7 +1206,7 @@ export default function BusinessValuePage() {
                 </div>
               </article>
 
-              <article className={`${panelClass} p-4`}>
+              <article className={`${panelClass} min-w-0 p-4`}>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <h2 className="text-lg font-semibold text-slate-900">Daily gains momentum</h2>
@@ -1266,7 +1266,7 @@ export default function BusinessValuePage() {
                 </div>
               </article>
 
-              <article className={`${panelClass} p-4`}>
+              <article className={`${panelClass} min-w-0 p-4`}>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <h2 className="text-lg font-semibold text-slate-900">
@@ -1362,7 +1362,7 @@ export default function BusinessValuePage() {
                 </div>
               </article>
 
-              <article className={`${panelClass} p-4`}>
+              <article className={`${panelClass} min-w-0 p-4`}>
                 <h2 className="text-lg font-semibold text-slate-900">Category breakdown</h2>
                 <p className="mt-1 text-xs text-slate-500">Where most of your valuation currently sits.</p>
 
@@ -1387,7 +1387,7 @@ export default function BusinessValuePage() {
                 </div>
               </article>
 
-              <article className={`${panelClass} p-4`}>
+              <article className={`${panelClass} min-w-0 p-4`}>
                 <h2 className="text-lg font-semibold text-slate-900">Motivation panel</h2>
                 <p className="mt-1 text-xs text-slate-500">Keep your target visible and make daily progress measurable.</p>
 
