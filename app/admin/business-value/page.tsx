@@ -846,8 +846,8 @@ export default function BusinessValuePage() {
             </article>
           </section>
 
-          <section className="mt-6 grid gap-6 xl:grid-cols-[1.85fr_1fr]">
-            <article className={`${panelClass} order-2 p-4 sm:p-6 xl:order-1`}>
+          <section className="mt-6 grid gap-6">
+            <article className={`${panelClass} order-2 p-4 sm:p-6`}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">Assets register</h2>
@@ -1123,7 +1123,7 @@ export default function BusinessValuePage() {
               </div>
             </article>
 
-            <div id="growth-graphs" className="space-y-6 order-1 xl:order-2">
+            <div id="growth-graphs" className="space-y-6 order-1">
               <article className={`${panelClass} p-5`}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
