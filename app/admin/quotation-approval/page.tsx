@@ -5,6 +5,7 @@ import NextImage from "next/image";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { storage } from "@/lib/firebase";
 import {
+  addDoc,
   collection,
   doc,
   onSnapshot,
@@ -44,6 +45,9 @@ type QuoteLine = {
 type DocumentType = "quotation" | "invoice" | "receipt" | "partial_receipt";
 
 type QuoteDraft = {
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
   documentType: DocumentType;
   documentNumber: string;
   documentDate: string;
@@ -262,6 +266,9 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
             ? "Partially paid"
             : "Quotation only";
     return {
+      contactName: quote.name || quote.quote.clientCompany || "",
+      contactEmail: quote.email || "",
+      contactPhone: quote.phone || "",
       documentType,
       documentNumber: quote.quote.documentNumber || fallbackNumber,
       documentDate,
@@ -305,6 +312,9 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
       ];
 
   return {
+    contactName: quote.name || "",
+    contactEmail: quote.email || "",
+    contactPhone: quote.phone || "",
     documentType: "quotation",
     documentNumber: fallbackNumber,
     documentDate: fallbackDate,
@@ -652,6 +662,7 @@ export default function QuotationApprovalPage() {
   const [draft, setDraft] = useState<QuoteDraft | null>(null);
   const [saving, setSaving] = useState(false);
   const [statusSaving, setStatusSaving] = useState(false);
+  const [creatingQuote, setCreatingQuote] = useState(false);
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
@@ -865,6 +876,29 @@ export default function QuotationApprovalPage() {
     return getPrimaryStatusMeta(selectedStatus, activeType);
   }, [selected, selectedStatus, draft?.documentType]);
 
+  const buildStoredQuotePayload = (baseDraft: QuoteDraft) => ({
+    documentType: baseDraft.documentType,
+    documentNumber: baseDraft.documentNumber,
+    documentDate: baseDraft.documentDate,
+    clientCompany: baseDraft.clientCompany,
+    clientAddress: baseDraft.clientAddress,
+    clientBrn: baseDraft.clientBrn,
+    clientVat: baseDraft.clientVat,
+    paymentStatus: baseDraft.paymentStatus,
+    preparedBy: baseDraft.preparedBy,
+    showLineItems: baseDraft.showLineItems,
+    currency: baseDraft.currency,
+    lines: baseDraft.lines,
+    deliveryFee: baseDraft.deliveryFee,
+    discount: baseDraft.discount,
+    amountReceived: baseDraft.amountReceived,
+    notes: baseDraft.notes,
+    validUntil: baseDraft.validUntil,
+    terms: baseDraft.terms,
+    subtotal: totals.subtotal,
+    total: totals.total,
+  });
+
   useEffect(() => {
     if (!draft || !paymentStatusOptions.length) return;
     if (draft.paymentStatus === "Half paid" && draft.documentType === "invoice") {
@@ -929,36 +963,18 @@ export default function QuotationApprovalPage() {
     setSaving(true);
     setNotice(null);
     try {
-      const payload = {
-        documentType: draft.documentType,
-        documentNumber: draft.documentNumber,
-        documentDate: draft.documentDate,
-        clientCompany: draft.clientCompany,
-        clientAddress: draft.clientAddress,
-        clientBrn: draft.clientBrn,
-        clientVat: draft.clientVat,
-        paymentStatus: draft.paymentStatus,
-        preparedBy: draft.preparedBy,
-        showLineItems: draft.showLineItems,
-        currency: draft.currency,
-        lines: draft.lines,
-        deliveryFee: draft.deliveryFee,
-        discount: draft.discount,
-        amountReceived: draft.amountReceived,
-        notes: draft.notes,
-        validUntil: draft.validUntil,
-        terms: draft.terms,
-        subtotal: totals.subtotal,
-        total: totals.total,
-      };
+      const payload = buildStoredQuotePayload(draft);
       await updateDoc(doc(db, "quotes", selected.id), {
         status: nextStatus || selected.status || "review",
+        name: draft.contactName.trim() || "Walk-in client",
+        email: draft.contactEmail.trim(),
+        phone: draft.contactPhone.trim(),
         quote: payload,
         updatedAt: serverTimestamp(),
       });
-      setNotice("Quote saved.");
+      setNotice("Document saved.");
     } catch {
-      setNotice("Failed to save quote.");
+      setNotice("Failed to save document.");
     } finally {
       setSaving(false);
     }
@@ -981,6 +997,82 @@ export default function QuotationApprovalPage() {
     }
   };
 
+  const createAdminQuote = async () => {
+    setCreatingQuote(true);
+    setNotice(null);
+    try {
+      const now = new Date();
+      const documentDate = format(now, "yyyy-MM-dd");
+      const initialDraft: QuoteDraft = {
+        contactName: "Walk-in client",
+        contactEmail: "",
+        contactPhone: "",
+        documentType: "quotation",
+        documentNumber: `Q-${String(Date.now()).slice(-6)}`,
+        documentDate,
+        clientCompany: "Walk-in client",
+        clientAddress: "",
+        clientBrn: "",
+        clientVat: "",
+        paymentStatus: "Quotation only",
+        preparedBy: DEFAULT_PREPARED_BY,
+        showLineItems: true,
+        currency: "Rs",
+        lines: [{ description: "Custom item", quantity: 1, unitPrice: 0 }],
+        deliveryFee: 0,
+        discount: 0,
+        amountReceived: 0,
+        notes: "",
+        validUntil: format(addDays(now, 7), "yyyy-MM-dd"),
+        terms: getDefaultTerms("quotation"),
+      };
+
+      const ref = await addDoc(collection(db, "quotes"), {
+        name: initialDraft.contactName,
+        email: initialDraft.contactEmail,
+        phone: initialDraft.contactPhone,
+        message: "Created from Mo Admin",
+        garments: [{ garment: "Custom item", size: "", quantity: 1 }],
+        source: "Mo Admin",
+        status: "review",
+        quote: {
+          documentType: initialDraft.documentType,
+          documentNumber: initialDraft.documentNumber,
+          documentDate: initialDraft.documentDate,
+          clientCompany: initialDraft.clientCompany,
+          clientAddress: initialDraft.clientAddress,
+          clientBrn: initialDraft.clientBrn,
+          clientVat: initialDraft.clientVat,
+          paymentStatus: initialDraft.paymentStatus,
+          preparedBy: initialDraft.preparedBy,
+          showLineItems: initialDraft.showLineItems,
+          currency: initialDraft.currency,
+          lines: initialDraft.lines,
+          deliveryFee: initialDraft.deliveryFee,
+          discount: initialDraft.discount,
+          amountReceived: initialDraft.amountReceived,
+          notes: initialDraft.notes,
+          validUntil: initialDraft.validUntil,
+          terms: initialDraft.terms,
+          subtotal: 0,
+          total: 0,
+        },
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      setStatusFilter("all");
+      setSearch("");
+      setSelectedId(ref.id);
+      setDraft(initialDraft);
+      setNotice("New quotation created. Fill details, then save.");
+    } catch {
+      setNotice("Failed to create new quotation.");
+    } finally {
+      setCreatingQuote(false);
+    }
+  };
+
   const handleDownloadPdf = () => {
     if (!selected || !draft) return;
     const doc = buildPdfDoc(selected, draft, logo);
@@ -997,43 +1089,30 @@ export default function QuotationApprovalPage() {
 
   const handleSend = async () => {
     if (!selected || !draft) return;
+    const recipientEmail = draft.contactEmail.trim();
+    if (!recipientEmail) {
+      setNotice("Add a client email before sending.");
+      return;
+    }
     setSending(true);
     setNotice(null);
     try {
       const pdfDoc = buildPdfDoc(selected, draft, logo);
       const pdfDataUri = pdfDoc.output("datauristring");
-      const clientName = selected.name || "there";
+      const clientName = draft.contactName.trim() || selected.name || "there";
       const documentLabel = DOC_TYPE_LABELS[draft.documentType].toLowerCase();
       const payload = {
         quoteId: selected.id,
-        to: selected.email,
+        to: recipientEmail,
+        clientName: draft.contactName.trim(),
+        clientEmail: draft.contactEmail.trim(),
+        clientPhone: draft.contactPhone.trim(),
         subject: `Your ${documentLabel} from MO T-SHIRT`,
         message: draft.notes?.trim()
           ? `Hi ${clientName},\n\nPlease find your ${documentLabel} attached.\n\n${draft.notes}\n\nBest regards,\nMo T-Shirt Team`
           : `Hi ${clientName},\n\nPlease find your ${documentLabel} attached.\n\nBest regards,\nMo T-Shirt Team`,
         pdfBase64: pdfDataUri,
-        quote: {
-          documentType: draft.documentType,
-          documentNumber: draft.documentNumber,
-          documentDate: draft.documentDate,
-          clientCompany: draft.clientCompany,
-          clientAddress: draft.clientAddress,
-          clientBrn: draft.clientBrn,
-          clientVat: draft.clientVat,
-          paymentStatus: draft.paymentStatus,
-          preparedBy: draft.preparedBy,
-          showLineItems: draft.showLineItems,
-          currency: draft.currency,
-          lines: draft.lines,
-          deliveryFee: draft.deliveryFee,
-          discount: draft.discount,
-          amountReceived: draft.amountReceived,
-          notes: draft.notes,
-          validUntil: draft.validUntil,
-          terms: draft.terms,
-          subtotal: totals.subtotal,
-          total: totals.total,
-        },
+        quote: buildStoredQuotePayload(draft),
       };
 
       const res = await fetch("/api/admin/quotes/send", {
@@ -1101,11 +1180,19 @@ export default function QuotationApprovalPage() {
                   Live updates
                 </span>
                 <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-600">
-                  Auto-saves draft changes
+                  Save and edit any time
                 </span>
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={createAdminQuote}
+                disabled={creatingQuote}
+                className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60"
+              >
+                <FiPlus className="h-4 w-4" /> {creatingQuote ? "Creating..." : "New quotation"}
+              </button>
               <button
                 type="button"
                 onClick={() => window.location.reload()}
@@ -1380,10 +1467,12 @@ export default function QuotationApprovalPage() {
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Client</p>
-                        <h2 className="mt-2 text-2xl font-semibold text-slate-900">{selected.name}</h2>
+                        <h2 className="mt-2 text-2xl font-semibold text-slate-900">
+                          {draft.contactName || selected.name || "Walk-in client"}
+                        </h2>
                         <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-600">
-                          <span className="inline-flex items-center gap-1"><FiMail /> {selected.email}</span>
-                          {selected.phone && <span className="inline-flex items-center gap-1"><FiPhone /> {selected.phone}</span>}
+                          <span className="inline-flex items-center gap-1"><FiMail /> {draft.contactEmail || "No email yet"}</span>
+                          <span className="inline-flex items-center gap-1"><FiPhone /> {draft.contactPhone || "No phone yet"}</span>
                         </div>
                         <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-slate-500">
                           <span className="rounded-full border border-slate-200 bg-white px-3 py-1">Source: {selected.source || "Website"}</span>
@@ -1667,6 +1756,36 @@ export default function QuotationApprovalPage() {
                         <p className="mt-1 text-[11px] text-slate-500">Shown on the client section of the PDF.</p>
                         <div className="mt-3 grid gap-3">
                           <label className="text-xs font-medium text-slate-600">
+                            Client contact name
+                            <input
+                              value={draft.contactName}
+                              onChange={(e) => setDraft({ ...draft, contactName: e.target.value })}
+                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                              placeholder="Client name"
+                            />
+                          </label>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <label className="text-xs font-medium text-slate-600">
+                              Client email
+                              <input
+                                type="email"
+                                value={draft.contactEmail}
+                                onChange={(e) => setDraft({ ...draft, contactEmail: e.target.value })}
+                                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                                placeholder="client@email.com"
+                              />
+                            </label>
+                            <label className="text-xs font-medium text-slate-600">
+                              Phone / WhatsApp
+                              <input
+                                value={draft.contactPhone}
+                                onChange={(e) => setDraft({ ...draft, contactPhone: e.target.value })}
+                                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                                placeholder="+230 ..."
+                              />
+                            </label>
+                          </div>
+                          <label className="text-xs font-medium text-slate-600">
                             Client / Company name
                             <input
                               value={draft.clientCompany}
@@ -1902,11 +2021,11 @@ export default function QuotationApprovalPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => saveDraft("review")}
+                      onClick={() => saveDraft()}
                       disabled={saving}
                       className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
                     >
-                      <FiEdit2 /> {saving ? "Saving..." : "Save draft"}
+                      <FiEdit2 /> {saving ? "Saving..." : "Save changes"}
                     </button>
                     <button
                       type="button"
@@ -1919,7 +2038,7 @@ export default function QuotationApprovalPage() {
                     <button
                       type="button"
                       onClick={handleSend}
-                      disabled={sending || !selected.email}
+                      disabled={sending || !draft.contactEmail.trim()}
                       className="inline-flex items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-5 py-2 text-xs font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:bg-slate-800 disabled:opacity-60"
                     >
                       <FiSend /> {sending ? "Sending..." : `Approve & send ${DOC_TYPE_LABELS[draft.documentType].toLowerCase()}`}

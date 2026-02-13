@@ -5,6 +5,9 @@ import { db } from "@/lib/firebase";
 type SendPayload = {
   quoteId: string;
   to: string;
+  clientName?: string;
+  clientEmail?: string;
+  clientPhone?: string;
   subject?: string;
   message?: string;
   pdfBase64: string;
@@ -123,12 +126,18 @@ export async function POST(req: Request) {
 
     await transporter.sendMail(mailOptions);
 
+    const cleanClientName = (payload.clientName || "").trim();
+    const cleanClientEmail = (payload.clientEmail || "").trim();
+    const cleanClientPhone = (payload.clientPhone || "").trim();
     await updateDoc(doc(db, "quotes", payload.quoteId), {
       status: "sent",
       approvedAt: serverTimestamp(),
       sentAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       quote: payload.quote || null,
+      ...(cleanClientName ? { name: cleanClientName } : {}),
+      ...(cleanClientEmail ? { email: cleanClientEmail } : {}),
+      ...(cleanClientPhone ? { phone: cleanClientPhone } : {}),
       lastEmailTo: payload.to,
       lastEmailSubject: subject,
     });
