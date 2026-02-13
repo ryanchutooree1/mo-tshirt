@@ -29,6 +29,7 @@ type ValuationItem = {
   id: string;
   name: string;
   category: AssetCategory;
+  boughtDate: string;
   quantity: number;
   investedUnitValue: number;
   currentUnitValue: number;
@@ -60,6 +61,7 @@ const DEFAULT_ITEMS: ValuationItem[] = [
     id: "asset-machine",
     name: "Printing machine",
     category: "Printing Machines",
+    boughtDate: "",
     quantity: 1,
     investedUnitValue: 0,
     currentUnitValue: 0,
@@ -69,6 +71,7 @@ const DEFAULT_ITEMS: ValuationItem[] = [
     id: "asset-tools",
     name: "Tools",
     category: "Tools",
+    boughtDate: "",
     quantity: 1,
     investedUnitValue: 0,
     currentUnitValue: 0,
@@ -78,6 +81,7 @@ const DEFAULT_ITEMS: ValuationItem[] = [
     id: "asset-products",
     name: "Products stock",
     category: "Products",
+    boughtDate: "",
     quantity: 1,
     investedUnitValue: 0,
     currentUnitValue: 0,
@@ -87,6 +91,7 @@ const DEFAULT_ITEMS: ValuationItem[] = [
     id: "asset-website",
     name: "Website + admin system",
     category: "Website",
+    boughtDate: "",
     quantity: 1,
     investedUnitValue: 0,
     currentUnitValue: 0,
@@ -113,6 +118,13 @@ const toNonNegativeNumber = (value: unknown) => {
   return Math.max(0, parsed);
 };
 
+const isDateKey = (value: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+};
+
 const normalizeCategory = (value: unknown): AssetCategory => {
   if (typeof value === "string" && CATEGORY_OPTIONS.includes(value as AssetCategory)) {
     return value as AssetCategory;
@@ -129,9 +141,11 @@ const normalizeItems = (value: unknown): ValuationItem[] => {
       const id = typeof rawId === "string" && rawId.trim() ? rawId : `item-${index}-${createId()}`;
       const name = typeof item.name === "string" ? item.name : "";
       const notes = typeof item.notes === "string" ? item.notes : "";
+      const boughtDate = typeof item.boughtDate === "string" && isDateKey(item.boughtDate) ? item.boughtDate : "";
       return {
         id,
         name,
+        boughtDate,
         notes,
         category: normalizeCategory(item.category),
         quantity: toNonNegativeNumber(item.quantity),
@@ -141,8 +155,6 @@ const normalizeItems = (value: unknown): ValuationItem[] => {
     })
     .filter((item): item is ValuationItem => Boolean(item));
 };
-
-const isDateKey = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
 const normalizeHistory = (value: unknown): HistoryPoint[] => {
   if (!Array.isArray(value)) return [];
@@ -385,6 +397,7 @@ export default function BusinessValuePage() {
         id: createId(),
         name: "",
         category,
+        boughtDate: "",
         quantity: 1,
         investedUnitValue: 0,
         currentUnitValue: 0,
@@ -517,7 +530,7 @@ export default function BusinessValuePage() {
               <div className="mt-4 space-y-4">
                 {items.map((item) => (
                   <div key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <div className="grid gap-3 md:grid-cols-[1.2fr_0.95fr_0.52fr_0.95fr_0.95fr_auto] md:items-center">
+                    <div className="grid gap-3 md:grid-cols-[1.1fr_0.95fr_0.78fr_0.52fr_0.95fr_0.95fr_auto] md:items-center">
                       <label className="space-y-1">
                         <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Description</span>
                         <input
@@ -541,6 +554,19 @@ export default function BusinessValuePage() {
                             </option>
                           ))}
                         </select>
+                      </label>
+
+                      <label className="space-y-1">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Bought date</span>
+                        <input
+                          type="date"
+                          value={item.boughtDate}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            updateItem(item.id, { boughtDate: value && isDateKey(value) ? value : "" });
+                          }}
+                          className="w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-slate-900"
+                        />
                       </label>
 
                       <label className="space-y-1">
