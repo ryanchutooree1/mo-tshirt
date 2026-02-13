@@ -1851,39 +1851,13 @@ export default function QuotationApprovalPage() {
                   </div>
 
                   <div className="rounded-[28px] border border-slate-200 bg-white/90 p-6 shadow-sm">
-                    <div className="flex items-center justify-between">
+                    <div>
                       <div>
                         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Quotation / Invoice Draft</p>
                         <h3 className="mt-2 text-lg font-semibold text-slate-900">
                           Price, approve, and send in minutes
                         </h3>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => addDraftLine("Product / Size")}
-                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
-                      >
-                        <FiPlus className="h-4 w-4" /> Add custom line
-                      </button>
-                    </div>
-
-                    <div className="mt-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Quick add products</p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {QUICK_PRODUCT_LINES.map((item) => (
-                          <button
-                            key={item}
-                            type="button"
-                            onClick={() => addDraftLine(`${item} (M)`)}
-                            className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
-                          >
-                            <FiPlus className="h-3.5 w-3.5" /> {item}
-                          </button>
-                        ))}
-                      </div>
-                      <p className="mt-2 text-[11px] text-slate-500">
-                        You can edit descriptions, for example: <span className="font-semibold">T-Shirt (M) with Logo Samsung</span>.
-                      </p>
                     </div>
 
                     <div className="mt-5 grid gap-4 lg:grid-cols-2">
@@ -2137,6 +2111,32 @@ export default function QuotationApprovalPage() {
                           </button>
                         </div>
                       ))}
+                    </div>
+
+                    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Add more product</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => addDraftLine("Product / Size")}
+                          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                        >
+                          <FiPlus className="h-4 w-4" /> Add custom line
+                        </button>
+                        {QUICK_PRODUCT_LINES.map((item) => (
+                          <button
+                            key={item}
+                            type="button"
+                            onClick={() => addDraftLine(`${item} (M)`)}
+                            className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                          >
+                            <FiPlus className="h-3.5 w-3.5" /> {item}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-[11px] text-slate-500">
+                        Example: <span className="font-semibold">T-Shirt (M) with Logo Samsung</span>.
+                      </p>
                     </div>
 
                     <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
