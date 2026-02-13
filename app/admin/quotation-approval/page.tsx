@@ -362,10 +362,10 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
 
   // Header left (company)
   const headerTop = 56;
-  const maxLogoWidth = 180;
-  const maxLogoHeight = 40;
-  let logoWidth = 140;
-  let logoHeight = 32;
+  const maxLogoWidth = 165;
+  const maxLogoHeight = 36;
+  let logoWidth = 128;
+  let logoHeight = 29;
   if (logo?.ratio) {
     logoWidth = maxLogoWidth;
     logoHeight = Math.round(logoWidth / logo.ratio);
@@ -375,7 +375,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
     }
   }
   const logoY = headerTop;
-  const addressStart = logo?.dataUrl ? logoY + logoHeight + 10 : headerTop + 22;
+  const addressStart = logo?.dataUrl ? logoY + logoHeight + 16 : headerTop + 22;
 
   if (logo?.dataUrl) {
     doc.addImage(logo.dataUrl, "PNG", margin, logoY, logoWidth, logoHeight);
