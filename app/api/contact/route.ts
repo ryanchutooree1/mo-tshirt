@@ -40,6 +40,34 @@ function escapeHtml(value: string) {
     .replace(/'/g, "&#39;");
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function formatFrom(name: string, address: string) {
+  const cleanName = name.replace(/[<>"]/g, "").trim();
+  return cleanName ? `${cleanName} <${address}>` : address;
+}
+
+function resolveFromAddress(rawFrom: string | undefined, smtpUser: string | undefined) {
+  const fallbackAddress = (smtpUser || "").trim();
+  const safeFallbackAddress = EMAIL_RE.test(fallbackAddress) ? fallbackAddress : "no-reply@example.com";
+  const fallbackName = "Mo T-Shirt";
+  const raw = (rawFrom || "").trim();
+  if (!raw) return formatFrom(fallbackName, safeFallbackAddress);
+
+  const bracketMatch = raw.match(/^(.*)<([^>]*)>\s*$/);
+  if (bracketMatch) {
+    const namePart = (bracketMatch[1] || "").trim();
+    const addressPart = (bracketMatch[2] || "").trim();
+    if (EMAIL_RE.test(addressPart)) {
+      return formatFrom(namePart, addressPart);
+    }
+    return formatFrom(namePart || fallbackName, safeFallbackAddress);
+  }
+
+  if (EMAIL_RE.test(raw)) return raw;
+  return formatFrom(raw, safeFallbackAddress);
+}
+
 export async function POST(req: Request) {
   try {
     const contentType = req.headers.get("content-type") || "";
@@ -153,14 +181,7 @@ export async function POST(req: Request) {
     const secure = String(process.env.SMTP_SECURE || "true") === "true";
     const user = process.env.SMTP_USER;
     const pass = process.env.SMTP_PASS;
-    const rawFrom = process.env.SMTP_FROM;
-    const from = rawFrom
-      ? rawFrom.includes("@")
-        ? rawFrom
-        : user
-          ? `${rawFrom} <${user}>`
-          : rawFrom
-      : user || "no-reply@example.com";
+    const from = resolveFromAddress(process.env.SMTP_FROM, user);
 
     const formatValue = (value: string | number | null | undefined) => {
       const trimmed = value === undefined || value === null ? "" : String(value).trim();
