@@ -7,6 +7,10 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
+  Line,
+  LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -68,6 +72,7 @@ const STORAGE_KEY = "admin-business-value-v1";
 const DOC_REF = doc(db, "adminSettings", "businessValueTracker");
 const DEFAULT_GOAL_VALUE = 1_000_000;
 const DEFAULT_PAGE_SIZE = 15;
+const DEFAULT_GOAL_HORIZON_DAYS = 30;
 const PAGE_SIZE_OPTIONS = [15, 30, 60, 120];
 
 const CATEGORY_OPTIONS: AssetCategory[] = [
@@ -476,6 +481,76 @@ export default function BusinessValuePage() {
       ? Math.max(0, Math.min(100, (totalBusinessValue / goalValue) * 100))
       : 0;
   const remainingToGoal = Math.max(goalValue - totalBusinessValue, 0);
+
+  const dailyGainData = useMemo(() => {
+    if (historyForChart.length < 2) return [] as Array<{ date: string; fullDate: string; gain: number }>;
+    return historyForChart.slice(1).map((entry, index) => {
+      const previous = historyForChart[index];
+      const gain = entry.totalValue - previous.totalValue;
+      return {
+        date: formatDateShort(entry.date),
+        fullDate: formatDateLong(entry.date),
+        gain,
+      };
+    });
+  }, [historyForChart]);
+
+  const recentAverageDailyGain = useMemo(() => {
+    if (historyWithTodayPreview.length < 2) return 0;
+    const gains = historyWithTodayPreview.slice(1).map((entry, index) => {
+      const previous = historyWithTodayPreview[index];
+      return entry.totalValue - previous.totalValue;
+    });
+    const recentGains = gains.slice(-14);
+    if (!recentGains.length) return 0;
+    return recentGains.reduce((sum, value) => sum + value, 0) / recentGains.length;
+  }, [historyWithTodayPreview]);
+
+  const currentPaceDailyGain = Math.max(0, recentAverageDailyGain);
+  const targetDailyGain =
+    remainingToGoal > 0 ? remainingToGoal / DEFAULT_GOAL_HORIZON_DAYS : 0;
+  const paceGap = currentPaceDailyGain - targetDailyGain;
+
+  const projectionData = useMemo(() => {
+    const points: Array<{
+      date: string;
+      fullDate: string;
+      currentPaceValue: number;
+      targetPathValue: number;
+      goal: number;
+    }> = [];
+    const now = new Date();
+    for (let dayOffset = 0; dayOffset <= DEFAULT_GOAL_HORIZON_DAYS; dayOffset += 1) {
+      const date = new Date(now);
+      date.setDate(now.getDate() + dayOffset);
+      const dateKey = getDateKey(date);
+      points.push({
+        date: dayOffset === 0 ? "Today" : formatDateShort(dateKey),
+        fullDate: formatDateLong(dateKey),
+        currentPaceValue: Math.round(totalBusinessValue + currentPaceDailyGain * dayOffset),
+        targetPathValue: Math.round(
+          remainingToGoal > 0
+            ? totalBusinessValue + targetDailyGain * dayOffset
+            : totalBusinessValue
+        ),
+        goal: goalValue,
+      });
+    }
+    return points;
+  }, [currentPaceDailyGain, goalValue, remainingToGoal, targetDailyGain, totalBusinessValue]);
+
+  const projectedValueInHorizon = projectionData.length
+    ? projectionData[projectionData.length - 1].currentPaceValue
+    : totalBusinessValue;
+  const goalHorizonDateLabel = useMemo(() => {
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + DEFAULT_GOAL_HORIZON_DAYS);
+    return targetDate.toLocaleDateString(undefined, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  }, []);
 
   const categoryData = useMemo(() => {
     const sums = new Map<AssetCategory, number>();
@@ -1082,6 +1157,150 @@ export default function BusinessValuePage() {
               </article>
 
               <article className={`${panelClass} p-5`}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">Daily gains momentum</h2>
+                    <p className="text-xs text-slate-500">
+                      Green bars are value increases. Red bars show days to recover and push harder.
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className={`text-sm font-semibold ${recentAverageDailyGain >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
+                      {recentAverageDailyGain >= 0 ? "+" : "-"}
+                      {formatCurrency(Math.abs(recentAverageDailyGain))}/day
+                    </div>
+                    <div className="text-[11px] text-slate-500">14-day average pace</div>
+                  </div>
+                </div>
+
+                <div className="mt-4 h-48 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={dailyGainData.length ? dailyGainData : [{ date: "No data", fullDate: "No data", gain: 0 }]}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                      <YAxis
+                        tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`}
+                        tick={{ fontSize: 11 }}
+                        stroke="#94a3b8"
+                        width={40}
+                      />
+                      <ReferenceLine y={0} stroke="#cbd5e1" />
+                      <Tooltip
+                        formatter={(value: number) => `${value >= 0 ? "+" : "-"}${formatCurrency(Math.abs(value))}`}
+                        labelFormatter={(label, payload) => {
+                          const first = payload?.[0]?.payload as { fullDate?: string } | undefined;
+                          return first?.fullDate || String(label);
+                        }}
+                      />
+                      <Bar dataKey="gain" radius={[4, 4, 0, 0]}>
+                        {(dailyGainData.length
+                          ? dailyGainData
+                          : [{ date: "No data", fullDate: "No data", gain: 0 }]
+                        ).map((entry, index) => (
+                          <Cell
+                            key={`${entry.date}-${index}`}
+                            fill={entry.gain >= 0 ? "#16a34a" : "#f43f5e"}
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </article>
+
+              <article className={`${panelClass} p-5`}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900">
+                      {DEFAULT_GOAL_HORIZON_DAYS}-day path to goal
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      Compare your current pace with the pace required to hit your target by {goalHorizonDateLabel}.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Current pace</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-900">
+                      +{formatCurrency(currentPaceDailyGain)}/day
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Needed pace</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-900">
+                      +{formatCurrency(targetDailyGain)}/day
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Your projection</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-900">
+                      {formatCurrency(projectedValueInHorizon)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 h-56 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={projectionData} margin={{ top: 8, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                      <YAxis
+                        tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`}
+                        tick={{ fontSize: 11 }}
+                        stroke="#94a3b8"
+                        width={50}
+                      />
+                      <Tooltip
+                        formatter={(value: number, key: string) =>
+                          key === "currentPaceValue"
+                            ? [formatCurrency(value), "Current pace"]
+                            : key === "targetPathValue"
+                              ? [formatCurrency(value), "Target pace"]
+                              : [formatCurrency(value), "Goal"]
+                        }
+                        labelFormatter={(label, payload) => {
+                          const first = payload?.[0]?.payload as { fullDate?: string } | undefined;
+                          return first?.fullDate || String(label);
+                        }}
+                      />
+                      <ReferenceLine y={goalValue} stroke="#f59e0b" strokeDasharray="5 5" />
+                      <Line
+                        type="monotone"
+                        dataKey="currentPaceValue"
+                        stroke="#0284c7"
+                        strokeWidth={2.2}
+                        dot={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="targetPathValue"
+                        stroke="#16a34a"
+                        strokeWidth={2.2}
+                        strokeDasharray="5 4"
+                        dot={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div
+                  className={`mt-3 rounded-2xl border px-3 py-2 text-xs font-semibold ${
+                    paceGap >= 0
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border-amber-200 bg-amber-50 text-amber-700"
+                  }`}
+                >
+                  {paceGap >= 0
+                    ? `You are ahead of target pace by +${formatCurrency(paceGap)}/day.`
+                    : `Add +${formatCurrency(Math.abs(paceGap))}/day to hit your target on time.`}
+                </div>
+              </article>
+
+              <article className={`${panelClass} p-5`}>
                 <h2 className="text-lg font-semibold text-slate-900">Category breakdown</h2>
                 <p className="mt-1 text-xs text-slate-500">Where most of your valuation currently sits.</p>
 
@@ -1124,6 +1343,15 @@ export default function BusinessValuePage() {
                 <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <div className="text-xs text-slate-500">Remaining to reach target</div>
                   <div className="mt-1 text-lg font-semibold text-slate-900">{formatCurrency(remainingToGoal)}</div>
+                </div>
+
+                <div className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                  <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">
+                    Projection by {goalHorizonDateLabel}
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-slate-900">
+                    {formatCurrency(projectedValueInHorizon)}
+                  </div>
                 </div>
 
                 <div className="mt-3 grid gap-2">
