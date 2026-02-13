@@ -744,11 +744,8 @@ export default function BusinessValuePage() {
   const lastVisibleIndex = Math.min(currentPage * pageSize, filteredSortedItems.length);
 
   return (
-    <main className="min-h-screen bg-[#f7f7fb] text-slate-900">
-      <div className="relative">
-        <div className="pointer-events-none absolute -left-20 top-[-8rem] h-72 w-72 rounded-full bg-cyan-200/50 blur-3xl" />
-        <div className="pointer-events-none absolute right-[-5rem] top-16 h-80 w-80 rounded-full bg-amber-200/40 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-[-8rem] left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-emerald-200/30 blur-3xl" />
+    <main className="min-h-screen overflow-x-hidden bg-[#f7f7fb] text-slate-900">
+      <div className="relative overflow-x-hidden">
 
         <div className="relative mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
           <header className={`${panelClass} p-6 sm:p-8`}>
@@ -1177,7 +1174,13 @@ export default function BusinessValuePage() {
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 11 }}
+                        stroke="#94a3b8"
+                        padding={{ left: 8, right: 18 }}
+                        interval="preserveStartEnd"
+                      />
                       <YAxis
                         tickFormatter={(value) => `Rs ${Math.round(value).toLocaleString()}`}
                         tick={{ fontSize: 11 }}
@@ -1229,7 +1232,13 @@ export default function BusinessValuePage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={dailyGainChartData} margin={{ top: 10, right: 28, left: 8, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 11 }}
+                        stroke="#94a3b8"
+                        padding={{ left: 8, right: 18 }}
+                        interval="preserveStartEnd"
+                      />
                       <YAxis
                         tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`}
                         tick={{ fontSize: 11 }}
@@ -1294,7 +1303,13 @@ export default function BusinessValuePage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={projectionData} margin={{ top: 8, right: 28, left: 8, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 11 }}
+                        stroke="#94a3b8"
+                        padding={{ left: 8, right: 18 }}
+                        interval="preserveStartEnd"
+                      />
                       <YAxis
                         tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`}
                         tick={{ fontSize: 11 }}
