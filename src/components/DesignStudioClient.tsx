@@ -374,6 +374,18 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
       }, 0),
     [sizeQuantities]
   );
+  const selectedSizes = useMemo(
+    () =>
+      SIZE_FIELDS.map((size) => ({
+        size,
+        quantity: Number(sizeQuantities[size]) || 0,
+      })).filter((entry) => entry.quantity > 0),
+    [sizeQuantities]
+  );
+  const selectedSizesLabel = useMemo(() => {
+    if (!selectedSizes.length) return "None";
+    return selectedSizes.map((entry) => `${entry.size} x ${entry.quantity}`).join(" | ");
+  }, [selectedSizes]);
 
   const decoratedSides = useMemo(() => {
     const sides: Side[] = ["front", "back"];
@@ -686,7 +698,7 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
   const summary = useMemo(() => {
     const front = designBySide.front;
     const back = designBySide.back;
-    const sizes = SIZE_FIELDS.map((size) => `${size}:${Number(sizeQuantities[size]) || 0}`).join(" | ");
+    const sizes = selectedSizesLabel;
     const frontText = front.text.enabled ? front.text.value || "none" : "off";
     const backText = back.text.enabled ? back.text.value || "none" : "off";
     const frontLogo = front.logo.enabled && logoPreview ? "on" : "off";
@@ -700,7 +712,7 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
       `Back text: ${backText}`,
       `Front logo: ${frontLogo}`,
       `Back logo: ${backLogo}`,
-      `Sizes: ${sizes}`,
+      `Selected sizes: ${sizes}`,
       `Total qty: ${totalQty}`,
       `Estimated total: Rs ${withCommas(totalPrice)}`,
       `Delivery: ${delivery}`,
@@ -725,7 +737,7 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
     product.label,
     rush,
     sourceLabel,
-    sizeQuantities,
+    selectedSizesLabel,
     totalPrice,
     totalQty,
   ]);
@@ -760,10 +772,7 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
     setSubmitting(true);
     setResult(null);
 
-    const garmentLines = SIZE_FIELDS.map((size) => ({
-      size,
-      quantity: Number(sizeQuantities[size]) || 0,
-    })).filter((entry) => entry.quantity > 0);
+    const garmentLines = selectedSizes;
 
     const payload = new FormData();
     payload.append("name", trimmedName);
@@ -788,6 +797,25 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
     payload.append(
       "notes",
       [summary, client.notes ? `Client notes:\n${client.notes.trim()}` : "", rush ? "Rush requested: Yes" : "Rush requested: No"].filter(Boolean).join("\n\n")
+    );
+    payload.append(
+      "designBrief",
+      JSON.stringify({
+        product: product.label,
+        color: color.label,
+        printMethod: method.label,
+        frontText: designBySide.front.text.enabled ? designBySide.front.text.value || "none" : "off",
+        backText: designBySide.back.text.enabled ? designBySide.back.text.value || "none" : "off",
+        frontLogo: designBySide.front.logo.enabled && !!logoPreview,
+        backLogo: designBySide.back.logo.enabled && !!logoPreview,
+        selectedSizes: garmentLines,
+        totalQty,
+        estimatedTotal: totalPrice,
+        rush,
+        delivery,
+        deadline: client.deadline.trim(),
+        clientNotes: client.notes.trim(),
+      })
     );
     payload.append("source", sourceLabel);
     payload.append("delivery", delivery);
@@ -1423,6 +1451,9 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
                     <div className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-slate-600">
                       Recommended: <span className="font-semibold text-slate-900">{product.minQty}+</span>
                     </div>
+                  </div>
+                  <div className="mt-3 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-600">
+                    Selected sizes: <span className="font-semibold text-slate-900">{selectedSizesLabel}</span>
                   </div>
                   <label className="mt-3 flex items-center gap-2 text-xs font-semibold text-slate-600">
                     <input

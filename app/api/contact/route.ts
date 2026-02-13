@@ -25,6 +25,7 @@ type ParsedPayload = {
   attachmentName?: string;
   attachmentType?: string;
   attachmentSize?: string | number;
+  designBrief?: string | Record<string, unknown>;
 };
 
 function isValidEmail(email: string) {
@@ -38,6 +39,20 @@ function escapeHtml(value: string) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function parseJsonObject(value: unknown): Record<string, unknown> | null {
+  if (!value) return null;
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  if (typeof value !== "string") return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null;
+  } catch {
+    return null;
+  }
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -97,6 +112,7 @@ export async function POST(req: Request) {
         attachmentName: form.get("attachmentName")?.toString(),
         attachmentType: form.get("attachmentType")?.toString(),
         attachmentSize: form.get("attachmentSize")?.toString(),
+        designBrief: form.get("designBrief")?.toString(),
         file: form.get("file") instanceof File ? (form.get("file") as File) : null,
       };
     } else {
@@ -127,6 +143,7 @@ export async function POST(req: Request) {
       attachmentName,
       attachmentType,
       attachmentSize,
+      designBrief,
     } = payload;
 
     const safeName = String(name ?? "").trim();
@@ -189,6 +206,7 @@ export async function POST(req: Request) {
     };
     const notesValue = notes && notes.trim() ? notes : safeMessage;
     const sourceValue = formatValue(source);
+    const parsedDesignBrief = parseJsonObject(designBrief);
     const parsedGarments: { garment?: string; size?: string; quantity?: string | number }[] = (() => {
       if (!garments) return [];
       if (Array.isArray(garments)) return garments;
@@ -243,6 +261,7 @@ export async function POST(req: Request) {
         deliveryAddress: deliveryAddress || "",
         deliveryPostCode: deliveryPostCode || "",
         deliveryPhone: deliveryPhone || "",
+        designBrief: parsedDesignBrief,
         attachment: attachmentUrl
           ? {
               url: attachmentUrl,

@@ -86,6 +86,7 @@ type QuoteRecord = {
   deliveryAddress?: string;
   deliveryPostCode?: string;
   deliveryPhone?: string;
+  designBrief?: Record<string, unknown> | null;
   attachment?: { filename?: string; contentType?: string; size?: number | null; url?: string };
   status?: QuoteStatus;
   createdAt?: Date | null;
@@ -112,6 +113,23 @@ type QuoteRecord = {
     total?: number;
     terms?: string;
   };
+};
+
+type DesignBrief = {
+  product?: string;
+  color?: string;
+  printMethod?: string;
+  frontText?: string;
+  backText?: string;
+  frontLogo?: boolean;
+  backLogo?: boolean;
+  selectedSizes?: { size?: string; quantity?: number }[];
+  totalQty?: number;
+  estimatedTotal?: number;
+  rush?: boolean;
+  delivery?: string;
+  deadline?: string;
+  clientNotes?: string;
 };
 
 type LogoAsset = {
@@ -220,6 +238,53 @@ const getPrimaryStatusMeta = (status: QuoteStatus, docType: DocumentType) => {
 const safeNumber = (value: unknown, fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const parseDesignBrief = (value: unknown): DesignBrief | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  const selectedSizes = Array.isArray(raw.selectedSizes)
+    ? raw.selectedSizes
+        .map((item) => {
+          if (!item || typeof item !== "object" || Array.isArray(item)) return { size: "", quantity: 0 };
+          const entry = item as Record<string, unknown>;
+          return {
+            size: String(entry.size || "").trim(),
+            quantity: safeNumber(entry.quantity, 0),
+          };
+        })
+        .filter((item) => item.size && item.quantity > 0)
+    : [];
+  return {
+    product: typeof raw.product === "string" ? raw.product : "",
+    color: typeof raw.color === "string" ? raw.color : "",
+    printMethod: typeof raw.printMethod === "string" ? raw.printMethod : "",
+    frontText: typeof raw.frontText === "string" ? raw.frontText : "",
+    backText: typeof raw.backText === "string" ? raw.backText : "",
+    frontLogo: Boolean(raw.frontLogo),
+    backLogo: Boolean(raw.backLogo),
+    selectedSizes,
+    totalQty: safeNumber(raw.totalQty, 0),
+    estimatedTotal: safeNumber(raw.estimatedTotal, 0),
+    rush: Boolean(raw.rush),
+    delivery: typeof raw.delivery === "string" ? raw.delivery : "",
+    deadline: typeof raw.deadline === "string" ? raw.deadline : "",
+    clientNotes: typeof raw.clientNotes === "string" ? raw.clientNotes : "",
+  };
+};
+
+const formatSizeRows = (sizes: { size?: string; quantity?: number }[]) =>
+  sizes
+    .filter((entry) => entry.size && safeNumber(entry.quantity, 0) > 0)
+    .map((entry) => `${entry.size} x ${safeNumber(entry.quantity, 0)}`);
+
+const extractClientNotes = (quote: QuoteRecord, designBrief: DesignBrief | null) => {
+  if (designBrief?.clientNotes?.trim()) return designBrief.clientNotes.trim();
+  const raw = (quote.notes || quote.message || "").trim();
+  if (!raw) return "";
+  const marker = raw.match(/Client notes:\s*([\s\S]*)$/i);
+  if (marker?.[1]?.trim()) return marker[1].trim();
+  return raw;
 };
 
 const parseTimestamp = (value: any) => {
@@ -798,6 +863,32 @@ export default function QuotationApprovalPage() {
     () => quotes.find((quote) => quote.id === selectedId) || null,
     [quotes, selectedId]
   );
+
+  const selectedDesignBrief = useMemo(
+    () => parseDesignBrief(selected?.designBrief),
+    [selected?.designBrief]
+  );
+  const selectedSizeRows = useMemo(() => {
+    if (selectedDesignBrief?.selectedSizes?.length) {
+      return formatSizeRows(selectedDesignBrief.selectedSizes);
+    }
+    return (selected?.garments || [])
+      .filter((entry) => safeNumber(entry.quantity, 0) > 0)
+      .map((entry) => {
+        const sizeLabel = entry.size ? ` (${entry.size})` : "";
+        return `${entry.garment || "Item"}${sizeLabel} x ${safeNumber(entry.quantity, 0)}`;
+      });
+  }, [selectedDesignBrief, selected?.garments]);
+  const selectedClientNotes = useMemo(
+    () => (selected ? extractClientNotes(selected, selectedDesignBrief) : ""),
+    [selected, selectedDesignBrief]
+  );
+  const selectedTotalQty = useMemo(() => {
+    if (selectedDesignBrief?.totalQty && selectedDesignBrief.totalQty > 0) {
+      return selectedDesignBrief.totalQty;
+    }
+    return (selected?.garments || []).reduce((sum, entry) => sum + safeNumber(entry.quantity, 0), 0);
+  }, [selected, selectedDesignBrief]);
 
   const attachment = selected?.attachment;
   const attachmentIsImage = Boolean(attachment?.contentType?.startsWith("image/"));
@@ -1438,6 +1529,15 @@ export default function QuotationApprovalPage() {
                   const readLabel = status === "new" ? "Unread" : "Read";
                   const selectedTone = selectedId === quote.id;
                   const stageLabel = status === "sent" ? `${DOC_TYPE_LABELS[docType]} sent` : DOC_TYPE_LABELS[docType];
+                  const sizePreview = (quote.garments || [])
+                    .filter((entry) => safeNumber(entry.quantity, 0) > 0)
+                    .slice(0, 2)
+                    .map((entry) => `${entry.size || "size"} x ${safeNumber(entry.quantity, 0)}`)
+                    .join(", ");
+                  const totalPieces = (quote.garments || []).reduce(
+                    (sum, entry) => sum + safeNumber(entry.quantity, 0),
+                    0
+                  );
                   return (
                     <button
                       key={quote.id}
@@ -1483,6 +1583,9 @@ export default function QuotationApprovalPage() {
                         >
                           {readLabel}
                         </span>
+                      </div>
+                      <div className={`mt-2 text-[11px] ${selectedTone ? "text-slate-300" : "text-slate-500"}`}>
+                        {totalPieces > 0 ? `${totalPieces} pcs${sizePreview ? ` • ${sizePreview}` : ""}` : "No quantity yet"}
                       </div>
                       <div className={`mt-3 flex items-center justify-between text-xs ${selectedTone ? "text-slate-200" : "text-slate-400"}`}>
                         <span>{createdAt}</span>
@@ -1552,22 +1655,41 @@ export default function QuotationApprovalPage() {
                       <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
                         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Request</p>
                         <p className="mt-3 text-sm text-slate-700">
-                          <span className="font-semibold">Garments:</span>{" "}
-                          {(selected.garments || [])
-                            .map((g) => {
-                              const sizeLabel = g.size ? ` (${g.size})` : "";
-                              return `${g.garment || "Item"}${sizeLabel} x ${g.quantity || "0"}`;
-                            })
-                            .join(", ") || "n/a"}
+                          <span className="font-semibold">Product:</span>{" "}
+                          {selectedDesignBrief?.product || selected.garments?.[0]?.garment || "n/a"}
                         </p>
                         <p className="mt-2 text-sm text-slate-700">
-                          <span className="font-semibold">Print:</span> {selected.printMethod || "n/a"}
+                          <span className="font-semibold">Selected sizes:</span> {selectedSizeRows.join(", ") || "n/a"}
                         </p>
                         <p className="mt-2 text-sm text-slate-700">
-                          <span className="font-semibold">Deadline:</span> {selected.deadline || "n/a"}
+                          <span className="font-semibold">Total qty:</span> {selectedTotalQty > 0 ? selectedTotalQty : "n/a"}
                         </p>
                         <p className="mt-2 text-sm text-slate-700">
-                          <span className="font-semibold">Notes:</span> {selected.notes || selected.message || "n/a"}
+                          <span className="font-semibold">Print:</span> {selectedDesignBrief?.printMethod || selected.printMethod || "n/a"}
+                        </p>
+                        <p className="mt-2 text-sm text-slate-700">
+                          <span className="font-semibold">Color:</span> {selectedDesignBrief?.color || "n/a"}
+                        </p>
+                        {selectedDesignBrief && (
+                          <p className="mt-2 text-sm text-slate-700">
+                            <span className="font-semibold">Design:</span>{" "}
+                            Front text {selectedDesignBrief.frontText || "off"}, Back text {selectedDesignBrief.backText || "off"}, Front logo {selectedDesignBrief.frontLogo ? "on" : "off"}, Back logo {selectedDesignBrief.backLogo ? "on" : "off"}
+                          </p>
+                        )}
+                        {safeNumber(selectedDesignBrief?.estimatedTotal, 0) > 0 && (
+                          <p className="mt-2 text-sm text-slate-700">
+                            <span className="font-semibold">Estimated total:</span> {formatMoney(safeNumber(selectedDesignBrief?.estimatedTotal, 0), "Rs")}
+                          </p>
+                        )}
+                        <p className="mt-2 text-sm text-slate-700">
+                          <span className="font-semibold">Rush:</span>{" "}
+                          {selectedDesignBrief ? (selectedDesignBrief.rush ? "Yes" : "No") : "n/a"}
+                        </p>
+                        <p className="mt-2 text-sm text-slate-700">
+                          <span className="font-semibold">Deadline:</span> {selectedDesignBrief?.deadline || selected.deadline || "n/a"}
+                        </p>
+                        <p className="mt-2 text-sm text-slate-700">
+                          <span className="font-semibold">Notes:</span> {selectedClientNotes || "n/a"}
                         </p>
                         <div className="mt-4 space-y-2">
                           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Attachment</p>
