@@ -12,6 +12,7 @@ const DETAILS_ITEM: NavItem = { href: "/admin/business-details", label: "Busines
 const QUOTE_ITEM: NavItem = { href: "/admin/quotation-approval", label: "Quotation / Invoice" };
 const DESIGN_STUDIO_ITEM: NavItem = { href: "/admin/design-studio", label: "Design Studio" };
 const FINANCE_ITEM: NavItem = { href: "/admin/finance-freedom", label: "Finance Freedom" };
+const BUSINESS_VALUE_ITEM: NavItem = { href: "/admin/business-value", label: "Business Value" };
 
 // Default nav groupings
 const DEFAULT_TOP: NavItem[] = [
@@ -24,6 +25,7 @@ const DEFAULT_TOP: NavItem[] = [
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/accounting", label: "Accounting" },
   FINANCE_ITEM,
+  BUSINESS_VALUE_ITEM,
   { href: "/admin/dms", label: "DMS" },
   NOTES_ITEM,
   DETAILS_ITEM,
@@ -51,12 +53,15 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
   const moreHasDesignStudio = more.some((item) => item.href === DESIGN_STUDIO_ITEM.href);
   const topHasFinance = top.some((item) => item.href === FINANCE_ITEM.href);
   const moreHasFinance = more.some((item) => item.href === FINANCE_ITEM.href);
+  const topHasBusinessValue = top.some((item) => item.href === BUSINESS_VALUE_ITEM.href);
+  const moreHasBusinessValue = more.some((item) => item.href === BUSINESS_VALUE_ITEM.href);
   const cleanedTop = top.filter(
     (item) =>
       item.href !== SHOP_ITEM.href &&
       item.href !== QUOTE_ITEM.href &&
       item.href !== DESIGN_STUDIO_ITEM.href &&
       item.href !== FINANCE_ITEM.href &&
+      item.href !== BUSINESS_VALUE_ITEM.href &&
       (item.href !== NOTES_ITEM.href || topHasNotes) &&
       (item.href !== DETAILS_ITEM.href || topHasDetails)
   );
@@ -66,6 +71,7 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
       item.href !== QUOTE_ITEM.href &&
       item.href !== DESIGN_STUDIO_ITEM.href &&
       item.href !== FINANCE_ITEM.href &&
+      item.href !== BUSINESS_VALUE_ITEM.href &&
       (item.href !== NOTES_ITEM.href || !topHasNotes) &&
       (item.href !== DETAILS_ITEM.href || !topHasDetails)
   );
@@ -100,6 +106,14 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
       nextTop.push(FINANCE_ITEM);
     }
   }
+  if (topHasBusinessValue || (!topHasBusinessValue && !moreHasBusinessValue)) {
+    const financeIndex = nextTop.findIndex((item) => item.href === FINANCE_ITEM.href);
+    if (financeIndex >= 0) {
+      nextTop.splice(financeIndex + 1, 0, BUSINESS_VALUE_ITEM);
+    } else {
+      nextTop.push(BUSINESS_VALUE_ITEM);
+    }
+  }
   if (!topHasNotes && !moreHasNotes) {
     const dmsIndex = nextTop.findIndex((item) => item.href === "/admin/dms");
     if (dmsIndex >= 0) {
@@ -130,6 +144,9 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
   }
   if (moreHasFinance) {
     nextMore.push(FINANCE_ITEM);
+  }
+  if (moreHasBusinessValue) {
+    nextMore.push(BUSINESS_VALUE_ITEM);
   }
   return { top: nextTop, more: nextMore };
 }
