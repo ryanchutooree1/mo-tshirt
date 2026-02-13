@@ -13,7 +13,7 @@ import {
   YAxis,
 } from "recharts";
 import { FiPlus, FiTrash2 } from "react-icons/fi";
-import { doc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 type AssetCategory =
@@ -227,11 +227,10 @@ export default function BusinessValuePage() {
   const [items, setItems] = useState<ValuationItem[]>(DEFAULT_ITEMS);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [goalValue, setGoalValue] = useState(DEFAULT_GOAL_VALUE);
+  const [loaded, setLoaded] = useState(false);
   const [syncState, setSyncState] = useState<SyncState>("idle");
   const [snapshotLabel, setSnapshotLabel] = useState<string | null>(null);
 
-  const hasLoadedRef = useRef(false);
-  const skipSaveRef = useRef(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -255,26 +254,31 @@ export default function BusinessValuePage() {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      DOC_REF,
-      (snapshot) => {
+    let cancelled = false;
+    const loadRemote = async () => {
+      try {
+        const snapshot = await getDoc(DOC_REF);
+        if (cancelled) return;
         if (snapshot.exists()) {
           const data = snapshot.data();
-          skipSaveRef.current = true;
           setItems(normalizeItems(data.items));
           setHistory(normalizeHistory(data.history));
           setGoalValue(toNonNegativeNumber(data.goalValue ?? DEFAULT_GOAL_VALUE));
         }
-        hasLoadedRef.current = true;
         setSyncState("idle");
-      },
-      () => {
-        hasLoadedRef.current = true;
+      } catch {
+        if (cancelled) return;
         setSyncState("error");
+      } finally {
+        if (!cancelled) {
+          setLoaded(true);
+        }
       }
-    );
-
-    return () => unsubscribe();
+    };
+    loadRemote();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -293,11 +297,7 @@ export default function BusinessValuePage() {
   }, [items, history, goalValue]);
 
   useEffect(() => {
-    if (!hasLoadedRef.current) return;
-    if (skipSaveRef.current) {
-      skipSaveRef.current = false;
-      return;
-    }
+    if (!loaded) return;
     setSyncState("saving");
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
@@ -325,7 +325,7 @@ export default function BusinessValuePage() {
         clearTimeout(saveTimerRef.current);
       }
     };
-  }, [items, history, goalValue]);
+  }, [items, history, goalValue, loaded]);
 
   const totalInvestedValue = useMemo(() => {
     return items.reduce((sum, item) => sum + lineInvestedTotal(item), 0);
@@ -414,6 +414,18 @@ export default function BusinessValuePage() {
   };
 
   const panelClass = "rounded-3xl border border-slate-200 bg-white/90 shadow-sm backdrop-blur";
+
+  if (!loaded) {
+    return (
+      <main className="min-h-screen bg-[#f7f7fb] text-slate-900">
+        <div className="mx-auto flex min-h-screen w-full max-w-7xl items-center justify-center px-4 py-10 sm:px-6">
+          <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600 shadow-sm">
+            Loading business value tracker...
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#f7f7fb] text-slate-900">
@@ -562,8 +574,7 @@ export default function BusinessValuePage() {
                           type="date"
                           value={item.boughtDate}
                           onChange={(event) => {
-                            const value = event.target.value;
-                            updateItem(item.id, { boughtDate: value && isDateKey(value) ? value : "" });
+                            updateItem(item.id, { boughtDate: event.target.value });
                           }}
                           className="w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-slate-900"
                         />
