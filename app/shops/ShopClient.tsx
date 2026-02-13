@@ -150,8 +150,9 @@ export default function ShopClient() {
           setItems(Array.isArray(data?.items) ? data.items : []);
           setError(null);
         }
-      } catch (err: any) {
-        if (active) setError(err?.message || "Failed to load shops.");
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Failed to load shops.";
+        if (active) setError(message);
       } finally {
         if (active) setLoading(false);
       }
@@ -412,8 +413,8 @@ export default function ShopClient() {
             <Link href="/shops" className="rounded-full bg-[#FF6600] px-3 py-1 text-white shadow-sm hover:bg-orange-600">
               Plain Shops
             </Link>
-            <Link href="/work" className="transition hover:text-black">Our Work</Link>
-            <Link href="/contact" className="transition hover:text-black">Contact</Link>
+            <Link href="/#our-work" className="transition hover:text-black">Our Work</Link>
+            <Link href="/#contact" className="transition hover:text-black">Contact</Link>
             <a href={getWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="transition hover:text-black">
               WhatsApp
             </a>
