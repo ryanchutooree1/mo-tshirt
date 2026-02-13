@@ -39,8 +39,8 @@ type QuoteStatus = "new" | "review" | "approved" | "sent";
 
 type QuoteLine = {
   description: string;
-  quantity: number;
-  unitPrice: number;
+  quantity: number | "";
+  unitPrice: number | "";
 };
 
 type DocumentType = "quotation" | "invoice" | "receipt" | "partial_receipt";
@@ -1000,7 +1000,11 @@ export default function QuotationApprovalPage() {
     preparedBy: baseDraft.preparedBy,
     showLineItems: baseDraft.showLineItems,
     currency: baseDraft.currency,
-    lines: baseDraft.lines,
+    lines: baseDraft.lines.map((line) => ({
+      description: line.description,
+      quantity: safeNumber(line.quantity, 0),
+      unitPrice: safeNumber(line.unitPrice, 0),
+    })),
     deliveryFee: baseDraft.deliveryFee,
     discount: baseDraft.discount,
     amountReceived: baseDraft.amountReceived,
@@ -2034,7 +2038,11 @@ export default function QuotationApprovalPage() {
                             type="number"
                             min={0}
                             value={line.quantity}
-                            onChange={(e) => updateDraftLine(index, { quantity: safeNumber(e.target.value, 0) })}
+                            onChange={(e) =>
+                              updateDraftLine(index, {
+                                quantity: e.target.value === "" ? "" : safeNumber(e.target.value, 0),
+                              })
+                            }
                             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-right"
                             placeholder="Qty"
                             aria-label="Quantity"
@@ -2043,13 +2051,20 @@ export default function QuotationApprovalPage() {
                             type="number"
                             min={0}
                             value={line.unitPrice}
-                            onChange={(e) => updateDraftLine(index, { unitPrice: safeNumber(e.target.value, 0) })}
+                            onChange={(e) =>
+                              updateDraftLine(index, {
+                                unitPrice: e.target.value === "" ? "" : safeNumber(e.target.value, 0),
+                              })
+                            }
                             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-right"
                             placeholder="Unit price"
                             aria-label="Unit price"
                           />
                           <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-right font-semibold text-slate-800">
-                            {formatMoney(line.quantity * line.unitPrice, draft.currency)}
+                            {formatMoney(
+                              safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0),
+                              draft.currency
+                            )}
                           </div>
                           <button
                             type="button"
