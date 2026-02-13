@@ -464,6 +464,24 @@ export default function BusinessValuePage() {
     [historyForChart]
   );
 
+  const trendUsingSample = chartData.length < 2;
+  const trendChartData = useMemo(() => {
+    if (!trendUsingSample) return chartData;
+    const base = Math.max(totalBusinessValue, totalInvestedValue, 20_000);
+    const points = 7;
+    return Array.from({ length: points }, (_, index) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (points - 1 - index));
+      const dateKey = getDateKey(date);
+      const factor = 0.82 + (index / (points - 1)) * 0.18;
+      return {
+        date: formatDateShort(dateKey),
+        fullDate: `${formatDateLong(dateKey)} (sample)`,
+        totalValue: Math.round(base * factor),
+      };
+    });
+  }, [chartData, totalBusinessValue, totalInvestedValue, trendUsingSample]);
+
   const todaySaved = history.some((point) => point.date === todayKey);
   const lastChartPoint = historyWithTodayPreview.length
     ? historyWithTodayPreview[historyWithTodayPreview.length - 1]
@@ -494,6 +512,24 @@ export default function BusinessValuePage() {
       };
     });
   }, [historyForChart]);
+
+  const dailyGainUsingSample = dailyGainData.length === 0;
+  const dailyGainChartData = useMemo(() => {
+    if (!dailyGainUsingSample) return dailyGainData;
+    const base = Math.max(totalBusinessValue, totalInvestedValue, 20_000);
+    const step = Math.max(500, Math.round(base * 0.01));
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (6 - index));
+      const dateKey = getDateKey(date);
+      const gain = index === 0 ? 0 : Math.round(step * (0.45 + Math.sin(index / 2) * 0.2 + index * 0.08));
+      return {
+        date: formatDateShort(dateKey),
+        fullDate: `${formatDateLong(dateKey)} (sample)`,
+        gain,
+      };
+    });
+  }, [dailyGainData, dailyGainUsingSample, totalBusinessValue, totalInvestedValue]);
 
   const recentAverageDailyGain = useMemo(() => {
     if (historyWithTodayPreview.length < 2) return 0;
@@ -743,6 +779,12 @@ export default function BusinessValuePage() {
                 >
                   <FiPlus className="h-4 w-4" /> Add asset
                 </button>
+                <a
+                  href="#growth-graphs"
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  View graphs
+                </a>
                 <span
                   className={`rounded-full border px-3 py-1 text-xs font-semibold ${
                     syncState === "error"
@@ -805,7 +847,7 @@ export default function BusinessValuePage() {
           </section>
 
           <section className="mt-6 grid gap-6 xl:grid-cols-[1.85fr_1fr]">
-            <article className={`${panelClass} p-4 sm:p-6`}>
+            <article className={`${panelClass} order-2 p-4 sm:p-6 xl:order-1`}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">Assets register</h2>
@@ -1081,7 +1123,7 @@ export default function BusinessValuePage() {
               </div>
             </article>
 
-            <div className="space-y-6">
+            <div id="growth-graphs" className="space-y-6 order-1 xl:order-2">
               <article className={`${panelClass} p-5`}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
@@ -1097,6 +1139,11 @@ export default function BusinessValuePage() {
                     {formatCurrency(Math.abs(dayChange))}
                   </div>
                 </div>
+                {trendUsingSample ? (
+                  <div className="mt-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700">
+                    Showing preview graph. Save snapshots for 2+ days to display your real trend.
+                  </div>
+                ) : null}
 
                 <div className="mt-3 inline-flex overflow-hidden rounded-full border border-slate-200 bg-slate-50 p-1 text-xs font-semibold">
                   {([
@@ -1122,7 +1169,7 @@ export default function BusinessValuePage() {
 
                 <div className="mt-4 h-64 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={chartData} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
+                    <AreaChart data={trendChartData} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
                       <defs>
                         <linearGradient id="businessValueFill" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#0f172a" stopOpacity={0.28} />
@@ -1172,12 +1219,15 @@ export default function BusinessValuePage() {
                     <div className="text-[11px] text-slate-500">14-day average pace</div>
                   </div>
                 </div>
+                {dailyGainUsingSample ? (
+                  <div className="mt-2 rounded-2xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-[11px] font-semibold text-cyan-700">
+                    Preview bars are shown until your real day-to-day gain history is available.
+                  </div>
+                ) : null}
 
                 <div className="mt-4 h-48 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={dailyGainData.length ? dailyGainData : [{ date: "No data", fullDate: "No data", gain: 0 }]}
-                    >
+                    <BarChart data={dailyGainChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                       <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94a3b8" />
                       <YAxis
@@ -1195,10 +1245,7 @@ export default function BusinessValuePage() {
                         }}
                       />
                       <Bar dataKey="gain" radius={[4, 4, 0, 0]}>
-                        {(dailyGainData.length
-                          ? dailyGainData
-                          : [{ date: "No data", fullDate: "No data", gain: 0 }]
-                        ).map((entry, index) => (
+                        {dailyGainChartData.map((entry, index) => (
                           <Cell
                             key={`${entry.date}-${index}`}
                             fill={entry.gain >= 0 ? "#16a34a" : "#f43f5e"}
