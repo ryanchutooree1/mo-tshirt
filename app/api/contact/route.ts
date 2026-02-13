@@ -204,9 +204,13 @@ export async function POST(req: Request) {
       const trimmed = value === undefined || value === null ? "" : String(value).trim();
       return trimmed ? trimmed : "n/a";
     };
-    const notesValue = notes && notes.trim() ? notes : safeMessage;
-    const sourceValue = formatValue(source);
     const parsedDesignBrief = parseJsonObject(designBrief);
+    const notesValue = parsedDesignBrief
+      ? String(notes ?? "").trim()
+      : notes && notes.trim()
+        ? notes
+        : safeMessage;
+    const sourceValue = formatValue(source);
     const parsedGarments: { garment?: string; size?: string; quantity?: string | number }[] = (() => {
       if (!garments) return [];
       if (Array.isArray(garments)) return garments;

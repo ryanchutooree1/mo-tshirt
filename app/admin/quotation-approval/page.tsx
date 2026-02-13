@@ -240,6 +240,15 @@ const safeNumber = (value: unknown, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const normalizeDesignText = (value: unknown) => {
+  if (typeof value !== "string") return "";
+  const text = value.trim();
+  if (!text) return "";
+  const lower = text.toLowerCase();
+  if (lower === "off" || lower === "none" || lower === "n/a") return "";
+  return text;
+};
+
 const parseDesignBrief = (value: unknown): DesignBrief | null => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
@@ -259,8 +268,8 @@ const parseDesignBrief = (value: unknown): DesignBrief | null => {
     product: typeof raw.product === "string" ? raw.product : "",
     color: typeof raw.color === "string" ? raw.color : "",
     printMethod: typeof raw.printMethod === "string" ? raw.printMethod : "",
-    frontText: typeof raw.frontText === "string" ? raw.frontText : "",
-    backText: typeof raw.backText === "string" ? raw.backText : "",
+    frontText: normalizeDesignText(raw.frontText),
+    backText: normalizeDesignText(raw.backText),
     frontLogo: Boolean(raw.frontLogo),
     backLogo: Boolean(raw.backLogo),
     selectedSizes,
@@ -280,6 +289,7 @@ const formatSizeRows = (sizes: { size?: string; quantity?: number }[]) =>
 
 const extractClientNotes = (quote: QuoteRecord, designBrief: DesignBrief | null) => {
   if (designBrief?.clientNotes?.trim()) return designBrief.clientNotes.trim();
+  if (designBrief) return "";
   const raw = (quote.notes || quote.message || "").trim();
   if (!raw) return "";
   const marker = raw.match(/Client notes:\s*([\s\S]*)$/i);
@@ -883,6 +893,15 @@ export default function QuotationApprovalPage() {
     () => (selected ? extractClientNotes(selected, selectedDesignBrief) : ""),
     [selected, selectedDesignBrief]
   );
+  const selectedDesignRows = useMemo(() => {
+    if (!selectedDesignBrief) return [];
+    const rows: string[] = [];
+    if (selectedDesignBrief.frontText) rows.push(`Front text: ${selectedDesignBrief.frontText}`);
+    if (selectedDesignBrief.backText) rows.push(`Back text: ${selectedDesignBrief.backText}`);
+    if (selectedDesignBrief.frontLogo) rows.push("Front logo");
+    if (selectedDesignBrief.backLogo) rows.push("Back logo");
+    return rows;
+  }, [selectedDesignBrief]);
   const selectedTotalQty = useMemo(() => {
     if (selectedDesignBrief?.totalQty && selectedDesignBrief.totalQty > 0) {
       return selectedDesignBrief.totalQty;
@@ -1670,10 +1689,9 @@ export default function QuotationApprovalPage() {
                         <p className="mt-2 text-sm text-slate-700">
                           <span className="font-semibold">Color:</span> {selectedDesignBrief?.color || "n/a"}
                         </p>
-                        {selectedDesignBrief && (
+                        {selectedDesignRows.length > 0 && (
                           <p className="mt-2 text-sm text-slate-700">
-                            <span className="font-semibold">Design:</span>{" "}
-                            Front text {selectedDesignBrief.frontText || "off"}, Back text {selectedDesignBrief.backText || "off"}, Front logo {selectedDesignBrief.frontLogo ? "on" : "off"}, Back logo {selectedDesignBrief.backLogo ? "on" : "off"}
+                            <span className="font-semibold">Design selected:</span> {selectedDesignRows.join(" | ")}
                           </p>
                         )}
                         {safeNumber(selectedDesignBrief?.estimatedTotal, 0) > 0 && (
@@ -1688,9 +1706,11 @@ export default function QuotationApprovalPage() {
                         <p className="mt-2 text-sm text-slate-700">
                           <span className="font-semibold">Deadline:</span> {selectedDesignBrief?.deadline || selected.deadline || "n/a"}
                         </p>
-                        <p className="mt-2 text-sm text-slate-700">
-                          <span className="font-semibold">Notes:</span> {selectedClientNotes || "n/a"}
-                        </p>
+                        {selectedClientNotes && (
+                          <p className="mt-2 text-sm text-slate-700">
+                            <span className="font-semibold">Notes:</span> {selectedClientNotes}
+                          </p>
+                        )}
                         <div className="mt-4 space-y-2">
                           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Attachment</p>
                           {attachment?.url ? (

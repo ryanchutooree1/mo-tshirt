@@ -699,19 +699,22 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
     const front = designBySide.front;
     const back = designBySide.back;
     const sizes = selectedSizesLabel;
-    const frontText = front.text.enabled ? front.text.value || "none" : "off";
-    const backText = back.text.enabled ? back.text.value || "none" : "off";
-    const frontLogo = front.logo.enabled && logoPreview ? "on" : "off";
-    const backLogo = back.logo.enabled && logoPreview ? "on" : "off";
+    const frontText = front.text.enabled ? front.text.value.trim() : "";
+    const backText = back.text.enabled ? back.text.value.trim() : "";
+    const frontLogo = front.logo.enabled && !!logoPreview;
+    const backLogo = back.logo.enabled && !!logoPreview;
+    const designSelections = [
+      frontText ? `Front text: ${frontText}` : "",
+      backText ? `Back text: ${backText}` : "",
+      frontLogo ? "Front logo" : "",
+      backLogo ? "Back logo" : "",
+    ].filter(Boolean);
     return [
       `Hi MO T-SHIRT, I want a quote from ${sourceLabel}.`,
       `Product: ${product.label}`,
       `Color: ${color.label}`,
       `Print method: ${method.label}`,
-      `Front text: ${frontText}`,
-      `Back text: ${backText}`,
-      `Front logo: ${frontLogo}`,
-      `Back logo: ${backLogo}`,
+      designSelections.length ? `Design selected: ${designSelections.join(" | ")}` : "",
       `Selected sizes: ${sizes}`,
       `Total qty: ${totalQty}`,
       `Estimated total: Rs ${withCommas(totalPrice)}`,
@@ -796,7 +799,7 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
     payload.append("deadline", client.deadline.trim());
     payload.append(
       "notes",
-      [summary, client.notes ? `Client notes:\n${client.notes.trim()}` : "", rush ? "Rush requested: Yes" : "Rush requested: No"].filter(Boolean).join("\n\n")
+      client.notes.trim()
     );
     payload.append(
       "designBrief",
@@ -804,8 +807,8 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
         product: product.label,
         color: color.label,
         printMethod: method.label,
-        frontText: designBySide.front.text.enabled ? designBySide.front.text.value || "none" : "off",
-        backText: designBySide.back.text.enabled ? designBySide.back.text.value || "none" : "off",
+        frontText: designBySide.front.text.enabled ? designBySide.front.text.value.trim() : "",
+        backText: designBySide.back.text.enabled ? designBySide.back.text.value.trim() : "",
         frontLogo: designBySide.front.logo.enabled && !!logoPreview,
         backLogo: designBySide.back.logo.enabled && !!logoPreview,
         selectedSizes: garmentLines,
