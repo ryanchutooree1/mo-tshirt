@@ -1120,8 +1120,8 @@ export default function BusinessValuePage() {
               </div>
             </article>
 
-            <div id="growth-graphs" className="space-y-6 order-1">
-              <article className={`${panelClass} p-5`}>
+            <div id="growth-graphs" className="order-1 grid gap-4 xl:grid-cols-2">
+              <article className={`${panelClass} p-4 xl:col-span-2`}>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <h2 className="text-lg font-semibold text-slate-900">Daily valuation trend</h2>
@@ -1164,7 +1164,7 @@ export default function BusinessValuePage() {
                   })}
                 </div>
 
-                <div className="mt-4 h-64 w-full">
+                <div className="mt-4 h-48 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={trendChartData} margin={{ top: 10, right: 28, left: 8, bottom: 0 }}>
                       <defs>
@@ -1206,7 +1206,7 @@ export default function BusinessValuePage() {
                 </div>
               </article>
 
-              <article className={`${panelClass} p-5`}>
+              <article className={`${panelClass} p-4`}>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <h2 className="text-lg font-semibold text-slate-900">Daily gains momentum</h2>
@@ -1228,7 +1228,7 @@ export default function BusinessValuePage() {
                   </div>
                 ) : null}
 
-                <div className="mt-4 h-48 w-full">
+                <div className="mt-4 h-36 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={dailyGainChartData} margin={{ top: 10, right: 28, left: 8, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1266,7 +1266,7 @@ export default function BusinessValuePage() {
                 </div>
               </article>
 
-              <article className={`${panelClass} p-5`}>
+              <article className={`${panelClass} p-4`}>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <h2 className="text-lg font-semibold text-slate-900">
@@ -1299,7 +1299,7 @@ export default function BusinessValuePage() {
                   </div>
                 </div>
 
-                <div className="mt-4 h-56 w-full">
+                <div className="mt-4 h-40 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={projectionData} margin={{ top: 8, right: 28, left: 8, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -1362,11 +1362,11 @@ export default function BusinessValuePage() {
                 </div>
               </article>
 
-              <article className={`${panelClass} p-5`}>
+              <article className={`${panelClass} p-4`}>
                 <h2 className="text-lg font-semibold text-slate-900">Category breakdown</h2>
                 <p className="mt-1 text-xs text-slate-500">Where most of your valuation currently sits.</p>
 
-                <div className="mt-4 h-56 w-full">
+                <div className="mt-4 h-40 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={categoryData.length ? categoryData : [{ category: "No data", total: 0 }]}
@@ -1387,7 +1387,7 @@ export default function BusinessValuePage() {
                 </div>
               </article>
 
-              <article className={`${panelClass} p-5`}>
+              <article className={`${panelClass} p-4`}>
                 <h2 className="text-lg font-semibold text-slate-900">Motivation panel</h2>
                 <p className="mt-1 text-xs text-slate-500">Keep your target visible and make daily progress measurable.</p>
 
