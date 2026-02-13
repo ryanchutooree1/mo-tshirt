@@ -2059,7 +2059,7 @@ export default function QuotationApprovalPage() {
                       )}
                       {draft.lines.map((line, index) => (
                         <div
-                          key={`${line.description}-${index}`}
+                          key={`line-${index}`}
                           className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3 sm:grid-cols-[1fr_110px_120px_120px_auto] sm:items-center"
                         >
                           <input
