@@ -1120,8 +1120,8 @@ export default function BusinessValuePage() {
               </div>
             </article>
 
-            <div id="growth-graphs" className="order-1 grid gap-4 xl:grid-cols-2">
-              <article className={`${panelClass} p-4 xl:col-span-2`}>
+            <div id="growth-graphs" className="order-1 grid gap-4">
+              <article className={`${panelClass} p-4`}>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
                     <h2 className="text-lg font-semibold text-slate-900">Daily valuation trend</h2>
