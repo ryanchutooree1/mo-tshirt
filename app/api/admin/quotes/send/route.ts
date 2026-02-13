@@ -11,6 +11,22 @@ type SendPayload = {
   quote?: Record<string, unknown>;
 };
 
+type DocumentType = "quotation" | "invoice" | "partial_receipt" | "receipt";
+
+const DOCUMENT_LABELS: Record<DocumentType, string> = {
+  quotation: "quotation",
+  invoice: "invoice",
+  partial_receipt: "partial receipt",
+  receipt: "receipt",
+};
+
+function parseDocumentType(value: unknown): DocumentType {
+  if (value === "quotation" || value === "invoice" || value === "partial_receipt" || value === "receipt") {
+    return value;
+  }
+  return "quotation";
+}
+
 function parsePdfBase64(input: string) {
   if (!input) return null;
   if (input.startsWith("data:")) {
@@ -59,10 +75,13 @@ export async function POST(req: Request) {
       auth: { user, pass },
     });
 
-    const subject = payload.subject || "Your quotation from MO T-SHIRT";
+    const documentType = parseDocumentType(payload.quote?.documentType);
+    const documentLabel = DOCUMENT_LABELS[documentType];
+    const documentSlug = documentType.replace(/_/g, "-");
+    const subject = payload.subject || `Your ${documentLabel} from MO T-SHIRT`;
     const message =
       payload.message ||
-      "Hi! Please find your quotation attached.\n\nBest regards,\nMo T-Shirt Team";
+      `Hi! Please find your ${documentLabel} attached.\n\nBest regards,\nMo T-Shirt Team`;
 
     const mailOptions: Record<string, unknown> = {
       from,
@@ -74,7 +93,7 @@ export async function POST(req: Request) {
 </div>`,
       attachments: [
         {
-          filename: `quotation-${payload.quoteId}.pdf`,
+          filename: `${documentSlug}-${payload.quoteId}.pdf`,
           content: buffer,
           contentType: "application/pdf",
         },

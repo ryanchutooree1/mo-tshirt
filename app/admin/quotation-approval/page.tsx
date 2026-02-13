@@ -199,6 +199,19 @@ const DOC_TYPE_TONES: Record<DocumentType, string> = {
 
 const getQuoteDocumentType = (quote: QuoteRecord): DocumentType => quote.quote?.documentType || "quotation";
 
+const getPrimaryStatusMeta = (status: QuoteStatus, docType: DocumentType) => {
+  if (status === "sent") {
+    return {
+      label: DOC_TYPE_LABELS[docType],
+      tone: DOC_TYPE_TONES[docType],
+    };
+  }
+  return {
+    label: STATUS_LABELS[status],
+    tone: STATUS_TONES[status],
+  };
+};
+
 const safeNumber = (value: unknown, fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -844,6 +857,14 @@ export default function QuotationApprovalPage() {
     return "Partial receipt";
   }, [draft?.documentType]);
 
+  const selectedStatus: QuoteStatus = (selected?.status || "new") as QuoteStatus;
+  const selectedPrimaryStatus = useMemo(() => {
+    if (!selected) return null;
+    const persistedType = getQuoteDocumentType(selected);
+    const activeType = selectedStatus === "sent" ? persistedType : draft?.documentType || persistedType;
+    return getPrimaryStatusMeta(selectedStatus, activeType);
+  }, [selected, selectedStatus, draft?.documentType]);
+
   useEffect(() => {
     if (!draft || !paymentStatusOptions.length) return;
     if (draft.paymentStatus === "Half paid" && draft.documentType === "invoice") {
@@ -963,7 +984,8 @@ export default function QuotationApprovalPage() {
   const handleDownloadPdf = () => {
     if (!selected || !draft) return;
     const doc = buildPdfDoc(selected, draft, logo);
-    doc.save(`quotation-${selected.id}.pdf`);
+    const filePrefix = draft.documentType.replace(/_/g, "-");
+    doc.save(`${filePrefix}-${selected.id}.pdf`);
   };
 
   const handleViewPdf = () => {
@@ -981,13 +1003,14 @@ export default function QuotationApprovalPage() {
       const pdfDoc = buildPdfDoc(selected, draft, logo);
       const pdfDataUri = pdfDoc.output("datauristring");
       const clientName = selected.name || "there";
+      const documentLabel = DOC_TYPE_LABELS[draft.documentType].toLowerCase();
       const payload = {
         quoteId: selected.id,
         to: selected.email,
-        subject: `Your quotation from MO T-SHIRT`,
+        subject: `Your ${documentLabel} from MO T-SHIRT`,
         message: draft.notes?.trim()
-          ? `Hi ${clientName},\n\nPlease find your quotation attached.\n\n${draft.notes}\n\nBest regards,\nMo T-Shirt Team`
-          : `Hi ${clientName},\n\nPlease find your quotation attached.\n\nBest regards,\nMo T-Shirt Team`,
+          ? `Hi ${clientName},\n\nPlease find your ${documentLabel} attached.\n\n${draft.notes}\n\nBest regards,\nMo T-Shirt Team`
+          : `Hi ${clientName},\n\nPlease find your ${documentLabel} attached.\n\nBest regards,\nMo T-Shirt Team`,
         pdfBase64: pdfDataUri,
         quote: {
           documentType: draft.documentType,
@@ -1021,9 +1044,9 @@ export default function QuotationApprovalPage() {
       if (!res.ok) {
         throw new Error("Failed to send");
       }
-      setNotice("Quote sent to client.");
+      setNotice(`${DOC_TYPE_LABELS[draft.documentType]} sent to client.`);
     } catch {
-      setNotice("Could not send quote.");
+      setNotice(`Could not send ${DOC_TYPE_LABELS[draft.documentType].toLowerCase()}.`);
     } finally {
       setSending(false);
     }
@@ -1285,8 +1308,10 @@ export default function QuotationApprovalPage() {
                   const createdAt = quote.createdAt ? formatDistanceToNow(quote.createdAt, { addSuffix: true }) : "—";
                   const status = quote.status || "new";
                   const docType = getQuoteDocumentType(quote);
+                  const primaryStatus = getPrimaryStatusMeta(status, docType);
                   const readLabel = status === "new" ? "Unread" : "Read";
                   const selectedTone = selectedId === quote.id;
+                  const stageLabel = status === "sent" ? `${DOC_TYPE_LABELS[docType]} sent` : DOC_TYPE_LABELS[docType];
                   return (
                     <button
                       key={quote.id}
@@ -1307,10 +1332,10 @@ export default function QuotationApprovalPage() {
                         </div>
                         <span
                           className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${
-                            selectedTone ? "border-white/30 bg-white/10 text-white" : STATUS_TONES[status]
+                            selectedTone ? "border-white/30 bg-white/10 text-white" : primaryStatus.tone
                           }`}
                         >
-                          {STATUS_LABELS[status]}
+                          {primaryStatus.label}
                         </span>
                       </div>
                       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -1319,7 +1344,7 @@ export default function QuotationApprovalPage() {
                             selectedTone ? "border-white/30 bg-white/10 text-white" : DOC_TYPE_TONES[docType]
                           }`}
                         >
-                          {DOC_TYPE_LABELS[docType]}
+                          {stageLabel}
                         </span>
                         <span
                           className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
@@ -1370,20 +1395,22 @@ export default function QuotationApprovalPage() {
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${STATUS_TONES[selected.status || "new"]}`}>
-                          {STATUS_LABELS[selected.status || "new"]}
+                        <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${selectedPrimaryStatus?.tone || STATUS_TONES.new}`}>
+                          {selectedPrimaryStatus?.label || STATUS_LABELS.new}
                         </span>
-                        <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${DOC_TYPE_TONES[draft.documentType]}`}>
-                          {DOC_TYPE_LABELS[draft.documentType]}
-                        </span>
+                        {selectedStatus !== "sent" && (
+                          <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${DOC_TYPE_TONES[draft.documentType]}`}>
+                            {DOC_TYPE_LABELS[draft.documentType]}
+                          </span>
+                        )}
                         <span
                           className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                            (selected.status || "new") === "new"
+                            selectedStatus === "new"
                               ? "border-rose-200 bg-rose-50 text-rose-700"
                               : "border-emerald-200 bg-emerald-50 text-emerald-700"
                           }`}
                         >
-                          {(selected.status || "new") === "new" ? "Unread" : "Read"}
+                          {selectedStatus === "new" ? "Unread" : "Read"}
                         </span>
                         {selected.attachment?.filename && (
                           <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600">
@@ -1895,7 +1922,7 @@ export default function QuotationApprovalPage() {
                       disabled={sending || !selected.email}
                       className="inline-flex items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-5 py-2 text-xs font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:bg-slate-800 disabled:opacity-60"
                     >
-                      <FiSend /> {sending ? "Sending..." : "Approve & send"}
+                      <FiSend /> {sending ? "Sending..." : `Approve & send ${DOC_TYPE_LABELS[draft.documentType].toLowerCase()}`}
                     </button>
                     {notice && (
                       <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
