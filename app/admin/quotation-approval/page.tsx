@@ -220,6 +220,8 @@ const DOC_TYPE_TONES: Record<DocumentType, string> = {
   receipt: "border-emerald-200 bg-emerald-50 text-emerald-700",
 };
 
+const QUICK_PRODUCT_LINES = ["T-Shirt", "Polo Shirt", "Hoodie", "Cap"];
+
 const getQuoteDocumentType = (quote: QuoteRecord): DocumentType => quote.quote?.documentType || "quotation";
 
 const getPrimaryStatusMeta = (status: QuoteStatus, docType: DocumentType) => {
@@ -297,6 +299,33 @@ const extractClientNotes = (quote: QuoteRecord, designBrief: DesignBrief | null)
   return raw;
 };
 
+const lineLabelList = (indexes: number[]) => indexes.map((value) => value + 1).join(", ");
+
+const validateDraftBeforeSend = (value: QuoteDraft) => {
+  if (!value.lines.length) return "Add at least one product line before sending.";
+
+  const missingDescription: number[] = [];
+  const invalidQuantity: number[] = [];
+  const missingUnitPrice: number[] = [];
+
+  value.lines.forEach((line, index) => {
+    if (!line.description.trim()) missingDescription.push(index);
+    if (safeNumber(line.quantity, 0) <= 0) invalidQuantity.push(index);
+    if (safeNumber(line.unitPrice, 0) <= 0) missingUnitPrice.push(index);
+  });
+
+  if (missingDescription.length) {
+    return `Add description for line(s): ${lineLabelList(missingDescription)}.`;
+  }
+  if (invalidQuantity.length) {
+    return `Quantity must be above 0 for line(s): ${lineLabelList(invalidQuantity)}.`;
+  }
+  if (missingUnitPrice.length) {
+    return `Unit price is mandatory for line(s): ${lineLabelList(missingUnitPrice)}.`;
+  }
+  return null;
+};
+
 const parseTimestamp = (value: any) => {
   if (!value) return null;
   if (typeof value?.toDate === "function") return value.toDate();
@@ -319,7 +348,10 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
     const storedLines = (quote.quote.lines || []).map((line) => ({
       description: line.description || "",
       quantity: safeNumber(line.quantity, 0),
-      unitPrice: safeNumber(line.unitPrice, 0),
+      unitPrice: (() => {
+        const amount = safeNumber(line.unitPrice, 0);
+        return amount > 0 ? amount : "";
+      })(),
     }));
     const fallbackLines =
       quote.garments?.map((entry) => {
@@ -327,7 +359,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
         return {
           description: `${entry.garment || "Custom item"}${sizeLabel}`,
           quantity: safeNumber(entry.quantity, 0),
-          unitPrice: 0,
+          unitPrice: "",
         };
       }) || [];
     const documentType = quote.quote.documentType || "quotation";
@@ -373,19 +405,19 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
       return {
         description: `${entry.garment || "Custom item"}${sizeLabel}`,
         quantity: safeNumber(entry.quantity, 0),
-        unitPrice: 0,
+        unitPrice: "",
       };
     }) || [];
 
   const lines = fromGarments.length
     ? fromGarments
     : [
-        {
-          description: "Custom item",
-          quantity: safeNumber(quote.quantity, 1),
-          unitPrice: 0,
-        },
-      ];
+      {
+        description: "Custom item",
+        quantity: safeNumber(quote.quantity, 1),
+        unitPrice: "",
+      },
+    ];
 
   return {
     contactName: quote.name || "",
@@ -988,6 +1020,11 @@ export default function QuotationApprovalPage() {
     return getPrimaryStatusMeta(selectedStatus, activeType);
   }, [selected, selectedStatus, draft?.documentType]);
 
+  const sendValidationError = useMemo(
+    () => (draft ? validateDraftBeforeSend(draft) : "Select a quotation first."),
+    [draft]
+  );
+
   const buildStoredQuotePayload = (baseDraft: QuoteDraft) => ({
     documentType: baseDraft.documentType,
     documentNumber: baseDraft.documentNumber,
@@ -1050,13 +1087,13 @@ export default function QuotationApprovalPage() {
     });
   };
 
-  const addDraftLine = () => {
+  const addDraftLine = (description = "Product / Size") => {
     if (!draft) return;
     setDraft((prev) =>
       prev
         ? {
             ...prev,
-            lines: [...prev.lines, { description: "Custom item", quantity: 1, unitPrice: 0 }],
+            lines: [...prev.lines, { description, quantity: 1, unitPrice: "" }],
           }
         : prev
     );
@@ -1171,7 +1208,7 @@ export default function QuotationApprovalPage() {
         preparedBy: DEFAULT_PREPARED_BY,
         showLineItems: true,
         currency: "Rs",
-        lines: [{ description: "Custom item", quantity: 1, unitPrice: 0 }],
+        lines: [{ description: "Product / Size", quantity: 1, unitPrice: "" }],
         deliveryFee: 0,
         discount: 0,
         amountReceived: 0,
@@ -1242,6 +1279,11 @@ export default function QuotationApprovalPage() {
 
   const handleSend = async () => {
     if (!selected || !draft) return;
+    const draftValidation = validateDraftBeforeSend(draft);
+    if (draftValidation) {
+      setNotice(draftValidation);
+      return;
+    }
     const recipientEmail = draft.contactEmail.trim();
     if (!recipientEmail) {
       setNotice("Add a client email before sending.");
@@ -1818,11 +1860,30 @@ export default function QuotationApprovalPage() {
                       </div>
                       <button
                         type="button"
-                        onClick={addDraftLine}
+                        onClick={() => addDraftLine("Product / Size")}
                         className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
                       >
-                        <FiPlus className="h-4 w-4" /> Add line
+                        <FiPlus className="h-4 w-4" /> Add custom line
                       </button>
+                    </div>
+
+                    <div className="mt-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Quick add products</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {QUICK_PRODUCT_LINES.map((item) => (
+                          <button
+                            key={item}
+                            type="button"
+                            onClick={() => addDraftLine(`${item} (M)`)}
+                            className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                          >
+                            <FiPlus className="h-3.5 w-3.5" /> {item}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-[11px] text-slate-500">
+                        You can edit descriptions, for example: <span className="font-semibold">T-Shirt (M) with Logo Samsung</span>.
+                      </p>
                     </div>
 
                     <div className="mt-5 grid gap-4 lg:grid-cols-2">
@@ -2031,7 +2092,7 @@ export default function QuotationApprovalPage() {
                             value={line.description}
                             onChange={(e) => updateDraftLine(index, { description: e.target.value })}
                             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                            placeholder="e.g., T-Shirt (M) front print"
+                            placeholder="e.g., T-Shirt (M) with Logo Black"
                             aria-label="Line item description"
                           />
                           <input
@@ -2234,7 +2295,12 @@ export default function QuotationApprovalPage() {
                     <button
                       type="button"
                       onClick={handleSend}
-                      disabled={sending || !draft.contactEmail.trim()}
+                      disabled={sending || !draft.contactEmail.trim() || Boolean(sendValidationError)}
+                      title={
+                        !draft.contactEmail.trim()
+                          ? "Add client email before sending."
+                          : sendValidationError || "Ready to send."
+                      }
                       className="inline-flex items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-5 py-2 text-xs font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:bg-slate-800 disabled:opacity-60"
                     >
                       <FiSend /> {sending ? "Sending..." : `Approve & send ${DOC_TYPE_LABELS[draft.documentType].toLowerCase()}`}
@@ -2247,6 +2313,11 @@ export default function QuotationApprovalPage() {
                     >
                       <FiTrash2 /> {deletingQuote ? "Deleting..." : "Delete quotation"}
                     </button>
+                    {sendValidationError && (
+                      <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                        <FiClock /> {sendValidationError}
+                      </span>
+                    )}
                     {notice && (
                       <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
                         <FiClock /> {notice}
