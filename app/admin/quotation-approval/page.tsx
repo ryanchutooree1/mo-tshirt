@@ -29,6 +29,7 @@ import {
   FiRefreshCw,
   FiSearch,
   FiSend,
+  FiTrash2,
   FiXCircle,
   FiUpload,
 } from "react-icons/fi";
@@ -663,6 +664,7 @@ export default function QuotationApprovalPage() {
   const [saving, setSaving] = useState(false);
   const [statusSaving, setStatusSaving] = useState(false);
   const [creatingQuote, setCreatingQuote] = useState(false);
+  const [deletingQuote, setDeletingQuote] = useState(false);
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
@@ -994,6 +996,43 @@ export default function QuotationApprovalPage() {
       setNotice("Failed to update status.");
     } finally {
       setStatusSaving(false);
+    }
+  };
+
+  const handleDeleteQuote = async () => {
+    if (!selected) return;
+    const password = window.prompt("Enter your admin login password to delete this quotation.");
+    if (password === null) return;
+    const cleanPassword = password.trim();
+    if (!cleanPassword) {
+      setNotice("Password is required to delete.");
+      return;
+    }
+
+    const targetName = draft?.contactName || selected.name || "this client";
+    const confirmed = window.confirm(`Delete quotation for ${targetName}? This cannot be undone.`);
+    if (!confirmed) return;
+
+    setDeletingQuote(true);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/admin/quotes/${selected.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: cleanPassword }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body?.error || "Failed to delete quote.");
+      }
+      setNotice("Quotation deleted.");
+      setSelectedId(null);
+      setDraft(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete quote.";
+      setNotice(message);
+    } finally {
+      setDeletingQuote(false);
     }
   };
 
@@ -2042,6 +2081,14 @@ export default function QuotationApprovalPage() {
                       className="inline-flex items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-5 py-2 text-xs font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:bg-slate-800 disabled:opacity-60"
                     >
                       <FiSend /> {sending ? "Sending..." : `Approve & send ${DOC_TYPE_LABELS[draft.documentType].toLowerCase()}`}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteQuote}
+                      disabled={deletingQuote}
+                      className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100 disabled:opacity-60"
+                    >
+                      <FiTrash2 /> {deletingQuote ? "Deleting..." : "Delete quotation"}
                     </button>
                     {notice && (
                       <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
