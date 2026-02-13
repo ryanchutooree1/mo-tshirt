@@ -745,7 +745,7 @@ export default function BusinessValuePage() {
 
   return (
     <main className="min-h-screen bg-[#f7f7fb] text-slate-900">
-      <div className="relative overflow-hidden">
+      <div className="relative">
         <div className="pointer-events-none absolute -left-20 top-[-8rem] h-72 w-72 rounded-full bg-cyan-200/50 blur-3xl" />
         <div className="pointer-events-none absolute right-[-5rem] top-16 h-80 w-80 rounded-full bg-amber-200/40 blur-3xl" />
         <div className="pointer-events-none absolute bottom-[-8rem] left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-emerald-200/30 blur-3xl" />
@@ -1125,8 +1125,8 @@ export default function BusinessValuePage() {
 
             <div id="growth-graphs" className="space-y-6 order-1">
               <article className={`${panelClass} p-5`}>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
                     <h2 className="text-lg font-semibold text-slate-900">Daily valuation trend</h2>
                     <p className="text-xs text-slate-500">
                       {todaySaved
@@ -1134,7 +1134,7 @@ export default function BusinessValuePage() {
                         : "Today is previewed. Save snapshot to lock it."}
                     </p>
                   </div>
-                  <div className={`text-sm font-semibold ${dayChange >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
+                  <div className={`shrink-0 text-sm font-semibold ${dayChange >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
                     {dayChange >= 0 ? "+" : "-"}
                     {formatCurrency(Math.abs(dayChange))}
                   </div>
@@ -1169,7 +1169,7 @@ export default function BusinessValuePage() {
 
                 <div className="mt-4 h-64 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={trendChartData} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
+                    <AreaChart data={trendChartData} margin={{ top: 10, right: 28, left: 8, bottom: 0 }}>
                       <defs>
                         <linearGradient id="businessValueFill" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#0f172a" stopOpacity={0.28} />
@@ -1182,7 +1182,7 @@ export default function BusinessValuePage() {
                         tickFormatter={(value) => `Rs ${Math.round(value).toLocaleString()}`}
                         tick={{ fontSize: 11 }}
                         stroke="#94a3b8"
-                        width={76}
+                        width={84}
                       />
                       <Tooltip
                         formatter={(value: number) => formatCurrency(value)}
@@ -1204,14 +1204,14 @@ export default function BusinessValuePage() {
               </article>
 
               <article className={`${panelClass} p-5`}>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
                     <h2 className="text-lg font-semibold text-slate-900">Daily gains momentum</h2>
                     <p className="text-xs text-slate-500">
                       Green bars are value increases. Red bars show days to recover and push harder.
                     </p>
                   </div>
-                  <div className="text-right">
+                  <div className="shrink-0 text-left sm:text-right">
                     <div className={`text-sm font-semibold ${recentAverageDailyGain >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
                       {recentAverageDailyGain >= 0 ? "+" : "-"}
                       {formatCurrency(Math.abs(recentAverageDailyGain))}/day
@@ -1227,14 +1227,14 @@ export default function BusinessValuePage() {
 
                 <div className="mt-4 h-48 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dailyGainChartData}>
+                    <BarChart data={dailyGainChartData} margin={{ top: 10, right: 28, left: 8, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                       <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94a3b8" />
                       <YAxis
                         tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`}
                         tick={{ fontSize: 11 }}
                         stroke="#94a3b8"
-                        width={40}
+                        width={48}
                       />
                       <ReferenceLine y={0} stroke="#cbd5e1" />
                       <Tooltip
@@ -1258,8 +1258,8 @@ export default function BusinessValuePage() {
               </article>
 
               <article className={`${panelClass} p-5`}>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
                     <h2 className="text-lg font-semibold text-slate-900">
                       {DEFAULT_GOAL_HORIZON_DAYS}-day path to goal
                     </h2>
@@ -1292,14 +1292,14 @@ export default function BusinessValuePage() {
 
                 <div className="mt-4 h-56 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={projectionData} margin={{ top: 8, right: 10, left: -20, bottom: 0 }}>
+                    <LineChart data={projectionData} margin={{ top: 8, right: 28, left: 8, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                       <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94a3b8" />
                       <YAxis
                         tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`}
                         tick={{ fontSize: 11 }}
                         stroke="#94a3b8"
-                        width={50}
+                        width={58}
                       />
                       <Tooltip
                         formatter={(value: number, key: string) =>
@@ -1353,7 +1353,10 @@ export default function BusinessValuePage() {
 
                 <div className="mt-4 h-56 w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={categoryData.length ? categoryData : [{ category: "No data", total: 0 }]}>
+                    <BarChart
+                      data={categoryData.length ? categoryData : [{ category: "No data", total: 0 }]}
+                      margin={{ top: 10, right: 24, left: 8, bottom: 0 }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                       <XAxis dataKey="category" tick={{ fontSize: 11 }} stroke="#94a3b8" />
                       <YAxis
