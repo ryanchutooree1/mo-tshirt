@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -154,13 +154,6 @@ function fmtDateTime(date: Date | null) {
   return date.toLocaleString();
 }
 
-function toLocalDayKey(date: Date) {
-  const y = date.getFullYear();
-  const m = `${date.getMonth() + 1}`.padStart(2, "0");
-  const d = `${date.getDate()}`.padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
 function asBooleanCount(status: StatusItem[]) {
   return status.reduce((count, item) => {
     if (typeof item.value === "boolean" && item.value) return count + 1;
@@ -206,8 +199,6 @@ export default function IotControlCenterPage() {
       return "UTC";
     }
   }, []);
-
-  const scheduleLocksRef = useRef<Set<string>>(new Set());
 
   const [loading, setLoading] = useState(true);
   const [refreshingAll, setRefreshingAll] = useState(false);
@@ -462,17 +453,13 @@ export default function IotControlCenterPage() {
   };
 
   const runAutomation = useCallback(
-    async (automation: IotAutomation, source: "manual" | "scheduler" = "manual") => {
+    async (automation: IotAutomation) => {
       if (!automation.deviceId || !automation.code) {
-        if (source === "manual") {
-          setAutomationMessage("Automation is missing device or command code.");
-        }
+        setAutomationMessage("Automation is missing device or command code.");
         return;
       }
 
-      if (source === "manual") {
-        setRunningAutomationId(automation.id);
-      }
+      setRunningAutomationId(automation.id);
 
       try {
         const response = await fetch(`/api/tuya/device/${encodeURIComponent(automation.deviceId)}/command`, {
@@ -494,18 +481,11 @@ export default function IotControlCenterPage() {
         await updateDoc(doc(db, "users", ADMIN_ID, "iotAutomations", automation.id), {
           lastRunAt: serverTimestamp(),
           lastRunStatus: "success",
-          lastRunNote:
-            source === "scheduler"
-              ? `Auto-executed at ${automation.dailyTime}`
-              : payload.msg
-                ? `Manual run: ${payload.msg}`
-                : "Manual run completed",
+          lastRunNote: payload.msg ? `Manual run: ${payload.msg}` : "Manual run completed",
           updatedAt: serverTimestamp(),
         });
 
-        if (source === "manual") {
-          setAutomationMessage(`Automation "${automation.name}" executed successfully.`);
-        }
+        setAutomationMessage(`Automation "${automation.name}" executed successfully.`);
 
         await refreshOne(automation.deviceId);
       } catch (error) {
@@ -518,50 +498,13 @@ export default function IotControlCenterPage() {
           updatedAt: serverTimestamp(),
         }).catch(() => undefined);
 
-        if (source === "manual") {
-          setAutomationMessage(message);
-        }
+        setAutomationMessage(message);
       } finally {
-        if (source === "manual") {
-          setRunningAutomationId(null);
-        }
+        setRunningAutomationId(null);
       }
     },
     [refreshOne]
   );
-
-  useEffect(() => {
-    if (!hasKeys) return;
-
-    const interval = window.setInterval(() => {
-      const now = new Date();
-      const hh = `${now.getHours()}`.padStart(2, "0");
-      const mm = `${now.getMinutes()}`.padStart(2, "0");
-      const currentTime = `${hh}:${mm}`;
-      const dayKey = toLocalDayKey(now);
-
-      automations.forEach((automation) => {
-        if (!automation.enabled) return;
-        if (automation.triggerType !== "daily") return;
-        if (!automation.dailyTime || automation.dailyTime !== currentTime) return;
-
-        const lockKey = `${automation.id}:${dayKey}:${currentTime}`;
-        if (scheduleLocksRef.current.has(lockKey)) return;
-
-        const alreadyRanToday = automation.lastRunAt ? toLocalDayKey(automation.lastRunAt) === dayKey : false;
-        if (alreadyRanToday) return;
-
-        scheduleLocksRef.current.add(lockKey);
-        void runAutomation(automation, "scheduler");
-      });
-
-      if (scheduleLocksRef.current.size > 4000) {
-        scheduleLocksRef.current.clear();
-      }
-    }, 15_000);
-
-    return () => window.clearInterval(interval);
-  }, [automations, hasKeys, runAutomation]);
 
   const openAutomationComposer = useCallback(
     (seed?: { deviceId: string; code: string; value: boolean }) => {
@@ -815,7 +758,7 @@ export default function IotControlCenterPage() {
                 <p className="iot-kicker">Automation Lab</p>
                 <h2 className="iot-automation-title">Create Device Automations</h2>
                 <p className="iot-automation-note">
-                  Build reusable command automations. Daily schedules execute automatically while this IoT page is open.
+                  Build reusable command automations. Daily schedules execute 24/7 via secure server cron.
                 </p>
               </div>
               <button type="button" onClick={() => openAutomationComposer()} className="iot-create-btn">
@@ -885,7 +828,7 @@ export default function IotControlCenterPage() {
 
                       <button
                         type="button"
-                        onClick={() => void runAutomation(automation, "manual")}
+                        onClick={() => void runAutomation(automation)}
                         disabled={runningAutomationId === automation.id}
                         className="iot-run-btn"
                       >
@@ -1241,7 +1184,7 @@ export default function IotControlCenterPage() {
                   }
                 >
                   <option value="manual">Manual run only</option>
-                  <option value="daily">Daily (auto while page is open)</option>
+                  <option value="daily">Daily (24/7 server cron)</option>
                 </select>
               </label>
 
