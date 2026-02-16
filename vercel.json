@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/tuya/automations/tick",
-      "schedule": "* * * * *"
+      "schedule": "0 1 * * *"
     }
   ]
 }
