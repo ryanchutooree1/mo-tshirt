@@ -214,6 +214,12 @@ const getNextWorkflowStatus = (status: string) => {
   return ORDER_WORKFLOW[Math.min(index + 1, ORDER_WORKFLOW.length - 1)];
 };
 
+const getNextDocumentType = (docType: OrderDocumentType) => {
+  const index = ORDER_DOC_FLOW.findIndex((item) => item === docType);
+  if (index === -1) return ORDER_DOC_FLOW[0];
+  return ORDER_DOC_FLOW[Math.min(index + 1, ORDER_DOC_FLOW.length - 1)];
+};
+
 const getWorkflowVisualIndex = (status: string) => {
   if (status === "Delivered") return 2;
   if (status === "Completed") return 1;
@@ -1532,6 +1538,19 @@ function OrdersPageInner() {
                       ? "quotation"
                       : "invoice";
                 const activeDocFlowIndex = activeDocType ? ORDER_DOC_FLOW.findIndex((item) => item === activeDocType) : -1;
+                const isWorkflowDone = workflowVisualIndex >= ORDER_WORKFLOW_VISUAL.length - 1;
+                const workflowNextLabel =
+                  workflowVisualIndex < 0
+                    ? ORDER_WORKFLOW_VISUAL[0]
+                    : isWorkflowDone
+                      ? null
+                      : ORDER_WORKFLOW_VISUAL[Math.min(workflowVisualIndex + 1, ORDER_WORKFLOW_VISUAL.length - 1)];
+                const isDocFlowDone = activeDocFlowIndex >= ORDER_DOC_FLOW.length - 1;
+                const nextDocType = activeDocType
+                  ? isDocFlowDone
+                    ? null
+                    : getNextDocumentType(activeDocType)
+                  : ORDER_DOC_FLOW[0];
 
                 return (
                   <li
@@ -1557,7 +1576,7 @@ function OrdersPageInner() {
                       className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[radial-gradient(circle_at_top,rgba(251,146,60,0.18),transparent_70%)]"
                     />
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="flex items-start gap-4">
+                      <div className="flex min-w-0 flex-1 items-start gap-4">
                         {selectMode && (
                           <input
                             type="checkbox"
@@ -1572,7 +1591,7 @@ function OrdersPageInner() {
                             }}
                           />
                         )}
-                        <div>
+                        <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-sm font-semibold text-slate-900">
                               Invoice #{m.invoiceNumber || ""}
@@ -1602,81 +1621,10 @@ function OrdersPageInner() {
                               </span>
                             )}
                           </div>
-                          <div className="mt-3 space-y-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                                Workflow
-                              </span>
-                              <span className="text-[11px] font-semibold text-slate-600">
-                                {workflowVisualIndex >= 0 ? `Next: ${nextStatus}` : "Queue pending"}
-                              </span>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                              {ORDER_WORKFLOW_VISUAL.map((step, index) => {
-                                const state = getFlowStepState(workflowVisualIndex, index);
-                                const className =
-                                  state === "done"
-                                    ? "border-emerald-200 bg-emerald-100 text-emerald-700"
-                                    : state === "active"
-                                      ? "border-slate-800 bg-slate-900 text-white"
-                                      : "border-slate-200 bg-white text-slate-500";
-                                return (
-                                  <React.Fragment key={`${id}-workflow-${step}`}>
-                                    <span className={`rounded-full border px-2.5 py-1 font-semibold ${className}`}>
-                                      {step}
-                                    </span>
-                                    {index < ORDER_WORKFLOW_VISUAL.length - 1 && <FiChevronRight className="text-slate-400" />}
-                                  </React.Fragment>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          <div className="mt-2 space-y-2 rounded-xl border border-violet-200/70 bg-violet-50/60 px-3 py-2.5">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-700">
-                                Document Flow
-                              </span>
-                              <span className="text-[11px] font-semibold text-violet-700">
-                                {activeDocType ? ORDER_DOC_LABELS[activeDocType] : "Not set"}
-                              </span>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                              {ORDER_DOC_FLOW.map((docType, index) => {
-                                const state = getFlowStepState(activeDocFlowIndex, index);
-                                const className =
-                                  state === "done"
-                                    ? "border-violet-200 bg-violet-100 text-violet-700"
-                                    : state === "active"
-                                      ? "border-orange-200 bg-orange-100 text-orange-700"
-                                      : "border-slate-200 bg-white text-slate-500";
-                                return (
-                                  <React.Fragment key={`${id}-docflow-${docType}`}>
-                                    <span className={`rounded-full border px-2.5 py-1 font-semibold ${className}`}>
-                                      {ORDER_DOC_LABELS[docType]}
-                                    </span>
-                                    {index < ORDER_DOC_FLOW.length - 1 && <FiChevronRight className="text-slate-400" />}
-                                  </React.Fragment>
-                                );
-                              })}
-                            </div>
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              {ORDER_DOC_FLOW.map((docType) => (
-                                <button
-                                  key={`${id}-docopen-${docType}`}
-                                  type="button"
-                                  onClick={() => openDocumentStudioWithType(id, m, docType)}
-                                  className="rounded-full border border-violet-200 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-700 transition hover:bg-violet-100"
-                                >
-                                  {ORDER_DOC_LABELS[docType]}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center justify-end gap-2">
+                      <div className="flex flex-wrap items-center justify-end gap-2 lg:max-w-[54%]">
                         <span className="rounded-full bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white">
                           {currency(total)}
                         </span>
@@ -1759,6 +1707,87 @@ function OrdersPageInner() {
                         >
                           <FiTrash2 />
                         </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 xl:grid-cols-2">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3.5 dark:border-slate-700 dark:bg-slate-900/50">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-300">
+                            Workflow
+                          </span>
+                          {isWorkflowDone ? (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                              <FiCheckCircle className="h-3.5 w-3.5" />
+                              Done
+                            </span>
+                          ) : (
+                            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
+                              Next: {workflowNextLabel}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-[12px]">
+                          {ORDER_WORKFLOW_VISUAL.map((step, index) => {
+                            const state = getFlowStepState(workflowVisualIndex, index);
+                            const className =
+                              state === "done"
+                                ? "border-emerald-200 bg-emerald-100 text-emerald-700"
+                                : state === "active"
+                                  ? "border-slate-800 bg-slate-900 text-white dark:border-slate-500 dark:bg-slate-800"
+                                  : "border-slate-200 bg-white text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300";
+                            return (
+                              <React.Fragment key={`${id}-workflow-wide-${step}`}>
+                                <span className={`rounded-full border px-3 py-1.5 font-semibold ${className}`}>
+                                  {step}
+                                </span>
+                                {index < ORDER_WORKFLOW_VISUAL.length - 1 && <FiChevronRight className="text-slate-400" />}
+                              </React.Fragment>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-violet-200/70 bg-violet-50/70 px-4 py-3.5 dark:border-violet-500/40 dark:bg-violet-900/20">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-violet-700 dark:text-violet-300">
+                            Document Flow
+                          </span>
+                          {isDocFlowDone ? (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                              <FiCheckCircle className="h-3.5 w-3.5" />
+                              Done
+                            </span>
+                          ) : (
+                            <span className="rounded-full border border-violet-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-violet-700 dark:border-violet-400/50 dark:bg-slate-900/70 dark:text-violet-300">
+                              Next: {nextDocType ? ORDER_DOC_LABELS[nextDocType] : "Quotation"}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-[12px]">
+                          {ORDER_DOC_FLOW.map((docType, index) => {
+                            const state = getFlowStepState(activeDocFlowIndex, index);
+                            const className =
+                              state === "done"
+                                ? "border-violet-200 bg-violet-100 text-violet-700"
+                                : state === "active"
+                                  ? "border-orange-200 bg-orange-100 text-orange-700"
+                                  : "border-slate-200 bg-white text-slate-500";
+                            return (
+                              <React.Fragment key={`${id}-docflow-wide-${docType}`}>
+                                <button
+                                  type="button"
+                                  onClick={() => openDocumentStudioWithType(id, m, docType)}
+                                  className={`rounded-full border px-3 py-1.5 font-semibold transition hover:brightness-95 ${className}`}
+                                  title={`Open ${ORDER_DOC_LABELS[docType]} in Document Studio`}
+                                >
+                                  {ORDER_DOC_LABELS[docType]}
+                                </button>
+                                {index < ORDER_DOC_FLOW.length - 1 && <FiChevronRight className="text-slate-400" />}
+                              </React.Fragment>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
 
