@@ -14,6 +14,7 @@ const QUOTE_ITEM: NavItem = { href: "/admin/quotation-approval", label: "Quotati
 const DESIGN_STUDIO_ITEM: NavItem = { href: "/admin/design-studio", label: "Design Studio" };
 const FINANCE_ITEM: NavItem = { href: "/admin/finance-freedom", label: "Finance Freedom" };
 const BUSINESS_VALUE_ITEM: NavItem = { href: "/admin/business-value", label: "Business Value" };
+const IOT_ITEM: NavItem = { href: "/admin/iot", label: "IoT Control Center" };
 
 // Default nav groupings
 const DEFAULT_TOP: NavItem[] = [
@@ -28,6 +29,7 @@ const DEFAULT_TOP: NavItem[] = [
   FINANCE_ITEM,
   BUSINESS_VALUE_ITEM,
   { href: "/admin/dms", label: "DMS" },
+  IOT_ITEM,
   NOTES_ITEM,
   DETAILS_ITEM,
   { href: "/admin/his-dream-life", label: "His Dream Life" },
@@ -56,12 +58,15 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
   const moreHasFinance = more.some((item) => item.href === FINANCE_ITEM.href);
   const topHasBusinessValue = top.some((item) => item.href === BUSINESS_VALUE_ITEM.href);
   const moreHasBusinessValue = more.some((item) => item.href === BUSINESS_VALUE_ITEM.href);
+  const topHasIot = top.some((item) => item.href === IOT_ITEM.href);
+  const moreHasIot = more.some((item) => item.href === IOT_ITEM.href);
   const cleanedTop = top.filter(
     (item) =>
       item.href !== SHOP_ITEM.href &&
       item.href !== QUOTE_ITEM.href &&
       item.href !== DESIGN_STUDIO_ITEM.href &&
       item.href !== FINANCE_ITEM.href &&
+      item.href !== IOT_ITEM.href &&
       item.href !== BUSINESS_VALUE_ITEM.href &&
       (item.href !== NOTES_ITEM.href || topHasNotes) &&
       (item.href !== DETAILS_ITEM.href || topHasDetails)
@@ -72,6 +77,7 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
       item.href !== QUOTE_ITEM.href &&
       item.href !== DESIGN_STUDIO_ITEM.href &&
       item.href !== FINANCE_ITEM.href &&
+      item.href !== IOT_ITEM.href &&
       item.href !== BUSINESS_VALUE_ITEM.href &&
       (item.href !== NOTES_ITEM.href || !topHasNotes) &&
       (item.href !== DETAILS_ITEM.href || !topHasDetails)
@@ -115,12 +121,25 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
       nextTop.push(BUSINESS_VALUE_ITEM);
     }
   }
-  if (!topHasNotes && !moreHasNotes) {
+  if (topHasIot || (!topHasIot && !moreHasIot)) {
     const dmsIndex = nextTop.findIndex((item) => item.href === "/admin/dms");
     if (dmsIndex >= 0) {
-      nextTop.splice(dmsIndex + 1, 0, NOTES_ITEM);
+      nextTop.splice(dmsIndex + 1, 0, IOT_ITEM);
     } else {
-      nextTop.push(NOTES_ITEM);
+      nextTop.push(IOT_ITEM);
+    }
+  }
+  if (!topHasNotes && !moreHasNotes) {
+    const iotIndex = nextTop.findIndex((item) => item.href === IOT_ITEM.href);
+    if (iotIndex >= 0) {
+      nextTop.splice(iotIndex + 1, 0, NOTES_ITEM);
+    } else {
+      const dmsIndex = nextTop.findIndex((item) => item.href === "/admin/dms");
+      if (dmsIndex >= 0) {
+        nextTop.splice(dmsIndex + 1, 0, NOTES_ITEM);
+      } else {
+        nextTop.push(NOTES_ITEM);
+      }
     }
   }
   if (!topHasDetails && !moreHasDetails) {
@@ -148,6 +167,9 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
   }
   if (moreHasBusinessValue) {
     nextMore.push(BUSINESS_VALUE_ITEM);
+  }
+  if (moreHasIot) {
+    nextMore.push(IOT_ITEM);
   }
   return { top: nextTop, more: nextMore };
 }
