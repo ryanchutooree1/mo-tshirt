@@ -49,11 +49,11 @@ function getBaseUrl() {
 }
 
 function getClientId() {
-  return String(process.env.TUYA_CLIENT_ID || "").trim();
+  return String(process.env.TUYA_CLIENT_ID || process.env.TUYA_ACCESS_ID || "").trim();
 }
 
 function getClientSecret() {
-  return String(process.env.TUYA_CLIENT_SECRET || "").trim();
+  return String(process.env.TUYA_CLIENT_SECRET || process.env.TUYA_ACCESS_SECRET || "").trim();
 }
 
 function hasNonEmpty(value: string) {
@@ -245,6 +245,17 @@ async function signedRequest<T>(options: RequestOptions): Promise<TuyaEnvelope<T
 
 export function hasTuyaKeys() {
   return hasNonEmpty(getClientId()) && hasNonEmpty(getClientSecret());
+}
+
+export function getMissingTuyaEnvVars() {
+  const missing: string[] = [];
+  if (!hasNonEmpty(getClientId())) {
+    missing.push("TUYA_CLIENT_ID (or TUYA_ACCESS_ID)");
+  }
+  if (!hasNonEmpty(getClientSecret())) {
+    missing.push("TUYA_CLIENT_SECRET (or TUYA_ACCESS_SECRET)");
+  }
+  return missing;
 }
 
 export function getTuyaBaseUrl() {

@@ -20,6 +20,7 @@ type DevicesResponse = {
   ok?: boolean;
   hasKeys?: boolean;
   message?: string;
+  missingEnv?: string[];
   source?: "cloud" | "env";
   listError?: string | null;
   devices?: DeviceItem[];
@@ -57,6 +58,7 @@ export default function IotControlCenterPage() {
   const [loading, setLoading] = useState(true);
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [hasKeys, setHasKeys] = useState<boolean>(false);
+  const [missingEnv, setMissingEnv] = useState<string[]>([]);
   const [baseUrl, setBaseUrl] = useState<string>("");
   const [devices, setDevices] = useState<DeviceItem[]>([]);
   const [globalError, setGlobalError] = useState<string>("");
@@ -91,13 +93,20 @@ export default function IotControlCenterPage() {
   const loadPing = useCallback(async () => {
     try {
       const response = await fetch("/api/tuya/ping", { cache: "no-store" });
-      const data = (await response.json()) as { ok?: boolean; hasKeys?: boolean; baseUrl?: string };
+      const data = (await response.json()) as {
+        ok?: boolean;
+        hasKeys?: boolean;
+        baseUrl?: string;
+        missingEnv?: string[];
+      };
       setHasKeys(Boolean(data.hasKeys));
       setBaseUrl(typeof data.baseUrl === "string" ? data.baseUrl : "");
+      setMissingEnv(Array.isArray(data.missingEnv) ? data.missingEnv : []);
       return Boolean(data.hasKeys);
     } catch {
       setHasKeys(false);
       setBaseUrl("");
+      setMissingEnv([]);
       return false;
     }
   }, []);
@@ -113,6 +122,7 @@ export default function IotControlCenterPage() {
 
       if (payload.hasKeys === false) {
         setHasKeys(false);
+        setMissingEnv(Array.isArray(payload.missingEnv) ? payload.missingEnv : []);
         setDevices([]);
         setGlobalMessage(payload.message || "Tuya keys missing");
         return;
@@ -309,6 +319,11 @@ export default function IotControlCenterPage() {
       {!hasKeys ? (
         <div className="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-700">
           Tuya keys missing. Add `TUYA_CLIENT_ID` and `TUYA_CLIENT_SECRET` to environment variables.
+          {missingEnv.length > 0 ? (
+            <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Missing on server: {missingEnv.join(", ")}
+            </div>
+          ) : null}
         </div>
       ) : null}
 

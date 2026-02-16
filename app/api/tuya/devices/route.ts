@@ -3,6 +3,7 @@ import {
   getConfiguredDeviceIds,
   getDeviceDetail,
   getDeviceStatus,
+  getMissingTuyaEnvVars,
   hasTuyaKeys,
   listDevicesFromCloud,
 } from "../../../../lib/tuya";
@@ -91,6 +92,7 @@ export async function GET() {
       ok: true,
       hasKeys: false,
       message: "Tuya keys missing",
+      missingEnv: getMissingTuyaEnvVars(),
       devices: [],
     });
   }
