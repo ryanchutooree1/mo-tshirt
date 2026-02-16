@@ -1,19 +1,38 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   AlertTriangle,
+  CalendarClock,
   CheckCircle2,
+  Clock3,
   Cpu,
   Loader2,
+  Play,
+  Plus,
   RefreshCcw,
   Send,
   ShieldCheck,
+  ToggleLeft,
+  ToggleRight,
+  Trash2,
   Wifi,
   WifiOff,
   Zap,
 } from "lucide-react";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 type StatusItem = {
   code: string;
@@ -50,6 +69,42 @@ type PingResponse = {
   missingEnv?: string[];
 };
 
+type AutomationTriggerType = "manual" | "daily";
+type AutomationRunStatus = "idle" | "success" | "error";
+
+type IotAutomation = {
+  id: string;
+  name: string;
+  deviceId: string;
+  deviceName: string;
+  code: string;
+  value: boolean;
+  triggerType: AutomationTriggerType;
+  dailyTime: string;
+  timezone: string;
+  enabled: boolean;
+  lastRunStatus: AutomationRunStatus;
+  lastRunNote: string;
+  lastRunAt: Date | null;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+};
+
+type AutomationDraft = {
+  id?: string;
+  name: string;
+  deviceId: string;
+  deviceName: string;
+  code: string;
+  value: boolean;
+  triggerType: AutomationTriggerType;
+  dailyTime: string;
+  timezone: string;
+  enabled: boolean;
+};
+
+const ADMIN_ID = "mo-owner";
+
 function safeText(value: unknown) {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
@@ -61,10 +116,49 @@ function safeText(value: unknown) {
   }
 }
 
+function asDate(value: unknown): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  if (typeof value === "number") {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  if (typeof value === "string") {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  if (typeof value === "object" && value !== null) {
+    const maybeTs = value as { toDate?: () => Date; seconds?: number };
+    if (typeof maybeTs.toDate === "function") {
+      const parsed = maybeTs.toDate();
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+    if (typeof maybeTs.seconds === "number") {
+      const parsed = new Date(maybeTs.seconds * 1000);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+  }
+
+  return null;
+}
+
 function fmtTime(iso: string) {
   const time = new Date(iso);
   if (Number.isNaN(time.getTime())) return "-";
   return time.toLocaleString();
+}
+
+function fmtDateTime(date: Date | null) {
+  if (!date) return "-";
+  return date.toLocaleString();
+}
+
+function toLocalDayKey(date: Date) {
+  const y = date.getFullYear();
+  const m = `${date.getMonth() + 1}`.padStart(2, "0");
+  const d = `${date.getDate()}`.padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 function asBooleanCount(status: StatusItem[]) {
@@ -98,19 +192,44 @@ function statusTone(online: boolean | null) {
   };
 }
 
+function automationStatusClass(status: AutomationRunStatus) {
+  if (status === "success") return "auto-status-success";
+  if (status === "error") return "auto-status-error";
+  return "auto-status-idle";
+}
+
 export default function IotControlCenterPage() {
+  const browserTimezone = useMemo(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    } catch {
+      return "UTC";
+    }
+  }, []);
+
+  const scheduleLocksRef = useRef<Set<string>>(new Set());
+
   const [loading, setLoading] = useState(true);
   const [refreshingAll, setRefreshingAll] = useState(false);
   const [hasKeys, setHasKeys] = useState<boolean>(false);
   const [missingEnv, setMissingEnv] = useState<string[]>([]);
   const [baseUrl, setBaseUrl] = useState<string>("");
   const [devices, setDevices] = useState<DeviceItem[]>([]);
+  const [automations, setAutomations] = useState<IotAutomation[]>([]);
+
   const [globalError, setGlobalError] = useState<string>("");
   const [globalMessage, setGlobalMessage] = useState<string>("");
+  const [automationMessage, setAutomationMessage] = useState<string>("");
+
   const [deviceBusy, setDeviceBusy] = useState<Record<string, boolean>>({});
   const [deviceAlerts, setDeviceAlerts] = useState<Record<string, string>>({});
   const [commandState, setCommandState] = useState<Record<string, CommandState>>({});
   const [commandBusy, setCommandBusy] = useState<Record<string, boolean>>({});
+
+  const [automationOpen, setAutomationOpen] = useState(false);
+  const [savingAutomation, setSavingAutomation] = useState(false);
+  const [runningAutomationId, setRunningAutomationId] = useState<string | null>(null);
+  const [automationDraft, setAutomationDraft] = useState<AutomationDraft | null>(null);
 
   const updateCommandDefaults = useCallback((items: DeviceItem[]) => {
     setCommandState((current) => {
@@ -195,6 +314,41 @@ export default function IotControlCenterPage() {
   );
 
   useEffect(() => {
+    const col = collection(db, "users", ADMIN_ID, "iotAutomations");
+    const qy = query(col, orderBy("createdAt", "desc"));
+    const unsub = onSnapshot(qy, (snap) => {
+      const rows: IotAutomation[] = snap.docs.map((docSnap) => {
+        const data = docSnap.data() as Record<string, unknown>;
+        const triggerType = data.triggerType === "daily" ? "daily" : "manual";
+        const lastRunStatusRaw = String(data.lastRunStatus || "idle").toLowerCase();
+        const lastRunStatus: AutomationRunStatus =
+          lastRunStatusRaw === "success" || lastRunStatusRaw === "error" ? (lastRunStatusRaw as AutomationRunStatus) : "idle";
+
+        return {
+          id: docSnap.id,
+          name: String(data.name || "IoT Automation"),
+          deviceId: String(data.deviceId || ""),
+          deviceName: String(data.deviceName || "Device"),
+          code: String(data.code || ""),
+          value: Boolean(data.value),
+          triggerType,
+          dailyTime: String(data.dailyTime || ""),
+          timezone: String(data.timezone || "UTC"),
+          enabled: data.enabled !== false,
+          lastRunStatus,
+          lastRunNote: String(data.lastRunNote || ""),
+          lastRunAt: asDate(data.lastRunAt),
+          createdAt: asDate(data.createdAt),
+          updatedAt: asDate(data.updatedAt),
+        };
+      });
+      setAutomations(rows);
+    });
+
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
     let mounted = true;
 
     async function boot() {
@@ -221,7 +375,7 @@ export default function IotControlCenterPage() {
     await loadDevices(true);
   };
 
-  const refreshOne = async (deviceId: string) => {
+  const refreshOne = useCallback(async (deviceId: string) => {
     setDeviceBusy((current) => ({ ...current, [deviceId]: true }));
     setDeviceAlerts((current) => ({ ...current, [deviceId]: "" }));
 
@@ -262,7 +416,7 @@ export default function IotControlCenterPage() {
     } finally {
       setDeviceBusy((current) => ({ ...current, [deviceId]: false }));
     }
-  };
+  }, []);
 
   const sendCommand = async (deviceId: string) => {
     const cmd = commandState[deviceId] || { code: "", value: true };
@@ -307,6 +461,226 @@ export default function IotControlCenterPage() {
     }
   };
 
+  const runAutomation = useCallback(
+    async (automation: IotAutomation, source: "manual" | "scheduler" = "manual") => {
+      if (!automation.deviceId || !automation.code) {
+        if (source === "manual") {
+          setAutomationMessage("Automation is missing device or command code.");
+        }
+        return;
+      }
+
+      if (source === "manual") {
+        setRunningAutomationId(automation.id);
+      }
+
+      try {
+        const response = await fetch(`/api/tuya/device/${encodeURIComponent(automation.deviceId)}/command`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: automation.code, value: automation.value }),
+        });
+
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          error?: string;
+          msg?: string | null;
+        };
+
+        if (!response.ok || !payload.ok) {
+          throw new Error(payload.error || "Automation command failed.");
+        }
+
+        await updateDoc(doc(db, "users", ADMIN_ID, "iotAutomations", automation.id), {
+          lastRunAt: serverTimestamp(),
+          lastRunStatus: "success",
+          lastRunNote:
+            source === "scheduler"
+              ? `Auto-executed at ${automation.dailyTime}`
+              : payload.msg
+                ? `Manual run: ${payload.msg}`
+                : "Manual run completed",
+          updatedAt: serverTimestamp(),
+        });
+
+        if (source === "manual") {
+          setAutomationMessage(`Automation "${automation.name}" executed successfully.`);
+        }
+
+        await refreshOne(automation.deviceId);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Automation failed.";
+
+        await updateDoc(doc(db, "users", ADMIN_ID, "iotAutomations", automation.id), {
+          lastRunAt: serverTimestamp(),
+          lastRunStatus: "error",
+          lastRunNote: message,
+          updatedAt: serverTimestamp(),
+        }).catch(() => undefined);
+
+        if (source === "manual") {
+          setAutomationMessage(message);
+        }
+      } finally {
+        if (source === "manual") {
+          setRunningAutomationId(null);
+        }
+      }
+    },
+    [refreshOne]
+  );
+
+  useEffect(() => {
+    if (!hasKeys) return;
+
+    const interval = window.setInterval(() => {
+      const now = new Date();
+      const hh = `${now.getHours()}`.padStart(2, "0");
+      const mm = `${now.getMinutes()}`.padStart(2, "0");
+      const currentTime = `${hh}:${mm}`;
+      const dayKey = toLocalDayKey(now);
+
+      automations.forEach((automation) => {
+        if (!automation.enabled) return;
+        if (automation.triggerType !== "daily") return;
+        if (!automation.dailyTime || automation.dailyTime !== currentTime) return;
+
+        const lockKey = `${automation.id}:${dayKey}:${currentTime}`;
+        if (scheduleLocksRef.current.has(lockKey)) return;
+
+        const alreadyRanToday = automation.lastRunAt ? toLocalDayKey(automation.lastRunAt) === dayKey : false;
+        if (alreadyRanToday) return;
+
+        scheduleLocksRef.current.add(lockKey);
+        void runAutomation(automation, "scheduler");
+      });
+
+      if (scheduleLocksRef.current.size > 4000) {
+        scheduleLocksRef.current.clear();
+      }
+    }, 15_000);
+
+    return () => window.clearInterval(interval);
+  }, [automations, hasKeys, runAutomation]);
+
+  const openAutomationComposer = useCallback(
+    (seed?: { deviceId: string; code: string; value: boolean }) => {
+      const fallbackDeviceId = seed?.deviceId || devices[0]?.id || "";
+      const matched = devices.find((item) => item.id === fallbackDeviceId) || null;
+      const fallbackCode =
+        seed?.code ||
+        commandState[fallbackDeviceId]?.code ||
+        matched?.status.find((item) => item.code.startsWith("switch_"))?.code ||
+        matched?.status[0]?.code ||
+        "";
+
+      setAutomationDraft({
+        name: matched ? `${matched.name} automation` : "IoT automation",
+        deviceId: fallbackDeviceId,
+        deviceName: matched?.name || "",
+        code: fallbackCode,
+        value: seed?.value ?? commandState[fallbackDeviceId]?.value ?? true,
+        triggerType: "manual",
+        dailyTime: "08:00",
+        timezone: browserTimezone,
+        enabled: true,
+      });
+      setAutomationOpen(true);
+    },
+    [browserTimezone, commandState, devices]
+  );
+
+  const openAutomationEditor = useCallback((automation: IotAutomation) => {
+    setAutomationDraft({
+      id: automation.id,
+      name: automation.name,
+      deviceId: automation.deviceId,
+      deviceName: automation.deviceName,
+      code: automation.code,
+      value: automation.value,
+      triggerType: automation.triggerType,
+      dailyTime: automation.dailyTime || "08:00",
+      timezone: automation.timezone || "UTC",
+      enabled: automation.enabled,
+    });
+    setAutomationOpen(true);
+  }, []);
+
+  const closeAutomationComposer = () => {
+    setAutomationOpen(false);
+    setAutomationDraft(null);
+  };
+
+  const saveAutomationDraft = async () => {
+    if (!automationDraft) return;
+
+    const name = automationDraft.name.trim();
+    const code = automationDraft.code.trim();
+    if (!name || !automationDraft.deviceId || !code) {
+      setAutomationMessage("Automation name, device, and code are required.");
+      return;
+    }
+
+    setSavingAutomation(true);
+
+    try {
+      const matchedDevice = devices.find((device) => device.id === automationDraft.deviceId);
+      const payload = {
+        name,
+        deviceId: automationDraft.deviceId,
+        deviceName: matchedDevice?.name || automationDraft.deviceName || `Device ${automationDraft.deviceId.slice(-6)}`,
+        code,
+        value: automationDraft.value,
+        triggerType: automationDraft.triggerType,
+        dailyTime: automationDraft.triggerType === "daily" ? automationDraft.dailyTime : "",
+        timezone: automationDraft.triggerType === "daily" ? automationDraft.timezone : "",
+        enabled: automationDraft.enabled,
+        updatedAt: serverTimestamp(),
+      };
+
+      if (automationDraft.id) {
+        await updateDoc(doc(db, "users", ADMIN_ID, "iotAutomations", automationDraft.id), payload);
+        setAutomationMessage("Automation updated.");
+      } else {
+        await addDoc(collection(db, "users", ADMIN_ID, "iotAutomations"), {
+          ...payload,
+          lastRunStatus: "idle",
+          lastRunNote: "",
+          lastRunAt: null,
+          createdAt: serverTimestamp(),
+        });
+        setAutomationMessage("Automation created.");
+      }
+
+      closeAutomationComposer();
+    } catch (error) {
+      setAutomationMessage(error instanceof Error ? error.message : "Failed to save automation.");
+    } finally {
+      setSavingAutomation(false);
+    }
+  };
+
+  const toggleAutomationEnabled = async (automation: IotAutomation) => {
+    try {
+      await updateDoc(doc(db, "users", ADMIN_ID, "iotAutomations", automation.id), {
+        enabled: !automation.enabled,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      setAutomationMessage(error instanceof Error ? error.message : "Failed to update automation status.");
+    }
+  };
+
+  const deleteAutomation = async (automation: IotAutomation) => {
+    if (!confirm(`Delete automation "${automation.name}"?`)) return;
+    try {
+      await deleteDoc(doc(db, "users", ADMIN_ID, "iotAutomations", automation.id));
+      setAutomationMessage("Automation deleted.");
+    } catch (error) {
+      setAutomationMessage(error instanceof Error ? error.message : "Failed to delete automation.");
+    }
+  };
+
   const pageStatus = useMemo(() => {
     if (!hasKeys) return "Tuya keys missing";
     if (refreshingAll) return "Refreshing all device nodes";
@@ -328,6 +702,14 @@ export default function IotControlCenterPage() {
       signalCount,
     };
   }, [devices]);
+
+  const automationSummary = useMemo(() => {
+    const enabled = automations.filter((item) => item.enabled).length;
+    const daily = automations.filter((item) => item.enabled && item.triggerType === "daily").length;
+    const failed = automations.filter((item) => item.lastRunStatus === "error").length;
+
+    return { enabled, daily, failed };
+  }, [automations]);
 
   return (
     <div className="iot-deck mx-auto w-full max-w-[1400px]">
@@ -353,6 +735,10 @@ export default function IotControlCenterPage() {
               <span className="iot-chip">
                 <ShieldCheck className="h-3.5 w-3.5" />
                 Base: {baseUrl || "-"}
+              </span>
+              <span className="iot-chip">
+                <CalendarClock className="h-3.5 w-3.5" />
+                {automationSummary.enabled} active automations
               </span>
             </div>
           </div>
@@ -404,6 +790,13 @@ export default function IotControlCenterPage() {
         </div>
       ) : null}
 
+      {automationMessage ? (
+        <div className="iot-alert iot-alert-info animate-rise">
+          <CheckCircle2 className="h-4 w-4" />
+          <span>{automationMessage}</span>
+        </div>
+      ) : null}
+
       {!hasKeys ? (
         <section className="iot-panel iot-missing animate-rise">
           <h2>Tuya keys missing</h2>
@@ -415,184 +808,517 @@ export default function IotControlCenterPage() {
       ) : null}
 
       {hasKeys ? (
-        <section className="iot-device-grid">
-          {loading ? (
-            <article className="iot-panel iot-state-card">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <span>Loading device matrix...</span>
-            </article>
-          ) : null}
+        <>
+          <section className="iot-panel iot-automation animate-rise">
+            <header className="iot-automation-head">
+              <div>
+                <p className="iot-kicker">Automation Lab</p>
+                <h2 className="iot-automation-title">Create Device Automations</h2>
+                <p className="iot-automation-note">
+                  Build reusable command automations. Daily schedules execute automatically while this IoT page is open.
+                </p>
+              </div>
+              <button type="button" onClick={() => openAutomationComposer()} className="iot-create-btn">
+                <Plus className="h-4 w-4" />
+                New Automation
+              </button>
+            </header>
 
-          {!loading && devices.length === 0 ? (
-            <article className="iot-panel iot-state-card">
-              <AlertTriangle className="h-5 w-5" />
-              <span>No devices returned. Add `TUYA_DEVICE_IDS` if cloud listing is restricted.</span>
-            </article>
-          ) : null}
+            <div className="iot-chip-row">
+              <span className="iot-chip">
+                <Clock3 className="h-3.5 w-3.5" />
+                {automations.length} total
+              </span>
+              <span className="iot-chip">
+                <ToggleRight className="h-3.5 w-3.5" />
+                {automationSummary.enabled} enabled
+              </span>
+              <span className="iot-chip">
+                <CalendarClock className="h-3.5 w-3.5" />
+                {automationSummary.daily} daily schedules
+              </span>
+              <span className="iot-chip">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                {automationSummary.failed} failed
+              </span>
+            </div>
 
-          {devices.map((device, index) => {
-            const command = commandState[device.id] || { code: "", value: true };
-            const isBusy = Boolean(deviceBusy[device.id]);
-            const isCommandBusy = Boolean(commandBusy[device.id]);
-            const state = statusTone(device.online);
-            const activeSignals = asBooleanCount(device.status);
-
-            return (
-              <article
-                key={device.id}
-                className="iot-panel iot-device-card animate-rise"
-                style={{ animationDelay: `${100 + index * 40}ms` }}
-              >
-                <header className="iot-device-head">
-                  <div>
-                    <p className="iot-device-kicker">Device Node {index + 1}</p>
-                    <h2>{device.name}</h2>
-                    <p className="iot-device-id">ID: {device.id}</p>
-                  </div>
-
-                  <div className="iot-head-actions">
-                    <span className={`iot-state-pill ${state.className}`}>
-                      {state.icon}
-                      {state.label}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => void refreshOne(device.id)}
-                      disabled={isBusy || isCommandBusy}
-                      className="iot-mini-btn"
-                    >
-                      {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />}
-                      {isBusy ? "Syncing" : "Refresh"}
-                    </button>
-                  </div>
-                </header>
-
-                <div className="iot-inline-metrics">
-                  <div>
-                    <span>Last fetched</span>
-                    <strong>{fmtTime(device.lastFetchedAt)}</strong>
-                  </div>
-                  <div>
-                    <span>Status codes</span>
-                    <strong>{device.status.length}</strong>
-                  </div>
-                  <div>
-                    <span>Active switches</span>
-                    <strong>{activeSignals}</strong>
-                  </div>
-                </div>
-
-                <section className="iot-section">
-                  <div className="iot-section-head">
-                    <span>Live Status Matrix</span>
-                  </div>
-                  {device.status.length === 0 ? (
-                    <p className="iot-empty-status">No status items returned.</p>
-                  ) : (
-                    <ul className="iot-status-grid">
-                      {device.status.map((item) => (
-                        <li key={`${device.id}-${item.code}`} className="iot-status-item">
-                          <span className="iot-code-chip">{item.code}</span>
-                          <span className="iot-value-chip">{safeText(item.value)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </section>
-
-                <section className="iot-section iot-command-box">
-                  <div className="iot-section-head">
-                    <span>Command Tester</span>
-                    <small>discover correct DP code before automating</small>
-                  </div>
-
-                  <div className="iot-command-grid">
-                    <div className="iot-control-field">
-                      <label>Code</label>
-                      <input
-                        list={`tuya-code-list-${device.id}`}
-                        value={command.code}
-                        onChange={(event) =>
-                          setCommandState((current) => ({
-                            ...current,
-                            [device.id]: {
-                              ...(current[device.id] || { code: "", value: true }),
-                              code: event.target.value,
-                            },
-                          }))
-                        }
-                        placeholder="switch_1"
-                        className="iot-input"
-                      />
-                      <datalist id={`tuya-code-list-${device.id}`}>
-                        {device.status.map((item) => (
-                          <option key={`${device.id}-${item.code}`} value={item.code} />
-                        ))}
-                      </datalist>
-                    </div>
-
-                    <div className="iot-toggle-wrap">
-                      <label>Value</label>
-                      <div className="iot-toggle">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCommandState((current) => ({
-                              ...current,
-                              [device.id]: {
-                                ...(current[device.id] || { code: "", value: true }),
-                                value: true,
-                              },
-                            }))
-                          }
-                          className={command.value ? "is-active" : ""}
-                        >
-                          ON
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCommandState((current) => ({
-                              ...current,
-                              [device.id]: {
-                                ...(current[device.id] || { code: "", value: true }),
-                                value: false,
-                              },
-                            }))
-                          }
-                          className={!command.value ? "is-active" : ""}
-                        >
-                          OFF
-                        </button>
+            {automations.length === 0 ? (
+              <div className="iot-automation-empty">
+                <p>No automations yet. Create one from this panel or directly from any device command box below.</p>
+              </div>
+            ) : (
+              <div className="iot-automation-grid">
+                {automations.map((automation) => (
+                  <article key={automation.id} className="iot-automation-card">
+                    <div className="iot-automation-row">
+                      <div>
+                        <h3>{automation.name}</h3>
+                        <p>{automation.deviceName}</p>
                       </div>
+                      <span className={`auto-status-pill ${automationStatusClass(automation.lastRunStatus)}`}>
+                        {automation.lastRunStatus}
+                      </span>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => void sendCommand(device.id)}
-                      disabled={isCommandBusy}
-                      className="iot-send"
-                    >
-                      {isCommandBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                      {isCommandBusy ? "Sending" : "Send Command"}
-                    </button>
-                  </div>
-                </section>
+                    <div className="iot-automation-meta">
+                      <span>Code: {automation.code}</span>
+                      <span>Value: {automation.value ? "ON" : "OFF"}</span>
+                      <span>
+                        Trigger:{" "}
+                        {automation.triggerType === "daily"
+                          ? `${automation.dailyTime || "--:--"} (${automation.timezone || "UTC"})`
+                          : "Manual"}
+                      </span>
+                      <span>Last run: {fmtDateTime(automation.lastRunAt)}</span>
+                    </div>
 
-                {device.error ? (
-                  <div className="iot-alert-inline iot-alert-inline-danger">{device.error}</div>
-                ) : null}
+                    <div className="iot-automation-actions">
+                      <button type="button" onClick={() => toggleAutomationEnabled(automation)} className="iot-mini-btn">
+                        {automation.enabled ? <ToggleRight className="h-3.5 w-3.5" /> : <ToggleLeft className="h-3.5 w-3.5" />}
+                        {automation.enabled ? "Enabled" : "Disabled"}
+                      </button>
 
-                {deviceAlerts[device.id] ? (
-                  <div className="iot-alert-inline iot-alert-inline-info">
-                    <CheckCircle2 className="h-4 w-4" />
-                    {deviceAlerts[device.id]}
-                  </div>
-                ) : null}
+                      <button type="button" onClick={() => openAutomationEditor(automation)} className="iot-mini-btn iot-ghost-btn">
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => void runAutomation(automation, "manual")}
+                        disabled={runningAutomationId === automation.id}
+                        className="iot-run-btn"
+                      >
+                        {runningAutomationId === automation.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Play className="h-3.5 w-3.5" />
+                        )}
+                        {runningAutomationId === automation.id ? "Running" : "Run now"}
+                      </button>
+
+                      <button type="button" onClick={() => void deleteAutomation(automation)} className="iot-delete-btn">
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete
+                      </button>
+                    </div>
+
+                    {automation.lastRunNote ? <p className="iot-automation-note-line">{automation.lastRunNote}</p> : null}
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="iot-device-grid">
+            {loading ? (
+              <article className="iot-panel iot-state-card">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Loading device matrix...</span>
               </article>
-            );
-          })}
-        </section>
+            ) : null}
+
+            {!loading && devices.length === 0 ? (
+              <article className="iot-panel iot-state-card">
+                <AlertTriangle className="h-5 w-5" />
+                <span>No devices returned. Add `TUYA_DEVICE_IDS` if cloud listing is restricted.</span>
+              </article>
+            ) : null}
+
+            {devices.map((device, index) => {
+              const command = commandState[device.id] || { code: "", value: true };
+              const isBusy = Boolean(deviceBusy[device.id]);
+              const isCommandBusy = Boolean(commandBusy[device.id]);
+              const state = statusTone(device.online);
+              const activeSignals = asBooleanCount(device.status);
+
+              return (
+                <article
+                  key={device.id}
+                  className="iot-panel iot-device-card animate-rise"
+                  style={{ animationDelay: `${100 + index * 40}ms` }}
+                >
+                  <header className="iot-device-head">
+                    <div>
+                      <p className="iot-device-kicker">Device Node {index + 1}</p>
+                      <h2>{device.name}</h2>
+                      <p className="iot-device-id">ID: {device.id}</p>
+                    </div>
+
+                    <div className="iot-head-actions">
+                      <span className={`iot-state-pill ${state.className}`}>
+                        {state.icon}
+                        {state.label}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => void refreshOne(device.id)}
+                        disabled={isBusy || isCommandBusy}
+                        className="iot-mini-btn"
+                      >
+                        {isBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />}
+                        {isBusy ? "Syncing" : "Refresh"}
+                      </button>
+                    </div>
+                  </header>
+
+                  <div className="iot-inline-metrics">
+                    <div>
+                      <span>Last fetched</span>
+                      <strong>{fmtTime(device.lastFetchedAt)}</strong>
+                    </div>
+                    <div>
+                      <span>Status codes</span>
+                      <strong>{device.status.length}</strong>
+                    </div>
+                    <div>
+                      <span>Active switches</span>
+                      <strong>{activeSignals}</strong>
+                    </div>
+                  </div>
+
+                  <section className="iot-section">
+                    <div className="iot-section-head">
+                      <span>Live Status Matrix</span>
+                    </div>
+                    {device.status.length === 0 ? (
+                      <p className="iot-empty-status">No status items returned.</p>
+                    ) : (
+                      <ul className="iot-status-grid">
+                        {device.status.map((item) => (
+                          <li key={`${device.id}-${item.code}`} className="iot-status-item">
+                            <span className="iot-code-chip">{item.code}</span>
+                            <span className="iot-value-chip">{safeText(item.value)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </section>
+
+                  <section className="iot-section iot-command-box">
+                    <div className="iot-section-head">
+                      <span>Command Tester</span>
+                      <small>discover correct DP code before automating</small>
+                    </div>
+
+                    <div className="iot-command-grid">
+                      <div className="iot-control-field">
+                        <label>Code</label>
+                        <input
+                          list={`tuya-code-list-${device.id}`}
+                          value={command.code}
+                          onChange={(event) =>
+                            setCommandState((current) => ({
+                              ...current,
+                              [device.id]: {
+                                ...(current[device.id] || { code: "", value: true }),
+                                code: event.target.value,
+                              },
+                            }))
+                          }
+                          placeholder="switch_1"
+                          className="iot-input"
+                        />
+                        <datalist id={`tuya-code-list-${device.id}`}>
+                          {device.status.map((item) => (
+                            <option key={`${device.id}-${item.code}`} value={item.code} />
+                          ))}
+                        </datalist>
+                      </div>
+
+                      <div className="iot-toggle-wrap">
+                        <label>Value</label>
+                        <div className="iot-toggle">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCommandState((current) => ({
+                                ...current,
+                                [device.id]: {
+                                  ...(current[device.id] || { code: "", value: true }),
+                                  value: true,
+                                },
+                              }))
+                            }
+                            className={command.value ? "is-active" : ""}
+                          >
+                            ON
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCommandState((current) => ({
+                                ...current,
+                                [device.id]: {
+                                  ...(current[device.id] || { code: "", value: true }),
+                                  value: false,
+                                },
+                              }))
+                            }
+                            className={!command.value ? "is-active" : ""}
+                          >
+                            OFF
+                          </button>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => void sendCommand(device.id)}
+                        disabled={isCommandBusy}
+                        className="iot-send"
+                      >
+                        {isCommandBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        {isCommandBusy ? "Sending" : "Send Command"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openAutomationComposer({
+                            deviceId: device.id,
+                            code: command.code,
+                            value: command.value,
+                          })
+                        }
+                        className="iot-ghost-btn"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Save Automation
+                      </button>
+                    </div>
+                  </section>
+
+                  {device.error ? (
+                    <div className="iot-alert-inline iot-alert-inline-danger">{device.error}</div>
+                  ) : null}
+
+                  {deviceAlerts[device.id] ? (
+                    <div className="iot-alert-inline iot-alert-inline-info">
+                      <CheckCircle2 className="h-4 w-4" />
+                      {deviceAlerts[device.id]}
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })}
+          </section>
+        </>
+      ) : null}
+
+      {automationOpen && automationDraft ? (
+        <div className="iot-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="iot-modal-panel">
+            <div className="iot-modal-head">
+              <div>
+                <p className="iot-kicker">Automation Lab</p>
+                <h3>{automationDraft.id ? "Edit IoT Automation" : "New IoT Automation"}</h3>
+              </div>
+              <button type="button" className="iot-mini-btn" onClick={closeAutomationComposer}>
+                Close
+              </button>
+            </div>
+
+            <div className="iot-modal-grid">
+              <label className="iot-modal-field">
+                Name
+                <input
+                  className="iot-input"
+                  value={automationDraft.name}
+                  onChange={(event) =>
+                    setAutomationDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            name: event.target.value,
+                          }
+                        : current
+                    )
+                  }
+                  placeholder="Living Room Night Shutdown"
+                />
+              </label>
+
+              <label className="iot-modal-field">
+                Device
+                <select
+                  className="iot-input"
+                  value={automationDraft.deviceId}
+                  onChange={(event) => {
+                    const nextId = event.target.value;
+                    const matched = devices.find((device) => device.id === nextId);
+                    setAutomationDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            deviceId: nextId,
+                            deviceName: matched?.name || current.deviceName,
+                          }
+                        : current
+                    );
+                  }}
+                >
+                  <option value="">Select device</option>
+                  {devices.map((device) => (
+                    <option key={device.id} value={device.id}>
+                      {device.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="iot-modal-field">
+                Command code
+                <input
+                  className="iot-input"
+                  value={automationDraft.code}
+                  onChange={(event) =>
+                    setAutomationDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            code: event.target.value,
+                          }
+                        : current
+                    )
+                  }
+                  placeholder="switch_1"
+                />
+              </label>
+
+              <div className="iot-modal-field">
+                Command value
+                <div className="iot-toggle iot-modal-toggle">
+                  <button
+                    type="button"
+                    className={automationDraft.value ? "is-active" : ""}
+                    onClick={() =>
+                      setAutomationDraft((current) =>
+                        current
+                          ? {
+                              ...current,
+                              value: true,
+                            }
+                          : current
+                      )
+                    }
+                  >
+                    ON
+                  </button>
+                  <button
+                    type="button"
+                    className={!automationDraft.value ? "is-active" : ""}
+                    onClick={() =>
+                      setAutomationDraft((current) =>
+                        current
+                          ? {
+                              ...current,
+                              value: false,
+                            }
+                          : current
+                      )
+                    }
+                  >
+                    OFF
+                  </button>
+                </div>
+              </div>
+
+              <label className="iot-modal-field">
+                Trigger
+                <select
+                  className="iot-input"
+                  value={automationDraft.triggerType}
+                  onChange={(event) =>
+                    setAutomationDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            triggerType: event.target.value === "daily" ? "daily" : "manual",
+                          }
+                        : current
+                    )
+                  }
+                >
+                  <option value="manual">Manual run only</option>
+                  <option value="daily">Daily (auto while page is open)</option>
+                </select>
+              </label>
+
+              {automationDraft.triggerType === "daily" ? (
+                <>
+                  <label className="iot-modal-field">
+                    Daily time
+                    <input
+                      type="time"
+                      className="iot-input"
+                      value={automationDraft.dailyTime}
+                      onChange={(event) =>
+                        setAutomationDraft((current) =>
+                          current
+                            ? {
+                                ...current,
+                                dailyTime: event.target.value,
+                              }
+                            : current
+                        )
+                      }
+                    />
+                  </label>
+
+                  <label className="iot-modal-field">
+                    Timezone
+                    <input
+                      className="iot-input"
+                      value={automationDraft.timezone}
+                      onChange={(event) =>
+                        setAutomationDraft((current) =>
+                          current
+                            ? {
+                                ...current,
+                                timezone: event.target.value,
+                              }
+                            : current
+                        )
+                      }
+                    />
+                  </label>
+                </>
+              ) : null}
+
+              <label className="iot-modal-field">
+                Enabled
+                <select
+                  className="iot-input"
+                  value={automationDraft.enabled ? "1" : "0"}
+                  onChange={(event) =>
+                    setAutomationDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            enabled: event.target.value === "1",
+                          }
+                        : current
+                    )
+                  }
+                >
+                  <option value="1">Enabled</option>
+                  <option value="0">Disabled</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="iot-modal-actions">
+              <button type="button" className="iot-ghost-btn" onClick={closeAutomationComposer}>
+                Cancel
+              </button>
+              <button type="button" className="iot-send" disabled={savingAutomation} onClick={() => void saveAutomationDraft()}>
+                {savingAutomation ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                {savingAutomation ? "Saving" : automationDraft.id ? "Update Automation" : "Create Automation"}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       <style jsx>{`
@@ -832,6 +1558,12 @@ export default function IotControlCenterPage() {
           color: #fde68a;
         }
 
+        .iot-alert-info {
+          border-color: rgba(52, 211, 153, 0.42);
+          background: rgba(6, 78, 59, 0.3);
+          color: #bbf7d0;
+        }
+
         :global(.admin-root.admin-light) .iot-alert-danger {
           background: rgba(254, 226, 226, 0.78);
           color: #be123c;
@@ -840,6 +1572,11 @@ export default function IotControlCenterPage() {
         :global(.admin-root.admin-light) .iot-alert-warn {
           background: rgba(254, 243, 199, 0.78);
           color: #92400e;
+        }
+
+        :global(.admin-root.admin-light) .iot-alert-info {
+          background: rgba(220, 252, 231, 0.78);
+          color: #047857;
         }
 
         .iot-missing {
@@ -868,6 +1605,209 @@ export default function IotControlCenterPage() {
           padding: 0.55rem 0.7rem;
           font-size: 0.8rem;
           font-weight: 600;
+        }
+
+        .iot-automation {
+          padding: 1rem;
+          margin-bottom: 0.95rem;
+        }
+
+        .iot-automation-head {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 0.8rem;
+        }
+
+        .iot-automation-title {
+          margin: 0.4rem 0 0;
+          font-size: clamp(1.1rem, 2vw, 1.45rem);
+          color: var(--iot-text);
+        }
+
+        .iot-automation-note {
+          margin: 0.38rem 0 0;
+          font-size: 0.84rem;
+          color: var(--iot-muted);
+          max-width: 64ch;
+        }
+
+        .iot-automation-empty {
+          margin-top: 0.75rem;
+          border: 1px dashed var(--iot-border);
+          border-radius: 1rem;
+          background: rgba(8, 21, 42, 0.56);
+          padding: 0.9rem;
+          color: var(--iot-muted);
+          font-size: 0.88rem;
+        }
+
+        .iot-automation-grid {
+          margin-top: 0.8rem;
+          display: grid;
+          gap: 0.65rem;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .iot-automation-card {
+          border: 1px solid var(--iot-border);
+          border-radius: 1rem;
+          background: rgba(4, 16, 34, 0.74);
+          padding: 0.78rem;
+        }
+
+        :global(.admin-root.admin-light) .iot-automation-card {
+          background: rgba(255, 255, 255, 0.9);
+        }
+
+        .iot-automation-row {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 0.5rem;
+        }
+
+        .iot-automation-row h3 {
+          margin: 0;
+          color: var(--iot-text);
+          font-size: 0.95rem;
+          line-height: 1.2;
+        }
+
+        .iot-automation-row p {
+          margin: 0.2rem 0 0;
+          color: var(--iot-muted);
+          font-size: 0.76rem;
+        }
+
+        .auto-status-pill {
+          border-radius: 999px;
+          border: 1px solid;
+          font-size: 0.68rem;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          font-weight: 700;
+          padding: 0.22rem 0.55rem;
+        }
+
+        .auto-status-success {
+          border-color: rgba(52, 211, 153, 0.45);
+          background: rgba(6, 78, 59, 0.4);
+          color: #86efac;
+        }
+
+        .auto-status-error {
+          border-color: rgba(251, 113, 133, 0.45);
+          background: rgba(127, 29, 29, 0.4);
+          color: #fecdd3;
+        }
+
+        .auto-status-idle {
+          border-color: rgba(148, 163, 184, 0.45);
+          background: rgba(51, 65, 85, 0.38);
+          color: #cbd5e1;
+        }
+
+        :global(.admin-root.admin-light) .auto-status-idle {
+          background: rgba(241, 245, 249, 0.9);
+          color: #334155;
+        }
+
+        .iot-automation-meta {
+          margin-top: 0.56rem;
+          display: grid;
+          gap: 0.22rem;
+        }
+
+        .iot-automation-meta span {
+          font-size: 0.75rem;
+          color: var(--iot-muted);
+        }
+
+        .iot-automation-actions {
+          margin-top: 0.62rem;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.44rem;
+        }
+
+        .iot-automation-note-line {
+          margin: 0.55rem 0 0;
+          padding-top: 0.5rem;
+          border-top: 1px dashed var(--iot-border);
+          font-size: 0.74rem;
+          color: var(--iot-muted);
+        }
+
+        .iot-create-btn,
+        .iot-run-btn,
+        .iot-delete-btn,
+        .iot-ghost-btn {
+          border-radius: 0.78rem;
+          border: 1px solid rgba(148, 163, 184, 0.42);
+          background: rgba(7, 20, 39, 0.72);
+          color: var(--iot-text);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.35rem;
+          padding: 0.5rem 0.72rem;
+          font-size: 0.78rem;
+          font-weight: 700;
+          line-height: 1;
+          transition: transform 0.2s ease, filter 0.2s ease, opacity 0.2s ease;
+        }
+
+        .iot-create-btn {
+          background: linear-gradient(135deg, rgba(13, 148, 136, 0.75), rgba(2, 132, 199, 0.75));
+          border-color: rgba(125, 211, 252, 0.5);
+          color: #ecfeff;
+        }
+
+        .iot-run-btn {
+          background: linear-gradient(135deg, rgba(14, 116, 144, 0.84), rgba(2, 132, 199, 0.82));
+          border-color: rgba(125, 211, 252, 0.52);
+          color: #ecfeff;
+        }
+
+        .iot-delete-btn {
+          border-color: rgba(251, 113, 133, 0.45);
+          color: #fecdd3;
+          background: rgba(127, 29, 29, 0.35);
+        }
+
+        .iot-create-btn:hover:not(:disabled),
+        .iot-run-btn:hover:not(:disabled),
+        .iot-delete-btn:hover:not(:disabled),
+        .iot-ghost-btn:hover:not(:disabled) {
+          transform: translateY(-1px);
+          filter: brightness(1.06);
+        }
+
+        .iot-create-btn:disabled,
+        .iot-run-btn:disabled,
+        .iot-delete-btn:disabled,
+        .iot-ghost-btn:disabled {
+          opacity: 0.62;
+          cursor: not-allowed;
+        }
+
+        :global(.admin-root.admin-light) .iot-create-btn,
+        :global(.admin-root.admin-light) .iot-run-btn,
+        :global(.admin-root.admin-light) .iot-delete-btn,
+        :global(.admin-root.admin-light) .iot-ghost-btn {
+          background: rgba(255, 255, 255, 0.92);
+          color: #0f1d34;
+        }
+
+        :global(.admin-root.admin-light) .iot-run-btn {
+          background: linear-gradient(135deg, rgba(14, 116, 144, 0.16), rgba(2, 132, 199, 0.18));
+          color: #0c4a6e;
+        }
+
+        :global(.admin-root.admin-light) .iot-delete-btn {
+          background: rgba(254, 226, 226, 0.88);
+          color: #be123c;
         }
 
         .iot-device-grid {
@@ -1131,7 +2071,7 @@ export default function IotControlCenterPage() {
         .iot-command-grid {
           display: grid;
           gap: 0.64rem;
-          grid-template-columns: 1fr auto auto;
+          grid-template-columns: 1fr auto auto auto;
           align-items: end;
         }
 
@@ -1243,6 +2183,74 @@ export default function IotControlCenterPage() {
           color: #047857;
         }
 
+        .iot-modal-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 70;
+          background: rgba(2, 6, 23, 0.62);
+          backdrop-filter: blur(4px);
+          padding: 1rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .iot-modal-panel {
+          width: min(760px, 96vw);
+          border-radius: 1.2rem;
+          border: 1px solid var(--iot-border);
+          background: linear-gradient(150deg, rgba(6, 19, 37, 0.96), rgba(5, 14, 29, 0.94));
+          box-shadow: 0 20px 50px rgba(2, 6, 23, 0.55);
+          padding: 1rem;
+          max-height: 92vh;
+          overflow: auto;
+        }
+
+        :global(.admin-root.admin-light) .iot-modal-panel {
+          background: linear-gradient(150deg, rgba(245, 250, 255, 0.98), rgba(255, 255, 255, 0.96));
+        }
+
+        .iot-modal-head {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 0.8rem;
+          margin-bottom: 0.8rem;
+        }
+
+        .iot-modal-head h3 {
+          margin: 0.35rem 0 0;
+          font-size: 1.18rem;
+          color: var(--iot-text);
+        }
+
+        .iot-modal-grid {
+          display: grid;
+          gap: 0.65rem;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .iot-modal-field {
+          display: grid;
+          gap: 0.34rem;
+          font-size: 0.74rem;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          color: var(--iot-muted);
+          font-weight: 700;
+        }
+
+        .iot-modal-toggle {
+          margin-top: 0.1rem;
+        }
+
+        .iot-modal-actions {
+          margin-top: 0.9rem;
+          display: flex;
+          justify-content: flex-end;
+          gap: 0.55rem;
+        }
+
         .animate-rise {
           animation: riseIn 0.55s ease both;
         }
@@ -1258,12 +2266,21 @@ export default function IotControlCenterPage() {
           }
         }
 
-        @media (max-width: 1100px) {
-          .iot-hero-grid {
+        @media (max-width: 1220px) {
+          .iot-automation-grid {
             grid-template-columns: 1fr;
           }
+        }
 
+        @media (max-width: 1100px) {
+          .iot-hero-grid,
           .iot-device-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 900px) {
+          .iot-modal-grid {
             grid-template-columns: 1fr;
           }
         }
@@ -1290,19 +2307,35 @@ export default function IotControlCenterPage() {
             grid-template-columns: 1fr;
           }
 
-          .iot-send {
+          .iot-send,
+          .iot-ghost-btn,
+          .iot-run-btn,
+          .iot-delete-btn,
+          .iot-create-btn {
             width: 100%;
+          }
+
+          .iot-automation-head {
+            flex-direction: column;
           }
 
           .iot-telemetry-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
+          .iot-automation-actions {
+            flex-direction: column;
           }
         }
 
         @media (prefers-reduced-motion: reduce) {
           .animate-rise,
           .iot-refresh,
-          .iot-send {
+          .iot-send,
+          .iot-run-btn,
+          .iot-create-btn,
+          .iot-delete-btn,
+          .iot-ghost-btn {
             animation: none !important;
             transition: none !important;
           }
