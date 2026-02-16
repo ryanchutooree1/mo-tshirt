@@ -100,7 +100,8 @@ export default function FinanceFreedomPage() {
   const salaryCovers = salaryLine ? salaryLine.amount >= totalExpenses : false;
   const monthlySeries = useMemo(() => buildMonthlySeries(totalIncome, totalExpenses), [totalIncome, totalExpenses]);
 
-  const handleUnlock = () => {
+  const handleUnlock = (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
     if (password.trim() === "godlove") {
       setUnlocked(true);
       setPassword("");
@@ -191,7 +192,7 @@ export default function FinanceFreedomPage() {
             <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Finance Freedom</p>
             <h1 className="mt-3 text-2xl font-semibold tracking-tight">Enter password</h1>
             <p className="mt-2 text-sm text-slate-600">This page is protected.</p>
-            <div className="mt-5 space-y-3">
+            <form className="mt-5 space-y-3" onSubmit={handleUnlock}>
               <input
                 type="password"
                 value={password}
@@ -204,13 +205,12 @@ export default function FinanceFreedomPage() {
               />
               {passwordError && <p className="text-xs text-rose-600">{passwordError}</p>}
               <button
-                type="button"
-                onClick={handleUnlock}
+                type="submit"
                 className="inline-flex w-full items-center justify-center rounded-full bg-black px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-900"
               >
                 Unlock
               </button>
-            </div>
+            </form>
           </div>
         </div>
       </main>
