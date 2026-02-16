@@ -24,3 +24,74 @@ body {
   font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.6;
 }
+
+.admin-root.admin-dark {
+  color-scheme: dark;
+  background: #020617;
+  color: #e2e8f0;
+}
+
+.admin-root.admin-light {
+  color-scheme: light;
+}
+
+.admin-root.admin-dark .admin-page-shell {
+  background: #020617;
+  color: #e2e8f0;
+}
+
+.admin-root.admin-dark :is(
+    .bg-white,
+    .bg-white\/90,
+    .bg-\[\#ffffff\],
+    .bg-\[\#F5F5F7\],
+    .bg-slate-50,
+    .bg-slate-100,
+    .bg-gray-50,
+    .bg-gray-100
+  ) {
+  background-color: #0f172a !important;
+}
+
+.admin-root.admin-dark :is(
+    .text-\[\#1a1a1a\],
+    .text-black,
+    .text-slate-900,
+    .text-slate-800,
+    .text-slate-700,
+    .text-gray-700,
+    .text-gray-600
+  ) {
+  color: #e2e8f0 !important;
+}
+
+.admin-root.admin-dark :is(
+    .text-slate-600,
+    .text-slate-500,
+    .text-slate-400,
+    .text-gray-500,
+    .text-gray-400
+  ) {
+  color: #94a3b8 !important;
+}
+
+.admin-root.admin-dark :is(
+    .border-slate-200,
+    .border-slate-100,
+    .border-gray-200,
+    .border-gray-100,
+    .border-\[\#e5e5e5\],
+    .border-\[\#bfa37a\]
+  ) {
+  border-color: #334155 !important;
+}
+
+.admin-root.admin-dark :is(input, textarea, select) {
+  background-color: #111827;
+  color: #e2e8f0;
+  border-color: #334155;
+}
+
+.admin-root.admin-dark :is(input, textarea)::placeholder {
+  color: #64748b;
+}

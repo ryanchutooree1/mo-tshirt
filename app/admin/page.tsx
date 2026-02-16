@@ -15,10 +15,12 @@ import {
   FileStack,
   Gauge,
   Layers3,
+  Moon,
   NotebookPen,
   Package,
   Plus,
   Sparkles,
+  Sun,
   Target,
   Trash2,
   TriangleAlert,
@@ -37,6 +39,7 @@ import {
 import { format, formatDistanceToNow, subDays } from "date-fns";
 import { db } from "@/lib/firebase";
 import { useAdminMetrics } from "@/admin/AdminDataContext";
+import { useAdminTheme } from "@/admin/AdminThemeContext";
 
 type TxnProduct = {
   quantity?: number;
@@ -268,6 +271,7 @@ const cardBase =
 
 export default function OwnerDashboard() {
   const global = useAdminMetrics();
+  const { theme, toggleTheme } = useAdminTheme();
 
   const [now, setNow] = useState(new Date());
   const [orders, setOrders] = useState<DashboardOrder[]>([]);
@@ -1045,6 +1049,23 @@ export default function OwnerDashboard() {
                   Review Quotes
                   <ArrowUpRight className="h-4 w-4" />
                 </Link>
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-white/30 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20"
+                >
+                  {theme === "dark" ? (
+                    <>
+                      <Sun className="h-4 w-4" />
+                      Switch To Light Admin
+                    </>
+                  ) : (
+                    <>
+                      <Moon className="h-4 w-4" />
+                      Switch To Dark Admin
+                    </>
+                  )}
+                </button>
               </div>
             </div>
 
