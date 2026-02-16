@@ -99,13 +99,14 @@ type Txn = {
   quoteId?: string;
   source?: string;
   documentProfile?: Partial<OrderDocumentProfile>;
+  workflowDone?: boolean;
 };
 
 const PAGE_SIZE = 20;
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "admin";
 const DEFAULT_PREPARED_BY = "Mo T-Shirt Team";
 const ORDER_WORKFLOW = ["Pending", "In Process", "Completed", "Delivered"] as const;
-const ORDER_WORKFLOW_VISUAL = ["In Process", "Completed", "Delivered"] as const;
+const ORDER_WORKFLOW_VISUAL = ["Process", "Completed", "Delivered"] as const;
 const ORDER_DOC_FLOW: OrderDocumentType[] = ["quotation", "invoice", "partial_receipt", "receipt"];
 const ORDER_STATUS_OPTIONS = [
   "Select Status",
@@ -843,12 +844,24 @@ function OrdersPageInner() {
   async function updateStatus(id: string, status: string) {
     if (!status || status === "Select Status") return;
     try {
-      await updateDoc(doc(db, "transactions", id), { status });
+      const statusPayload: Record<string, unknown> = { status };
+      if (status !== "Delivered") {
+        statusPayload.workflowDone = false;
+        statusPayload.workflowDoneAt = null;
+      }
+      await updateDoc(doc(db, "transactions", id), statusPayload);
       const accRef = doc(db, "account", id);
       const acc = await getDoc(accRef);
       if (acc.exists()) await updateDoc(accRef, { status });
       showToast({ type: "ok", text: "Status updated" });
-      setOverrides((prev) => ({ ...prev, [id]: { ...(prev[id] || {}), status } }));
+      setOverrides((prev) => ({
+        ...prev,
+        [id]: {
+          ...(prev[id] || {}),
+          status,
+          ...(status !== "Delivered" ? { workflowDone: false } : {}),
+        },
+      }));
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Update failed";
       showToast({ type: "err", text: msg });
@@ -877,6 +890,63 @@ function OrdersPageInner() {
       return;
     }
     await updateStatus(id, nextStatus);
+  }
+
+  async function markWorkflowDone(id: string) {
+    try {
+      await updateDoc(doc(db, "transactions", id), {
+        status: "Delivered",
+        workflowDone: true,
+        workflowDoneAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      const accRef = doc(db, "account", id);
+      const acc = await getDoc(accRef);
+      if (acc.exists()) await updateDoc(accRef, { status: "Delivered" });
+      setOverrides((prev) => ({
+        ...prev,
+        [id]: {
+          ...(prev[id] || {}),
+          status: "Delivered",
+          workflowDone: true,
+        },
+      }));
+      showToast({ type: "ok", text: "Workflow marked as done." });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Could not mark workflow done.";
+      showToast({ type: "err", text: msg });
+    }
+  }
+
+  async function advanceDocumentFlow(id: string, txn: Txn) {
+    try {
+      const base = buildOrderDocumentDraft(id, txn);
+      const currentType = base.documentType;
+      if (currentType === "receipt") {
+        showToast({ type: "ok", text: "Document flow is already at the final stage." });
+        return;
+      }
+      const nextType = getNextDocumentType(currentType);
+      const nextDraft = withDocumentTypeDefaults(base, nextType);
+      await updateDoc(doc(db, "transactions", id), {
+        documentProfile: {
+          ...nextDraft,
+          updatedAt: serverTimestamp(),
+        },
+        updatedAt: serverTimestamp(),
+      });
+      setOverrides((prev) => ({
+        ...prev,
+        [id]: {
+          ...(prev[id] || {}),
+          documentProfile: nextDraft,
+        },
+      }));
+      showToast({ type: "ok", text: `Document flow moved to ${ORDER_DOC_LABELS[nextType]}.` });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Could not update document flow.";
+      showToast({ type: "err", text: msg });
+    }
   }
 
   function openDocumentStudio(txnId: string, txn: Txn) {
@@ -1524,8 +1594,9 @@ function OrdersPageInner() {
                     ? m.products.reduce((s, p) => s + (p.price || 0), 0)
                     : 0;
                 const currentStatus = m.status || "Pending";
-                const nextStatus = getNextWorkflowStatus(currentStatus);
                 const workflowVisualIndex = getWorkflowVisualIndex(currentStatus);
+                const workflowDone = Boolean(m.workflowDone);
+                const workflowReachedDelivered = workflowVisualIndex >= ORDER_WORKFLOW_VISUAL.length - 1;
                 const docProfile = m.documentProfile;
                 const docTypeLabel =
                   docProfile && isOrderDocumentType(docProfile.documentType)
@@ -1538,12 +1609,13 @@ function OrdersPageInner() {
                       ? "quotation"
                       : "invoice";
                 const activeDocFlowIndex = activeDocType ? ORDER_DOC_FLOW.findIndex((item) => item === activeDocType) : -1;
-                const isWorkflowDone = workflowVisualIndex >= ORDER_WORKFLOW_VISUAL.length - 1;
                 const workflowNextLabel =
-                  workflowVisualIndex < 0
+                  workflowDone
+                    ? null
+                    : workflowVisualIndex < 0
                     ? ORDER_WORKFLOW_VISUAL[0]
-                    : isWorkflowDone
-                      ? null
+                    : workflowReachedDelivered
+                      ? "Done"
                       : ORDER_WORKFLOW_VISUAL[Math.min(workflowVisualIndex + 1, ORDER_WORKFLOW_VISUAL.length - 1)];
                 const isDocFlowDone = activeDocFlowIndex >= ORDER_DOC_FLOW.length - 1;
                 const nextDocType = activeDocType
@@ -1628,46 +1700,6 @@ function OrdersPageInner() {
                         <span className="rounded-full bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white">
                           {currency(total)}
                         </span>
-                        <select
-                          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
-                          value={m.status || "Select Status"}
-                          onChange={(e) => updateStatus(id, e.target.value)}
-                        >
-                          {ORDER_STATUS_OPTIONS.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
-                        <select
-                          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
-                          value={m.paymentMethod || "Select Payment Status"}
-                          onChange={(e) => updatePayment(id, e.target.value)}
-                        >
-                          {ORDER_PAYMENT_OPTIONS.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
-
-                        <button
-                          title={nextStatus === currentStatus ? "Order is already at final stage." : "Advance order to next workflow stage"}
-                          onClick={() => advanceWorkflowStatus(id, currentStatus)}
-                          disabled={nextStatus === currentStatus}
-                          className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          <FiCheckCircle />
-                          Next Stage
-                        </button>
-                        <button
-                          title="Open Document Studio"
-                          onClick={() => openDocumentStudio(id, m)}
-                          className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-sm font-semibold text-orange-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-100"
-                        >
-                          <FiFileText />
-                          Document Studio
-                        </button>
                         <button
                           title="Quick invoice preview"
                           onClick={() => quickPreviewInvoice(id, m)}
@@ -1716,7 +1748,7 @@ function OrdersPageInner() {
                           <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-300">
                             Workflow
                           </span>
-                          {isWorkflowDone ? (
+                          {workflowDone ? (
                             <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
                               <FiCheckCircle className="h-3.5 w-3.5" />
                               Done
@@ -1729,7 +1761,7 @@ function OrdersPageInner() {
                         </div>
                         <div className="flex flex-wrap items-center gap-2 text-[12px]">
                           {ORDER_WORKFLOW_VISUAL.map((step, index) => {
-                            const state = getFlowStepState(workflowVisualIndex, index);
+                            const state = workflowDone ? "done" : getFlowStepState(workflowVisualIndex, index);
                             const className =
                               state === "done"
                                 ? "border-emerald-200 bg-emerald-100 text-emerald-700"
@@ -1745,6 +1777,32 @@ function OrdersPageInner() {
                               </React.Fragment>
                             );
                           })}
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          {workflowDone ? (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1 text-[11px] font-semibold text-emerald-700">
+                              <FiCheckCircle className="h-3.5 w-3.5" />
+                              Workflow Done
+                            </span>
+                          ) : workflowReachedDelivered ? (
+                            <button
+                              type="button"
+                              onClick={() => markWorkflowDone(id)}
+                              className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-600 px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-emerald-700"
+                            >
+                              <FiCheckCircle className="h-3.5 w-3.5" />
+                              Done
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => advanceWorkflowStatus(id, currentStatus)}
+                              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-100"
+                            >
+                              <FiCheckCircle className="h-3.5 w-3.5" />
+                              Advance to {workflowNextLabel}
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -1788,12 +1846,63 @@ function OrdersPageInner() {
                             );
                           })}
                         </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          {!isDocFlowDone && nextDocType && (
+                            <button
+                              type="button"
+                              onClick={() => advanceDocumentFlow(id, m)}
+                              className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-violet-700 transition hover:bg-violet-100"
+                            >
+                              <FiChevronRight className="h-3.5 w-3.5" />
+                              Advance to {ORDER_DOC_LABELS[nextDocType]}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => openDocumentStudio(id, m)}
+                            className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-[11px] font-semibold text-orange-700 transition hover:bg-orange-100"
+                          >
+                            <FiFileText className="h-3.5 w-3.5" />
+                            Document Studio
+                          </button>
+                        </div>
                       </div>
                     </div>
 
                     {/* order details */}
                     {expanded.has(id) && (
                       <div className="mt-4 space-y-3">
+                        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-3 md:grid-cols-2">
+                          <label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                            Status
+                            <select
+                              className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                              value={m.status || "Select Status"}
+                              onChange={(e) => updateStatus(id, e.target.value)}
+                            >
+                              {ORDER_STATUS_OPTIONS.map((s) => (
+                                <option key={s} value={s}>
+                                  {s}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                            Payment
+                            <select
+                              className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                              value={m.paymentMethod || "Select Payment Status"}
+                              onChange={(e) => updatePayment(id, e.target.value)}
+                            >
+                              {ORDER_PAYMENT_OPTIONS.map((s) => (
+                                <option key={s} value={s}>
+                                  {s}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+
                         <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3 text-sm text-slate-600 md:grid-cols-2 xl:grid-cols-4">
                           <div>
                             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Phone</p>
