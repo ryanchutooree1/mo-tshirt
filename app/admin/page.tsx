@@ -266,12 +266,16 @@ function statusClass(status: string) {
   return "border-white/20 bg-white/10 text-slate-200";
 }
 
-const cardBase =
-  "rounded-3xl border border-white/10 bg-white/[0.06] backdrop-blur-xl shadow-[0_22px_60px_rgba(5,12,24,0.45)]";
-
 export default function OwnerDashboard() {
   const global = useAdminMetrics();
   const { theme, toggleTheme } = useAdminTheme();
+  const isDark = theme === "dark";
+  const cardBase = isDark
+    ? "rounded-3xl border border-white/10 bg-white/[0.06] backdrop-blur-xl shadow-[0_22px_60px_rgba(5,12,24,0.45)]"
+    : "rounded-3xl border border-slate-200 bg-white/90 backdrop-blur-xl shadow-[0_16px_40px_rgba(15,23,42,0.08)]";
+  const heroPanelClass = isDark
+    ? "rounded-2xl border border-white/20 bg-black/20 p-4"
+    : "rounded-2xl border border-slate-200 bg-white/80 p-4";
 
   const [now, setNow] = useState(new Date());
   const [orders, setOrders] = useState<DashboardOrder[]>([]);
@@ -988,35 +992,69 @@ export default function OwnerDashboard() {
   }
 
   return (
-    <main className={`${bodyFont.className} ceo-theme relative min-h-screen overflow-hidden text-white`}>
-      <div className="pointer-events-none absolute inset-0 opacity-80">
-        <div className="absolute -top-40 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.35),rgba(56,189,248,0)_70%)] blur-3xl" />
-        <div className="absolute right-[-6rem] top-32 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,rgba(14,165,233,0.28),rgba(14,165,233,0)_70%)] blur-3xl" />
+    <main
+      className={`${bodyFont.className} ${isDark ? "ceo-theme" : "ceo-theme-light"} relative min-h-screen overflow-hidden ${
+        isDark ? "text-white" : "text-slate-900"
+      }`}
+    >
+      <div className={`pointer-events-none absolute inset-0 ${isDark ? "opacity-80" : "opacity-100"}`}>
+        <div
+          className={`absolute -top-40 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full blur-3xl ${
+            isDark
+              ? "bg-[radial-gradient(circle,rgba(56,189,248,0.35),rgba(56,189,248,0)_70%)]"
+              : "bg-[radial-gradient(circle,rgba(56,189,248,0.28),rgba(56,189,248,0)_70%)]"
+          }`}
+        />
+        <div
+          className={`absolute right-[-6rem] top-32 h-[420px] w-[420px] rounded-full blur-3xl ${
+            isDark
+              ? "bg-[radial-gradient(circle,rgba(14,165,233,0.28),rgba(14,165,233,0)_70%)]"
+              : "bg-[radial-gradient(circle,rgba(16,185,129,0.18),rgba(16,185,129,0)_70%)]"
+          }`}
+        />
       </div>
 
       <div className="relative mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <section className={`${cardBase} animate-rise overflow-hidden p-7 sm:p-10`}>
-          <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(15,23,42,0.95),rgba(10,36,62,0.88))]" />
-          <div className="absolute inset-0 opacity-30 [background-image:radial-gradient(rgba(148,163,184,0.32)_1px,transparent_1px)] [background-size:20px_20px]" />
+          <div
+            className={`absolute inset-0 ${
+              isDark
+                ? "bg-[linear-gradient(120deg,rgba(15,23,42,0.95),rgba(10,36,62,0.88))]"
+                : "bg-[linear-gradient(125deg,rgba(255,255,255,0.94),rgba(224,242,254,0.82))]"
+            }`}
+          />
+          <div
+            className={`absolute inset-0 [background-size:20px_20px] ${
+              isDark
+                ? "opacity-30 [background-image:radial-gradient(rgba(148,163,184,0.32)_1px,transparent_1px)]"
+                : "opacity-35 [background-image:radial-gradient(rgba(15,23,42,0.12)_1px,transparent_1px)]"
+            }`}
+          />
 
           <div className="relative grid gap-8 xl:grid-cols-[1.4fr_0.9fr]">
             <div>
-              <p className="text-xs uppercase tracking-[0.28em] text-cyan-200/80">MO Executive Layer</p>
-              <h1 className={`${displayFont.className} mt-3 text-4xl font-semibold tracking-tight text-white sm:text-6xl`}>
+              <p className={`text-xs uppercase tracking-[0.28em] ${isDark ? "text-cyan-200/80" : "text-sky-700"}`}>
+                MO Executive Layer
+              </p>
+              <h1
+                className={`${displayFont.className} mt-3 text-4xl font-semibold tracking-tight sm:text-6xl ${
+                  isDark ? "text-white" : "text-slate-900"
+                }`}
+              >
                 The CEO Control Panel
               </h1>
-              <p className="mt-4 max-w-2xl text-base text-slate-200/90 sm:text-lg">
+              <p className={`mt-4 max-w-2xl text-base sm:text-lg ${isDark ? "text-slate-200/90" : "text-slate-700"}`}>
                 One command view for sales, quote pipeline, stock pressure, automations, and execution rhythm.
               </p>
-              <p className="mt-3 text-sm text-slate-200/95">
+              <p className={`mt-3 text-sm ${isDark ? "text-slate-200/95" : "text-slate-700"}`}>
                 {formattedDate} • Primary{" "}
-                <span className="font-semibold text-cyan-200">{numerologyToday.primary}</span> • Secondary{" "}
-                <span className="font-semibold text-emerald-200">{numerologyToday.secondary}</span>
+                <span className={`font-semibold ${isDark ? "text-cyan-200" : "text-sky-700"}`}>{numerologyToday.primary}</span> • Secondary{" "}
+                <span className={`font-semibold ${isDark ? "text-emerald-200" : "text-emerald-700"}`}>{numerologyToday.secondary}</span>
               </p>
-              <p className="mt-1 text-xs text-slate-300">
+              <p className={`mt-1 text-xs ${isDark ? "text-slate-300" : "text-slate-600"}`}>
                 Tomorrow ({tomorrowCalc.dateStr}) • Primary{" "}
-                <span className="font-medium text-cyan-100">{tomorrowCalc.primary}</span> • Secondary{" "}
-                <span className="font-medium text-emerald-100">{tomorrowCalc.secondary}</span>
+                <span className={`font-medium ${isDark ? "text-cyan-100" : "text-sky-700"}`}>{tomorrowCalc.primary}</span> • Secondary{" "}
+                <span className={`font-medium ${isDark ? "text-emerald-100" : "text-emerald-700"}`}>{tomorrowCalc.secondary}</span>
               </p>
 
               <div className="mt-6 flex flex-wrap gap-2.5">
@@ -1044,7 +1082,11 @@ export default function OwnerDashboard() {
                 </Link>
                 <Link
                   href="/admin/quotation-approval"
-                  className="inline-flex items-center gap-2 rounded-2xl border border-white/30 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20"
+                  className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-semibold transition ${
+                    isDark
+                      ? "border-white/30 bg-white/10 text-white hover:bg-white/20"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                  }`}
                 >
                   Review Quotes
                   <ArrowUpRight className="h-4 w-4" />
@@ -1052,7 +1094,11 @@ export default function OwnerDashboard() {
                 <button
                   type="button"
                   onClick={toggleTheme}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-white/30 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/20"
+                  className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-semibold transition ${
+                    isDark
+                      ? "border-white/30 bg-white/10 text-white hover:bg-white/20"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                  }`}
                 >
                   {theme === "dark" ? (
                     <>
@@ -1070,37 +1116,55 @@ export default function OwnerDashboard() {
             </div>
 
             <div className="grid gap-4 self-end sm:grid-cols-2 xl:grid-cols-1">
-              <div className="rounded-2xl border border-white/20 bg-black/20 p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-cyan-200/75">Live Clock</div>
-                <div className={`${displayFont.className} mt-2 text-3xl text-white`}>{timeString}</div>
-                <div className="mt-1 text-sm text-slate-200">{format(now, "EEEE, d MMMM yyyy")}</div>
+              <div className={heroPanelClass}>
+                <div className={`text-xs uppercase tracking-[0.2em] ${isDark ? "text-cyan-200/75" : "text-slate-600"}`}>
+                  Live Clock
+                </div>
+                <div className={`${displayFont.className} mt-2 text-3xl ${isDark ? "text-white" : "text-slate-900"}`}>
+                  {timeString}
+                </div>
+                <div className={`mt-1 text-sm ${isDark ? "text-slate-200" : "text-slate-600"}`}>
+                  {format(now, "EEEE, d MMMM yyyy")}
+                </div>
               </div>
 
-              <div className="rounded-2xl border border-white/20 bg-black/20 p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-cyan-200/75">Command Focus</div>
-                <div className="mt-2 text-sm text-slate-100">
+              <div className={heroPanelClass}>
+                <div className={`text-xs uppercase tracking-[0.2em] ${isDark ? "text-cyan-200/75" : "text-slate-600"}`}>
+                  Command Focus
+                </div>
+                <div className={`mt-2 text-sm ${isDark ? "text-slate-100" : "text-slate-700"}`}>
                   {pendingOrders > 0
                     ? `Clear ${pendingOrders} pending orders before new rush jobs.`
                     : "Queue is clean, shift to growth and outreach."}
                 </div>
-                <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-cyan-300/40 bg-cyan-300/10 px-3 py-1 text-xs text-cyan-100">
+                <div
+                  className={`mt-3 inline-flex items-center gap-2 rounded-full border border-cyan-300/40 bg-cyan-300/10 px-3 py-1 text-xs ${
+                    isDark ? "text-cyan-100" : "text-cyan-700"
+                  }`}
+                >
                   <Sparkles className="h-3.5 w-3.5" />
                   Conversion {quoteMetrics.conversion}%
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/20 bg-black/20 p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-cyan-200/75">Numerology Outlook</div>
+              <div className={heroPanelClass}>
+                <div className={`text-xs uppercase tracking-[0.2em] ${isDark ? "text-cyan-200/75" : "text-slate-600"}`}>
+                  Numerology Outlook
+                </div>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <div className="rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2">
-                    <div className="text-[11px] uppercase tracking-[0.14em] text-cyan-100/85">Today</div>
-                    <div className="mt-1 text-sm text-slate-100">
+                    <div className={`text-[11px] uppercase tracking-[0.14em] ${isDark ? "text-cyan-100/85" : "text-cyan-700"}`}>
+                      Today
+                    </div>
+                    <div className={`mt-1 text-sm ${isDark ? "text-slate-100" : "text-slate-700"}`}>
                       {numerologyToday.primary} / {numerologyToday.secondary}
                     </div>
                   </div>
                   <div className="rounded-xl border border-emerald-300/30 bg-emerald-300/10 px-3 py-2">
-                    <div className="text-[11px] uppercase tracking-[0.14em] text-emerald-100/85">Tomorrow</div>
-                    <div className="mt-1 text-sm text-slate-100">
+                    <div className={`text-[11px] uppercase tracking-[0.14em] ${isDark ? "text-emerald-100/85" : "text-emerald-700"}`}>
+                      Tomorrow
+                    </div>
+                    <div className={`mt-1 text-sm ${isDark ? "text-slate-100" : "text-slate-700"}`}>
                       {tomorrowCalc.primary} / {tomorrowCalc.secondary}
                     </div>
                   </div>
@@ -1586,6 +1650,51 @@ export default function OwnerDashboard() {
             radial-gradient(120% 90% at 50% -20%, rgba(56, 189, 248, 0.25), transparent 65%),
             linear-gradient(145deg, #040814 0%, #081325 46%, #0a1b30 100%);
           color: var(--ceo-text);
+        }
+
+        .ceo-theme-light {
+          --ceo-bg: #f3f8ff;
+          --ceo-text: #0f172a;
+          background:
+            radial-gradient(120% 90% at 50% -20%, rgba(56, 189, 248, 0.22), transparent 65%),
+            linear-gradient(145deg, #f7fbff 0%, #eef7ff 48%, #e6f2ff 100%);
+          color: var(--ceo-text);
+        }
+
+        .ceo-theme-light :is(.text-white, .text-slate-100) {
+          color: #0f172a !important;
+        }
+
+        .ceo-theme-light .text-slate-200 {
+          color: #334155 !important;
+        }
+
+        .ceo-theme-light .text-slate-300 {
+          color: #475569 !important;
+        }
+
+        .ceo-theme-light :is(.text-cyan-100, .text-cyan-200) {
+          color: #0e7490 !important;
+        }
+
+        .ceo-theme-light :is(.text-emerald-100, .text-emerald-200) {
+          color: #047857 !important;
+        }
+
+        .ceo-theme-light :is(.text-amber-100, .text-amber-200) {
+          color: #b45309 !important;
+        }
+
+        .ceo-theme-light :is(.border-white\/10, .border-white\/15, .border-white\/20, .border-white\/30) {
+          border-color: rgba(15, 23, 42, 0.15) !important;
+        }
+
+        .ceo-theme-light :is(.bg-white\/\[0\.06\], .bg-white\/10, .bg-white\/5, .bg-black\/20, .bg-slate-950\/40, .bg-slate-950\/90) {
+          background-color: rgba(255, 255, 255, 0.86) !important;
+        }
+
+        .ceo-theme-light :is(.bg-slate-900, .from-slate-900, .to-slate-800) {
+          background-color: #0f172a !important;
         }
 
         .animate-rise {
