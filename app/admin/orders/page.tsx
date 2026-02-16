@@ -105,6 +105,8 @@ const PAGE_SIZE = 20;
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "admin";
 const DEFAULT_PREPARED_BY = "Mo T-Shirt Team";
 const ORDER_WORKFLOW = ["Pending", "In Process", "Completed", "Delivered"] as const;
+const ORDER_WORKFLOW_VISUAL = ["In Process", "Completed", "Delivered"] as const;
+const ORDER_DOC_FLOW: OrderDocumentType[] = ["quotation", "invoice", "partial_receipt", "receipt"];
 const ORDER_STATUS_OPTIONS = [
   "Select Status",
   "Pending",
@@ -210,6 +212,38 @@ const getNextWorkflowStatus = (status: string) => {
   const index = ORDER_WORKFLOW.findIndex((item) => item === status);
   if (index === -1) return ORDER_WORKFLOW[0];
   return ORDER_WORKFLOW[Math.min(index + 1, ORDER_WORKFLOW.length - 1)];
+};
+
+const getWorkflowVisualIndex = (status: string) => {
+  if (status === "Delivered") return 2;
+  if (status === "Completed") return 1;
+  if (status === "In Process" || status === "Urgent") return 0;
+  return -1;
+};
+
+const getFlowStepState = (
+  currentIndex: number,
+  stepIndex: number
+): "done" | "active" | "upcoming" => {
+  if (currentIndex < 0) return "upcoming";
+  if (stepIndex < currentIndex) return "done";
+  if (stepIndex === currentIndex) return "active";
+  return "upcoming";
+};
+
+const withDocumentTypeDefaults = (
+  base: OrderDocumentProfile,
+  nextType: OrderDocumentType
+): OrderDocumentProfile => {
+  if (base.documentType === nextType) return base;
+  const suffix = base.documentNumber.split("-").slice(1).join("-") || "00001";
+  return {
+    ...base,
+    documentType: nextType,
+    documentNumber: `${ORDER_DOC_PREFIX[nextType]}-${suffix}`,
+    paymentStatus: getDefaultPaymentStatus(nextType),
+    terms: ORDER_DOC_TERMS[nextType],
+  };
 };
 
 const normalizeDocumentLines = (
@@ -845,6 +879,13 @@ function OrdersPageInner() {
     setDocStudioOpen(true);
   }
 
+  function openDocumentStudioWithType(txnId: string, txn: Txn, docType: OrderDocumentType) {
+    const base = buildOrderDocumentDraft(txnId, txn);
+    setDocTxnId(txnId);
+    setDocDraft(withDocumentTypeDefaults(base, docType));
+    setDocStudioOpen(true);
+  }
+
   function updateDocLine(index: number, patch: Partial<OrderDocumentLine>) {
     setDocDraft((prev) => {
       if (!prev) return prev;
@@ -880,17 +921,7 @@ function OrdersPageInner() {
   function setDocType(nextType: OrderDocumentType) {
     setDocDraft((prev) => {
       if (!prev) return prev;
-      if (prev.documentType === nextType) return prev;
-      const prefix = ORDER_DOC_PREFIX[nextType];
-      const numberPart = prev.documentNumber.split("-").slice(1).join("-") || "00001";
-      const nextNumber = `${prefix}-${numberPart}`;
-      return {
-        ...prev,
-        documentType: nextType,
-        documentNumber: nextNumber,
-        paymentStatus: getDefaultPaymentStatus(nextType),
-        terms: ORDER_DOC_TERMS[nextType],
-      };
+      return withDocumentTypeDefaults(prev, nextType);
     });
   }
 
@@ -1488,16 +1519,24 @@ function OrdersPageInner() {
                     : 0;
                 const currentStatus = m.status || "Pending";
                 const nextStatus = getNextWorkflowStatus(currentStatus);
+                const workflowVisualIndex = getWorkflowVisualIndex(currentStatus);
                 const docProfile = m.documentProfile;
                 const docTypeLabel =
                   docProfile && isOrderDocumentType(docProfile.documentType)
                     ? ORDER_DOC_LABELS[docProfile.documentType]
                     : null;
+                const activeDocType: OrderDocumentType | null =
+                  docProfile && isOrderDocumentType(docProfile.documentType)
+                    ? docProfile.documentType
+                    : m.quoteId
+                      ? "quotation"
+                      : "invoice";
+                const activeDocFlowIndex = activeDocType ? ORDER_DOC_FLOW.findIndex((item) => item === activeDocType) : -1;
 
                 return (
                   <li
                     key={id}
-                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-orange-200 hover:shadow-md"
+                    className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 p-4 shadow-sm transition hover:border-orange-200 hover:shadow-md"
                     data-row-id={id}
                     data-row={JSON.stringify({
                       invoiceNumber: m.invoiceNumber,
@@ -1513,6 +1552,10 @@ function OrdersPageInner() {
                       date: when,
                     })}
                   >
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[radial-gradient(circle_at_top,rgba(251,146,60,0.18),transparent_70%)]"
+                    />
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="flex items-start gap-4">
                         {selectMode && (
@@ -1533,6 +1576,9 @@ function OrdersPageInner() {
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-sm font-semibold text-slate-900">
                               Invoice #{m.invoiceNumber || ""}
+                            </span>
+                            <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                              Order {id.slice(-6).toUpperCase()}
                             </span>
                             <span className="text-xs text-slate-400">{when}</span>
                           </div>
@@ -1556,17 +1602,76 @@ function OrdersPageInner() {
                               </span>
                             )}
                           </div>
-                          <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
-                            <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-semibold uppercase tracking-[0.18em] text-slate-500">
-                              Workflow
-                            </span>
-                            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-600">
-                              {currentStatus || "Pending"}
-                            </span>
-                            <FiChevronRight className="text-slate-400" />
-                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700">
-                              Next: {nextStatus}
-                            </span>
+                          <div className="mt-3 space-y-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                                Workflow
+                              </span>
+                              <span className="text-[11px] font-semibold text-slate-600">
+                                {workflowVisualIndex >= 0 ? `Next: ${nextStatus}` : "Queue pending"}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                              {ORDER_WORKFLOW_VISUAL.map((step, index) => {
+                                const state = getFlowStepState(workflowVisualIndex, index);
+                                const className =
+                                  state === "done"
+                                    ? "border-emerald-200 bg-emerald-100 text-emerald-700"
+                                    : state === "active"
+                                      ? "border-slate-800 bg-slate-900 text-white"
+                                      : "border-slate-200 bg-white text-slate-500";
+                                return (
+                                  <React.Fragment key={`${id}-workflow-${step}`}>
+                                    <span className={`rounded-full border px-2.5 py-1 font-semibold ${className}`}>
+                                      {step}
+                                    </span>
+                                    {index < ORDER_WORKFLOW_VISUAL.length - 1 && <FiChevronRight className="text-slate-400" />}
+                                  </React.Fragment>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <div className="mt-2 space-y-2 rounded-xl border border-violet-200/70 bg-violet-50/60 px-3 py-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-700">
+                                Document Flow
+                              </span>
+                              <span className="text-[11px] font-semibold text-violet-700">
+                                {activeDocType ? ORDER_DOC_LABELS[activeDocType] : "Not set"}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                              {ORDER_DOC_FLOW.map((docType, index) => {
+                                const state = getFlowStepState(activeDocFlowIndex, index);
+                                const className =
+                                  state === "done"
+                                    ? "border-violet-200 bg-violet-100 text-violet-700"
+                                    : state === "active"
+                                      ? "border-orange-200 bg-orange-100 text-orange-700"
+                                      : "border-slate-200 bg-white text-slate-500";
+                                return (
+                                  <React.Fragment key={`${id}-docflow-${docType}`}>
+                                    <span className={`rounded-full border px-2.5 py-1 font-semibold ${className}`}>
+                                      {ORDER_DOC_LABELS[docType]}
+                                    </span>
+                                    {index < ORDER_DOC_FLOW.length - 1 && <FiChevronRight className="text-slate-400" />}
+                                  </React.Fragment>
+                                );
+                              })}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {ORDER_DOC_FLOW.map((docType) => (
+                                <button
+                                  key={`${id}-docopen-${docType}`}
+                                  type="button"
+                                  onClick={() => openDocumentStudioWithType(id, m, docType)}
+                                  className="rounded-full border border-violet-200 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-700 transition hover:bg-violet-100"
+                                >
+                                  {ORDER_DOC_LABELS[docType]}
+                                </button>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1599,9 +1704,10 @@ function OrdersPageInner() {
                         </select>
 
                         <button
-                          title="Advance order to next workflow stage"
+                          title={nextStatus === currentStatus ? "Order is already at final stage." : "Advance order to next workflow stage"}
                           onClick={() => advanceWorkflowStatus(id, currentStatus)}
-                          className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-100"
+                          disabled={nextStatus === currentStatus}
+                          className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <FiCheckCircle />
                           Next Stage
