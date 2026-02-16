@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import NextImage from "next/image";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { storage } from "@/lib/firebase";
@@ -8,11 +9,14 @@ import {
   addDoc,
   collection,
   doc,
+  getDocs,
+  limit,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { addDays, format, formatDistanceToNow } from "date-fns";
@@ -89,6 +93,8 @@ type QuoteRecord = {
   designBrief?: Record<string, unknown> | null;
   attachment?: { filename?: string; contentType?: string; size?: number | null; url?: string };
   status?: QuoteStatus;
+  orderTransactionId?: string;
+  movedToOrdersAt?: Date | null;
   createdAt?: Date | null;
   updatedAt?: Date | null;
   quote?: {
@@ -775,6 +781,7 @@ export default function QuotationApprovalPage() {
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [movingToOrders, setMovingToOrders] = useState(false);
   const [logo, setLogo] = useState<LogoAsset | null>(null);
   const prevDocumentTypeRef = useRef<DocumentType | null>(null);
 
@@ -875,6 +882,7 @@ export default function QuotationApprovalPage() {
           return {
             id: docSnap.id,
             ...data,
+            movedToOrdersAt: parseTimestamp(data.movedToOrdersAt),
             createdAt: parseTimestamp(data.createdAt),
             updatedAt: parseTimestamp(data.updatedAt),
           } as QuoteRecord;
@@ -1352,6 +1360,100 @@ export default function QuotationApprovalPage() {
     }
   };
 
+  const mapPaymentMethodForOrder = (
+    paymentStatus: string
+  ): "Full Payment" | "Part Payment" | "Select Payment Status" => {
+    const normalized = paymentStatus.toLowerCase();
+    if (normalized.includes("paid") && !normalized.includes("partial")) return "Full Payment";
+    if (normalized.includes("partial")) return "Part Payment";
+    return "Select Payment Status";
+  };
+
+  const moveToOrders = async () => {
+    if (!selected || !draft) return;
+    const draftValidation = validateDraftBeforeSend(draft);
+    if (draftValidation) {
+      setNotice(draftValidation);
+      return;
+    }
+
+    setMovingToOrders(true);
+    setNotice(null);
+    try {
+      const payload = buildStoredQuotePayload(draft);
+      const lineItems = payload.lines
+        .map((line) => {
+          const quantity = safeNumber(line.quantity, 0);
+          const unitPrice = safeNumber(line.unitPrice, 0);
+          return {
+            product: line.description.trim() || "Custom item",
+            color: "",
+            size: "",
+            quantity,
+            unitPrice,
+            price: quantity * unitPrice,
+          };
+        })
+        .filter((line) => line.quantity > 0 && line.unitPrice > 0);
+
+      const orderPayload = {
+        invoiceNumber: payload.documentNumber || `Q-${selected.id.slice(-5).toUpperCase()}`,
+        customerName: draft.contactName.trim() || selected.name || "Walk-in client",
+        phoneNumber: draft.contactPhone.trim() || selected.phone || "",
+        email: draft.contactEmail.trim() || selected.email || "",
+        address: draft.clientAddress.trim() || selected.deliveryAddress || "",
+        status: "Pending",
+        paymentMethod: mapPaymentMethodForOrder(payload.paymentStatus || ""),
+        amount: totals.total,
+        products: lineItems,
+        transactionDate: serverTimestamp(),
+        source: "quotation_approval",
+        quoteId: selected.id,
+        quoteDocumentType: payload.documentType,
+        updatedAt: serverTimestamp(),
+      };
+
+      const existingOrder = await getDocs(
+        query(collection(db, "transactions"), where("quoteId", "==", selected.id), limit(1))
+      );
+
+      let transactionId = "";
+      if (!existingOrder.empty) {
+        const ref = existingOrder.docs[0].ref;
+        transactionId = ref.id;
+        const currentDate = existingOrder.docs[0].data().transactionDate;
+        await updateDoc(ref, {
+          ...orderPayload,
+          transactionDate: currentDate || serverTimestamp(),
+        });
+      } else {
+        const created = await addDoc(collection(db, "transactions"), {
+          ...orderPayload,
+          createdAt: serverTimestamp(),
+        });
+        transactionId = created.id;
+      }
+
+      await updateDoc(doc(db, "quotes", selected.id), {
+        status: "approved",
+        name: draft.contactName.trim() || "Walk-in client",
+        email: draft.contactEmail.trim(),
+        phone: draft.contactPhone.trim(),
+        quote: payload,
+        orderTransactionId: transactionId,
+        movedToOrdersAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      setNotice(`Moved to Order Management. Order ID: ${transactionId}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to move to orders.";
+      setNotice(message);
+    } finally {
+      setMovingToOrders(false);
+    }
+  };
+
   return (
     <div className="quotation-approval-page min-h-screen bg-[#f7f7fb] text-slate-900">
       <div className="relative overflow-hidden">
@@ -1711,6 +1813,11 @@ export default function QuotationApprovalPage() {
                         {selected.attachment?.filename && (
                           <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600">
                             <FiFileText /> {selected.attachment.filename}
+                          </span>
+                        )}
+                        {selected.orderTransactionId && (
+                          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                            <FiCheckCircle /> In orders: {selected.orderTransactionId}
                           </span>
                         )}
                       </div>
@@ -2294,6 +2401,16 @@ export default function QuotationApprovalPage() {
                     </button>
                     <button
                       type="button"
+                      onClick={moveToOrders}
+                      disabled={movingToOrders || Boolean(sendValidationError)}
+                      title={sendValidationError || "Create or sync this quotation into Order Management."}
+                      className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:opacity-60"
+                    >
+                      <FiCheckCircle />{" "}
+                      {movingToOrders ? "Moving..." : "Quotation Approved → Move to Orders"}
+                    </button>
+                    <button
+                      type="button"
                       onClick={handleSend}
                       disabled={sending || !draft.contactEmail.trim() || Boolean(sendValidationError)}
                       title={
@@ -2313,6 +2430,12 @@ export default function QuotationApprovalPage() {
                     >
                       <FiTrash2 /> {deletingQuote ? "Deleting..." : "Delete quotation"}
                     </button>
+                    <Link
+                      href="/admin/orders"
+                      className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-xs font-semibold text-sky-700 shadow-sm transition hover:bg-sky-100"
+                    >
+                      Open Order Management
+                    </Link>
                     {sendValidationError && (
                       <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
                         <FiClock /> {sendValidationError}
