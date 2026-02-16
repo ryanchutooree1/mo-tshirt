@@ -490,135 +490,114 @@ export default function POSPage() {
   };
 
   const canHold = !done && cart.length > 0;
+  const customerReady = Boolean(customerName.trim() && phone.trim() && email.trim());
+  const checkoutSteps = [customerReady, cart.length > 0, Boolean(status), Boolean(payment)];
+  const progressPct = done
+    ? 100
+    : Math.round((checkoutSteps.filter(Boolean).length / checkoutSteps.length) * 100);
+  const checkoutStage = done
+    ? 'Transaction completed'
+    : progressPct < 25
+      ? 'Capture customer details'
+      : progressPct < 50
+        ? 'Build cart with products'
+        : progressPct < 75
+          ? 'Select order status'
+          : progressPct < 100
+            ? 'Choose payment type'
+            : 'Ready to complete';
 
   // ---------- UI ----------
   return (
-    <main className="relative min-h-screen">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-40 right-[-12rem] h-80 w-80 rounded-full bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.35),transparent_70%)] blur-3xl"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-[-10rem] top-40 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_top,rgba(14,116,144,0.25),transparent_70%)] blur-3xl"
-      />
-      <div className="relative mx-auto max-w-7xl space-y-6 px-6 py-8">
-        {/* Hero */}
-        <section
-          className="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 p-6 shadow-sm backdrop-blur"
-          style={{ animation: 'fadeUp 0.6s ease-out both' }}
-        >
-          <div
-            aria-hidden
-            className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.08),transparent_60%)]"
-          />
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+    <main className="pos-performance relative min-h-screen overflow-x-hidden pb-10">
+      <div aria-hidden className="posperf-grid" />
+      <div aria-hidden className="posperf-glow posperf-glow-left" />
+      <div aria-hidden className="posperf-glow posperf-glow-right" />
+
+      <div className="relative mx-auto max-w-[1520px] space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+        <section className="posperf-panel posperf-hero" style={{ animation: 'fadeUp 0.6s ease-out both' }}>
+          <div className="posperf-hero-main">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">
-                POS
-              </p>
-              <h1 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">
-                POS Transaction
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
-                Fast checkout with live stock control, part payments, and instant PDF receipts.
+              <p className="posperf-kicker">Retail Engine</p>
+              <h1 className="posperf-title">POS Command Deck</h1>
+              <p className="posperf-copy">
+                High-speed checkout lane with live stock guardrails, hold/resume workflow, and instant invoice handoff.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                  <FiShoppingCart className="h-4 w-4" /> Live cart + stock
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
-                  <FiCreditCard className="h-4 w-4" /> Part payments
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                  <FiFileText className="h-4 w-4" /> PDF receipt
-                </span>
+                <span className="posperf-chip posperf-chip-sky"><FiShoppingCart className="h-4 w-4" /> Live stock link</span>
+                <span className="posperf-chip posperf-chip-emerald"><FiCreditCard className="h-4 w-4" /> Split payment ready</span>
+                <span className="posperf-chip posperf-chip-slate"><FiFileText className="h-4 w-4" /> PDF + email receipt</span>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={saveHold}
-                disabled={!canHold}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60"
-              >
+            <div className="flex flex-wrap items-start justify-end gap-2">
+              <button onClick={saveHold} disabled={!canHold} className="posperf-btn posperf-btn-ghost">
                 <FiPauseCircle className="h-4 w-4" /> Hold Current
               </button>
-              <button
-                onClick={clearAll}
-                className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-              >
+              <button onClick={clearAll} className="posperf-btn posperf-btn-solid">
                 <FiPlayCircle className="h-4 w-4" /> New Transaction
               </button>
             </div>
           </div>
-          <div className="relative mt-4 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1">
-              <FiFileText className="h-4 w-4" />
-              {fetchingInvoice
-                ? 'Fetching invoice number…'
-                : `Invoice #${String(invoice || 0).padStart(5, '0')}`}
-            </span>
+          <div className="posperf-hero-rail">
+            <div className="posperf-rail-item">
+              <span>Invoice Stream</span>
+              <strong>{fetchingInvoice ? 'Loading…' : `#${String(invoice || 0).padStart(5, '0')}`}</strong>
+            </div>
+            <div className="posperf-rail-item">
+              <span>Checkout Readiness</span>
+              <strong>{progressPct}%</strong>
+            </div>
+            <div className="posperf-rail-item">
+              <span>Live Stage</span>
+              <strong>{checkoutStage}</strong>
+            </div>
+            <div className="posperf-rail-item">
+              <span>Held Orders</span>
+              <strong>{holds.length}</strong>
+            </div>
             {holdId && (
-              <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700">
-                <FiPauseCircle className="h-4 w-4" /> Hold id: {holdId}
-              </span>
+              <div className="posperf-rail-item">
+                <span>Current Hold ID</span>
+                <strong className="break-all">{holdId}</strong>
+              </div>
             )}
           </div>
         </section>
 
-        {/* Stats */}
-        <section
-          className="grid grid-cols-2 gap-4 md:grid-cols-4"
-          style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.08s' }}
-        >
-          <StatCard label="Cart items" value={cartItems} tone="sky" icon={<FiShoppingCart className="h-4 w-4" />} />
-          <StatCard label="Cart total" value={money(cartTotal)} tone="emerald" icon={<FiDollarSign className="h-4 w-4" />} />
-          <StatCard label="Active holds" value={holds.length} tone="amber" icon={<FiPauseCircle className="h-4 w-4" />} />
-          <StatCard label="Status" value={status || 'Not set'} tone="slate" icon={<FiClipboard className="h-4 w-4" />} />
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5" style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.08s' }}>
+          <StatCard label="Cart Items" value={cartItems} tone="sky" icon={<FiShoppingCart className="h-4 w-4" />} />
+          <StatCard label="Cart Total" value={money(cartTotal)} tone="emerald" icon={<FiDollarSign className="h-4 w-4" />} />
+          <StatCard label="Active Holds" value={holds.length} tone="amber" icon={<FiPauseCircle className="h-4 w-4" />} />
+          <StatCard label="Current Status" value={status || 'Not set'} tone="slate" icon={<FiClipboard className="h-4 w-4" />} />
+          <FlowCard progress={progressPct} stage={checkoutStage} />
         </section>
 
-        {/* Holds */}
-        <section
-          className="rounded-3xl border border-slate-200/70 bg-white/90 p-4 shadow-sm backdrop-blur"
-          style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.14s' }}
-        >
+        <section className="posperf-panel" style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.14s' }}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Holds</div>
-              <div className="mt-1 text-sm text-slate-600">Pause a checkout and resume later.</div>
+              <div className="posperf-eyebrow">Hold Queue</div>
+              <div className="posperf-copy">Pause a checkout and recover it instantly.</div>
             </div>
-            <button
-              onClick={saveHold}
-              disabled={!canHold}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-60"
-            >
+            <button onClick={saveHold} disabled={!canHold} className="posperf-btn posperf-btn-ghost">
               <FiPauseCircle className="h-4 w-4" /> Hold Current
             </button>
           </div>
           {holds.length > 0 ? (
-            <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {holds.map(h => (
-                <div
-                  key={h.id}
-                  className="min-w-[190px] rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
-                >
+                <div key={h.id} className="posperf-subcard">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="font-semibold text-sm text-slate-800 truncate" title={h.customerName || '—'}>
+                    <div className="truncate text-sm font-semibold" title={h.customerName || '—'}>
                       {h.customerName || '—'}
                     </div>
-                    <span className="text-[11px] font-semibold text-slate-500">{money(h.total || 0)}</span>
+                    <span className="text-xs font-semibold">{money(h.total || 0)}</span>
                   </div>
+                  <div className="mt-1 text-[11px] text-[var(--pos-soft)]">ID: {h.id}</div>
                   <div className="mt-3 flex gap-2">
-                    <button
-                      onClick={() => loadHold(h)}
-                      className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                    >
+                    <button onClick={() => loadHold(h)} className="posperf-btn posperf-btn-mini">
                       Resume
                     </button>
-                    <button
-                      onClick={() => releaseHold(h)}
-                      className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-600 hover:bg-rose-100"
-                    >
+                    <button onClick={() => releaseHold(h)} className="posperf-btn posperf-btn-danger-mini">
                       Release
                     </button>
                   </div>
@@ -626,19 +605,18 @@ export default function POSPage() {
               ))}
             </div>
           ) : (
-            <div className="mt-4 text-sm text-slate-500">No holds yet.</div>
+            <div className="mt-4 text-sm text-[var(--pos-muted)]">No holds yet.</div>
           )}
         </section>
 
-        {/* Grid: Customer | Add Item */}
-        <section
-          className="grid grid-cols-1 gap-6 lg:grid-cols-2"
-          style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.2s' }}
-        >
-          {/* Customer */}
-          <div className="rounded-3xl border border-slate-200/70 bg-white/90 p-5 shadow-sm">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <FiUser className="h-4 w-4" /> Customer Information
+        <section className="grid grid-cols-1 gap-6 xl:grid-cols-2" style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.2s' }}>
+          <div className="posperf-panel">
+            <div className="posperf-section-header">
+              <div className="posperf-icon-wrap"><FiUser className="h-4 w-4" /></div>
+              <div>
+                <div className="posperf-section-title">Customer Intelligence</div>
+                <div className="posperf-section-copy">Search existing client or prepare a new checkout profile.</div>
+              </div>
             </div>
             <div className="mt-4 space-y-3">
               <Input label="Customer Name" value={customerName} onChange={setCustomerName} disabled={done} />
@@ -646,28 +624,29 @@ export default function POSPage() {
               <Input label="Address" value={address} onChange={setAddress} disabled={done} />
               <Input label="Email" value={email} onChange={setEmail} disabled={done} />
             </div>
-
             {!done && (
               <div className="mt-4 flex flex-wrap gap-2">
-                <button onClick={searchCustomer} className="rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700">
+                <button onClick={searchCustomer} className="posperf-btn posperf-btn-primary">
                   Search Customer
                 </button>
-                <button onClick={clearAll} className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700">
+                <button onClick={clearAll} className="posperf-btn posperf-btn-danger">
                   Clear
                 </button>
               </div>
             )}
           </div>
 
-          {/* Add product */}
-          <div className="rounded-3xl border border-slate-200/70 bg-white/90 p-5 shadow-sm">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <FiTag className="h-4 w-4" /> Add Product
+          <div className="posperf-panel">
+            <div className="posperf-section-header">
+              <div className="posperf-icon-wrap"><FiTag className="h-4 w-4" /></div>
+              <div>
+                <div className="posperf-section-title">Product Injector</div>
+                <div className="posperf-section-copy">Compose the line items with stock-safe quantity control.</div>
+              </div>
             </div>
 
             {!done && (
               <>
-                {/* Product */}
                 <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
                   <Select
                     label="Product"
@@ -697,11 +676,10 @@ export default function POSPage() {
                     disabled={!selectedSize}
                   />
                 </div>
-
                 <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
                   <InputNumber label="Unit Price (Rs)" value={unitPrice} onChange={setUnitPrice} disabled={!selectedQty} />
                   <div className="flex items-end">
-                    <button onClick={addToCart} disabled={!selectedQty || unitPrice === ''} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-60">
+                    <button onClick={addToCart} disabled={!selectedQty || unitPrice === ''} className="posperf-btn posperf-btn-solid disabled:opacity-60">
                       Add to Cart
                     </button>
                   </div>
@@ -709,25 +687,26 @@ export default function POSPage() {
               </>
             )}
 
-            {/* Cart list */}
-            <div className="mt-5">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <div className="mt-6">
+              <div className="flex items-center gap-2 text-sm font-semibold">
                 <FiShoppingCart className="h-4 w-4" /> Items
               </div>
               {cart.length === 0 ? (
-                <div className="mt-3 text-sm text-slate-500">No items yet.</div>
+                <div className="mt-3 text-sm text-[var(--pos-muted)]">No items yet.</div>
               ) : (
                 <div className="mt-3 space-y-3">
                   {cart.map((it, i) => (
-                    <div key={i} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                    <div key={i} className="posperf-subcard">
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="text-sm">
-                          <div className="font-semibold text-slate-800">{it.productName}</div>
-                          <div className="text-xs text-slate-500">Color: {it.color} • Size: {it.size} • Qty: {it.quantity}</div>
-                          <div className="text-emerald-700 text-xs font-semibold mt-1">{money(it.lineTotal)} ({money(it.unitPrice)} x {it.quantity})</div>
+                          <div className="font-semibold">{it.productName}</div>
+                          <div className="text-xs text-[var(--pos-muted)]">Color: {it.color} • Size: {it.size} • Qty: {it.quantity}</div>
+                          <div className="mt-1 text-xs font-semibold text-[var(--pos-accent-2)]">
+                            {money(it.lineTotal)} ({money(it.unitPrice)} x {it.quantity})
+                          </div>
                         </div>
                         {!done && (
-                          <button onClick={() => removeCartItem(i)} className="text-rose-600 text-xs font-semibold hover:underline">
+                          <button onClick={() => removeCartItem(i)} className="posperf-link-danger">
                             Remove
                           </button>
                         )}
@@ -738,7 +717,7 @@ export default function POSPage() {
               )}
 
               {cart.length > 0 && (
-                <div className="mt-3 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                <div className="mt-3 flex items-center justify-between rounded-2xl border border-[var(--pos-border)] bg-[var(--pos-chip-bg)] px-4 py-3 text-sm font-semibold">
                   <span>Order total</span>
                   <span>{money(cartTotal)}</span>
                 </div>
@@ -747,14 +726,14 @@ export default function POSPage() {
           </div>
         </section>
 
-        {/* Status / Payment */}
         {cart.length > 0 && !done && (
-          <section
-            className="rounded-3xl border border-slate-200/70 bg-white/90 p-5 shadow-sm"
-            style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.26s' }}
-          >
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <FiClipboard className="h-4 w-4" /> Status & Payment
+          <section className="posperf-panel" style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.26s' }}>
+            <div className="posperf-section-header">
+              <div className="posperf-icon-wrap"><FiClipboard className="h-4 w-4" /></div>
+              <div>
+                <div className="posperf-section-title">Finalize Checkout Lane</div>
+                <div className="posperf-section-copy">Set operational status and payment split before posting transaction.</div>
+              </div>
             </div>
             <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
               <Select
@@ -784,11 +763,7 @@ export default function POSPage() {
             </div>
 
             <div className="mt-4">
-              <button
-                onClick={complete}
-                disabled={busy}
-                className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60"
-              >
+              <button onClick={complete} disabled={busy} className="posperf-btn posperf-btn-success">
                 <FiCheckCircle className="h-4 w-4" />
                 {busy ? 'Saving…' : 'Complete Transaction'}
               </button>
@@ -796,44 +771,529 @@ export default function POSPage() {
           </section>
         )}
 
-        {/* After completion */}
         {done && (
-          <section
-            className="rounded-3xl border border-emerald-200/70 bg-emerald-50/70 p-5 shadow-sm"
-            style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.26s' }}
-          >
-            <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
-              <FiCheckCircle className="h-4 w-4" /> Success
+          <section className="posperf-panel posperf-success" style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.26s' }}>
+            <div className="posperf-section-header">
+              <div className="posperf-icon-wrap"><FiCheckCircle className="h-4 w-4" /></div>
+              <div>
+                <div className="posperf-section-title">Transaction Closed</div>
+                <div className="posperf-section-copy">Receipt is ready for download, sharing, and customer notification.</div>
+              </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-3">
               {pdfUrl && (
-                <a href={pdfUrl} target="_blank" className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700">
+                <a href={pdfUrl} target="_blank" className="posperf-btn posperf-btn-success">
                   View / Download Receipt PDF
                 </a>
               )}
-              <button onClick={sendEmail} disabled={!pdfUrl || busy} className="rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:opacity-60">
+              <button onClick={sendEmail} disabled={!pdfUrl || busy} className="posperf-btn posperf-btn-primary disabled:opacity-60">
                 {busy ? 'Sending…' : 'Send Receipt by Email'}
               </button>
-              <button onClick={clearAll} className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800">
+              <button onClick={clearAll} className="posperf-btn posperf-btn-solid">
                 New Transaction
               </button>
             </div>
           </section>
         )}
-
-        <style jsx>{`
-          @keyframes fadeUp {
-            from {
-              opacity: 0;
-              transform: translateY(14px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-        `}</style>
       </div>
+
+      <style jsx global>{`
+        @keyframes fadeUp {
+          from {
+            opacity: 0;
+            transform: translateY(14px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .pos-performance {
+          --pos-bg-main: #f3f8ff;
+          --pos-bg-panel: rgba(255, 255, 255, 0.9);
+          --pos-bg-panel-strong: rgba(255, 255, 255, 0.98);
+          --pos-border: rgba(15, 23, 42, 0.12);
+          --pos-border-strong: rgba(14, 165, 233, 0.28);
+          --pos-text: #0f172a;
+          --pos-muted: #536176;
+          --pos-soft: #7b8aa1;
+          --pos-accent: #0ea5e9;
+          --pos-accent-2: #10b981;
+          --pos-accent-3: #f59e0b;
+          --pos-danger: #f43f5e;
+          --pos-chip-bg: rgba(15, 23, 42, 0.04);
+          --pos-input-bg: #ffffff;
+          color: var(--pos-text);
+          background:
+            radial-gradient(920px 420px at 12% -12%, rgba(56, 189, 248, 0.2), transparent 60%),
+            radial-gradient(780px 420px at 88% 0%, rgba(16, 185, 129, 0.15), transparent 64%),
+            var(--pos-bg-main);
+        }
+
+        .admin-root.admin-dark .pos-performance {
+          --pos-bg-main: #020617;
+          --pos-bg-panel: rgba(6, 15, 36, 0.82);
+          --pos-bg-panel-strong: rgba(8, 19, 46, 0.95);
+          --pos-border: rgba(56, 189, 248, 0.23);
+          --pos-border-strong: rgba(56, 189, 248, 0.42);
+          --pos-text: #e2e8f0;
+          --pos-muted: #9baeca;
+          --pos-soft: #7d8da6;
+          --pos-accent: #38bdf8;
+          --pos-accent-2: #34d399;
+          --pos-accent-3: #fbbf24;
+          --pos-danger: #fb7185;
+          --pos-chip-bg: rgba(51, 65, 85, 0.34);
+          --pos-input-bg: rgba(8, 23, 50, 0.88);
+          background:
+            radial-gradient(920px 460px at 8% -10%, rgba(56, 189, 248, 0.17), transparent 62%),
+            radial-gradient(860px 460px at 92% -8%, rgba(20, 184, 166, 0.18), transparent 64%),
+            #020617;
+        }
+
+        .posperf-grid {
+          pointer-events: none;
+          position: absolute;
+          inset: 0;
+          background-image:
+            linear-gradient(to right, rgba(148, 163, 184, 0.1) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(148, 163, 184, 0.1) 1px, transparent 1px);
+          background-size: 42px 42px;
+          mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.55), transparent 80%);
+        }
+
+        .admin-root.admin-dark .posperf-grid {
+          background-image:
+            linear-gradient(to right, rgba(56, 189, 248, 0.1) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(56, 189, 248, 0.1) 1px, transparent 1px);
+        }
+
+        .posperf-glow {
+          pointer-events: none;
+          position: absolute;
+          width: 420px;
+          height: 420px;
+          border-radius: 9999px;
+          filter: blur(80px);
+          opacity: 0.45;
+        }
+
+        .posperf-glow-left {
+          left: -160px;
+          top: 160px;
+          background: rgba(14, 165, 233, 0.35);
+        }
+
+        .posperf-glow-right {
+          right: -160px;
+          top: 20px;
+          background: rgba(16, 185, 129, 0.3);
+        }
+
+        .posperf-panel {
+          border-radius: 28px;
+          border: 1px solid var(--pos-border);
+          background: linear-gradient(140deg, var(--pos-bg-panel-strong), var(--pos-bg-panel));
+          backdrop-filter: blur(10px);
+          box-shadow: 0 16px 35px rgba(15, 23, 42, 0.12);
+          padding: 1.35rem;
+        }
+
+        .admin-root.admin-dark .posperf-panel {
+          box-shadow: 0 20px 45px rgba(2, 6, 23, 0.5);
+        }
+
+        .posperf-hero {
+          position: relative;
+          overflow: hidden;
+          border-color: var(--pos-border-strong);
+        }
+
+        .posperf-hero::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(circle at 20% 10%, rgba(56, 189, 248, 0.12), transparent 45%);
+          pointer-events: none;
+        }
+
+        .posperf-hero-main {
+          position: relative;
+          z-index: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+          justify-content: space-between;
+        }
+
+        @media (min-width: 1024px) {
+          .posperf-hero-main {
+            flex-direction: row;
+            align-items: flex-start;
+          }
+        }
+
+        .posperf-kicker {
+          text-transform: uppercase;
+          letter-spacing: 0.3em;
+          font-size: 0.72rem;
+          font-weight: 700;
+          color: var(--pos-accent);
+        }
+
+        .posperf-title {
+          margin-top: 0.55rem;
+          font-size: clamp(2rem, 4vw, 3.45rem);
+          line-height: 1.05;
+          font-weight: 700;
+          letter-spacing: -0.02em;
+        }
+
+        .posperf-copy {
+          margin-top: 0.8rem;
+          max-width: 70ch;
+          color: var(--pos-muted);
+          font-size: 0.98rem;
+        }
+
+        .posperf-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          border-radius: 9999px;
+          border: 1px solid var(--pos-border);
+          background: var(--pos-chip-bg);
+          padding: 0.42rem 0.85rem;
+          font-size: 0.74rem;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+        }
+
+        .posperf-chip-sky {
+          color: var(--pos-accent);
+        }
+
+        .posperf-chip-emerald {
+          color: var(--pos-accent-2);
+        }
+
+        .posperf-chip-slate {
+          color: var(--pos-muted);
+        }
+
+        .posperf-hero-rail {
+          position: relative;
+          z-index: 1;
+          margin-top: 1.2rem;
+          display: grid;
+          grid-template-columns: repeat(1, minmax(0, 1fr));
+          gap: 0.6rem;
+        }
+
+        @media (min-width: 768px) {
+          .posperf-hero-rail {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+
+        @media (min-width: 1280px) {
+          .posperf-hero-rail {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+          }
+        }
+
+        .posperf-rail-item {
+          border: 1px solid var(--pos-border);
+          background: var(--pos-chip-bg);
+          border-radius: 14px;
+          padding: 0.65rem 0.8rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.15rem;
+          min-height: 65px;
+        }
+
+        .posperf-rail-item span {
+          font-size: 0.68rem;
+          text-transform: uppercase;
+          letter-spacing: 0.22em;
+          color: var(--pos-soft);
+          font-weight: 700;
+        }
+
+        .posperf-rail-item strong {
+          font-size: 0.9rem;
+          line-height: 1.3;
+          font-weight: 700;
+          color: var(--pos-text);
+        }
+
+        .posperf-eyebrow {
+          text-transform: uppercase;
+          letter-spacing: 0.28em;
+          font-size: 0.7rem;
+          color: var(--pos-soft);
+          font-weight: 700;
+        }
+
+        .posperf-subcard {
+          border-radius: 18px;
+          border: 1px solid var(--pos-border);
+          background: linear-gradient(145deg, var(--pos-bg-panel-strong), var(--pos-chip-bg));
+          padding: 0.85rem;
+        }
+
+        .posperf-metric-icon {
+          width: 2.1rem;
+          height: 2.1rem;
+          border-radius: 9999px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid var(--pos-border);
+        }
+
+        .posperf-metric-icon-slate {
+          color: #cbd5e1;
+          background: rgba(71, 85, 105, 0.28);
+        }
+
+        .posperf-metric-icon-sky {
+          color: #7dd3fc;
+          background: rgba(56, 189, 248, 0.2);
+        }
+
+        .posperf-metric-icon-emerald {
+          color: #6ee7b7;
+          background: rgba(16, 185, 129, 0.2);
+        }
+
+        .posperf-metric-icon-amber {
+          color: #fcd34d;
+          background: rgba(245, 158, 11, 0.2);
+        }
+
+        .posperf-metric-glow-slate {
+          background: rgba(100, 116, 139, 0.2);
+        }
+
+        .posperf-metric-glow-sky {
+          background: rgba(56, 189, 248, 0.22);
+        }
+
+        .posperf-metric-glow-emerald {
+          background: rgba(16, 185, 129, 0.22);
+        }
+
+        .posperf-metric-glow-amber {
+          background: rgba(245, 158, 11, 0.24);
+        }
+
+        .posperf-btn {
+          border: 1px solid transparent;
+          border-radius: 9999px;
+          padding: 0.55rem 1rem;
+          font-size: 0.85rem;
+          font-weight: 700;
+          line-height: 1;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.45rem;
+          transition: transform 160ms ease, opacity 160ms ease, background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+        }
+
+        .posperf-btn:hover {
+          transform: translateY(-1px);
+        }
+
+        .posperf-btn:disabled {
+          opacity: 0.58;
+          cursor: not-allowed;
+          transform: none;
+        }
+
+        .posperf-btn-solid {
+          background: linear-gradient(120deg, #0f172a, #1e293b);
+          color: #f8fafc;
+          border-color: rgba(51, 65, 85, 0.65);
+        }
+
+        .admin-root.admin-dark .posperf-btn-solid {
+          background: linear-gradient(120deg, #0b132e, #132348);
+          border-color: rgba(56, 189, 248, 0.35);
+        }
+
+        .posperf-btn-ghost {
+          background: var(--pos-chip-bg);
+          border-color: var(--pos-border);
+          color: var(--pos-text);
+        }
+
+        .posperf-btn-primary {
+          background: linear-gradient(120deg, #0284c7, #0ea5e9);
+          color: white;
+          border-color: rgba(14, 165, 233, 0.45);
+        }
+
+        .posperf-btn-success {
+          background: linear-gradient(120deg, #059669, #10b981);
+          color: white;
+          border-color: rgba(16, 185, 129, 0.4);
+        }
+
+        .posperf-btn-danger {
+          background: linear-gradient(120deg, #e11d48, #f43f5e);
+          color: white;
+          border-color: rgba(244, 63, 94, 0.45);
+        }
+
+        .posperf-btn-mini,
+        .posperf-btn-danger-mini {
+          border-radius: 9999px;
+          padding: 0.38rem 0.8rem;
+          font-size: 0.72rem;
+          font-weight: 700;
+          border: 1px solid var(--pos-border);
+          background: var(--pos-chip-bg);
+        }
+
+        .posperf-btn-danger-mini {
+          color: var(--pos-danger);
+          border-color: rgba(244, 63, 94, 0.35);
+          background: rgba(244, 63, 94, 0.1);
+        }
+
+        .posperf-link-danger {
+          color: var(--pos-danger);
+          font-size: 0.72rem;
+          font-weight: 700;
+        }
+
+        .posperf-link-danger:hover {
+          text-decoration: underline;
+        }
+
+        .posperf-section-header {
+          display: flex;
+          align-items: flex-start;
+          gap: 0.75rem;
+        }
+
+        .posperf-icon-wrap {
+          width: 32px;
+          height: 32px;
+          border-radius: 9999px;
+          border: 1px solid var(--pos-border);
+          background: var(--pos-chip-bg);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--pos-accent);
+          flex-shrink: 0;
+        }
+
+        .posperf-section-title {
+          font-size: 1rem;
+          font-weight: 700;
+          letter-spacing: 0.02em;
+          color: var(--pos-text);
+        }
+
+        .posperf-section-copy {
+          color: var(--pos-muted);
+          font-size: 0.83rem;
+          margin-top: 0.15rem;
+        }
+
+        .posperf-field-label {
+          display: block;
+          font-size: 0.75rem;
+          text-transform: uppercase;
+          letter-spacing: 0.17em;
+          color: var(--pos-soft);
+          font-weight: 700;
+          margin-bottom: 0.38rem;
+        }
+
+        .posperf-input,
+        .posperf-select {
+          width: 100%;
+          border-radius: 14px;
+          border: 1px solid var(--pos-border);
+          background: var(--pos-input-bg);
+          color: var(--pos-text);
+          padding: 0.6rem 0.78rem;
+          font-size: 0.95rem;
+          transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+        }
+
+        .posperf-input:focus,
+        .posperf-select:focus {
+          outline: none;
+          border-color: var(--pos-accent);
+          box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+        }
+
+        .posperf-input:disabled,
+        .posperf-select:disabled {
+          cursor: not-allowed;
+          opacity: 0.62;
+        }
+
+        .posperf-flow {
+          border-radius: 18px;
+          border: 1px solid var(--pos-border);
+          background: linear-gradient(140deg, var(--pos-bg-panel-strong), var(--pos-bg-panel));
+          padding: 0.95rem;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          min-height: 128px;
+        }
+
+        .posperf-flow-label {
+          text-transform: uppercase;
+          letter-spacing: 0.2em;
+          font-size: 0.67rem;
+          color: var(--pos-soft);
+          font-weight: 700;
+        }
+
+        .posperf-flow-value {
+          margin-top: 0.2rem;
+          font-size: 1.6rem;
+          line-height: 1.1;
+          font-weight: 700;
+        }
+
+        .posperf-flow-track {
+          margin-top: 0.55rem;
+          height: 8px;
+          border-radius: 9999px;
+          background: rgba(148, 163, 184, 0.28);
+          overflow: hidden;
+        }
+
+        .posperf-flow-track > span {
+          display: block;
+          height: 100%;
+          border-radius: 9999px;
+          background: linear-gradient(90deg, var(--pos-accent), var(--pos-accent-2));
+          transition: width 300ms ease;
+        }
+
+        .posperf-flow-note {
+          margin-top: 0.4rem;
+          font-size: 0.78rem;
+          color: var(--pos-muted);
+        }
+
+        .posperf-success {
+          border-color: rgba(16, 185, 129, 0.42);
+          background: linear-gradient(140deg, rgba(16, 185, 129, 0.11), var(--pos-bg-panel-strong));
+        }
+      `}</style>
     </main>
   );
 }
@@ -851,53 +1311,45 @@ function StatCard({
 }) {
   const tones = {
     slate: {
-      border: 'border-slate-200',
-      bg: 'from-slate-50 via-white to-white',
-      accent: 'bg-slate-100 text-slate-700',
-      glow: 'bg-slate-200/40',
-      value: 'text-slate-900',
+      icon: 'posperf-metric-icon-slate',
+      glow: 'posperf-metric-glow-slate',
     },
     sky: {
-      border: 'border-sky-100',
-      bg: 'from-sky-50 via-white to-white',
-      accent: 'bg-sky-100 text-sky-700',
-      glow: 'bg-sky-200/40',
-      value: 'text-slate-900',
+      icon: 'posperf-metric-icon-sky',
+      glow: 'posperf-metric-glow-sky',
     },
     emerald: {
-      border: 'border-emerald-100',
-      bg: 'from-emerald-50 via-white to-white',
-      accent: 'bg-emerald-100 text-emerald-700',
-      glow: 'bg-emerald-200/40',
-      value: 'text-slate-900',
+      icon: 'posperf-metric-icon-emerald',
+      glow: 'posperf-metric-glow-emerald',
     },
     amber: {
-      border: 'border-amber-100',
-      bg: 'from-amber-50 via-white to-white',
-      accent: 'bg-amber-100 text-amber-700',
-      glow: 'bg-amber-200/40',
-      value: 'text-slate-900',
+      icon: 'posperf-metric-icon-amber',
+      glow: 'posperf-metric-glow-amber',
     },
   } as const;
   const theme = tones[tone] ?? tones.slate;
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl border ${theme.border} bg-gradient-to-br ${theme.bg} p-4 shadow-sm`}>
-      <div className="flex items-center justify-between">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-          {label}
-        </div>
-        {icon && (
-          <span className={`flex h-9 w-9 items-center justify-center rounded-full ${theme.accent}`}>
-            {icon}
-          </span>
-        )}
+    <div className="relative overflow-hidden rounded-2xl border border-[var(--pos-border)] bg-[linear-gradient(145deg,var(--pos-bg-panel-strong),var(--pos-chip-bg))] p-4">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--pos-soft)]">{label}</div>
+        {icon && <span className={`posperf-metric-icon ${theme.icon}`}>{icon}</span>}
       </div>
-      <div className={`mt-3 text-2xl font-semibold ${theme.value}`}>{value}</div>
-      <div
-        aria-hidden
-        className={`pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full blur-2xl ${theme.glow}`}
-      />
+      <div className="mt-3 text-[1.8rem] font-semibold leading-none text-[var(--pos-text)]">{value}</div>
+      <div aria-hidden className={`pointer-events-none absolute -right-12 -top-12 h-28 w-28 rounded-full blur-2xl ${theme.glow}`} />
+    </div>
+  );
+}
+
+function FlowCard({ progress, stage }: { progress: number; stage: string }) {
+  return (
+    <div className="posperf-flow">
+      <div className="posperf-flow-label">Checkout Progress</div>
+      <div className="posperf-flow-value">{progress}%</div>
+      <div className="posperf-flow-track">
+        <span style={{ width: `${Math.min(Math.max(progress, 0), 100)}%` }} />
+      </div>
+      <div className="posperf-flow-note">{stage}</div>
     </div>
   );
 }
@@ -909,12 +1361,12 @@ function Input({ label, value, onChange, disabled=false }:{
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-semibold text-slate-600">{label}</span>
+      <span className="posperf-field-label">{label}</span>
       <input
         value={value}
         onChange={(e)=>onChange(e.target.value)}
         disabled={disabled}
-        className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+        className="posperf-input"
       />
     </label>
   );
@@ -925,13 +1377,13 @@ function InputNumber({ label, value, onChange, disabled=false }:{
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-semibold text-slate-600">{label}</span>
+      <span className="posperf-field-label">{label}</span>
       <input
         type="number"
         value={value}
         onChange={(e)=>onChange(e.target.value === '' ? '' : Number(e.target.value))}
         disabled={disabled}
-        className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+        className="posperf-input"
       />
     </label>
   );
@@ -943,12 +1395,12 @@ function Select({ label, value, onChange, options, disabled=false }:{
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-semibold text-slate-600">{label}</span>
+      <span className="posperf-field-label">{label}</span>
       <select
         value={value}
         onChange={(e)=>onChange(e.target.value)}
         disabled={disabled}
-        className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+        className="posperf-select"
       >
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
