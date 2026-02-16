@@ -153,24 +153,50 @@ body {
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
 }
 
-/* Dark-mode tone chips/badges */
-.admin-root.admin-dark :is(.bg-amber-50, .bg-orange-50) { background-color: rgb(245 158 11 / 0.16) !important; }
-.admin-root.admin-dark :is(.bg-emerald-50, .bg-teal-50) { background-color: rgb(16 185 129 / 0.16) !important; }
-.admin-root.admin-dark :is(.bg-sky-50, .bg-blue-50, .bg-cyan-50) { background-color: rgb(56 189 248 / 0.16) !important; }
-.admin-root.admin-dark :is(.bg-rose-50, .bg-pink-50) { background-color: rgb(244 63 94 / 0.16) !important; }
-.admin-root.admin-dark :is(.bg-violet-50, .bg-indigo-50) { background-color: rgb(139 92 246 / 0.16) !important; }
+/* Dark-mode tone chips/badges and icon accents (softened) */
+.admin-root.admin-dark :is(.bg-amber-50, .bg-orange-50) { background-color: rgb(245 158 11 / 0.12) !important; }
+.admin-root.admin-dark :is(.bg-amber-100, .bg-orange-100) { background-color: rgb(245 158 11 / 0.16) !important; }
+.admin-root.admin-dark :is(.bg-amber-200, .bg-orange-200) { background-color: rgb(245 158 11 / 0.2) !important; }
 
-.admin-root.admin-dark :is(.text-amber-700, .text-orange-700) { color: #fcd34d !important; }
-.admin-root.admin-dark :is(.text-emerald-700, .text-teal-700) { color: #6ee7b7 !important; }
-.admin-root.admin-dark :is(.text-sky-700, .text-blue-700, .text-cyan-700) { color: #7dd3fc !important; }
-.admin-root.admin-dark :is(.text-rose-700, .text-pink-700) { color: #fda4af !important; }
-.admin-root.admin-dark :is(.text-violet-700, .text-indigo-700) { color: #c4b5fd !important; }
+.admin-root.admin-dark :is(.bg-emerald-50, .bg-teal-50) { background-color: rgb(16 185 129 / 0.12) !important; }
+.admin-root.admin-dark :is(.bg-emerald-100, .bg-teal-100) { background-color: rgb(16 185 129 / 0.16) !important; }
+.admin-root.admin-dark :is(.bg-emerald-200, .bg-teal-200) { background-color: rgb(16 185 129 / 0.2) !important; }
 
-.admin-root.admin-dark :is(.border-amber-200, .border-orange-200) { border-color: rgb(245 158 11 / 0.35) !important; }
-.admin-root.admin-dark :is(.border-emerald-200, .border-teal-200) { border-color: rgb(16 185 129 / 0.35) !important; }
-.admin-root.admin-dark :is(.border-sky-200, .border-blue-200, .border-cyan-200) { border-color: rgb(56 189 248 / 0.35) !important; }
-.admin-root.admin-dark :is(.border-rose-200, .border-pink-200) { border-color: rgb(244 63 94 / 0.35) !important; }
-.admin-root.admin-dark :is(.border-violet-200, .border-indigo-200) { border-color: rgb(139 92 246 / 0.35) !important; }
+.admin-root.admin-dark :is(.bg-sky-50, .bg-blue-50, .bg-cyan-50) { background-color: rgb(56 189 248 / 0.12) !important; }
+.admin-root.admin-dark :is(.bg-sky-100, .bg-blue-100, .bg-cyan-100) { background-color: rgb(56 189 248 / 0.16) !important; }
+.admin-root.admin-dark :is(.bg-sky-200, .bg-blue-200, .bg-cyan-200) { background-color: rgb(56 189 248 / 0.2) !important; }
+
+.admin-root.admin-dark :is(.bg-rose-50, .bg-pink-50) { background-color: rgb(244 63 94 / 0.12) !important; }
+.admin-root.admin-dark :is(.bg-rose-100, .bg-pink-100) { background-color: rgb(244 63 94 / 0.16) !important; }
+.admin-root.admin-dark :is(.bg-rose-200, .bg-pink-200) { background-color: rgb(244 63 94 / 0.2) !important; }
+
+.admin-root.admin-dark :is(.bg-violet-50, .bg-indigo-50) { background-color: rgb(139 92 246 / 0.12) !important; }
+.admin-root.admin-dark :is(.bg-violet-100, .bg-indigo-100) { background-color: rgb(139 92 246 / 0.16) !important; }
+.admin-root.admin-dark :is(.bg-violet-200, .bg-indigo-200) { background-color: rgb(139 92 246 / 0.2) !important; }
+
+.admin-root.admin-dark :is(.bg-amber-200\/40, .bg-orange-200\/40) { background-color: rgb(245 158 11 / 0.12) !important; }
+.admin-root.admin-dark :is(.bg-emerald-200\/40, .bg-teal-200\/40) { background-color: rgb(16 185 129 / 0.12) !important; }
+.admin-root.admin-dark :is(.bg-sky-200\/40, .bg-blue-200\/40, .bg-cyan-200\/40) { background-color: rgb(56 189 248 / 0.12) !important; }
+.admin-root.admin-dark :is(.bg-rose-200\/40, .bg-pink-200\/40) { background-color: rgb(244 63 94 / 0.12) !important; }
+.admin-root.admin-dark :is(.bg-violet-200\/40, .bg-indigo-200\/40) { background-color: rgb(139 92 246 / 0.12) !important; }
+
+.admin-root.admin-dark :is(.text-amber-600, .text-amber-700, .text-amber-800, .text-orange-600, .text-orange-700, .text-orange-800) { color: #fbbf24 !important; }
+.admin-root.admin-dark :is(.text-emerald-600, .text-emerald-700, .text-emerald-800, .text-teal-600, .text-teal-700, .text-teal-800) { color: #34d399 !important; }
+.admin-root.admin-dark :is(.text-sky-600, .text-sky-700, .text-sky-800, .text-blue-600, .text-blue-700, .text-blue-800, .text-cyan-600, .text-cyan-700, .text-cyan-800) { color: #38bdf8 !important; }
+.admin-root.admin-dark :is(.text-rose-600, .text-rose-700, .text-rose-800, .text-pink-600, .text-pink-700, .text-pink-800) { color: #fb7185 !important; }
+.admin-root.admin-dark :is(.text-violet-600, .text-violet-700, .text-violet-800, .text-indigo-600, .text-indigo-700, .text-indigo-800) { color: #a78bfa !important; }
+
+.admin-root.admin-dark :is(.border-amber-200, .border-orange-200) { border-color: rgb(245 158 11 / 0.3) !important; }
+.admin-root.admin-dark :is(.border-emerald-200, .border-teal-200) { border-color: rgb(16 185 129 / 0.3) !important; }
+.admin-root.admin-dark :is(.border-sky-200, .border-blue-200, .border-cyan-200) { border-color: rgb(56 189 248 / 0.3) !important; }
+.admin-root.admin-dark :is(.border-rose-200, .border-pink-200) { border-color: rgb(244 63 94 / 0.3) !important; }
+.admin-root.admin-dark :is(.border-violet-200, .border-indigo-200) { border-color: rgb(139 92 246 / 0.3) !important; }
+
+.admin-root.admin-dark :is(.ring-amber-200, .ring-amber-200\/70, .ring-orange-200, .ring-orange-200\/70) { --tw-ring-color: rgb(245 158 11 / 0.28) !important; }
+.admin-root.admin-dark :is(.ring-emerald-200, .ring-emerald-200\/70, .ring-teal-200, .ring-teal-200\/70) { --tw-ring-color: rgb(16 185 129 / 0.28) !important; }
+.admin-root.admin-dark :is(.ring-sky-200, .ring-sky-200\/70, .ring-blue-200, .ring-blue-200\/70, .ring-cyan-200, .ring-cyan-200\/70) { --tw-ring-color: rgb(56 189 248 / 0.28) !important; }
+.admin-root.admin-dark :is(.ring-rose-200, .ring-rose-200\/70, .ring-pink-200, .ring-pink-200\/70) { --tw-ring-color: rgb(244 63 94 / 0.28) !important; }
+.admin-root.admin-dark :is(.ring-violet-200, .ring-violet-200\/70, .ring-indigo-200, .ring-indigo-200\/70) { --tw-ring-color: rgb(139 92 246 / 0.28) !important; }
 
 /* Quotation Approval targeted readability fixes */
 .admin-root.admin-dark .quotation-approval-page {
