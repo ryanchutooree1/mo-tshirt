@@ -155,7 +155,7 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
 export default function AdminChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { theme } = useAdminTheme();
+  const { theme, toggleTheme } = useAdminTheme();
   const isDark = theme === "dark";
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -389,6 +389,17 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
                   {editing ? "Done" : "Edit"}
                 </button>
               </div>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className={`relative mt-3 inline-flex w-full items-center justify-center rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                  isDark
+                    ? "border-cyan-400/45 bg-cyan-400/15 text-cyan-100 hover:border-cyan-300/70 hover:bg-cyan-400/25"
+                    : "border-slate-300 bg-slate-100 text-slate-700 hover:border-slate-400 hover:bg-slate-200"
+                }`}
+              >
+                {isDark ? "Switch To Light Mode" : "Switch To Dark Mode"}
+              </button>
             </div>
 
             <nav className="mt-5 space-y-3 flex-1 min-h-0 overflow-y-auto pr-1">
