@@ -21,6 +21,7 @@ import {
   DocumentData,
   Timestamp,
   QueryConstraint,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
@@ -34,6 +35,10 @@ import {
   FiUsers,
   FiTrendingUp,
   FiShield,
+  FiFileText,
+  FiSend,
+  FiChevronRight,
+  FiPlus,
 } from "react-icons/fi";
 import jsPDF from "jspdf";
 
@@ -44,6 +49,40 @@ type ProductLine = {
   quantity: number;
   unitPrice?: number;
   price?: number;
+};
+
+type OrderDocumentType = "quotation" | "invoice" | "partial_receipt" | "receipt";
+
+type OrderDocumentLine = {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  color?: string;
+  size?: string;
+};
+
+type OrderDocumentProfile = {
+  documentType: OrderDocumentType;
+  documentNumber: string;
+  documentDate: string;
+  validUntil: string;
+  paymentStatus: string;
+  preparedBy: string;
+  currency: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone: string;
+  clientCompany: string;
+  clientAddress: string;
+  clientBrn: string;
+  clientVat: string;
+  deliveryFee: number;
+  discount: number;
+  amountReceived: number;
+  notes: string;
+  terms: string;
+  showLineItems: boolean;
+  lines: OrderDocumentLine[];
 };
 
 type Txn = {
@@ -57,10 +96,441 @@ type Txn = {
   paymentMethod?: "Full Payment" | "Part Payment" | string;
   products?: ProductLine[];
   amount?: number;
+  quoteId?: string;
+  source?: string;
+  documentProfile?: Partial<OrderDocumentProfile>;
 };
 
 const PAGE_SIZE = 20;
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "admin";
+const DEFAULT_PREPARED_BY = "Mo T-Shirt Team";
+const ORDER_WORKFLOW = ["Pending", "In Process", "Completed", "Delivered"] as const;
+const ORDER_STATUS_OPTIONS = [
+  "Select Status",
+  "Pending",
+  "In Process",
+  "Urgent",
+  "Completed",
+  "Delivered",
+  "Cancelled",
+];
+const ORDER_PAYMENT_OPTIONS = ["Select Payment Status", "Full Payment", "Part Payment", "Unpaid"];
+
+const BUSINESS_INFO = {
+  name: "MO T-SHIRT",
+  addressLines: ["School Lane", "Surinam, 60907"],
+  phone: "+230 5988 3880",
+  brn: "I20009899",
+};
+
+const PAYMENT_DETAILS = {
+  payee: "Manavshree Chutooree",
+  bankName: "SBM BANK",
+  accountNumber: "50300001273751",
+};
+
+const ORDER_DOC_LABELS: Record<OrderDocumentType, string> = {
+  quotation: "Quotation",
+  invoice: "Invoice",
+  partial_receipt: "Partial Receipt",
+  receipt: "Receipt",
+};
+
+const ORDER_DOC_PREFIX: Record<OrderDocumentType, string> = {
+  quotation: "Q",
+  invoice: "INV",
+  partial_receipt: "PR",
+  receipt: "RCPT",
+};
+
+const ORDER_DOC_TERMS: Record<OrderDocumentType, string> = {
+  quotation: [
+    "This quotation is provided for information purposes only and is valid for a limited period.",
+    "Prices may change if quantities, specifications, or deadlines are modified.",
+    "Production starts after written client approval of this quotation.",
+    "MO T-SHIRT is not VAT-registered. This quotation is not subject to VAT.",
+  ].join("\n"),
+  invoice: [
+    "A 50% advance payment is required to start production.",
+    "Remaining balance is due before delivery or collection.",
+    "Late payments may delay production and dispatch.",
+    "MO T-SHIRT is not VAT-registered. This invoice is not subject to VAT.",
+  ].join("\n"),
+  partial_receipt: [
+    "This receipt confirms partial payment received by MO T-SHIRT.",
+    "Remaining balance must be settled before delivery or collection.",
+    "This receipt is proof of advance payment only.",
+  ].join("\n"),
+  receipt: [
+    "This receipt confirms full payment received by MO T-SHIRT.",
+    "No outstanding balance remains for this order.",
+    "This receipt serves as official proof of payment.",
+  ].join("\n"),
+};
+
+const safeNumber = (value: unknown, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const toIsoDate = (date: Date) => {
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const addDaysIso = (isoDate: string, days: number) => {
+  const start = new Date(isoDate);
+  if (Number.isNaN(start.getTime())) return toIsoDate(new Date());
+  start.setDate(start.getDate() + days);
+  return toIsoDate(start);
+};
+
+const formatMoney = (value: number, currency = "Rs") => {
+  const amount = safeNumber(value, 0);
+  const sign = amount < 0 ? "-" : "";
+  return `${sign}${currency} ${Math.abs(amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+};
+
+const getDefaultPaymentStatus = (docType: OrderDocumentType) => {
+  if (docType === "quotation") return "Quotation only";
+  if (docType === "invoice") return "Unpaid";
+  if (docType === "partial_receipt") return "Partially paid";
+  return "Paid";
+};
+
+const isOrderDocumentType = (value: unknown): value is OrderDocumentType =>
+  value === "quotation" || value === "invoice" || value === "partial_receipt" || value === "receipt";
+
+const isCompletedLikeStatus = (status: string) => status === "Completed" || status === "Delivered";
+
+const getNextWorkflowStatus = (status: string) => {
+  const index = ORDER_WORKFLOW.findIndex((item) => item === status);
+  if (index === -1) return ORDER_WORKFLOW[0];
+  return ORDER_WORKFLOW[Math.min(index + 1, ORDER_WORKFLOW.length - 1)];
+};
+
+const normalizeDocumentLines = (
+  lines: OrderDocumentLine[] | undefined,
+  fallbackProducts: ProductLine[] | undefined
+) => {
+  if (Array.isArray(lines) && lines.length) {
+    return lines.map((line) => ({
+      description: line.description || "Custom item",
+      quantity: Math.max(1, safeNumber(line.quantity, 1)),
+      unitPrice: Math.max(0, safeNumber(line.unitPrice, 0)),
+      color: line.color || "",
+      size: line.size || "",
+    }));
+  }
+
+  return (fallbackProducts || []).map((product) => {
+    const quantity = Math.max(1, safeNumber(product.quantity, 1));
+    const unitPrice = product.unitPrice != null
+      ? Math.max(0, safeNumber(product.unitPrice, 0))
+      : quantity > 0
+        ? Math.max(0, safeNumber(product.price, 0) / quantity)
+        : 0;
+    return {
+      description: product.product || "Custom item",
+      quantity,
+      unitPrice,
+      color: product.color || "",
+      size: product.size || "",
+    };
+  });
+};
+
+const buildOrderDocumentDraft = (txnId: string, txn: Txn): OrderDocumentProfile => {
+  const createdAt = txn.transactionDate?.toDate?.() || new Date();
+  const baseDate = toIsoDate(createdAt);
+  const profile = txn.documentProfile || {};
+  const documentType = isOrderDocumentType(profile.documentType) ? profile.documentType : "invoice";
+  const fallbackNumber = txn.invoiceNumber?.trim() || `${ORDER_DOC_PREFIX[documentType]}-${txnId.slice(-5).toUpperCase()}`;
+  const lines = normalizeDocumentLines(profile.lines as OrderDocumentLine[] | undefined, txn.products);
+  const paymentStatusFromPaymentMethod =
+    txn.paymentMethod === "Full Payment"
+      ? "Paid"
+      : txn.paymentMethod === "Part Payment"
+        ? "Partially paid"
+        : getDefaultPaymentStatus(documentType);
+  const documentDate = typeof profile.documentDate === "string" && profile.documentDate ? profile.documentDate : baseDate;
+
+  return {
+    documentType,
+    documentNumber: typeof profile.documentNumber === "string" && profile.documentNumber ? profile.documentNumber : fallbackNumber,
+    documentDate,
+    validUntil:
+      typeof profile.validUntil === "string" && profile.validUntil
+        ? profile.validUntil
+        : addDaysIso(documentDate, 7),
+    paymentStatus:
+      typeof profile.paymentStatus === "string" && profile.paymentStatus
+        ? profile.paymentStatus
+        : paymentStatusFromPaymentMethod,
+    preparedBy:
+      typeof profile.preparedBy === "string" && profile.preparedBy
+        ? profile.preparedBy
+        : DEFAULT_PREPARED_BY,
+    currency:
+      typeof profile.currency === "string" && profile.currency ? profile.currency : "Rs",
+    clientName:
+      typeof profile.clientName === "string" && profile.clientName
+        ? profile.clientName
+        : txn.customerName || "",
+    clientEmail:
+      typeof profile.clientEmail === "string" && profile.clientEmail
+        ? profile.clientEmail
+        : txn.email || "",
+    clientPhone:
+      typeof profile.clientPhone === "string" && profile.clientPhone
+        ? profile.clientPhone
+        : txn.phoneNumber || "",
+    clientCompany:
+      typeof profile.clientCompany === "string" && profile.clientCompany
+        ? profile.clientCompany
+        : txn.customerName || "",
+    clientAddress:
+      typeof profile.clientAddress === "string" && profile.clientAddress
+        ? profile.clientAddress
+        : txn.address || "",
+    clientBrn: typeof profile.clientBrn === "string" ? profile.clientBrn : "",
+    clientVat: typeof profile.clientVat === "string" ? profile.clientVat : "",
+    deliveryFee: safeNumber(profile.deliveryFee, 0),
+    discount: safeNumber(profile.discount, 0),
+    amountReceived: safeNumber(profile.amountReceived, 0),
+    notes: typeof profile.notes === "string" ? profile.notes : "",
+    terms:
+      typeof profile.terms === "string" && profile.terms
+        ? profile.terms
+        : ORDER_DOC_TERMS[documentType],
+    showLineItems:
+      typeof profile.showLineItems === "boolean" ? profile.showLineItems : true,
+    lines,
+  };
+};
+
+function buildOrderDocumentPdf(txnId: string, draft: OrderDocumentProfile) {
+  const docPdf = new jsPDF({ unit: "pt", format: "a4" });
+  const pageWidth = docPdf.internal.pageSize.getWidth();
+  const pageHeight = docPdf.internal.pageSize.getHeight();
+  const margin = 40;
+  const contentWidth = pageWidth - margin * 2;
+  const accent = { r: 250, g: 115, b: 35 };
+  const docTitle = ORDER_DOC_LABELS[draft.documentType];
+  const dateRaw = new Date(draft.documentDate);
+  const docDate = Number.isNaN(dateRaw.getTime()) ? new Date() : dateRaw;
+  const validUntilRaw = new Date(draft.validUntil);
+  const validUntil = Number.isNaN(validUntilRaw.getTime()) ? new Date(docDate.getTime() + 7 * 86400000) : validUntilRaw;
+
+  const lineTotals = draft.lines.map((line) => ({
+    ...line,
+    lineTotal: safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0),
+  }));
+  const subtotal = lineTotals.reduce((sum, line) => sum + line.lineTotal, 0);
+  const deliveryFee = safeNumber(draft.deliveryFee, 0);
+  const discount = safeNumber(draft.discount, 0);
+  const amountReceived = safeNumber(draft.amountReceived, 0);
+  const grandTotal = subtotal + deliveryFee - discount;
+  const balanceDue = Math.max(0, grandTotal - amountReceived);
+
+  docPdf.setFillColor(accent.r, accent.g, accent.b);
+  docPdf.rect(margin, 24, contentWidth, 4, "F");
+
+  docPdf.setFont("helvetica", "bold");
+  docPdf.setFontSize(20);
+  docPdf.setTextColor(accent.r, accent.g, accent.b);
+  docPdf.text(BUSINESS_INFO.name, margin, 64);
+
+  docPdf.setFont("helvetica", "normal");
+  docPdf.setFontSize(10);
+  docPdf.setTextColor(70);
+  BUSINESS_INFO.addressLines.forEach((line, index) => {
+    docPdf.text(line, margin, 82 + index * 13);
+  });
+  docPdf.text(`Tel: ${BUSINESS_INFO.phone}`, margin, 108);
+  docPdf.text(`BRN: ${BUSINESS_INFO.brn}`, margin, 122);
+
+  docPdf.setFont("helvetica", "bold");
+  docPdf.setFontSize(22);
+  docPdf.setTextColor(accent.r, accent.g, accent.b);
+  docPdf.text(docTitle, pageWidth - margin, 66, { align: "right" });
+  docPdf.setFont("helvetica", "normal");
+  docPdf.setFontSize(10);
+  docPdf.setTextColor(95);
+  docPdf.text(`No ${draft.documentNumber || txnId}`, pageWidth - margin, 84, { align: "right" });
+  docPdf.text(`Date ${docDate.toLocaleDateString("en-GB")}`, pageWidth - margin, 98, { align: "right" });
+  if (draft.documentType === "quotation") {
+    docPdf.text(`Valid until ${validUntil.toLocaleDateString("en-GB")}`, pageWidth - margin, 112, { align: "right" });
+  }
+  docPdf.text(`Status: ${draft.paymentStatus || getDefaultPaymentStatus(draft.documentType)}`, pageWidth - margin, 126, {
+    align: "right",
+  });
+  docPdf.text(`Prepared by: ${draft.preparedBy || DEFAULT_PREPARED_BY}`, pageWidth - margin, 140, { align: "right" });
+
+  let y = 178;
+  docPdf.setFont("helvetica", "bold");
+  docPdf.setFontSize(11);
+  docPdf.setTextColor(accent.r, accent.g, accent.b);
+  docPdf.text(`${docTitle} for`, margin, y);
+  y += 21;
+
+  docPdf.setFont("helvetica", "bold");
+  docPdf.setFontSize(14);
+  docPdf.setTextColor(20);
+  docPdf.text(draft.clientCompany || draft.clientName || "Client", margin, y);
+  y += 18;
+
+  docPdf.setFont("helvetica", "normal");
+  docPdf.setFontSize(10);
+  docPdf.setTextColor(70);
+  if (draft.clientName) {
+    docPdf.text(`Contact: ${draft.clientName}`, margin, y);
+    y += 14;
+  }
+  if (draft.clientEmail) {
+    docPdf.text(`Email: ${draft.clientEmail}`, margin, y);
+    y += 14;
+  }
+  if (draft.clientPhone) {
+    docPdf.text(`Phone: ${draft.clientPhone}`, margin, y);
+    y += 14;
+  }
+  if (draft.clientAddress) {
+    const addressLines = docPdf.splitTextToSize(`Address: ${draft.clientAddress}`, contentWidth - 10);
+    docPdf.text(addressLines, margin, y);
+    y += addressLines.length * 13;
+  }
+  if (draft.clientBrn) {
+    docPdf.text(`BRN: ${draft.clientBrn}`, margin, y);
+    y += 14;
+  }
+  if (draft.clientVat) {
+    docPdf.text(`VAT: ${draft.clientVat}`, margin, y);
+    y += 14;
+  }
+
+  y += 8;
+  docPdf.setDrawColor(145);
+  docPdf.line(margin, y, pageWidth - margin, y);
+  y += 20;
+
+  const descWidth = draft.showLineItems ? contentWidth - 220 : contentWidth - 100;
+  const colQtyX = pageWidth - margin - 180;
+  const colUnitX = pageWidth - margin - 92;
+  const colTotalX = pageWidth - margin;
+
+  docPdf.setFont("helvetica", "bold");
+  docPdf.setFontSize(10);
+  docPdf.setTextColor(accent.r, accent.g, accent.b);
+  docPdf.text("Description", margin, y);
+  if (draft.showLineItems) {
+    docPdf.text("Qty", colQtyX, y, { align: "right" });
+    docPdf.text("Unit", colUnitX, y, { align: "right" });
+  }
+  docPdf.text("Total", colTotalX, y, { align: "right" });
+  y += 16;
+
+  docPdf.setFont("helvetica", "normal");
+  docPdf.setTextColor(30);
+  const rowPadding = 5;
+  for (const line of lineTotals) {
+    const label = `${line.description}${line.color || line.size ? ` (${[line.color, line.size].filter(Boolean).join("/")})` : ""}`;
+    const wrapped = docPdf.splitTextToSize(label, descWidth);
+    const rowHeight = Math.max(26, wrapped.length * 13 + rowPadding * 2);
+    if (y + rowHeight > pageHeight - 170) {
+      docPdf.addPage();
+      y = 40;
+    }
+    docPdf.setFillColor(246, 247, 249);
+    docPdf.rect(margin, y - rowPadding - 3, contentWidth, rowHeight, "F");
+    docPdf.text(wrapped, margin + 6, y + 6);
+    if (draft.showLineItems) {
+      docPdf.text(String(line.quantity), colQtyX, y + 6, { align: "right" });
+      docPdf.text(formatMoney(line.unitPrice, draft.currency), colUnitX, y + 6, { align: "right" });
+    }
+    docPdf.text(formatMoney(line.lineTotal, draft.currency), colTotalX, y + 6, { align: "right" });
+    y += rowHeight + 6;
+  }
+
+  y += 2;
+  if (y > pageHeight - 190) {
+    docPdf.addPage();
+    y = 40;
+  }
+  docPdf.setDrawColor(150);
+  docPdf.line(margin, y, pageWidth - margin, y);
+  y += 18;
+  docPdf.setFont("helvetica", "normal");
+  docPdf.setTextColor(50);
+  docPdf.text("Subtotal", pageWidth - margin - 150, y);
+  docPdf.text(formatMoney(subtotal, draft.currency), colTotalX, y, { align: "right" });
+  if (deliveryFee > 0) {
+    y += 16;
+    docPdf.text("Delivery fee", pageWidth - margin - 150, y);
+    docPdf.text(formatMoney(deliveryFee, draft.currency), colTotalX, y, { align: "right" });
+  }
+  if (discount > 0) {
+    y += 16;
+    docPdf.setTextColor(170, 25, 25);
+    docPdf.text("Discount", pageWidth - margin - 150, y);
+    docPdf.text(formatMoney(-discount, draft.currency), colTotalX, y, { align: "right" });
+    docPdf.setTextColor(50);
+  }
+  y += 20;
+  docPdf.setFont("helvetica", "bold");
+  docPdf.setFontSize(12);
+  docPdf.setTextColor(20);
+  docPdf.text("Grand Total", pageWidth - margin - 150, y);
+  docPdf.text(formatMoney(grandTotal, draft.currency), colTotalX, y, { align: "right" });
+
+  if (draft.documentType === "partial_receipt") {
+    y += 18;
+    docPdf.setFont("helvetica", "normal");
+    docPdf.setFontSize(10);
+    docPdf.text("Amount received", pageWidth - margin - 150, y);
+    docPdf.text(formatMoney(amountReceived, draft.currency), colTotalX, y, { align: "right" });
+    y += 14;
+    docPdf.setFont("helvetica", "bold");
+    docPdf.text("Balance due", pageWidth - margin - 150, y);
+    docPdf.text(formatMoney(balanceDue, draft.currency), colTotalX, y, { align: "right" });
+  }
+
+  y += 24;
+  if (y > pageHeight - 130) {
+    docPdf.addPage();
+    y = 44;
+  }
+  docPdf.setFillColor(accent.r, accent.g, accent.b);
+  docPdf.rect(margin, y, contentWidth, 17, "F");
+  docPdf.setFont("helvetica", "bold");
+  docPdf.setFontSize(10);
+  docPdf.setTextColor(255);
+  docPdf.text("TERMS AND CONDITIONS", margin + 6, y + 12);
+  y += 28;
+
+  docPdf.setFont("helvetica", "normal");
+  docPdf.setTextColor(35);
+  const termLines = docPdf.splitTextToSize(draft.terms || ORDER_DOC_TERMS[draft.documentType], contentWidth - 10);
+  docPdf.text(termLines, margin + 4, y);
+  y += termLines.length * 13 + 16;
+
+  docPdf.setFont("helvetica", "bold");
+  docPdf.setTextColor(accent.r, accent.g, accent.b);
+  docPdf.text("Payment Details", margin, y);
+  y += 14;
+  docPdf.setFont("helvetica", "normal");
+  docPdf.setTextColor(50);
+  docPdf.text(`Payee: ${PAYMENT_DETAILS.payee}`, margin, y);
+  y += 13;
+  docPdf.text(`Bank: ${PAYMENT_DETAILS.bankName}`, margin, y);
+  y += 13;
+  docPdf.text(`Account No: ${PAYMENT_DETAILS.accountNumber}`, margin, y);
+
+  return docPdf;
+}
 
 function OrdersPageInner() {
   const searchParams = useSearchParams();
@@ -105,6 +575,12 @@ function OrdersPageInner() {
   const [editTxnId, setEditTxnId] = useState<string | null>(null);
   const [editIndex, setEditIndex] = useState<number>(-1);
   const [editValue, setEditValue] = useState<ProductLine | null>(null);
+
+  // document studio
+  const [docStudioOpen, setDocStudioOpen] = useState(false);
+  const [docTxnId, setDocTxnId] = useState<string | null>(null);
+  const [docDraft, setDocDraft] = useState<OrderDocumentProfile | null>(null);
+  const [docSaving, setDocSaving] = useState(false);
 
   // toast
   const [toast, setToast] = useState<{
@@ -234,7 +710,7 @@ function OrdersPageInner() {
   const visibleRows = useMemo(() => {
     const filtered = rows.filter((d) => {
       const m = d.data() as Txn;
-      const matchesTab = activeTab === "all" ? true : m.status === "Completed";
+      const matchesTab = activeTab === "all" ? true : isCompletedLikeStatus(m.status || "");
       if (!matchesTab) return false;
       if (!debounced) return true;
       const bag = `${m.customerName ?? ""} ${m.phoneNumber ?? ""} ${
@@ -273,12 +749,12 @@ function OrdersPageInner() {
             : 0;
         rev += amount;
 
-        if (m.status === "Pending") pending++;
-        if (m.status === "Delivered") completed++;
+        if (m.status === "Pending" || m.status === "In Process" || m.status === "Urgent") pending++;
+        if (isCompletedLikeStatus(m.status || "")) completed++;
 
         const date = (m.transactionDate?.toDate?.() as Date) || new Date();
         const ds = date.toISOString().slice(0, 10);
-        if (m.status === "Delivered" && ds === todayStr) deliveredToday++;
+        if (isCompletedLikeStatus(m.status || "") && ds === todayStr) deliveredToday++;
 
         const who = m.customerName || m.phoneNumber || m.email;
         if (who) clients.add(String(who));
@@ -325,6 +801,7 @@ function OrdersPageInner() {
 
   // actions: update status/payment on both collections if account doc exists
   async function updateStatus(id: string, status: string) {
+    if (!status || status === "Select Status") return;
     try {
       await updateDoc(doc(db, "transactions", id), { status });
       const accRef = doc(db, "account", id);
@@ -339,6 +816,7 @@ function OrdersPageInner() {
   }
 
   async function updatePayment(id: string, paymentMethod: string) {
+    if (!paymentMethod || paymentMethod === "Select Payment Status") return;
     try {
       await updateDoc(doc(db, "transactions", id), { paymentMethod });
       const accRef = doc(db, "account", id);
@@ -349,6 +827,121 @@ function OrdersPageInner() {
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Update failed";
       showToast({ type: "err", text: msg });
+    }
+  }
+
+  async function advanceWorkflowStatus(id: string, currentStatus: string) {
+    const nextStatus = getNextWorkflowStatus(currentStatus || "Pending");
+    if (nextStatus === currentStatus) {
+      showToast({ type: "ok", text: "Order is already at the last workflow stage." });
+      return;
+    }
+    await updateStatus(id, nextStatus);
+  }
+
+  function openDocumentStudio(txnId: string, txn: Txn) {
+    setDocTxnId(txnId);
+    setDocDraft(buildOrderDocumentDraft(txnId, txn));
+    setDocStudioOpen(true);
+  }
+
+  function updateDocLine(index: number, patch: Partial<OrderDocumentLine>) {
+    setDocDraft((prev) => {
+      if (!prev) return prev;
+      const nextLines = prev.lines.slice();
+      if (!nextLines[index]) return prev;
+      nextLines[index] = { ...nextLines[index], ...patch };
+      return { ...prev, lines: nextLines };
+    });
+  }
+
+  function addDocLine() {
+    setDocDraft((prev) =>
+      prev
+        ? {
+            ...prev,
+            lines: [...prev.lines, { description: "Custom item", quantity: 1, unitPrice: 0, color: "", size: "" }],
+          }
+        : prev
+    );
+  }
+
+  function removeDocLine(index: number) {
+    setDocDraft((prev) =>
+      prev
+        ? {
+            ...prev,
+            lines: prev.lines.filter((_, i) => i !== index),
+          }
+        : prev
+    );
+  }
+
+  function setDocType(nextType: OrderDocumentType) {
+    setDocDraft((prev) => {
+      if (!prev) return prev;
+      if (prev.documentType === nextType) return prev;
+      const prefix = ORDER_DOC_PREFIX[nextType];
+      const numberPart = prev.documentNumber.split("-").slice(1).join("-") || "00001";
+      const nextNumber = `${prefix}-${numberPart}`;
+      return {
+        ...prev,
+        documentType: nextType,
+        documentNumber: nextNumber,
+        paymentStatus: getDefaultPaymentStatus(nextType),
+        terms: ORDER_DOC_TERMS[nextType],
+      };
+    });
+  }
+
+  const docTotals = useMemo(() => {
+    if (!docDraft) return { subtotal: 0, total: 0, balanceDue: 0 };
+    const subtotal = docDraft.lines.reduce(
+      (sum, line) => sum + safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0),
+      0
+    );
+    const total = subtotal + safeNumber(docDraft.deliveryFee, 0) - safeNumber(docDraft.discount, 0);
+    const balanceDue = Math.max(0, total - safeNumber(docDraft.amountReceived, 0));
+    return { subtotal, total, balanceDue };
+  }, [docDraft]);
+
+  function openDocumentPreview() {
+    if (!docDraft || !docTxnId) return;
+    const pdf = buildOrderDocumentPdf(docTxnId, docDraft);
+    const url = pdf.output("bloburl");
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  function downloadDocumentPdf() {
+    if (!docDraft || !docTxnId) return;
+    const pdf = buildOrderDocumentPdf(docTxnId, docDraft);
+    pdf.save(`${docDraft.documentType.replace(/_/g, "-")}-${docDraft.documentNumber || docTxnId}.pdf`);
+  }
+
+  async function saveDocumentProfile() {
+    if (!docDraft || !docTxnId) return;
+    setDocSaving(true);
+    try {
+      await updateDoc(doc(db, "transactions", docTxnId), {
+        documentProfile: {
+          ...docDraft,
+          updatedAt: serverTimestamp(),
+        },
+        updatedAt: serverTimestamp(),
+      });
+      setOverrides((prev) => ({
+        ...prev,
+        [docTxnId]: {
+          ...(prev[docTxnId] || {}),
+          documentProfile: docDraft,
+        },
+      }));
+      showToast({ type: "ok", text: "Document profile saved to order." });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Could not save document profile.";
+      showToast({ type: "err", text: msg });
+    } finally {
+      setDocSaving(false);
     }
   }
 
@@ -485,105 +1078,20 @@ function OrdersPageInner() {
     }
   }
 
-  // PDF – lightweight invoice (client-side)
-  function printInvoice(data: Txn) {
-    const docPdf = new jsPDF();
-    const title = "MO T-SHIRT — INVOICE";
-    docPdf.setFontSize(16);
-    docPdf.text(title, 14, 18);
-
-    docPdf.setFontSize(10);
-    docPdf.text(`Invoice #${data.invoiceNumber || ""}`, 14, 26);
-    const dt = data.transactionDate?.toDate?.() as Date | undefined;
-    if (dt) docPdf.text(`${dt.toDateString()}`, 14, 31);
-
-    docPdf.text(
-      `Customer: ${
-        data.customerName || data.phoneNumber || data.email || "Unknown"
-      }`,
-      14,
-      38
-    );
-
-    // Column positions
-    const descX = 14;
-    const qtyX = 135;
-    const unitX = 165;
-    const totalX = 195;
-
-    // Table header
-    let y = 48;
-    docPdf.setFont("helvetica", "bold");
-    docPdf.text("Description", descX, y);
-    docPdf.text("Qty", qtyX, y, { align: "right" });
-    docPdf.text("Unit", unitX, y, { align: "right" });
-    docPdf.text("Total", totalX, y, { align: "right" });
-    docPdf.setFont("helvetica", "normal");
-    y += 6;
-
-    const ps = docPdf.internal.pageSize as unknown as {
-      getHeight?: () => number;
-      height?: number;
+  function quickPreviewInvoice(txnId: string, txn: Txn) {
+    const fallback = buildOrderDocumentDraft(txnId, txn);
+    const draft: OrderDocumentProfile = {
+      ...fallback,
+      documentType: "invoice",
+      documentNumber: txn.invoiceNumber || fallback.documentNumber,
+      paymentStatus:
+        fallback.paymentStatus && fallback.paymentStatus !== "Quotation only"
+          ? fallback.paymentStatus
+          : getDefaultPaymentStatus("invoice"),
+      terms: ORDER_DOC_TERMS.invoice,
     };
-    const pageHeight = ps.getHeight?.() || ps.height || 297;
-    const lineHeight = 6;
-    const maxY = pageHeight - 20;
-    const wrapWidth = unitX - descX - 6;
-    const money = (n: number) => `Rs ${n.toFixed(2)}`;
-
-    const products: ProductLine[] = Array.isArray(data.products) ? data.products : [];
-    let grand = 0;
-
-    products.forEach((p) => {
-      const qty = Number(p?.quantity ?? 0);
-      const unitRaw =
-        p?.unitPrice != null
-          ? Number(p.unitPrice)
-          : p?.price && qty
-          ? Number(p.price) / qty
-          : 0;
-      const unit = Number.isFinite(unitRaw) ? unitRaw : 0;
-      const total = p?.price != null ? Number(p.price) : Number(unit * qty);
-      grand += total;
-
-      const name = `${p?.product ?? "Item"}${
-        p?.color || p?.size
-          ? ` (${[p?.color, p?.size].filter(Boolean).join("/")})`
-          : ""
-      }`;
-
-      // Wrap long names
-      const lines = docPdf.splitTextToSize(name, wrapWidth);
-
-      // Page break if needed
-      if (y + lines.length * lineHeight > maxY) {
-        docPdf.addPage();
-        y = 20;
-      }
-
-      // Description
-      lines.forEach((ln: string, i: number) => {
-        docPdf.text(ln, descX, y + i * lineHeight);
-      });
-
-      // Numbers on first line
-      docPdf.text(String(qty), qtyX, y, { align: "right" });
-      docPdf.text(money(unit), unitX, y, { align: "right" });
-      docPdf.text(money(total), totalX, y, { align: "right" });
-
-      y += lines.length * lineHeight + 2;
-    });
-
-    // Total row
-    if (y > maxY) {
-      docPdf.addPage();
-      y = 20;
-    }
-    docPdf.setFont("helvetica", "bold");
-    docPdf.text(`Total: ${money(grand)}`, totalX, y, { align: "right" });
-    docPdf.setFont("helvetica", "normal");
-
-    docPdf.output("dataurlnewwindow"); // open in new tab
+    const pdf = buildOrderDocumentPdf(txnId, draft);
+    pdf.output("dataurlnewwindow");
   }
 
   // bulk actions
@@ -870,10 +1378,11 @@ function OrdersPageInner() {
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >
                   <option value="">All</option>
-                  <option>In Process</option>
-                  <option>Urgent</option>
-                  <option>Completed</option>
-                  <option>Pending</option>
+                  {ORDER_STATUS_OPTIONS.filter((value) => value !== "Select Status").map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -884,8 +1393,11 @@ function OrdersPageInner() {
                   onChange={(e) => setPaymentFilter(e.target.value)}
                 >
                   <option value="">All</option>
-                  <option>Full Payment</option>
-                  <option>Part Payment</option>
+                  {ORDER_PAYMENT_OPTIONS.filter((value) => value !== "Select Payment Status").map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -974,6 +1486,13 @@ function OrdersPageInner() {
                     : Array.isArray(m.products)
                     ? m.products.reduce((s, p) => s + (p.price || 0), 0)
                     : 0;
+                const currentStatus = m.status || "Pending";
+                const nextStatus = getNextWorkflowStatus(currentStatus);
+                const docProfile = m.documentProfile;
+                const docTypeLabel =
+                  docProfile && isOrderDocumentType(docProfile.documentType)
+                    ? ORDER_DOC_LABELS[docProfile.documentType]
+                    : null;
 
                 return (
                   <li
@@ -1026,6 +1545,28 @@ function OrdersPageInner() {
                             <span className="text-xs text-slate-500 border border-slate-200 px-2 py-0.5 rounded-full bg-slate-50">
                               Items: {Array.isArray(m.products) ? m.products.length : 0}
                             </span>
+                            {m.quoteId && (
+                              <span className="text-xs text-violet-700 border border-violet-200 px-2 py-0.5 rounded-full bg-violet-50">
+                                From quotation
+                              </span>
+                            )}
+                            {docTypeLabel && (
+                              <span className="text-xs text-orange-700 border border-orange-200 px-2 py-0.5 rounded-full bg-orange-50">
+                                Doc profile: {docTypeLabel}
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
+                            <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-semibold uppercase tracking-[0.18em] text-slate-500">
+                              Workflow
+                            </span>
+                            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-600">
+                              {currentStatus || "Pending"}
+                            </span>
+                            <FiChevronRight className="text-slate-400" />
+                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700">
+                              Next: {nextStatus}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -1039,13 +1580,7 @@ function OrdersPageInner() {
                           value={m.status || "Select Status"}
                           onChange={(e) => updateStatus(id, e.target.value)}
                         >
-                          {[
-                            "Select Status",
-                            "In Process",
-                            "Urgent",
-                            "Completed",
-                            "Pending",
-                          ].map((s) => (
+                          {ORDER_STATUS_OPTIONS.map((s) => (
                             <option key={s} value={s}>
                               {s}
                             </option>
@@ -1056,11 +1591,7 @@ function OrdersPageInner() {
                           value={m.paymentMethod || "Select Payment Status"}
                           onChange={(e) => updatePayment(id, e.target.value)}
                         >
-                          {[
-                            "Select Payment Status",
-                            "Full Payment",
-                            "Part Payment",
-                          ].map((s) => (
+                          {ORDER_PAYMENT_OPTIONS.map((s) => (
                             <option key={s} value={s}>
                               {s}
                             </option>
@@ -1068,8 +1599,24 @@ function OrdersPageInner() {
                         </select>
 
                         <button
-                          title="Print / Share"
-                          onClick={() => printInvoice(m)}
+                          title="Advance order to next workflow stage"
+                          onClick={() => advanceWorkflowStatus(id, currentStatus)}
+                          className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-100"
+                        >
+                          <FiCheckCircle />
+                          Next Stage
+                        </button>
+                        <button
+                          title="Open Document Studio"
+                          onClick={() => openDocumentStudio(id, m)}
+                          className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-sm font-semibold text-orange-700 shadow-sm transition hover:border-orange-300 hover:bg-orange-100"
+                        >
+                          <FiFileText />
+                          Document Studio
+                        </button>
+                        <button
+                          title="Quick invoice preview"
+                          onClick={() => quickPreviewInvoice(id, m)}
                           className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white p-2 text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
                         >
                           <FiPrinter />
@@ -1109,60 +1656,87 @@ function OrdersPageInner() {
                       </div>
                     </div>
 
-                    {/* products */}
-                    {expanded.has(id) && Array.isArray(m.products) && m.products.length > 0 && (
-                      <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                        <table className="w-full text-sm">
-                          <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            <tr>
-                              <th className="text-left px-3 py-2">Product</th>
-                              <th className="text-left px-3 py-2">Color/Size</th>
-                              <th className="text-left px-3 py-2">Qty</th>
-                              <th className="text-left px-3 py-2">Unit</th>
-                              <th className="text-left px-3 py-2">Total</th>
-                              <th className="text-right px-3 py-2">Edit</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y">
-                            {m.products.map((p, idx) => {
-                              const qty = p.quantity || 0;
-                              const unit =
-                                p.unitPrice != null
-                                  ? p.unitPrice!
-                                  : p.price && qty
-                                  ? p.price / qty
-                                  : 0;
-                              const tot = p.price != null ? p.price! : unit * qty;
-                              return (
-                                <tr key={idx} className="text-slate-700">
-                                  <td className="px-3 py-2">
-                                    {p.product || "Item"}
-                                  </td>
-                                  <td className="px-3 py-2">
-                                    {[p.color, p.size]
-                                      .filter(Boolean)
-                                      .join(" / ")}
-                                  </td>
-                                  <td className="px-3 py-2">{qty}</td>
-                                  <td className="px-3 py-2">
-                                    Rs {unit.toFixed(2)}
-                                  </td>
-                                  <td className="px-3 py-2">
-                                    Rs {tot.toFixed(2)}
-                                  </td>
-                                  <td className="px-3 py-2 text-right">
-                                    <button
-                                      onClick={() => openEditLine(id, idx, p)}
-                                      className="text-sky-600 font-semibold hover:underline"
-                                    >
-                                      Edit
-                                    </button>
-                                  </td>
+                    {/* order details */}
+                    {expanded.has(id) && (
+                      <div className="mt-4 space-y-3">
+                        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3 text-sm text-slate-600 md:grid-cols-2 xl:grid-cols-4">
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Phone</p>
+                            <p className="mt-1 font-medium text-slate-800">{m.phoneNumber || "Not set"}</p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Email</p>
+                            <p className="mt-1 font-medium text-slate-800">{m.email || "Not set"}</p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Address</p>
+                            <p className="mt-1 font-medium text-slate-800">{m.address || "Not set"}</p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Source</p>
+                            <p className="mt-1 font-medium text-slate-800">{m.source || "Order Management"}</p>
+                          </div>
+                        </div>
+
+                        {Array.isArray(m.products) && m.products.length > 0 ? (
+                          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                            <table className="w-full text-sm">
+                              <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <tr>
+                                  <th className="text-left px-3 py-2">Product</th>
+                                  <th className="text-left px-3 py-2">Color/Size</th>
+                                  <th className="text-left px-3 py-2">Qty</th>
+                                  <th className="text-left px-3 py-2">Unit</th>
+                                  <th className="text-left px-3 py-2">Total</th>
+                                  <th className="text-right px-3 py-2">Edit</th>
                                 </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
+                              </thead>
+                              <tbody className="divide-y">
+                                {m.products.map((p, idx) => {
+                                  const qty = p.quantity || 0;
+                                  const unit =
+                                    p.unitPrice != null
+                                      ? p.unitPrice!
+                                      : p.price && qty
+                                        ? p.price / qty
+                                        : 0;
+                                  const tot = p.price != null ? p.price! : unit * qty;
+                                  return (
+                                    <tr key={idx} className="text-slate-700">
+                                      <td className="px-3 py-2">
+                                        {p.product || "Item"}
+                                      </td>
+                                      <td className="px-3 py-2">
+                                        {[p.color, p.size]
+                                          .filter(Boolean)
+                                          .join(" / ")}
+                                      </td>
+                                      <td className="px-3 py-2">{qty}</td>
+                                      <td className="px-3 py-2">
+                                        Rs {unit.toFixed(2)}
+                                      </td>
+                                      <td className="px-3 py-2">
+                                        Rs {tot.toFixed(2)}
+                                      </td>
+                                      <td className="px-3 py-2 text-right">
+                                        <button
+                                          onClick={() => openEditLine(id, idx, p)}
+                                          className="text-sky-600 font-semibold hover:underline"
+                                        >
+                                          Edit
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-sm text-slate-500">
+                            No line items on this order yet.
+                          </div>
+                        )}
                       </div>
                     )}
                   </li>
@@ -1300,6 +1874,391 @@ function OrdersPageInner() {
             </div>
           </div>
         )}
+        {docStudioOpen && docDraft && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 p-4">
+            <div className="max-h-[95vh] w-full max-w-6xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-orange-600">
+                    Order Document Studio
+                  </p>
+                  <h3 className="mt-1 text-xl font-semibold text-slate-900">
+                    {ORDER_DOC_LABELS[docDraft.documentType]} for Order {docTxnId ? `#${docTxnId.slice(-6).toUpperCase()}` : ""}
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Step 1 Configure document • Step 2 Preview/Download • Step 3 Save profile to this order
+                  </p>
+                </div>
+                <button
+                  onClick={() => setDocStudioOpen(false)}
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="max-h-[75vh] overflow-y-auto p-5">
+                <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Document Setup</p>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <label className="text-xs font-semibold text-slate-600">
+                          Type
+                          <select
+                            value={docDraft.documentType}
+                            onChange={(e) => setDocType(e.target.value as OrderDocumentType)}
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                          >
+                            {Object.entries(ORDER_DOC_LABELS).map(([key, label]) => (
+                              <option key={key} value={key}>
+                                {label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="text-xs font-semibold text-slate-600">
+                          Number
+                          <input
+                            value={docDraft.documentNumber}
+                            onChange={(e) =>
+                              setDocDraft((prev) => (prev ? { ...prev, documentNumber: e.target.value } : prev))
+                            }
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </label>
+                        <label className="text-xs font-semibold text-slate-600">
+                          Date
+                          <input
+                            type="date"
+                            value={docDraft.documentDate}
+                            onChange={(e) =>
+                              setDocDraft((prev) => (prev ? { ...prev, documentDate: e.target.value } : prev))
+                            }
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </label>
+                        {docDraft.documentType === "quotation" && (
+                          <label className="text-xs font-semibold text-slate-600">
+                            Valid Until
+                            <input
+                              type="date"
+                              value={docDraft.validUntil}
+                              onChange={(e) =>
+                                setDocDraft((prev) => (prev ? { ...prev, validUntil: e.target.value } : prev))
+                              }
+                              className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                            />
+                          </label>
+                        )}
+                        <label className="text-xs font-semibold text-slate-600">
+                          Payment Status
+                          <input
+                            value={docDraft.paymentStatus}
+                            onChange={(e) =>
+                              setDocDraft((prev) => (prev ? { ...prev, paymentStatus: e.target.value } : prev))
+                            }
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </label>
+                        <label className="text-xs font-semibold text-slate-600">
+                          Prepared By
+                          <input
+                            value={docDraft.preparedBy}
+                            onChange={(e) =>
+                              setDocDraft((prev) => (prev ? { ...prev, preparedBy: e.target.value } : prev))
+                            }
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </label>
+                        <label className="text-xs font-semibold text-slate-600">
+                          Currency
+                          <input
+                            value={docDraft.currency}
+                            onChange={(e) =>
+                              setDocDraft((prev) => (prev ? { ...prev, currency: e.target.value } : prev))
+                            }
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </label>
+                        <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 sm:pt-6">
+                          <input
+                            type="checkbox"
+                            checked={docDraft.showLineItems}
+                            onChange={(e) =>
+                              setDocDraft((prev) => (prev ? { ...prev, showLineItems: e.target.checked } : prev))
+                            }
+                            className="h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-200"
+                          />
+                          Show quantity + unit price columns
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Client Info</p>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <label className="text-xs font-semibold text-slate-600">
+                          Contact Name
+                          <input
+                            value={docDraft.clientName}
+                            onChange={(e) =>
+                              setDocDraft((prev) => (prev ? { ...prev, clientName: e.target.value } : prev))
+                            }
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </label>
+                        <label className="text-xs font-semibold text-slate-600">
+                          Company Name
+                          <input
+                            value={docDraft.clientCompany}
+                            onChange={(e) =>
+                              setDocDraft((prev) => (prev ? { ...prev, clientCompany: e.target.value } : prev))
+                            }
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </label>
+                        <label className="text-xs font-semibold text-slate-600">
+                          Email
+                          <input
+                            value={docDraft.clientEmail}
+                            onChange={(e) =>
+                              setDocDraft((prev) => (prev ? { ...prev, clientEmail: e.target.value } : prev))
+                            }
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </label>
+                        <label className="text-xs font-semibold text-slate-600">
+                          Phone
+                          <input
+                            value={docDraft.clientPhone}
+                            onChange={(e) =>
+                              setDocDraft((prev) => (prev ? { ...prev, clientPhone: e.target.value } : prev))
+                            }
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </label>
+                        <label className="text-xs font-semibold text-slate-600 sm:col-span-2">
+                          Address
+                          <input
+                            value={docDraft.clientAddress}
+                            onChange={(e) =>
+                              setDocDraft((prev) => (prev ? { ...prev, clientAddress: e.target.value } : prev))
+                            }
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </label>
+                        <label className="text-xs font-semibold text-slate-600">
+                          BRN (optional)
+                          <input
+                            value={docDraft.clientBrn}
+                            onChange={(e) =>
+                              setDocDraft((prev) => (prev ? { ...prev, clientBrn: e.target.value } : prev))
+                            }
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </label>
+                        <label className="text-xs font-semibold text-slate-600">
+                          VAT (optional)
+                          <input
+                            value={docDraft.clientVat}
+                            onChange={(e) =>
+                              setDocDraft((prev) => (prev ? { ...prev, clientVat: e.target.value } : prev))
+                            }
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Line Items</p>
+                        <button
+                          onClick={addDocLine}
+                          className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                        >
+                          <FiPlus /> Add line
+                        </button>
+                      </div>
+
+                      <div className="mt-3 space-y-2">
+                        {docDraft.lines.map((line, index) => (
+                          <div key={`${line.description}-${index}`} className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2 md:grid-cols-[1.4fr_0.65fr_0.75fr_40px]">
+                            <input
+                              value={line.description}
+                              onChange={(e) => updateDocLine(index, { description: e.target.value })}
+                              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                              placeholder="Description"
+                            />
+                            <input
+                              type="number"
+                              min={1}
+                              value={line.quantity}
+                              onChange={(e) =>
+                                updateDocLine(index, { quantity: Math.max(1, safeNumber(e.target.value, 1)) })
+                              }
+                              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                              placeholder="Qty"
+                            />
+                            <input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              value={line.unitPrice}
+                              onChange={(e) => updateDocLine(index, { unitPrice: Math.max(0, safeNumber(e.target.value, 0)) })}
+                              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
+                              placeholder="Unit Price"
+                            />
+                            <button
+                              onClick={() => removeDocLine(index)}
+                              className="inline-flex items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-700 transition hover:bg-rose-100"
+                              title="Remove line"
+                            >
+                              <FiTrash2 />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Totals</p>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <label className="text-xs font-semibold text-slate-600">
+                          Delivery fee
+                          <input
+                            type="number"
+                            min={0}
+                            value={docDraft.deliveryFee}
+                            onChange={(e) =>
+                              setDocDraft((prev) => (prev ? { ...prev, deliveryFee: Math.max(0, safeNumber(e.target.value, 0)) } : prev))
+                            }
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </label>
+                        <label className="text-xs font-semibold text-slate-600">
+                          Discount
+                          <input
+                            type="number"
+                            min={0}
+                            value={docDraft.discount}
+                            onChange={(e) =>
+                              setDocDraft((prev) => (prev ? { ...prev, discount: Math.max(0, safeNumber(e.target.value, 0)) } : prev))
+                            }
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </label>
+                        <label className="text-xs font-semibold text-slate-600">
+                          Amount received
+                          <input
+                            type="number"
+                            min={0}
+                            value={docDraft.amountReceived}
+                            onChange={(e) =>
+                              setDocDraft((prev) => (prev ? { ...prev, amountReceived: Math.max(0, safeNumber(e.target.value, 0)) } : prev))
+                            }
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                          />
+                        </label>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                          <div className="flex items-center justify-between">
+                            <span>Subtotal</span>
+                            <strong>{formatMoney(docTotals.subtotal, docDraft.currency)}</strong>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between">
+                            <span>Grand total</span>
+                            <strong>{formatMoney(docTotals.total, docDraft.currency)}</strong>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between">
+                            <span>Balance due</span>
+                            <strong>{formatMoney(docTotals.balanceDue, docDraft.currency)}</strong>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                      <label className="text-xs font-semibold text-slate-600">
+                        Notes
+                        <textarea
+                          rows={3}
+                          value={docDraft.notes}
+                          onChange={(e) =>
+                            setDocDraft((prev) => (prev ? { ...prev, notes: e.target.value } : prev))
+                          }
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                        />
+                      </label>
+                      <label className="mt-3 block text-xs font-semibold text-slate-600">
+                        Terms
+                        <textarea
+                          rows={5}
+                          value={docDraft.terms}
+                          onChange={(e) =>
+                            setDocDraft((prev) => (prev ? { ...prev, terms: e.target.value } : prev))
+                          }
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 px-5 py-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={openDocumentPreview}
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <FiPrinter /> Preview PDF
+                  </button>
+                  <button
+                    onClick={downloadDocumentPdf}
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <FiFileText /> Download PDF
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!docDraft.clientEmail.trim()) {
+                        showToast({ type: "err", text: "Add a client email before using quick send." });
+                        return;
+                      }
+                      const subject = encodeURIComponent(`${ORDER_DOC_LABELS[docDraft.documentType]} from MO T-SHIRT`);
+                      const body = encodeURIComponent(
+                        `Hi ${docDraft.clientName || "there"},\n\nPlease find your ${ORDER_DOC_LABELS[docDraft.documentType].toLowerCase()} attached.\n\nBest regards,\nMO T-SHIRT`
+                      );
+                      window.location.href = `mailto:${encodeURIComponent(docDraft.clientEmail)}?subject=${subject}&body=${body}`;
+                    }}
+                    className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-100"
+                  >
+                    <FiSend /> Quick send
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setDocStudioOpen(false)}
+                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={saveDocumentProfile}
+                    disabled={docSaving}
+                    className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-60"
+                  >
+                    {docSaving ? "Saving..." : "Save Profile to Order"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <style jsx>{`
           @keyframes fadeUp {
             from {
@@ -1402,6 +2361,8 @@ function StatusBadge(status: string) {
     "In Process": "bg-sky-50 text-sky-700 border-sky-200",
     Urgent: "bg-rose-50 text-rose-700 border-rose-200",
     Completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    Delivered: "bg-teal-50 text-teal-700 border-teal-200",
+    Cancelled: "bg-slate-100 text-slate-600 border-slate-300",
   };
   const cls = map[status] || "bg-slate-50 text-slate-600 border-slate-200";
   return (
@@ -1413,6 +2374,7 @@ function PaymentBadge(method: string) {
   const map: Record<string, string> = {
     "Full Payment": "bg-emerald-50 text-emerald-700 border-emerald-200",
     "Part Payment": "bg-violet-50 text-violet-700 border-violet-200",
+    Unpaid: "bg-amber-50 text-amber-700 border-amber-200",
   };
   const cls = map[method] || "bg-slate-50 text-slate-600 border-slate-200";
   return (
