@@ -1032,6 +1032,14 @@ export default function QuotationApprovalPage() {
     () => (draft ? validateDraftBeforeSend(draft) : "Select a quotation first."),
     [draft]
   );
+  const quoteIsMarkedApproved = selectedStatus === "approved" || selectedStatus === "sent";
+  const quoteHasBeenSent = selectedStatus === "sent";
+  const quoteInOrders = Boolean(selected?.orderTransactionId);
+  const moveToOrdersTitle = sendValidationError
+    ? sendValidationError
+    : quoteIsMarkedApproved
+      ? "Create or sync this quotation into Order Management."
+      : "Complete Step 2 first (Mark approved or Send to client).";
 
   const buildStoredQuotePayload = (baseDraft: QuoteDraft) => ({
     documentType: baseDraft.documentType,
@@ -2374,78 +2382,163 @@ export default function QuotationApprovalPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => updateSelectedStatus("review", "Marked as read.")}
-                      disabled={statusSaving || (selected.status || "new") !== "new"}
-                      className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-700 shadow-sm transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <FiClock /> {statusSaving ? "Updating..." : "Mark as read"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => saveDraft()}
-                      disabled={saving}
-                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
-                    >
-                      <FiEdit2 /> {saving ? "Saving..." : "Save changes"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => saveDraft("approved")}
-                      disabled={saving}
-                      className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60"
-                    >
-                      <FiCheckCircle /> Mark approved
-                    </button>
-                    <button
-                      type="button"
-                      onClick={moveToOrders}
-                      disabled={movingToOrders || Boolean(sendValidationError)}
-                      title={sendValidationError || "Create or sync this quotation into Order Management."}
-                      className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:opacity-60"
-                    >
-                      <FiCheckCircle />{" "}
-                      {movingToOrders ? "Moving..." : "Quotation Approved → Move to Orders"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSend}
-                      disabled={sending || !draft.contactEmail.trim() || Boolean(sendValidationError)}
-                      title={
-                        !draft.contactEmail.trim()
-                          ? "Add client email before sending."
-                          : sendValidationError || "Ready to send."
-                      }
-                      className="inline-flex items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-5 py-2 text-xs font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:bg-slate-800 disabled:opacity-60"
-                    >
-                      <FiSend /> {sending ? "Sending..." : `Approve & send ${DOC_TYPE_LABELS[draft.documentType].toLowerCase()}`}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleDeleteQuote}
-                      disabled={deletingQuote}
-                      className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100 disabled:opacity-60"
-                    >
-                      <FiTrash2 /> {deletingQuote ? "Deleting..." : "Delete quotation"}
-                    </button>
-                    <Link
-                      href="/admin/orders"
-                      className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-xs font-semibold text-sky-700 shadow-sm transition hover:bg-sky-100"
-                    >
-                      Open Order Management
-                    </Link>
-                    {sendValidationError && (
-                      <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                        <FiClock /> {sendValidationError}
-                      </span>
-                    )}
-                    {notice && (
-                      <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
-                        <FiClock /> {notice}
-                      </span>
-                    )}
+                  <div className="space-y-3">
+                    <div className="rounded-[24px] border border-slate-200 bg-white/95 p-4 sm:p-5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                          Approval Workflow
+                        </p>
+                        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-600">
+                          Follow Step 1 → Step 2 → Step 3
+                        </span>
+                      </div>
+
+                      <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                              Step 1
+                            </p>
+                            <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                              Prepare
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm font-semibold text-slate-900">Save quotation changes</p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            Confirm prices, quantities, delivery, and notes.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => saveDraft()}
+                            disabled={saving}
+                            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-60"
+                          >
+                            <FiEdit2 /> {saving ? "Saving..." : "Save changes"}
+                          </button>
+                        </div>
+
+                        <div className="rounded-2xl border border-emerald-200/70 bg-emerald-50/70 p-3.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                              Step 2
+                            </p>
+                            <span
+                              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                                quoteIsMarkedApproved
+                                  ? "border-emerald-300 bg-emerald-100 text-emerald-700"
+                                  : "border-amber-300 bg-amber-50 text-amber-700"
+                              }`}
+                            >
+                              {quoteIsMarkedApproved ? "Done" : "Required"}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm font-semibold text-slate-900">Approve quotation</p>
+                          <p className="mt-1 text-xs text-slate-600">
+                            Mark approved first, then optionally send the document by email.
+                          </p>
+                          <div className="mt-3 grid gap-2">
+                            <button
+                              type="button"
+                              onClick={() => saveDraft("approved")}
+                              disabled={saving || quoteIsMarkedApproved}
+                              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-emerald-200 bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+                            >
+                              <FiCheckCircle />{" "}
+                              {quoteIsMarkedApproved ? "Approved" : saving ? "Saving..." : "Mark approved"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleSend}
+                              disabled={sending || !draft.contactEmail.trim() || Boolean(sendValidationError)}
+                              title={
+                                !draft.contactEmail.trim()
+                                  ? "Add client email before sending."
+                                  : sendValidationError || "Ready to send."
+                              }
+                              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-300 bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+                            >
+                              <FiSend />{" "}
+                              {sending
+                                ? "Sending..."
+                                : quoteHasBeenSent
+                                  ? "Sent to client"
+                                  : `Approve & send ${DOC_TYPE_LABELS[draft.documentType].toLowerCase()}`}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-violet-200/70 bg-violet-50/60 p-3.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-violet-700">
+                              Step 3
+                            </p>
+                            <span
+                              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                                quoteInOrders
+                                  ? "border-violet-300 bg-violet-100 text-violet-700"
+                                  : "border-slate-200 bg-white text-slate-500"
+                              }`}
+                            >
+                              {quoteInOrders ? "Done" : "Final step"}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm font-semibold text-slate-900">Move to Order Management</p>
+                          <p className="mt-1 text-xs text-slate-600">
+                            This creates or syncs the production order.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={moveToOrders}
+                            disabled={movingToOrders || Boolean(sendValidationError) || !quoteIsMarkedApproved}
+                            title={moveToOrdersTitle}
+                            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-violet-200 bg-violet-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-violet-700 disabled:opacity-60"
+                          >
+                            <FiCheckCircle />{" "}
+                            {movingToOrders ? "Moving..." : quoteInOrders ? "Sync with Orders" : "Move to Orders"}
+                          </button>
+                          {quoteInOrders && (
+                            <p className="mt-2 rounded-xl border border-violet-200 bg-white px-3 py-2 text-[11px] font-medium text-violet-700">
+                              Linked Order ID: {selected.orderTransactionId}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedStatus("review", "Marked as read.")}
+                        disabled={statusSaving || (selected.status || "new") !== "new"}
+                        className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-700 shadow-sm transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <FiClock /> {statusSaving ? "Updating..." : "Mark as read"}
+                      </button>
+                      <Link
+                        href="/admin/orders"
+                        className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-xs font-semibold text-sky-700 shadow-sm transition hover:bg-sky-100"
+                      >
+                        Open Order Management
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={handleDeleteQuote}
+                        disabled={deletingQuote}
+                        className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100 disabled:opacity-60"
+                      >
+                        <FiTrash2 /> {deletingQuote ? "Deleting..." : "Delete quotation"}
+                      </button>
+                      {sendValidationError && (
+                        <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                          <FiClock /> {sendValidationError}
+                        </span>
+                      )}
+                      {notice && (
+                        <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                          <FiClock /> {notice}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </>
               ) : (
