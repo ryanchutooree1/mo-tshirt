@@ -1353,7 +1353,7 @@ export default function QuotationApprovalPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f7fb] text-slate-900">
+    <div className="quotation-approval-page min-h-screen bg-[#f7f7fb] text-slate-900">
       <div className="relative overflow-hidden">
         <div className="pointer-events-none absolute -left-28 top-[-10rem] h-64 w-64 rounded-full bg-slate-200/70 blur-3xl" />
         <div className="pointer-events-none absolute right-[-6rem] top-8 h-80 w-80 rounded-full bg-zinc-200/60 blur-3xl" />

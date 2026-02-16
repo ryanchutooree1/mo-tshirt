@@ -116,3 +116,80 @@ body {
 .admin-root.admin-dark :is(input, textarea)::placeholder {
   color: #64748b;
 }
+
+/* Normalize light utility surfaces to dark on non-dashboard admin pages */
+.admin-root.admin-dark .admin-page-shell > :not(.ceo-theme) :is(
+    [class*="bg-white/"],
+    [class*="bg-slate-50/"],
+    [class*="bg-slate-100/"],
+    [class*="bg-gray-50/"],
+    [class*="bg-gray-100/"]
+  ) {
+  background-color: #111827 !important;
+}
+
+.admin-root.admin-dark .admin-page-shell > :not(.ceo-theme) [class*="bg-gradient-to-"] {
+  background-image: none !important;
+  background-color: #0f172a !important;
+}
+
+.admin-root.admin-dark .admin-page-shell > :not(.ceo-theme) :is(
+    .from-white,
+    .from-slate-50,
+    .from-slate-100,
+    .from-gray-50,
+    .from-gray-100,
+    .via-white,
+    .via-slate-50,
+    .via-slate-100,
+    .to-white,
+    .to-slate-50,
+    .to-slate-100,
+    .to-gray-50,
+    .to-gray-100
+  ) {
+  --tw-gradient-from: #0f172a var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgb(15 23 42 / 0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+/* Dark-mode tone chips/badges */
+.admin-root.admin-dark :is(.bg-amber-50, .bg-orange-50) { background-color: rgb(245 158 11 / 0.16) !important; }
+.admin-root.admin-dark :is(.bg-emerald-50, .bg-teal-50) { background-color: rgb(16 185 129 / 0.16) !important; }
+.admin-root.admin-dark :is(.bg-sky-50, .bg-blue-50, .bg-cyan-50) { background-color: rgb(56 189 248 / 0.16) !important; }
+.admin-root.admin-dark :is(.bg-rose-50, .bg-pink-50) { background-color: rgb(244 63 94 / 0.16) !important; }
+.admin-root.admin-dark :is(.bg-violet-50, .bg-indigo-50) { background-color: rgb(139 92 246 / 0.16) !important; }
+
+.admin-root.admin-dark :is(.text-amber-700, .text-orange-700) { color: #fcd34d !important; }
+.admin-root.admin-dark :is(.text-emerald-700, .text-teal-700) { color: #6ee7b7 !important; }
+.admin-root.admin-dark :is(.text-sky-700, .text-blue-700, .text-cyan-700) { color: #7dd3fc !important; }
+.admin-root.admin-dark :is(.text-rose-700, .text-pink-700) { color: #fda4af !important; }
+.admin-root.admin-dark :is(.text-violet-700, .text-indigo-700) { color: #c4b5fd !important; }
+
+.admin-root.admin-dark :is(.border-amber-200, .border-orange-200) { border-color: rgb(245 158 11 / 0.35) !important; }
+.admin-root.admin-dark :is(.border-emerald-200, .border-teal-200) { border-color: rgb(16 185 129 / 0.35) !important; }
+.admin-root.admin-dark :is(.border-sky-200, .border-blue-200, .border-cyan-200) { border-color: rgb(56 189 248 / 0.35) !important; }
+.admin-root.admin-dark :is(.border-rose-200, .border-pink-200) { border-color: rgb(244 63 94 / 0.35) !important; }
+.admin-root.admin-dark :is(.border-violet-200, .border-indigo-200) { border-color: rgb(139 92 246 / 0.35) !important; }
+
+/* Quotation Approval targeted readability fixes */
+.admin-root.admin-dark .quotation-approval-page {
+  color: #e2e8f0;
+}
+
+.admin-root.admin-dark .quotation-approval-page [class*="bg-slate-50"] {
+  background-color: #111827 !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page [class*="bg-slate-100"] {
+  background-color: #0f172a !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page [class*="bg-white"] {
+  background-color: #0f172a !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page [class*="bg-gradient-to-"] {
+  background-image: none !important;
+  background-color: #0f172a !important;
+}
