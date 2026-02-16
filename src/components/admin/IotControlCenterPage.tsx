@@ -760,6 +760,10 @@ export default function IotControlCenterPage() {
                 <p className="iot-automation-note">
                   Build reusable command automations. Daily schedules execute 24/7 via secure server cron.
                 </p>
+                <p className="iot-automation-hint">
+                  Trigger modes available: <strong>Manual run only</strong> and{" "}
+                  <strong>Daily (24/7 server cron)</strong>.
+                </p>
               </div>
               <button type="button" onClick={() => openAutomationComposer()} className="iot-create-btn">
                 <Plus className="h-4 w-4" />
@@ -1573,6 +1577,18 @@ export default function IotControlCenterPage() {
           font-size: 0.84rem;
           color: var(--iot-muted);
           max-width: 64ch;
+        }
+
+        .iot-automation-hint {
+          margin: 0.45rem 0 0;
+          font-size: 0.77rem;
+          color: var(--iot-muted);
+          letter-spacing: 0.04em;
+        }
+
+        .iot-automation-hint strong {
+          color: var(--iot-text);
+          font-weight: 700;
         }
 
         .iot-automation-empty {
