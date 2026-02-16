@@ -189,6 +189,41 @@ function dayKey(value: Date) {
   return format(value, "yyyy-MM-dd");
 }
 
+function sumDigits(n: number) {
+  return n
+    .toString()
+    .split("")
+    .map((digit) => Number(digit))
+    .reduce((acc, digit) => acc + digit, 0);
+}
+
+function sumDigitsOfString(value: string) {
+  return value.split("").reduce((acc, char) => acc + (/\d/.test(char) ? Number(char) : 0), 0);
+}
+
+function reduceToMaster(value: number) {
+  let next = value;
+  while (next > 9 && next !== 11 && next !== 22 && next !== 33) {
+    next = sumDigits(next);
+  }
+  return next;
+}
+
+function secondaryFromDay(day: number) {
+  if ([2, 11, 20, 22, 33].includes(day)) return day;
+  return reduceToMaster(sumDigits(day));
+}
+
+function calcNumerology(date: Date) {
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yyyy = String(date.getFullYear());
+  return {
+    primary: reduceToMaster(sumDigitsOfString(dd + mm + yyyy)),
+    secondary: secondaryFromDay(date.getDate()),
+  };
+}
+
 function buildSparkline(values: number[], width = 420, height = 120, pad = 10): SparklineResult {
   if (!values.length) {
     const flat = `M ${pad} ${height - pad} L ${width - pad} ${height - pad}`;
@@ -254,9 +289,21 @@ export default function OwnerDashboard() {
   );
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 30_000);
+    const timer = setInterval(() => setNow(new Date()), 1_000);
     return () => clearInterval(timer);
   }, []);
+
+  const numerologyToday = useMemo(() => calcNumerology(now), [now]);
+  const tomorrowCalc = useMemo(() => {
+    const nextDay = new Date(now);
+    nextDay.setDate(nextDay.getDate() + 1);
+    return {
+      dateStr: format(nextDay, "dd/MM/yyyy"),
+      ...calcNumerology(nextDay),
+    };
+  }, [now]);
+  const formattedDate = format(now, "dd/MM/yyyy");
+  const timeString = format(now, "HH:mm:ss");
 
   useEffect(() => {
     let cancelled = false;
@@ -957,6 +1004,16 @@ export default function OwnerDashboard() {
               <p className="mt-4 max-w-2xl text-base text-slate-200/90 sm:text-lg">
                 One command view for sales, quote pipeline, stock pressure, automations, and execution rhythm.
               </p>
+              <p className="mt-3 text-sm text-slate-200/95">
+                {formattedDate} • Primary{" "}
+                <span className="font-semibold text-cyan-200">{numerologyToday.primary}</span> • Secondary{" "}
+                <span className="font-semibold text-emerald-200">{numerologyToday.secondary}</span>
+              </p>
+              <p className="mt-1 text-xs text-slate-300">
+                Tomorrow ({tomorrowCalc.dateStr}) • Primary{" "}
+                <span className="font-medium text-cyan-100">{tomorrowCalc.primary}</span> • Secondary{" "}
+                <span className="font-medium text-emerald-100">{tomorrowCalc.secondary}</span>
+              </p>
 
               <div className="mt-6 flex flex-wrap gap-2.5">
                 <span className="rounded-full border border-cyan-300/35 bg-cyan-300/15 px-4 py-2 text-sm font-semibold text-cyan-100">
@@ -994,7 +1051,7 @@ export default function OwnerDashboard() {
             <div className="grid gap-4 self-end sm:grid-cols-2 xl:grid-cols-1">
               <div className="rounded-2xl border border-white/20 bg-black/20 p-4">
                 <div className="text-xs uppercase tracking-[0.2em] text-cyan-200/75">Live Clock</div>
-                <div className={`${displayFont.className} mt-2 text-3xl text-white`}>{format(now, "HH:mm")}</div>
+                <div className={`${displayFont.className} mt-2 text-3xl text-white`}>{timeString}</div>
                 <div className="mt-1 text-sm text-slate-200">{format(now, "EEEE, d MMMM yyyy")}</div>
               </div>
 
@@ -1008,6 +1065,24 @@ export default function OwnerDashboard() {
                 <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-cyan-300/40 bg-cyan-300/10 px-3 py-1 text-xs text-cyan-100">
                   <Sparkles className="h-3.5 w-3.5" />
                   Conversion {quoteMetrics.conversion}%
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/20 bg-black/20 p-4">
+                <div className="text-xs uppercase tracking-[0.2em] text-cyan-200/75">Numerology Outlook</div>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <div className="rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2">
+                    <div className="text-[11px] uppercase tracking-[0.14em] text-cyan-100/85">Today</div>
+                    <div className="mt-1 text-sm text-slate-100">
+                      {numerologyToday.primary} / {numerologyToday.secondary}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-emerald-300/30 bg-emerald-300/10 px-3 py-2">
+                    <div className="text-[11px] uppercase tracking-[0.14em] text-emerald-100/85">Tomorrow</div>
+                    <div className="mt-1 text-sm text-slate-100">
+                      {tomorrowCalc.primary} / {tomorrowCalc.secondary}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
