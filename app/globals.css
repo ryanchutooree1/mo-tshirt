@@ -198,24 +198,191 @@ body {
 .admin-root.admin-dark :is(.ring-rose-200, .ring-rose-200\/70, .ring-pink-200, .ring-pink-200\/70) { --tw-ring-color: rgb(244 63 94 / 0.28) !important; }
 .admin-root.admin-dark :is(.ring-violet-200, .ring-violet-200\/70, .ring-indigo-200, .ring-indigo-200\/70) { --tw-ring-color: rgb(139 92 246 / 0.28) !important; }
 
-/* Quotation Approval targeted readability fixes */
+/* Keep the quotation workspace paper-like even when the admin shell is dark */
 .admin-root.admin-dark .quotation-approval-page {
-  color: #e2e8f0;
+  background-color: #f6efe4 !important;
+  color: #2c241b !important;
 }
 
 .admin-root.admin-dark .quotation-approval-page [class*="bg-slate-50"] {
-  background-color: #111827 !important;
+  background-color: #f7f1e7 !important;
 }
 
 .admin-root.admin-dark .quotation-approval-page [class*="bg-slate-100"] {
-  background-color: #0f172a !important;
+  background-color: #ede2d1 !important;
 }
 
 .admin-root.admin-dark .quotation-approval-page [class*="bg-white"] {
-  background-color: #0f172a !important;
+  background-color: #fffaf2 !important;
 }
 
 .admin-root.admin-dark .quotation-approval-page [class*="bg-gradient-to-"] {
   background-image: none !important;
-  background-color: #0f172a !important;
+  background-color: #fffaf2 !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(
+    .text-\[\#1a1a1a\],
+    .text-black,
+    .text-slate-950,
+    .text-slate-900,
+    .text-slate-800,
+    .text-slate-700
+  ) {
+  color: #2c241b !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(
+    .text-slate-600,
+    .text-slate-500,
+    .text-slate-400,
+    .text-gray-500,
+    .text-gray-400
+  ) {
+  color: #766758 !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(
+    .border-slate-200,
+    .border-slate-100,
+    .border-slate-300,
+    .border-slate-400,
+    .border-gray-200,
+    .border-gray-100
+  ) {
+  border-color: #d8c5ad !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.shadow-sm, .shadow, .shadow-md, .shadow-lg) {
+  box-shadow: 0 16px 36px rgb(120 89 49 / 0.08) !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(input, textarea, select) {
+  background-color: #fffaf2 !important;
+  color: #2c241b !important;
+  border-color: #d8c5ad !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(input, textarea)::placeholder {
+  color: #9a8a77 !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.bg-amber-50, .bg-orange-50) {
+  background-color: #fff7ed !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.bg-amber-100, .bg-orange-100) {
+  background-color: #ffedd5 !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.bg-amber-200, .bg-orange-200, .bg-amber-200\/40, .bg-orange-200\/40) {
+  background-color: #fed7aa !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.bg-emerald-50, .bg-teal-50) {
+  background-color: #ecfdf5 !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.bg-emerald-100, .bg-teal-100) {
+  background-color: #d1fae5 !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.bg-emerald-200, .bg-teal-200, .bg-emerald-200\/40, .bg-teal-200\/40) {
+  background-color: #a7f3d0 !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.bg-sky-50, .bg-blue-50, .bg-cyan-50) {
+  background-color: #eff6ff !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.bg-sky-100, .bg-blue-100, .bg-cyan-100) {
+  background-color: #dbeafe !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.bg-sky-200, .bg-blue-200, .bg-cyan-200, .bg-sky-200\/40, .bg-blue-200\/40, .bg-cyan-200\/40) {
+  background-color: #bfdbfe !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.bg-rose-50, .bg-pink-50) {
+  background-color: #fff1f2 !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.bg-rose-100, .bg-pink-100) {
+  background-color: #ffe4e6 !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.bg-rose-200, .bg-pink-200, .bg-rose-200\/40, .bg-pink-200\/40) {
+  background-color: #fecdd3 !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.bg-violet-50, .bg-indigo-50) {
+  background-color: #f5f3ff !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.bg-violet-100, .bg-indigo-100) {
+  background-color: #ede9fe !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.bg-violet-200, .bg-indigo-200, .bg-violet-200\/40, .bg-indigo-200\/40) {
+  background-color: #ddd6fe !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.text-amber-600, .text-amber-700, .text-amber-800, .text-orange-600, .text-orange-700, .text-orange-800) {
+  color: #b45309 !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.text-emerald-600, .text-emerald-700, .text-emerald-800, .text-teal-600, .text-teal-700, .text-teal-800) {
+  color: #047857 !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.text-sky-600, .text-sky-700, .text-sky-800, .text-blue-600, .text-blue-700, .text-blue-800, .text-cyan-600, .text-cyan-700, .text-cyan-800) {
+  color: #1d4ed8 !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.text-rose-600, .text-rose-700, .text-rose-800, .text-pink-600, .text-pink-700, .text-pink-800) {
+  color: #be123c !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.text-violet-600, .text-violet-700, .text-violet-800, .text-indigo-600, .text-indigo-700, .text-indigo-800) {
+  color: #6d28d9 !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.border-amber-200, .border-orange-200) {
+  border-color: #fcd34d !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.border-emerald-200, .border-teal-200) {
+  border-color: #86efac !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.border-sky-200, .border-blue-200, .border-cyan-200) {
+  border-color: #93c5fd !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.border-rose-200, .border-pink-200) {
+  border-color: #fda4af !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.border-violet-200, .border-indigo-200) {
+  border-color: #c4b5fd !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.ring-amber-200, .ring-amber-200\/70, .ring-orange-200, .ring-orange-200\/70) {
+  --tw-ring-color: rgb(252 211 77 / 0.45) !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.ring-emerald-200, .ring-emerald-200\/70, .ring-teal-200, .ring-teal-200\/70) {
+  --tw-ring-color: rgb(134 239 172 / 0.4) !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.ring-sky-200, .ring-sky-200\/70, .ring-blue-200, .ring-blue-200\/70, .ring-cyan-200, .ring-cyan-200\/70) {
+  --tw-ring-color: rgb(147 197 253 / 0.42) !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.ring-rose-200, .ring-rose-200\/70, .ring-pink-200, .ring-pink-200\/70) {
+  --tw-ring-color: rgb(253 164 175 / 0.4) !important;
+}
+
+.admin-root.admin-dark .quotation-approval-page :is(.ring-violet-200, .ring-violet-200\/70, .ring-indigo-200, .ring-indigo-200\/70) {
+  --tw-ring-color: rgb(196 181 253 / 0.42) !important;
 }
