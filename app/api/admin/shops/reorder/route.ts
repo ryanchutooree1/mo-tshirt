@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { hasAdminSession } from "@/lib/admin-auth";
 import { db } from "@/lib/firebase";
 
-function isAdmin() {
-  return cookies().get("admin-auth")?.value === "1";
+async function isAdmin() {
+  return hasAdminSession(await cookies());
 }
 
 type ReorderItem = { id: string; position: number };
 
 export async function POST(req: Request) {
-  if (!isAdmin()) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 

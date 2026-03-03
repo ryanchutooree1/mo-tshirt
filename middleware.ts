@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { hasAdminSession } from "@/lib/admin-auth";
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
   // Protect all /admin routes
   const isAdmin = pathname.startsWith("/admin");
   if (!isAdmin) return NextResponse.next();
 
-  const authCookie = req.cookies.get("admin-auth")?.value;
-  if (authCookie === "1") return NextResponse.next();
+  if (await hasAdminSession(req.cookies)) return NextResponse.next();
 
   const url = req.nextUrl.clone();
   url.pathname = "/login";
@@ -20,4 +20,3 @@ export function middleware(req: NextRequest) {
 export const config = {
   matcher: ["/admin/:path*"],
 };
-

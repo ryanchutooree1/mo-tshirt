@@ -1,18 +1,19 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { deleteDoc, doc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { hasAdminSession } from "@/lib/admin-auth";
 import { db } from "@/lib/firebase";
 import { parseShopPayload } from "@/lib/shops-api";
 
-function isAdmin() {
-  return cookies().get("admin-auth")?.value === "1";
+async function isAdmin() {
+  return hasAdminSession(await cookies());
 }
 
 export async function PUT(
   req: Request,
   { params }: { params: { id: string } }
 ) {
-  if (!isAdmin()) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
@@ -43,7 +44,7 @@ export async function DELETE(
   _req: Request,
   { params }: { params: { id: string } }
 ) {
-  if (!isAdmin()) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 

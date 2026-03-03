@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
+import {
+  applyAdminSessionCookie,
+  createAdminSessionToken,
+  getAdminPasswordFromEnv,
+} from "@/lib/admin-auth";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
     const password = String(body?.password ?? "");
-    const expected = process.env.ADMIN_PASSWORD || process.env.NEXT_ADMIN_PASSWORD || "";
+    const expected = getAdminPasswordFromEnv();
 
     if (!expected) {
       return NextResponse.json(
@@ -17,15 +22,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid password." }, { status: 401 });
     }
 
+    const token = await createAdminSessionToken();
+    if (!token) {
+      return NextResponse.json(
+        { error: "Server is missing ADMIN session secret." },
+        { status: 500 }
+      );
+    }
+
     const res = NextResponse.json({ ok: true });
-    // Set a short-lived auth cookie; adjust maxAge as needed
-    res.cookies.set("admin-auth", "1", {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 8, // 8 hours
-    });
+    applyAdminSessionCookie(res, token);
     return res;
   } catch {
     return NextResponse.json({ error: "Invalid payload." }, { status: 400 });

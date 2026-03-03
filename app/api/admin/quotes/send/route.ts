@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { hasAdminSession } from "@/lib/admin-auth";
 import { db } from "@/lib/firebase";
 
 type SendPayload = {
@@ -68,6 +70,10 @@ function parsePdfBase64(input: string) {
 }
 
 export async function POST(req: Request) {
+  if (!(await hasAdminSession(await cookies()))) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   try {
     const payload = (await req.json()) as SendPayload;
     if (!payload?.quoteId || !payload?.to || !payload?.pdfBase64) {

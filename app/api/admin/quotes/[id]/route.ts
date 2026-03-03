@@ -1,21 +1,22 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { deleteDoc, doc } from "firebase/firestore";
+import { getAdminPasswordFromEnv, hasAdminSession } from "@/lib/admin-auth";
 import { db } from "@/lib/firebase";
 
-function isAdmin() {
-  return cookies().get("admin-auth")?.value === "1";
+async function isAdmin() {
+  return hasAdminSession(await cookies());
 }
 
 function getExpectedPassword() {
-  return process.env.ADMIN_PASSWORD || process.env.NEXT_ADMIN_PASSWORD || "";
+  return getAdminPasswordFromEnv();
 }
 
 export async function DELETE(
   req: Request,
   { params }: { params: { id: string } }
 ) {
-  if (!isAdmin()) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 

@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { addDoc, collection, getDocs, orderBy, query, serverTimestamp } from "firebase/firestore";
+import { hasAdminSession } from "@/lib/admin-auth";
 import { db } from "@/lib/firebase";
 import { parseShopPayload } from "@/lib/shops-api";
 import type { ShopItem } from "@/lib/shops";
 
-function isAdmin() {
-  return cookies().get("admin-auth")?.value === "1";
+async function isAdmin() {
+  return hasAdminSession(await cookies());
 }
 
 function getPositionValue(data: Record<string, any>) {
@@ -37,7 +38,7 @@ function mapDoc(id: string, data: Record<string, any>): ShopItem {
 }
 
 export async function GET() {
-  if (!isAdmin()) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
@@ -53,7 +54,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  if (!isAdmin()) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 

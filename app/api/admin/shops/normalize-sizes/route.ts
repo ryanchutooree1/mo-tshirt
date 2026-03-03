@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { collection, doc, getDocs, serverTimestamp, writeBatch } from "firebase/firestore";
+import { hasAdminSession } from "@/lib/admin-auth";
 import { db } from "@/lib/firebase";
 import { normalizeSizeLabel, sortSizePrices, sortSizes, toNumber, type ShopSizePrice } from "@/lib/shops";
 
-function isAdmin() {
-  return cookies().get("admin-auth")?.value === "1";
+async function isAdmin() {
+  return hasAdminSession(await cookies());
 }
 
 function normalizeSizePrices(list: unknown): ShopSizePrice[] {
@@ -28,7 +29,7 @@ function normalizeSizePrices(list: unknown): ShopSizePrice[] {
 }
 
 export async function POST() {
-  if (!isAdmin()) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 

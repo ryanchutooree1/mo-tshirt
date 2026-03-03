@@ -106,8 +106,9 @@ const PAGE_SIZE = 20;
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "admin";
 const DEFAULT_PREPARED_BY = "Mo T-Shirt Team";
 const ORDER_WORKFLOW = ["Pending", "In Process", "Completed", "Delivered"] as const;
-const ORDER_WORKFLOW_VISUAL = ["Process", "Completed", "Delivered"] as const;
+const ORDER_WORKFLOW_VISUAL = ["Process", "Completed", "Delivered", "Done"] as const;
 const ORDER_DOC_FLOW: OrderDocumentType[] = ["quotation", "invoice", "partial_receipt", "receipt"];
+const ORDER_DOC_FLOW_VISUAL = ["Quotation", "Invoice", "Partial Receipt", "Receipt", "Done"] as const;
 const ORDER_STATUS_OPTIONS = [
   "Select Status",
   "Pending",
@@ -221,7 +222,8 @@ const getNextDocumentType = (docType: OrderDocumentType) => {
   return ORDER_DOC_FLOW[Math.min(index + 1, ORDER_DOC_FLOW.length - 1)];
 };
 
-const getWorkflowVisualIndex = (status: string) => {
+const getWorkflowVisualIndex = (status: string, workflowDone: boolean) => {
+  if (workflowDone) return 3;
   if (status === "Delivered") return 2;
   if (status === "Completed") return 1;
   if (status === "In Process" || status === "Urgent") return 0;
@@ -1594,9 +1596,9 @@ function OrdersPageInner() {
                     ? m.products.reduce((s, p) => s + (p.price || 0), 0)
                     : 0;
                 const currentStatus = m.status || "Pending";
-                const workflowVisualIndex = getWorkflowVisualIndex(currentStatus);
                 const workflowDone = Boolean(m.workflowDone);
-                const workflowReachedDelivered = workflowVisualIndex >= ORDER_WORKFLOW_VISUAL.length - 1;
+                const workflowVisualIndex = getWorkflowVisualIndex(currentStatus, workflowDone);
+                const workflowReachedDelivered = currentStatus === "Delivered";
                 const docProfile = m.documentProfile;
                 const docTypeLabel =
                   docProfile && isOrderDocumentType(docProfile.documentType)
@@ -1613,11 +1615,12 @@ function OrdersPageInner() {
                   workflowDone
                     ? null
                     : workflowVisualIndex < 0
-                    ? ORDER_WORKFLOW_VISUAL[0]
+                    ? "Process"
                     : workflowReachedDelivered
                       ? "Done"
-                      : ORDER_WORKFLOW_VISUAL[Math.min(workflowVisualIndex + 1, ORDER_WORKFLOW_VISUAL.length - 1)];
+                      : ORDER_WORKFLOW_VISUAL[Math.min(workflowVisualIndex + 1, ORDER_WORKFLOW_VISUAL.length - 2)];
                 const isDocFlowDone = activeDocFlowIndex >= ORDER_DOC_FLOW.length - 1;
+                const documentVisualIndex = isDocFlowDone ? ORDER_DOC_FLOW_VISUAL.length - 1 : activeDocFlowIndex;
                 const nextDocType = activeDocType
                   ? isDocFlowDone
                     ? null
