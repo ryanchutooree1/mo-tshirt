@@ -28,8 +28,6 @@ const DELIVERY_METHODS = [
 
 const money = (value: number) => `Rs ${Number(value || 0).toLocaleString()}`;
 
-const LOADING_CARDS = Array.from({ length: 6 });
-
 type ItemSelection = {
   color: string;
   size: string;
@@ -38,80 +36,13 @@ type ItemSelection = {
 
 function ShopsLoading() {
   return (
-    <main className="min-h-screen bg-[#f7f7fb] text-neutral-900">
-      <div className="relative overflow-hidden">
-        <div className="pointer-events-none absolute -left-32 top-[-10rem] h-72 w-72 rounded-full bg-slate-200/70 blur-3xl" />
-        <div className="pointer-events-none absolute right-[-6rem] top-16 h-80 w-80 rounded-full bg-zinc-200/60 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-[-8rem] left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-slate-100/70 blur-3xl" />
-
-        <div className="relative mx-auto w-full max-w-6xl px-6 py-16">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-lg ring-1 ring-neutral-200">
-                <Image
-                  src="/logo_transparent.png"
-                  alt="MO T-SHIRT logo"
-                  width={40}
-                  height={16}
-                  className="h-6 w-auto"
-                />
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-neutral-500">Loading</p>
-                <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Setting up the rack</h1>
-                <p className="mt-1 text-sm text-neutral-600">Pulling fresh stock, colors, and prices.</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-xs font-semibold text-neutral-700 shadow-sm ring-1 ring-neutral-200 backdrop-blur">
-              <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-slate-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-slate-500" />
-              </span>
-              Fetching the latest drop…
-            </div>
-          </div>
-
-          <section className="mt-10 rounded-[28px] border border-neutral-200 bg-white/80 p-6 shadow-sm">
-            <div className="space-y-4">
-              <div className="h-3 w-24 rounded-full bg-neutral-200 animate-pulse" />
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="h-10 rounded-2xl bg-neutral-200/80 animate-pulse" />
-                <div className="h-10 rounded-2xl bg-neutral-200/80 animate-pulse" />
-                <div className="h-10 rounded-2xl bg-neutral-200/80 animate-pulse" />
-              </div>
-            </div>
-          </section>
-
-          <section className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {LOADING_CARDS.map((_, idx) => (
-              <article
-                key={idx}
-                className="rounded-[28px] border border-neutral-200 bg-white/80 p-4 shadow-sm"
-              >
-                <div className="aspect-square w-full rounded-2xl bg-neutral-200/80 animate-pulse" />
-                <div className="mt-4 space-y-3">
-                  <div className="h-4 w-28 rounded-full bg-orange-100/80 animate-pulse" />
-                  <div className="h-5 w-3/4 rounded-full bg-neutral-200/80 animate-pulse" />
-                  <div className="flex flex-wrap gap-2">
-                    <div className="h-7 w-24 rounded-full bg-neutral-200/80 animate-pulse" />
-                    <div className="h-7 w-20 rounded-full bg-neutral-200/80 animate-pulse" />
-                    <div className="h-7 w-16 rounded-full bg-neutral-200/80 animate-pulse" />
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="h-10 rounded-2xl bg-neutral-200/80 animate-pulse" />
-                    <div className="h-10 rounded-2xl bg-neutral-200/80 animate-pulse" />
-                    <div className="h-10 rounded-2xl bg-neutral-200/80 animate-pulse" />
-                    <div className="h-10 rounded-2xl bg-neutral-200/80 animate-pulse" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="h-9 w-24 rounded-full bg-neutral-200/80 animate-pulse" />
-                    <div className="h-9 w-28 rounded-full bg-neutral-200/80 animate-pulse" />
-                  </div>
-                </div>
-              </article>
-            ))}
-          </section>
-        </div>
+    <main className="grid min-h-screen place-items-center bg-[#f7f7fb] text-neutral-900">
+      <div className="flex flex-col items-center gap-3" role="status" aria-live="polite">
+        <span
+          className="h-10 w-10 animate-spin rounded-full border-4 border-neutral-200 border-t-[#FF6600]"
+          aria-hidden="true"
+        />
+        <p className="text-sm font-medium text-neutral-600">Loading…</p>
       </div>
     </main>
   );
