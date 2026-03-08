@@ -14,9 +14,9 @@ export async function middleware(req: NextRequest) {
     return response;
   }
 
-  // Protect all /admin routes
-  const isAdmin = pathname.startsWith("/admin");
-  if (!isAdmin) return NextResponse.next();
+  // Protect all /admin routes and the standalone IoT command deck.
+  const isProtectedRoute = pathname.startsWith("/admin") || pathname === "/iot";
+  if (!isProtectedRoute) return NextResponse.next();
 
   if (await hasAdminSession(req.cookies)) return NextResponse.next();
 
@@ -29,5 +29,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/design-studio"],
+  matcher: ["/admin/:path*", "/design-studio", "/iot"],
 };

@@ -11,11 +11,11 @@ module.exports = {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin", "/admin/*", "/login", "/design-studio"],
+        disallow: ["/admin", "/admin/*", "/login", "/design-studio", "/iot"],
       },
     ],
   },
-  exclude: ["/login", "/api/*", "/admin", "/admin/*", "/design-studio"],
+  exclude: ["/login", "/api/*", "/admin", "/admin/*", "/design-studio", "/iot", "/icon.png"],
   changefreq: "weekly",
   priority: 0.7,
   sitemapSize: 5000,

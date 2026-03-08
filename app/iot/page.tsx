@@ -1,4 +1,12 @@
+import type { Metadata } from "next";
 import IotControlCenterPage from "@/components/admin/IotControlCenterPage";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default function IotPage() {
   return (

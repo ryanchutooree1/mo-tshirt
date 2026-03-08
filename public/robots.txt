@@ -5,6 +5,7 @@ Disallow: /admin
 Disallow: /admin/*
 Disallow: /login
 Disallow: /design-studio
+Disallow: /iot
 
 # Host
 Host: https://www.mo-tshirt.mu
