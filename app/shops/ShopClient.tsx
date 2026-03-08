@@ -336,8 +336,15 @@ export default function ShopClient() {
 
         <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white/80 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-2" aria-label="MO T-SHIRT Home">
-            <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={140} height={48} className="h-9 w-auto" />
+          <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="MO T-SHIRT Home">
+            <Image
+              src="/logo_transparent.png"
+              alt="MO T-SHIRT logo"
+              width={150}
+              height={60}
+              priority
+              className="h-10 w-auto sm:h-12"
+            />
           </Link>
           <nav className="flex items-center gap-4 text-xs font-semibold text-neutral-600 sm:text-sm">
             <Link href="/" className="transition hover:text-black">Home</Link>

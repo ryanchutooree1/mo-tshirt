@@ -1,4 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   collection,
   doc,
@@ -7,6 +9,16 @@ import {
   serverTimestamp,
   writeBatch,
 } from "firebase/firestore";
+import { loadEnvConfig } from "@next/env";
+
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+loadEnvConfig(path.resolve(scriptDir, ".."));
+
+function requireEnv(name) {
+  const value = process.env[name]?.trim();
+  if (value) return value;
+  throw new Error(`Missing required environment variable: ${name}`);
+}
 
 const SIZE_ORDER = [
   "1 Yr",
@@ -181,9 +193,7 @@ async function run() {
   const apply = process.argv.includes("--apply");
 
   const firebaseConfig = {
-    apiKey:
-      process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
-      "AIzaSyAhNoYB-MsYIy0Sk0sc1zUE_3ctGSvv5nY",
+    apiKey: requireEnv("NEXT_PUBLIC_FIREBASE_API_KEY"),
     authDomain:
       process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ||
       "pocket-entreprise-app.firebaseapp.com",
