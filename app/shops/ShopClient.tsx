@@ -362,26 +362,6 @@ export default function ShopClient() {
 
         <main className="relative z-10 mx-auto w-full max-w-6xl px-6 py-14">
         <div className="space-y-8">
-            <section className="rounded-[32px] border border-neutral-200 bg-white/80 p-6 shadow-sm sm:p-8">
-              <div className="space-y-4">
-                <p className="text-xs uppercase tracking-[0.35em] text-neutral-500">Shops</p>
-                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Ready-to-order essentials</h1>
-                <p className="max-w-2xl text-sm text-neutral-600">
-                  Choose your product, color, and size below, then confirm delivery or pickup on WhatsApp.
-                </p>
-                <div className="flex flex-wrap gap-2 text-xs font-semibold text-neutral-700">
-                  <span className="rounded-full border border-neutral-200 bg-white px-3 py-1">Fast pickup</span>
-                  <span className="rounded-full border border-neutral-200 bg-white px-3 py-1">WhatsApp confirmation</span>
-                </div>
-                <a
-                  href="#shop-items"
-                  className="inline-flex items-center rounded-full bg-neutral-900 px-4 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-white transition hover:bg-neutral-700"
-                >
-                  Start ordering
-                </a>
-              </div>
-            </section>
-
             <section className="flex flex-col gap-4 rounded-[28px] border border-neutral-200 bg-white/80 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <div>
                 <p className="text-sm font-medium text-neutral-800">Filters</p>
@@ -437,7 +417,7 @@ export default function ShopClient() {
             )}
         </div>
 
-        <section id="shop-items" className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <section className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((item) => {
             const sizes = getSizes(item);
             const sizePrices = getSizePrices(item);
