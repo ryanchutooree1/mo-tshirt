@@ -9,6 +9,16 @@ const nextConfig: NextConfig = {
         destination: "https://www.mo-tshirt.mu/:path*",
         permanent: true,
       },
+      {
+        source: "/work",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/work/:path*",
+        destination: "/",
+        permanent: true,
+      },
     ];
   },
   images: {

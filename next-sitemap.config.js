@@ -15,7 +15,7 @@ module.exports = {
       },
     ],
   },
-  exclude: ["/login", "/api/*", "/admin", "/admin/*", "/design-studio", "/iot", "/icon.png"],
+  exclude: ["/login", "/api/*", "/admin", "/admin/*", "/design-studio", "/iot", "/icon.png", "/work", "/work/*"],
   changefreq: "weekly",
   priority: 0.7,
   sitemapSize: 5000,
@@ -24,7 +24,7 @@ module.exports = {
     let priority = 0.7;
     if (normalized === "/") priority = 1.0;
     else if (normalized === "/contact") priority = 0.9;
-    else if (normalized === "/work" || normalized === "/our-work") priority = 0.9;
+    else if (normalized === "/our-work") priority = 0.9;
     else if (normalized === "/products" || normalized === "/shop") priority = 0.8;
     return {
       loc: path,
