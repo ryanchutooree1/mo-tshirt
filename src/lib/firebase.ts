@@ -3,16 +3,12 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
-function requireEnv(name: "NEXT_PUBLIC_FIREBASE_API_KEY"): string {
-  const value = process.env[name]?.trim();
-  if (value) return value;
-  throw new Error(`Missing required environment variable: ${name}`);
-}
-
 // --- Firebase configuration ---
-// API key must come from env; other values keep project defaults.
+// Prefer env vars if present; fallback to project constants.
 const firebaseConfig = {
-  apiKey: requireEnv("NEXT_PUBLIC_FIREBASE_API_KEY"),
+  apiKey:
+    process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.trim() ||
+    "AIzaSyAhNoYB-MsYIy0Sk0sc1zUE_3ctGSvv5nY",
   authDomain:
     process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ||
     "pocket-entreprise-app.firebaseapp.com",

@@ -363,27 +363,22 @@ export default function ShopClient() {
         <main className="relative z-10 mx-auto w-full max-w-6xl px-6 py-14">
         <div className="space-y-8">
             <section className="rounded-[32px] border border-neutral-200 bg-white/80 p-6 shadow-sm sm:p-8">
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-                <div className="space-y-4">
-                  <p className="text-xs uppercase tracking-[0.35em] text-neutral-500">Shops</p>
-                  <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Ready-to-order essentials</h1>
-                  <p className="max-w-2xl text-sm text-neutral-600">
-                    Browse T-shirts, polos, hoodies, and caps. Choose color and size, then confirm delivery or pickup via WhatsApp.
-                  </p>
-                  <div className="flex flex-wrap gap-2 text-xs font-semibold text-neutral-700">
-                    <span className="rounded-full border border-neutral-200 bg-white px-3 py-1">Fast pickup</span>
-                    <span className="rounded-full border border-neutral-200 bg-white px-3 py-1">WhatsApp confirmation</span>
-                    <span className="rounded-full border border-neutral-200 bg-white px-3 py-1">Local delivery options</span>
-                  </div>
+              <div className="space-y-4">
+                <p className="text-xs uppercase tracking-[0.35em] text-neutral-500">Shops</p>
+                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Ready-to-order essentials</h1>
+                <p className="max-w-2xl text-sm text-neutral-600">
+                  Choose your product, color, and size below, then confirm delivery or pickup on WhatsApp.
+                </p>
+                <div className="flex flex-wrap gap-2 text-xs font-semibold text-neutral-700">
+                  <span className="rounded-full border border-neutral-200 bg-white px-3 py-1">Fast pickup</span>
+                  <span className="rounded-full border border-neutral-200 bg-white px-3 py-1">WhatsApp confirmation</span>
                 </div>
-                <div className="rounded-[24px] border border-neutral-200 bg-gradient-to-br from-white via-slate-50 to-zinc-100 px-5 py-4 shadow-sm">
-                  <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">How it works</p>
-                  <ol className="mt-3 space-y-2 text-sm text-neutral-700">
-                    <li><span className="font-semibold text-neutral-900">1.</span> Pick item + color</li>
-                    <li><span className="font-semibold text-neutral-900">2.</span> Choose size + qty</li>
-                    <li><span className="font-semibold text-neutral-900">3.</span> Confirm on WhatsApp</li>
-                  </ol>
-                </div>
+                <a
+                  href="#shop-items"
+                  className="inline-flex items-center rounded-full bg-neutral-900 px-4 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-white transition hover:bg-neutral-700"
+                >
+                  Start ordering
+                </a>
               </div>
             </section>
 
@@ -442,7 +437,7 @@ export default function ShopClient() {
             )}
         </div>
 
-        <section className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <section id="shop-items" className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((item) => {
             const sizes = getSizes(item);
             const sizePrices = getSizePrices(item);
