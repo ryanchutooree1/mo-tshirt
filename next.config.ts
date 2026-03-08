@@ -14,11 +14,6 @@ const nextConfig: NextConfig = {
         destination: "/",
         permanent: true,
       },
-      {
-        source: "/work/:path*",
-        destination: "/",
-        permanent: true,
-      },
     ];
   },
   images: {
