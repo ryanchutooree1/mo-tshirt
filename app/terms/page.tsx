@@ -131,7 +131,7 @@ export default function TermsPage() {
           <p className="text-neutral-700">MO T-SHIRT, Mauritius</p>
           <ul className="list-disc pl-5 text-neutral-700">
             <li>
-              Website: <a className="underline" href="https://mo-tshirt.mu">https://mo-tshirt.mu</a>
+              Website: <a className="underline" href="https://www.mo-tshirt.mu">https://www.mo-tshirt.mu</a>
             </li>
             <li>
               Email: <a className="underline" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>

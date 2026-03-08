@@ -7,9 +7,15 @@ module.exports = {
   // Avoid daily diffs by omitting dynamic lastmod timestamps
   autoLastmod: false,
   robotsTxtOptions: {
-    policies: [{ userAgent: "*", allow: "/" }],
+    policies: [
+      {
+        userAgent: "*",
+        allow: "/",
+        disallow: ["/admin", "/admin/*", "/login", "/design-studio"],
+      },
+    ],
   },
-  exclude: ["/login", "/api/*", "/admin/*", "/design-studio"],
+  exclude: ["/login", "/api/*", "/admin", "/admin/*", "/design-studio"],
   changefreq: "weekly",
   priority: 0.7,
   sitemapSize: 5000,
