@@ -469,6 +469,17 @@ export const servicePageCards = servicePages.map(({ slug, label, summary }) => (
   summary,
 }));
 
+export const servicePageOverviewCards = servicePages.map(
+  ({ slug, label, summary, heroImage, eyebrow, badges }) => ({
+    slug,
+    label,
+    summary,
+    heroImage,
+    eyebrow,
+    badges: badges.slice(0, 2),
+  })
+);
+
 export function getServicePageBySlug(slug: string) {
   return servicePages.find((page) => page.slug === slug) || null;
 }

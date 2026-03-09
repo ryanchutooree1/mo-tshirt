@@ -8,7 +8,7 @@ import MapCard from "@/components/MapCard";
 import QuoteForm from "@/components/QuoteForm";
 import ZoomableImage from "@/components/ZoomableImage";
 import LocationJump from "@/components/LocationJump";
-import { servicePageCards } from "@/data/service-pages";
+import { servicePageOverviewCards } from "@/data/service-pages";
 
 const pageTitle = "MO T-SHIRT PRINTING | Fastest in Mauritius";
 const pageDescription =
@@ -308,21 +308,60 @@ export default function HomePage() {
                 We now break out our highest-intent services so buyers can land on the exact print flow they need.
               </p>
             </div>
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {servicePageCards.map((service) => (
+            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {servicePageOverviewCards.map((service) => (
                 <Link
                   key={service.slug}
                   href={`/${service.slug}`}
-                  className="group rounded-[28px] border border-[#EAEAEA] bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-black"
+                  className="group overflow-hidden rounded-[30px] border border-[#EAEAEA] bg-white shadow-sm transition hover:-translate-y-1 hover:border-black hover:shadow-lg"
                 >
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-500">Service</p>
-                  <h3 className="mt-3 text-xl font-semibold text-black">{service.label}</h3>
-                  <p className="mt-3 text-sm leading-6 text-neutral-600">{service.summary}</p>
-                  <span className="mt-5 inline-flex items-center text-sm font-semibold text-black">
-                    View page
-                  </span>
+                  <div className="relative aspect-[4/3] overflow-hidden bg-neutral-100">
+                    <Image
+                      src={service.heroImage}
+                      alt={service.label}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      className="object-cover transition duration-500 group-hover:scale-[1.04]"
+                    />
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 via-black/20 to-transparent px-5 pb-4 pt-10">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/80">
+                        {service.eyebrow}
+                      </p>
+                      <h3 className="mt-2 text-xl font-semibold text-white">{service.label}</h3>
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <div className="flex flex-wrap gap-2">
+                      {service.badges.map((badge) => (
+                        <span
+                          key={badge}
+                          className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-orange-700"
+                        >
+                          {badge}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="mt-4 text-sm leading-6 text-neutral-600">{service.summary}</p>
+                    <span className="mt-5 inline-flex items-center text-sm font-semibold text-black">
+                      Open service page
+                    </span>
+                  </div>
                 </Link>
               ))}
+            </div>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <a
+                href="#contact"
+                className="inline-flex items-center justify-center rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-neutral-800"
+              >
+                Get a fast quote
+              </a>
+              <Link
+                href="/plain-t-shirts-mauritius"
+                className="inline-flex items-center justify-center rounded-full border border-neutral-300 px-5 py-2.5 text-sm font-semibold text-black transition hover:border-black"
+              >
+                Browse plain stock
+              </Link>
             </div>
           </div>
         </section>

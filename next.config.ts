@@ -14,11 +14,6 @@ const nextConfig: NextConfig = {
         destination: "/",
         permanent: true,
       },
-      {
-        source: "/work/:slug*",
-        destination: "/",
-        permanent: true,
-      },
     ];
   },
   images: {
