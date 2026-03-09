@@ -200,7 +200,7 @@ export async function POST(req: Request) {
     const pass = process.env.SMTP_PASS;
     const from = resolveFromAddress(process.env.SMTP_FROM, user);
 
-    const formatValue = (value: string | number | null | undefined) => {
+    const formatValue = (value: unknown) => {
       const trimmed = value === undefined || value === null ? "" : String(value).trim();
       return trimmed ? trimmed : "n/a";
     };
@@ -312,19 +312,19 @@ export async function POST(req: Request) {
     ];
     const text = textLines.join("\n");
 
-    const contactRows = [
+    const contactRows: [string, unknown][] = [
       ["Name", safeName],
       ["Email", safeEmail],
       ["Phone", safePhone],
     ];
-    const orderRows = [
+    const orderRows: [string, unknown][] = [
       ["Garments", garmentsSummary],
       ["Print method", printMethod],
       ["Deadline", deadline],
       ["Notes", notesValue],
       ["Delivery", delivery],
     ];
-    const deliveryRows = [
+    const deliveryRows: [string, unknown][] = [
       ["Name", deliveryName],
       ["Address", deliveryAddress],
       ["Post code", deliveryPostCode],

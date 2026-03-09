@@ -1,5 +1,15 @@
 /** @type {import('next-sitemap').IConfig} */
 const siteUrl = "https://www.mo-tshirt.mu";
+const servicePages = new Set([
+  "/t-shirt-printing-mauritius",
+  "/polo-uniforms-mauritius",
+  "/hoodie-printing-mauritius",
+  "/event-shirts-mauritius",
+  "/dtf-printing-mauritius",
+  "/screen-printing-mauritius",
+  "/rush-order-printing-mauritius",
+  "/plain-t-shirts-mauritius",
+]);
 
 module.exports = {
   siteUrl,
@@ -15,7 +25,7 @@ module.exports = {
       },
     ],
   },
-  exclude: ["/login", "/api/*", "/admin", "/admin/*", "/design-studio", "/iot", "/icon.png", "/work", "/work/*"],
+  exclude: ["/login", "/api/*", "/admin", "/admin/*", "/design-studio", "/iot", "/icon.png"],
   changefreq: "weekly",
   priority: 0.7,
   sitemapSize: 5000,
@@ -24,8 +34,8 @@ module.exports = {
     let priority = 0.7;
     if (normalized === "/") priority = 1.0;
     else if (normalized === "/contact") priority = 0.9;
-    else if (normalized === "/our-work") priority = 0.9;
-    else if (normalized === "/products" || normalized === "/shop") priority = 0.8;
+    else if (normalized === "/shops") priority = 0.85;
+    else if (servicePages.has(normalized)) priority = 0.85;
     return {
       loc: path,
       changefreq: config.changefreq ?? "weekly",

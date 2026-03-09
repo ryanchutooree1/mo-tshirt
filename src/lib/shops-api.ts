@@ -29,18 +29,21 @@ function cleanString(value: unknown) {
 function normalizeSizePrices(input: unknown): ShopSizePrice[] {
   if (Array.isArray(input)) {
     const list = input
-      .map((entry) => ({
-        size: normalizeSizeLabel(cleanString((entry as any)?.size)),
-        price: toNumber((entry as any)?.price),
-        buyingPrice: toNumber((entry as any)?.buyingPrice),
-        profit: toNumber((entry as any)?.profit),
-      }))
+      .map((entry) => {
+        const raw = typeof entry === "object" && entry !== null ? entry as Record<string, unknown> : {};
+        return {
+          size: normalizeSizeLabel(cleanString(raw.size)),
+          price: toNumber(raw.price),
+          buyingPrice: toNumber(raw.buyingPrice),
+          profit: toNumber(raw.profit),
+        };
+      })
       .filter((entry) => entry.size && entry.price !== null && entry.price >= 0) as ShopSizePrice[];
     return list.map((entry) => ({
       size: entry.size,
       price: entry.price as number,
       buyingPrice:
-        entry.buyingPrice !== null && entry.buyingPrice >= 0 ? entry.buyingPrice : null,
+        entry.buyingPrice != null && entry.buyingPrice >= 0 ? entry.buyingPrice : null,
       profit: Number.isFinite(entry.profit) ? (entry.profit as number) : null,
     }));
   }

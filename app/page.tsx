@@ -8,6 +8,7 @@ import MapCard from "@/components/MapCard";
 import QuoteForm from "@/components/QuoteForm";
 import ZoomableImage from "@/components/ZoomableImage";
 import LocationJump from "@/components/LocationJump";
+import { servicePageCards } from "@/data/service-pages";
 
 const pageTitle = "MO T-SHIRT PRINTING | Fastest in Mauritius";
 const pageDescription =
@@ -37,6 +38,7 @@ export const metadata: Metadata = {
 
 const navLinks = [
   { label: "Home", href: "#top" },
+  { label: "Services", href: "#services" },
   { label: "Quote Form", href: "#contact", highlight: true },
   { label: "Plain Shops", href: "/shops" },
   { label: "Our Work", href: "#our-work" },
@@ -295,6 +297,36 @@ export default function HomePage() {
           </div>
         </section>
 
+        <section id="services" className="px-6 py-16 sm:py-20">
+          <div className="mx-auto max-w-6xl">
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-500">SEO service pages</p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-black sm:text-4xl">
+                Start from the service that matches your order.
+              </h2>
+              <p className="mt-4 text-base text-neutral-600">
+                We now break out our highest-intent services so buyers can land on the exact print flow they need.
+              </p>
+            </div>
+            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {servicePageCards.map((service) => (
+                <Link
+                  key={service.slug}
+                  href={`/${service.slug}`}
+                  className="group rounded-[28px] border border-[#EAEAEA] bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-black"
+                >
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-orange-500">Service</p>
+                  <h3 className="mt-3 text-xl font-semibold text-black">{service.label}</h3>
+                  <p className="mt-3 text-sm leading-6 text-neutral-600">{service.summary}</p>
+                  <span className="mt-5 inline-flex items-center text-sm font-semibold text-black">
+                    View page
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Our Work */}
         <section id="our-work" className="px-6 py-16 sm:py-20">
           <div className="mx-auto max-w-6xl text-center">
@@ -457,8 +489,8 @@ export default function HomePage() {
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-white/90">
             <a href="#contact" className="transition hover:text-white">Quote Form</a>
             <a href="#our-work" className="transition hover:text-white">Our Work</a>
-            <a href="/terms" className="transition hover:text-white">Terms</a>
-            <a href="/privacy" className="transition hover:text-white">Privacy</a>
+            <Link href="/terms" className="transition hover:text-white">Terms</Link>
+            <Link href="/privacy" className="transition hover:text-white">Privacy</Link>
             <a href="https://www.instagram.com/mo_tshirt_printing/" target="_blank" rel="noopener noreferrer" className="transition hover:text-white">
               Instagram
             </a>

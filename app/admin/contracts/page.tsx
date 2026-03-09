@@ -39,7 +39,7 @@ function computeRadii(contracts: Contract[], maxRadiusPx: number, minRadiusPx = 
 function computePositions(radii: number[], containerWidth: number, gap = 16) {
   const diameters = radii.map((r) => r * 2);
   const totalWidth = diameters.reduce((s, d) => s + d, 0) + gap * (radii.length - 1);
-  let startX = Math.max(16, (containerWidth - totalWidth) / 2); // 16px left padding
+  const startX = Math.max(16, (containerWidth - totalWidth) / 2); // 16px left padding
   const positions: number[] = [];
   let cursor = startX;
   for (let i = 0; i < radii.length; i++) {
@@ -477,7 +477,7 @@ export default function AdminContractsPage() {
 
       {/* Footer micro guidance */}
       <div className="text-xs text-slate-500">
-        Tip: Focus on the biggest bubble first — that's where you get the largest impact. Use <strong>Show → Top 3</strong> to narrow down quickly.
+        Tip: Focus on the biggest bubble first because that is where you get the largest impact. Use <strong>Show → Top 3</strong> to narrow down quickly.
       </div>
     </main>
   );

@@ -35,7 +35,7 @@ type SizePriceRow = {
   profitAuto: boolean;
 };
 
-const SIZE_ORDER_SET = new Set(SIZE_ORDER);
+const SIZE_ORDER_SET = new Set<string>(SIZE_ORDER);
 
 function buildSizeRows(
   existing: { size: string; price: number; buyingPrice?: number | null; profit?: number | null }[] = []
@@ -50,14 +50,14 @@ function buildSizeRows(
       profitAuto: !Number.isFinite(entry.profit),
     });
   });
-  const ordered = SIZE_ORDER.map((size) => ({
+  const ordered: SizePriceRow[] = SIZE_ORDER.map((size) => ({
     size,
     price: rowMap.get(size)?.price ?? "",
     buyingPrice: rowMap.get(size)?.buyingPrice ?? "",
     profit: rowMap.get(size)?.profit ?? "",
     profitAuto: rowMap.get(size)?.profitAuto ?? true,
   }));
-  const extras = existing
+  const extras: SizePriceRow[] = existing
     .filter((entry) => !SIZE_ORDER_SET.has(entry.size))
     .map((entry) => ({
       size: entry.size,
@@ -140,12 +140,12 @@ export default function AdminShopsPage() {
       const res = await fetch("/api/admin/shops");
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to load shops.");
-      const list = Array.isArray(data?.items) ? data.items : [];
+      const list: ShopItem[] = Array.isArray(data?.items) ? data.items : [];
       list.sort((a, b) => (b.position || 0) - (a.position || 0));
       setItems(list);
       setError(null);
-    } catch (err: any) {
-      setError(err?.message || "Failed to load shops.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load shops.");
     } finally {
       setLoading(false);
     }

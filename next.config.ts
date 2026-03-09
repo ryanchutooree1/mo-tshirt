@@ -14,6 +14,11 @@ const nextConfig: NextConfig = {
         destination: "/",
         permanent: true,
       },
+      {
+        source: "/work/:slug*",
+        destination: "/",
+        permanent: true,
+      },
     ];
   },
   images: {
@@ -31,16 +36,6 @@ const nextConfig: NextConfig = {
         hostname: "storage.googleapis.com",
       },
     ],
-  },
-  eslint: {
-    // Allow production builds to successfully complete even if
-    // there are ESLint errors. This matches Vercel behavior we want
-    // while we iterate on lint fixes.
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    // Do not fail the build on type errors. Useful while migrating.
-    ignoreBuildErrors: true,
   },
 };
 

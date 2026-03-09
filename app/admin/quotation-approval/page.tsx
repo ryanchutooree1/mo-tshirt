@@ -351,7 +351,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
   const fallbackDate = quote.createdAt ? format(quote.createdAt, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
   const fallbackNumber = `Q-${quote.id.slice(-5).toUpperCase()}`;
   if (quote.quote) {
-    const storedLines = (quote.quote.lines || []).map((line) => ({
+    const storedLines: QuoteLine[] = (quote.quote.lines || []).map((line) => ({
       description: line.description || "",
       quantity: safeNumber(line.quantity, 0),
       unitPrice: (() => {
@@ -359,7 +359,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
         return amount > 0 ? amount : "";
       })(),
     }));
-    const fallbackLines =
+    const fallbackLines: QuoteLine[] =
       quote.garments?.map((entry) => {
         const sizeLabel = entry.size ? ` (${entry.size})` : "";
         return {
@@ -405,7 +405,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
   }
 
   const validUntilFallback = format(addDays(new Date(fallbackDate), 7), "yyyy-MM-dd");
-  const fromGarments =
+  const fromGarments: QuoteLine[] =
     quote.garments?.map((entry) => {
       const sizeLabel = entry.size ? ` (${entry.size})` : "";
       return {
@@ -415,7 +415,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
       };
     }) || [];
 
-  const lines = fromGarments.length
+  const lines: QuoteLine[] = fromGarments.length
     ? fromGarments
     : [
       {
@@ -657,7 +657,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
     doc.text(descriptionLines, margin + 6, rowY);
     if (showLineItems) {
       doc.text(String(safeNumber(line.quantity, 0)), colQtyX, rowY, { align: "right" });
-      doc.text(formatMoney(line.unitPrice, draft.currency), colUnitX, rowY, { align: "right" });
+      doc.text(formatMoney(safeNumber(line.unitPrice, 0), draft.currency), colUnitX, rowY, { align: "right" });
     }
     doc.text(formatMoney(line.lineTotal, draft.currency), colTotalX, rowY, { align: "right" });
     rowY += rowHeight + 6;
@@ -729,8 +729,9 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   y += 30;
   doc.setFont("helvetica", "normal");
   doc.setTextColor(40);
-  const termsLines = doc.splitTextToSize(draft.terms || getDefaultTerms(draft.documentType), contentWidth - 12);
-  termsLines.forEach((line, idx) => {
+  const splitTerms = doc.splitTextToSize(draft.terms || getDefaultTerms(draft.documentType), contentWidth - 12);
+  const termsLines = Array.isArray(splitTerms) ? splitTerms : [splitTerms];
+  termsLines.forEach((line: string, idx: number) => {
     doc.text(line, margin + 6, y + idx * 13);
   });
 

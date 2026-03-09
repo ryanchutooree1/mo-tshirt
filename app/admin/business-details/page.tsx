@@ -34,7 +34,9 @@ const CATEGORY_OPTIONS = [
   { value: "Other", label: "Other", Icon: ClipboardList, tone: "bg-slate-100 text-slate-700 border-slate-200" },
 ] as const;
 
-const categoryMap = new Map(CATEGORY_OPTIONS.map((c) => [c.value, c]));
+type CategoryOption = (typeof CATEGORY_OPTIONS)[number];
+
+const categoryMap = new Map<string, CategoryOption>(CATEGORY_OPTIONS.map((c) => [c.value, c]));
 
 const TEMPLATES = [
   { title: "BRN", content: "BRN: ", category: "Identity" },

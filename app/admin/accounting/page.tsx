@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { db } from "@/lib/firebase";
-import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, Timestamp, updateDoc, where } from "firebase/firestore";
+import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query as firestoreQuery, Timestamp, updateDoc, where } from "firebase/firestore";
 import {
   LineChart,
   Line,
@@ -199,7 +199,7 @@ class PageBoundary extends React.Component<{ children: React.ReactNode }, { hasE
             <h1 className="text-xl font-semibold mb-2">Accounting temporarily unavailable</h1>
             <p className="text-gray-600 mb-4">Something went wrong while rendering this view. You can still navigate elsewhere.</p>
             <div className="flex justify-center gap-2">
-              <a href="/admin" className="px-3 py-2 border border-[#bfa37a] rounded-lg text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white transition-colors">Back to Dashboard</a>
+              <Link href="/admin" className="px-3 py-2 border border-[#bfa37a] rounded-lg text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white transition-colors">Back to Dashboard</Link>
               <button onClick={() => this.setState({ hasError: false })} className="px-3 py-2 border rounded-lg">Retry</button>
             </div>
           </div>
@@ -269,14 +269,14 @@ export default function AccountingPage() {
       setError(null);
       try {
         // Transactions (orders)
-        const qTxn = query(
+        const qTxn = firestoreQuery(
           collection(db, "transactions"),
           where("transactionDate", ">=", Timestamp.fromDate(yStart)),
           where("transactionDate", "<=", Timestamp.fromDate(new Date(yEnd.getFullYear(), yEnd.getMonth(), yEnd.getDate(), 23,59,59))),
           orderBy("transactionDate", "desc")
         );
         // Account rows (income/expense) if present
-        const qAcc = query(
+        const qAcc = firestoreQuery(
           collection(db, "account"),
           where("transactionDate", ">=", Timestamp.fromDate(yStart)),
           where("transactionDate", "<=", Timestamp.fromDate(new Date(yEnd.getFullYear(), yEnd.getMonth(), yEnd.getDate(), 23,59,59))),

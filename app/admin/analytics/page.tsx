@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import React, { useEffect, useMemo, useState } from 'react';
 import { db } from '@/lib/firebase';
 import {
@@ -466,11 +467,11 @@ export default function AnalysisPage() {
           </div>
           <div className="mt-3 text-sm text-blue-600 flex flex-wrap gap-2">
             {statusData.map((s, i) => (
-              <a key={i} href={`/admin/orders?status=${encodeURIComponent(s.name)}`} className="px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 border border-blue-200">
+              <Link key={i} href={`/admin/orders?status=${encodeURIComponent(s.name)}`} className="px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 border border-blue-200">
                 View {s.name}
-              </a>
+              </Link>
             ))}
-            <a href="/admin/orders?range=today" className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 border">Today</a>
+            <Link href="/admin/orders?range=today" className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 border">Today</Link>
           </div>
         </div>
 

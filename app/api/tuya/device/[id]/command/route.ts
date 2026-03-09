@@ -13,9 +13,10 @@ function isAllowedValue(value: unknown): value is boolean | number | string {
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const id = String(params?.id || "").trim();
+  const { id: rawId } = await params;
+  const id = String(rawId || "").trim();
   if (!id) {
     return NextResponse.json({ ok: false, error: "Device id is required." }, { status: 400 });
   }

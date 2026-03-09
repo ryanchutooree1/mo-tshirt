@@ -11,13 +11,12 @@ async function isAdmin() {
 
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
-
-  const id = params.id;
   if (!id) {
     return NextResponse.json({ error: "Missing id." }, { status: 400 });
   }
@@ -42,13 +41,12 @@ export async function PUT(
 
 export async function DELETE(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
-
-  const id = params.id;
   if (!id) {
     return NextResponse.json({ error: "Missing id." }, { status: 400 });
   }

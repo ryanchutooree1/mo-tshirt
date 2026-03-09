@@ -14,13 +14,12 @@ function getExpectedPassword() {
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   if (!(await isAdmin())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
-
-  const id = params.id;
   if (!id) {
     return NextResponse.json({ error: "Missing id." }, { status: 400 });
   }
