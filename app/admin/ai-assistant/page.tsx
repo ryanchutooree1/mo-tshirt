@@ -66,6 +66,24 @@ function formatDateTime(value: string | null) {
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
+function formatSizeBreakdown(
+  lines: Array<{ color: string | null; productType: string | null; size: string; quantity: number }>
+) {
+  if (!lines.length) return "Not set";
+  return lines
+    .map((line) => {
+      const color = line.color ? `${line.color.charAt(0).toUpperCase()}${line.color.slice(1)} ` : "";
+      const product =
+        line.productType === "t-shirt"
+          ? "T-Shirt"
+          : line.productType
+            ? `${line.productType.charAt(0).toUpperCase()}${line.productType.slice(1)}`
+            : "Item";
+      return `${color}${product} Size ${line.size} quantity ${line.quantity}`;
+    })
+    .join(" | ");
+}
+
 function leadStatusClass(status: string) {
   if (status === "approved") {
     return "border-emerald-200 bg-emerald-50 text-emerald-700";
@@ -636,6 +654,7 @@ export default function AdminAiAssistantPage() {
                   ["Quantity", session.lead.quantity ? String(session.lead.quantity) : "Not set"],
                   ["Color", session.lead.color || "Not set"],
                   ["Sizes", session.lead.sizes.join(", ") || "Not set"],
+                  ["Size breakdown", formatSizeBreakdown(session.lead.sizeBreakdown)],
                   ["Print positions", session.lead.printPositions.join(", ") || "Not set"],
                   ["Print sizes", session.lead.printSizes.join(", ") || "Not set"],
                   ["Logo ready", session.lead.logoReady === null ? "Not set" : session.lead.logoReady ? "Yes" : "No"],

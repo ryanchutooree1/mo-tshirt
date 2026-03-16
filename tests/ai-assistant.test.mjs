@@ -20,7 +20,7 @@ test("extracts core sales lead details from a realistic request", () => {
   assert.deepEqual(result.lead.printPositions, ["back", "front left chest"]);
   assert.deepEqual(result.lead.printSizes, ["large 22x22"]);
   assert.equal(result.readyToSubmit, false);
-  assert.match(result.reply, /What is your name\?/);
+  assert.match(result.reply, /Please send the size breakdown/);
 });
 
 test("phone capture does not get mistaken for quantity", () => {
@@ -51,7 +51,8 @@ test("plain name replies are accepted when client name is the next required fiel
       productType: "t-shirt",
       quantity: 2,
       color: null,
-      sizes: [],
+      sizes: ["S"],
+      sizeBreakdown: [{ color: "black", productType: "t-shirt", size: "S", quantity: 2 }],
       printPositions: ["back"],
       printSizes: [],
       logoReady: null,
@@ -66,6 +67,33 @@ test("plain name replies are accepted when client name is the next required fiel
   assert.match(result.reply, /What is your phone number\?/);
 });
 
+test("size breakdown template lines are parsed into structured order lines", () => {
+  const result = runAssistantTurn({
+    lead: {
+      clientName: null,
+      phone: null,
+      email: null,
+      productType: "t-shirt",
+      quantity: 3,
+      color: "black",
+      sizes: [],
+      sizeBreakdown: [],
+      printPositions: ["back"],
+      printSizes: [],
+      logoReady: null,
+      deliveryMethod: null,
+      deadline: null,
+      notes: null,
+    },
+    message: "Black T-Shirt Size S quantity 2\nBlack T-Shirt Size M quality 1",
+  });
+
+  assert.deepEqual(result.lead.sizes, ["M", "S"]);
+  assert.equal(result.lead.sizeBreakdown.length, 2);
+  assert.equal(result.lead.sizeBreakdown[0].quantity + result.lead.sizeBreakdown[1].quantity, 3);
+  assert.match(result.reply, /What is your name\?/);
+});
+
 test("summary command returns the stored lead snapshot when all key fields are present", () => {
   const result = runAssistantTurn({
     lead: {
@@ -76,6 +104,11 @@ test("summary command returns the stored lead snapshot when all key fields are p
       quantity: 24,
       color: "navy",
       sizes: ["M", "L", "XL"],
+      sizeBreakdown: [
+        { color: "navy", productType: "t-shirt", size: "M", quantity: 8 },
+        { color: "navy", productType: "t-shirt", size: "L", quantity: 8 },
+        { color: "navy", productType: "t-shirt", size: "XL", quantity: 8 },
+      ],
       printPositions: ["front left chest"],
       printSizes: ["small 9x9"],
       logoReady: true,
@@ -91,6 +124,7 @@ test("summary command returns the stored lead snapshot when all key fields are p
   assert.match(result.reply, /Name: Ryan/);
   assert.match(result.reply, /Product: t-shirt/);
   assert.match(result.reply, /Print positions: front left chest/);
+  assert.match(result.reply, /Size breakdown:/);
 });
 
 test("training state learns from approved leads and saved knowledge", () => {
@@ -106,6 +140,10 @@ test("training state learns from approved leads and saved knowledge", () => {
           quantity: 12,
           color: "black",
           sizes: ["M", "L"],
+          sizeBreakdown: [
+            { color: "black", productType: "t-shirt", size: "M", quantity: 6 },
+            { color: "black", productType: "t-shirt", size: "L", quantity: 6 },
+          ],
           printPositions: ["front left chest", "back"],
           printSizes: ["small 9x9", "large 22x22"],
           logoReady: true,
@@ -146,6 +184,7 @@ test("runAssistantTurn uses learned aliases from approved sessions", () => {
           quantity: 8,
           color: "black",
           sizes: ["M"],
+          sizeBreakdown: [{ color: "black", productType: "t-shirt", size: "M", quantity: 8 }],
           printPositions: ["front left chest"],
           printSizes: ["small 9x9"],
           logoReady: true,

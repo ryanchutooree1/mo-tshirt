@@ -128,6 +128,7 @@ export const ASSISTANT_FIELDS_IN_ORDER = [
   "printPositions",
   "printSizes",
   "logoReady",
+  "sizeBreakdown",
   "sizes",
   "deliveryMethod",
   "clientName",
@@ -138,6 +139,7 @@ export const ASSISTANT_REQUIRED_FIELDS = [
   "productType",
   "quantity",
   "printPositions",
+  "sizeBreakdown",
   "clientName",
   "phone",
 ] as const;
@@ -154,12 +156,20 @@ export type AssistantLead = {
   quantity: number | null;
   color: string | null;
   sizes: string[];
+  sizeBreakdown: AssistantOrderLine[];
   printPositions: string[];
   printSizes: string[];
   logoReady: boolean | null;
   deliveryMethod: "pickup" | "delivery" | null;
   deadline: string | null;
   notes: string | null;
+};
+
+export type AssistantOrderLine = {
+  color: string | null;
+  productType: AssistantProductType | null;
+  size: string;
+  quantity: number;
 };
 
 export type AssistantApprovedLeadSource = {
@@ -216,6 +226,7 @@ const FIELD_LABELS: Record<AssistantRequiredField, string> = {
   productType: "product type",
   quantity: "quantity",
   printPositions: "print positions",
+  sizeBreakdown: "size breakdown",
   clientName: "client name",
   phone: "phone number",
 };
@@ -361,6 +372,132 @@ function normalizeStringArray(value: unknown, transform?: (value: string) => str
 
 function incrementCounter(target: Record<string, number>, key: string) {
   target[key] = (target[key] || 0) + 1;
+}
+
+function normalizeOrderLines(value: unknown): AssistantOrderLine[] {
+  if (!Array.isArray(value)) return [];
+
+  return mergeOrderLines(
+    value
+      .map((entry) => {
+        const source = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
+        const productType = cleanString(source.productType).toLowerCase();
+        const color = cleanString(source.color).toLowerCase();
+        const size = normalizeSize(cleanString(source.size));
+        const quantity = normalizeQuantity(source.quantity);
+        return {
+          color: color || null,
+          productType:
+            productType === "t-shirt" || productType === "polo" || productType === "hoodie" || productType === "cap"
+              ? (productType as AssistantProductType)
+              : null,
+          size,
+          quantity: quantity || 0,
+        };
+      })
+      .filter((entry) => entry.size && entry.quantity > 0)
+  );
+}
+
+function getOrderLineKey(line: AssistantOrderLine) {
+  return `${line.color || ""}::${line.productType || ""}::${line.size}`;
+}
+
+function mergeOrderLines(lines: AssistantOrderLine[]) {
+  const map = new Map<string, AssistantOrderLine>();
+
+  lines.forEach((line) => {
+    const key = getOrderLineKey(line);
+    const existing = map.get(key);
+    if (existing) {
+      existing.quantity += line.quantity;
+    } else {
+      map.set(key, { ...line });
+    }
+  });
+
+  return Array.from(map.values()).sort((left, right) => {
+    const byColor = (left.color || "").localeCompare(right.color || "");
+    if (byColor !== 0) return byColor;
+    const byProduct = (left.productType || "").localeCompare(right.productType || "");
+    if (byProduct !== 0) return byProduct;
+    return left.size.localeCompare(right.size);
+  });
+}
+
+function getOrderLineTotal(lines: AssistantOrderLine[]) {
+  return lines.reduce((total, line) => total + line.quantity, 0);
+}
+
+function formatProductTypeLabel(productType: AssistantProductType | null) {
+  if (productType === "t-shirt") return "T-Shirt";
+  if (productType === "polo") return "Polo";
+  if (productType === "hoodie") return "Hoodie";
+  if (productType === "cap") return "Cap";
+  return "T-Shirt";
+}
+
+function formatOrderLine(line: AssistantOrderLine) {
+  const color = line.color ? `${titleCase(line.color)} ` : "";
+  const product = formatProductTypeLabel(line.productType);
+  return `${color}${product} Size ${line.size} quantity ${line.quantity}`;
+}
+
+function buildSizeBreakdownPrompt(lead: AssistantLead) {
+  const primaryColor = lead.color ? titleCase(lead.color) : "Black";
+  const secondaryColor = lead.color ? titleCase(lead.color) : "White";
+  const productLabel = formatProductTypeLabel(lead.productType);
+  const capturedTotal = getOrderLineTotal(lead.sizeBreakdown);
+
+  let intro = "Please send the size breakdown one line per variation, like this:";
+  if (lead.quantity && capturedTotal > 0 && capturedTotal !== lead.quantity) {
+    if (capturedTotal < lead.quantity) {
+      intro = `I have size lines for ${capturedTotal} of ${lead.quantity} pieces. Please send the remaining size lines like this:`;
+    } else {
+      intro = `The size lines add up to ${capturedTotal} pieces while the total quantity is ${lead.quantity}. Please resend them in this format:`;
+    }
+  }
+
+  return [
+    intro,
+    `- ${primaryColor} ${productLabel} Size S quantity 2`,
+    `- ${secondaryColor} ${productLabel} Size M quantity 1`,
+    "",
+    "If the design or logo is ready, you can upload or send the image/PDF too.",
+  ].join("\n");
+}
+
+function extractOrderLines(
+  message: string,
+  trainingState?: Pick<AssistantTrainingState, "learnedProductAliases"> | null
+) {
+  const segments = message
+    .split(/\n|;/)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  const lines = (segments.length ? segments : [message])
+    .map((segment) => {
+      const sizeMatch = segment.match(/\bsize\s*(xs|s|m|l|xl|2xl|3xl|4xl)\b/i);
+      const quantityMatch =
+        segment.match(/\b(?:quantity|qty|qte|quality)\s*(\d{1,4})\b/i) ||
+        segment.match(/\bx\s*(\d{1,4})\b/i);
+      if (!sizeMatch || !quantityMatch) return null;
+
+      const color = Array.from(COLORS).find((candidate) => hasPattern(normalizeWords(segment), candidate)) || null;
+      const productType = detectProductType(segment, trainingState);
+      const quantity = Number(quantityMatch[1]);
+      if (!Number.isFinite(quantity) || quantity <= 0) return null;
+
+      return {
+        color,
+        productType,
+        size: normalizeSize(sizeMatch[1]),
+        quantity,
+      } satisfies AssistantOrderLine;
+    })
+    .filter((line): line is AssistantOrderLine => Boolean(line));
+
+  return mergeOrderLines(lines);
 }
 
 export function createEmptyLearnedProductAliases(): Record<AssistantProductType, string[]> {
@@ -525,6 +662,7 @@ export function createEmptyAssistantLead(): AssistantLead {
     quantity: null,
     color: null,
     sizes: [],
+    sizeBreakdown: [],
     printPositions: [],
     printSizes: [],
     logoReady: null,
@@ -551,6 +689,7 @@ export function normalizeAssistantLead(input: unknown): AssistantLead {
   lead.quantity = normalizeQuantity(source.quantity);
   lead.color = cleanString(source.color).toLowerCase() || null;
   lead.sizes = normalizeStringArray(source.sizes, normalizeSize);
+  lead.sizeBreakdown = normalizeOrderLines(source.sizeBreakdown);
   lead.printPositions = normalizeStringArray(source.printPositions, (value) => value.toLowerCase());
   lead.printSizes = normalizeStringArray(source.printSizes, (value) => value.toLowerCase());
   lead.logoReady = typeof source.logoReady === "boolean" ? source.logoReady : null;
@@ -605,6 +744,7 @@ export function leadToTrainingText(lead: AssistantLead) {
     lead.quantity ? String(lead.quantity) : "",
     lead.color,
     lead.sizes.join(" "),
+    lead.sizeBreakdown.map(formatOrderLine).join(" "),
     lead.printPositions.join(" "),
     lead.printSizes.join(" "),
     lead.deliveryMethod,
@@ -622,6 +762,7 @@ export function extractLeadUpdates(
   const updates: Partial<AssistantLead> = {};
   const lower = message.toLowerCase();
   const normalized = normalizeWords(message);
+  const orderLines = extractOrderLines(message, trainingState);
 
   const productType = detectProductType(message, trainingState);
   if (productType) {
@@ -652,6 +793,25 @@ export function extractLeadUpdates(
     .map(normalizeSize);
   if (foundSizes.length) {
     updates.sizes = dedupeSorted(foundSizes);
+  }
+  if (orderLines.length) {
+    updates.sizeBreakdown = orderLines;
+    updates.sizes = dedupeSorted([
+      ...(updates.sizes || []),
+      ...orderLines.map((line) => line.size),
+    ]);
+    const total = getOrderLineTotal(orderLines);
+    if (total > 0) {
+      updates.quantity = total;
+    }
+    const lineProducts = Array.from(new Set(orderLines.map((line) => line.productType).filter(Boolean)));
+    if (lineProducts.length === 1) {
+      updates.productType = lineProducts[0] as AssistantProductType;
+    }
+    const lineColors = Array.from(new Set(orderLines.map((line) => line.color).filter(Boolean)));
+    if (lineColors.length === 1) {
+      updates.color = lineColors[0] as string;
+    }
   }
 
   const printPositions = new Set<string>();
@@ -730,6 +890,32 @@ export function mergeAssistantLeadUpdates(lead: AssistantLead, updates: Partial<
   if (updates.sizes) {
     merged.sizes = dedupeSorted([...merged.sizes, ...updates.sizes], normalizeSize);
   }
+  if (updates.sizeBreakdown) {
+    merged.sizeBreakdown = mergeOrderLines([...merged.sizeBreakdown, ...updates.sizeBreakdown]);
+    merged.sizes = dedupeSorted(
+      [...merged.sizes, ...merged.sizeBreakdown.map((line) => line.size)],
+      normalizeSize
+    );
+
+    const lineProducts = Array.from(
+      new Set(merged.sizeBreakdown.map((line) => line.productType).filter(Boolean))
+    ) as AssistantProductType[];
+    if (!merged.productType && lineProducts.length === 1) {
+      merged.productType = lineProducts[0];
+    }
+
+    const lineColors = Array.from(
+      new Set(merged.sizeBreakdown.map((line) => line.color).filter(Boolean))
+    ) as string[];
+    if (!merged.color && lineColors.length === 1) {
+      merged.color = lineColors[0];
+    }
+
+    const lineTotal = getOrderLineTotal(merged.sizeBreakdown);
+    if (lineTotal > 0 && (!lead.quantity || lineTotal >= lead.quantity)) {
+      merged.quantity = lineTotal;
+    }
+  }
   if (updates.printPositions) {
     merged.printPositions = dedupeSorted([...merged.printPositions, ...updates.printPositions], (value) =>
       value.toLowerCase()
@@ -743,7 +929,7 @@ export function mergeAssistantLeadUpdates(lead: AssistantLead, updates: Partial<
   if (updates.phone !== undefined) merged.phone = updates.phone;
   if (updates.email !== undefined) merged.email = updates.email;
   if (updates.productType !== undefined) merged.productType = updates.productType;
-  if (updates.quantity !== undefined) merged.quantity = updates.quantity;
+  if (updates.quantity !== undefined && !updates.sizeBreakdown) merged.quantity = updates.quantity;
   if (updates.color !== undefined) merged.color = updates.color;
   if (updates.logoReady !== undefined) merged.logoReady = updates.logoReady;
   if (updates.deliveryMethod !== undefined) merged.deliveryMethod = updates.deliveryMethod;
@@ -755,6 +941,11 @@ export function mergeAssistantLeadUpdates(lead: AssistantLead, updates: Partial<
 
 export function missingAssistantFields(lead: AssistantLead) {
   return ASSISTANT_REQUIRED_FIELDS.filter((field) => {
+    if (field === "sizeBreakdown") {
+      if (!lead.sizeBreakdown.length) return true;
+      if (lead.quantity && getOrderLineTotal(lead.sizeBreakdown) !== lead.quantity) return true;
+      return false;
+    }
     const value = lead[field];
     if (Array.isArray(value)) return value.length === 0;
     return value === null || value === "";
@@ -772,13 +963,14 @@ export function formatAssistantFieldLabel(field: AssistantRequiredField) {
 export function nextAssistantQuestion(lead: AssistantLead) {
   const missing = missingAssistantFields(lead);
   if (!missing.length) {
-    return 'Great. I have the main details. Type "summary" to review the lead or use "Submit lead" in admin.';
+    return 'Great. I have the main details. If the design or logo is ready, you can upload or send the image/PDF now. Type "summary" to review the lead or use "Submit lead" in admin.';
   }
 
   const prompts: Record<AssistantRequiredField, string> = {
     productType: "What do you want: T-shirt, polo, hoodie, or cap?",
     quantity: "How many pieces do you need?",
     printPositions: "Where do you want the print: front left chest, front center, back, or sleeve?",
+    sizeBreakdown: buildSizeBreakdownPrompt(lead),
     clientName: "What is your name?",
     phone: "What is your phone number?",
   };
@@ -797,6 +989,9 @@ export function buildAssistantSuggestions(lead: AssistantLead, message: string) 
   if (/\brestaurant\b|\bcompany\b/i.test(message)) {
     suggestions.push("For company uniforms, front left chest plus a large back print is a common setup.");
   }
+  if (lead.productType && lead.logoReady !== false) {
+    suggestions.push("If the design or logo is ready, send or upload the file as PNG, JPG, PDF, or AI.");
+  }
   return suggestions.slice(0, 3);
 }
 
@@ -809,6 +1004,7 @@ export function formatLeadSummary(lead: AssistantLead) {
     ["Quantity", lead.quantity ? String(lead.quantity) : null],
     ["Color", lead.color],
     ["Sizes", lead.sizes.join(", ") || null],
+    ["Size breakdown", lead.sizeBreakdown.map(formatOrderLine).join(" | ") || null],
     ["Print positions", lead.printPositions.join(", ") || null],
     ["Print sizes", lead.printSizes.join(", ") || null],
     ["Logo ready", lead.logoReady === null ? null : lead.logoReady ? "Yes" : "No"],
