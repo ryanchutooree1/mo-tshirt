@@ -21,7 +21,8 @@ module.exports = {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin", "/admin/*", "/login", "/design-studio", "/iot"],
+        // Let Google crawl noindex pages and redirects; only block truly private routes.
+        disallow: ["/admin", "/admin/*", "/iot"],
       },
     ],
   },
