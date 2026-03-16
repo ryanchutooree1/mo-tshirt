@@ -30,6 +30,7 @@ export async function POST(
     return NextResponse.json({
       ok: true,
       lead: result.lead,
+      quoteId: result.quoteId,
     });
   } catch (error) {
     console.error("ai-assistant:submit", error);

@@ -79,6 +79,7 @@ export type AssistantLeadRecord = {
   status: string;
   lead: AssistantLead;
   summary: string;
+  quoteId?: string | null;
   createdAt: string | null;
   updatedAt: string | null;
   feedbackComment: string | null;
@@ -108,6 +109,7 @@ export type AssistantSubmitResult =
   | {
       ok: true;
       lead: AssistantLeadRecord;
+      quoteId: string | null;
     }
   | {
       ok: false;
@@ -214,6 +216,7 @@ function mapLeadRecord(id: string, data: FirestoreLike): AssistantLeadRecord {
     status: cleanString(data.status) || "submitted",
     lead,
     summary: cleanString(data.summary) || formatLeadSummary(lead),
+    quoteId: cleanNullableString(data.quoteId),
     createdAt: timestampToIso(data.createdAt, data.createdAtIso),
     updatedAt: timestampToIso(data.updatedAt, data.updatedAtIso),
     feedbackComment: cleanNullableString(data.feedbackComment),
@@ -394,6 +397,122 @@ function buildLeadDocument(sessionId: string, lead: AssistantLead, nowIso: strin
   };
 }
 
+function formatAssistantProduct(productType: AssistantLead["productType"]) {
+  if (productType === "t-shirt") return "T-Shirt";
+  if (productType === "polo") return "Polo Shirt";
+  if (productType === "hoodie") return "Hoodie";
+  if (productType === "cap") return "Cap";
+  return "Custom item";
+}
+
+function titleCase(value: string | null | undefined) {
+  if (!value) return "";
+  return value
+    .toLowerCase()
+    .replace(/\b([a-z])/g, (_, char: string) => char.toUpperCase())
+    .trim();
+}
+
+function getAssistantLeadQuantity(lead: AssistantLead) {
+  if (typeof lead.quantity === "number" && Number.isFinite(lead.quantity) && lead.quantity > 0) {
+    return lead.quantity;
+  }
+  const fromBreakdown = lead.sizeBreakdown.reduce((total, line) => total + (line.quantity || 0), 0);
+  return fromBreakdown > 0 ? fromBreakdown : 1;
+}
+
+function buildQuoteMessageFromAssistantLead(lead: AssistantLead) {
+  const details = [
+    `Captured via AI assistant.`,
+    `Product: ${formatAssistantProduct(lead.productType)}`,
+    `Quantity: ${getAssistantLeadQuantity(lead)}`,
+    lead.color ? `Color: ${titleCase(lead.color)}` : "",
+    lead.printPositions.length ? `Print positions: ${lead.printPositions.join(", ")}` : "",
+    lead.printSizes.length ? `Print sizes: ${lead.printSizes.join(", ")}` : "",
+    lead.deadline ? `Deadline: ${lead.deadline}` : "",
+    lead.deliveryMethod ? `Delivery: ${titleCase(lead.deliveryMethod)}` : "",
+  ].filter(Boolean);
+
+  if (lead.notes?.trim()) {
+    details.push(`Client notes: ${lead.notes.trim()}`);
+  }
+
+  return details.join("\n");
+}
+
+function buildQuotePayloadFromAssistantLead(
+  sessionId: string,
+  leadId: string,
+  lead: AssistantLead,
+  nowIso: string
+) {
+  const garments = lead.sizeBreakdown.length
+    ? lead.sizeBreakdown.map((line) => ({
+        garment: formatAssistantProduct(line.productType || lead.productType),
+        size: line.size,
+        quantity: line.quantity,
+      }))
+    : [
+        {
+          garment: formatAssistantProduct(lead.productType),
+          size: lead.sizes[0] || "",
+          quantity: getAssistantLeadQuantity(lead),
+        },
+      ];
+
+  const printSummary = [
+    lead.printPositions.length ? lead.printPositions.join(", ") : "",
+    lead.printSizes.length ? `Sizes: ${lead.printSizes.join(", ")}` : "",
+  ]
+    .filter(Boolean)
+    .join(" • ");
+
+  return {
+    name: lead.clientName || "",
+    email: lead.email || "",
+    phone: lead.phone || "",
+    message: buildQuoteMessageFromAssistantLead(lead),
+    garments,
+    printMethod: printSummary,
+    quantity: getAssistantLeadQuantity(lead),
+    deadline: lead.deadline || "",
+    notes: lead.notes || "",
+    source: "AI Assistant",
+    delivery: lead.deliveryMethod ? titleCase(lead.deliveryMethod) : "",
+    attachments: lead.logoAttachment
+      ? [
+          {
+            label: "Logo file",
+            filename: lead.logoAttachment.name,
+            contentType: lead.logoAttachment.contentType || undefined,
+            size: lead.logoAttachment.size,
+            url: lead.logoAttachment.url,
+          },
+        ]
+      : [],
+    designBrief: {
+      product: formatAssistantProduct(lead.productType),
+      color: titleCase(lead.color),
+      printMethod: printSummary,
+      selectedSizes: lead.sizeBreakdown.map((line) => ({
+        size: line.size,
+        quantity: line.quantity,
+      })),
+      totalQty: getAssistantLeadQuantity(lead),
+      delivery: lead.deliveryMethod ? titleCase(lead.deliveryMethod) : "",
+      deadline: lead.deadline || "",
+      clientNotes: lead.notes || "",
+    },
+    status: "new",
+    aiAssistantLeadId: leadId,
+    aiAssistantSessionId: sessionId,
+    createdAt: serverTimestamp(),
+    createdAtIso: nowIso,
+    updatedAt: serverTimestamp(),
+    updatedAtIso: nowIso,
+  };
+}
+
 async function getTrainingSnapshotInternal() {
   const snap = await getDoc(doc(db, COLLECTIONS.modelState, MODEL_STATE_KEY));
   if (!snap.exists()) return null;
@@ -537,7 +656,10 @@ export async function runAssistantChat(
 }
 
 export async function submitAssistantLeadFromSession(sessionId: string): Promise<AssistantSubmitResult> {
-  const session = await getAssistantSession(sessionId);
+  const cleanedSessionId = cleanString(sessionId);
+  const sessionRef = doc(db, COLLECTIONS.sessions, cleanedSessionId);
+  const sessionSnap = await getDoc(sessionRef);
+  const session = await getAssistantSession(cleanedSessionId);
   if (!session.exists) {
     return {
       ok: false,
@@ -554,25 +676,78 @@ export async function submitAssistantLeadFromSession(sessionId: string): Promise
     };
   }
 
+  const sessionData = sessionSnap.exists() ? (sessionSnap.data() as FirestoreLike) : null;
+  const existingLeadId = cleanNullableString(sessionData?.submittedLeadId);
+  const existingQuoteId = cleanNullableString(sessionData?.submittedQuoteId);
+
+  if (existingLeadId) {
+    const existingLeadSnap = await getDoc(doc(db, COLLECTIONS.leads, existingLeadId));
+    if (existingLeadSnap.exists()) {
+      let quoteId = existingQuoteId;
+      if (!quoteId) {
+        const existingLead = mapLeadRecord(existingLeadSnap.id, existingLeadSnap.data() as FirestoreLike);
+        const backfillQuoteRef = await addDoc(
+          collection(db, "quotes"),
+          buildQuotePayloadFromAssistantLead(cleanedSessionId, existingLead.id, existingLead.lead, new Date().toISOString())
+        );
+        quoteId = backfillQuoteRef.id;
+        await Promise.all([
+          updateDoc(doc(db, COLLECTIONS.leads, existingLead.id), {
+            quoteId,
+            updatedAt: serverTimestamp(),
+            updatedAtIso: new Date().toISOString(),
+          }),
+          setDoc(
+            sessionRef,
+            {
+              submittedQuoteId: quoteId,
+              updatedAt: serverTimestamp(),
+              updatedAtIso: new Date().toISOString(),
+            },
+            { merge: true }
+          ),
+        ]);
+      }
+      return {
+        ok: true,
+        lead: mapLeadRecord(existingLeadSnap.id, { ...(existingLeadSnap.data() as FirestoreLike), quoteId }),
+        quoteId,
+      };
+    }
+  }
+
   const nowIso = new Date().toISOString();
   const leadPayload = buildLeadDocument(session.sessionId, session.lead, nowIso);
   const ref = await addDoc(collection(db, COLLECTIONS.leads), leadPayload);
+  const quoteRef = await addDoc(
+    collection(db, "quotes"),
+    buildQuotePayloadFromAssistantLead(cleanedSessionId, ref.id, session.lead, nowIso)
+  );
 
-  await setDoc(
-    doc(db, COLLECTIONS.sessions, session.sessionId),
-    {
-      submittedLeadId: ref.id,
-      submittedAt: serverTimestamp(),
-      submittedAtIso: nowIso,
+  await Promise.all([
+    updateDoc(doc(db, COLLECTIONS.leads, ref.id), {
+      quoteId: quoteRef.id,
       updatedAt: serverTimestamp(),
       updatedAtIso: nowIso,
-    },
-    { merge: true }
-  );
+    }),
+    setDoc(
+      sessionRef,
+      {
+        submittedLeadId: ref.id,
+        submittedQuoteId: quoteRef.id,
+        submittedAt: serverTimestamp(),
+        submittedAtIso: nowIso,
+        updatedAt: serverTimestamp(),
+        updatedAtIso: nowIso,
+      },
+      { merge: true }
+    ),
+  ]);
 
   return {
     ok: true,
-    lead: mapLeadRecord(ref.id, leadPayload),
+    lead: mapLeadRecord(ref.id, { ...leadPayload, quoteId: quoteRef.id }),
+    quoteId: quoteRef.id,
   };
 }
 

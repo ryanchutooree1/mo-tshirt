@@ -319,12 +319,16 @@ export default function AdminAiAssistantPage() {
     setNotice(null);
 
     try {
-      const result = await readJson<{ ok: true; lead: AssistantLeadRecord }>(
+      const result = await readJson<{ ok: true; lead: AssistantLeadRecord; quoteId: string | null }>(
         await fetch(`/api/admin/ai-assistant/session/${encodeURIComponent(session.sessionId)}/submit`, {
           method: "POST",
         })
       );
-      setNotice(`Lead ${result.lead.id} submitted for testing.`);
+      setNotice(
+        result.quoteId
+          ? `Lead ${result.lead.id} submitted to Quotation Approval as request ${result.quoteId}.`
+          : `Lead ${result.lead.id} submitted to Quotation Approval.`
+      );
       await Promise.all([refreshOverview(), refreshSession(session.sessionId)]);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Failed to submit lead.");
@@ -602,7 +606,7 @@ export default function AdminAiAssistantPage() {
                   className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ArrowUpRight className="h-4 w-4" />}
-                  Submit lead
+                  Send to Quotation Approval
                 </button>
               </div>
             </div>
@@ -1215,6 +1219,11 @@ export default function AdminAiAssistantPage() {
                         <p className="mt-2 text-xs uppercase tracking-[0.16em] text-slate-500">
                           Session {lead.sessionId || "n/a"} · {formatDateTime(lead.updatedAt)}
                         </p>
+                        {lead.quoteId && (
+                          <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
+                            Quotation Approval ID {lead.quoteId}
+                          </p>
+                        )}
                       </div>
                       <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${leadStatusClass(lead.status)}`}>
                         {lead.status}
