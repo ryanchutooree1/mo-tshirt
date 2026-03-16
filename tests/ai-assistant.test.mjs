@@ -31,6 +31,17 @@ test("phone capture does not get mistaken for quantity", () => {
   assert.equal(updates.quantity, undefined);
 });
 
+test("plural tshirts are recognized as t-shirt products", () => {
+  const result = runAssistantTurn({
+    lead: createEmptyAssistantLead(),
+    message: "hi i need 3 tshirts",
+  });
+
+  assert.equal(result.lead.productType, "t-shirt");
+  assert.equal(result.lead.quantity, 3);
+  assert.match(result.reply, /Where do you want the print/);
+});
+
 test("summary command returns the stored lead snapshot when all key fields are present", () => {
   const result = runAssistantTurn({
     lead: {

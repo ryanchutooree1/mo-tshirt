@@ -11,10 +11,13 @@ const QUANTITY_CONTEXT_RE =
   /\b(piece|pieces|pcs|qty|quantity|need|want|order|shirts?|t[\s-]?shirts?|polos?|hoodies?|caps?)\b/i;
 
 const PRODUCT_PATTERNS: Array<{ canonical: AssistantLead["productType"]; patterns: string[] }> = [
-  { canonical: "t-shirt", patterns: ["tshirt", "t shirt", "tee", "shirt"] },
-  { canonical: "polo", patterns: ["poloshirt", "polo shirt", "polo"] },
-  { canonical: "hoodie", patterns: ["hoodie"] },
-  { canonical: "cap", patterns: ["cap"] },
+  {
+    canonical: "t-shirt",
+    patterns: ["tshirt", "tshirts", "t shirt", "t shirts", "t-shirt", "t-shirts", "tee", "tees"],
+  },
+  { canonical: "polo", patterns: ["poloshirt", "poloshirts", "polo shirt", "polo shirts", "polo", "polos"] },
+  { canonical: "hoodie", patterns: ["hoodie", "hoodies"] },
+  { canonical: "cap", patterns: ["cap", "caps"] },
 ];
 
 const LEFT_CHEST_PATTERNS = ["left chest", "front left chest", "left logo", "logo on chest"];

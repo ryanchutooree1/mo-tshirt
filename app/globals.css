@@ -381,3 +381,116 @@ body {
 .admin-root.admin-dark .quotation-approval-page :is(.ring-violet-200, .ring-violet-200\/70, .ring-indigo-200, .ring-indigo-200\/70) {
   --tw-ring-color: rgb(196 181 253 / 0.34) !important;
 }
+
+/* Restore the AI assistant testing page palette inside the dark admin shell */
+.admin-root.admin-dark .ai-assistant-page {
+  background:
+    radial-gradient(circle at top, rgba(245, 158, 11, 0.16), transparent 32%),
+    linear-gradient(180deg, #f8fafc 0%, #ecfeff 38%, #f8fafc 100%) !important;
+  color: #0f172a !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page [class*="bg-white"] {
+  background-color: rgb(255 255 255 / 0.94) !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page [class*="bg-slate-50"] {
+  background-color: rgb(248 250 252 / 0.88) !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page [class*="bg-slate-100"] {
+  background-color: rgb(241 245 249 / 0.92) !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page :is(
+    .text-black,
+    .text-slate-950,
+    .text-slate-900,
+    .text-slate-800,
+    .text-slate-700
+  ) {
+  color: #0f172a !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page :is(
+    .text-slate-600,
+    .text-slate-500,
+    .text-slate-400,
+    .text-gray-500,
+    .text-gray-400
+  ) {
+  color: #64748b !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page :is(
+    .border-slate-200,
+    .border-slate-100,
+    .border-slate-300,
+    .border-slate-400,
+    .border-gray-200,
+    .border-gray-100
+  ) {
+  border-color: #e2e8f0 !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page :is(.shadow-sm, .shadow, .shadow-md, .shadow-lg) {
+  box-shadow: 0 12px 32px rgb(15 23 42 / 0.08) !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page :is(input, textarea, select) {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page :is(input, textarea)::placeholder {
+  color: #94a3b8 !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page :is(.bg-amber-50, .bg-orange-50) {
+  background-color: #fffbeb !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page :is(.bg-emerald-50, .bg-teal-50) {
+  background-color: #ecfdf5 !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page :is(.bg-sky-50, .bg-blue-50, .bg-cyan-50) {
+  background-color: #eff6ff !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page :is(.bg-rose-50, .bg-pink-50) {
+  background-color: #fff1f2 !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page :is(.border-amber-200, .border-orange-200) {
+  border-color: #fcd34d !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page :is(.border-emerald-200, .border-teal-200) {
+  border-color: #86efac !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page :is(.border-sky-200, .border-blue-200, .border-cyan-200) {
+  border-color: #93c5fd !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page :is(.border-rose-200, .border-pink-200) {
+  border-color: #fda4af !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page :is(.text-amber-600, .text-amber-700, .text-amber-800, .text-orange-600, .text-orange-700, .text-orange-800) {
+  color: #b45309 !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page :is(.text-emerald-600, .text-emerald-700, .text-emerald-800, .text-teal-600, .text-teal-700, .text-teal-800) {
+  color: #047857 !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page :is(.text-sky-600, .text-sky-700, .text-sky-800, .text-blue-600, .text-blue-700, .text-blue-800, .text-cyan-600, .text-cyan-700, .text-cyan-800) {
+  color: #1d4ed8 !important;
+}
+
+.admin-root.admin-dark .ai-assistant-page :is(.text-rose-600, .text-rose-700, .text-rose-800, .text-pink-600, .text-pink-700, .text-pink-800) {
+  color: #be123c !important;
+}

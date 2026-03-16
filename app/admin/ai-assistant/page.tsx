@@ -322,7 +322,7 @@ export default function AdminAiAssistantPage() {
   ];
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,rgba(245,158,11,0.16),transparent_32%),linear-gradient(180deg,#f8fafc_0%,#ecfeff_38%,#f8fafc_100%)]">
+    <main className="ai-assistant-page relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,rgba(245,158,11,0.16),transparent_32%),linear-gradient(180deg,#f8fafc_0%,#ecfeff_38%,#f8fafc_100%)]">
       <div
         aria-hidden
         className="pointer-events-none absolute left-[-8rem] top-10 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,rgba(34,197,94,0.18),transparent_70%)] blur-3xl"
@@ -511,14 +511,14 @@ export default function AdminAiAssistantPage() {
                       key={message.id}
                       className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm shadow-sm ${
                         message.role === "user"
-                          ? "ml-auto bg-slate-950 text-white"
-                          : "bg-cyan-50 text-slate-800"
+                          ? "ml-auto bg-[#0f172a] text-white"
+                          : "border border-[#7dd3fc] bg-[rgba(255,255,255,0.96)] text-[#082f49]"
                       }`}
                     >
                       <p className="whitespace-pre-wrap leading-6">{message.content}</p>
                       <p
                         className={`mt-2 text-[11px] uppercase tracking-[0.18em] ${
-                          message.role === "user" ? "text-slate-300" : "text-cyan-700"
+                          message.role === "user" ? "text-slate-300" : "text-[#0c4a6e]"
                         }`}
                       >
                         {message.role} · {formatDateTime(message.createdAt)}
