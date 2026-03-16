@@ -19,12 +19,15 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const message = cleanString(body?.message);
     const sessionId = cleanString(body?.sessionId) || buildSessionId();
+    const hasAttachment = Boolean(body?.attachment && typeof body.attachment === "object");
 
-    if (!message) {
-      return NextResponse.json({ error: "Message is required." }, { status: 400 });
+    if (!message && !hasAttachment) {
+      return NextResponse.json({ error: "Message or attachment is required." }, { status: 400 });
     }
 
-    const result = await runAssistantChat(sessionId, message);
+    const result = await runAssistantChat(sessionId, message, {
+      attachment: hasAttachment ? body.attachment : null,
+    });
     return NextResponse.json(result);
   } catch (error) {
     console.error("ai-assistant:chat", error);

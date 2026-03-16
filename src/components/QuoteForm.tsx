@@ -29,6 +29,13 @@ type GarmentLine = {
   quantity: string;
 };
 
+type ArtworkItem = {
+  id: number;
+  label: string;
+  quantity: string;
+  file: File | null;
+};
+
 const garmentOptions = ["T-Shirt", "Polo Shirt", "Hoodie", "Cap", "Other"];
 const sizeOptions = [
   "1 Yr",
@@ -54,12 +61,30 @@ const printMethods = [
   "Direct-to-Film (DTF) Printing ($$$)",
   "Not sure",
 ];
+const SCREEN_PRINTING_METHOD = printMethods[0];
 const deliveryOptions = [
   "Surinam Pickup (Free)",
   "Post Office Postage Delivery (Rs 100)",
   "Post Office Express Delivery (Rs 150)",
   "Delivery (Need to arrange first)",
 ];
+const artworkAccept =
+  ".png,.jpg,.jpeg,.webp,.svg,.heic,.heif,.pdf,image/png,image/jpeg,image/webp,image/svg+xml,image/heic,image/heif,application/pdf";
+
+function createArtworkItem(id: number): ArtworkItem {
+  return {
+    id,
+    label: "",
+    quantity: "",
+    file: null,
+  };
+}
+
+function formatBytes(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "";
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 102.4) / 10} KB`;
+  return `${Math.round(bytes / (1024 * 102.4)) / 10} MB`;
+}
 
 export default function QuoteForm({ source = "Website", className }: QuoteFormProps) {
   const [form, setForm] = useState<FormState>({
@@ -78,7 +103,8 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     { garment: garmentOptions[0], size: sizeOptions[0], quantity: "1" },
   ]);
   const [printMethod, setPrintMethod] = useState<string>(printMethods[3]);
-  const [file, setFile] = useState<File | null>(null);
+  const [artworkItems, setArtworkItems] = useState<ArtworkItem[]>([createArtworkItem(1)]);
+  const [nextArtworkId, setNextArtworkId] = useState(2);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -113,6 +139,24 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     setGarmentLines((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
   }
 
+  function updateArtworkItem(index: number, patch: Partial<ArtworkItem>) {
+    setArtworkItems((prev) => {
+      const next = prev.slice();
+      if (!next[index]) return prev;
+      next[index] = { ...next[index], ...patch };
+      return next;
+    });
+  }
+
+  function addArtworkItem() {
+    setArtworkItems((prev) => [...prev, createArtworkItem(nextArtworkId)]);
+    setNextArtworkId((prev) => prev + 1);
+  }
+
+  function removeArtworkItem(index: number) {
+    setArtworkItems((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
+  }
+
   function handleEmailChange(e: ChangeEvent<HTMLInputElement>) {
     const next = e.target.value;
     setForm((prev) => ({ ...prev, email: next }));
@@ -125,9 +169,9 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     }
   }
 
-  function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0] || null;
-    setFile(f);
+  function handleFileChange(index: number, e: ChangeEvent<HTMLInputElement>) {
+    const nextFile = e.target.files?.[0] || null;
+    updateArtworkItem(index, { file: nextFile });
   }
 
   function handlePhoneChange(value: string) {
@@ -157,6 +201,46 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     setDeliveryPostCodeError(isValidPostCode(value) ? null : "Numbers only");
   }
 
+  const totalQuantity = garmentLines.reduce((sum, line) => sum + Math.max(0, Number(line.quantity) || 0), 0);
+  const screenPrintingSelected = printMethod === SCREEN_PRINTING_METHOD;
+
+  function getScreenPrintingValidationMessage() {
+    const filledArtworkItems = artworkItems.filter(
+      (item) => item.file || item.label.trim() || item.quantity.trim()
+    );
+    const incompleteArtwork = filledArtworkItems.find((item) => !item.file);
+    if (incompleteArtwork) {
+      return "Upload a file or clear the extra logo row before sending the quote.";
+    }
+
+    if (!screenPrintingSelected) return null;
+    if (totalQuantity < 10) {
+      return "Screen printing requires at least 10 pieces for the same design.";
+    }
+
+    const uploadedArtworkItems = filledArtworkItems.filter((item) => item.file);
+    if (uploadedArtworkItems.length > 1) {
+      const missingQty = uploadedArtworkItems.find((item) => !item.quantity.trim() || Number(item.quantity) <= 0);
+      if (missingQty) {
+        return "Add the quantity for each uploaded design so we can confirm the 10-piece minimum per design.";
+      }
+    }
+
+    const tooSmall = uploadedArtworkItems.find(
+      (item) => item.quantity.trim() && Number(item.quantity) > 0 && Number(item.quantity) < 10
+    );
+    if (tooSmall) {
+      return `${tooSmall.label.trim() || tooSmall.file?.name || "This design"} needs at least 10 pieces for screen printing.`;
+    }
+
+    const declaredArtworkQty = uploadedArtworkItems.reduce((sum, item) => sum + Math.max(0, Number(item.quantity) || 0), 0);
+    if (declaredArtworkQty > totalQuantity) {
+      return "Artwork quantities cannot be higher than the total garment quantity.";
+    }
+
+    return null;
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const phoneOk = !form.phone || isValidPhone(form.phone);
@@ -166,6 +250,13 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     setDeliveryPhoneError(deliveryPhoneOk ? null : "Use only numbers and + ( ) -");
     setDeliveryPostCodeError(deliveryPostCodeOk ? null : "Numbers only");
     if (!phoneOk || !deliveryPhoneOk || !deliveryPostCodeOk) return;
+
+    const screenPrintingError = getScreenPrintingValidationMessage();
+    if (screenPrintingError) {
+      setResult({ ok: false, msg: screenPrintingError });
+      return;
+    }
+
     setLoading(true);
     setResult(null);
 
@@ -192,19 +283,38 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     payload.append("deliveryAddress", form.deliveryAddress);
     payload.append("deliveryPostCode", form.deliveryPostCode);
     payload.append("deliveryPhone", form.deliveryPhone);
-    if (file) {
-      payload.append("file", file);
+
+    const uploadedArtworkItems = artworkItems.filter((item) => item.file);
+    if (uploadedArtworkItems.length) {
       try {
-        const safeName = file.name.replace(/[^a-z0-9._-]/gi, "_");
-        const uploadRef = ref(storage, `quotes/${Date.now()}-${safeName}`);
-        const snap = await uploadBytes(uploadRef, file);
-        const url = await getDownloadURL(snap.ref);
-        payload.append("attachmentUrl", url);
-        payload.append("attachmentName", file.name);
-        payload.append("attachmentType", file.type);
-        payload.append("attachmentSize", String(file.size || ""));
+        const uploadBatch = Date.now();
+        const uploadedAttachments = await Promise.all(
+          uploadedArtworkItems.map(async (item, index) => {
+            const currentFile = item.file as File;
+            const safeName = currentFile.name.replace(/[^a-z0-9._-]/gi, "_");
+            const uploadRef = ref(storage, `quotes/${uploadBatch}-${index + 1}-${safeName}`);
+            const snap = await uploadBytes(uploadRef, currentFile);
+            const url = await getDownloadURL(snap.ref);
+            return {
+              label: item.label.trim() || `Logo ${index + 1}`,
+              quantity: item.quantity.trim() || null,
+              url,
+              filename: currentFile.name,
+              contentType: currentFile.type || "application/octet-stream",
+              size: currentFile.size || null,
+            };
+          })
+        );
+
+        payload.append("attachments", JSON.stringify(uploadedAttachments));
+        uploadedArtworkItems.forEach((item) => {
+          if (item.file) payload.append("files", item.file);
+        });
       } catch (err) {
         console.error("quote:upload", err);
+        setResult({ ok: false, msg: "Failed to upload one of the artwork files. Please try again." });
+        setLoading(false);
+        return;
       }
     }
 
@@ -230,7 +340,8 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
         });
         setGarmentLines([{ garment: garmentOptions[0], size: sizeOptions[0], quantity: "1" }]);
         setPrintMethod(printMethods[3]);
-        setFile(null);
+        setArtworkItems([createArtworkItem(1)]);
+        setNextArtworkId(2);
         setEmailError(null);
       } else {
         setResult({ ok: false, msg: body?.error || "Something went wrong." });
@@ -363,15 +474,6 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Upload logo (PNG, JPG, JPEG, PDF)</label>
-            <input
-              type="file"
-              accept=".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf"
-              onChange={handleFileChange}
-              className="mt-1 w-full cursor-pointer rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
-            />
-          </div>
-          <div>
             <label className="block text-sm font-medium text-neutral-700">Print method</label>
             <select
               value={printMethod}
@@ -383,6 +485,103 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
               ))}
             </select>
           </div>
+          <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-700">
+            <p className="font-semibold text-neutral-900">Screen printing rule</p>
+            <p className="mt-2">
+              Minimum order is <span className="font-semibold">10 pcs per design</span>. That means 10 identical prints
+              for one logo or artwork, not 10 pcs with 10 different designs.
+            </p>
+            <p className="mt-2 text-xs text-neutral-500">
+              If you have several logos or design versions, add each one separately below and tell us its quantity.
+            </p>
+          </div>
+        </div>
+
+        {screenPrintingSelected && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p className="font-semibold">Screen printing selected</p>
+            <p className="mt-1">
+              Total quantity in this quote: <span className="font-semibold">{totalQuantity || 0} pcs</span>.
+            </p>
+            <p className="mt-1 text-xs text-amber-800">
+              For multiple logos, each uploaded design should normally cover at least 10 pcs.
+            </p>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <label className="block text-sm font-medium text-neutral-700">Artwork / logos</label>
+              <p className="mt-1 text-xs text-neutral-500">
+                Upload one or more logo or design files. Use a separate row for each different design.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={addArtworkItem}
+              className="inline-flex items-center gap-2 rounded-full border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-black hover:text-black"
+            >
+              + Add another logo
+            </button>
+          </div>
+
+          {artworkItems.map((item, index) => (
+            <div key={item.id} className="rounded-2xl border border-neutral-200 bg-neutral-50/80 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-neutral-900">Design {index + 1}</p>
+                {artworkItems.length > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => removeArtworkItem(index)}
+                    className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
+                  >
+                    Remove
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700">Label</label>
+                  <input
+                    value={item.label}
+                    onChange={(e) => updateArtworkItem(index, { label: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    placeholder={`Logo ${index + 1}`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700">Qty for this design</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={item.quantity}
+                    onChange={(e) => updateArtworkItem(index, { quantity: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    placeholder="Optional"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-neutral-700">File</label>
+                <input
+                  type="file"
+                  accept={artworkAccept}
+                  onChange={(e) => handleFileChange(index, e)}
+                  className="mt-1 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                />
+                <p className="mt-1 text-xs text-neutral-500">Accepted: PNG, JPG, WEBP, SVG, HEIC, HEIF, PDF.</p>
+                {item.file && (
+                  <p className="mt-2 text-xs font-medium text-neutral-600">
+                    {item.file.name}
+                    {item.file.size ? ` · ${formatBytes(item.file.size)}` : ""}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
 
         <div>

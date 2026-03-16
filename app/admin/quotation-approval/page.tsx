@@ -37,7 +37,7 @@ import {
   FiXCircle,
   FiUpload,
 } from "react-icons/fi";
-import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY } from "@/data/work";
+import { CONTACT_PHONE_DISPLAY } from "@/data/work";
 
 type QuoteStatus = "new" | "review" | "approved" | "sent";
 
@@ -73,6 +73,15 @@ type QuoteDraft = {
   terms: string;
 };
 
+type QuoteAttachment = {
+  label?: string;
+  quantity?: string | number | null;
+  filename?: string;
+  contentType?: string;
+  size?: number | null;
+  url?: string;
+};
+
 type QuoteRecord = {
   id: string;
   name: string;
@@ -91,7 +100,8 @@ type QuoteRecord = {
   deliveryPostCode?: string;
   deliveryPhone?: string;
   designBrief?: Record<string, unknown> | null;
-  attachment?: { filename?: string; contentType?: string; size?: number | null; url?: string };
+  attachment?: QuoteAttachment | null;
+  attachments?: QuoteAttachment[];
   status?: QuoteStatus;
   orderTransactionId?: string;
   movedToOrdersAt?: Date | null;
@@ -288,6 +298,17 @@ const parseDesignBrief = (value: unknown): DesignBrief | null => {
     deadline: typeof raw.deadline === "string" ? raw.deadline : "",
     clientNotes: typeof raw.clientNotes === "string" ? raw.clientNotes : "",
   };
+};
+
+const getQuoteAttachments = (quote: QuoteRecord | null | undefined) => {
+  if (!quote) return [] as QuoteAttachment[];
+  if (Array.isArray(quote.attachments) && quote.attachments.length) {
+    return quote.attachments.filter(
+      (entry) => Boolean(entry?.filename || entry?.url || entry?.label || entry?.quantity)
+    );
+  }
+  if (quote.attachment) return [quote.attachment];
+  return [] as QuoteAttachment[];
 };
 
 const formatSizeRows = (sizes: { size?: string; quantity?: number }[]) =>
@@ -950,8 +971,7 @@ export default function QuotationApprovalPage() {
     return (selected?.garments || []).reduce((sum, entry) => sum + safeNumber(entry.quantity, 0), 0);
   }, [selected, selectedDesignBrief]);
 
-  const attachment = selected?.attachment;
-  const attachmentIsImage = Boolean(attachment?.contentType?.startsWith("image/"));
+  const selectedAttachments = useMemo(() => getQuoteAttachments(selected), [selected]);
 
   useEffect(() => {
     if (!selected) {
@@ -1343,27 +1363,36 @@ export default function QuotationApprovalPage() {
     }
   };
 
-  const handleAttachmentUpload = async (file: File) => {
+  const handleAttachmentUpload = async (files: File[]) => {
     if (!selected) return;
+    if (!files.length) return;
     setUploadingAttachment(true);
     setNotice(null);
     try {
-      const safeName = file.name.replace(/[^a-z0-9._-]/gi, "_");
-      const uploadRef = ref(storage, `quotes/${selected.id}/${Date.now()}-${safeName}`);
-      const snap = await uploadBytes(uploadRef, file);
-      const url = await getDownloadURL(snap.ref);
+      const existingAttachments = getQuoteAttachments(selected);
+      const uploadedAttachments = await Promise.all(
+        files.map(async (file, index) => {
+          const safeName = file.name.replace(/[^a-z0-9._-]/gi, "_");
+          const uploadRef = ref(storage, `quotes/${selected.id}/${Date.now()}-${index + 1}-${safeName}`);
+          const snap = await uploadBytes(uploadRef, file);
+          const url = await getDownloadURL(snap.ref);
+          return {
+            url,
+            filename: file.name,
+            contentType: file.type,
+            size: file.size,
+          } satisfies QuoteAttachment;
+        })
+      );
+      const nextAttachments = [...existingAttachments, ...uploadedAttachments];
       await updateDoc(doc(db, "quotes", selected.id), {
-        attachment: {
-          url,
-          filename: file.name,
-          contentType: file.type,
-          size: file.size,
-        },
+        attachments: nextAttachments,
+        attachment: nextAttachments[0] || null,
         updatedAt: serverTimestamp(),
       });
-      setNotice("Attachment uploaded.");
+      setNotice(uploadedAttachments.length > 1 ? "Files uploaded." : "Attachment uploaded.");
     } catch {
-      setNotice("Failed to upload attachment.");
+      setNotice("Failed to upload file.");
     } finally {
       setUploadingAttachment(false);
     }
@@ -1819,9 +1848,9 @@ export default function QuotationApprovalPage() {
                         >
                           {selectedStatus === "new" ? "Unread" : "Read"}
                         </span>
-                        {selected.attachment?.filename && (
+                        {selectedAttachments.length > 0 && (
                           <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600">
-                            <FiFileText /> {selected.attachment.filename}
+                            <FiFileText /> {selectedAttachments.length} file{selectedAttachments.length > 1 ? "s" : ""}
                           </span>
                         )}
                         {selected.orderTransactionId && (
@@ -1874,31 +1903,54 @@ export default function QuotationApprovalPage() {
                           </p>
                         )}
                         <div className="mt-4 space-y-2">
-                          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Attachment</p>
-                          {attachment?.url ? (
-                            <>
-                              <a
-                                href={attachment.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
-                              >
-                                <FiFileText /> Open file
-                              </a>
-                              {attachmentIsImage && (
-                                <div className="relative h-40 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                                <NextImage
-                                  src={attachment.url}
-                                  alt={attachment.filename || "Attachment"}
-                                  fill
-                                  className="object-cover"
-                                />
-                                </div>
-                              )}
-                            </>
-                          ) : attachment?.filename ? (
-                            <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-3 py-3 text-xs text-slate-500">
-                              Attachment received via email: {attachment.filename}
+                          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Artwork Files</p>
+                          {selectedAttachments.length ? (
+                            <div className="grid gap-3">
+                              {selectedAttachments.map((attachment, index) => {
+                                const attachmentIsImage = Boolean(attachment.contentType?.startsWith("image/"));
+                                return (
+                                  <div
+                                    key={`${attachment.url || attachment.filename || "attachment"}-${index}`}
+                                    className="rounded-2xl border border-slate-200 bg-white p-3"
+                                  >
+                                    <div className="flex flex-wrap items-start justify-between gap-3">
+                                      <div className="space-y-1 text-xs text-slate-500">
+                                        <p className="font-semibold uppercase tracking-[0.18em] text-slate-400">
+                                          {attachment.label || `Design ${index + 1}`}
+                                        </p>
+                                        <p className="text-sm font-medium text-slate-700">
+                                          {attachment.filename || "Attachment"}
+                                        </p>
+                                        {attachment.quantity ? <p>Qty: {attachment.quantity}</p> : null}
+                                      </div>
+                                      {attachment.url ? (
+                                        <a
+                                          href={attachment.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                                        >
+                                          <FiFileText /> Open file
+                                        </a>
+                                      ) : null}
+                                    </div>
+                                    {attachmentIsImage && attachment.url ? (
+                                      <div className="relative mt-3 h-40 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                                        <NextImage
+                                          src={attachment.url}
+                                          alt={attachment.filename || "Attachment"}
+                                          fill
+                                          className="object-cover"
+                                        />
+                                      </div>
+                                    ) : !attachment.url ? (
+                                      <div className="mt-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-500">
+                                        Attachment received via email: {attachment.filename || `Attachment ${index + 1}`}
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                );
+                              })}
                             </div>
                           ) : (
                             <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-3 py-3 text-xs text-slate-500">
@@ -1912,15 +1964,16 @@ export default function QuotationApprovalPage() {
                                 : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
                             }`}
                           >
-                            <FiUpload /> {uploadingAttachment ? "Uploading..." : attachment?.url ? "Replace file" : "Upload file"}
+                            <FiUpload /> {uploadingAttachment ? "Uploading..." : "Add file"}
                             <input
                               type="file"
                               accept="image/*,application/pdf"
+                              multiple
                               className="hidden"
                               disabled={uploadingAttachment}
                               onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) handleAttachmentUpload(file);
+                                const files = Array.from(e.target.files || []);
+                                if (files.length) handleAttachmentUpload(files);
                                 e.currentTarget.value = "";
                               }}
                             />

@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL } from "@/data/work";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: "Terms & Conditions | MO T-SHIRT Mauritius",
   description:
     "Terms and conditions for MO T-SHIRT in Mauritius. Read about orders, pricing, payments, delivery, and returns.",
-  alternates: {
-    canonical: "https://www.mo-tshirt.mu/terms",
-  },
-};
+  path: "/terms",
+});
 
 export default function TermsPage() {
   return (

@@ -25,7 +25,7 @@ module.exports = {
       },
     ],
   },
-  exclude: ["/login", "/api/*", "/admin", "/admin/*", "/design-studio", "/iot", "/icon.png"],
+  exclude: ["/login", "/api/*", "/admin", "/admin/*", "/design-studio", "/iot", "/our-dream", "/icon.png"],
   changefreq: "weekly",
   priority: 0.7,
   sitemapSize: 5000,

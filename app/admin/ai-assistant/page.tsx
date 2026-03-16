@@ -1,7 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { startTransition, useCallback, useEffect, useState, type KeyboardEvent } from "react";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type KeyboardEvent,
+} from "react";
 import {
   ArrowUpRight,
   Bot,
@@ -11,6 +20,7 @@ import {
   DatabaseZap,
   LoaderCircle,
   MessageSquareText,
+  Paperclip,
   RefreshCw,
   SendHorizontal,
   Sparkles,
@@ -20,9 +30,11 @@ import {
   createEmptyAssistantLead,
   formatAssistantFieldLabel,
   missingAssistantFields,
+  type AssistantAttachment,
   type AssistantContextItem,
   type AssistantTrainingSnapshot,
 } from "@/lib/ai-assistant";
+import { storage } from "@/lib/firebase";
 import type {
   AssistantChatPayload,
   AssistantKnowledgeRecord,
@@ -31,6 +43,9 @@ import type {
   AssistantSessionDetail,
   AssistantSessionSummary,
 } from "@/lib/ai-assistant-store";
+
+const LOGO_UPLOAD_ACCEPT = ".png,.jpg,.jpeg,.pdf,.ai,.eps,.svg";
+const MAX_LOGO_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 function generateSessionId() {
   return `admin-test-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -64,6 +79,14 @@ function formatDateTime(value: string | null) {
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
   return `${day}/${month}/${year} ${hours}:${minutes}`;
+}
+
+function formatAttachmentSize(value: number | null) {
+  if (!value || value <= 0) return null;
+  if (value >= 1024 * 1024) {
+    return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  return `${Math.max(1, Math.round(value / 1024))} KB`;
 }
 
 function formatSizeBreakdown(
@@ -121,6 +144,7 @@ function MiniStat({
 }
 
 export default function AdminAiAssistantPage() {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [overview, setOverview] = useState<AssistantOverview | null>(null);
   const [session, setSession] = useState<AssistantSessionDetail>(() => createDraftSession(generateSessionId()));
   const [draft, setDraft] = useState("");
@@ -133,6 +157,7 @@ export default function AdminAiAssistantPage() {
   const [loadingOverview, setLoadingOverview] = useState(true);
   const [loadingSession, setLoadingSession] = useState(false);
   const [sending, setSending] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [savingKnowledge, setSavingKnowledge] = useState(false);
   const [training, setTraining] = useState(false);
@@ -181,9 +206,14 @@ export default function AdminAiAssistantPage() {
     };
   }, [refreshOverview]);
 
-  async function handleSendMessage(message?: string) {
-    const nextMessage = (message ?? draft).trim();
-    if (!nextMessage || sending) return;
+  async function handleSendMessage(options?: {
+    message?: string;
+    attachment?: AssistantAttachment | null;
+    preserveDraft?: boolean;
+  }) {
+    const nextMessage = (options?.message ?? draft).trim();
+    const attachment = options?.attachment ?? null;
+    if ((!nextMessage && !attachment) || sending) return;
 
     setSending(true);
     setError(null);
@@ -197,13 +227,16 @@ export default function AdminAiAssistantPage() {
           body: JSON.stringify({
             sessionId: session.sessionId,
             message: nextMessage,
+            attachment,
           }),
         })
       );
 
       startTransition(() => {
         setSession(result.session);
-        setDraft("");
+        if (!options?.preserveDraft) {
+          setDraft("");
+        }
         setLastSuggestions(result.suggestions || []);
         setLastRelatedContext(result.relatedContext || []);
       });
@@ -213,6 +246,44 @@ export default function AdminAiAssistantPage() {
       setError(nextError instanceof Error ? nextError.message : "Failed to send message.");
     } finally {
       setSending(false);
+    }
+  }
+
+  async function handleLogoUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || uploadingLogo) return;
+
+    if (file.size > MAX_LOGO_UPLOAD_BYTES) {
+      setError("Logo file must be 10 MB or smaller.");
+      return;
+    }
+
+    setUploadingLogo(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const safeName = file.name.replace(/[^a-z0-9._-]/gi, "_");
+      const uploadRef = ref(storage, `ai-assistant/${session.sessionId}/${Date.now()}-${safeName}`);
+      const snap = await uploadBytes(uploadRef, file);
+      const url = await getDownloadURL(snap.ref);
+
+      await handleSendMessage({
+        message: `Uploaded logo file: ${file.name}`,
+        attachment: {
+          name: file.name,
+          url,
+          contentType: file.type || null,
+          size: typeof file.size === "number" ? file.size : null,
+          uploadedAt: new Date().toISOString(),
+        },
+        preserveDraft: true,
+      });
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Failed to upload logo.");
+    } finally {
+      setUploadingLogo(false);
     }
   }
 
@@ -338,6 +409,8 @@ export default function AdminAiAssistantPage() {
   const recentLeads = overview?.leads || [];
   const recentKnowledge = overview?.knowledge || [];
   const trainingSnapshot = overview?.training || null;
+  const canUploadLogo = session.lead.sizeBreakdown.length > 0;
+  const logoAttachment = session.lead.logoAttachment;
   const samplePrompts = [
     "I need 20 black polo shirts with logo on front left chest and a big print at the back",
     "My name is Ryan and my phone is 59883880",
@@ -491,7 +564,7 @@ export default function AdminAiAssistantPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => void handleSendMessage("summary")}
+                  onClick={() => void handleSendMessage({ message: "summary" })}
                   className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100"
                 >
                   Summary
@@ -513,7 +586,7 @@ export default function AdminAiAssistantPage() {
                 <button
                   key={prompt}
                   type="button"
-                  onClick={() => void handleSendMessage(prompt)}
+                  onClick={() => void handleSendMessage({ message: prompt })}
                   className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white"
                 >
                   {prompt}
@@ -539,6 +612,26 @@ export default function AdminAiAssistantPage() {
                       }`}
                     >
                       <p className="whitespace-pre-wrap leading-6">{message.content}</p>
+                      {message.attachment?.url && (
+                        <a
+                          href={message.attachment.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`mt-3 flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm ${
+                            message.role === "user"
+                              ? "border-white/15 bg-white/10 text-white"
+                              : "border-cyan-200 bg-cyan-50 text-cyan-900"
+                          }`}
+                        >
+                          <Paperclip className="h-4 w-4 shrink-0" />
+                          <span className="min-w-0 flex-1 truncate font-medium">{message.attachment.name}</span>
+                          <span className="shrink-0 text-[11px] uppercase tracking-[0.18em] opacity-75">
+                            {[message.attachment.contentType?.split("/").pop(), formatAttachmentSize(message.attachment.size)]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </span>
+                        </a>
+                      )}
                       <p
                         className={`mt-2 text-[11px] uppercase tracking-[0.18em] ${
                           message.role === "user" ? "text-slate-300" : "text-[#0c4a6e]"
@@ -564,6 +657,13 @@ export default function AdminAiAssistantPage() {
               <label htmlFor="assistant-composer" className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
                 Send a test message
               </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={LOGO_UPLOAD_ACCEPT}
+                className="hidden"
+                onChange={handleLogoUpload}
+              />
               <textarea
                 id="assistant-composer"
                 value={draft}
@@ -573,11 +673,37 @@ export default function AdminAiAssistantPage() {
                 placeholder="Example: I need 30 navy t-shirts with front left chest logo and back print for next week."
               />
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                <p className="text-xs text-slate-500">Press Enter to send. Shift+Enter adds a new line.</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-xs text-slate-500">Press Enter to send. Shift+Enter adds a new line.</p>
+                  {canUploadLogo ? (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingLogo || sending}
+                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                      {logoAttachment ? "Replace logo" : "Upload logo"}
+                    </button>
+                  ) : (
+                    <span className="text-xs text-slate-400">Upload appears after the size breakdown is captured.</span>
+                  )}
+                  {logoAttachment?.url && (
+                    <a
+                      href={logoAttachment.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-800 transition hover:bg-cyan-100"
+                    >
+                      <Paperclip className="h-3.5 w-3.5" />
+                      {logoAttachment.name}
+                    </a>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={() => void handleSendMessage()}
-                  disabled={!draft.trim() || sending}
+                  disabled={!draft.trim() || sending || uploadingLogo}
                   className="inline-flex items-center gap-2 rounded-full bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {sending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <SendHorizontal className="h-4 w-4" />}
@@ -658,6 +784,7 @@ export default function AdminAiAssistantPage() {
                   ["Print positions", session.lead.printPositions.join(", ") || "Not set"],
                   ["Print sizes", session.lead.printSizes.join(", ") || "Not set"],
                   ["Logo ready", session.lead.logoReady === null ? "Not set" : session.lead.logoReady ? "Yes" : "No"],
+                  ["Logo file", session.lead.logoAttachment?.name || "Not set"],
                   ["Delivery", session.lead.deliveryMethod || "Not set"],
                   ["Deadline", session.lead.deadline || "Not set"],
                 ].map(([label, value]) => (
@@ -690,6 +817,20 @@ export default function AdminAiAssistantPage() {
                   <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Notes</p>
                     <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{session.lead.notes}</p>
+                  </div>
+                )}
+                {session.lead.logoAttachment?.url && (
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Uploaded logo</p>
+                    <a
+                      href={session.lead.logoAttachment.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100"
+                    >
+                      <Paperclip className="h-4 w-4" />
+                      {session.lead.logoAttachment.name}
+                    </a>
                   </div>
                 )}
               </div>

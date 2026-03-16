@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import ServiceLandingPage from "@/components/ServiceLandingPage";
 import { getServicePageBySlug, servicePageSlugs } from "@/data/service-pages";
+import { buildPageMetadata } from "@/lib/seo";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -21,27 +22,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {};
   }
 
-  return {
+  return buildPageMetadata({
     title: page.title,
     description: page.description,
-    alternates: {
-      canonical: `https://www.mo-tshirt.mu/${page.slug}`,
-    },
-    openGraph: {
-      title: page.title,
-      description: page.description,
-      url: `https://www.mo-tshirt.mu/${page.slug}`,
-      siteName: "MO T-SHIRT",
-      images: [{ url: page.heroImage }],
-      type: "website",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: page.title,
-      description: page.description,
-      images: [page.heroImage],
-    },
-  };
+    path: `/${page.slug}`,
+    image: page.heroImage,
+  });
 }
 
 export default async function ServiceSlugPage({ params }: PageProps) {

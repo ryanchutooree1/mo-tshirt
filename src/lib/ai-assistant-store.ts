@@ -21,8 +21,10 @@ import {
   createEmptyLearnedProductAliases,
   formatLeadSummary,
   missingAssistantFields,
+  normalizeAssistantAttachment,
   normalizeAssistantLead,
   runAssistantTurn,
+  type AssistantAttachment,
   type AssistantApprovedLeadSource,
   type AssistantChatResult,
   type AssistantKnowledgeSource,
@@ -49,6 +51,7 @@ export type AssistantMessageRecord = {
   id: string;
   role: AssistantMessageRole;
   content: string;
+  attachment: AssistantAttachment | null;
   createdAt: string | null;
 };
 
@@ -198,6 +201,7 @@ function mapMessageRecord(id: string, data: FirestoreLike): AssistantMessageReco
     id,
     role: data.role === "user" ? "user" : "assistant",
     content: cleanString(data.content),
+    attachment: normalizeAssistantAttachment(data.attachment),
     createdAt: timestampToIso(data.createdAt, data.createdAtIso),
   };
 }
@@ -379,6 +383,7 @@ function buildLeadDocument(sessionId: string, lead: AssistantLead, nowIso: strin
     printPositions: lead.printPositions,
     printSizes: lead.printSizes,
     logoReady: lead.logoReady,
+    logoAttachment: lead.logoAttachment,
     deliveryMethod: lead.deliveryMethod,
     deadline: lead.deadline,
     notes: lead.notes,
@@ -453,9 +458,15 @@ export async function getAssistantSession(sessionId: string): Promise<AssistantS
   };
 }
 
-export async function runAssistantChat(sessionId: string, message: string): Promise<AssistantChatPayload> {
+export async function runAssistantChat(
+  sessionId: string,
+  message: string,
+  options?: { attachment?: AssistantAttachment | null }
+): Promise<AssistantChatPayload> {
   const cleanedSessionId = cleanString(sessionId);
   const cleanedMessage = cleanString(message);
+  const attachment = normalizeAssistantAttachment(options?.attachment);
+  const effectiveMessage = cleanedMessage || (attachment ? `Uploaded logo file: ${attachment.name}` : "");
   const sessionRef = doc(db, COLLECTIONS.sessions, cleanedSessionId);
   const sessionSnap = await getDoc(sessionRef);
   const currentLead = sessionSnap.exists()
@@ -474,7 +485,8 @@ export async function runAssistantChat(sessionId: string, message: string): Prom
 
   const result = runAssistantTurn({
     lead: currentLead,
-    message: cleanedMessage,
+    message: effectiveMessage,
+    attachment,
     approvedLeads,
     knowledgeItems,
     trainingState,
@@ -485,7 +497,8 @@ export async function runAssistantChat(sessionId: string, message: string): Prom
   await Promise.all([
     addDoc(collection(db, COLLECTIONS.sessions, cleanedSessionId, "messages"), {
       role: "user",
-      content: cleanedMessage,
+      content: effectiveMessage,
+      attachment,
       createdAt: serverTimestamp(),
       createdAtIso: nowIso,
     }),

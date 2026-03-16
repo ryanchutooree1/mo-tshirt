@@ -304,13 +304,14 @@ export const servicePages: ServicePageContent[] = [
       "Screen printing in Mauritius for bulk T-shirt orders, teamwear, event kits, and business uniforms. Best value for larger quantities with simple artwork and repeatable branding.",
     heroTitle: "Screen printing for bulk apparel orders that need clean, repeatable results.",
     heroBody:
-      "When the order size is higher and the design is relatively simple, screen print is usually the strongest value. It gives a sharp finish and makes the most sense for repeat team or event orders.",
+      "When the order size is higher and the design is relatively simple, screen print is usually the strongest value. It gives a sharp finish and makes the most sense for repeat team or event orders, especially when the same design is repeated across the run.",
     eyebrow: "Bulk-value printing",
     summary: "Best for larger quantities, simpler artwork, and orders that need repeatability.",
     heroImage: "/work/work-05.JPG",
     badges: ["Bulk orders", "Simple logos", "Repeat uniforms"],
     intro: [
       "Screen printing makes the most sense when quantity is high enough to spread the setup across the run. That is why it is often the best option for team uniforms, campaign tees, and large event orders.",
+      "For our quotation flow, screen printing is planned around a minimum of 10 pieces per design. Ten shirts with one repeated logo can work well; ten shirts with ten different logos usually need a different method.",
       "It works especially well when the artwork is clean, limited in color count, and expected to be repeated again in future orders.",
     ],
     highlights: [
@@ -337,6 +338,10 @@ export const servicePages: ServicePageContent[] = [
       {
         question: "Is screen printing the cheapest option?",
         answer: "Usually only when the quantity is high enough and the design is simple. For smaller or more detailed jobs, DTF or vinyl can be more practical.",
+      },
+      {
+        question: "What is the minimum for screen printing?",
+        answer: "We normally plan screen printing from 10 pieces per design. If the artwork changes from shirt to shirt, another print method is usually a better fit.",
       },
       {
         question: "What kind of artwork suits screen print best?",

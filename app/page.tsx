@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { getWhatsAppUrl, CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL } from "@/data/work";
+import { buildPageMetadata } from "@/lib/seo";
 import { HiOutlineCheckBadge, HiOutlineBolt, HiOutlineGlobeAlt, HiOutlineSparkles } from "react-icons/hi2";
 import Gallery from "@/components/Gallery";
 import MapCard from "@/components/MapCard";
@@ -14,27 +15,11 @@ const pageTitle = "MO T-SHIRT PRINTING | Fastest in Mauritius";
 const pageDescription =
   "T-shirt printing in Mauritius for businesses and events. Fast custom T-shirts, Poloshirts, Caps & Hoodies trusted by 80+ local businesses.";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildPageMetadata({
   title: pageTitle,
   description: pageDescription,
-  alternates: {
-    canonical: "https://www.mo-tshirt.mu/",
-  },
-  openGraph: {
-    title: pageTitle,
-    description: pageDescription,
-    url: "https://www.mo-tshirt.mu/",
-    siteName: "MO T-SHIRT",
-    images: [{ url: "/all_products.jpg" }],
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: pageTitle,
-    description: pageDescription,
-    images: ["/all_products.jpg"],
-  },
-};
+  path: "/",
+});
 
 const navLinks = [
   { label: "Home", href: "#top" },

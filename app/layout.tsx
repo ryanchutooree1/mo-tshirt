@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { Inter } from "next/font/google";
+import { SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
 const inter = Inter({
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
     "fast t-shirt printing",
   ],
   // Use canonical www host to avoid mixed-domain canonicals/sitemaps
-  metadataBase: new URL("https://www.mo-tshirt.mu"),
+  metadataBase: new URL(SITE_URL),
   icons: {
     icon: [
       { url: "/favicon-16x16.png", type: "image/png", sizes: "16x16" },
@@ -41,7 +42,7 @@ export const metadata: Metadata = {
     title: "MO T-SHIRT PRINTING 🇲🇺",
     description:
       "⭐ Mauritius’ trusted name in custom T-Shirts, Poloshirts & Hoodies✨. Worn by top restaurants, gyms, and businesses. Serving 50+ companies island-wide with fast delivery 🚀 ⭐",
-    url: "https://www.mo-tshirt.mu/",
+    url: SITE_URL,
     siteName: "MO T-SHIRT",
     images: [{ url: "/all_products.jpg" }],
     locale: "en_US",
@@ -65,9 +66,9 @@ export default function RootLayout({
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     name: "MO T-SHIRT",
-    url: "https://www.mo-tshirt.mu",
-    image: "https://www.mo-tshirt.mu/all_products.jpg",
-    logo: "https://www.mo-tshirt.mu/icon.png",
+    url: SITE_URL,
+    image: `${SITE_URL}/all_products.jpg`,
+    logo: `${SITE_URL}/icon.png`,
     telephone: "+23059883880",
     priceRange: "MUR 200-MUR 1500",
     address: {

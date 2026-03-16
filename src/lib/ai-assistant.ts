@@ -120,6 +120,8 @@ const COLORS = new Set([
 ]);
 
 const SIZE_TOKENS = new Set(["xs", "s", "m", "l", "xl", "2xl", "3xl", "4xl"]);
+const SIZE_TEMPLATE_ORDER = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
+const SIZE_TEMPLATE_ORDER_INDEX = new Map<string, number>(SIZE_TEMPLATE_ORDER.map((size, index) => [size, index]));
 
 export const ASSISTANT_FIELDS_IN_ORDER = [
   "productType",
@@ -148,6 +150,14 @@ export type AssistantMessageRole = "user" | "assistant";
 
 export type AssistantRequiredField = (typeof ASSISTANT_REQUIRED_FIELDS)[number];
 
+export type AssistantAttachment = {
+  name: string;
+  url: string;
+  contentType: string | null;
+  size: number | null;
+  uploadedAt: string | null;
+};
+
 export type AssistantLead = {
   clientName: string | null;
   phone: string | null;
@@ -160,6 +170,7 @@ export type AssistantLead = {
   printPositions: string[];
   printSizes: string[];
   logoReady: boolean | null;
+  logoAttachment: AssistantAttachment | null;
   deliveryMethod: "pickup" | "delivery" | null;
   deadline: string | null;
   notes: string | null;
@@ -346,8 +357,32 @@ function normalizeQuantity(value: unknown) {
   return null;
 }
 
+function normalizeNullableNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 function normalizeSize(value: string) {
   return value.trim().toUpperCase();
+}
+
+function sortTemplateSizes(values: string[]) {
+  return Array.from(new Set(values.map(normalizeSize).filter(Boolean))).sort((left, right) => {
+    const leftIndex = SIZE_TEMPLATE_ORDER_INDEX.get(left);
+    const rightIndex = SIZE_TEMPLATE_ORDER_INDEX.get(right);
+    if (leftIndex !== undefined || rightIndex !== undefined) {
+      if (leftIndex === undefined) return 1;
+      if (rightIndex === undefined) return -1;
+      return leftIndex - rightIndex;
+    }
+    return left.localeCompare(right);
+  });
 }
 
 function dedupeSorted(values: string[], transform?: (value: string) => string) {
@@ -443,10 +478,47 @@ function formatOrderLine(line: AssistantOrderLine) {
   return `${color}${product} Size ${line.size} quantity ${line.quantity}`;
 }
 
+export function normalizeAssistantAttachment(value: unknown): AssistantAttachment | null {
+  if (!value || typeof value !== "object") return null;
+
+  const source = value as Record<string, unknown>;
+  const name = cleanString(source.name ?? source.filename);
+  const url = cleanString(source.url);
+  if (!name || !url) return null;
+
+  return {
+    name,
+    url,
+    contentType: cleanString(source.contentType ?? source.type) || null,
+    size: normalizeNullableNumber(source.size),
+    uploadedAt: cleanString(source.uploadedAt) || null,
+  };
+}
+
+function buildSizeTemplateLines(lead: AssistantLead) {
+  const lineTotals = new Map<string, number>();
+  lead.sizeBreakdown.forEach((line) => {
+    lineTotals.set(line.size, (lineTotals.get(line.size) || 0) + line.quantity);
+  });
+
+  const sizes = sortTemplateSizes([...lead.sizeBreakdown.map((line) => line.size), ...lead.sizes]);
+  const templateSizes = [...sizes];
+  for (const fallback of ["S", "M", "L", "XL"]) {
+    if (templateSizes.length >= 4) break;
+    if (!templateSizes.includes(fallback)) {
+      templateSizes.push(fallback);
+    }
+  }
+
+  const color = lead.color ? titleCase(lead.color) : "Black";
+  const product = formatProductTypeLabel(lead.productType);
+
+  return sortTemplateSizes(templateSizes)
+    .slice(0, Math.max(4, sizes.length || 0))
+    .map((size) => `${color} ${product} Size ${size} quantity ${lineTotals.get(size) || 0}`);
+}
+
 function buildSizeBreakdownPrompt(lead: AssistantLead) {
-  const primaryColor = lead.color ? titleCase(lead.color) : "Black";
-  const secondaryColor = lead.color ? titleCase(lead.color) : "White";
-  const productLabel = formatProductTypeLabel(lead.productType);
   const capturedTotal = getOrderLineTotal(lead.sizeBreakdown);
 
   let intro = "Please send the size breakdown one line per variation, like this:";
@@ -460,10 +532,14 @@ function buildSizeBreakdownPrompt(lead: AssistantLead) {
 
   return [
     intro,
-    `- ${primaryColor} ${productLabel} Size S quantity 2`,
-    `- ${secondaryColor} ${productLabel} Size M quantity 1`,
     "",
-    "If the design or logo is ready, you can upload or send the image/PDF too.",
+    "Copy, edit, and send this size template:",
+    "```",
+    ...buildSizeTemplateLines(lead),
+    "```",
+    "Replace each quantity with the real count and delete any size lines you do not need.",
+    "",
+    "If the design or logo is ready, use the upload button to attach PNG, JPG, PDF, or AI.",
   ].join("\n");
 }
 
@@ -666,6 +742,7 @@ export function createEmptyAssistantLead(): AssistantLead {
     printPositions: [],
     printSizes: [],
     logoReady: null,
+    logoAttachment: null,
     deliveryMethod: null,
     deadline: null,
     notes: null,
@@ -693,6 +770,7 @@ export function normalizeAssistantLead(input: unknown): AssistantLead {
   lead.printPositions = normalizeStringArray(source.printPositions, (value) => value.toLowerCase());
   lead.printSizes = normalizeStringArray(source.printSizes, (value) => value.toLowerCase());
   lead.logoReady = typeof source.logoReady === "boolean" ? source.logoReady : null;
+  lead.logoAttachment = normalizeAssistantAttachment(source.logoAttachment);
 
   const deliveryMethod = cleanString(source.deliveryMethod).toLowerCase();
   if (deliveryMethod === "pickup" || deliveryMethod === "delivery") {
@@ -932,6 +1010,7 @@ export function mergeAssistantLeadUpdates(lead: AssistantLead, updates: Partial<
   if (updates.quantity !== undefined && !updates.sizeBreakdown) merged.quantity = updates.quantity;
   if (updates.color !== undefined) merged.color = updates.color;
   if (updates.logoReady !== undefined) merged.logoReady = updates.logoReady;
+  if (updates.logoAttachment !== undefined) merged.logoAttachment = updates.logoAttachment;
   if (updates.deliveryMethod !== undefined) merged.deliveryMethod = updates.deliveryMethod;
   if (updates.deadline !== undefined) merged.deadline = updates.deadline;
   if (updates.notes !== undefined) merged.notes = updates.notes;
@@ -963,7 +1042,10 @@ export function formatAssistantFieldLabel(field: AssistantRequiredField) {
 export function nextAssistantQuestion(lead: AssistantLead) {
   const missing = missingAssistantFields(lead);
   if (!missing.length) {
-    return 'Great. I have the main details. If the design or logo is ready, you can upload or send the image/PDF now. Type "summary" to review the lead or use "Submit lead" in admin.';
+    if (lead.logoAttachment) {
+      return 'Great. I have the main details and the logo file. Type "summary" to review the lead or use "Submit lead" in admin.';
+    }
+    return 'Great. I have the main details. If the design or logo is ready, use the upload button to attach PNG, JPG, PDF, or AI. Type "summary" to review the lead or use "Submit lead" in admin.';
   }
 
   const prompts: Record<AssistantRequiredField, string> = {
@@ -990,7 +1072,7 @@ export function buildAssistantSuggestions(lead: AssistantLead, message: string) 
     suggestions.push("For company uniforms, front left chest plus a large back print is a common setup.");
   }
   if (lead.productType && lead.logoReady !== false) {
-    suggestions.push("If the design or logo is ready, send or upload the file as PNG, JPG, PDF, or AI.");
+    suggestions.push("If the design or logo is ready, upload it as PNG, JPG, PDF, or AI.");
   }
   return suggestions.slice(0, 3);
 }
@@ -1008,6 +1090,7 @@ export function formatLeadSummary(lead: AssistantLead) {
     ["Print positions", lead.printPositions.join(", ") || null],
     ["Print sizes", lead.printSizes.join(", ") || null],
     ["Logo ready", lead.logoReady === null ? null : lead.logoReady ? "Yes" : "No"],
+    ["Logo file", lead.logoAttachment?.name || null],
     ["Delivery", lead.deliveryMethod],
     ["Deadline", lead.deadline],
     ["Notes", lead.notes],
@@ -1055,6 +1138,7 @@ export function retrieveAssistantContext(
 export function runAssistantTurn(input: {
   lead: AssistantLead;
   message: string;
+  attachment?: AssistantAttachment | null;
   approvedLeads?: AssistantApprovedLeadSource[];
   knowledgeItems?: AssistantKnowledgeSource[];
   trainingState?: AssistantTrainingState | null;
@@ -1064,7 +1148,16 @@ export function runAssistantTurn(input: {
     input.message,
     extractLeadUpdates(input.message, input.trainingState)
   );
-  const lead = mergeAssistantLeadUpdates(input.lead, updates);
+  const attachment = normalizeAssistantAttachment(input.attachment);
+  const lead = mergeAssistantLeadUpdates(input.lead, {
+    ...updates,
+    ...(attachment
+      ? {
+          logoReady: true,
+          logoAttachment: attachment,
+        }
+      : {}),
+  });
   const relatedContext = retrieveAssistantContext(
     input.message,
     input.approvedLeads || [],

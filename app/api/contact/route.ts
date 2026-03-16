@@ -21,11 +21,31 @@ type ParsedPayload = {
   deliveryPostCode?: string;
   deliveryPhone?: string;
   garments?: { garment?: string; size?: string; quantity?: string | number }[] | string;
+  attachments?:
+    | {
+        label?: string;
+        quantity?: string | number | null;
+        url?: string;
+        filename?: string;
+        contentType?: string;
+        size?: string | number | null;
+      }[]
+    | string;
+  files?: File[];
   attachmentUrl?: string;
   attachmentName?: string;
   attachmentType?: string;
   attachmentSize?: string | number;
   designBrief?: string | Record<string, unknown>;
+};
+
+type QuoteAttachment = {
+  label?: string;
+  quantity?: string | number | null;
+  url?: string;
+  filename?: string;
+  contentType?: string;
+  size?: number | null;
 };
 
 function isValidEmail(email: string) {
@@ -52,6 +72,58 @@ function parseJsonObject(value: unknown): Record<string, unknown> | null {
     return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null;
   } catch {
     return null;
+  }
+}
+
+function parseAttachmentList(value: unknown): QuoteAttachment[] {
+  if (!value) return [];
+
+  const normalizeAttachment = (entry: unknown): QuoteAttachment | null => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
+    const source = entry as Record<string, unknown>;
+    const label = typeof source.label === "string" ? source.label.trim() : "";
+    const quantity =
+      typeof source.quantity === "number"
+        ? source.quantity
+        : typeof source.quantity === "string" && source.quantity.trim()
+          ? source.quantity.trim()
+          : null;
+    const url = typeof source.url === "string" ? source.url.trim() : "";
+    const filename = typeof source.filename === "string" ? source.filename.trim() : "";
+    const contentType = typeof source.contentType === "string" ? source.contentType.trim() : "";
+    const rawSize = source.size;
+    const parsedSize =
+      typeof rawSize === "number"
+        ? rawSize
+        : typeof rawSize === "string" && rawSize.trim()
+          ? Number(rawSize)
+          : null;
+
+    if (!label && !quantity && !url && !filename && !contentType && parsedSize === null) {
+      return null;
+    }
+
+    return {
+      ...(label ? { label } : {}),
+      ...(quantity !== null ? { quantity } : {}),
+      ...(url ? { url } : {}),
+      ...(filename ? { filename } : {}),
+      ...(contentType ? { contentType } : {}),
+      ...(Number.isFinite(parsedSize) ? { size: parsedSize as number } : {}),
+    };
+  };
+
+  if (Array.isArray(value)) {
+    return value.map(normalizeAttachment).filter((entry): entry is QuoteAttachment => Boolean(entry));
+  }
+  if (typeof value !== "string") return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed)
+      ? parsed.map(normalizeAttachment).filter((entry): entry is QuoteAttachment => Boolean(entry))
+      : [];
+  } catch {
+    return [];
   }
 }
 
@@ -90,6 +162,9 @@ export async function POST(req: Request) {
 
     if (contentType.includes("multipart/form-data")) {
       const form = await req.formData();
+      const files = form
+        .getAll("files")
+        .filter((entry): entry is File => entry instanceof File && entry.size > 0);
       payload = {
         name: String(form.get("name") ?? ""),
         email: String(form.get("email") ?? ""),
@@ -108,6 +183,8 @@ export async function POST(req: Request) {
         deliveryPostCode: form.get("deliveryPostCode")?.toString(),
         deliveryPhone: form.get("deliveryPhone")?.toString(),
         garments: form.get("garments")?.toString(),
+        attachments: form.get("attachments")?.toString(),
+        files,
         attachmentUrl: form.get("attachmentUrl")?.toString(),
         attachmentName: form.get("attachmentName")?.toString(),
         attachmentType: form.get("attachmentType")?.toString(),
@@ -139,6 +216,8 @@ export async function POST(req: Request) {
       deliveryPostCode,
       deliveryPhone,
       garments,
+      attachments,
+      files,
       attachmentUrl,
       attachmentName,
       attachmentType,
@@ -174,23 +253,31 @@ export async function POST(req: Request) {
       "application/pdf",
     ];
     const maxSize = 5 * 1024 * 1024; // 5MB
-    let attachment: { filename: string; content: Buffer; contentType?: string } | null = null;
+    const requestFiles = Array.isArray(files)
+      ? files.filter((entry): entry is File => entry instanceof File && entry.size > 0)
+      : file
+        ? [file]
+        : [];
+    const emailAttachments: { filename: string; content: Buffer; contentType?: string }[] = [];
 
-    if (file) {
-      const typeOk = allowedTypes.includes(file.type || "");
-      const sizeOk = typeof file.size === "number" ? file.size <= maxSize : true;
+    for (const currentFile of requestFiles) {
+      const typeOk = allowedTypes.includes(currentFile.type || "");
+      const sizeOk = typeof currentFile.size === "number" ? currentFile.size <= maxSize : true;
       if (!typeOk) {
-        return NextResponse.json({ error: "Unsupported file type. Use PNG, JPG, WEBP, SVG, HEIC, or PDF." }, { status: 400 });
+        return NextResponse.json(
+          { error: "Unsupported file type. Use PNG, JPG, WEBP, SVG, HEIC, or PDF." },
+          { status: 400 }
+        );
       }
       if (!sizeOk) {
-        return NextResponse.json({ error: "File too large. Max 5MB." }, { status: 400 });
+        return NextResponse.json({ error: "File too large. Max 5MB per file." }, { status: 400 });
       }
-      const buffer = Buffer.from(await file.arrayBuffer());
-      attachment = {
-        filename: file.name || "attachment",
+      const buffer = Buffer.from(await currentFile.arrayBuffer());
+      emailAttachments.push({
+        filename: currentFile.name || "attachment",
         content: buffer,
-        contentType: file.type || undefined,
-      };
+        contentType: currentFile.type || undefined,
+      });
     }
 
     const host = process.env.SMTP_HOST;
@@ -238,14 +325,53 @@ export async function POST(req: Request) {
     const garmentsSummary = parsedGarments.length
       ? parsedGarments.map(formatGarmentLine).join(", ")
       : formatGarmentLine({ garment, size, quantity });
+    const parsedAttachments = parseAttachmentList(attachments);
+    const storedAttachments: QuoteAttachment[] = (() => {
+      const normalizedAttachments = parsedAttachments.map((entry, index) => ({
+        ...entry,
+        filename: entry.filename || requestFiles[index]?.name || "attachment",
+        contentType: entry.contentType || requestFiles[index]?.type || "application/octet-stream",
+        size:
+          typeof entry.size === "number"
+            ? entry.size
+            : typeof requestFiles[index]?.size === "number"
+              ? requestFiles[index].size
+              : null,
+      }));
+      if (normalizedAttachments.length) return normalizedAttachments;
 
-    const attachmentMeta = file
-      ? {
-          filename: file.name || "attachment",
-          contentType: file.type || "application/octet-stream",
-          size: typeof file.size === "number" ? file.size : null,
-        }
-      : null;
+      if (attachmentUrl || attachmentName || attachmentType || attachmentSize || requestFiles.length) {
+        const fallbackFile = requestFiles[0] || null;
+        const fallbackSize =
+          typeof attachmentSize === "string" && attachmentSize.trim()
+            ? Number(attachmentSize)
+            : typeof attachmentSize === "number"
+              ? attachmentSize
+              : typeof fallbackFile?.size === "number"
+                ? fallbackFile.size
+                : null;
+
+        return [
+          {
+            url: attachmentUrl || undefined,
+            filename: attachmentName || fallbackFile?.name || "attachment",
+            contentType: attachmentType || fallbackFile?.type || "application/octet-stream",
+            size: Number.isFinite(fallbackSize) ? Number(fallbackSize) : null,
+          },
+        ];
+      }
+
+      return [];
+    })();
+    const formatAttachmentValue = (entry: QuoteAttachment, index: number) => {
+      const lines = [
+        entry.filename || `attachment-${index + 1}`,
+        entry.label ? `Label: ${entry.label}` : "",
+        entry.quantity ? `Qty: ${entry.quantity}` : "",
+        entry.url ? `URL: ${entry.url}` : "URL: Attached to email",
+      ].filter(Boolean);
+      return lines.join("\n");
+    };
 
     let quoteId: string | null = null;
     try {
@@ -266,19 +392,8 @@ export async function POST(req: Request) {
         deliveryPostCode: deliveryPostCode || "",
         deliveryPhone: deliveryPhone || "",
         designBrief: parsedDesignBrief,
-        attachment: attachmentUrl
-          ? {
-              url: attachmentUrl,
-              filename: attachmentName || attachmentMeta?.filename || "attachment",
-              contentType: attachmentType || attachmentMeta?.contentType || "application/octet-stream",
-              size:
-                typeof attachmentSize === "string"
-                  ? Number(attachmentSize)
-                  : typeof attachmentSize === "number"
-                    ? attachmentSize
-                    : attachmentMeta?.size || null,
-            }
-          : attachmentMeta,
+        attachments: storedAttachments,
+        attachment: storedAttachments[0] || null,
         status: "new",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -303,13 +418,21 @@ export async function POST(req: Request) {
       `  Deadline: ${formatValue(deadline)}`,
       `  Notes: ${formatValue(notesValue)}`,
       `  Delivery: ${formatValue(delivery)}`,
+    ];
+    if (storedAttachments.length) {
+      textLines.push("", "Artwork Files:");
+      storedAttachments.forEach((entry, index) => {
+        textLines.push(`  ${index + 1}. ${formatAttachmentValue(entry, index).replace(/\n/g, " | ")}`);
+      });
+    }
+    textLines.push(
       "",
       "Delivery Info:",
       `  Name: ${formatValue(deliveryName)}`,
       `  Address: ${formatValue(deliveryAddress)}`,
       `  Post code: ${formatValue(deliveryPostCode)}`,
-      `  Phone: ${formatValue(deliveryPhone)}`,
-    ];
+      `  Phone: ${formatValue(deliveryPhone)}`
+    );
     const text = textLines.join("\n");
 
     const contactRows: [string, unknown][] = [
@@ -330,6 +453,10 @@ export async function POST(req: Request) {
       ["Post code", deliveryPostCode],
       ["Phone", deliveryPhone],
     ];
+    const attachmentRows: [string, unknown][] = storedAttachments.map((entry, index) => [
+      entry.label || `Design ${index + 1}`,
+      formatAttachmentValue(entry, index),
+    ]);
     const renderRow = (label: string, value: unknown) => {
       const safeValue = escapeHtml(formatValue(value)).replace(/\n/g, "<br/>");
       const labelStyle = "padding:6px 12px 6px 0; font-weight:700; vertical-align:top; white-space:nowrap;";
@@ -351,6 +478,9 @@ export async function POST(req: Request) {
       `<tr><td colspan="2" style="height:10px;"></td></tr>`,
       renderSection("Order Details", orderRows),
       `<tr><td colspan="2" style="height:10px;"></td></tr>`,
+      storedAttachments.length
+        ? `${renderSection("Artwork Files", attachmentRows)}<tr><td colspan="2" style="height:10px;"></td></tr>`
+        : "",
       renderSection("Delivery Info", deliveryRows),
     ].join("");
     const html = `<div style="font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#111;">
@@ -383,8 +513,8 @@ export async function POST(req: Request) {
         if (safeEmail) {
           mailOptions.replyTo = safeEmail;
         }
-        if (attachment) {
-          mailOptions.attachments = [attachment];
+        if (emailAttachments.length) {
+          mailOptions.attachments = emailAttachments;
         }
         await transporter.sendMail(mailOptions);
         return NextResponse.json(

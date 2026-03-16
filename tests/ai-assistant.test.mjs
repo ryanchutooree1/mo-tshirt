@@ -94,6 +94,42 @@ test("size breakdown template lines are parsed into structured order lines", () 
   assert.match(result.reply, /What is your name\?/);
 });
 
+test("logo upload marks the file as ready and keeps the lead submittable", () => {
+  const result = runAssistantTurn({
+    lead: {
+      clientName: "Ryan",
+      phone: "59883880",
+      email: null,
+      productType: "t-shirt",
+      quantity: 3,
+      color: "black",
+      sizes: ["S", "M"],
+      sizeBreakdown: [
+        { color: "black", productType: "t-shirt", size: "S", quantity: 2 },
+        { color: "black", productType: "t-shirt", size: "M", quantity: 1 },
+      ],
+      printPositions: ["front left chest"],
+      printSizes: ["small 9x9"],
+      logoReady: null,
+      deliveryMethod: null,
+      deadline: null,
+      notes: null,
+    },
+    message: "Uploaded logo file: brand.ai",
+    attachment: {
+      name: "brand.ai",
+      url: "https://example.com/brand.ai",
+      contentType: "application/postscript",
+      size: 1024,
+      uploadedAt: "2026-03-16T10:00:00.000Z",
+    },
+  });
+
+  assert.equal(result.lead.logoReady, true);
+  assert.equal(result.lead.logoAttachment?.name, "brand.ai");
+  assert.match(result.reply, /Great\. I have the main details and the logo file\./);
+});
+
 test("summary command returns the stored lead snapshot when all key fields are present", () => {
   const result = runAssistantTurn({
     lead: {

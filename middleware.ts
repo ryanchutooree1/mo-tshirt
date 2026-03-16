@@ -9,7 +9,7 @@ export async function middleware(req: NextRequest) {
     const url = req.nextUrl.clone();
     url.pathname = "/";
     url.hash = "contact";
-    const response = NextResponse.redirect(url);
+    const response = NextResponse.redirect(url, 308);
     response.headers.set("X-Robots-Tag", "noindex, nofollow");
     return response;
   }
