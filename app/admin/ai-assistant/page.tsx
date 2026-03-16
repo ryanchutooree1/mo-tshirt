@@ -220,7 +220,7 @@ export default function AdminAiAssistantPage() {
   }) {
     const nextMessage = (options?.message ?? draft).trim();
     const attachment = options?.attachment ?? null;
-    if ((!nextMessage && !attachment) || sending) return;
+    if ((!nextMessage && !attachment) || sending) return false;
 
     setSending(true);
     setError(null);
@@ -249,8 +249,10 @@ export default function AdminAiAssistantPage() {
       });
 
       await refreshOverview();
+      return true;
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Failed to send message.");
+      return false;
     } finally {
       setSending(false);
     }
@@ -276,7 +278,7 @@ export default function AdminAiAssistantPage() {
       const snap = await uploadBytes(uploadRef, file);
       const url = await getDownloadURL(snap.ref);
 
-      await handleSendMessage({
+      const sent = await handleSendMessage({
         message: `Uploaded logo file: ${file.name}`,
         attachment: {
           name: file.name,
@@ -287,6 +289,9 @@ export default function AdminAiAssistantPage() {
         },
         preserveDraft: true,
       });
+      if (sent) {
+        setNotice(`Logo uploaded: ${file.name}. Review it in the chat thread or the Lead Snapshot panel.`);
+      }
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Failed to upload logo.");
     } finally {
@@ -720,9 +725,13 @@ export default function AdminAiAssistantPage() {
                 <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-3">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-emerald-950">Logo attached to this session</p>
+                      <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Upload complete
+                      </div>
+                      <p className="mt-2 text-sm font-semibold text-emerald-950">Logo attached to this session</p>
                       <p className="mt-1 text-xs text-emerald-800">
-                        Review it in the conversation thread or the Lead Snapshot panel on the right.
+                        The assistant has this file now. Review it in the conversation thread or the Lead Snapshot panel on the right.
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
