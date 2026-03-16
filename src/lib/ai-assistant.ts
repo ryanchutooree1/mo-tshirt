@@ -53,6 +53,39 @@ const PRODUCT_ALIAS_STOP_WORDS = new Set([
   "with",
   "you",
 ]);
+const NAME_RESPONSE_STOP_WORDS = new Set([
+  "back",
+  "black",
+  "blue",
+  "cap",
+  "caps",
+  "center",
+  "chest",
+  "delivery",
+  "front",
+  "hoodie",
+  "hoodies",
+  "large",
+  "left",
+  "logo",
+  "pickup",
+  "polo",
+  "polos",
+  "print",
+  "red",
+  "shirt",
+  "shirts",
+  "size",
+  "small",
+  "sleeve",
+  "summary",
+  "submit",
+  "tee",
+  "tees",
+  "tshirt",
+  "tshirts",
+  "white",
+]);
 
 const LEFT_CHEST_PATTERNS = ["left chest", "front left chest", "left logo", "logo on chest"];
 const FRONT_CENTER_PATTERNS = ["front center", "center front", "big front"];
@@ -398,6 +431,45 @@ function candidateLooksLikeProductAlias(productType: AssistantProductType, phras
         (hint) => aliasKey.includes(hint) || aliasKeysAreClose(aliasKey, hint)
       )
   );
+}
+
+function looksLikeStandaloneName(message: string) {
+  const trimmed = message.trim();
+  if (!trimmed || trimmed.length < 3 || trimmed.length > 40) return false;
+  if (/\d|@|https?:\/\//i.test(trimmed)) return false;
+  if (!/^[A-Za-z][A-Za-z\s'-]*$/.test(trimmed)) return false;
+
+  const words = trimmed
+    .split(/\s+/)
+    .map((word) => word.replace(/[^A-Za-z'-]/g, "").toLowerCase())
+    .filter(Boolean);
+
+  if (!words.length || words.length > 3) return false;
+  if (words.some((word) => word.length < 2)) return false;
+  if (words.some((word) => NAME_RESPONSE_STOP_WORDS.has(word))) return false;
+
+  return true;
+}
+
+function inferContextualLeadUpdates(lead: AssistantLead, message: string, updates: Partial<AssistantLead>) {
+  const nextMissingField = missingAssistantFields(lead)[0];
+  if (
+    nextMissingField === "clientName" &&
+    !lead.clientName &&
+    !updates.clientName &&
+    !updates.phone &&
+    !updates.email &&
+    !updates.productType &&
+    !updates.quantity &&
+    !updates.color &&
+    !updates.printPositions?.length &&
+    !updates.printSizes?.length &&
+    looksLikeStandaloneName(message)
+  ) {
+    updates.clientName = titleCase(message);
+  }
+
+  return updates;
 }
 
 function learnProductAliasesFromApprovedLeads(approvedLeads: AssistantApprovedLeadSource[]) {
@@ -791,7 +863,11 @@ export function runAssistantTurn(input: {
   knowledgeItems?: AssistantKnowledgeSource[];
   trainingState?: AssistantTrainingState | null;
 }): AssistantChatResult {
-  const updates = extractLeadUpdates(input.message, input.trainingState);
+  const updates = inferContextualLeadUpdates(
+    input.lead,
+    input.message,
+    extractLeadUpdates(input.message, input.trainingState)
+  );
   const lead = mergeAssistantLeadUpdates(input.lead, updates);
   const relatedContext = retrieveAssistantContext(
     input.message,

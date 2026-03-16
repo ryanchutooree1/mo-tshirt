@@ -42,6 +42,30 @@ test("plural tshirts are recognized as t-shirt products", () => {
   assert.match(result.reply, /Where do you want the print/);
 });
 
+test("plain name replies are accepted when client name is the next required field", () => {
+  const result = runAssistantTurn({
+    lead: {
+      clientName: null,
+      phone: null,
+      email: null,
+      productType: "t-shirt",
+      quantity: 2,
+      color: null,
+      sizes: [],
+      printPositions: ["back"],
+      printSizes: [],
+      logoReady: null,
+      deliveryMethod: null,
+      deadline: null,
+      notes: null,
+    },
+    message: "Sam Legoy",
+  });
+
+  assert.equal(result.lead.clientName, "Sam Legoy");
+  assert.match(result.reply, /What is your phone number\?/);
+});
+
 test("summary command returns the stored lead snapshot when all key fields are present", () => {
   const result = runAssistantTurn({
     lead: {
