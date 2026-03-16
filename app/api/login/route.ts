@@ -4,12 +4,28 @@ import {
   createAdminSessionToken,
   getAdminPasswordFromEnv,
 } from "@/lib/admin-auth";
+import { isContentLengthWithinLimit, isRequestOriginAllowed } from "@/lib/request-safety";
+
+const MAX_LOGIN_REQUEST_BYTES = 2_048;
+const MAX_PASSWORD_LENGTH = 256;
 
 export async function POST(req: Request) {
+  if (!isRequestOriginAllowed(req)) {
+    return NextResponse.json({ error: "Origin not allowed." }, { status: 403 });
+  }
+
+  if (!isContentLengthWithinLimit(req.headers, MAX_LOGIN_REQUEST_BYTES)) {
+    return NextResponse.json({ error: "Payload too large." }, { status: 413 });
+  }
+
   try {
     const body = await req.json().catch(() => ({}));
     const password = String(body?.password ?? "");
     const expected = getAdminPasswordFromEnv();
+
+    if (password.length > MAX_PASSWORD_LENGTH) {
+      return NextResponse.json({ error: "Invalid password." }, { status: 400 });
+    }
 
     if (!expected) {
       return NextResponse.json(

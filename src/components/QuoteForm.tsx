@@ -133,6 +133,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
   const [printMethod, setPrintMethod] = useState<string>(printMethods[3]);
   const [artworkItems, setArtworkItems] = useState<ArtworkItem[]>([createArtworkItem(1)]);
   const [nextArtworkId, setNextArtworkId] = useState(2);
+  const [website, setWebsite] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -298,6 +299,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     payload.append("name", form.name);
     payload.append("email", form.email);
     payload.append("message", summaryMessage);
+    payload.append("website", website);
     payload.append("phone", form.phone);
     payload.append("garment", primaryLine.garment);
     payload.append("size", primaryLine.size);
@@ -371,6 +373,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
         setPrintMethod(printMethods[3]);
         setArtworkItems([createArtworkItem(1)]);
         setNextArtworkId(2);
+        setWebsite("");
         setEmailError(null);
       } else {
         setResult({ ok: false, msg: body?.error || "Something went wrong." });
@@ -385,6 +388,18 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
   return (
     <div className={className}>
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
+          <label htmlFor="quote-website">Website</label>
+          <input
+            id="quote-website"
+            name="website"
+            tabIndex={-1}
+            autoComplete="url"
+            value={website}
+            onChange={(e) => setWebsite(e.target.value)}
+          />
+        </div>
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className="block text-sm font-medium text-neutral-700">Name *</label>

@@ -9,6 +9,7 @@ export default function ContactClient() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [website, setWebsite] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<null | { ok: boolean; msg: string }>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -34,7 +35,7 @@ export default function ContactClient() {
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, message }),
+        body: JSON.stringify({ name, email, message, website }),
       });
       const body = await res.json();
       if (res.ok) {
@@ -42,6 +43,7 @@ export default function ContactClient() {
         setName("");
         setEmail("");
         setMessage("");
+        setWebsite("");
       } else {
         setResult({ ok: false, msg: body?.error || "Something went wrong." });
       }
@@ -82,6 +84,18 @@ export default function ContactClient() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
         <form className="space-y-4" onSubmit={handleSubmit}>
+          <div className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
+            <label htmlFor="contact-website">Website</label>
+            <input
+              id="contact-website"
+              name="website"
+              tabIndex={-1}
+              autoComplete="url"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-medium mb-1">Name</label>
             <input

@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { isContentLengthWithinLimit, isRequestOriginAllowed } from "@/lib/request-safety";
 
 type ParsedPayload = {
   name: string;
   email: string;
   message: string;
+  website?: string;
   phone?: string;
   garment?: string;
   size?: string;
@@ -128,6 +130,14 @@ function parseAttachmentList(value: unknown): QuoteAttachment[] {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_CONTACT_REQUEST_BYTES = 15 * 1024 * 1024;
+const MAX_CONTACT_NAME_LENGTH = 120;
+const MAX_CONTACT_EMAIL_LENGTH = 254;
+const MAX_CONTACT_PHONE_LENGTH = 40;
+const MAX_CONTACT_MESSAGE_LENGTH = 2_000;
+const MAX_CONTACT_NOTES_LENGTH = 4_000;
+const MAX_EMAIL_ATTACHMENT_COUNT = 4;
+const MAX_TOTAL_ATTACHMENT_BYTES = 15 * 1024 * 1024;
 
 function formatFrom(name: string, address: string) {
   const cleanName = name.replace(/[<>"]/g, "").trim();
@@ -156,6 +166,14 @@ function resolveFromAddress(rawFrom: string | undefined, smtpUser: string | unde
 }
 
 export async function POST(req: Request) {
+  if (!isRequestOriginAllowed(req)) {
+    return NextResponse.json({ error: "Origin not allowed." }, { status: 403 });
+  }
+
+  if (!isContentLengthWithinLimit(req.headers, MAX_CONTACT_REQUEST_BYTES)) {
+    return NextResponse.json({ error: "Payload too large." }, { status: 413 });
+  }
+
   try {
     const contentType = req.headers.get("content-type") || "";
     let payload: ParsedPayload = { name: "", email: "", message: "" };
@@ -169,6 +187,7 @@ export async function POST(req: Request) {
         name: String(form.get("name") ?? ""),
         email: String(form.get("email") ?? ""),
         message: String(form.get("message") ?? ""),
+        website: form.get("website")?.toString(),
         phone: form.get("phone")?.toString(),
         garment: form.get("garment")?.toString(),
         size: form.get("size")?.toString(),
@@ -201,6 +220,7 @@ export async function POST(req: Request) {
       name,
       email,
       message,
+      website,
       phone,
       garment,
       size,
@@ -229,6 +249,22 @@ export async function POST(req: Request) {
     const safeEmail = String(email ?? "").trim();
     const safePhone = String(phone ?? "").trim();
     const safeMessage = String(message ?? "").trim();
+    const safeNotes = String(notes ?? "").trim();
+    const honeypot = String(website ?? "").trim();
+
+    if (honeypot) {
+      return NextResponse.json({ message: "Thanks! We received your message." }, { status: 200 });
+    }
+
+    if (
+      safeName.length > MAX_CONTACT_NAME_LENGTH ||
+      safeEmail.length > MAX_CONTACT_EMAIL_LENGTH ||
+      safePhone.length > MAX_CONTACT_PHONE_LENGTH ||
+      safeMessage.length > MAX_CONTACT_MESSAGE_LENGTH ||
+      safeNotes.length > MAX_CONTACT_NOTES_LENGTH
+    ) {
+      return NextResponse.json({ error: "One or more fields are too long." }, { status: 400 });
+    }
 
     if (!safeName || !safeMessage) {
       return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
@@ -258,6 +294,19 @@ export async function POST(req: Request) {
       : file
         ? [file]
         : [];
+
+    if (requestFiles.length > MAX_EMAIL_ATTACHMENT_COUNT) {
+      return NextResponse.json({ error: "Too many files. Send up to 4 attachments." }, { status: 400 });
+    }
+
+    const totalAttachmentBytes = requestFiles.reduce(
+      (sum, currentFile) => sum + (typeof currentFile.size === "number" ? currentFile.size : 0),
+      0
+    );
+    if (totalAttachmentBytes > MAX_TOTAL_ATTACHMENT_BYTES) {
+      return NextResponse.json({ error: "Attachments are too large. Keep the total under 15MB." }, { status: 400 });
+    }
+
     const emailAttachments: { filename: string; content: Buffer; contentType?: string }[] = [];
 
     for (const currentFile of requestFiles) {
@@ -293,9 +342,9 @@ export async function POST(req: Request) {
     };
     const parsedDesignBrief = parseJsonObject(designBrief);
     const notesValue = parsedDesignBrief
-      ? String(notes ?? "").trim()
-      : notes && notes.trim()
-        ? notes
+      ? safeNotes
+      : safeNotes
+        ? safeNotes
         : safeMessage;
     const sourceValue = formatValue(source);
     const parsedGarments: { garment?: string; size?: string; quantity?: string | number }[] = (() => {
@@ -326,6 +375,9 @@ export async function POST(req: Request) {
       ? parsedGarments.map(formatGarmentLine).join(", ")
       : formatGarmentLine({ garment, size, quantity });
     const parsedAttachments = parseAttachmentList(attachments);
+    if (parsedAttachments.length > MAX_EMAIL_ATTACHMENT_COUNT) {
+      return NextResponse.json({ error: "Too many artwork attachments." }, { status: 400 });
+    }
     const storedAttachments: QuoteAttachment[] = (() => {
       const normalizedAttachments = parsedAttachments.map((entry, index) => ({
         ...entry,
