@@ -12,6 +12,7 @@ const NOTES_ITEM: NavItem = { href: "/admin/business-notes", label: "Business No
 const DETAILS_ITEM: NavItem = { href: "/admin/business-details", label: "Business Details" };
 const QUOTE_ITEM: NavItem = { href: "/admin/quotation-approval", label: "Quotation / Invoice" };
 const DESIGN_STUDIO_ITEM: NavItem = { href: "/admin/design-studio", label: "Design Studio" };
+const AI_ASSISTANT_ITEM: NavItem = { href: "/admin/ai-assistant", label: "AI Assistant" };
 const FINANCE_ITEM: NavItem = { href: "/admin/finance-freedom", label: "Finance Freedom" };
 const BUSINESS_VALUE_ITEM: NavItem = { href: "/admin/business-value", label: "Business Value" };
 const IOT_ITEM: NavItem = { href: "/admin/iot", label: "IoT Control Center" };
@@ -20,6 +21,7 @@ const IOT_ITEM: NavItem = { href: "/admin/iot", label: "IoT Control Center" };
 const DEFAULT_TOP: NavItem[] = [
   { href: "/admin/pos", label: "POS" },
   { href: "/admin/clients", label: "Clients" },
+  AI_ASSISTANT_ITEM,
   { href: "/admin/contracts", label: "Contracts" },
   SHOP_ITEM,
   QUOTE_ITEM,
@@ -54,6 +56,8 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
   const moreHasQuote = more.some((item) => item.href === QUOTE_ITEM.href);
   const topHasDesignStudio = top.some((item) => item.href === DESIGN_STUDIO_ITEM.href);
   const moreHasDesignStudio = more.some((item) => item.href === DESIGN_STUDIO_ITEM.href);
+  const topHasAiAssistant = top.some((item) => item.href === AI_ASSISTANT_ITEM.href);
+  const moreHasAiAssistant = more.some((item) => item.href === AI_ASSISTANT_ITEM.href);
   const topHasFinance = top.some((item) => item.href === FINANCE_ITEM.href);
   const moreHasFinance = more.some((item) => item.href === FINANCE_ITEM.href);
   const topHasBusinessValue = top.some((item) => item.href === BUSINESS_VALUE_ITEM.href);
@@ -65,6 +69,7 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
       item.href !== SHOP_ITEM.href &&
       item.href !== QUOTE_ITEM.href &&
       item.href !== DESIGN_STUDIO_ITEM.href &&
+      item.href !== AI_ASSISTANT_ITEM.href &&
       item.href !== FINANCE_ITEM.href &&
       item.href !== IOT_ITEM.href &&
       item.href !== BUSINESS_VALUE_ITEM.href &&
@@ -76,6 +81,7 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
       item.href !== SHOP_ITEM.href &&
       item.href !== QUOTE_ITEM.href &&
       item.href !== DESIGN_STUDIO_ITEM.href &&
+      item.href !== AI_ASSISTANT_ITEM.href &&
       item.href !== FINANCE_ITEM.href &&
       item.href !== IOT_ITEM.href &&
       item.href !== BUSINESS_VALUE_ITEM.href &&
@@ -103,6 +109,14 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
       nextTop.splice(quoteIndex + 1, 0, DESIGN_STUDIO_ITEM);
     } else {
       nextTop.push(DESIGN_STUDIO_ITEM);
+    }
+  }
+  if (topHasAiAssistant || (!topHasAiAssistant && !moreHasAiAssistant)) {
+    const clientsIndex = nextTop.findIndex((item) => item.href === "/admin/clients");
+    if (clientsIndex >= 0) {
+      nextTop.splice(clientsIndex + 1, 0, AI_ASSISTANT_ITEM);
+    } else {
+      nextTop.push(AI_ASSISTANT_ITEM);
     }
   }
   if (topHasFinance || (!topHasFinance && !moreHasFinance)) {
@@ -161,6 +175,9 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
   }
   if (moreHasDesignStudio) {
     nextMore.push(DESIGN_STUDIO_ITEM);
+  }
+  if (moreHasAiAssistant) {
+    nextMore.push(AI_ASSISTANT_ITEM);
   }
   if (moreHasFinance) {
     nextMore.push(FINANCE_ITEM);

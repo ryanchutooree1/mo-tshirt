@@ -825,6 +825,12 @@ export default function OwnerDashboard() {
       Icon: Target,
     },
     {
+      label: "AI Assistant",
+      description: "Test lead capture in admin",
+      href: "/admin/ai-assistant",
+      Icon: Sparkles,
+    },
+    {
       label: "Analytics",
       description: "Inspect sales momentum",
       href: "/admin/analytics?preset=30d",

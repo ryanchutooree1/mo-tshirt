@@ -1,0 +1,917 @@
+"use client";
+
+import Link from "next/link";
+import { startTransition, useCallback, useEffect, useState, type KeyboardEvent } from "react";
+import {
+  ArrowUpRight,
+  Bot,
+  BrainCircuit,
+  CheckCircle2,
+  CircleAlert,
+  DatabaseZap,
+  LoaderCircle,
+  MessageSquareText,
+  RefreshCw,
+  SendHorizontal,
+  Sparkles,
+  TestTube2,
+} from "lucide-react";
+import {
+  createEmptyAssistantLead,
+  formatAssistantFieldLabel,
+  missingAssistantFields,
+  type AssistantContextItem,
+  type AssistantTrainingSnapshot,
+} from "@/lib/ai-assistant";
+import type {
+  AssistantChatPayload,
+  AssistantKnowledgeRecord,
+  AssistantLeadRecord,
+  AssistantOverview,
+  AssistantSessionDetail,
+  AssistantSessionSummary,
+} from "@/lib/ai-assistant-store";
+
+function generateSessionId() {
+  return `admin-test-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+function createDraftSession(sessionId: string): AssistantSessionDetail {
+  const emptyLead = createEmptyAssistantLead();
+  return {
+    sessionId,
+    exists: false,
+    lead: emptyLead,
+    createdAt: null,
+    updatedAt: null,
+    lastMessage: null,
+    messageCount: 0,
+    submittedLeadId: null,
+    submittedAt: null,
+    readyToSubmit: false,
+    missingFields: missingAssistantFields(emptyLead),
+    messages: [],
+  };
+}
+
+function formatDateTime(value: string | null) {
+  if (!value) return "Not yet";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+}
+
+function leadStatusClass(status: string) {
+  if (status === "approved") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+  if (status === "rejected") {
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+  return "border-amber-200 bg-amber-50 text-amber-700";
+}
+
+async function readJson<T>(response: Response) {
+  const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!response.ok) {
+    throw new Error(typeof body.error === "string" ? body.error : "Request failed.");
+  }
+  return body as T;
+}
+
+function MiniStat({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/60 bg-white/70 p-4 shadow-sm backdrop-blur">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-slate-500">{label}</p>
+      <p className="mt-3 text-2xl font-semibold text-slate-950">{value}</p>
+      <p className="mt-1 text-sm text-slate-600">{sub}</p>
+    </div>
+  );
+}
+
+export default function AdminAiAssistantPage() {
+  const [overview, setOverview] = useState<AssistantOverview | null>(null);
+  const [session, setSession] = useState<AssistantSessionDetail>(() => createDraftSession(generateSessionId()));
+  const [draft, setDraft] = useState("");
+  const [knowledgeTitle, setKnowledgeTitle] = useState("");
+  const [knowledgeContent, setKnowledgeContent] = useState("");
+  const [lastSuggestions, setLastSuggestions] = useState<string[]>([]);
+  const [lastRelatedContext, setLastRelatedContext] = useState<AssistantContextItem[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loadingOverview, setLoadingOverview] = useState(true);
+  const [loadingSession, setLoadingSession] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [savingKnowledge, setSavingKnowledge] = useState(false);
+  const [training, setTraining] = useState(false);
+
+  const refreshOverview = useCallback(async () => {
+    const data = await readJson<AssistantOverview>(await fetch("/api/admin/ai-assistant", { cache: "no-store" }));
+    startTransition(() => {
+      setOverview(data);
+    });
+    return data;
+  }, []);
+
+  const refreshSession = useCallback(async (sessionId: string) => {
+    setLoadingSession(true);
+    try {
+      const data = await readJson<{ session: AssistantSessionDetail }>(
+        await fetch(`/api/admin/ai-assistant/session/${encodeURIComponent(sessionId)}`, {
+          cache: "no-store",
+        })
+      );
+      startTransition(() => {
+        setSession(data.session);
+        setLastSuggestions([]);
+        setLastRelatedContext([]);
+      });
+    } finally {
+      setLoadingSession(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    setLoadingOverview(true);
+    void refreshOverview()
+      .catch((nextError: unknown) => {
+        if (!alive) return;
+        setError(nextError instanceof Error ? nextError.message : "Failed to load AI assistant.");
+      })
+      .finally(() => {
+        if (alive) {
+          setLoadingOverview(false);
+        }
+      });
+    return () => {
+      alive = false;
+    };
+  }, [refreshOverview]);
+
+  async function handleSendMessage(message?: string) {
+    const nextMessage = (message ?? draft).trim();
+    if (!nextMessage || sending) return;
+
+    setSending(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const result = await readJson<AssistantChatPayload>(
+        await fetch("/api/admin/ai-assistant/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: session.sessionId,
+            message: nextMessage,
+          }),
+        })
+      );
+
+      startTransition(() => {
+        setSession(result.session);
+        setDraft("");
+        setLastSuggestions(result.suggestions || []);
+        setLastRelatedContext(result.relatedContext || []);
+      });
+
+      await refreshOverview();
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Failed to send message.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleSubmitLead() {
+    if (submitting || !session.sessionId) return;
+
+    setSubmitting(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const result = await readJson<{ ok: true; lead: AssistantLeadRecord }>(
+        await fetch(`/api/admin/ai-assistant/session/${encodeURIComponent(session.sessionId)}/submit`, {
+          method: "POST",
+        })
+      );
+      setNotice(`Lead ${result.lead.id} submitted for testing.`);
+      await Promise.all([refreshOverview(), refreshSession(session.sessionId)]);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Failed to submit lead.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleFeedback(lead: AssistantLeadRecord, verdict: "approved" | "rejected") {
+    const commentPrompt =
+      verdict === "approved"
+        ? "Approval note (optional)"
+        : "Reason for rejection (optional)";
+    const comment = window.prompt(commentPrompt, lead.feedbackComment || "");
+    if (comment === null) return;
+
+    setError(null);
+    setNotice(null);
+
+    try {
+      await readJson<{ ok: true; training: AssistantTrainingSnapshot }>(
+        await fetch(`/api/admin/ai-assistant/feedback/${encodeURIComponent(lead.id)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ verdict, comment }),
+        })
+      );
+      setNotice(`Lead ${lead.id} marked ${verdict}.`);
+      await refreshOverview();
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Failed to save feedback.");
+    }
+  }
+
+  async function handleSaveKnowledge() {
+    const title = knowledgeTitle.trim();
+    const content = knowledgeContent.trim();
+    if (!title || !content || savingKnowledge) return;
+
+    setSavingKnowledge(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      await readJson<{ ok: true; knowledge: AssistantKnowledgeRecord }>(
+        await fetch("/api/admin/ai-assistant/knowledge", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, content }),
+        })
+      );
+      startTransition(() => {
+        setKnowledgeTitle("");
+        setKnowledgeContent("");
+      });
+      setNotice("Knowledge saved and assistant retrained.");
+      await refreshOverview();
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Failed to save knowledge.");
+    } finally {
+      setSavingKnowledge(false);
+    }
+  }
+
+  async function handleRetrain() {
+    if (training) return;
+
+    setTraining(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      await readJson<{ ok: true; training: AssistantTrainingSnapshot }>(
+        await fetch("/api/admin/ai-assistant/train", {
+          method: "POST",
+        })
+      );
+      setNotice("Assistant retrained from approved leads and saved knowledge.");
+      await refreshOverview();
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Failed to retrain assistant.");
+    } finally {
+      setTraining(false);
+    }
+  }
+
+  function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      void handleSendMessage();
+    }
+  }
+
+  function startFreshSession() {
+    startTransition(() => {
+      setSession(createDraftSession(generateSessionId()));
+      setDraft("");
+      setLastSuggestions([]);
+      setLastRelatedContext([]);
+      setNotice("Started a fresh admin testing session.");
+      setError(null);
+    });
+  }
+
+  const recentSessions = overview?.sessions || [];
+  const recentLeads = overview?.leads || [];
+  const recentKnowledge = overview?.knowledge || [];
+  const trainingSnapshot = overview?.training || null;
+  const samplePrompts = [
+    "I need 20 black polo shirts with logo on front left chest and a big print at the back",
+    "My name is Ryan and my phone is 59883880",
+    "summary",
+  ];
+
+  return (
+    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,rgba(245,158,11,0.16),transparent_32%),linear-gradient(180deg,#f8fafc_0%,#ecfeff_38%,#f8fafc_100%)]">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-[-8rem] top-10 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,rgba(34,197,94,0.18),transparent_70%)] blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute right-[-7rem] top-24 h-80 w-80 rounded-full bg-[radial-gradient(circle_at_center,rgba(14,165,233,0.18),transparent_70%)] blur-3xl"
+      />
+
+      <div className="relative mx-auto max-w-7xl px-6 py-8">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <Link href="/admin" className="text-sm font-semibold text-slate-600 transition hover:text-slate-900">
+              ← Back to admin dashboard
+            </Link>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">
+                <TestTube2 className="h-3.5 w-3.5" />
+                Admin testing first
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
+                <DatabaseZap className="h-3.5 w-3.5" />
+                Firestore backed
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                setNotice(null);
+                setLoadingOverview(true);
+                void refreshOverview()
+                  .catch((nextError: unknown) => {
+                    setError(nextError instanceof Error ? nextError.message : "Failed to refresh.");
+                  })
+                  .finally(() => {
+                    setLoadingOverview(false);
+                  });
+              }}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${loadingOverview ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+            <button
+              type="button"
+              onClick={handleRetrain}
+              className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+            >
+              {training ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <BrainCircuit className="h-4 w-4" />}
+              Retrain
+            </button>
+          </div>
+        </div>
+
+        <section className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-white/75 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.12)] backdrop-blur">
+          <div
+            aria-hidden
+            className="absolute inset-x-0 top-0 h-36 bg-[linear-gradient(90deg,rgba(15,23,42,0.95),rgba(8,145,178,0.88),rgba(245,158,11,0.82))]"
+          />
+          <div className="relative grid gap-6 lg:grid-cols-[1.35fr_0.95fr]">
+            <div className="text-white">
+              <p className="text-xs font-semibold uppercase tracking-[0.34em] text-cyan-100">MO T-SHIRT AI Lab</p>
+              <h1 className="mt-4 max-w-3xl font-sans text-4xl font-semibold tracking-tight sm:text-5xl">
+                Train and test the local sales assistant inside admin before any public launch.
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm text-cyan-50/90 sm:text-base">
+                This page keeps the assistant private while you validate order capture, submit sample leads, save knowledge, and approve or reject results for learning.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90">
+                  <Bot className="h-3.5 w-3.5" />
+                  Chat-driven lead capture
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90">
+                  <MessageSquareText className="h-3.5 w-3.5" />
+                  Session playback
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Feedback-driven retraining
+                </span>
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+              <MiniStat
+                label="Sessions"
+                value={String(recentSessions.length)}
+                sub={recentSessions.length ? "Recent admin runs loaded" : "No testing sessions yet"}
+              />
+              <MiniStat
+                label="Leads"
+                value={String(recentLeads.length)}
+                sub={recentLeads.length ? "Recent submitted leads ready for review" : "No submitted leads yet"}
+              />
+              <MiniStat
+                label="Knowledge"
+                value={String(recentKnowledge.length)}
+                sub={recentKnowledge.length ? "Business notes already feeding the assistant" : "Knowledge base is empty"}
+              />
+            </div>
+          </div>
+        </section>
+
+        {(notice || error) && (
+          <div
+            className={`mt-6 rounded-2xl border px-4 py-3 text-sm shadow-sm ${
+              error
+                ? "border-rose-200 bg-rose-50 text-rose-700"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700"
+            }`}
+          >
+            <div className="flex items-start gap-2">
+              {error ? <CircleAlert className="mt-0.5 h-4 w-4" /> : <CheckCircle2 className="mt-0.5 h-4 w-4" />}
+              <span>{error || notice}</span>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-6 grid gap-6 xl:grid-cols-[1.45fr_1fr]">
+          <section className="rounded-[1.8rem] border border-slate-200/70 bg-white/85 p-5 shadow-sm backdrop-blur">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Testing Session</p>
+                <h2 className="mt-2 text-2xl font-semibold text-slate-950">Assistant console</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Session: <span className="font-mono text-xs text-slate-700">{session.sessionId}</span>
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={startFreshSession}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  New session
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSendMessage("summary")}
+                  className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100"
+                >
+                  Summary
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitLead}
+                  disabled={submitting || !session.readyToSubmit}
+                  className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ArrowUpRight className="h-4 w-4" />}
+                  Submit lead
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {samplePrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => void handleSendMessage(prompt)}
+                  className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-4 min-h-[26rem] rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 shadow-inner">
+              <div className="h-[25rem] space-y-3 overflow-y-auto pr-1">
+                {loadingSession ? (
+                  <div className="flex h-full items-center justify-center text-sm text-slate-500">
+                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                    Loading session
+                  </div>
+                ) : session.messages.length ? (
+                  session.messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm shadow-sm ${
+                        message.role === "user"
+                          ? "ml-auto bg-slate-950 text-white"
+                          : "bg-cyan-50 text-slate-800"
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap leading-6">{message.content}</p>
+                      <p
+                        className={`mt-2 text-[11px] uppercase tracking-[0.18em] ${
+                          message.role === "user" ? "text-slate-300" : "text-cyan-700"
+                        }`}
+                      >
+                        {message.role} · {formatDateTime(message.createdAt)}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center rounded-[1.2rem] border border-dashed border-slate-200 bg-white/80 px-6 text-center">
+                    <Bot className="h-10 w-10 text-cyan-500" />
+                    <h3 className="mt-4 text-lg font-semibold text-slate-900">No conversation yet</h3>
+                    <p className="mt-2 max-w-md text-sm leading-6 text-slate-600">
+                      Start with a real customer-style request. The assistant will extract order details, ask for missing fields, and let you submit the lead from this admin test harness.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4">
+              <label htmlFor="assistant-composer" className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                Send a test message
+              </label>
+              <textarea
+                id="assistant-composer"
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                onKeyDown={handleComposerKeyDown}
+                className="mt-3 min-h-[7.5rem] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100"
+                placeholder="Example: I need 30 navy t-shirts with front left chest logo and back print for next week."
+              />
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs text-slate-500">Press Enter to send. Shift+Enter adds a new line.</p>
+                <button
+                  type="button"
+                  onClick={() => void handleSendMessage()}
+                  disabled={!draft.trim() || sending}
+                  className="inline-flex items-center gap-2 rounded-full bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {sending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <SendHorizontal className="h-4 w-4" />}
+                  Send message
+                </button>
+              </div>
+            </div>
+
+            {(lastSuggestions.length > 0 || lastRelatedContext.length > 0) && (
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div className="rounded-[1.4rem] border border-amber-200 bg-amber-50/80 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">Assistant suggestions</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {lastSuggestions.length ? (
+                      lastSuggestions.map((item) => (
+                        <span
+                          key={item}
+                          className="inline-flex rounded-full border border-amber-200 bg-white px-3 py-1.5 text-xs font-medium text-amber-800"
+                        >
+                          {item}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm text-amber-700">No extra suggestions on the last reply.</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-[1.4rem] border border-cyan-200 bg-cyan-50/80 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700">Retrieved context</p>
+                  <div className="mt-3 space-y-2">
+                    {lastRelatedContext.length ? (
+                      lastRelatedContext.map((item) => (
+                        <div key={`${item.source}-${item.text}`} className="rounded-2xl border border-cyan-200 bg-white px-3 py-2 text-sm text-slate-700">
+                          <p>{item.text}</p>
+                          <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-cyan-700">
+                            {item.source} · match {Math.round(item.score * 100)}%
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-sm text-cyan-700">No related approved patterns or knowledge surfaced yet.</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+
+          <div className="space-y-6">
+            <section className="rounded-[1.8rem] border border-slate-200/70 bg-white/85 p-5 shadow-sm backdrop-blur">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-500">Lead Snapshot</p>
+                  <h2 className="mt-2 text-2xl font-semibold text-slate-950">Current extracted lead</h2>
+                </div>
+                <span
+                  className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${
+                    session.readyToSubmit
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border-amber-200 bg-amber-50 text-amber-700"
+                  }`}
+                >
+                  {session.readyToSubmit ? "Ready to submit" : "Missing details"}
+                </span>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {[
+                  ["Client", session.lead.clientName || "Not set"],
+                  ["Phone", session.lead.phone || "Not set"],
+                  ["Email", session.lead.email || "Not set"],
+                  ["Product", session.lead.productType || "Not set"],
+                  ["Quantity", session.lead.quantity ? String(session.lead.quantity) : "Not set"],
+                  ["Color", session.lead.color || "Not set"],
+                  ["Sizes", session.lead.sizes.join(", ") || "Not set"],
+                  ["Print positions", session.lead.printPositions.join(", ") || "Not set"],
+                  ["Print sizes", session.lead.printSizes.join(", ") || "Not set"],
+                  ["Logo ready", session.lead.logoReady === null ? "Not set" : session.lead.logoReady ? "Yes" : "No"],
+                  ["Delivery", session.lead.deliveryMethod || "Not set"],
+                  ["Deadline", session.lead.deadline || "Not set"],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">{label}</p>
+                    <p className="mt-2 text-sm font-medium text-slate-900">{value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Missing required fields</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {session.missingFields.length ? (
+                    session.missingFields.map((field) => (
+                      <span
+                        key={field}
+                        className="inline-flex rounded-full border border-amber-200 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800"
+                      >
+                        {formatAssistantFieldLabel(field)}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="inline-flex rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                      All required details captured
+                    </span>
+                  )}
+                </div>
+                {session.lead.notes && (
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Notes</p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{session.lead.notes}</p>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-[1.8rem] border border-slate-200/70 bg-white/85 p-5 shadow-sm backdrop-blur">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-500">Learning State</p>
+                  <h2 className="mt-2 text-2xl font-semibold text-slate-950">Training overview</h2>
+                </div>
+                <BrainCircuit className="h-8 w-8 text-cyan-600" />
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <MiniStat
+                  label="Approved leads"
+                  value={String(trainingSnapshot?.approvedLeadCount || 0)}
+                  sub="Used as positive examples"
+                />
+                <MiniStat
+                  label="Keywords"
+                  value={String(trainingSnapshot?.positiveKeywordCount || 0)}
+                  sub="Learned signal vocabulary"
+                />
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Field groups</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {trainingSnapshot?.fieldGroups?.length ? (
+                    trainingSnapshot.fieldGroups.map((fieldGroup) => (
+                      <span
+                        key={fieldGroup}
+                        className="inline-flex rounded-full border border-cyan-200 bg-white px-3 py-1.5 text-xs font-semibold text-cyan-700"
+                      >
+                        {fieldGroup}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-sm text-slate-600">No training groups yet.</span>
+                  )}
+                </div>
+                <p className="mt-4 text-sm text-slate-600">
+                  Last retrained: <span className="font-medium text-slate-900">{formatDateTime(trainingSnapshot?.updatedAt || null)}</span>
+                </p>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Top learned keywords</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {trainingSnapshot?.topKeywords?.length ? (
+                    trainingSnapshot.topKeywords.map((item) => (
+                      <span
+                        key={item.keyword}
+                        className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
+                      >
+                        {item.keyword} · {item.count}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-sm text-slate-600">Top keywords will appear after approvals or saved knowledge.</span>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-[1.8rem] border border-slate-200/70 bg-white/85 p-5 shadow-sm backdrop-blur">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-500">Knowledge Base</p>
+                  <h2 className="mt-2 text-2xl font-semibold text-slate-950">Add business guidance</h2>
+                </div>
+                <DatabaseZap className="h-8 w-8 text-amber-500" />
+              </div>
+
+              <div className="mt-4 space-y-3">
+                <input
+                  value={knowledgeTitle}
+                  onChange={(event) => setKnowledgeTitle(event.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-amber-300 focus:ring-4 focus:ring-amber-100"
+                  placeholder="Knowledge title"
+                />
+                <textarea
+                  value={knowledgeContent}
+                  onChange={(event) => setKnowledgeContent(event.target.value)}
+                  className="min-h-[8rem] w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-amber-300 focus:ring-4 focus:ring-amber-100"
+                  placeholder="Example: Front left chest logo is usually 9x9 cm. Large back print is usually 22x22 cm."
+                />
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleSaveKnowledge}
+                    disabled={savingKnowledge || !knowledgeTitle.trim() || !knowledgeContent.trim()}
+                    className="inline-flex items-center gap-2 rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {savingKnowledge ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <DatabaseZap className="h-4 w-4" />}
+                    Save knowledge
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-3">
+                {recentKnowledge.length ? (
+                  recentKnowledge.map((item) => (
+                    <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                          <p className="mt-2 text-sm leading-6 text-slate-600">{item.content}</p>
+                        </div>
+                        <span className="text-[11px] uppercase tracking-[0.16em] text-slate-500">
+                          {formatDateTime(item.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600">
+                    No knowledge items saved yet.
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+          <section className="rounded-[1.8rem] border border-slate-200/70 bg-white/85 p-5 shadow-sm backdrop-blur">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-500">Recent Sessions</p>
+                <h2 className="mt-2 text-2xl font-semibold text-slate-950">Replay test runs</h2>
+              </div>
+              <MessageSquareText className="h-8 w-8 text-slate-500" />
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {recentSessions.length ? (
+                recentSessions.map((item: AssistantSessionSummary) => (
+                  <button
+                    key={item.sessionId}
+                    type="button"
+                    onClick={() => void refreshSession(item.sessionId)}
+                    className={`w-full rounded-2xl border px-4 py-4 text-left transition ${
+                      session.sessionId === item.sessionId
+                        ? "border-cyan-300 bg-cyan-50"
+                        : "border-slate-200 bg-slate-50/70 hover:border-slate-300 hover:bg-white"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-mono text-xs text-slate-700">{item.sessionId}</p>
+                        <p className="mt-2 text-sm font-semibold text-slate-900">
+                          {item.lead.clientName || "Unnamed lead"} · {item.lead.productType || "No product yet"}
+                        </p>
+                        <p className="mt-2 line-clamp-2 text-sm text-slate-600">
+                          {item.lastMessage || "No assistant reply stored yet."}
+                        </p>
+                      </div>
+                      <span
+                        className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
+                          item.readyToSubmit
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : "border-amber-200 bg-amber-50 text-amber-700"
+                        }`}
+                      >
+                        {item.readyToSubmit ? "Ready" : "In progress"}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-xs uppercase tracking-[0.16em] text-slate-500">
+                      {item.messageCount} messages · updated {formatDateTime(item.updatedAt)}
+                    </p>
+                  </button>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600">
+                  No sessions yet. Start a fresh session above and send a message.
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section className="rounded-[1.8rem] border border-slate-200/70 bg-white/85 p-5 shadow-sm backdrop-blur">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-500">Recent Leads</p>
+                <h2 className="mt-2 text-2xl font-semibold text-slate-950">Approve or reject submissions</h2>
+              </div>
+              <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {recentLeads.length ? (
+                recentLeads.map((lead) => (
+                  <div key={lead.id} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {lead.lead.clientName || "Unnamed client"} · {lead.lead.productType || "No product"}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-600">
+                          Qty {lead.lead.quantity || 0} · {lead.lead.color || "No color"} · {lead.lead.printPositions.join(", ") || "No print positions"}
+                        </p>
+                        <p className="mt-2 text-xs uppercase tracking-[0.16em] text-slate-500">
+                          Session {lead.sessionId || "n/a"} · {formatDateTime(lead.updatedAt)}
+                        </p>
+                      </div>
+                      <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${leadStatusClass(lead.status)}`}>
+                        {lead.status}
+                      </span>
+                    </div>
+
+                    {lead.feedbackComment && (
+                      <div className="mt-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                        {lead.feedbackComment}
+                      </div>
+                    )}
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleFeedback(lead, "approved")}
+                        className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleFeedback(lead, "rejected")}
+                        className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-500"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-600">
+                  Submitted leads will appear here for approval testing.
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  );
+}

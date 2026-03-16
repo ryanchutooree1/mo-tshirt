@@ -13,6 +13,7 @@
     "start": "next start",
     "clean": "rm -rf .next",
     "lint": "eslint",
+    "test:ai-assistant": "node --no-warnings --test tests/ai-assistant.test.mjs",
     "test:pricing": "node --test tests/pricing.test.js",
     "postbuild": "next-sitemap"
   },

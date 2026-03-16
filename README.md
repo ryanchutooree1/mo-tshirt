@@ -22,6 +22,7 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 - Public catalog: `http://localhost:3000/shops`
 - Admin: `http://localhost:3000/admin/shops` (protected by password)
+- AI assistant lab: `http://localhost:3000/admin/ai-assistant` (admin-only testing)
 
 ### Environment
 
