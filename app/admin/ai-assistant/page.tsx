@@ -691,6 +691,11 @@ export default function AdminAiAssistantPage() {
                   value={String(trainingSnapshot?.positiveKeywordCount || 0)}
                   sub="Learned signal vocabulary"
                 />
+                <MiniStat
+                  label="Aliases"
+                  value={String(trainingSnapshot?.learnedProductAliasCount || 0)}
+                  sub="Auto-learned product phrasing"
+                />
               </div>
 
               <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
@@ -712,6 +717,37 @@ export default function AdminAiAssistantPage() {
                 <p className="mt-4 text-sm text-slate-600">
                   Last retrained: <span className="font-medium text-slate-900">{formatDateTime(trainingSnapshot?.updatedAt || null)}</span>
                 </p>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Learned product aliases</p>
+                <div className="mt-3 space-y-3">
+                  {trainingSnapshot?.learnedProductAliasCount ? (
+                    Object.entries(trainingSnapshot.learnedProductAliases).map(([productType, aliases]) => (
+                      <div key={productType}>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{productType}</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {aliases.length ? (
+                            aliases.map((alias) => (
+                              <span
+                                key={`${productType}-${alias}`}
+                                className="inline-flex rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700"
+                              >
+                                {alias}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-sm text-slate-500">No learned aliases yet.</span>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-sm text-slate-600">
+                      The assistant only learns aliases from approved leads, so it adapts without training itself on bad chats.
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">

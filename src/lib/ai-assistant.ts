@@ -9,8 +9,12 @@ const QUANTITY_RE = /\b(\d{1,4})\b/g;
 const NOTE_RE = /\bnotes?\s*:/i;
 const QUANTITY_CONTEXT_RE =
   /\b(piece|pieces|pcs|qty|quantity|need|want|order|shirts?|t[\s-]?shirts?|polos?|hoodies?|caps?)\b/i;
+const ORDER_CONTEXT_RE = /\b(need|want|order|quote|looking|get|require)\b/i;
 
-const PRODUCT_PATTERNS: Array<{ canonical: AssistantLead["productType"]; patterns: string[] }> = [
+export const ASSISTANT_PRODUCT_TYPES = ["t-shirt", "polo", "hoodie", "cap"] as const;
+export type AssistantProductType = (typeof ASSISTANT_PRODUCT_TYPES)[number];
+
+const PRODUCT_PATTERNS: Array<{ canonical: AssistantProductType; patterns: string[] }> = [
   {
     canonical: "t-shirt",
     patterns: ["tshirt", "tshirts", "t shirt", "t shirts", "t-shirt", "t-shirts", "tee", "tees"],
@@ -19,6 +23,36 @@ const PRODUCT_PATTERNS: Array<{ canonical: AssistantLead["productType"]; pattern
   { canonical: "hoodie", patterns: ["hoodie", "hoodies"] },
   { canonical: "cap", patterns: ["cap", "caps"] },
 ];
+
+const PRODUCT_ROOT_HINTS: Record<AssistantProductType, string[]> = {
+  "t-shirt": ["tshirt", "tee"],
+  polo: ["polo"],
+  hoodie: ["hoodie"],
+  cap: ["cap"],
+};
+
+const PRODUCT_ALIAS_STOP_WORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "for",
+  "hi",
+  "i",
+  "in",
+  "is",
+  "me",
+  "my",
+  "need",
+  "of",
+  "on",
+  "please",
+  "quote",
+  "the",
+  "to",
+  "want",
+  "with",
+  "you",
+]);
 
 const LEFT_CHEST_PATTERNS = ["left chest", "front left chest", "left logo", "logo on chest"];
 const FRONT_CENTER_PATTERNS = ["front center", "center front", "big front"];
@@ -83,7 +117,7 @@ export type AssistantLead = {
   clientName: string | null;
   phone: string | null;
   email: string | null;
-  productType: "t-shirt" | "polo" | "hoodie" | "cap" | null;
+  productType: AssistantProductType | null;
   quantity: number | null;
   color: string | null;
   sizes: string[];
@@ -98,6 +132,7 @@ export type AssistantLead = {
 export type AssistantApprovedLeadSource = {
   lead: AssistantLead;
   status?: string | null;
+  sessionMessages?: string[];
 };
 
 export type AssistantKnowledgeSource = {
@@ -132,6 +167,8 @@ export type AssistantTrainingSnapshot = {
   approvedLeadCount: number;
   knowledgeCount: number;
   topKeywords: AssistantKeywordStat[];
+  learnedProductAliases: Record<AssistantProductType, string[]>;
+  learnedProductAliasCount: number;
   updatedAt?: string | null;
 };
 
@@ -156,6 +193,77 @@ function cleanString(value: unknown) {
 
 function normalizeWords(text: string) {
   return ` ${text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
+}
+
+function singularizeComparable(value: string) {
+  if (value.endsWith("ies") && value.length > 4) {
+    return `${value.slice(0, -3)}y`;
+  }
+  if (value.endsWith("es") && /(sh|ch|ss|x|z|o)$/.test(value.slice(0, -2))) {
+    return value.slice(0, -2);
+  }
+  if (value.endsWith("s") && value.length > 3 && !value.endsWith("ss")) {
+    return value.slice(0, -1);
+  }
+  return value;
+}
+
+function toComparableAliasKey(value: string) {
+  return singularizeComparable(value.toLowerCase().replace(/[^a-z0-9]+/g, ""));
+}
+
+function normalizeLearnedAliasPhrase(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9\s-]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function buildSlidingPhrases(tokens: string[], maxSize = 3) {
+  const phrases = new Set<string>();
+  const cleaned = tokens.filter((token) => token && !/^\d+$/.test(token));
+
+  for (let size = 1; size <= maxSize; size += 1) {
+    for (let index = 0; index <= cleaned.length - size; index += 1) {
+      const slice = cleaned.slice(index, index + size);
+      if (!slice.length || slice.every((token) => PRODUCT_ALIAS_STOP_WORDS.has(token))) continue;
+      phrases.add(slice.join(" "));
+    }
+  }
+
+  return Array.from(phrases);
+}
+
+function levenshteinDistance(left: string, right: string) {
+  if (left === right) return 0;
+  if (!left.length) return right.length;
+  if (!right.length) return left.length;
+
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  const current = new Array<number>(right.length + 1).fill(0);
+
+  for (let row = 0; row < left.length; row += 1) {
+    current[0] = row + 1;
+    for (let column = 0; column < right.length; column += 1) {
+      const cost = left[row] === right[column] ? 0 : 1;
+      current[column + 1] = Math.min(
+        current[column] + 1,
+        previous[column + 1] + 1,
+        previous[column] + cost
+      );
+    }
+    for (let column = 0; column <= right.length; column += 1) {
+      previous[column] = current[column];
+    }
+  }
+
+  return previous[right.length];
+}
+
+function aliasKeysAreClose(left: string, right: string) {
+  if (!left || !right) return false;
+  if (left === right) return true;
+  if (left.length < 5 || right.length < 5) return false;
+  if (Math.abs(left.length - right.length) > 1) return false;
+  if (left[0] !== right[0]) return false;
+  return levenshteinDistance(left, right) <= 1;
 }
 
 function hasPattern(normalizedWords: string, pattern: string) {
@@ -220,6 +328,120 @@ function normalizeStringArray(value: unknown, transform?: (value: string) => str
 
 function incrementCounter(target: Record<string, number>, key: string) {
   target[key] = (target[key] || 0) + 1;
+}
+
+export function createEmptyLearnedProductAliases(): Record<AssistantProductType, string[]> {
+  return {
+    "t-shirt": [],
+    polo: [],
+    hoodie: [],
+    cap: [],
+  };
+}
+
+function getProductPatternCatalog(trainingState?: Pick<AssistantTrainingState, "learnedProductAliases"> | null) {
+  return PRODUCT_PATTERNS.map((product) => {
+    const patterns = dedupeSorted([
+      ...product.patterns,
+      ...(trainingState?.learnedProductAliases?.[product.canonical] || []),
+    ]);
+
+    return {
+      canonical: product.canonical,
+      patterns,
+      patternKeys: patterns.map(toComparableAliasKey).filter(Boolean),
+    };
+  });
+}
+
+function detectProductType(
+  message: string,
+  trainingState?: Pick<AssistantTrainingState, "learnedProductAliases"> | null
+): AssistantProductType | null {
+  const normalized = normalizeWords(message);
+  const candidateKeys = buildSlidingPhrases(tokenize(message), 3)
+    .map(toComparableAliasKey)
+    .filter(Boolean);
+
+  for (const product of getProductPatternCatalog(trainingState)) {
+    if (product.patterns.some((pattern) => hasPattern(normalized, pattern))) {
+      return product.canonical;
+    }
+
+    for (const candidateKey of candidateKeys) {
+      if (product.patternKeys.some((patternKey) => patternKey === candidateKey || aliasKeysAreClose(candidateKey, patternKey))) {
+        return product.canonical;
+      }
+    }
+  }
+
+  return null;
+}
+
+function candidateLooksLikeProductAlias(productType: AssistantProductType, phrase: string) {
+  const normalizedPhrase = normalizeLearnedAliasPhrase(phrase);
+  const aliasKey = toComparableAliasKey(normalizedPhrase);
+  if (!aliasKey || aliasKey.length < 4) return false;
+  const words = normalizedPhrase.split(" ").filter(Boolean);
+  if (words.length > 3) return false;
+  if (words.some((word) => PRODUCT_ALIAS_STOP_WORDS.has(word))) return false;
+
+  const hasOwnHint = PRODUCT_ROOT_HINTS[productType].some(
+    (hint) => aliasKey.includes(hint) || aliasKeysAreClose(aliasKey, hint)
+  );
+  if (!hasOwnHint) return false;
+
+  return !ASSISTANT_PRODUCT_TYPES.some(
+    (otherType) =>
+      otherType !== productType &&
+      PRODUCT_ROOT_HINTS[otherType].some(
+        (hint) => aliasKey.includes(hint) || aliasKeysAreClose(aliasKey, hint)
+      )
+  );
+}
+
+function learnProductAliasesFromApprovedLeads(approvedLeads: AssistantApprovedLeadSource[]) {
+  const learnedCounts: Record<AssistantProductType, Record<string, number>> = {
+    "t-shirt": {},
+    polo: {},
+    hoodie: {},
+    cap: {},
+  };
+  const builtInKeys = Object.fromEntries(
+    PRODUCT_PATTERNS.map((product) => [
+      product.canonical,
+      new Set(product.patterns.map(toComparableAliasKey)),
+    ])
+  ) as Record<AssistantProductType, Set<string>>;
+
+  approvedLeads.forEach((source) => {
+    if (source.status && source.status !== "approved") return;
+    const lead = normalizeAssistantLead(source.lead);
+    if (!lead.productType || !source.sessionMessages?.length) return;
+
+    source.sessionMessages.forEach((message) => {
+      const lower = message.toLowerCase();
+      if (!QUANTITY_CONTEXT_RE.test(lower) && !ORDER_CONTEXT_RE.test(lower)) return;
+
+      buildSlidingPhrases(tokenize(message), 3).forEach((phrase) => {
+        const normalizedPhrase = normalizeLearnedAliasPhrase(phrase);
+        const aliasKey = toComparableAliasKey(normalizedPhrase);
+        if (!aliasKey || builtInKeys[lead.productType!].has(aliasKey)) return;
+        if (!candidateLooksLikeProductAlias(lead.productType!, normalizedPhrase)) return;
+        incrementCounter(learnedCounts[lead.productType!], normalizedPhrase);
+      });
+    });
+  });
+
+  const learnedAliases = createEmptyLearnedProductAliases();
+  ASSISTANT_PRODUCT_TYPES.forEach((productType) => {
+    learnedAliases[productType] = Object.entries(learnedCounts[productType])
+      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .slice(0, 12)
+      .map(([alias]) => alias);
+  });
+
+  return learnedAliases;
 }
 
 export function createEmptyAssistantLead(): AssistantLead {
@@ -321,16 +543,17 @@ export function leadToTrainingText(lead: AssistantLead) {
     .join(" ");
 }
 
-export function extractLeadUpdates(message: string): Partial<AssistantLead> {
+export function extractLeadUpdates(
+  message: string,
+  trainingState?: Pick<AssistantTrainingState, "learnedProductAliases"> | null
+): Partial<AssistantLead> {
   const updates: Partial<AssistantLead> = {};
   const lower = message.toLowerCase();
   const normalized = normalizeWords(message);
 
-  for (const product of PRODUCT_PATTERNS) {
-    if (product.patterns.some((pattern) => hasPattern(normalized, pattern))) {
-      updates.productType = product.canonical;
-      break;
-    }
+  const productType = detectProductType(message, trainingState);
+  if (productType) {
+    updates.productType = productType;
   }
 
   const phoneMatch = PHONE_RE.exec(message);
@@ -566,8 +789,9 @@ export function runAssistantTurn(input: {
   message: string;
   approvedLeads?: AssistantApprovedLeadSource[];
   knowledgeItems?: AssistantKnowledgeSource[];
+  trainingState?: AssistantTrainingState | null;
 }): AssistantChatResult {
-  const updates = extractLeadUpdates(input.message);
+  const updates = extractLeadUpdates(input.message, input.trainingState);
   const lead = mergeAssistantLeadUpdates(input.lead, updates);
   const relatedContext = retrieveAssistantContext(
     input.message,
@@ -610,6 +834,7 @@ export function buildAssistantTrainingState(
 ): AssistantTrainingState {
   const positiveKeywords: Record<string, number> = {};
   const fieldKeywordCounts: Record<string, Record<string, number>> = {};
+  const learnedProductAliases = learnProductAliasesFromApprovedLeads(approvedLeads);
 
   approvedLeads.forEach((source) => {
     if (source.status && source.status !== "approved") return;
@@ -643,5 +868,10 @@ export function buildAssistantTrainingState(
     approvedLeadCount: approvedLeads.filter((item) => !item.status || item.status === "approved").length,
     knowledgeCount: knowledgeItems.length,
     topKeywords,
+    learnedProductAliases,
+    learnedProductAliasCount: Object.values(learnedProductAliases).reduce(
+      (total, aliases) => total + aliases.length,
+      0
+    ),
   };
 }

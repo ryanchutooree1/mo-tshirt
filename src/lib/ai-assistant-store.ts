@@ -14,9 +14,11 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
+  ASSISTANT_PRODUCT_TYPES,
   assistantReadyToSubmit,
   buildAssistantTrainingState,
   createEmptyAssistantLead,
+  createEmptyLearnedProductAliases,
   formatLeadSummary,
   missingAssistantFields,
   normalizeAssistantLead,
@@ -26,7 +28,9 @@ import {
   type AssistantKnowledgeSource,
   type AssistantLead,
   type AssistantMessageRole,
+  type AssistantProductType,
   type AssistantRequiredField,
+  type AssistantTrainingState,
   type AssistantTrainingSnapshot,
 } from "@/lib/ai-assistant";
 
@@ -222,6 +226,25 @@ function mapKnowledgeRecord(id: string, data: FirestoreLike): AssistantKnowledge
   };
 }
 
+function mapLearnedProductAliases(value: unknown): Record<AssistantProductType, string[]> {
+  const fallback = createEmptyLearnedProductAliases();
+  if (!value || typeof value !== "object") return fallback;
+
+  const source = value as Record<string, unknown>;
+  ASSISTANT_PRODUCT_TYPES.forEach((productType) => {
+    const aliases = Array.isArray(source[productType]) ? source[productType] : [];
+    fallback[productType] = Array.from(
+      new Set(
+        aliases
+          .map((alias) => cleanString(alias))
+          .filter(Boolean)
+      )
+    );
+  });
+
+  return fallback;
+}
+
 function mapTrainingSnapshot(data: FirestoreLike | null): AssistantTrainingSnapshot | null {
   if (!data) return null;
   const topKeywords = Array.isArray(data.topKeywords)
@@ -247,6 +270,7 @@ function mapTrainingSnapshot(data: FirestoreLike | null): AssistantTrainingSnaps
     data.positiveKeywords && typeof data.positiveKeywords === "object"
       ? (data.positiveKeywords as Record<string, unknown>)
       : null;
+  const learnedProductAliases = mapLearnedProductAliases(data.learnedProductAliases);
 
   return {
     positiveKeywordCount: asNumber(
@@ -257,16 +281,79 @@ function mapTrainingSnapshot(data: FirestoreLike | null): AssistantTrainingSnaps
     approvedLeadCount: asNumber(data.approvedLeadCount, 0),
     knowledgeCount: asNumber(data.knowledgeCount, 0),
     topKeywords,
+    learnedProductAliases,
+    learnedProductAliasCount: asNumber(
+      data.learnedProductAliasCount,
+      Object.values(learnedProductAliases).reduce((total, aliases) => total + aliases.length, 0)
+    ),
     updatedAt: timestampToIso(data.updatedAt, data.updatedAtIso),
   };
 }
 
-async function getApprovedLeadSources(limitCount = 120): Promise<AssistantApprovedLeadSource[]> {
-  const snap = await getDocs(query(collection(db, COLLECTIONS.leads), orderBy("updatedAt", "desc"), limit(limitCount)));
+function mapTrainingState(data: FirestoreLike | null): AssistantTrainingState | null {
+  const snapshot = mapTrainingSnapshot(data);
+  if (!snapshot) return null;
+
+  return {
+    ...snapshot,
+    positiveKeywords:
+      data?.positiveKeywords && typeof data.positiveKeywords === "object"
+        ? Object.fromEntries(
+            Object.entries(data.positiveKeywords as Record<string, unknown>).map(([key, value]) => [
+              key,
+              asNumber(value, 0),
+            ])
+          )
+        : {},
+    fieldKeywordCounts:
+      data?.fieldKeywordCounts && typeof data.fieldKeywordCounts === "object"
+        ? Object.fromEntries(
+            Object.entries(data.fieldKeywordCounts as Record<string, unknown>).map(([field, counts]) => [
+              field,
+              counts && typeof counts === "object"
+                ? Object.fromEntries(
+                    Object.entries(counts as Record<string, unknown>).map(([keyword, value]) => [
+                      keyword,
+                      asNumber(value, 0),
+                    ])
+                  )
+                : {},
+            ])
+          )
+        : {},
+  };
+}
+
+async function getSessionUserMessages(sessionId: string, limitCount = 40) {
+  const snap = await getDocs(
+    query(collection(db, COLLECTIONS.sessions, sessionId, "messages"), orderBy("createdAt", "asc"), limit(limitCount))
+  );
   return snap.docs
+    .map((item) => mapMessageRecord(item.id, item.data() as FirestoreLike))
+    .filter((item) => item.role === "user" && item.content)
+    .map((item) => item.content);
+}
+
+async function getApprovedLeadSources(
+  limitCount = 120,
+  options?: { includeSessionMessages?: boolean }
+): Promise<AssistantApprovedLeadSource[]> {
+  const snap = await getDocs(query(collection(db, COLLECTIONS.leads), orderBy("updatedAt", "desc"), limit(limitCount)));
+  const approved = snap.docs
     .map((item) => mapLeadRecord(item.id, item.data() as FirestoreLike))
-    .filter((item) => item.status === "approved")
-    .map((item) => ({ lead: item.lead, status: item.status }));
+    .filter((item) => item.status === "approved");
+
+  if (!options?.includeSessionMessages) {
+    return approved.map((item) => ({ lead: item.lead, status: item.status }));
+  }
+
+  return Promise.all(
+    approved.map(async (item) => ({
+      lead: item.lead,
+      status: item.status,
+      sessionMessages: item.sessionId ? await getSessionUserMessages(item.sessionId) : [],
+    }))
+  );
 }
 
 async function getKnowledgeSources(limitCount = 120): Promise<AssistantKnowledgeSource[]> {
@@ -306,6 +393,12 @@ async function getTrainingSnapshotInternal() {
   const snap = await getDoc(doc(db, COLLECTIONS.modelState, MODEL_STATE_KEY));
   if (!snap.exists()) return null;
   return mapTrainingSnapshot(snap.data() as FirestoreLike);
+}
+
+async function getTrainingStateInternal() {
+  const snap = await getDoc(doc(db, COLLECTIONS.modelState, MODEL_STATE_KEY));
+  if (!snap.exists()) return null;
+  return mapTrainingState(snap.data() as FirestoreLike);
 }
 
 export async function getAssistantOverview(): Promise<AssistantOverview> {
@@ -369,6 +462,11 @@ export async function runAssistantChat(sessionId: string, message: string): Prom
     ? normalizeAssistantLead((sessionSnap.data() as FirestoreLike).lead)
     : createEmptyAssistantLead();
 
+  let trainingState = await getTrainingStateInternal();
+  if (!trainingState) {
+    trainingState = await retrainAssistantModelState();
+  }
+
   const [approvedLeads, knowledgeItems] = await Promise.all([
     getApprovedLeadSources(),
     getKnowledgeSources(),
@@ -379,6 +477,7 @@ export async function runAssistantChat(sessionId: string, message: string): Prom
     message: cleanedMessage,
     approvedLeads,
     knowledgeItems,
+    trainingState,
   });
 
   const nowIso = new Date().toISOString();
@@ -527,13 +626,28 @@ export async function saveAssistantKnowledge(title: string, content: string): Pr
 
 export async function retrainAssistantModel(): Promise<AssistantTrainingSnapshot> {
   const [approvedLeads, knowledgeItems] = await Promise.all([
-    getApprovedLeadSources(250),
+    getApprovedLeadSources(250, { includeSessionMessages: true }),
     getKnowledgeSources(250),
   ]);
 
   const trainingState = buildAssistantTrainingState(approvedLeads, knowledgeItems);
   const nowIso = new Date().toISOString();
 
+  await persistTrainingState(trainingState, nowIso);
+
+  return {
+    positiveKeywordCount: trainingState.positiveKeywordCount,
+    fieldGroups: trainingState.fieldGroups,
+    approvedLeadCount: trainingState.approvedLeadCount,
+    knowledgeCount: trainingState.knowledgeCount,
+    topKeywords: trainingState.topKeywords,
+    learnedProductAliases: trainingState.learnedProductAliases,
+    learnedProductAliasCount: trainingState.learnedProductAliasCount,
+    updatedAt: nowIso,
+  };
+}
+
+async function persistTrainingState(trainingState: AssistantTrainingState, nowIso: string) {
   await setDoc(
     doc(db, COLLECTIONS.modelState, MODEL_STATE_KEY),
     {
@@ -545,18 +659,26 @@ export async function retrainAssistantModel(): Promise<AssistantTrainingSnapshot
       approvedLeadCount: trainingState.approvedLeadCount,
       knowledgeCount: trainingState.knowledgeCount,
       topKeywords: trainingState.topKeywords,
+      learnedProductAliases: trainingState.learnedProductAliases,
+      learnedProductAliasCount: trainingState.learnedProductAliasCount,
       updatedAt: serverTimestamp(),
       updatedAtIso: nowIso,
     },
     { merge: true }
   );
+}
 
+async function retrainAssistantModelState(): Promise<AssistantTrainingState> {
+  const [approvedLeads, knowledgeItems] = await Promise.all([
+    getApprovedLeadSources(250, { includeSessionMessages: true }),
+    getKnowledgeSources(250),
+  ]);
+
+  const trainingState = buildAssistantTrainingState(approvedLeads, knowledgeItems);
+  const nowIso = new Date().toISOString();
+  await persistTrainingState(trainingState, nowIso);
   return {
-    positiveKeywordCount: trainingState.positiveKeywordCount,
-    fieldGroups: trainingState.fieldGroups,
-    approvedLeadCount: trainingState.approvedLeadCount,
-    knowledgeCount: trainingState.knowledgeCount,
-    topKeywords: trainingState.topKeywords,
+    ...trainingState,
     updatedAt: nowIso,
   };
 }

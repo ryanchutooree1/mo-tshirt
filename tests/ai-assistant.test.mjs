@@ -78,7 +78,7 @@ test("training state learns from approved leads and saved knowledge", () => {
           clientName: "Ryan",
           phone: "59883880",
           email: null,
-          productType: "polo",
+          productType: "t-shirt",
           quantity: 12,
           color: "black",
           sizes: ["M", "L"],
@@ -89,6 +89,7 @@ test("training state learns from approved leads and saved knowledge", () => {
           deadline: "next week",
           notes: "Uniform order",
         },
+        sessionMessages: ["Need 12 crewtees with front left chest logo and back print"],
       },
     ],
     [
@@ -104,4 +105,42 @@ test("training state learns from approved leads and saved knowledge", () => {
   assert.equal(training.knowledgeCount, 1);
   assert.ok(training.positiveKeywordCount > 0);
   assert.ok(training.topKeywords.length > 0);
+  assert.ok(training.learnedProductAliases["t-shirt"].includes("crewtees"));
+  assert.ok(training.learnedProductAliasCount > 0);
+});
+
+test("runAssistantTurn uses learned aliases from approved sessions", () => {
+  const training = buildAssistantTrainingState(
+    [
+      {
+        status: "approved",
+        lead: {
+          clientName: "Ryan",
+          phone: "59883880",
+          email: null,
+          productType: "t-shirt",
+          quantity: 8,
+          color: "black",
+          sizes: ["M"],
+          printPositions: ["front left chest"],
+          printSizes: ["small 9x9"],
+          logoReady: true,
+          deliveryMethod: "pickup",
+          deadline: null,
+          notes: null,
+        },
+        sessionMessages: ["Hi I need 8 crewtees for staff"],
+      },
+    ],
+    []
+  );
+
+  const result = runAssistantTurn({
+    lead: createEmptyAssistantLead(),
+    message: "I need 3 crewtees",
+    trainingState: training,
+  });
+
+  assert.equal(result.lead.productType, "t-shirt");
+  assert.equal(result.lead.quantity, 3);
 });
