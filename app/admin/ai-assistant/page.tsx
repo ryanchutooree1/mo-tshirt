@@ -165,6 +165,7 @@ export default function AdminAiAssistantPage() {
   const [loadingSession, setLoadingSession] = useState(false);
   const [sending, setSending] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [savingKnowledge, setSavingKnowledge] = useState(false);
   const [training, setTraining] = useState(false);
@@ -189,6 +190,7 @@ export default function AdminAiAssistantPage() {
         setSession(data.session);
         setLastSuggestions([]);
         setLastRelatedContext([]);
+        setPendingLogoFile(null);
       });
     } finally {
       setLoadingSession(false);
@@ -268,11 +270,20 @@ export default function AdminAiAssistantPage() {
       return;
     }
 
+    setError(null);
+    setPendingLogoFile(file);
+    setNotice(`Logo selected: ${file.name}. Press Submit logo to send it.`);
+  }
+
+  async function handleSubmitLogo() {
+    if (!pendingLogoFile || uploadingLogo || sending) return;
+
     setUploadingLogo(true);
     setError(null);
     setNotice(null);
 
     try {
+      const file = pendingLogoFile;
       const safeName = file.name.replace(/[^a-z0-9._-]/gi, "_");
       const uploadRef = ref(storage, `ai-assistant/${session.sessionId}/${Date.now()}-${safeName}`);
       const snap = await uploadBytes(uploadRef, file);
@@ -290,7 +301,8 @@ export default function AdminAiAssistantPage() {
         preserveDraft: true,
       });
       if (sent) {
-        setNotice(`Logo uploaded: ${file.name}. Review it in the chat thread or the Lead Snapshot panel.`);
+        setPendingLogoFile(null);
+        setNotice(`We have received the logo: ${file.name}. Review it in the chat thread or the Lead Snapshot panel.`);
       }
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Failed to upload logo.");
@@ -410,6 +422,7 @@ export default function AdminAiAssistantPage() {
     startTransition(() => {
       setSession(createDraftSession(generateSessionId()));
       setDraft("");
+      setPendingLogoFile(null);
       setLastSuggestions([]);
       setLastRelatedContext([]);
       setNotice("Started a fresh admin testing session.");
@@ -423,6 +436,7 @@ export default function AdminAiAssistantPage() {
   const trainingSnapshot = overview?.training || null;
   const canUploadLogo = session.lead.sizeBreakdown.length > 0;
   const logoAttachment = session.lead.logoAttachment;
+  const pendingLogoSize = pendingLogoFile ? formatAttachmentSize(pendingLogoFile.size) : null;
   const samplePrompts = [
     "I need 20 black polo shirts with logo on front left chest and a big print at the back",
     "My name is Ryan and my phone is 59883880",
@@ -718,7 +732,28 @@ export default function AdminAiAssistantPage() {
                       {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
                       Upload logo
                     </button>
+                    {pendingLogoFile && (
+                      <>
+                        <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white px-3 py-2 text-xs font-semibold text-cyan-900">
+                          <Paperclip className="h-3.5 w-3.5" />
+                          {pendingLogoFile.name}
+                          {pendingLogoSize ? <span className="text-cyan-700">{pendingLogoSize}</span> : null}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => void handleSubmitLogo()}
+                          disabled={uploadingLogo || sending}
+                          className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                          Submit logo
+                        </button>
+                      </>
+                    )}
                   </div>
+                  {pendingLogoFile && (
+                    <p className="w-full text-xs text-cyan-700">Logo selected. Press Submit logo to send it to this session.</p>
+                  )}
                 </div>
               )}
               {canUploadLogo && logoAttachment && (
@@ -751,10 +786,29 @@ export default function AdminAiAssistantPage() {
                         className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-                        Replace logo
+                        Upload new logo
                       </button>
+                      {pendingLogoFile && (
+                        <button
+                          type="button"
+                          onClick={() => void handleSubmitLogo()}
+                          disabled={uploadingLogo || sending}
+                          className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                          Submit logo
+                        </button>
+                      )}
                     </div>
                   </div>
+                  {pendingLogoFile && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-200 bg-white px-3 py-3 text-xs text-emerald-900">
+                      <Paperclip className="h-3.5 w-3.5" />
+                      <span className="font-semibold">{pendingLogoFile.name}</span>
+                      {pendingLogoSize ? <span className="text-emerald-700">{pendingLogoSize}</span> : null}
+                      <span className="text-emerald-700">ready to send</span>
+                    </div>
+                  )}
                   {isImageAttachment(logoAttachment) && (
                     <div className="mt-3 overflow-hidden rounded-2xl border border-emerald-200 bg-white p-2">
                       {/* eslint-disable-next-line @next/next/no-img-element */}

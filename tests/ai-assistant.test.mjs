@@ -64,7 +64,7 @@ test("plain name replies are accepted when client name is the next required fiel
   });
 
   assert.equal(result.lead.clientName, "Sam Legoy");
-  assert.match(result.reply, /What is your phone number\?/);
+  assert.match(result.reply, /What is your WhatsApp number/);
 });
 
 test("size breakdown template lines are parsed into structured order lines", () => {
@@ -96,7 +96,7 @@ test("size breakdown template lines are parsed into structured order lines", () 
   assert.match(result.reply, /upload button/i);
 });
 
-test("logo upload marks the file as ready and keeps the lead submittable", () => {
+test("logo upload asks for email when the file is received", () => {
   const result = runAssistantTurn({
     lead: {
       clientName: "Ryan",
@@ -129,11 +129,11 @@ test("logo upload marks the file as ready and keeps the lead submittable", () =>
 
   assert.equal(result.lead.logoReady, true);
   assert.equal(result.lead.logoAttachment?.name, "brand.ai");
-  assert.match(result.reply, /Great\. I have the main details and the logo file\./);
-  assert.match(result.reply, /We will use 59883880 to contact you back\./);
+  assert.match(result.reply, /Logo received and attached to your request\./);
+  assert.match(result.reply, /What is your email address so we can reply to you later\?/);
 });
 
-test("logo upload is acknowledged before asking for remaining size lines", () => {
+test("logo upload is acknowledged before asking for contact details", () => {
   const result = runAssistantTurn({
     lead: {
       clientName: null,
@@ -164,7 +164,39 @@ test("logo upload is acknowledged before asking for remaining size lines", () =>
   assert.equal(result.lead.logoReady, true);
   assert.equal(result.lead.logoAttachment?.name, "IMG_3618.PNG");
   assert.match(result.reply, /Logo received and attached to your request\./);
-  assert.match(result.reply, /I have size lines for 1 of 3 pieces/);
+  assert.match(result.reply, /What is your email address so we can reply to you later\?/);
+});
+
+test("after email is captured with a logo on file, the assistant asks for WhatsApp", () => {
+  const result = runAssistantTurn({
+    lead: {
+      clientName: null,
+      phone: null,
+      email: null,
+      productType: "t-shirt",
+      quantity: 3,
+      color: "black",
+      sizes: ["M"],
+      sizeBreakdown: [{ color: "black", productType: "t-shirt", size: "M", quantity: 3 }],
+      printPositions: ["back"],
+      printSizes: [],
+      logoReady: true,
+      logoAttachment: {
+        name: "logo.png",
+        url: "https://example.com/logo.png",
+        contentType: "image/png",
+        size: 2048,
+        uploadedAt: "2026-03-16T10:00:00.000Z",
+      },
+      deliveryMethod: null,
+      deadline: null,
+      notes: null,
+    },
+    message: "ryan@example.com",
+  });
+
+  assert.equal(result.lead.email, "ryan@example.com");
+  assert.match(result.reply, /What is your WhatsApp number so we can reply to you later\?/);
 });
 
 test("summary command returns the stored lead snapshot when all key fields are present", () => {

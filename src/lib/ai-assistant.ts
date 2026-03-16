@@ -239,7 +239,7 @@ const FIELD_LABELS: Record<AssistantRequiredField, string> = {
   printPositions: "print positions",
   sizeBreakdown: "size breakdown",
   clientName: "client name",
-  phone: "phone number",
+  phone: "whatsapp number",
 };
 
 function cleanString(value: unknown) {
@@ -1045,6 +1045,15 @@ function buildFollowUpContactMessage(lead: AssistantLead) {
 
 export function nextAssistantQuestion(lead: AssistantLead) {
   const missing = missingAssistantFields(lead);
+  if (lead.logoAttachment) {
+    if (!lead.email) {
+      return "What is your email address so we can reply to you later?";
+    }
+    if (!lead.phone) {
+      return "What is your WhatsApp number so we can reply to you later?";
+    }
+  }
+
   if (!missing.length) {
     if (lead.logoAttachment) {
       return `Great. I have the main details and the logo file.${buildFollowUpContactMessage(
@@ -1062,7 +1071,7 @@ export function nextAssistantQuestion(lead: AssistantLead) {
     printPositions: "Where do you want the print: front left chest, front center, back, or sleeve?",
     sizeBreakdown: buildSizeBreakdownPrompt(lead),
     clientName: "What is your name?",
-    phone: "What is your phone number?",
+    phone: "What is your WhatsApp number so we can reply to you later?",
   };
 
   const nextPrompt = prompts[missing[0]];
@@ -1084,7 +1093,7 @@ export function buildAssistantSuggestions(lead: AssistantLead, message: string) 
   if (/\brestaurant\b|\bcompany\b/i.test(message)) {
     suggestions.push("For company uniforms, front left chest plus a large back print is a common setup.");
   }
-  if (lead.productType && lead.logoReady !== false) {
+  if (lead.productType && lead.logoReady !== false && !lead.logoAttachment) {
     suggestions.push("If the design or logo is ready, upload it as PNG, JPG, PDF, or AI.");
   }
   return suggestions.slice(0, 3);
