@@ -36,6 +36,12 @@ type ArtworkItem = {
   file: File | null;
 };
 
+type PrintMethodInfo = {
+  title: string;
+  description: string;
+  note?: string;
+};
+
 const garmentOptions = ["T-Shirt", "Polo Shirt", "Hoodie", "Cap", "Other"];
 const sizeOptions = [
   "1 Yr",
@@ -62,6 +68,8 @@ const printMethods = [
   "Not sure",
 ];
 const SCREEN_PRINTING_METHOD = printMethods[0];
+const VINYL_METHOD = printMethods[1];
+const DTF_METHOD = printMethods[2];
 const deliveryOptions = [
   "Surinam Pickup (Free)",
   "Post Office Postage Delivery (Rs 100)",
@@ -70,6 +78,26 @@ const deliveryOptions = [
 ];
 const artworkAccept =
   ".png,.jpg,.jpeg,.webp,.svg,.heic,.heif,.pdf,image/png,image/jpeg,image/webp,image/svg+xml,image/heic,image/heif,application/pdf";
+const printMethodInfoByMethod: Partial<Record<string, PrintMethodInfo>> = {
+  [SCREEN_PRINTING_METHOD]: {
+    title: "Screen printing rule",
+    description:
+      "Minimum order is 10 pcs per design. That means 10 identical prints for one logo or artwork, not 10 pcs with 10 different designs.",
+    note: "If you have several logos or design versions, add each one separately below and tell us its quantity.",
+  },
+  [VINYL_METHOD]: {
+    title: "Vinyl heat press guide",
+    description:
+      "Best for simple logos, names, numbers, and clean shapes. It works well for smaller quantities and personalized pieces.",
+    note: "If the artwork has gradients, photos, or a lot of detail, DTF is usually the better option.",
+  },
+  [DTF_METHOD]: {
+    title: "DTF printing guide",
+    description:
+      "Best for full-color artwork, gradients, and detailed logos. It is a strong choice for smaller runs that are too complex for vinyl or not ideal for screen printing.",
+    note: "Send the clearest artwork file you have so we can confirm the print size and placement properly.",
+  },
+};
 
 function createArtworkItem(id: number): ArtworkItem {
   return {
@@ -203,6 +231,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
 
   const totalQuantity = garmentLines.reduce((sum, line) => sum + Math.max(0, Number(line.quantity) || 0), 0);
   const screenPrintingSelected = printMethod === SCREEN_PRINTING_METHOD;
+  const selectedPrintMethodInfo = printMethodInfoByMethod[printMethod];
 
   function getScreenPrintingValidationMessage() {
     const filledArtworkItems = artworkItems.filter(
@@ -472,7 +501,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className={`grid grid-cols-1 gap-4 ${selectedPrintMethodInfo ? "sm:grid-cols-2" : ""}`}>
           <div>
             <label className="block text-sm font-medium text-neutral-700">Print method</label>
             <select
@@ -485,16 +514,15 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
               ))}
             </select>
           </div>
-          <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-700">
-            <p className="font-semibold text-neutral-900">Screen printing rule</p>
-            <p className="mt-2">
-              Minimum order is <span className="font-semibold">10 pcs per design</span>. That means 10 identical prints
-              for one logo or artwork, not 10 pcs with 10 different designs.
-            </p>
-            <p className="mt-2 text-xs text-neutral-500">
-              If you have several logos or design versions, add each one separately below and tell us its quantity.
-            </p>
-          </div>
+          {selectedPrintMethodInfo ? (
+            <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-700">
+              <p className="font-semibold text-neutral-900">{selectedPrintMethodInfo.title}</p>
+              <p className="mt-2">{selectedPrintMethodInfo.description}</p>
+              {selectedPrintMethodInfo.note ? (
+                <p className="mt-2 text-xs text-neutral-500">{selectedPrintMethodInfo.note}</p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         {screenPrintingSelected && (
