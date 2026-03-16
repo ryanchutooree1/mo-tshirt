@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { FiArrowUpRight, FiMapPin, FiTarget, FiTrendingUp } from "react-icons/fi";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FiArrowUpRight, FiMapPin, FiPause, FiPlay, FiRotateCcw, FiTarget, FiTrendingUp } from "react-icons/fi";
 import {
   type ClientLocation,
   type MauritiusDistrict,
@@ -126,6 +126,120 @@ function cn(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
 
+type OrbitalView = {
+  yaw: number;
+  pitch: number;
+  zoom: number;
+};
+
+type OrbitalPoint = {
+  x: number;
+  y: number;
+  z: number;
+};
+
+type OrbitalProjection = {
+  left: number;
+  top: number;
+  depth: number;
+  scale: number;
+  visible: boolean;
+};
+
+const DEFAULT_ORBITAL_VIEW: OrbitalView = {
+  yaw: -0.36,
+  pitch: 0.16,
+  zoom: 1,
+};
+
+const ORBITAL_CENTER = {
+  x: 50,
+  y: 53,
+};
+
+const ORBITAL_RADIUS = {
+  x: 30.5,
+  y: 34.5,
+};
+
+const MAX_SCENE_CLUSTERS = 8;
+const ORBITAL_PITCH_LIMIT = 0.64;
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function wrapAngle(angle: number) {
+  const turn = Math.PI * 2;
+  return ((((angle + Math.PI) % turn) + turn) % turn) - Math.PI;
+}
+
+function shortestAngleDelta(from: number, to: number) {
+  return wrapAngle(to - from);
+}
+
+function lerp(from: number, to: number, amount: number) {
+  return from + (to - from) * amount;
+}
+
+function lerpAngle(from: number, to: number, amount: number) {
+  return from + shortestAngleDelta(from, to) * amount;
+}
+
+function toOrbitalPoint(x: number, y: number): OrbitalPoint {
+  const nx = clamp((x - 50) / 22, -0.92, 0.92);
+  const ny = clamp((y - 52) / 38, -0.98, 0.98);
+  const radial = clamp(nx * nx + ny * ny * 0.84, 0, 0.98);
+  const z = Math.sqrt(1 - radial) * 0.94 - 0.08;
+
+  return {
+    x: nx * 0.94,
+    y: ny * 1.08,
+    z,
+  };
+}
+
+function rotateOrbitalPoint(point: OrbitalPoint, yaw: number, pitch: number): OrbitalPoint {
+  const cosYaw = Math.cos(yaw);
+  const sinYaw = Math.sin(yaw);
+  const cosPitch = Math.cos(pitch);
+  const sinPitch = Math.sin(pitch);
+
+  const x = point.x * cosYaw + point.z * sinYaw;
+  const z = point.z * cosYaw - point.x * sinYaw;
+  const y = point.y * cosPitch - z * sinPitch;
+  const nextZ = point.y * sinPitch + z * cosPitch;
+
+  return { x, y, z: nextZ };
+}
+
+function projectOrbitalPoint(point: OrbitalPoint, view: OrbitalView): OrbitalProjection {
+  const rotated = rotateOrbitalPoint(point, view.yaw, view.pitch);
+  const perspective = 1.95 / view.zoom;
+  const scale = perspective / (perspective - rotated.z * 0.92);
+
+  return {
+    left: ORBITAL_CENTER.x + rotated.x * ORBITAL_RADIUS.x * scale,
+    top: ORBITAL_CENTER.y + rotated.y * ORBITAL_RADIUS.y * scale,
+    depth: rotated.z,
+    scale,
+    visible: rotated.z > -0.2,
+  };
+}
+
+function getFocusView(x: number, y: number): OrbitalView {
+  const point = toOrbitalPoint(x, y);
+  const yaw = wrapAngle(-Math.atan2(point.x, point.z || 0.0001));
+  const afterYaw = rotateOrbitalPoint(point, yaw, 0);
+  const pitch = clamp(Math.atan2(afterYaw.y, afterYaw.z || 0.0001), -0.42, 0.42);
+
+  return {
+    yaw,
+    pitch,
+    zoom: 1.08,
+  };
+}
+
 export function MauritiusClientHeatmap({
   clients,
   totalClients,
@@ -194,6 +308,21 @@ export function MauritiusClientHeatmap({
     clusters.find((cluster) => cluster.district === selectedDistrict) ||
     clusters[0] ||
     null;
+  const unpinnedCount = Math.max(totalClients - locatedCount, 0);
+
+  function handleDistrictSelection(district: DistrictFilter) {
+    setActiveHotspotKey((current) => {
+      if (district === "all" || district === "unlocated") return null;
+      const active = clusters.find((cluster) => cluster.key === current);
+      return active?.district === district ? current : null;
+    });
+    onSelectDistrict(district);
+  }
+
+  function handleClusterSelection(cluster: HotspotCluster) {
+    setActiveHotspotKey((current) => (current === cluster.key ? null : cluster.key));
+    onSelectDistrict(cluster.district);
+  }
 
   return (
     <section
@@ -207,12 +336,12 @@ export function MauritiusClientHeatmap({
         />
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-sky-600">Mauritius client map</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-sky-600">Mauritius orbital map</p>
             <h2 className="mt-3 text-2xl font-semibold text-slate-950 sm:text-[2rem]">
-              See where demand is stacking up across the island.
+              Navigate the island demand like a live command surface.
             </h2>
             <p className="mt-2 max-w-2xl text-sm text-slate-600">
-              The map updates from your live CRM. Click a district or hotspot to narrow the list and spot where to push uniforms, school runs, and merch offers next.
+              Drag to orbit, scroll to zoom, and lock onto the busiest zones. The scene still runs from your live CRM, but now the map behaves like the reference instead of a flat island card.
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
@@ -237,122 +366,20 @@ export function MauritiusClientHeatmap({
           </div>
         </div>
 
-        <div className="relative mt-6 overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-slate-950 px-4 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:px-6">
-          <div
-            aria-hidden
-            className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(14,165,233,0.15),transparent_35%),linear-gradient(180deg,rgba(15,23,42,0.92),rgba(2,6,23,0.98))]"
-          />
-          <div
-            aria-hidden
-            className="absolute inset-0 opacity-40"
-            style={{
-              backgroundImage:
-                "linear-gradient(rgba(148,163,184,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.08) 1px, transparent 1px)",
-              backgroundSize: "48px 48px",
-            }}
-          />
-          <div className="relative aspect-[1/1.08]">
-            <MauritiusIslandArtwork />
-
-            {districtCounts.map(({ district, count }) => {
-              const centroid = getDistrictCentroid(district);
-              if (!centroid || count === 0) return null;
-              const active = selectedDistrict === district;
-              const style = getDistrictStyle(district);
-              return (
-                <button
-                  key={district}
-                  type="button"
-                  onClick={() => onSelectDistrict(active ? "all" : district)}
-                  className={cn(
-                    "absolute z-10 rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/80 backdrop-blur transition hover:border-white/40 hover:text-white",
-                    active && "border-white/50 bg-white/10 text-white"
-                  )}
-                  style={{
-                    left: `${centroid.x}%`,
-                    top: `${centroid.y}%`,
-                    transform: "translate(-50%, -50%)",
-                    boxShadow: active ? `0 0 0 1px ${style.stroke} inset` : "none",
-                  }}
-                >
-                  {district}
-                </button>
-              );
-            })}
-
-            {clusters.map((cluster) => {
-              const active = activeHotspotKey === cluster.key || selectedDistrict === cluster.district;
-              const style = getDistrictStyle(cluster.district);
-              const size = Math.min(86, 32 + cluster.count * 9);
-
-              return (
-                <button
-                  key={cluster.key}
-                  type="button"
-                  onClick={() => {
-                    setActiveHotspotKey((current) => (current === cluster.key ? null : cluster.key));
-                    onSelectDistrict(cluster.district);
-                  }}
-                  className="absolute z-20 -translate-x-1/2 -translate-y-1/2 text-left transition-transform hover:scale-105"
-                  style={{ left: `${cluster.x}%`, top: `${cluster.y}%` }}
-                  title={`${cluster.label}: ${cluster.count} client${cluster.count > 1 ? "s" : ""}`}
-                >
-                  <span
-                    aria-hidden
-                    className="absolute rounded-full blur-xl transition"
-                    style={{
-                      width: `${size}px`,
-                      height: `${size}px`,
-                      left: "50%",
-                      top: "50%",
-                      transform: "translate(-50%, -50%)",
-                      background: style.glow,
-                      opacity: active ? 1 : 0.78,
-                    }}
-                  />
-                  <span
-                    aria-hidden
-                    className="absolute animate-ping rounded-full border border-white/30"
-                    style={{
-                      width: `${Math.max(22, size * 0.58)}px`,
-                      height: `${Math.max(22, size * 0.58)}px`,
-                      left: "50%",
-                      top: "50%",
-                      transform: "translate(-50%, -50%)",
-                      background: style.glow,
-                      animationDuration: `${1.8 + cluster.count * 0.1}s`,
-                    }}
-                  />
-                  <span
-                    className={cn(
-                      "relative flex min-w-[3.25rem] items-center justify-center rounded-full border border-white/20 px-3 py-2 text-xs font-semibold shadow-[0_10px_24px_rgba(15,23,42,0.28)]",
-                      style.badge,
-                      active && "ring-4 ring-white/20"
-                    )}
-                  >
-                    {cluster.count}
-                  </span>
-                  <span className="pointer-events-none absolute left-1/2 top-full mt-2 hidden -translate-x-1/2 whitespace-nowrap rounded-full border border-white/15 bg-slate-950/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/75 shadow-lg md:block">
-                    {cluster.label}
-                  </span>
-                </button>
-              );
-            })}
-
-            {!clusters.length && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 backdrop-blur">
-                  Start pinning clients to unlock the island heatmap.
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <MauritiusOrbitalScene
+          clusters={clusters}
+          districtCounts={districtCounts}
+          selectedDistrict={selectedDistrict}
+          activeCluster={activeCluster}
+          onSelectDistrict={handleDistrictSelection}
+          onSelectCluster={handleClusterSelection}
+          unpinnedCount={unpinnedCount}
+        />
 
         <div className="relative mt-4 flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => onSelectDistrict("all")}
+            onClick={() => handleDistrictSelection("all")}
             className={cn(
               "rounded-full border px-3 py-1.5 text-xs font-semibold transition",
               selectedDistrict === "all"
@@ -366,7 +393,7 @@ export function MauritiusClientHeatmap({
             <button
               key={district}
               type="button"
-              onClick={() => onSelectDistrict(selectedDistrict === district ? "all" : district)}
+              onClick={() => handleDistrictSelection(selectedDistrict === district ? "all" : district)}
               className={cn(
                 "rounded-full border px-3 py-1.5 text-xs font-semibold transition",
                 selectedDistrict === district
@@ -379,7 +406,7 @@ export function MauritiusClientHeatmap({
           ))}
           <button
             type="button"
-            onClick={() => onSelectDistrict(selectedDistrict === "unlocated" ? "all" : "unlocated")}
+            onClick={() => handleDistrictSelection(selectedDistrict === "unlocated" ? "all" : "unlocated")}
             className={cn(
               "rounded-full border px-3 py-1.5 text-xs font-semibold transition",
               selectedDistrict === "unlocated"
@@ -387,7 +414,7 @@ export function MauritiusClientHeatmap({
                 : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
             )}
           >
-            Unpinned · {Math.max(totalClients - locatedCount, 0)}
+            Unpinned · {unpinnedCount}
           </button>
         </div>
       </div>
@@ -412,7 +439,7 @@ export function MauritiusClientHeatmap({
                 <button
                   key={district}
                   type="button"
-                  onClick={() => onSelectDistrict(active ? "all" : district)}
+                  onClick={() => handleDistrictSelection(active ? "all" : district)}
                   className={cn(
                     "w-full rounded-2xl border px-4 py-3 text-left transition",
                     active ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-slate-50/80 hover:border-slate-300 hover:bg-white"
@@ -493,6 +520,503 @@ export function MauritiusClientHeatmap({
         </div>
       </div>
     </section>
+  );
+}
+
+function MauritiusOrbitalScene({
+  clusters,
+  districtCounts,
+  selectedDistrict,
+  activeCluster,
+  onSelectDistrict,
+  onSelectCluster,
+  unpinnedCount,
+}: {
+  clusters: HotspotCluster[];
+  districtCounts: Array<{ district: MauritiusDistrict; count: number }>;
+  selectedDistrict: DistrictFilter;
+  activeCluster: HotspotCluster | null;
+  onSelectDistrict: (district: DistrictFilter) => void;
+  onSelectCluster: (cluster: HotspotCluster) => void;
+  unpinnedCount: number;
+}) {
+  const [view, setView] = useState<OrbitalView>(DEFAULT_ORBITAL_VIEW);
+  const [autoOrbit, setAutoOrbit] = useState(true);
+  const [dragging, setDragging] = useState(false);
+  const motionRef = useRef({
+    yaw: DEFAULT_ORBITAL_VIEW.yaw,
+    pitch: DEFAULT_ORBITAL_VIEW.pitch,
+    zoom: DEFAULT_ORBITAL_VIEW.zoom,
+    velocityYaw: 0,
+    velocityPitch: 0,
+    target: null as OrbitalView | null,
+    holdTarget: false,
+  });
+  const pointerRef = useRef({
+    pointerId: -1,
+    x: 0,
+    y: 0,
+    dragging: false,
+  });
+  const autoOrbitRef = useRef(autoOrbit);
+
+  const sceneClusters = useMemo(() => {
+    const source =
+      selectedDistrict !== "all" && selectedDistrict !== "unlocated"
+        ? clusters.filter((cluster) => cluster.district === selectedDistrict)
+        : clusters.slice(0, MAX_SCENE_CLUSTERS);
+
+    if (activeCluster && !source.some((cluster) => cluster.key === activeCluster.key)) {
+      return [...source, activeCluster].sort((a, b) => b.count - a.count);
+    }
+
+    return source;
+  }, [activeCluster, clusters, selectedDistrict]);
+
+  const districtNodes = useMemo(() => {
+    return districtCounts
+      .filter(({ count }) => count > 0)
+      .map(({ district, count }) => {
+        const centroid = getDistrictCentroid(district);
+        return centroid ? { district, count, centroid } : null;
+      })
+      .filter(Boolean) as Array<{ district: MauritiusDistrict; count: number; centroid: { x: number; y: number } }>;
+  }, [districtCounts]);
+
+  const focusSeed = useMemo(() => {
+    if (selectedDistrict !== "all" && selectedDistrict !== "unlocated") {
+      const focusedCluster = activeCluster?.district === selectedDistrict ? activeCluster : sceneClusters[0] || null;
+      if (focusedCluster) return { x: focusedCluster.x, y: focusedCluster.y };
+      const centroid = getDistrictCentroid(selectedDistrict);
+      return centroid ? { x: centroid.x, y: centroid.y } : null;
+    }
+
+    return null;
+  }, [activeCluster, sceneClusters, selectedDistrict]);
+
+  useEffect(() => {
+    autoOrbitRef.current = autoOrbit;
+  }, [autoOrbit]);
+
+  useEffect(() => {
+    const target = focusSeed ? getFocusView(focusSeed.x, focusSeed.y) : DEFAULT_ORBITAL_VIEW;
+    motionRef.current.target = target;
+    motionRef.current.holdTarget = Boolean(focusSeed);
+    motionRef.current.velocityYaw = 0;
+    motionRef.current.velocityPitch = 0;
+  }, [focusSeed]);
+
+  useEffect(() => {
+    let frameId = 0;
+    let lastTick = performance.now();
+
+    const tick = (now: number) => {
+      const delta = Math.min(0.04, Math.max(0.008, (now - lastTick) / 1000));
+      lastTick = now;
+      const motion = motionRef.current;
+
+      if (!pointerRef.current.dragging) {
+        if (motion.target) {
+          const easing = 1 - Math.exp(-delta * 4);
+          motion.yaw = wrapAngle(lerpAngle(motion.yaw, motion.target.yaw, easing));
+          motion.pitch = clamp(lerp(motion.pitch, motion.target.pitch, easing), -ORBITAL_PITCH_LIMIT, ORBITAL_PITCH_LIMIT);
+          motion.zoom = lerp(motion.zoom, motion.target.zoom, easing);
+
+          if (
+            !motion.holdTarget &&
+            Math.abs(shortestAngleDelta(motion.yaw, motion.target.yaw)) < 0.015 &&
+            Math.abs(motion.pitch - motion.target.pitch) < 0.015 &&
+            Math.abs(motion.zoom - motion.target.zoom) < 0.015
+          ) {
+            motion.target = null;
+          }
+        } else if (autoOrbitRef.current) {
+          motion.yaw = wrapAngle(motion.yaw + delta * 0.18 / motion.zoom);
+        }
+
+        motion.yaw = wrapAngle(motion.yaw + motion.velocityYaw * delta);
+        motion.pitch = clamp(motion.pitch + motion.velocityPitch * delta, -ORBITAL_PITCH_LIMIT, ORBITAL_PITCH_LIMIT);
+
+        const friction = Math.pow(0.82, delta * 60);
+        motion.velocityYaw *= friction;
+        motion.velocityPitch *= friction;
+      }
+
+      setView({
+        yaw: motion.yaw,
+        pitch: motion.pitch,
+        zoom: motion.zoom,
+      });
+
+      frameId = window.requestAnimationFrame(tick);
+    };
+
+    frameId = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frameId);
+  }, []);
+
+  function resetView() {
+    const target = focusSeed ? getFocusView(focusSeed.x, focusSeed.y) : DEFAULT_ORBITAL_VIEW;
+    motionRef.current.target = target;
+    motionRef.current.holdTarget = Boolean(focusSeed);
+    motionRef.current.velocityYaw = 0;
+    motionRef.current.velocityPitch = 0;
+  }
+
+  function endDrag(pointerId: number, target: HTMLDivElement) {
+    if (pointerRef.current.pointerId !== pointerId) return;
+    if (target.hasPointerCapture(pointerId)) target.releasePointerCapture(pointerId);
+    pointerRef.current.pointerId = -1;
+    pointerRef.current.dragging = false;
+    setDragging(false);
+  }
+
+  const projectedClusters = useMemo(() => {
+    return sceneClusters
+      .map((cluster) => ({
+        cluster,
+        projection: projectOrbitalPoint(toOrbitalPoint(cluster.x, cluster.y), view),
+      }))
+      .sort((left, right) => left.projection.depth - right.projection.depth);
+  }, [sceneClusters, view]);
+
+  const projectedDistricts = useMemo(() => {
+    return districtNodes.map((entry) => ({
+      ...entry,
+      projection: projectOrbitalPoint(toOrbitalPoint(entry.centroid.x, entry.centroid.y), view),
+    }));
+  }, [districtNodes, view]);
+
+  const activeProjection = activeCluster ? projectOrbitalPoint(toOrbitalPoint(activeCluster.x, activeCluster.y), view) : null;
+
+  return (
+    <div className="relative mt-6 overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-slate-950 px-4 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:px-6">
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(34,211,238,0.14),transparent_30%),radial-gradient(circle_at_50%_100%,rgba(59,130,246,0.12),transparent_34%),linear-gradient(180deg,rgba(15,23,42,0.92),rgba(2,6,23,0.99))]"
+      />
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-30"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(148,163,184,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.08) 1px, transparent 1px), radial-gradient(rgba(255,255,255,0.8) 1px, transparent 1px)",
+          backgroundSize: "48px 48px, 48px 48px, 150px 150px",
+          backgroundPosition: "0 0, 0 0, 18px 26px",
+        }}
+      />
+
+      <div className="relative flex flex-wrap items-center justify-between gap-3">
+        <div className="rounded-full border border-white/15 bg-slate-950/[0.55] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-white/[0.72] backdrop-blur">
+          Drag to orbit · Scroll to zoom · Tap a hotspot to inspect
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setAutoOrbit((current) => !current)}
+            className="rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white/[0.82] transition hover:border-white/30 hover:bg-white/10"
+          >
+            {autoOrbit ? (
+              <span className="inline-flex items-center gap-2">
+                <FiPause className="h-3.5 w-3.5" /> Pause orbit
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-2">
+                <FiPlay className="h-3.5 w-3.5" /> Auto orbit
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={resetView}
+            className="rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white/[0.82] transition hover:border-white/30 hover:bg-white/10"
+          >
+            <span className="inline-flex items-center gap-2">
+              <FiRotateCcw className="h-3.5 w-3.5" /> Reset view
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <div
+        className={cn(
+          "relative mt-4 aspect-[1/1.02] overflow-hidden rounded-[1.6rem]",
+          dragging ? "cursor-grabbing" : "cursor-grab"
+        )}
+        style={{ touchAction: "none" }}
+        onPointerDown={(event) => {
+          if ((event.target as HTMLElement).closest("[data-orbital-stop]")) return;
+          motionRef.current.target = null;
+          motionRef.current.holdTarget = false;
+          pointerRef.current.pointerId = event.pointerId;
+          pointerRef.current.x = event.clientX;
+          pointerRef.current.y = event.clientY;
+          pointerRef.current.dragging = true;
+          motionRef.current.velocityYaw = 0;
+          motionRef.current.velocityPitch = 0;
+          event.currentTarget.setPointerCapture(event.pointerId);
+          setDragging(true);
+        }}
+        onPointerMove={(event) => {
+          if (!pointerRef.current.dragging || pointerRef.current.pointerId !== event.pointerId) return;
+          const deltaX = event.clientX - pointerRef.current.x;
+          const deltaY = event.clientY - pointerRef.current.y;
+          pointerRef.current.x = event.clientX;
+          pointerRef.current.y = event.clientY;
+
+          motionRef.current.yaw = wrapAngle(motionRef.current.yaw + deltaX * 0.0066);
+          motionRef.current.pitch = clamp(
+            motionRef.current.pitch + deltaY * 0.0048,
+            -ORBITAL_PITCH_LIMIT,
+            ORBITAL_PITCH_LIMIT
+          );
+          motionRef.current.velocityYaw = deltaX * 0.34;
+          motionRef.current.velocityPitch = deltaY * 0.26;
+        }}
+        onPointerUp={(event) => endDrag(event.pointerId, event.currentTarget)}
+        onPointerCancel={(event) => endDrag(event.pointerId, event.currentTarget)}
+        onLostPointerCapture={(event) => endDrag(event.pointerId, event.currentTarget)}
+        onWheel={(event) => {
+          event.preventDefault();
+          motionRef.current.target = null;
+          motionRef.current.holdTarget = false;
+          motionRef.current.zoom = clamp(motionRef.current.zoom - event.deltaY * 0.0011, 0.84, 1.42);
+        }}
+      >
+        <div
+          aria-hidden
+          className="absolute inset-0 rounded-[1.6rem] bg-[radial-gradient(circle_at_50%_46%,rgba(34,211,238,0.18),transparent_24%),radial-gradient(circle_at_50%_95%,rgba(125,211,252,0.08),transparent_30%)]"
+        />
+
+        <div
+          aria-hidden
+          className="absolute left-1/2 top-[53%] h-[82%] w-[82%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-200/10 blur-md"
+        />
+        <div
+          aria-hidden
+          className="absolute left-1/2 top-[53%] h-[78%] w-[78%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-200/20 animate-spin"
+          style={{ animationDuration: "22s" }}
+        />
+        <div
+          aria-hidden
+          className="absolute left-1/2 top-[53%] h-[72%] w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle_at_36%_28%,rgba(250,250,255,0.72),rgba(103,232,249,0.22)_20%,rgba(22,78,99,0.18)_44%,rgba(8,47,73,0.92)_72%,rgba(2,6,23,0.98)_100%)] shadow-[0_0_60px_rgba(34,211,238,0.18),inset_0_0_70px_rgba(255,255,255,0.08)]"
+        />
+
+        <svg
+          aria-hidden
+          viewBox="0 0 100 100"
+          className="absolute left-1/2 top-[53%] h-[72%] w-[72%] -translate-x-1/2 -translate-y-1/2"
+        >
+          <defs>
+            <radialGradient id="orbital-atmosphere" cx="35%" cy="28%" r="70%">
+              <stop offset="0%" stopColor="rgba(255,255,255,0.42)" />
+              <stop offset="30%" stopColor="rgba(34,211,238,0.24)" />
+              <stop offset="75%" stopColor="rgba(8,47,73,0.1)" />
+              <stop offset="100%" stopColor="rgba(2,6,23,0)" />
+            </radialGradient>
+          </defs>
+          <circle cx="50" cy="50" r="48" fill="url(#orbital-atmosphere)" />
+          <ellipse cx="50" cy="50" rx="45" ry="13" stroke="rgba(226,232,240,0.22)" strokeWidth="0.8" fill="none" />
+          <ellipse cx="50" cy="50" rx="45" ry="24" stroke="rgba(226,232,240,0.18)" strokeWidth="0.8" fill="none" />
+          <ellipse cx="50" cy="50" rx="45" ry="36" stroke="rgba(226,232,240,0.12)" strokeWidth="0.8" fill="none" />
+          <ellipse
+            cx="50"
+            cy="50"
+            rx="18"
+            ry="46"
+            stroke="rgba(226,232,240,0.12)"
+            strokeWidth="0.8"
+            fill="none"
+            transform="rotate(15 50 50)"
+          />
+          <ellipse
+            cx="50"
+            cy="50"
+            rx="28"
+            ry="46"
+            stroke="rgba(226,232,240,0.16)"
+            strokeWidth="0.8"
+            fill="none"
+            transform="rotate(-24 50 50)"
+          />
+          <ellipse
+            cx="50"
+            cy="50"
+            rx="36"
+            ry="46"
+            stroke="rgba(226,232,240,0.1)"
+            strokeWidth="0.8"
+            fill="none"
+            transform="rotate(42 50 50)"
+          />
+        </svg>
+
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-[53%] h-[44%] w-[28%] -translate-x-1/2 -translate-y-1/2 opacity-45 mix-blend-screen"
+          style={{
+            transform: `translate(-50%, -50%) rotate(${view.yaw * 18}deg) scale(${0.94 + (view.zoom - 1) * 0.24}) skewY(${view.pitch * 6}deg)`,
+          }}
+        >
+          <MauritiusIslandArtwork muted />
+        </div>
+
+        {activeCluster && activeProjection && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute rounded-full blur-2xl transition"
+            style={{
+              left: `${activeProjection.left}%`,
+              top: `${activeProjection.top}%`,
+              width: `${Math.min(220, 92 + activeCluster.count * 18)}px`,
+              height: `${Math.min(220, 92 + activeCluster.count * 18)}px`,
+              transform: "translate(-50%, -50%)",
+              background: getDistrictStyle(activeCluster.district).glow,
+              opacity: activeProjection.visible ? 0.85 : 0.28,
+            }}
+          />
+        )}
+
+        {projectedDistricts.map(({ district, count, projection }) => {
+          if (!projection.visible) return null;
+          const active = selectedDistrict === district;
+
+          return (
+            <button
+              key={district}
+              type="button"
+              data-orbital-stop
+              onClick={() => onSelectDistrict(active ? "all" : district)}
+              className={cn(
+                "absolute -translate-x-1/2 -translate-y-1/2 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/[0.58] backdrop-blur transition hover:border-white/35 hover:text-white/[0.92]",
+                active && "border-white/45 bg-white/[0.12] text-white"
+              )}
+              style={{
+                left: `${projection.left}%`,
+                top: `${projection.top}%`,
+                zIndex: 10 + Math.round((projection.depth + 1) * 20),
+                boxShadow: active ? `0 0 0 1px ${getDistrictStyle(district).stroke} inset` : "none",
+                opacity: clamp(0.32 + projection.scale * 0.24, 0.28, 0.76),
+              }}
+            >
+              {district} · {count}
+            </button>
+          );
+        })}
+
+        {projectedClusters.map(({ cluster, projection }) => {
+          const style = getDistrictStyle(cluster.district);
+          const active = activeCluster?.key === cluster.key;
+          const bubbleSize = Math.min(66, 26 + cluster.count * 7);
+          const frontStrength = clamp((projection.depth + 1) / 2, 0.22, 1);
+          const labelBelow = projection.top < 26;
+
+          if (!projection.visible) {
+            return (
+              <span
+                key={cluster.key}
+                aria-hidden
+                className="pointer-events-none absolute rounded-full border border-white/15 blur-[1px]"
+                style={{
+                  left: `${projection.left}%`,
+                  top: `${projection.top}%`,
+                  width: `${Math.max(10, bubbleSize * 0.34)}px`,
+                  height: `${Math.max(10, bubbleSize * 0.34)}px`,
+                  transform: "translate(-50%, -50%)",
+                  background: style.glow,
+                  opacity: 0.25,
+                }}
+              />
+            );
+          }
+
+          return (
+            <button
+              key={cluster.key}
+              type="button"
+              data-orbital-stop
+              onClick={() => onSelectCluster(cluster)}
+              className="absolute -translate-x-1/2 -translate-y-1/2 text-left transition-transform hover:scale-[1.03]"
+              style={{
+                left: `${projection.left}%`,
+                top: `${projection.top}%`,
+                zIndex: 30 + Math.round((projection.depth + 1) * 100),
+                opacity: frontStrength,
+                transform: `translate(-50%, -50%) scale(${clamp(0.78 + (projection.scale - 1) * 0.92, 0.74, 1.16)})`,
+              }}
+              title={`${cluster.label}: ${cluster.count} client${cluster.count > 1 ? "s" : ""}`}
+            >
+              <span
+                aria-hidden
+                className="absolute left-1/2 top-1/2 rounded-full blur-xl transition"
+                style={{
+                  width: `${bubbleSize * 1.9}px`,
+                  height: `${bubbleSize * 1.9}px`,
+                  transform: "translate(-50%, -50%)",
+                  background: style.glow,
+                  opacity: active ? 1 : 0.75,
+                }}
+              />
+              <span
+                aria-hidden
+                className="absolute left-1/2 top-1/2 animate-ping rounded-full border border-white/20"
+                style={{
+                  width: `${bubbleSize * 0.86}px`,
+                  height: `${bubbleSize * 0.86}px`,
+                  transform: "translate(-50%, -50%)",
+                  background: style.glow,
+                  animationDuration: `${2.1 + cluster.count * 0.12}s`,
+                }}
+              />
+              <span
+                className={cn(
+                  "relative flex items-center justify-center rounded-[1.15rem] border border-white/20 px-4 font-semibold shadow-[0_10px_30px_rgba(2,6,23,0.42)]",
+                  style.badge,
+                  active && "ring-4 ring-white/18"
+                )}
+                style={{
+                  minWidth: `${bubbleSize}px`,
+                  height: `${Math.max(34, bubbleSize * 0.9)}px`,
+                  fontSize: `${clamp(0.92 + cluster.count * 0.035, 0.92, 1.15)}rem`,
+                }}
+              >
+                {cluster.count}
+              </span>
+              <span
+                className={cn(
+                  "pointer-events-none absolute left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-full border border-white/18 bg-slate-950/[0.78] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-white/[0.82] shadow-lg backdrop-blur md:block",
+                  labelBelow ? "top-full mt-3" : "bottom-full mb-3"
+                )}
+              >
+                {cluster.label}
+              </span>
+            </button>
+          );
+        })}
+
+        {!clusters.length && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="rounded-full border border-white/10 bg-white/[0.06] px-5 py-2.5 text-sm text-white/70 backdrop-blur">
+              Start pinning clients to unlock the orbital map.
+            </div>
+          </div>
+        )}
+
+        <div className="absolute bottom-4 left-4 flex flex-wrap gap-2">
+          <span className="rounded-full border border-white/[0.12] bg-slate-950/[0.6] px-3 py-1.5 text-xs font-semibold text-white/[0.72] backdrop-blur">
+            Zoom {view.zoom.toFixed(2)}x
+          </span>
+          <span className="rounded-full border border-white/[0.12] bg-slate-950/[0.6] px-3 py-1.5 text-xs font-semibold text-white/[0.72] backdrop-blur">
+            Hotspots {sceneClusters.length}
+          </span>
+          {!!unpinnedCount && (
+            <span className="rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-100 backdrop-blur">
+              Unpinned {unpinnedCount}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
