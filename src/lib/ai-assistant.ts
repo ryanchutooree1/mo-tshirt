@@ -1038,13 +1038,22 @@ export function formatAssistantFieldLabel(field: AssistantRequiredField) {
   return FIELD_LABELS[field];
 }
 
+function buildFollowUpContactMessage(lead: AssistantLead) {
+  if (!lead.phone) return "";
+  return ` We will use ${lead.phone} to contact you back.`;
+}
+
 export function nextAssistantQuestion(lead: AssistantLead) {
   const missing = missingAssistantFields(lead);
   if (!missing.length) {
     if (lead.logoAttachment) {
-      return 'Great. I have the main details and the logo file. Type "summary" to review the lead or use "Submit lead" in admin.';
+      return `Great. I have the main details and the logo file.${buildFollowUpContactMessage(
+        lead
+      )} Type "summary" to review the lead or use "Submit lead" in admin.`;
     }
-    return 'Great. I have the main details. If the design or logo is ready, use the upload button to attach PNG, JPG, PDF, or AI. Type "summary" to review the lead or use "Submit lead" in admin.';
+    return `Great. I have the main details.${buildFollowUpContactMessage(
+      lead
+    )} If the design or logo is ready, use the upload button to attach PNG, JPG, PDF, or AI. Type "summary" to review the lead or use "Submit lead" in admin.`;
   }
 
   const prompts: Record<AssistantRequiredField, string> = {
@@ -1170,6 +1179,8 @@ export function runAssistantTurn(input: {
   const missingFields = missingAssistantFields(lead);
   const readyToSubmit = missingFields.length === 0;
   const normalizedMessage = input.message.trim().toLowerCase();
+  const receivedAttachment = Boolean(attachment);
+  const replacingAttachment = Boolean(input.lead.logoAttachment && attachment);
 
   let reply = "";
   if (normalizedMessage === "summary" || normalizedMessage === "show summary" || normalizedMessage === "show lead") {
@@ -1183,7 +1194,10 @@ export function runAssistantTurn(input: {
     }
   } else {
     const intro = relatedContext.length ? "I found similar past information that may help. " : "";
-    reply = `${intro}${nextAssistantQuestion(lead)}`;
+    const attachmentAck = receivedAttachment
+      ? `${replacingAttachment ? "Logo updated" : "Logo received"} and attached to your request. `
+      : "";
+    reply = `${intro}${attachmentAck}${nextAssistantQuestion(lead)}`;
   }
 
   return {

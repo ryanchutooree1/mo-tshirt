@@ -89,6 +89,12 @@ function formatAttachmentSize(value: number | null) {
   return `${Math.max(1, Math.round(value / 1024))} KB`;
 }
 
+function isImageAttachment(attachment: AssistantAttachment | null) {
+  if (!attachment?.url) return false;
+  if (attachment.contentType?.startsWith("image/")) return true;
+  return /\.(png|jpe?g|webp|gif|svg)$/i.test(attachment.name);
+}
+
 function formatSizeBreakdown(
   lines: Array<{ color: string | null; productType: string | null; size: string; quantity: number }>
 ) {
@@ -614,24 +620,43 @@ export default function AdminAiAssistantPage() {
                     >
                       <p className="whitespace-pre-wrap leading-6">{message.content}</p>
                       {message.attachment?.url && (
-                        <a
-                          href={message.attachment.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className={`mt-3 flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm ${
-                            message.role === "user"
-                              ? "border-white/15 bg-white/10 text-white"
-                              : "border-cyan-200 bg-cyan-50 text-cyan-900"
-                          }`}
-                        >
-                          <Paperclip className="h-4 w-4 shrink-0" />
-                          <span className="min-w-0 flex-1 truncate font-medium">{message.attachment.name}</span>
-                          <span className="shrink-0 text-[11px] uppercase tracking-[0.18em] opacity-75">
-                            {[message.attachment.contentType?.split("/").pop(), formatAttachmentSize(message.attachment.size)]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </span>
-                        </a>
+                        <div className="mt-3 space-y-2">
+                          {isImageAttachment(message.attachment) && (
+                            <div
+                              className={`overflow-hidden rounded-2xl border p-2 ${
+                                message.role === "user"
+                                  ? "border-white/15 bg-white/10"
+                                  : "border-cyan-200 bg-cyan-50/70"
+                              }`}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={message.attachment.url}
+                                alt={message.attachment.name}
+                                className="max-h-48 w-full rounded-xl object-contain"
+                                loading="lazy"
+                              />
+                            </div>
+                          )}
+                          <a
+                            href={message.attachment.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm ${
+                              message.role === "user"
+                                ? "border-white/15 bg-white/10 text-white"
+                                : "border-cyan-200 bg-cyan-50 text-cyan-900"
+                            }`}
+                          >
+                            <Paperclip className="h-4 w-4 shrink-0" />
+                            <span className="min-w-0 flex-1 truncate font-medium">{message.attachment.name}</span>
+                            <span className="shrink-0 text-[11px] uppercase tracking-[0.18em] opacity-75">
+                              {[message.attachment.contentType?.split("/").pop(), formatAttachmentSize(message.attachment.size)]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </span>
+                          </a>
+                        </div>
                       )}
                       <p
                         className={`mt-2 text-[11px] uppercase tracking-[0.18em] ${
@@ -673,25 +698,12 @@ export default function AdminAiAssistantPage() {
                 className="mt-3 min-h-[7.5rem] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100"
                 placeholder="Example: I need 30 navy t-shirts with front left chest logo and back print for next week."
               />
-              {canUploadLogo && (
+              {canUploadLogo && !logoAttachment && (
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3">
                   <p className="text-sm font-medium text-cyan-950">
-                    {logoAttachment
-                      ? "Logo received. You can replace it here if needed."
-                      : "If the design or logo is ready, use the upload button here to attach it now."}
+                    If the design or logo is ready, use the upload button here to attach it now.
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
-                    {logoAttachment?.url && (
-                      <a
-                        href={logoAttachment.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white px-3 py-2 text-xs font-semibold text-cyan-800 transition hover:bg-cyan-100"
-                      >
-                        <Paperclip className="h-3.5 w-3.5" />
-                        {logoAttachment.name}
-                      </a>
-                    )}
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
@@ -699,9 +711,52 @@ export default function AdminAiAssistantPage() {
                       className="inline-flex items-center gap-2 rounded-full border border-cyan-300 bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-                      {logoAttachment ? "Replace logo" : "Upload logo"}
+                      Upload logo
                     </button>
                   </div>
+                </div>
+              )}
+              {canUploadLogo && logoAttachment && (
+                <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-950">Logo attached to this session</p>
+                      <p className="mt-1 text-xs text-emerald-800">
+                        Review it in the conversation thread or the Lead Snapshot panel on the right.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <a
+                        href={logoAttachment.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100"
+                      >
+                        <Paperclip className="h-3.5 w-3.5" />
+                        Review logo
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingLogo || sending}
+                        className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                        Replace logo
+                      </button>
+                    </div>
+                  </div>
+                  {isImageAttachment(logoAttachment) && (
+                    <div className="mt-3 overflow-hidden rounded-2xl border border-emerald-200 bg-white p-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={logoAttachment.url}
+                        alt={logoAttachment.name}
+                        className="h-28 w-full rounded-xl object-contain"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -833,11 +888,23 @@ export default function AdminAiAssistantPage() {
                 {session.lead.logoAttachment?.url && (
                   <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Uploaded logo</p>
+                    <p className="mt-2 text-sm text-slate-600">Review it here, then open the original file if needed.</p>
+                    {isImageAttachment(session.lead.logoAttachment) && (
+                      <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={session.lead.logoAttachment.url}
+                          alt={session.lead.logoAttachment.name}
+                          className="h-32 w-full rounded-xl object-contain"
+                          loading="lazy"
+                        />
+                      </div>
+                    )}
                     <a
                       href={session.lead.logoAttachment.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="mt-2 inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100"
+                      className="mt-3 inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100"
                     >
                       <Paperclip className="h-4 w-4" />
                       {session.lead.logoAttachment.name}

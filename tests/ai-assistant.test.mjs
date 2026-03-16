@@ -130,6 +130,41 @@ test("logo upload marks the file as ready and keeps the lead submittable", () =>
   assert.equal(result.lead.logoReady, true);
   assert.equal(result.lead.logoAttachment?.name, "brand.ai");
   assert.match(result.reply, /Great\. I have the main details and the logo file\./);
+  assert.match(result.reply, /We will use 59883880 to contact you back\./);
+});
+
+test("logo upload is acknowledged before asking for remaining size lines", () => {
+  const result = runAssistantTurn({
+    lead: {
+      clientName: null,
+      phone: null,
+      email: null,
+      productType: "t-shirt",
+      quantity: 3,
+      color: "black",
+      sizes: ["XL"],
+      sizeBreakdown: [{ color: "black", productType: "t-shirt", size: "XL", quantity: 1 }],
+      printPositions: ["back"],
+      printSizes: [],
+      logoReady: null,
+      deliveryMethod: null,
+      deadline: null,
+      notes: null,
+    },
+    message: "Uploaded logo file: IMG_3618.PNG",
+    attachment: {
+      name: "IMG_3618.PNG",
+      url: "https://example.com/IMG_3618.PNG",
+      contentType: "image/png",
+      size: 2500000,
+      uploadedAt: "2026-03-16T10:00:00.000Z",
+    },
+  });
+
+  assert.equal(result.lead.logoReady, true);
+  assert.equal(result.lead.logoAttachment?.name, "IMG_3618.PNG");
+  assert.match(result.reply, /Logo received and attached to your request\./);
+  assert.match(result.reply, /I have size lines for 1 of 3 pieces/);
 });
 
 test("summary command returns the stored lead snapshot when all key fields are present", () => {
