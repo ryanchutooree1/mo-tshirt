@@ -473,9 +473,8 @@ function formatProductTypeLabel(productType: AssistantProductType | null) {
 }
 
 function formatOrderLine(line: AssistantOrderLine) {
-  const color = line.color ? `${titleCase(line.color)} ` : "";
   const product = formatProductTypeLabel(line.productType);
-  return `${color}${product} Size ${line.size} quantity ${line.quantity}`;
+  return `Product: ${product} Colour: ${line.color ? titleCase(line.color) : "Not set"} Size: ${line.size} Quantity: ${line.quantity}`;
 }
 
 export function normalizeAssistantAttachment(value: unknown): AssistantAttachment | null {
@@ -515,7 +514,7 @@ function buildSizeTemplateLines(lead: AssistantLead) {
 
   return sortTemplateSizes(templateSizes)
     .slice(0, Math.max(4, sizes.length || 0))
-    .map((size) => `${color} ${product} Size ${size} quantity ${lineTotals.get(size) || 0}`);
+    .map((size) => `Product: ${product} Colour: ${color} Size: ${size} Quantity: ${lineTotals.get(size) || 0}`);
 }
 
 function buildSizeBreakdownPrompt(lead: AssistantLead) {
@@ -553,9 +552,9 @@ function extractOrderLines(
     .filter(Boolean);
   const lines = (segments.length ? segments : [message])
     .map((segment) => {
-      const sizeMatch = segment.match(/\bsize\s*(xs|s|m|l|xl|2xl|3xl|4xl)\b/i);
+      const sizeMatch = segment.match(/\bsize\b\s*[:=-]?\s*(xs|s|m|l|xl|2xl|3xl|4xl)\b/i);
       const quantityMatch =
-        segment.match(/\b(?:quantity|qty|qte|quality)\s*(\d{1,4})\b/i) ||
+        segment.match(/\b(?:quantity|qty|qte|quality)\b\s*[:=-]?\s*(\d{1,4})\b/i) ||
         segment.match(/\bx\s*(\d{1,4})\b/i);
       if (!sizeMatch || !quantityMatch) return null;
 
@@ -1057,7 +1056,12 @@ export function nextAssistantQuestion(lead: AssistantLead) {
     phone: "What is your phone number?",
   };
 
-  return prompts[missing[0]];
+  const nextPrompt = prompts[missing[0]];
+  if (missing[0] !== "sizeBreakdown" && lead.sizeBreakdown.length > 0 && !lead.logoAttachment && lead.logoReady !== false) {
+    return `${nextPrompt} If the design or logo is ready, use the upload button to attach it now.`;
+  }
+
+  return nextPrompt;
 }
 
 export function buildAssistantSuggestions(lead: AssistantLead, message: string) {

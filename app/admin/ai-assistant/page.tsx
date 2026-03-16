@@ -95,14 +95,15 @@ function formatSizeBreakdown(
   if (!lines.length) return "Not set";
   return lines
     .map((line) => {
-      const color = line.color ? `${line.color.charAt(0).toUpperCase()}${line.color.slice(1)} ` : "";
       const product =
         line.productType === "t-shirt"
           ? "T-Shirt"
           : line.productType
             ? `${line.productType.charAt(0).toUpperCase()}${line.productType.slice(1)}`
             : "Item";
-      return `${color}${product} Size ${line.size} quantity ${line.quantity}`;
+      return `Product: ${product} Colour: ${
+        line.color ? `${line.color.charAt(0).toUpperCase()}${line.color.slice(1)}` : "Not set"
+      } Size: ${line.size} Quantity: ${line.quantity}`;
     })
     .join(" | ");
 }
@@ -672,32 +673,42 @@ export default function AdminAiAssistantPage() {
                 className="mt-3 min-h-[7.5rem] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100"
                 placeholder="Example: I need 30 navy t-shirts with front left chest logo and back print for next week."
               />
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-xs text-slate-500">Press Enter to send. Shift+Enter adds a new line.</p>
-                  {canUploadLogo ? (
+              {canUploadLogo && (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3">
+                  <p className="text-sm font-medium text-cyan-950">
+                    {logoAttachment
+                      ? "Logo received. You can replace it here if needed."
+                      : "If the design or logo is ready, use the upload button here to attach it now."}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {logoAttachment?.url && (
+                      <a
+                        href={logoAttachment.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white px-3 py-2 text-xs font-semibold text-cyan-800 transition hover:bg-cyan-100"
+                      >
+                        <Paperclip className="h-3.5 w-3.5" />
+                        {logoAttachment.name}
+                      </a>
+                    )}
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploadingLogo || sending}
-                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex items-center gap-2 rounded-full border border-cyan-300 bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
                       {logoAttachment ? "Replace logo" : "Upload logo"}
                     </button>
-                  ) : (
+                  </div>
+                </div>
+              )}
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-xs text-slate-500">Press Enter to send. Shift+Enter adds a new line.</p>
+                  {!canUploadLogo && (
                     <span className="text-xs text-slate-400">Upload appears after the size breakdown is captured.</span>
-                  )}
-                  {logoAttachment?.url && (
-                    <a
-                      href={logoAttachment.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-800 transition hover:bg-cyan-100"
-                    >
-                      <Paperclip className="h-3.5 w-3.5" />
-                      {logoAttachment.name}
-                    </a>
                   )}
                 </div>
                 <button

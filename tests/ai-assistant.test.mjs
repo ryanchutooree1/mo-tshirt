@@ -85,13 +85,15 @@ test("size breakdown template lines are parsed into structured order lines", () 
       deadline: null,
       notes: null,
     },
-    message: "Black T-Shirt Size S quantity 2\nBlack T-Shirt Size M quality 1",
+    message:
+      "Product: T-Shirt Colour: Black Size: S Quantity: 2\nProduct: T-Shirt Colour: Black Size: M Quantity: 1",
   });
 
   assert.deepEqual(result.lead.sizes, ["M", "S"]);
   assert.equal(result.lead.sizeBreakdown.length, 2);
   assert.equal(result.lead.sizeBreakdown[0].quantity + result.lead.sizeBreakdown[1].quantity, 3);
   assert.match(result.reply, /What is your name\?/);
+  assert.match(result.reply, /upload button/i);
 });
 
 test("logo upload marks the file as ready and keeps the lead submittable", () => {
