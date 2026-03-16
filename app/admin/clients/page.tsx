@@ -1,6 +1,15 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { MauritiusClientHeatmap, MauritiusLocationPicker } from '@/components/admin/MauritiusClientMap';
+import {
+  MAURITIUS_DISTRICTS,
+  type ClientLocation,
+  type MauritiusDistrict,
+  normalizeClientLocation,
+  resolveClientLocation,
+  serializeClientLocation,
+} from '@/lib/client-location';
 import { db } from '@/lib/firebase';
 import {
   collection,
@@ -30,6 +39,8 @@ import {
 } from 'react-icons/fi';
 
 // ---------- Types ----------
+type FirestoreDateLike = { toDate?: () => Date } | Date | string | number | null;
+
 type Client = {
   id: string;
   customerName: string;
@@ -37,9 +48,13 @@ type Client = {
   customerPhone?: string;
   customerAddress?: string;
   starRating?: number; // 1..5
-  createdAt?: any;
+  createdAt?: FirestoreDateLike;
   tags?: string[];
+  location?: ClientLocation | null;
 };
+
+type ClientDraft = Omit<Client, 'createdAt' | 'id'> & { id?: string };
+type LocationFilter = MauritiusDistrict | 'all' | 'unlocated';
 
 const DELETE_CODE = process.env.NEXT_PUBLIC_DELETE_CODE || 'DELETE';
 
@@ -49,9 +64,28 @@ const waLink = (p?: string, text?: string) =>
   p ? `https://wa.me/${cleanPhone(p)}${text ? `?text=${encodeURIComponent(text)}` : ''}` : '#';
 const telLink = (p?: string) => (p ? `tel:${cleanPhone(p)}` : '#');
 const emailLink = (e?: string) => (e ? `mailto:${e}` : '#');
-
-const byText = (v: string, q: string) => v.toLowerCase().includes(q.toLowerCase());
 const fmtDate = (d?: Date) => (d ? d.toLocaleDateString() : '');
+const toDateValue = (value?: FirestoreDateLike) => {
+  if (!value) return undefined;
+  if (value instanceof Date) return value;
+  if (typeof value === 'string' || typeof value === 'number') {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  }
+  if (typeof value === 'object' && typeof value.toDate === 'function') {
+    return value.toDate();
+  }
+  return undefined;
+};
+const createEmptyClient = (): ClientDraft => ({
+  customerName: '',
+  customerEmail: '',
+  customerPhone: '',
+  customerAddress: '',
+  starRating: 3,
+  tags: [],
+  location: null,
+});
 
 // ---------- Page ----------
 export default function ClientsPage() {
@@ -60,9 +94,10 @@ export default function ClientsPage() {
   const [minStars, setMinStars] = useState<number | 'all'>('all');
   const [hasPhoneOnly, setHasPhoneOnly] = useState(false);
   const [hasEmailOnly, setHasEmailOnly] = useState(false);
+  const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
 
   // Modal states
-  const [editing, setEditing] = useState<Client | null>(null);
+  const [editing, setEditing] = useState<ClientDraft | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Live data
@@ -70,7 +105,7 @@ export default function ClientsPage() {
     const qy = query(collection(db, 'customers'), orderBy('createdAt', 'desc'));
     const unsub = onSnapshot(qy, (snap) => {
       const list: Client[] = snap.docs.map((d) => {
-        const data = d.data() as Omit<Client, 'id'>;
+        const data = d.data() as Partial<Client> & { location?: unknown };
         return {
           id: d.id,
           customerName: data.customerName || '',
@@ -80,6 +115,7 @@ export default function ClientsPage() {
           starRating: data.starRating || 1,
           createdAt: data.createdAt,
           tags: data.tags || [],
+          location: normalizeClientLocation(data.location),
         };
       });
       setClients(list);
@@ -106,12 +142,32 @@ export default function ClientsPage() {
     return map;
   }, [clients]);
 
+  const resolvedById = useMemo(
+    () =>
+      new Map(
+        clients.map((client) => [client.id, resolveClientLocation(client)] as const)
+      ),
+    [clients]
+  );
+
   // Filters + search
-  const filtered = useMemo(() => {
+  const baseFiltered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return clients.filter((c) => {
+      const location = resolvedById.get(c.id);
       if (q) {
-        const blob = `${c.customerName} ${c.customerEmail} ${c.customerPhone} ${c.customerAddress}`.toLowerCase();
+        const blob = [
+          c.customerName,
+          c.customerEmail,
+          c.customerPhone,
+          c.customerAddress,
+          c.location?.notes,
+          location?.district,
+          location?.hotspotLabel,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
         if (!blob.includes(q)) return false;
       }
       if (minStars !== 'all' && (c.starRating || 1) < minStars) return false;
@@ -119,35 +175,50 @@ export default function ClientsPage() {
       if (hasEmailOnly && !(c.customerEmail || '').trim()) return false;
       return true;
     });
-  }, [clients, search, minStars, hasPhoneOnly, hasEmailOnly]);
+  }, [clients, hasEmailOnly, hasPhoneOnly, minStars, resolvedById, search]);
+
+  const filtered = useMemo(() => {
+    if (locationFilter === 'all') return baseFiltered;
+    return baseFiltered.filter((client) => {
+      const location = resolvedById.get(client.id);
+      if (locationFilter === 'unlocated') return !location;
+      return location?.district === locationFilter;
+    });
+  }, [baseFiltered, locationFilter, resolvedById]);
 
   // Quick stats
   const stats = useMemo(() => {
     const total = clients.length;
     const vip = clients.filter((c) => (c.starRating || 1) >= 4).length;
     const withPhone = clients.filter((c) => cleanPhone(c.customerPhone)).length;
+    const mapped = clients.filter((c) => resolvedById.get(c.id)).length;
     const last7 = clients.filter((c) => {
-      const dt: Date | null = c.createdAt?.toDate ? c.createdAt.toDate() : null;
+      const dt = toDateValue(c.createdAt);
       if (!dt) return false;
       const diff = (Date.now() - dt.getTime()) / (1000 * 60 * 60 * 24);
       return diff <= 7;
     }).length;
-    return { total, vip, withPhone, last7 };
-  }, [clients]);
+    return { total, vip, withPhone, mapped, last7 };
+  }, [clients, resolvedById]);
 
   // CSV export (filtered)
   const exportCSV = () => {
     const rows: string[] = [
-      ['Name', 'Email', 'Phone', 'Address', 'Stars', 'Created At', 'Tags'].join(','),
+      ['Name', 'Email', 'Phone', 'Address', 'District', 'Hotspot', 'Pin Notes', 'Pin Source', 'Stars', 'Created At', 'Tags'].join(','),
     ];
     filtered.forEach((c) => {
-      const d = c.createdAt?.toDate ? c.createdAt.toDate() : undefined;
+      const d = toDateValue(c.createdAt);
+      const location = resolvedById.get(c.id);
       rows.push(
         [
           csv(c.customerName),
           csv(c.customerEmail || ''),
           csv(c.customerPhone || ''),
           csv(c.customerAddress || ''),
+          csv(location?.district || ''),
+          csv(location?.hotspotLabel || ''),
+          csv(c.location?.notes || ''),
+          csv(location?.source || ''),
           String(c.starRating || 1),
           csv(d ? d.toISOString() : ''),
           csv((c.tags || []).join('|')),
@@ -163,7 +234,7 @@ export default function ClientsPage() {
   const csv = (s: string) => `"${String(s).replace(/"/g, '""')}"`;
 
   // Mutations
-  const saveClient = async (payload: Omit<Client, 'id' | 'createdAt'> & { id?: string }) => {
+  const saveClient = async (payload: ClientDraft) => {
     const base = {
       customerName: payload.customerName.trim(),
       customerEmail: (payload.customerEmail || '').trim(),
@@ -171,6 +242,7 @@ export default function ClientsPage() {
       customerAddress: (payload.customerAddress || '').trim(),
       starRating: payload.starRating || 1,
       tags: payload.tags || [],
+      location: serializeClientLocation(payload.location),
     };
 
     if (!payload.id) {
@@ -226,7 +298,7 @@ export default function ClientsPage() {
                 Clients (CRM)
               </h1>
               <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
-                Keep your best customers close with VIP tagging, clean data, and fast contact actions.
+                Keep your best customers close with VIP tagging, clean data, live Mauritius pinning, and a market heatmap that shows where to push harder next.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
@@ -238,6 +310,9 @@ export default function ClientsPage() {
                 <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
                   <FiStar className="h-4 w-4" /> VIP prioritization
                 </span>
+                <span className="inline-flex items-center gap-2 rounded-full bg-fuchsia-50 px-3 py-1 text-xs font-semibold text-fuchsia-700">
+                  <FiMapPin className="h-4 w-4" /> Mauritius heatmap
+                </span>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -248,17 +323,7 @@ export default function ClientsPage() {
                 <FiDownload className="h-4 w-4" /> Export CSV
               </button>
               <button
-                onClick={() =>
-                  setEditing({
-                    id: '',
-                    customerName: '',
-                    customerEmail: '',
-                    customerPhone: '',
-                    customerAddress: '',
-                    starRating: 3,
-                    tags: [],
-                  })
-                }
+                onClick={() => setEditing(createEmptyClient())}
                 className="inline-flex items-center gap-2 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
               >
                 <FiPlus className="h-4 w-4" /> Add Client
@@ -269,14 +334,23 @@ export default function ClientsPage() {
 
         {/* Stats */}
         <section
-          className="grid grid-cols-2 gap-4 md:grid-cols-4"
+          className="grid grid-cols-2 gap-4 md:grid-cols-5"
           style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.08s' }}
         >
           <StatCard label="Total Clients" value={stats.total} tone="sky" icon={<FiUsers className="h-4 w-4" />} />
           <StatCard label="VIP (4+ stars)" value={stats.vip} tone="amber" icon={<FiStar className="h-4 w-4" />} />
           <StatCard label="With Phone" value={stats.withPhone} tone="emerald" icon={<FiPhone className="h-4 w-4" />} />
+          <StatCard label="Pinned on Map" value={stats.mapped} tone="rose" icon={<FiMapPin className="h-4 w-4" />} />
           <StatCard label="New (7d)" value={stats.last7} tone="slate" icon={<FiTag className="h-4 w-4" />} />
         </section>
+
+        <MauritiusClientHeatmap
+          clients={baseFiltered}
+          totalClients={baseFiltered.length}
+          selectedDistrict={locationFilter}
+          onSelectDistrict={setLocationFilter}
+          onEditClient={(client) => setEditing(client)}
+        />
 
         {/* Filters */}
         <section
@@ -304,6 +378,19 @@ export default function ClientsPage() {
               <option value={3}>★ 3+</option>
               <option value={4}>★ 4+</option>
               <option value={5}>★ 5 only</option>
+            </select>
+            <select
+              value={locationFilter}
+              onChange={(e) => setLocationFilter((e.target.value || 'all') as LocationFilter)}
+              className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+            >
+              <option value="all">All Mauritius</option>
+              <option value="unlocated">Unpinned only</option>
+              {MAURITIUS_DISTRICTS.map((district) => (
+                <option key={district} value={district}>
+                  {district}
+                </option>
+              ))}
             </select>
             <button
               type="button"
@@ -335,6 +422,7 @@ export default function ClientsPage() {
           {filtered.map((c) => {
             const phoneDup = !!cleanPhone(c.customerPhone) && (dupByPhone.get(cleanPhone(c.customerPhone)) || 0) > 1;
             const emailDup = !!(c.customerEmail || '').trim() && (dupByEmail.get((c.customerEmail || '').toLowerCase()) || 0) > 1;
+            const location = resolvedById.get(c.id);
 
             return (
               <div key={c.id} className="overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 shadow-sm transition hover:border-sky-200 hover:shadow-md">
@@ -356,6 +444,11 @@ export default function ClientsPage() {
                               Duplicate
                             </span>
                           )}
+                          {location && (
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700">
+                              {location.hotspotLabel}
+                            </span>
+                          )}
                         </div>
                         <div className="mt-2">
                           <Stars
@@ -364,7 +457,7 @@ export default function ClientsPage() {
                           />
                         </div>
                         <div className="mt-2 text-xs text-slate-500">
-                          Added: {fmtDate(c.createdAt?.toDate ? c.createdAt.toDate() : undefined)}
+                          Added: {fmtDate(toDateValue(c.createdAt))}
                         </div>
                       </div>
                     </div>
@@ -413,6 +506,28 @@ export default function ClientsPage() {
                   <Row label="Address" icon={<FiMapPin className="h-4 w-4 text-slate-400" />}>
                     {c.customerAddress ? c.customerAddress : <span className="text-slate-400">—</span>}
                   </Row>
+                  <Row label="Zone" icon={<FiMapPin className="h-4 w-4 text-fuchsia-400" />}>
+                    {location ? (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full border border-fuchsia-200 bg-fuchsia-50 px-2.5 py-1 text-xs font-semibold text-fuchsia-700">
+                          {location.hotspotLabel}
+                        </span>
+                        <span className="text-xs text-slate-500">{location.district}</span>
+                        {location.inferred && (
+                          <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
+                            Auto
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-slate-400">No pin yet</span>
+                    )}
+                  </Row>
+                  {c.location?.notes && (
+                    <Row label="Pin note" icon={<FiTag className="h-4 w-4 text-slate-400" />}>
+                      {c.location.notes}
+                    </Row>
+                  )}
                   {c.tags && c.tags.length > 0 && (
                     <Row label="Tags" icon={<FiTag className="h-4 w-4 text-slate-400" />}>
                       <div className="flex flex-wrap gap-2">
@@ -438,17 +553,7 @@ export default function ClientsPage() {
             <div className="mt-3 text-base font-semibold text-slate-700">No clients match your filters.</div>
             <p className="mt-1 text-sm text-slate-500">Try clearing filters or add a new client.</p>
             <button
-              onClick={() =>
-                setEditing({
-                  id: '',
-                  customerName: '',
-                  customerEmail: '',
-                  customerPhone: '',
-                  customerAddress: '',
-                  starRating: 3,
-                  tags: [],
-                })
-              }
+              onClick={() => setEditing(createEmptyClient())}
               className="mt-4 inline-flex items-center gap-2 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
             >
               <FiPlus className="h-4 w-4" /> Add Client
@@ -503,8 +608,8 @@ function StatCard({
 }: {
   label: string;
   value: number;
-  tone?: 'slate' | 'sky' | 'emerald' | 'amber';
-  icon?: React.ReactNode;
+  tone?: 'slate' | 'sky' | 'emerald' | 'amber' | 'rose';
+  icon?: ReactNode;
 }) {
   const tones = {
     slate: {
@@ -533,6 +638,13 @@ function StatCard({
       bg: 'from-amber-50 via-white to-white',
       accent: 'bg-amber-100 text-amber-700',
       glow: 'bg-amber-200/40',
+      value: 'text-slate-900',
+    },
+    rose: {
+      border: 'border-rose-100',
+      bg: 'from-rose-50 via-white to-white',
+      accent: 'bg-rose-100 text-rose-700',
+      glow: 'bg-rose-200/40',
       value: 'text-slate-900',
     },
   } as const;
@@ -573,7 +685,7 @@ function Avatar({ name }: { name: string }) {
   );
 }
 
-function Row({ label, icon, children }: { label: string; icon?: React.ReactNode; children: React.ReactNode }) {
+function Row({ label, icon, children }: { label: string; icon?: ReactNode; children: ReactNode }) {
   return (
     <div className="flex gap-3">
       <div className="flex w-24 items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-[0.16em]">
@@ -609,9 +721,9 @@ function ClientModal({
   onCancel,
   onSave,
 }: {
-  initial: Client;
+  initial: ClientDraft;
   onCancel: () => void;
-  onSave: (payload: Omit<Client, 'id' | 'createdAt'> & { id?: string }) => void;
+  onSave: (payload: ClientDraft) => void;
 }) {
   const [name, setName] = useState(initial.customerName || '');
   const [email, setEmail] = useState(initial.customerEmail || '');
@@ -619,6 +731,7 @@ function ClientModal({
   const [address, setAddress] = useState(initial.customerAddress || '');
   const [stars, setStars] = useState(initial.starRating || 3);
   const [tags, setTags] = useState<string>((initial.tags || []).join(', '));
+  const [location, setLocation] = useState<ClientLocation | null>(initial.location || null);
   const isEdit = Boolean(initial.id);
 
   return (
@@ -673,6 +786,16 @@ function ClientModal({
             className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
           />
         </label>
+
+        <div className="pt-2">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <span className="text-sm font-semibold text-slate-600">Mauritius pin location</span>
+            <span className="rounded-full bg-fuchsia-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-fuchsia-700">
+              Dynamic map
+            </span>
+          </div>
+          <MauritiusLocationPicker value={location} address={address} onChange={setLocation} />
+        </div>
       </div>
 
       <div className="mt-5 flex justify-end gap-2">
@@ -690,6 +813,7 @@ function ClientModal({
               customerPhone: phone,
               customerAddress: address,
               starRating: stars,
+              location,
               tags: tags
                 .split(',')
                 .map((t) => t.trim())
@@ -745,10 +869,10 @@ function ConfirmDeleteModal({
 }
 
 // ---------- Base Modal ----------
-function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-xl">
+      <div className="w-full max-w-5xl rounded-2xl border border-slate-200 bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{title}</h3>
           <button
