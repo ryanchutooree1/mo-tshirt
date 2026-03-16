@@ -161,6 +161,17 @@ function asBooleanCount(status: StatusItem[]) {
   }, 0);
 }
 
+function preferredCommandCode(status: StatusItem[]) {
+  return status.find((item) => item.code.startsWith("switch_"))?.code || status[0]?.code || "";
+}
+
+function statusValueTone(value: unknown) {
+  if (typeof value === "boolean") return value ? "status-boolean-on" : "status-boolean-off";
+  if (typeof value === "number") return "status-number";
+  if (typeof value === "string" && value.trim()) return "status-text";
+  return "status-neutral";
+}
+
 function statusTone(online: boolean | null) {
   if (online === true) {
     return {
@@ -226,10 +237,7 @@ export default function IotControlCenterPage() {
     setCommandState((current) => {
       const next = { ...current };
       for (const device of items) {
-        const suggestedCode =
-          device.status.find((item) => item.code.startsWith("switch_"))?.code ||
-          device.status[0]?.code ||
-          "";
+        const suggestedCode = preferredCommandCode(device.status);
 
         if (!next[device.id]) {
           next[device.id] = { code: suggestedCode, value: true };
@@ -510,12 +518,7 @@ export default function IotControlCenterPage() {
     (seed?: { deviceId: string; code: string; value: boolean }) => {
       const fallbackDeviceId = seed?.deviceId || devices[0]?.id || "";
       const matched = devices.find((item) => item.id === fallbackDeviceId) || null;
-      const fallbackCode =
-        seed?.code ||
-        commandState[fallbackDeviceId]?.code ||
-        matched?.status.find((item) => item.code.startsWith("switch_"))?.code ||
-        matched?.status[0]?.code ||
-        "";
+      const fallbackCode = seed?.code || commandState[fallbackDeviceId]?.code || preferredCommandCode(matched?.status || []);
 
       setAutomationDraft({
         name: matched ? `${matched.name} automation` : "IoT automation",
@@ -626,8 +629,8 @@ export default function IotControlCenterPage() {
 
   const pageStatus = useMemo(() => {
     if (!hasKeys) return "Tuya keys missing";
-    if (refreshingAll) return "Refreshing all device nodes";
-    if (loading) return "Booting command grid";
+    if (refreshingAll) return "Refreshing all devices";
+    if (loading) return "Preparing device view";
     return `${devices.length} device${devices.length === 1 ? "" : "s"} linked`;
   }, [devices.length, hasKeys, loading, refreshingAll]);
 
@@ -666,8 +669,7 @@ export default function IotControlCenterPage() {
             <p className="iot-kicker">Admin Module</p>
             <h1 className="iot-title">IoT Command Deck</h1>
             <p className="iot-subtitle">
-              Orchestrate Tuya devices in real time, inspect datapoints, and execute command tests through secure
-              server-side control channels.
+              Watch device health live, trigger quick power actions, and turn repeatable moves into clean automations.
             </p>
 
             <div className="iot-chip-row">
@@ -792,7 +794,7 @@ export default function IotControlCenterPage() {
 
             {automations.length === 0 ? (
               <div className="iot-automation-empty">
-                <p>No automations yet. Create one from this panel or directly from any device command box below.</p>
+                <p>No automations yet. Create one from this panel or directly from any device control panel below.</p>
               </div>
             ) : (
               <div className="iot-automation-grid">
@@ -873,11 +875,20 @@ export default function IotControlCenterPage() {
             ) : null}
 
             {devices.map((device, index) => {
-              const command = commandState[device.id] || { code: "", value: true };
+              const suggestedCode = preferredCommandCode(device.status);
+              const command = commandState[device.id] || { code: suggestedCode, value: true };
               const isBusy = Boolean(deviceBusy[device.id]);
               const isCommandBusy = Boolean(commandBusy[device.id]);
               const state = statusTone(device.online);
               const activeSignals = asBooleanCount(device.status);
+              const primaryCode = command.code || suggestedCode;
+              const primaryStatus =
+                device.status.find((item) => item.code === primaryCode) ||
+                device.status.find((item) => item.code === suggestedCode) ||
+                null;
+              const primaryValue = primaryStatus ? safeText(primaryStatus.value) : "Waiting";
+              const switchCount = device.status.filter((item) => item.code.startsWith("switch_")).length;
+              const deviceNumber = String(index + 1).padStart(2, "0");
 
               return (
                 <article
@@ -886,10 +897,15 @@ export default function IotControlCenterPage() {
                   style={{ animationDelay: `${100 + index * 40}ms` }}
                 >
                   <header className="iot-device-head">
-                    <div>
-                      <p className="iot-device-kicker">Device Node {index + 1}</p>
-                      <h2>{device.name}</h2>
-                      <p className="iot-device-id">ID: {device.id}</p>
+                    <div className="iot-device-identity">
+                      <div className="iot-device-orb">
+                        <Cpu className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="iot-device-kicker">Connected Device {deviceNumber}</p>
+                        <h2>{device.name}</h2>
+                        <p className="iot-device-id">ID: {device.id}</p>
+                      </div>
                     </div>
 
                     <div className="iot-head-actions">
@@ -909,32 +925,59 @@ export default function IotControlCenterPage() {
                     </div>
                   </header>
 
+                  <div className="iot-device-spotlight">
+                    <div className="iot-device-spotlight-copy">
+                      <span>Ready datapoint</span>
+                      <strong>{primaryCode || "Select a datapoint below"}</strong>
+                      <p>
+                        {primaryCode
+                          ? `Live value: ${primaryValue}`
+                          : "Choose the device datapoint you want to control, then apply it or save it as a routine."}
+                      </p>
+                    </div>
+
+                    <div className="iot-device-spotlight-stats">
+                      <div>
+                        <span>Smart toggles</span>
+                        <strong>{switchCount}</strong>
+                      </div>
+                      <div>
+                        <span>Signals active</span>
+                        <strong>{activeSignals}</strong>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="iot-inline-metrics">
                     <div>
                       <span>Last fetched</span>
                       <strong>{fmtTime(device.lastFetchedAt)}</strong>
                     </div>
                     <div>
-                      <span>Status codes</span>
+                      <span>Live datapoints</span>
                       <strong>{device.status.length}</strong>
                     </div>
                     <div>
-                      <span>Active switches</span>
+                      <span>Active signals</span>
                       <strong>{activeSignals}</strong>
                     </div>
                   </div>
 
                   <section className="iot-section">
                     <div className="iot-section-head">
-                      <span>Live Status Matrix</span>
+                      <span>Live Signals</span>
+                      <small>{device.status.length} datapoints</small>
                     </div>
                     {device.status.length === 0 ? (
                       <p className="iot-empty-status">No status items returned.</p>
                     ) : (
                       <ul className="iot-status-grid">
                         {device.status.map((item) => (
-                          <li key={`${device.id}-${item.code}`} className="iot-status-item">
-                            <span className="iot-code-chip">{item.code}</span>
+                          <li key={`${device.id}-${item.code}`} className={`iot-status-item ${statusValueTone(item.value)}`}>
+                            <div className="iot-status-copy">
+                              <span className="iot-code-chip">{item.code}</span>
+                              <small>{typeof item.value === "boolean" ? "switch state" : "live value"}</small>
+                            </div>
                             <span className="iot-value-chip">{safeText(item.value)}</span>
                           </li>
                         ))}
@@ -944,13 +987,13 @@ export default function IotControlCenterPage() {
 
                   <section className="iot-section iot-command-box">
                     <div className="iot-section-head">
-                      <span>Command Tester</span>
-                      <small>discover correct DP code before automating</small>
+                      <span>Quick Controls</span>
+                      <small>{primaryCode ? `Ready for ${primaryCode}` : "Choose a datapoint"}</small>
                     </div>
 
                     <div className="iot-command-grid">
                       <div className="iot-control-field">
-                        <label>Code</label>
+                        <label>Datapoint</label>
                         <input
                           list={`tuya-code-list-${device.id}`}
                           value={command.code}
@@ -1016,7 +1059,7 @@ export default function IotControlCenterPage() {
                         className="iot-send"
                       >
                         {isCommandBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                        {isCommandBusy ? "Sending" : "Send Command"}
+                        {isCommandBusy ? "Applying" : "Apply Now"}
                       </button>
 
                       <button
@@ -1031,7 +1074,7 @@ export default function IotControlCenterPage() {
                         className="iot-ghost-btn"
                       >
                         <Plus className="h-4 w-4" />
-                        Save Automation
+                        Save Routine
                       </button>
                     </div>
                   </section>
@@ -1788,7 +1831,26 @@ export default function IotControlCenterPage() {
         }
 
         .iot-device-card {
+          overflow: hidden;
+          isolation: isolate;
           padding: 0.95rem;
+        }
+
+        .iot-device-card::before {
+          content: "";
+          position: absolute;
+          inset: 0 0 auto 0;
+          height: 120px;
+          background:
+            radial-gradient(circle at 12% 22%, rgba(45, 212, 191, 0.2), transparent 34%),
+            radial-gradient(circle at 82% 18%, rgba(56, 189, 248, 0.22), transparent 36%);
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        .iot-device-card > * {
+          position: relative;
+          z-index: 1;
         }
 
         .iot-device-head {
@@ -1796,6 +1858,32 @@ export default function IotControlCenterPage() {
           align-items: flex-start;
           justify-content: space-between;
           gap: 0.8rem;
+        }
+
+        .iot-device-identity {
+          display: flex;
+          align-items: center;
+          gap: 0.85rem;
+          min-width: 0;
+        }
+
+        .iot-device-orb {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 3rem;
+          height: 3rem;
+          flex-shrink: 0;
+          border-radius: 1rem;
+          border: 1px solid rgba(125, 211, 252, 0.34);
+          background: linear-gradient(145deg, rgba(15, 118, 110, 0.55), rgba(8, 47, 73, 0.88));
+          color: #d1fae5;
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        }
+
+        :global(.admin-root.admin-light) .iot-device-orb {
+          background: linear-gradient(145deg, rgba(209, 250, 229, 0.95), rgba(224, 242, 254, 0.95));
+          color: #0f766e;
         }
 
         .iot-device-kicker {
@@ -1827,6 +1915,71 @@ export default function IotControlCenterPage() {
           flex-wrap: wrap;
           gap: 0.45rem;
           justify-content: flex-end;
+        }
+
+        .iot-device-spotlight {
+          margin-top: 0.9rem;
+          display: grid;
+          gap: 0.75rem;
+          grid-template-columns: minmax(0, 1.4fr) minmax(180px, 0.8fr);
+          border: 1px solid rgba(125, 211, 252, 0.26);
+          border-radius: 1.15rem;
+          background:
+            linear-gradient(145deg, rgba(7, 26, 48, 0.9), rgba(3, 12, 27, 0.84)),
+            rgba(2, 6, 23, 0.4);
+          padding: 0.88rem;
+        }
+
+        :global(.admin-root.admin-light) .iot-device-spotlight {
+          background: linear-gradient(145deg, rgba(236, 253, 245, 0.96), rgba(255, 255, 255, 0.96));
+        }
+
+        .iot-device-spotlight-copy span,
+        .iot-device-spotlight-stats span {
+          display: block;
+          font-size: 0.66rem;
+          text-transform: uppercase;
+          letter-spacing: 0.18em;
+          color: var(--iot-muted);
+          font-weight: 700;
+        }
+
+        .iot-device-spotlight-copy strong {
+          display: block;
+          margin-top: 0.24rem;
+          color: var(--iot-text);
+          font-size: 1.04rem;
+          line-height: 1.2;
+        }
+
+        .iot-device-spotlight-copy p {
+          margin: 0.3rem 0 0;
+          color: var(--iot-muted);
+          font-size: 0.85rem;
+        }
+
+        .iot-device-spotlight-stats {
+          display: grid;
+          gap: 0.5rem;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .iot-device-spotlight-stats div {
+          border: 1px solid rgba(148, 163, 184, 0.22);
+          border-radius: 0.95rem;
+          background: rgba(2, 6, 23, 0.28);
+          padding: 0.68rem 0.72rem;
+        }
+
+        :global(.admin-root.admin-light) .iot-device-spotlight-stats div {
+          background: rgba(255, 255, 255, 0.68);
+        }
+
+        .iot-device-spotlight-stats strong {
+          display: block;
+          margin-top: 0.22rem;
+          color: var(--iot-text);
+          font-size: 1.08rem;
         }
 
         .iot-state-pill {
@@ -1906,7 +2059,7 @@ export default function IotControlCenterPage() {
         .iot-inline-metrics div {
           border: 1px solid var(--iot-border);
           border-radius: 0.9rem;
-          background: rgba(7, 18, 35, 0.68);
+          background: rgba(7, 18, 35, 0.56);
           padding: 0.5rem 0.6rem;
         }
 
@@ -1976,6 +2129,7 @@ export default function IotControlCenterPage() {
           padding: 0;
           display: grid;
           gap: 0.45rem;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
         .iot-status-item {
@@ -1983,6 +2137,27 @@ export default function IotControlCenterPage() {
           align-items: center;
           justify-content: space-between;
           gap: 0.55rem;
+          border: 1px solid rgba(148, 163, 184, 0.2);
+          border-radius: 0.95rem;
+          background: rgba(7, 18, 35, 0.52);
+          padding: 0.58rem 0.62rem;
+        }
+
+        :global(.admin-root.admin-light) .iot-status-item {
+          background: rgba(248, 250, 252, 0.94);
+        }
+
+        .iot-status-copy {
+          min-width: 0;
+        }
+
+        .iot-status-copy small {
+          display: block;
+          margin-top: 0.24rem;
+          color: var(--iot-muted);
+          font-size: 0.68rem;
+          text-transform: uppercase;
+          letter-spacing: 0.14em;
         }
 
         .iot-code-chip {
@@ -2009,6 +2184,38 @@ export default function IotControlCenterPage() {
           white-space: nowrap;
         }
 
+        .iot-status-item.status-boolean-on {
+          border-color: rgba(52, 211, 153, 0.3);
+        }
+
+        .iot-status-item.status-boolean-on .iot-value-chip {
+          border-color: rgba(52, 211, 153, 0.36);
+          background: rgba(6, 95, 70, 0.45);
+          color: #d1fae5;
+        }
+
+        .iot-status-item.status-boolean-off {
+          border-color: rgba(251, 113, 133, 0.28);
+        }
+
+        .iot-status-item.status-boolean-off .iot-value-chip {
+          border-color: rgba(251, 113, 133, 0.36);
+          background: rgba(127, 29, 29, 0.35);
+          color: #fecdd3;
+        }
+
+        .iot-status-item.status-number .iot-value-chip {
+          border-color: rgba(125, 211, 252, 0.36);
+          background: rgba(8, 47, 73, 0.48);
+          color: #bae6fd;
+        }
+
+        .iot-status-item.status-text .iot-value-chip {
+          border-color: rgba(251, 191, 36, 0.34);
+          background: rgba(120, 53, 15, 0.34);
+          color: #fde68a;
+        }
+
         :global(.admin-root.admin-light) .iot-code-chip {
           background: rgba(224, 242, 254, 0.72);
           color: #0c4a6e;
@@ -2016,6 +2223,26 @@ export default function IotControlCenterPage() {
 
         :global(.admin-root.admin-light) .iot-value-chip {
           background: rgba(248, 250, 252, 0.95);
+        }
+
+        :global(.admin-root.admin-light) .iot-status-item.status-boolean-on .iot-value-chip {
+          background: rgba(209, 250, 229, 0.95);
+          color: #047857;
+        }
+
+        :global(.admin-root.admin-light) .iot-status-item.status-boolean-off .iot-value-chip {
+          background: rgba(254, 226, 226, 0.95);
+          color: #be123c;
+        }
+
+        :global(.admin-root.admin-light) .iot-status-item.status-number .iot-value-chip {
+          background: rgba(224, 242, 254, 0.95);
+          color: #0369a1;
+        }
+
+        :global(.admin-root.admin-light) .iot-status-item.status-text .iot-value-chip {
+          background: rgba(254, 243, 199, 0.95);
+          color: #92400e;
         }
 
         .iot-command-box {
@@ -2030,7 +2257,7 @@ export default function IotControlCenterPage() {
         .iot-command-grid {
           display: grid;
           gap: 0.64rem;
-          grid-template-columns: 1fr auto auto auto;
+          grid-template-columns: minmax(0, 1.35fr) auto auto auto;
           align-items: end;
         }
 
@@ -2258,7 +2485,18 @@ export default function IotControlCenterPage() {
             padding: 0.85rem;
           }
 
+          .iot-device-head,
+          .iot-head-actions {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
           .iot-inline-metrics {
+            grid-template-columns: 1fr;
+          }
+
+          .iot-status-grid,
+          .iot-device-spotlight {
             grid-template-columns: 1fr;
           }
 
