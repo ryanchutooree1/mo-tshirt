@@ -359,14 +359,15 @@ export default function AdminAiAssistantPage() {
   async function handleSubmitLogo() {
     if (!pendingLogoFile || uploadingLogo || sending) return;
 
+    const currentSessionId = session.sessionId;
     setUploadingLogo(true);
     setError(null);
-    setNotice(null);
+    setNotice("Uploading logo and waiting for the assistant reply...");
 
     try {
       const file = pendingLogoFile;
       const safeName = file.name.replace(/[^a-z0-9._-]/gi, "_");
-      const uploadRef = ref(storage, `ai-assistant/${session.sessionId}/${Date.now()}-${safeName}`);
+      const uploadRef = ref(storage, `ai-assistant/${currentSessionId}/${Date.now()}-${safeName}`);
       const snap = await uploadBytes(uploadRef, file);
       const url = await getDownloadURL(snap.ref);
 
@@ -383,7 +384,10 @@ export default function AdminAiAssistantPage() {
       });
       if (sent) {
         setPendingLogoFile(null);
+        await refreshSession(currentSessionId);
         setNotice(`We have received the logo: ${file.name}. Review it in the chat thread or the Lead Snapshot panel.`);
+      } else {
+        await refreshSession(currentSessionId);
       }
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Failed to upload logo.");
