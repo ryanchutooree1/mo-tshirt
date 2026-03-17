@@ -142,10 +142,52 @@ function MiniStat({
   sub: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/60 bg-white/70 p-4 shadow-sm backdrop-blur">
+    <div className="rounded-[1.35rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] backdrop-blur">
       <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-slate-500">{label}</p>
-      <p className="mt-3 text-2xl font-semibold text-slate-950">{value}</p>
-      <p className="mt-1 text-sm text-slate-600">{sub}</p>
+      <p className="mt-3 text-[2rem] font-semibold leading-none text-slate-950">{value}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{sub}</p>
+    </div>
+  );
+}
+
+function HeroStat({
+  label,
+  value,
+  sub,
+  accent,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  accent: "cyan" | "amber" | "emerald";
+}) {
+  const topEdgeClass =
+    accent === "amber"
+      ? "from-amber-200/80 via-amber-100/30 to-white/0"
+      : accent === "emerald"
+        ? "from-emerald-200/80 via-emerald-100/30 to-white/0"
+        : "from-cyan-200/80 via-cyan-100/30 to-white/0";
+
+  const labelClass =
+    accent === "amber"
+      ? "text-amber-100/85"
+      : accent === "emerald"
+        ? "text-emerald-100/85"
+        : "text-cyan-100/85";
+
+  const subClass =
+    accent === "amber"
+      ? "text-amber-50/82"
+      : accent === "emerald"
+        ? "text-emerald-50/82"
+        : "text-slate-200";
+
+  return (
+    <div className="relative overflow-hidden rounded-[1.6rem] border border-white/15 bg-[linear-gradient(180deg,rgba(255,255,255,0.16),rgba(255,255,255,0.08))] p-5 shadow-[0_18px_45px_rgba(2,6,23,0.18)] backdrop-blur-md">
+      <div aria-hidden className={`absolute inset-x-0 top-0 h-px bg-gradient-to-r ${topEdgeClass}`} />
+      <p className={`text-[11px] font-semibold uppercase tracking-[0.32em] ${labelClass}`}>{label}</p>
+      <p className="mt-5 text-4xl font-semibold leading-none text-white">{value}</p>
+      <p className={`mt-3 max-w-[16rem] text-sm leading-6 ${subClass}`}>{sub}</p>
     </div>
   );
 }
@@ -448,28 +490,35 @@ export default function AdminAiAssistantPage() {
   ];
 
   return (
-    <main className="ai-assistant-page relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,rgba(245,158,11,0.16),transparent_32%),linear-gradient(180deg,#f8fafc_0%,#ecfeff_38%,#f8fafc_100%)]">
+    <main className="ai-assistant-page relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.14),transparent_24%),radial-gradient(circle_at_top_right,rgba(56,189,248,0.14),transparent_28%),linear-gradient(180deg,#f5f7fb_0%,#f7fbff_42%,#eef4ff_100%)]">
       <div
         aria-hidden
-        className="pointer-events-none absolute left-[-8rem] top-10 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,rgba(34,197,94,0.18),transparent_70%)] blur-3xl"
+        className="pointer-events-none absolute left-[-10rem] top-14 h-80 w-80 rounded-full bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.18),transparent_72%)] blur-3xl"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute right-[-7rem] top-24 h-80 w-80 rounded-full bg-[radial-gradient(circle_at_center,rgba(14,165,233,0.18),transparent_70%)] blur-3xl"
+        className="pointer-events-none absolute right-[-8rem] top-24 h-96 w-96 rounded-full bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.18),transparent_72%)] blur-3xl"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute bottom-[-10rem] left-1/3 h-96 w-96 rounded-full bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.12),transparent_72%)] blur-3xl"
       />
 
-      <div className="relative mx-auto max-w-7xl px-6 py-8">
+      <div className="relative mx-auto max-w-7xl px-6 py-8 lg:py-10">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <Link href="/admin" className="text-sm font-semibold text-slate-600 transition hover:text-slate-900">
+            <Link
+              href="/admin"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900"
+            >
               ← Back to admin dashboard
             </Link>
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">
+              <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200/80 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-800 shadow-sm backdrop-blur">
                 <TestTube2 className="h-3.5 w-3.5" />
                 Admin testing first
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
+              <span className="inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-amber-800 shadow-sm backdrop-blur">
                 <DatabaseZap className="h-3.5 w-3.5" />
                 Firestore backed
               </span>
@@ -491,7 +540,7 @@ export default function AdminAiAssistantPage() {
                     setLoadingOverview(false);
                   });
               }}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-300/80 bg-white/80 px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-[0_12px_24px_rgba(15,23,42,0.08)] backdrop-blur transition hover:-translate-y-0.5 hover:border-slate-400 hover:bg-white"
             >
               <RefreshCw className={`h-4 w-4 ${loadingOverview ? "animate-spin" : ""}`} />
               Refresh
@@ -499,7 +548,7 @@ export default function AdminAiAssistantPage() {
             <button
               type="button"
               onClick={handleRetrain}
-              className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+              className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#0f172a_0%,#164e63_100%)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_16px_28px_rgba(15,23,42,0.16)] transition hover:-translate-y-0.5 hover:brightness-105"
             >
               {training ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <BrainCircuit className="h-4 w-4" />}
               Retrain
@@ -507,51 +556,66 @@ export default function AdminAiAssistantPage() {
           </div>
         </div>
 
-        <section className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-white/75 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.12)] backdrop-blur">
+        <section className="relative isolate overflow-hidden rounded-[2.25rem] border border-slate-200/80 bg-[linear-gradient(135deg,#0f172a_0%,#15314a_34%,#155e75_70%,#f59e0b_150%)] px-6 py-7 shadow-[0_28px_100px_rgba(15,23,42,0.18)] sm:px-8 sm:py-9 lg:px-10 lg:py-10">
           <div
             aria-hidden
-            className="absolute inset-x-0 top-0 h-36 bg-[linear-gradient(90deg,rgba(15,23,42,0.95),rgba(8,145,178,0.88),rgba(245,158,11,0.82))]"
+            className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.16),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.12),transparent_24%)]"
           />
-          <div className="relative grid gap-6 lg:grid-cols-[1.35fr_0.95fr]">
-            <div className="text-white">
-              <p className="text-xs font-semibold uppercase tracking-[0.34em] text-cyan-100">MO T-SHIRT AI Lab</p>
-              <h1 className="mt-4 max-w-3xl font-sans text-4xl font-semibold tracking-tight sm:text-5xl">
+          <div
+            aria-hidden
+            className="absolute -left-16 bottom-0 h-56 w-56 rounded-full bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.32),transparent_68%)] blur-3xl"
+          />
+          <div
+            aria-hidden
+            className="absolute right-0 top-0 h-64 w-64 rounded-full bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.28),transparent_68%)] blur-3xl"
+          />
+          <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1.35fr)_360px] lg:items-start xl:grid-cols-[minmax(0,1.35fr)_390px]">
+            <div className="max-w-3xl text-white">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-100/90 backdrop-blur">
+                <Sparkles className="h-3.5 w-3.5" />
+                Private training cockpit
+              </span>
+              <p className="mt-6 text-xs font-semibold uppercase tracking-[0.38em] text-cyan-100/80">MO T-SHIRT AI Lab</p>
+              <h1 className="mt-4 max-w-3xl font-sans text-4xl font-semibold leading-[0.95] tracking-tight sm:text-5xl xl:text-[4.2rem]">
                 Train and test the local sales assistant inside admin before any public launch.
               </h1>
-              <p className="mt-4 max-w-2xl text-sm text-cyan-50/90 sm:text-base">
+              <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">
                 This page keeps the assistant private while you validate order capture, submit sample leads, save knowledge, and approve or reject results for learning.
               </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90">
+              <div className="mt-8 flex flex-wrap gap-3">
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-slate-950/20 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur">
                   <Bot className="h-3.5 w-3.5" />
                   Chat-driven lead capture
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90">
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-slate-950/20 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur">
                   <MessageSquareText className="h-3.5 w-3.5" />
                   Session playback
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90">
+                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-slate-950/20 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur">
                   <Sparkles className="h-3.5 w-3.5" />
                   Feedback-driven retraining
                 </span>
               </div>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-              <MiniStat
+            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+              <HeroStat
                 label="Sessions"
                 value={String(recentSessions.length)}
                 sub={recentSessions.length ? "Recent admin runs loaded" : "No testing sessions yet"}
+                accent="cyan"
               />
-              <MiniStat
+              <HeroStat
                 label="Leads"
                 value={String(recentLeads.length)}
                 sub={recentLeads.length ? "Recent submitted leads ready for review" : "No submitted leads yet"}
+                accent="emerald"
               />
-              <MiniStat
+              <HeroStat
                 label="Knowledge"
                 value={String(recentKnowledge.length)}
                 sub={recentKnowledge.length ? "Business notes already feeding the assistant" : "Knowledge base is empty"}
+                accent="amber"
               />
             </div>
           </div>
@@ -573,7 +637,7 @@ export default function AdminAiAssistantPage() {
         )}
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[1.45fr_1fr]">
-          <section className="rounded-[1.8rem] border border-slate-200/70 bg-white/85 p-5 shadow-sm backdrop-blur">
+          <section className="rounded-[1.8rem] border border-slate-200/80 bg-white/88 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Testing Session</p>
@@ -587,7 +651,7 @@ export default function AdminAiAssistantPage() {
                 <button
                   type="button"
                   onClick={startFreshSession}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-300/80 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50"
                 >
                   <Sparkles className="h-4 w-4" />
                   New session
@@ -595,7 +659,7 @@ export default function AdminAiAssistantPage() {
                 <button
                   type="button"
                   onClick={() => void handleSendMessage({ message: "summary" })}
-                  className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100"
+                  className="inline-flex items-center gap-2 rounded-full border border-cyan-200/80 bg-cyan-50 px-4 py-2 text-sm font-semibold text-cyan-800 transition hover:bg-cyan-100"
                 >
                   Summary
                 </button>
@@ -603,7 +667,7 @@ export default function AdminAiAssistantPage() {
                   type="button"
                   onClick={handleSubmitLead}
                   disabled={submitting || !session.readyToSubmit}
-                  className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#0f172a_0%,#155e75_100%)] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(15,23,42,0.14)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ArrowUpRight className="h-4 w-4" />}
                   Send to Quotation Approval
@@ -617,14 +681,14 @@ export default function AdminAiAssistantPage() {
                   key={prompt}
                   type="button"
                   onClick={() => void handleSendMessage({ message: prompt })}
-                  className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white"
+                  className="rounded-full border border-slate-200/80 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-800"
                 >
                   {prompt}
                 </button>
               ))}
             </div>
 
-            <div className="mt-4 min-h-[26rem] rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 shadow-inner">
+            <div className="mt-4 min-h-[26rem] rounded-[1.5rem] border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 shadow-inner shadow-slate-200/70">
               <div className="h-[25rem] space-y-3 overflow-y-auto pr-1">
                 {loadingSession ? (
                   <div className="flex h-full items-center justify-center text-sm text-slate-500">
@@ -702,7 +766,7 @@ export default function AdminAiAssistantPage() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-[1.5rem] border border-slate-200 bg-slate-50/80 p-4">
+            <div className="mt-4 rounded-[1.5rem] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.92))] p-4">
               <label htmlFor="assistant-composer" className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
                 Send a test message
               </label>
@@ -837,7 +901,7 @@ export default function AdminAiAssistantPage() {
                   type="button"
                   onClick={() => void handleSendMessage()}
                   disabled={!draft.trim() || sending || uploadingLogo}
-                  className="inline-flex items-center gap-2 rounded-full bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#0891b2_0%,#155e75_100%)] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(8,145,178,0.22)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {sending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <SendHorizontal className="h-4 w-4" />}
                   Send message
@@ -887,7 +951,7 @@ export default function AdminAiAssistantPage() {
           </section>
 
           <div className="space-y-6">
-            <section className="rounded-[1.8rem] border border-slate-200/70 bg-white/85 p-5 shadow-sm backdrop-blur">
+            <section className="rounded-[1.8rem] border border-slate-200/80 bg-white/88 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-500">Lead Snapshot</p>
@@ -981,13 +1045,15 @@ export default function AdminAiAssistantPage() {
               </div>
             </section>
 
-            <section className="rounded-[1.8rem] border border-slate-200/70 bg-white/85 p-5 shadow-sm backdrop-blur">
+            <section className="rounded-[1.8rem] border border-slate-200/80 bg-white/88 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-500">Learning State</p>
                   <h2 className="mt-2 text-2xl font-semibold text-slate-950">Training overview</h2>
                 </div>
-                <BrainCircuit className="h-8 w-8 text-cyan-600" />
+                <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-100 bg-cyan-50 text-cyan-700 shadow-sm">
+                  <BrainCircuit className="h-6 w-6" />
+                </span>
               </div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -1079,13 +1145,15 @@ export default function AdminAiAssistantPage() {
               </div>
             </section>
 
-            <section className="rounded-[1.8rem] border border-slate-200/70 bg-white/85 p-5 shadow-sm backdrop-blur">
+            <section className="rounded-[1.8rem] border border-slate-200/80 bg-white/88 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-500">Knowledge Base</p>
                   <h2 className="mt-2 text-2xl font-semibold text-slate-950">Add business guidance</h2>
                 </div>
-                <DatabaseZap className="h-8 w-8 text-amber-500" />
+                <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-100 bg-amber-50 text-amber-700 shadow-sm">
+                  <DatabaseZap className="h-6 w-6" />
+                </span>
               </div>
 
               <div className="mt-4 space-y-3">
@@ -1140,13 +1208,15 @@ export default function AdminAiAssistantPage() {
         </div>
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-          <section className="rounded-[1.8rem] border border-slate-200/70 bg-white/85 p-5 shadow-sm backdrop-blur">
+          <section className="rounded-[1.8rem] border border-slate-200/80 bg-white/88 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-500">Recent Sessions</p>
                 <h2 className="mt-2 text-2xl font-semibold text-slate-950">Replay test runs</h2>
               </div>
-              <MessageSquareText className="h-8 w-8 text-slate-500" />
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-600 shadow-sm">
+                <MessageSquareText className="h-6 w-6" />
+              </span>
             </div>
 
             <div className="mt-4 space-y-3">
@@ -1158,7 +1228,7 @@ export default function AdminAiAssistantPage() {
                     onClick={() => void refreshSession(item.sessionId)}
                     className={`w-full rounded-2xl border px-4 py-4 text-left transition ${
                       session.sessionId === item.sessionId
-                        ? "border-cyan-300 bg-cyan-50"
+                        ? "border-cyan-300 bg-cyan-50 shadow-[0_14px_28px_rgba(8,145,178,0.12)]"
                         : "border-slate-200 bg-slate-50/70 hover:border-slate-300 hover:bg-white"
                     }`}
                   >
@@ -1195,13 +1265,15 @@ export default function AdminAiAssistantPage() {
             </div>
           </section>
 
-          <section className="rounded-[1.8rem] border border-slate-200/70 bg-white/85 p-5 shadow-sm backdrop-blur">
+          <section className="rounded-[1.8rem] border border-slate-200/80 bg-white/88 p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-500">Recent Leads</p>
                 <h2 className="mt-2 text-2xl font-semibold text-slate-950">Approve or reject submissions</h2>
               </div>
-              <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 text-emerald-700 shadow-sm">
+                <CheckCircle2 className="h-6 w-6" />
+              </span>
             </div>
 
             <div className="mt-4 space-y-3">
