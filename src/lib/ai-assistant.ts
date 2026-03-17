@@ -999,33 +999,31 @@ export function mergeAssistantLeadUpdates(lead: AssistantLead, updates: Partial<
     merged.sizes = dedupeSorted([...merged.sizes, ...updates.sizes], normalizeSize);
   }
   if (updates.sizeBreakdown) {
-    const currentLineTotal = getOrderLineTotal(merged.sizeBreakdown);
-    const shouldReplaceSizeBreakdown =
-      Boolean(lead.quantity) && currentLineTotal > (lead.quantity || 0);
-    merged.sizeBreakdown = shouldReplaceSizeBreakdown
-      ? mergeOrderLines([...updates.sizeBreakdown])
-      : mergeOrderLines([...merged.sizeBreakdown, ...updates.sizeBreakdown]);
+    merged.sizeBreakdown = mergeOrderLines([...updates.sizeBreakdown]);
     merged.sizes = dedupeSorted(
-      [...merged.sizes, ...merged.sizeBreakdown.map((line) => line.size)],
+      [
+        ...(updates.sizes || []),
+        ...merged.sizeBreakdown.map((line) => line.size),
+      ],
       normalizeSize
     );
 
     const lineProducts = Array.from(
       new Set(merged.sizeBreakdown.map((line) => line.productType).filter(Boolean))
     ) as AssistantProductType[];
-    if (!merged.productType && lineProducts.length === 1) {
+    if (lineProducts.length === 1) {
       merged.productType = lineProducts[0];
     }
 
     const lineColors = Array.from(
       new Set(merged.sizeBreakdown.map((line) => line.color).filter(Boolean))
     ) as string[];
-    if (!merged.color && lineColors.length === 1) {
+    if (lineColors.length === 1) {
       merged.color = lineColors[0];
     }
 
     const lineTotal = getOrderLineTotal(merged.sizeBreakdown);
-    if (lineTotal > 0 && !lead.quantity) {
+    if (lineTotal > 0) {
       merged.quantity = lineTotal;
     }
   }

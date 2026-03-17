@@ -118,7 +118,7 @@ test("size breakdown template lines are parsed into structured order lines", () 
   assert.match(result.reply, /name, email address, WhatsApp number, and deadline/i);
 });
 
-test("size breakdown mismatches keep the requested quantity and block the upload step", () => {
+test("a size breakdown reply overrides a stale requested quantity and advances to the upload step", () => {
   const result = runAssistantTurn({
     lead: {
       clientName: null,
@@ -139,13 +139,13 @@ test("size breakdown mismatches keep the requested quantity and block the upload
     message: "Product: T-Shirt Colour: Black Size: L Quantity: 4",
   });
 
-  assert.equal(result.lead.quantity, 3);
+  assert.equal(result.lead.quantity, 4);
   assert.equal(result.lead.sizeBreakdown.length, 1);
-  assert.match(result.reply, /The size lines add up to 4 pieces while the total quantity is 3\./i);
-  assert.equal(/upload button/i.test(result.reply), false);
+  assert.match(result.reply, /upload button/i);
+  assert.equal(result.readyToSubmit, false);
 });
 
-test("resending size lines after an overfilled mismatch replaces the bad breakdown instead of accumulating it", () => {
+test("a new size breakdown reply replaces the previous breakdown instead of accumulating it", () => {
   const result = runAssistantTurn({
     lead: {
       clientName: null,
@@ -166,11 +166,40 @@ test("resending size lines after an overfilled mismatch replaces the bad breakdo
     message: "Product: T-Shirt Colour: Black Size: M Quantity: 2",
   });
 
-  assert.equal(result.lead.quantity, 3);
+  assert.equal(result.lead.quantity, 2);
   assert.deepEqual(result.lead.sizeBreakdown, [
     { color: "black", productType: "t-shirt", size: "M", quantity: 2 },
   ]);
-  assert.match(result.reply, /I have size lines for 2 of 3 pieces\./i);
+  assert.deepEqual(result.lead.sizes, ["M"]);
+  assert.match(result.reply, /upload button/i);
+});
+
+test("a single kept size line is treated as the full breakdown when unused sizes were deleted", () => {
+  const result = runAssistantTurn({
+    lead: {
+      clientName: null,
+      phone: null,
+      email: null,
+      productType: "t-shirt",
+      quantity: 3,
+      color: "black",
+      sizes: [],
+      sizeBreakdown: [],
+      printPositions: ["front center"],
+      printSizes: [],
+      logoReady: null,
+      deliveryMethod: null,
+      deadline: null,
+      notes: null,
+    },
+    message: "Product: T-Shirt Colour: Black Size: XL Quantity: 1",
+  });
+
+  assert.equal(result.lead.quantity, 1);
+  assert.deepEqual(result.lead.sizeBreakdown, [
+    { color: "black", productType: "t-shirt", size: "XL", quantity: 1 },
+  ]);
+  assert.match(result.reply, /upload button/i);
 });
 
 test("logo upload asks for email when the file is received", () => {
