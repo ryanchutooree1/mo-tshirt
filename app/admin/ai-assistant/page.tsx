@@ -480,9 +480,11 @@ export default function AdminAiAssistantPage() {
   const recentLeads = overview?.leads || [];
   const recentKnowledge = overview?.knowledge || [];
   const trainingSnapshot = overview?.training || null;
-  const canUploadLogo = session.lead.sizeBreakdown.length > 0;
+  const canUploadLogo = !session.missingFields.includes("sizeBreakdown") && session.lead.logoReady !== false;
   const logoAttachment = session.lead.logoAttachment;
   const pendingLogoSize = pendingLogoFile ? formatAttachmentSize(pendingLogoFile.size) : null;
+  const assistantBubbleClass =
+    "max-w-[85%] rounded-3xl border border-[#7dd3fc] bg-[rgba(255,255,255,0.96)] px-4 py-3 text-sm text-[#082f49] shadow-sm";
   const samplePrompts = [
     "I need 20 black polo shirts with logo on front left chest and a big print at the back",
     "My name is Ryan and my phone is 59883880",
@@ -696,64 +698,177 @@ export default function AdminAiAssistantPage() {
                     Loading session
                   </div>
                 ) : session.messages.length ? (
-                  session.messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm shadow-sm ${
-                        message.role === "user"
-                          ? "ml-auto bg-[#0f172a] text-white"
-                          : "border border-[#7dd3fc] bg-[rgba(255,255,255,0.96)] text-[#082f49]"
-                      }`}
-                    >
-                      <p className="whitespace-pre-wrap leading-6">{message.content}</p>
-                      {message.attachment?.url && (
-                        <div className="mt-3 space-y-2">
-                          {isImageAttachment(message.attachment) && (
-                            <div
-                              className={`overflow-hidden rounded-2xl border p-2 ${
-                                message.role === "user"
-                                  ? "border-white/15 bg-white/10"
-                                  : "border-cyan-200 bg-cyan-50/70"
-                              }`}
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={message.attachment.url}
-                                alt={message.attachment.name}
-                                className="max-h-48 w-full rounded-xl object-contain"
-                                loading="lazy"
-                              />
-                            </div>
-                          )}
-                          <a
-                            href={message.attachment.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm ${
-                              message.role === "user"
-                                ? "border-white/15 bg-white/10 text-white"
-                                : "border-cyan-200 bg-cyan-50 text-cyan-900"
-                            }`}
-                          >
-                            <Paperclip className="h-4 w-4 shrink-0" />
-                            <span className="min-w-0 flex-1 truncate font-medium">{message.attachment.name}</span>
-                            <span className="shrink-0 text-[11px] uppercase tracking-[0.18em] opacity-75">
-                              {[message.attachment.contentType?.split("/").pop(), formatAttachmentSize(message.attachment.size)]
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </span>
-                          </a>
-                        </div>
-                      )}
-                      <p
-                        className={`mt-2 text-[11px] uppercase tracking-[0.18em] ${
-                          message.role === "user" ? "text-slate-300" : "text-[#0c4a6e]"
+                  <>
+                    {session.messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm shadow-sm ${
+                          message.role === "user" ? "ml-auto bg-[#0f172a] text-white" : assistantBubbleClass
                         }`}
                       >
-                        {message.role} · {formatDateTime(message.createdAt)}
-                      </p>
-                    </div>
-                  ))
+                        <p className="whitespace-pre-wrap leading-6">{message.content}</p>
+                        {message.attachment?.url && (
+                          <div className="mt-3 space-y-2">
+                            {isImageAttachment(message.attachment) && (
+                              <div
+                                className={`overflow-hidden rounded-2xl border p-2 ${
+                                  message.role === "user"
+                                    ? "border-white/15 bg-white/10"
+                                    : "border-cyan-200 bg-cyan-50/70"
+                                }`}
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={message.attachment.url}
+                                  alt={message.attachment.name}
+                                  className="max-h-48 w-full rounded-xl object-contain"
+                                  loading="lazy"
+                                />
+                              </div>
+                            )}
+                            <a
+                              href={message.attachment.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm ${
+                                message.role === "user"
+                                  ? "border-white/15 bg-white/10 text-white"
+                                  : "border-cyan-200 bg-cyan-50 text-cyan-900"
+                              }`}
+                            >
+                              <Paperclip className="h-4 w-4 shrink-0" />
+                              <span className="min-w-0 flex-1 truncate font-medium">{message.attachment.name}</span>
+                              <span className="shrink-0 text-[11px] uppercase tracking-[0.18em] opacity-75">
+                                {[message.attachment.contentType?.split("/").pop(), formatAttachmentSize(message.attachment.size)]
+                                  .filter(Boolean)
+                                  .join(" · ")}
+                              </span>
+                            </a>
+                          </div>
+                        )}
+                        <p
+                          className={`mt-2 text-[11px] uppercase tracking-[0.18em] ${
+                            message.role === "user" ? "text-slate-300" : "text-[#0c4a6e]"
+                          }`}
+                        >
+                          {message.role} · {formatDateTime(message.createdAt)}
+                        </p>
+                      </div>
+                    ))}
+
+                    {canUploadLogo && !logoAttachment && (
+                      <div className={assistantBubbleClass}>
+                        <p className="whitespace-pre-wrap leading-6">
+                          If the design or logo is ready, use the upload button here to attach it now.
+                        </p>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploadingLogo || sending}
+                            className="inline-flex items-center gap-2 rounded-full border border-cyan-300 bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                            Upload logo
+                          </button>
+                          {pendingLogoFile && (
+                            <>
+                              <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white px-3 py-2 text-xs font-semibold text-cyan-900">
+                                <Paperclip className="h-3.5 w-3.5" />
+                                {pendingLogoFile.name}
+                                {pendingLogoSize ? <span className="text-cyan-700">{pendingLogoSize}</span> : null}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => void handleSubmitLogo()}
+                                disabled={uploadingLogo || sending}
+                                className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {uploadingLogo ? (
+                                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <CheckCircle2 className="h-4 w-4" />
+                                )}
+                                Submit logo
+                              </button>
+                            </>
+                          )}
+                        </div>
+                        {pendingLogoFile && (
+                          <p className="mt-3 text-xs text-cyan-700">
+                            Logo selected. Press Submit logo to send it into this chat flow.
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {canUploadLogo && logoAttachment && (
+                      <div className={assistantBubbleClass}>
+                        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          Upload complete
+                        </div>
+                        <p className="mt-3 font-semibold text-emerald-950">Logo attached to this session</p>
+                        <p className="mt-1 text-xs leading-5 text-emerald-800">
+                          The assistant has this file now. Review it below or upload a new version if needed.
+                        </p>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <a
+                            href={logoAttachment.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100"
+                          >
+                            <Paperclip className="h-3.5 w-3.5" />
+                            Review logo
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploadingLogo || sending}
+                            className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                            Upload new logo
+                          </button>
+                          {pendingLogoFile && (
+                            <button
+                              type="button"
+                              onClick={() => void handleSubmitLogo()}
+                              disabled={uploadingLogo || sending}
+                              className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {uploadingLogo ? (
+                                <LoaderCircle className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="h-4 w-4" />
+                              )}
+                              Submit logo
+                            </button>
+                          )}
+                        </div>
+                        {pendingLogoFile && (
+                          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-200 bg-white px-3 py-3 text-xs text-emerald-900">
+                            <Paperclip className="h-3.5 w-3.5" />
+                            <span className="font-semibold">{pendingLogoFile.name}</span>
+                            {pendingLogoSize ? <span className="text-emerald-700">{pendingLogoSize}</span> : null}
+                            <span className="text-emerald-700">ready to send</span>
+                          </div>
+                        )}
+                        {isImageAttachment(logoAttachment) && (
+                          <div className="mt-3 overflow-hidden rounded-2xl border border-emerald-200 bg-white p-2">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={logoAttachment.url}
+                              alt={logoAttachment.name}
+                              className="h-28 w-full rounded-xl object-contain"
+                              loading="lazy"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center rounded-[1.2rem] border border-dashed border-slate-200 bg-white/80 px-6 text-center">
                     <Bot className="h-10 w-10 text-cyan-500" />
@@ -785,116 +900,11 @@ export default function AdminAiAssistantPage() {
                 className="mt-3 min-h-[7.5rem] w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100"
                 placeholder="Example: I need 30 navy t-shirts with front left chest logo and back print for next week."
               />
-              {canUploadLogo && !logoAttachment && (
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3">
-                  <p className="text-sm font-medium text-cyan-950">
-                    If the design or logo is ready, use the upload button here to attach it now.
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploadingLogo || sending}
-                      className="inline-flex items-center gap-2 rounded-full border border-cyan-300 bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-                      Upload logo
-                    </button>
-                    {pendingLogoFile && (
-                      <>
-                        <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white px-3 py-2 text-xs font-semibold text-cyan-900">
-                          <Paperclip className="h-3.5 w-3.5" />
-                          {pendingLogoFile.name}
-                          {pendingLogoSize ? <span className="text-cyan-700">{pendingLogoSize}</span> : null}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => void handleSubmitLogo()}
-                          disabled={uploadingLogo || sending}
-                          className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                          Submit logo
-                        </button>
-                      </>
-                    )}
-                  </div>
-                  {pendingLogoFile && (
-                    <p className="w-full text-xs text-cyan-700">Logo selected. Press Submit logo to send it to this session.</p>
-                  )}
-                </div>
-              )}
-              {canUploadLogo && logoAttachment && (
-                <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-3">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        Upload complete
-                      </div>
-                      <p className="mt-2 text-sm font-semibold text-emerald-950">Logo attached to this session</p>
-                      <p className="mt-1 text-xs text-emerald-800">
-                        The assistant has this file now. Review it in the conversation thread or the Lead Snapshot panel on the right.
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <a
-                        href={logoAttachment.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100"
-                      >
-                        <Paperclip className="h-3.5 w-3.5" />
-                        Review logo
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploadingLogo || sending}
-                        className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-                        Upload new logo
-                      </button>
-                      {pendingLogoFile && (
-                        <button
-                          type="button"
-                          onClick={() => void handleSubmitLogo()}
-                          disabled={uploadingLogo || sending}
-                          className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                          Submit logo
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  {pendingLogoFile && (
-                    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-200 bg-white px-3 py-3 text-xs text-emerald-900">
-                      <Paperclip className="h-3.5 w-3.5" />
-                      <span className="font-semibold">{pendingLogoFile.name}</span>
-                      {pendingLogoSize ? <span className="text-emerald-700">{pendingLogoSize}</span> : null}
-                      <span className="text-emerald-700">ready to send</span>
-                    </div>
-                  )}
-                  {isImageAttachment(logoAttachment) && (
-                    <div className="mt-3 overflow-hidden rounded-2xl border border-emerald-200 bg-white p-2">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={logoAttachment.url}
-                        alt={logoAttachment.name}
-                        className="h-28 w-full rounded-xl object-contain"
-                        loading="lazy"
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-xs text-slate-500">Press Enter to send. Shift+Enter adds a new line.</p>
                   {!canUploadLogo && (
-                    <span className="text-xs text-slate-400">Upload appears after the size breakdown is captured.</span>
+                    <span className="text-xs text-slate-400">The upload step appears in the chat after the size breakdown is captured.</span>
                   )}
                 </div>
                 <button
