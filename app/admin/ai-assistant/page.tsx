@@ -200,6 +200,7 @@ function HeroStat({
 
 export default function AdminAiAssistantPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const messageListRef = useRef<HTMLDivElement | null>(null);
   const [overview, setOverview] = useState<AssistantOverview | null>(null);
   const [session, setSession] = useState<AssistantSessionDetail>(() => createDraftSession(generateSessionId()));
   const [draft, setDraft] = useState("");
@@ -509,6 +510,22 @@ export default function AdminAiAssistantPage() {
     "summary",
   ];
 
+  useEffect(() => {
+    const list = messageListRef.current;
+    if (!list || loadingSession) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      list.scrollTo({
+        top: list.scrollHeight,
+        behavior: "smooth",
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [loadingSession, orderedMessages.length, canUploadLogo, logoAttachment?.url, pendingLogoFile?.name]);
+
   function renderLogoStatusCard() {
     if (!logoAttachment) return null;
 
@@ -776,7 +793,7 @@ export default function AdminAiAssistantPage() {
             </div>
 
             <div className="mt-4 min-h-[26rem] rounded-[1.5rem] border border-slate-200/80 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4 shadow-inner shadow-slate-200/70">
-              <div className="h-[25rem] space-y-3 overflow-y-auto pr-1">
+              <div ref={messageListRef} className="h-[25rem] space-y-3 overflow-y-auto pr-1">
                 {loadingSession ? (
                   <div className="flex h-full items-center justify-center text-sm text-slate-500">
                     <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
