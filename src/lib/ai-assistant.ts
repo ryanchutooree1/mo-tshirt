@@ -5,7 +5,7 @@ const NAME_RE =
   /(?:my name is|i am|i'm)\s+([A-Za-z][A-Za-z\s'-]{1,40}?)(?=\s+(?:and\b|phone\b|email\b)|$)/i;
 const DEADLINE_RE =
   /(?:by|before|for)\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|today|next week|this week)/i;
-const QUANTITY_RE = /\b(\d{1,4})\b/g;
+const ABSOLUTE_DATE_RE = /\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{2}-\d{2})\b/i;
 const NOTE_RE = /\bnotes?\s*:/i;
 const QUANTITY_CONTEXT_RE =
   /\b(piece|pieces|pcs|qty|quantity|need|want|order|shirts?|t[\s-]?shirts?|polos?|hoodies?|caps?)\b/i;
@@ -370,6 +370,34 @@ function normalizeNullableNumber(value: unknown) {
     return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
+}
+
+function extractRequestedQuantity(message: string) {
+  const trimmed = message.trim().toLowerCase();
+  const patterns = [
+    /(?:need|want|order|quote|require|get)\s+(\d{1,4})\b/i,
+    /\bqty(?:\s*[:=-]?\s*|\s+)(\d{1,4})\b/i,
+    /\bquantity(?:\s*[:=-]?\s*|\s+)(\d{1,4})\b/i,
+    /\b(\d{1,4})\s*(?:piece|pieces|pcs|shirts?|t[\s-]?shirts?|polos?|hoodies?|caps?)\b/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = pattern.exec(trimmed);
+    if (!match) continue;
+    const quantity = Number(match[1]);
+    if (Number.isFinite(quantity) && quantity >= 1 && quantity <= 5000) {
+      return quantity;
+    }
+  }
+
+  if (/^\d{1,4}$/.test(trimmed)) {
+    const quantity = Number(trimmed);
+    if (Number.isFinite(quantity) && quantity >= 1 && quantity <= 5000) {
+      return quantity;
+    }
+  }
+
+  return undefined;
 }
 
 function normalizeSize(value: string) {
@@ -853,13 +881,9 @@ export function extractLeadUpdates(
     updates.phone = phoneMatch[1];
   }
 
-  if (QUANTITY_CONTEXT_RE.test(lower) || !phoneMatch) {
-    const quantityMatch = Array.from(lower.matchAll(QUANTITY_RE))
-      .map((match) => Number(match[1]))
-      .find((value) => Number.isFinite(value) && value >= 1 && value <= 5000);
-    if (quantityMatch) {
-      updates.quantity = quantityMatch;
-    }
+  const requestedQuantity = extractRequestedQuantity(message);
+  if (requestedQuantity !== undefined) {
+    updates.quantity = requestedQuantity;
   }
 
   const foundColor = Array.from(COLORS).find((color) => hasPattern(normalized, color));
@@ -954,6 +978,11 @@ export function extractLeadUpdates(
   const deadlineMatch = DEADLINE_RE.exec(lower);
   if (deadlineMatch) {
     updates.deadline = deadlineMatch[1].toLowerCase();
+  } else {
+    const absoluteDeadlineMatch = ABSOLUTE_DATE_RE.exec(message);
+    if (absoluteDeadlineMatch) {
+      updates.deadline = absoluteDeadlineMatch[0].toLowerCase();
+    }
   }
 
   if (NOTE_RE.test(message)) {
@@ -991,7 +1020,7 @@ export function mergeAssistantLeadUpdates(lead: AssistantLead, updates: Partial<
     }
 
     const lineTotal = getOrderLineTotal(merged.sizeBreakdown);
-    if (lineTotal > 0 && (!lead.quantity || lineTotal >= lead.quantity)) {
+    if (lineTotal > 0 && !lead.quantity) {
       merged.quantity = lineTotal;
     }
   }

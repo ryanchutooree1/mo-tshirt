@@ -31,6 +31,13 @@ test("phone capture does not get mistaken for quantity", () => {
   assert.equal(updates.quantity, undefined);
 });
 
+test("date replies are captured as deadlines instead of quantities", () => {
+  const updates = extractLeadUpdates("09/12/2026");
+
+  assert.equal(updates.deadline, "09/12/2026");
+  assert.equal(updates.quantity, undefined);
+});
+
 test("plural tshirts are recognized as t-shirt products", () => {
   const result = runAssistantTurn({
     lead: createEmptyAssistantLead(),
@@ -94,6 +101,33 @@ test("size breakdown template lines are parsed into structured order lines", () 
   assert.equal(result.lead.sizeBreakdown[0].quantity + result.lead.sizeBreakdown[1].quantity, 3);
   assert.match(result.reply, /upload button/i);
   assert.match(result.reply, /name, email address, WhatsApp number, and deadline/i);
+});
+
+test("size breakdown mismatches keep the requested quantity and block the upload step", () => {
+  const result = runAssistantTurn({
+    lead: {
+      clientName: null,
+      phone: null,
+      email: null,
+      productType: "t-shirt",
+      quantity: 3,
+      color: "black",
+      sizes: [],
+      sizeBreakdown: [],
+      printPositions: ["front center"],
+      printSizes: [],
+      logoReady: null,
+      deliveryMethod: null,
+      deadline: null,
+      notes: null,
+    },
+    message: "Product: T-Shirt Colour: Black Size: L Quantity: 4",
+  });
+
+  assert.equal(result.lead.quantity, 3);
+  assert.equal(result.lead.sizeBreakdown.length, 1);
+  assert.match(result.reply, /The size lines add up to 4 pieces while the total quantity is 3\./i);
+  assert.equal(/upload button/i.test(result.reply), false);
 });
 
 test("logo upload asks for email when the file is received", () => {
@@ -229,6 +263,40 @@ test("after WhatsApp is captured with a logo on file, the assistant asks for the
 
   assert.equal(result.lead.phone, "59883880");
   assert.match(result.reply, /What is your deadline\?/);
+});
+
+test("deadline date replies do not overwrite the original quantity", () => {
+  const result = runAssistantTurn({
+    lead: {
+      clientName: "Sam Game",
+      phone: "59184399",
+      email: "sam@gmail.com",
+      productType: "t-shirt",
+      quantity: 3,
+      color: "black",
+      sizes: ["L"],
+      sizeBreakdown: [{ color: "black", productType: "t-shirt", size: "L", quantity: 3 }],
+      printPositions: ["front center"],
+      printSizes: [],
+      logoReady: true,
+      logoAttachment: {
+        name: "IMG_3618.PNG",
+        url: "https://example.com/IMG_3618.PNG",
+        contentType: "image/png",
+        size: 2500000,
+        uploadedAt: "2026-03-16T10:00:00.000Z",
+      },
+      deliveryMethod: null,
+      deadline: null,
+      notes: null,
+    },
+    message: "09/12/2026",
+  });
+
+  assert.equal(result.lead.deadline, "09/12/2026");
+  assert.equal(result.lead.quantity, 3);
+  assert.equal(result.readyToSubmit, true);
+  assert.match(result.reply, /Great\. I have the main details and the logo file\./);
 });
 
 test("summary command returns the stored lead snapshot when all key fields are present", () => {
