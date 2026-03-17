@@ -4,6 +4,8 @@ import { Inter } from "next/font/google";
 import { SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
+const ICON_VERSION = "20260317";
+
 const inter = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
@@ -28,16 +30,16 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   icons: {
     icon: [
-      { url: "/favicon-16x16.png", type: "image/png", sizes: "16x16" },
-      { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
-      { url: "/favicon-48x48.png", type: "image/png", sizes: "48x48" },
-      { url: "/icon.png", type: "image/png" },
+      { url: `/favicon-16x16.png?v=${ICON_VERSION}`, type: "image/png", sizes: "16x16" },
+      { url: `/favicon-32x32.png?v=${ICON_VERSION}`, type: "image/png", sizes: "32x32" },
+      { url: `/favicon-48x48.png?v=${ICON_VERSION}`, type: "image/png", sizes: "48x48" },
+      { url: `/icon.png?v=${ICON_VERSION}`, type: "image/png" },
     ],
     apple: [
-      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+      { url: `/apple-touch-icon.png?v=${ICON_VERSION}`, sizes: "180x180", type: "image/png" },
     ],
   },
-  manifest: "/site.webmanifest",
+  manifest: `/site.webmanifest?v=${ICON_VERSION}`,
   openGraph: {
     title: "MO T-SHIRT PRINTING 🇲🇺",
     description:
