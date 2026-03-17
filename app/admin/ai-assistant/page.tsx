@@ -102,10 +102,12 @@ function isLogoUploadMessage(message: AssistantMessageRecord) {
 }
 
 function titleCaseOption(value: string) {
-  return value
+  const titled = value
     .toLowerCase()
     .replace(/\b([a-z])/g, (_, char: string) => char.toUpperCase())
     .trim();
+
+  return titled.replace(/\b(And|Or)\b/g, (word) => word.toLowerCase());
 }
 
 function parsePrintPositionPrompt(content: string) {
@@ -863,12 +865,15 @@ export default function AdminAiAssistantPage() {
                                 <p className="text-base font-medium leading-6 text-[#082f49]">{printPrompt.question}</p>
                                 <div className="flex flex-wrap gap-2">
                                   {printPrompt.options.map((option) => (
-                                    <span
+                                    <button
                                       key={option}
+                                      type="button"
+                                      onClick={() => void handleSendMessage({ message: option })}
+                                      disabled={sending || uploadingLogo}
                                       className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-semibold tracking-[0.04em] text-cyan-900 shadow-sm"
                                     >
                                       {option}
-                                    </span>
+                                    </button>
                                   ))}
                                 </div>
                               </div>

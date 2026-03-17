@@ -49,6 +49,21 @@ test("plural tshirts are recognized as t-shirt products", () => {
   assert.match(result.reply, /Where do you want the print/);
 });
 
+test("front and back combo choices are parsed into positions and print sizes", () => {
+  const result = runAssistantTurn({
+    lead: {
+      ...createEmptyAssistantLead(),
+      productType: "t-shirt",
+      quantity: 12,
+    },
+    message: "small front and large back",
+  });
+
+  assert.deepEqual(result.lead.printPositions, ["back", "front center"]);
+  assert.deepEqual(result.lead.printSizes, ["large 22x22", "small 9x9"]);
+  assert.match(result.reply, /Please send the size breakdown/);
+});
+
 test("plain name replies are accepted even if logo upload is still the next prompt", () => {
   const result = runAssistantTurn({
     lead: {

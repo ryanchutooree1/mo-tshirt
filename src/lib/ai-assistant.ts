@@ -93,8 +93,8 @@ const BACK_PATTERNS = ["back print", "big back", "rear", "back"];
 const SLEEVE_PATTERNS = ["sleeve", "arm"];
 
 const PRINT_SIZE_PATTERNS: Array<{ canonical: string; patterns: string[] }> = [
-  { canonical: "small 9x9", patterns: ["9x9", "small logo", "small print"] },
-  { canonical: "large 22x22", patterns: ["22x22", "large print", "big print", "big logo"] },
+  { canonical: "small 9x9", patterns: ["9x9", "small logo", "small print", "small front", "small back"] },
+  { canonical: "large 22x22", patterns: ["22x22", "large print", "big print", "big logo", "large front", "large back"] },
 ];
 
 const DELIVERY_PATTERNS: Array<{ canonical: AssistantLead["deliveryMethod"]; patterns: string[] }> = [
@@ -1101,7 +1101,8 @@ export function nextAssistantQuestion(lead: AssistantLead) {
   const prompts: Record<AssistantRequiredField, string> = {
     productType: "What do you want: T-shirt, polo, hoodie, or cap?",
     quantity: "How many pieces do you need?",
-    printPositions: "Where do you want the print: front left chest, front center, back, or sleeve?",
+    printPositions:
+      "Where do you want the print: front left chest, front center, back, sleeve, small front and small back, small front and large back, or large front and large back?",
     sizeBreakdown: buildSizeBreakdownPrompt(lead),
     clientName: "What is your name?",
     email: "What is your email address so we can reply to you later?",
