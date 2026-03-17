@@ -42,7 +42,7 @@ test("plural tshirts are recognized as t-shirt products", () => {
   assert.match(result.reply, /Where do you want the print/);
 });
 
-test("plain name replies are accepted when client name is the next required field", () => {
+test("plain name replies are accepted even if logo upload is still the next prompt", () => {
   const result = runAssistantTurn({
     lead: {
       clientName: null,
@@ -64,7 +64,7 @@ test("plain name replies are accepted when client name is the next required fiel
   });
 
   assert.equal(result.lead.clientName, "Sam Legoy");
-  assert.match(result.reply, /What is your WhatsApp number/);
+  assert.match(result.reply, /upload button/i);
 });
 
 test("size breakdown template lines are parsed into structured order lines", () => {
@@ -92,8 +92,8 @@ test("size breakdown template lines are parsed into structured order lines", () 
   assert.deepEqual(result.lead.sizes, ["M", "S"]);
   assert.equal(result.lead.sizeBreakdown.length, 2);
   assert.equal(result.lead.sizeBreakdown[0].quantity + result.lead.sizeBreakdown[1].quantity, 3);
-  assert.match(result.reply, /What is your name\?/);
   assert.match(result.reply, /upload button/i);
+  assert.match(result.reply, /name, email address, WhatsApp number, and deadline/i);
 });
 
 test("logo upload asks for email when the file is received", () => {
@@ -143,7 +143,7 @@ test("logo upload is acknowledged before asking for contact details", () => {
       quantity: 3,
       color: "black",
       sizes: ["XL"],
-      sizeBreakdown: [{ color: "black", productType: "t-shirt", size: "XL", quantity: 1 }],
+      sizeBreakdown: [{ color: "black", productType: "t-shirt", size: "XL", quantity: 3 }],
       printPositions: ["back"],
       printSizes: [],
       logoReady: null,
@@ -164,13 +164,13 @@ test("logo upload is acknowledged before asking for contact details", () => {
   assert.equal(result.lead.logoReady, true);
   assert.equal(result.lead.logoAttachment?.name, "IMG_3618.PNG");
   assert.match(result.reply, /Logo received and attached to your request\./);
-  assert.match(result.reply, /What is your email address so we can reply to you later\?/);
+  assert.match(result.reply, /What is your name\?/);
 });
 
 test("after email is captured with a logo on file, the assistant asks for WhatsApp", () => {
   const result = runAssistantTurn({
     lead: {
-      clientName: null,
+      clientName: "Ryan",
       phone: null,
       email: null,
       productType: "t-shirt",
@@ -197,6 +197,38 @@ test("after email is captured with a logo on file, the assistant asks for WhatsA
 
   assert.equal(result.lead.email, "ryan@example.com");
   assert.match(result.reply, /What is your WhatsApp number so we can reply to you later\?/);
+});
+
+test("after WhatsApp is captured with a logo on file, the assistant asks for the deadline", () => {
+  const result = runAssistantTurn({
+    lead: {
+      clientName: "Ryan",
+      phone: null,
+      email: "ryan@example.com",
+      productType: "t-shirt",
+      quantity: 3,
+      color: "black",
+      sizes: ["M"],
+      sizeBreakdown: [{ color: "black", productType: "t-shirt", size: "M", quantity: 3 }],
+      printPositions: ["back"],
+      printSizes: [],
+      logoReady: true,
+      logoAttachment: {
+        name: "logo.png",
+        url: "https://example.com/logo.png",
+        contentType: "image/png",
+        size: 2048,
+        uploadedAt: "2026-03-16T10:00:00.000Z",
+      },
+      deliveryMethod: null,
+      deadline: null,
+      notes: null,
+    },
+    message: "+230 59883880",
+  });
+
+  assert.equal(result.lead.phone, "59883880");
+  assert.match(result.reply, /What is your deadline\?/);
 });
 
 test("summary command returns the stored lead snapshot when all key fields are present", () => {

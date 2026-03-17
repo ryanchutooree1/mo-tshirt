@@ -143,7 +143,9 @@ export const ASSISTANT_REQUIRED_FIELDS = [
   "printPositions",
   "sizeBreakdown",
   "clientName",
+  "email",
   "phone",
+  "deadline",
 ] as const;
 
 export type AssistantMessageRole = "user" | "assistant";
@@ -239,7 +241,9 @@ const FIELD_LABELS: Record<AssistantRequiredField, string> = {
   printPositions: "print positions",
   sizeBreakdown: "size breakdown",
   clientName: "client name",
+  email: "email address",
   phone: "whatsapp number",
+  deadline: "deadline",
 };
 
 function cleanString(value: unknown) {
@@ -537,8 +541,6 @@ function buildSizeBreakdownPrompt(lead: AssistantLead) {
     ...buildSizeTemplateLines(lead),
     "```",
     "Replace each quantity with the real count and delete any size lines you do not need.",
-    "",
-    "If the design or logo is ready, use the upload button to attach PNG, JPG, PDF, or AI.",
   ].join("\n");
 }
 
@@ -1043,15 +1045,17 @@ function buildFollowUpContactMessage(lead: AssistantLead) {
   return ` We will use ${lead.phone} to contact you back.`;
 }
 
+function shouldPromptForLogoUpload(lead: AssistantLead, missingFields: AssistantRequiredField[]) {
+  return !missingFields.includes("sizeBreakdown") && !lead.logoAttachment && lead.logoReady !== false;
+}
+
 export function nextAssistantQuestion(lead: AssistantLead) {
   const missing = missingAssistantFields(lead);
-  if (lead.logoAttachment) {
-    if (!lead.email) {
-      return "What is your email address so we can reply to you later?";
-    }
-    if (!lead.phone) {
-      return "What is your WhatsApp number so we can reply to you later?";
-    }
+  if (shouldPromptForLogoUpload(lead, missing)) {
+    return (
+      "If the design or logo is ready, use the upload button to attach PNG, JPG, PDF, or AI. " +
+      "Once it is uploaded, I will ask for your name, email address, WhatsApp number, and deadline."
+    );
   }
 
   if (!missing.length) {
@@ -1071,15 +1075,12 @@ export function nextAssistantQuestion(lead: AssistantLead) {
     printPositions: "Where do you want the print: front left chest, front center, back, or sleeve?",
     sizeBreakdown: buildSizeBreakdownPrompt(lead),
     clientName: "What is your name?",
+    email: "What is your email address so we can reply to you later?",
     phone: "What is your WhatsApp number so we can reply to you later?",
+    deadline: "What is your deadline?",
   };
 
-  const nextPrompt = prompts[missing[0]];
-  if (missing[0] !== "sizeBreakdown" && lead.sizeBreakdown.length > 0 && !lead.logoAttachment && lead.logoReady !== false) {
-    return `${nextPrompt} If the design or logo is ready, use the upload button to attach it now.`;
-  }
-
-  return nextPrompt;
+  return prompts[missing[0]];
 }
 
 export function buildAssistantSuggestions(lead: AssistantLead, message: string) {
