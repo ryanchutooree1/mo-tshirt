@@ -321,6 +321,13 @@ export default function AdminAiAssistantPage() {
         setLastSuggestions(result.suggestions || []);
         setLastRelatedContext(result.relatedContext || []);
       });
+      if (result.autoSubmitted) {
+        setNotice(
+          result.quoteId
+            ? `Request sent to Quotation Approval as ${result.quoteId}.`
+            : "Request sent to Quotation Approval."
+        );
+      }
 
       await refreshOverview();
       return true;
@@ -793,11 +800,11 @@ export default function AdminAiAssistantPage() {
                 <button
                   type="button"
                   onClick={handleSubmitLead}
-                  disabled={submitting || !session.readyToSubmit}
+                  disabled={submitting || !session.readyToSubmit || Boolean(session.submittedLeadId)}
                   className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#0f172a_0%,#155e75_100%)] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(15,23,42,0.14)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ArrowUpRight className="h-4 w-4" />}
-                  Send to Quotation Approval
+                  {session.submittedLeadId ? "Already in Quotation Approval" : "Send to Quotation Approval"}
                 </button>
               </div>
             </div>
@@ -1078,12 +1085,14 @@ export default function AdminAiAssistantPage() {
                 </div>
                 <span
                   className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${
-                    session.readyToSubmit
+                    session.submittedLeadId
+                      ? "border-cyan-200 bg-cyan-50 text-cyan-700"
+                      : session.readyToSubmit
                       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                       : "border-amber-200 bg-amber-50 text-amber-700"
                   }`}
                 >
-                  {session.readyToSubmit ? "Ready to submit" : "Missing details"}
+                  {session.submittedLeadId ? "Submitted" : session.readyToSubmit ? "Ready to submit" : "Missing details"}
                 </span>
               </div>
 

@@ -103,6 +103,8 @@ export type AssistantOverview = {
 export type AssistantChatPayload = AssistantChatResult & {
   sessionId: string;
   session: AssistantSessionDetail;
+  autoSubmitted?: boolean;
+  quoteId?: string | null;
 };
 
 export type AssistantSubmitResult =
@@ -591,6 +593,9 @@ export async function runAssistantChat(
   const currentLead = sessionSnap.exists()
     ? normalizeAssistantLead((sessionSnap.data() as FirestoreLike).lead)
     : createEmptyAssistantLead();
+  const existingSessionData = sessionSnap.exists() ? (sessionSnap.data() as FirestoreLike) : null;
+  const existingLeadId = cleanNullableString(existingSessionData?.submittedLeadId);
+  const existingQuoteId = cleanNullableString(existingSessionData?.submittedQuoteId);
 
   let trainingState = await getTrainingStateInternal();
   if (!trainingState) {
@@ -610,6 +615,7 @@ export async function runAssistantChat(
     knowledgeItems,
     trainingState,
   });
+  let assistantReply = result.reply;
 
   const nowIso = new Date().toISOString();
 
@@ -623,7 +629,7 @@ export async function runAssistantChat(
     }),
     addDoc(collection(db, COLLECTIONS.sessions, cleanedSessionId, "messages"), {
       role: "assistant",
-      content: result.reply,
+      content: assistantReply,
       createdAt: serverTimestamp(),
       createdAtIso: nowIso,
     }),
@@ -632,7 +638,7 @@ export async function runAssistantChat(
       {
         sessionId: cleanedSessionId,
         lead: result.lead,
-        lastMessage: result.reply,
+        lastMessage: assistantReply,
         messageCount: sessionSnap.exists() ? increment(2) : 2,
         updatedAt: serverTimestamp(),
         updatedAtIso: nowIso,
@@ -647,11 +653,52 @@ export async function runAssistantChat(
     ),
   ]);
 
+  let autoSubmitted = false;
+  let quoteId: string | null = null;
+  if (result.readyToSubmit && (!existingLeadId || !existingQuoteId)) {
+    const submission = await submitAssistantLeadFromSession(cleanedSessionId);
+    if (submission.ok) {
+      autoSubmitted = true;
+      quoteId = submission.quoteId;
+      const intro = result.lead.logoAttachment
+        ? "Great. I have the main details and the logo file."
+        : "Great. I have the main details.";
+      const contact = result.lead.phone ? ` We will reply on ${result.lead.phone}.` : "";
+      const submitted = quoteId
+        ? ` Your request has been sent to Quotation Approval as request ${quoteId}.`
+        : " Your request has been sent to Quotation Approval.";
+      assistantReply = `${intro}${contact}${submitted}`;
+
+      const messagesSnap = await getDocs(
+        query(collection(db, COLLECTIONS.sessions, cleanedSessionId, "messages"), orderBy("createdAt", "desc"), limit(2))
+      );
+      const latestAssistantMessage = messagesSnap.docs.find((item) => (item.data() as FirestoreLike).role === "assistant");
+      if (latestAssistantMessage) {
+        await updateDoc(latestAssistantMessage.ref, {
+          content: assistantReply,
+        });
+      }
+
+      await setDoc(
+        sessionRef,
+        {
+          lastMessage: assistantReply,
+          updatedAt: serverTimestamp(),
+          updatedAtIso: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    }
+  }
+
   const session = await getAssistantSession(cleanedSessionId);
   return {
     sessionId: cleanedSessionId,
     session,
     ...result,
+    reply: assistantReply,
+    autoSubmitted,
+    quoteId,
   };
 }
 
