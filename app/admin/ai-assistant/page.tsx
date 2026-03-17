@@ -551,10 +551,22 @@ export default function AdminAiAssistantPage() {
     if (!list || loadingSession) return;
 
     const frame = window.requestAnimationFrame(() => {
-      list.scrollTo({
-        top: list.scrollHeight,
-        behavior: "smooth",
-      });
+      const items = Array.from(list.querySelectorAll<HTMLElement>("[data-thread-item]"));
+      const lastItem = items.at(-1);
+      if (!lastItem) {
+        list.scrollTo({
+          top: list.scrollHeight,
+          behavior: "smooth",
+        });
+        return;
+      }
+
+      const behavior: ScrollBehavior = "smooth";
+      if (lastItem.offsetHeight > list.clientHeight * 0.7) {
+        lastItem.scrollIntoView({ block: "start", behavior });
+      } else {
+        lastItem.scrollIntoView({ block: "end", behavior });
+      }
     });
 
     return () => {
@@ -566,7 +578,7 @@ export default function AdminAiAssistantPage() {
     if (!logoAttachment) return null;
 
     return (
-      <div className={assistantBubbleClass}>
+      <div data-thread-item className={assistantBubbleClass}>
         <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
           <CheckCircle2 className="h-3.5 w-3.5" />
           Upload complete
@@ -853,7 +865,7 @@ export default function AdminAiAssistantPage() {
 
                       return (
                         <Fragment key={message.id}>
-                          <div className={messageBubbleClass}>
+                      <div data-thread-item className={messageBubbleClass}>
                             {isUploadMessage ? (
                               <div className="space-y-3">
                                 <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-200">
@@ -947,7 +959,7 @@ export default function AdminAiAssistantPage() {
                     })}
 
                     {canUploadLogo && !logoAttachment && (
-                      <div className={assistantBubbleClass}>
+                      <div data-thread-item className={assistantBubbleClass}>
                         <p className="whitespace-pre-wrap leading-6">
                           If the design or logo is ready, use the upload button here to attach it now.
                         </p>
