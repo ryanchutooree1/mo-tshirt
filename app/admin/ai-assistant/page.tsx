@@ -40,6 +40,7 @@ import type {
   AssistantChatPayload,
   AssistantKnowledgeRecord,
   AssistantLeadRecord,
+  AssistantMessageRecord,
   AssistantOverview,
   AssistantSessionDetail,
   AssistantSessionSummary,
@@ -94,6 +95,10 @@ function isImageAttachment(attachment: AssistantAttachment | null) {
   if (!attachment?.url) return false;
   if (attachment.contentType?.startsWith("image/")) return true;
   return /\.(png|jpe?g|webp|gif|svg)$/i.test(attachment.name);
+}
+
+function isLogoUploadMessage(message: AssistantMessageRecord) {
+  return message.role === "user" && Boolean(message.attachment?.url) && /^uploaded logo file:/i.test(message.content.trim());
 }
 
 function formatSizeBreakdown(
@@ -785,22 +790,38 @@ export default function AdminAiAssistantPage() {
                         message.role === "user" &&
                         Boolean(message.attachment?.url) &&
                         message.attachment?.url === logoAttachment?.url;
+                      const isUploadMessage = isLogoUploadMessage(message);
+                      const messageBubbleClass = isUploadMessage
+                        ? "ml-auto max-w-[88%] rounded-[2rem] border border-slate-800/90 bg-[linear-gradient(180deg,#0f172a_0%,#182235_100%)] px-4 py-4 text-white shadow-[0_20px_40px_rgba(15,23,42,0.34)]"
+                        : `max-w-[85%] rounded-3xl px-4 py-3 text-sm shadow-sm ${
+                            message.role === "user" ? "ml-auto bg-[#0f172a] text-white" : assistantBubbleClass
+                          }`;
 
                       return (
                         <Fragment key={message.id}>
-                          <div
-                            className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm shadow-sm ${
-                              message.role === "user" ? "ml-auto bg-[#0f172a] text-white" : assistantBubbleClass
-                            }`}
-                          >
-                            <p className="whitespace-pre-wrap leading-6">{message.content}</p>
+                          <div className={messageBubbleClass}>
+                            {isUploadMessage ? (
+                              <div className="space-y-3">
+                                <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-200">
+                                  <Paperclip className="h-3.5 w-3.5" />
+                                  Logo uploaded
+                                </div>
+                                <div className="rounded-[1.6rem] border border-white/10 bg-white/[0.05] px-4 py-3">
+                                  <p className="text-xl font-semibold tracking-tight text-white">{message.attachment?.name || message.content}</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="whitespace-pre-wrap leading-6">{message.content}</p>
+                            )}
                             {message.attachment?.url && (
                               <div className="mt-3 space-y-2">
                                 {isImageAttachment(message.attachment) && (
                                   <div
                                     className={`overflow-hidden rounded-2xl border p-2 ${
                                       message.role === "user"
-                                        ? "border-white/15 bg-white/10"
+                                        ? isUploadMessage
+                                          ? "border-white/10 bg-white/[0.04]"
+                                          : "border-white/15 bg-white/10"
                                         : "border-cyan-200 bg-cyan-50/70"
                                     }`}
                                   >
@@ -808,7 +829,9 @@ export default function AdminAiAssistantPage() {
                                     <img
                                       src={message.attachment.url}
                                       alt={message.attachment.name}
-                                      className="max-h-48 w-full rounded-xl object-contain"
+                                      className={`w-full rounded-xl object-contain ${
+                                        isUploadMessage ? "max-h-64 bg-slate-900/40" : "max-h-48"
+                                      }`}
                                       loading="lazy"
                                     />
                                   </div>
@@ -819,7 +842,9 @@ export default function AdminAiAssistantPage() {
                                   rel="noreferrer"
                                   className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm ${
                                     message.role === "user"
-                                      ? "border-white/15 bg-white/10 text-white"
+                                      ? isUploadMessage
+                                        ? "border-white/10 bg-white/[0.07] text-white"
+                                        : "border-white/15 bg-white/10 text-white"
                                       : "border-cyan-200 bg-cyan-50 text-cyan-900"
                                   }`}
                                 >
@@ -835,7 +860,11 @@ export default function AdminAiAssistantPage() {
                             )}
                             <p
                               className={`mt-2 text-[11px] uppercase tracking-[0.18em] ${
-                                message.role === "user" ? "text-slate-300" : "text-[#0c4a6e]"
+                                message.role === "user"
+                                  ? isUploadMessage
+                                    ? "text-slate-300/90"
+                                    : "text-slate-300"
+                                  : "text-[#0c4a6e]"
                               }`}
                             >
                               {message.role} · {formatDateTime(message.createdAt)}
