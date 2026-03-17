@@ -1325,6 +1325,10 @@ export default function IotControlCenterPage() {
           --iot-chip-bg: rgba(15, 33, 66, 0.74);
           --iot-chip-border: rgba(125, 211, 252, 0.32);
           --iot-input-bg: rgba(4, 14, 33, 0.9);
+          --iot-toggle-bg: rgba(7, 18, 36, 0.76);
+          --iot-toggle-text: #c1d0e4;
+          --iot-toggle-active-bg: linear-gradient(135deg, rgba(13, 148, 136, 0.88), rgba(5, 150, 105, 0.84));
+          --iot-toggle-active-text: #ecfeff;
           --iot-success: #34d399;
           --iot-danger: #fb7185;
           --iot-warn: #fbbf24;
@@ -1352,6 +1356,10 @@ export default function IotControlCenterPage() {
           --iot-chip-bg: rgba(238, 246, 255, 0.95);
           --iot-chip-border: rgba(56, 189, 248, 0.35);
           --iot-input-bg: rgba(255, 255, 255, 0.96);
+          --iot-toggle-bg: rgba(226, 232, 240, 0.96);
+          --iot-toggle-text: #24415f;
+          --iot-toggle-active-bg: linear-gradient(135deg, #0f766e 0%, #059669 100%);
+          --iot-toggle-active-text: #f8fafc;
           --iot-success: #059669;
           --iot-danger: #e11d48;
           --iot-warn: #b45309;
@@ -2298,8 +2306,8 @@ export default function IotControlCenterPage() {
 
         .iot-toggle button {
           border: 0;
-          background: rgba(7, 18, 36, 0.76);
-          color: var(--iot-muted);
+          background: var(--iot-toggle-bg);
+          color: var(--iot-toggle-text);
           min-width: 54px;
           padding: 0.55rem 0.72rem;
           font-size: 0.78rem;
@@ -2307,13 +2315,9 @@ export default function IotControlCenterPage() {
           transition: background 0.2s ease, color 0.2s ease;
         }
 
-        :global(.admin-root.admin-light) .iot-toggle button {
-          background: rgba(241, 245, 249, 0.88);
-        }
-
         .iot-toggle button.is-active {
-          background: linear-gradient(135deg, rgba(13, 148, 136, 0.88), rgba(5, 150, 105, 0.84));
-          color: #ecfeff;
+          background: var(--iot-toggle-active-bg);
+          color: var(--iot-toggle-active-text);
         }
 
         .iot-send {
