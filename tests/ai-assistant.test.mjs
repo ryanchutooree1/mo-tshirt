@@ -145,6 +145,34 @@ test("size breakdown mismatches keep the requested quantity and block the upload
   assert.equal(/upload button/i.test(result.reply), false);
 });
 
+test("resending size lines after an overfilled mismatch replaces the bad breakdown instead of accumulating it", () => {
+  const result = runAssistantTurn({
+    lead: {
+      clientName: null,
+      phone: null,
+      email: null,
+      productType: "t-shirt",
+      quantity: 3,
+      color: "black",
+      sizes: ["XL"],
+      sizeBreakdown: [{ color: "black", productType: "t-shirt", size: "XL", quantity: 4 }],
+      printPositions: ["front center"],
+      printSizes: [],
+      logoReady: null,
+      deliveryMethod: null,
+      deadline: null,
+      notes: null,
+    },
+    message: "Product: T-Shirt Colour: Black Size: M Quantity: 2",
+  });
+
+  assert.equal(result.lead.quantity, 3);
+  assert.deepEqual(result.lead.sizeBreakdown, [
+    { color: "black", productType: "t-shirt", size: "M", quantity: 2 },
+  ]);
+  assert.match(result.reply, /I have size lines for 2 of 3 pieces\./i);
+});
+
 test("logo upload asks for email when the file is received", () => {
   const result = runAssistantTurn({
     lead: {
