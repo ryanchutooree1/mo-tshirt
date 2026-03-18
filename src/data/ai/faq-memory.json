@@ -1,0 +1,32 @@
+[
+  {
+    "id": "faq-print-size",
+    "question": "What logo size do you usually use on the front left chest?",
+    "answer": "Front left chest logos are usually kept small. A common guide is around 9x9 cm, but the artwork still needs to be checked before production.",
+    "tags": ["logo", "front left chest", "size"]
+  },
+  {
+    "id": "faq-back-print",
+    "question": "What size is a large back print?",
+    "answer": "A large back print is usually around 22x22 cm. The final size still depends on the garment and artwork proportions.",
+    "tags": ["back", "large print", "size"]
+  },
+  {
+    "id": "faq-delivery",
+    "question": "Do you offer delivery or pickup?",
+    "answer": "Yes. Orders can usually be arranged for pickup or delivery, depending on the job and timing.",
+    "tags": ["delivery", "pickup"]
+  },
+  {
+    "id": "faq-design-help",
+    "question": "Can MO T-SHIRT help with artwork and print advice?",
+    "answer": "Yes. We can guide print position, print size, and the most realistic method once the logo or design is shared.",
+    "tags": ["design", "artwork", "help"]
+  },
+  {
+    "id": "faq-price",
+    "question": "Can you give a price immediately?",
+    "answer": "Pricing depends on product, quantity, print setup, and deadline. The assistant captures those details first, then sends the request to Quotation Approval.",
+    "tags": ["price", "quotation"]
+  }
+]

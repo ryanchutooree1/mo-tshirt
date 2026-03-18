@@ -1,0 +1,10 @@
+[
+  { "text": "Need 24 black polos for staff", "intent": "new_order" },
+  { "text": "My phone is 59393939", "intent": "provide_details" },
+  { "text": "How much for 15 tees", "intent": "ask_price" },
+  { "text": "Do you deliver to Rose Hill", "intent": "ask_delivery" },
+  { "text": "Can you help me choose the print method", "intent": "ask_design_help" },
+  { "text": "Please confirm the request", "intent": "confirm_order" },
+  { "text": "Hello", "intent": "greet" },
+  { "text": "Maybe", "intent": "unclear" }
+]

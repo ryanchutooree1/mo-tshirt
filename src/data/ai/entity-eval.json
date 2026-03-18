@@ -1,0 +1,32 @@
+[
+  {
+    "message": "I need 12 black polos with front left chest logo",
+    "expected": {
+      "productType": "polo",
+      "quantity": 12,
+      "color": "black",
+      "printPositions": ["front left chest"]
+    }
+  },
+  {
+    "message": "Product: T-Shirt Colour: Black Size: M Quantity: 2\nProduct: T-Shirt Colour: Black Size: XL Quantity: 1",
+    "expected": {
+      "quantity": 3,
+      "sizes": ["M", "XL"]
+    }
+  },
+  {
+    "message": "My name is Paul Sam and email is hello@gmail.com",
+    "expected": {
+      "clientName": "Paul Sam",
+      "email": "hello@gmail.com"
+    }
+  },
+  {
+    "message": "Company is Island Events Ltd and my phone is 59883880",
+    "expected": {
+      "companyName": "Island Events Ltd",
+      "phone": "59883880"
+    }
+  }
+]

@@ -1384,10 +1384,10 @@ export default function AdminAiAssistantPage() {
                   {trainingSnapshot?.fieldGroups?.length ? (
                     trainingSnapshot.fieldGroups.map((fieldGroup) => (
                       <span
-                        key={fieldGroup}
+                        key={fieldGroup.field}
                         className="inline-flex rounded-full border border-cyan-200 bg-white px-3 py-1.5 text-xs font-semibold text-cyan-700"
                       >
-                        {fieldGroup}
+                        {fieldGroup.field} · {fieldGroup.examples.length} examples
                       </span>
                     ))
                   ) : (

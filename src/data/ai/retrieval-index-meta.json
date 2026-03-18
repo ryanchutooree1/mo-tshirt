@@ -1,0 +1,62 @@
+{
+  "documentCount": 25,
+  "avgTermsPerDocument": 45.56,
+  "threshold": 0.18,
+  "kindCounts": {
+    "faq": 5,
+    "alias": 20
+  },
+  "sampleDocuments": [
+    {
+      "id": "faq-print-size",
+      "kind": "faq",
+      "text": "What logo size do you usually use on the front left chest? Front left chest logos are usually kept small. A common guide is around 9x9 cm, but the artwork still needs to be checked before production."
+    },
+    {
+      "id": "faq-back-print",
+      "kind": "faq",
+      "text": "What size is a large back print? A large back print is usually around 22x22 cm. The final size still depends on the garment and artwork proportions."
+    },
+    {
+      "id": "faq-delivery",
+      "kind": "faq",
+      "text": "Do you offer delivery or pickup? Yes. Orders can usually be arranged for pickup or delivery, depending on the job and timing."
+    },
+    {
+      "id": "faq-design-help",
+      "kind": "faq",
+      "text": "Can MO T-SHIRT help with artwork and print advice? Yes. We can guide print position, print size, and the most realistic method once the logo or design is shared."
+    },
+    {
+      "id": "faq-price",
+      "kind": "faq",
+      "text": "Can you give a price immediately? Pricing depends on product, quantity, print setup, and deadline. The assistant captures those details first, then sends the request to Quotation Approval."
+    },
+    {
+      "id": "alias-t-shirt-0",
+      "kind": "alias",
+      "text": "crewtee means t-shirt"
+    },
+    {
+      "id": "alias-t-shirt-1",
+      "kind": "alias",
+      "text": "crewtees means t-shirt"
+    },
+    {
+      "id": "alias-t-shirt-2",
+      "kind": "alias",
+      "text": "t shirt means t-shirt"
+    },
+    {
+      "id": "alias-t-shirt-3",
+      "kind": "alias",
+      "text": "t shirts means t-shirt"
+    },
+    {
+      "id": "alias-t-shirt-4",
+      "kind": "alias",
+      "text": "tee means t-shirt"
+    }
+  ],
+  "updatedAt": "2026-03-18T18:32:18.824Z"
+}

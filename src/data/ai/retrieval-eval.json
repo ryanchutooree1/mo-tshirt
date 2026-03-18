@@ -1,0 +1,14 @@
+[
+  {
+    "query": "How big is a front left chest logo",
+    "expectedKind": "faq"
+  },
+  {
+    "query": "Do you deliver or can I collect",
+    "expectedKind": "faq"
+  },
+  {
+    "query": "crewtees for staff with back print",
+    "expectedKind": "alias"
+  }
+]

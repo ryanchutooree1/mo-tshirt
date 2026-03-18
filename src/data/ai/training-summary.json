@@ -1,0 +1,96 @@
+{
+  "positiveKeywordCount": 769,
+  "classifierSampleCount": 52,
+  "classifierLabelCount": 8,
+  "faqCount": 5,
+  "retrievalDocumentCount": 25,
+  "learnedProductAliasCount": 20,
+  "retrievalIndexMetadata": {
+    "documentCount": 25,
+    "avgTermsPerDocument": 45.56,
+    "threshold": 0.18
+  },
+  "topKeywords": [
+    {
+      "keyword": "for",
+      "count": 22
+    },
+    {
+      "keyword": "you",
+      "count": 20
+    },
+    {
+      "keyword": "can",
+      "count": 18
+    },
+    {
+      "keyword": "the",
+      "count": 13
+    },
+    {
+      "keyword": "is ",
+      "count": 12
+    },
+    {
+      "keyword": " ca",
+      "count": 11
+    },
+    {
+      "keyword": " co",
+      "count": 11
+    },
+    {
+      "keyword": " fo",
+      "count": 11
+    },
+    {
+      "keyword": " th",
+      "count": 11
+    },
+    {
+      "keyword": "an ",
+      "count": 11
+    },
+    {
+      "keyword": "nt ",
+      "count": 11
+    },
+    {
+      "keyword": "or ",
+      "count": 11
+    },
+    {
+      "keyword": " is",
+      "count": 10
+    },
+    {
+      "keyword": " yo",
+      "count": 10
+    },
+    {
+      "keyword": "ou ",
+      "count": 10
+    },
+    {
+      "keyword": "st ",
+      "count": 10
+    },
+    {
+      "keyword": " ne",
+      "count": 9
+    },
+    {
+      "keyword": " pr",
+      "count": 9
+    },
+    {
+      "keyword": "and",
+      "count": 9
+    },
+    {
+      "keyword": "er ",
+      "count": 9
+    }
+  ],
+  "updatedAt": "2026-03-18T18:32:18.823Z"
+}

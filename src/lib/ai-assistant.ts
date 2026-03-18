@@ -1,1022 +1,142 @@
-const WORD_RE = /[a-zA-Z0-9+]+/g;
+import faqMemoryData from "../data/ai/faq-memory.json" with { type: "json" };
+import intentTrainingData from "../data/ai/intent-training.json" with { type: "json" };
+import productAliasesData from "../data/ai/product-aliases.json" with { type: "json" };
+import { predictIntent } from "./ai/core/classifier.ts";
+import { decideNextAction } from "./ai/core/decision-engine.ts";
+import { extractEntities } from "./ai/core/entities.ts";
+import { buildAssistantTurnDebug } from "./ai/core/explain.ts";
+import {
+  buildAssistantTrainingState as buildLocalTrainingState,
+  createEmptyLearnedProductAliases,
+  createEmptyLearnedProductPlaybooks,
+} from "./ai/core/learning.ts";
+import { retrieveTopMatches } from "./ai/core/retrieval.ts";
+import {
+  formatAssistantFieldLabel,
+  formatLeadSummary,
+  generateAssistantReply,
+} from "./ai/core/response-generator.ts";
+import type {
+  AssistantApprovedLeadSource,
+  AssistantAttachment,
+  AssistantChatResult,
+  AssistantContextItem,
+  AssistantFeedbackEntry,
+  AssistantIntentSample,
+  AssistantKnowledgeSource,
+  AssistantLead,
+  AssistantOrderLine,
+  AssistantProductType,
+  AssistantRequiredField,
+  AssistantTrainingState,
+} from "./ai/core/types.ts";
+import { ASSISTANT_PRODUCT_TYPES, ASSISTANT_REQUIRED_FIELDS } from "./ai/core/types.ts";
+import { cosineSimilarity, normalizeText, termFrequency, titleCase, unique } from "./ai/core/utils.ts";
+
+type LeadLike = Partial<Record<keyof AssistantLead, unknown>>;
+
+const BASE_SAMPLES = intentTrainingData as AssistantIntentSample[];
+const BASE_FAQ = faqMemoryData as Array<{ id: string; question: string; answer: string; tags?: string[] }>;
+const BASE_ALIASES = productAliasesData as Record<AssistantProductType, string[]>;
+
 const PHONE_RE = /(?:\+?230)?[\s-]?([2455789]\d{7})\b/;
-const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
-const NAME_RE =
-  /(?:my name is|i am|i'm)\s+([A-Za-z][A-Za-z\s'-]{1,40}?)(?=\s+(?:and\b|phone\b|email\b)|$)/i;
-const DEADLINE_RE =
-  /(?:by|before|for)\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|today|next week|this week)/i;
-const ABSOLUTE_DATE_RE = /\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{2}-\d{2})\b/i;
-const NOTE_RE = /\bnotes?\s*:/i;
-const QUANTITY_CONTEXT_RE =
-  /\b(piece|pieces|pcs|qty|quantity|need|want|order|shirts?|t[\s-]?shirts?|polos?|hoodies?|caps?)\b/i;
-const ORDER_CONTEXT_RE = /\b(need|want|order|quote|looking|get|require)\b/i;
-
-export const ASSISTANT_PRODUCT_TYPES = ["t-shirt", "polo", "hoodie", "cap"] as const;
-export type AssistantProductType = (typeof ASSISTANT_PRODUCT_TYPES)[number];
-
-const PRODUCT_PATTERNS: Array<{ canonical: AssistantProductType; patterns: string[] }> = [
-  {
-    canonical: "t-shirt",
-    patterns: ["tshirt", "tshirts", "t shirt", "t shirts", "t-shirt", "t-shirts", "tee", "tees"],
-  },
-  { canonical: "polo", patterns: ["poloshirt", "poloshirts", "polo shirt", "polo shirts", "polo", "polos"] },
-  { canonical: "hoodie", patterns: ["hoodie", "hoodies"] },
-  { canonical: "cap", patterns: ["cap", "caps"] },
-];
-
-const PRODUCT_ROOT_HINTS: Record<AssistantProductType, string[]> = {
-  "t-shirt": ["tshirt", "tee"],
-  polo: ["polo"],
-  hoodie: ["hoodie"],
-  cap: ["cap"],
-};
-
-const PRODUCT_ALIAS_STOP_WORDS = new Set([
-  "a",
-  "an",
-  "and",
-  "for",
-  "hi",
-  "i",
-  "in",
-  "is",
-  "me",
-  "my",
-  "need",
-  "of",
-  "on",
-  "please",
-  "quote",
-  "the",
-  "to",
-  "want",
-  "with",
-  "you",
-]);
-const NAME_RESPONSE_STOP_WORDS = new Set([
-  "back",
-  "black",
-  "blue",
-  "cap",
-  "caps",
-  "center",
-  "chest",
-  "delivery",
-  "front",
-  "hoodie",
-  "hoodies",
-  "large",
-  "left",
-  "logo",
-  "pickup",
-  "polo",
-  "polos",
-  "print",
-  "red",
-  "shirt",
-  "shirts",
-  "size",
-  "small",
-  "sleeve",
-  "summary",
-  "submit",
-  "tee",
-  "tees",
-  "tshirt",
-  "tshirts",
-  "white",
-]);
-
-const LEFT_CHEST_PATTERNS = ["left chest", "front left chest", "left logo", "logo on chest"];
-const FRONT_CENTER_PATTERNS = ["front center", "center front", "big front"];
-const BACK_PATTERNS = ["back print", "big back", "rear", "back"];
-const SLEEVE_PATTERNS = ["sleeve", "arm"];
-
 const PRINT_SIZE_PATTERNS: Array<{ canonical: string; patterns: string[] }> = [
   { canonical: "small 9x9", patterns: ["9x9", "small logo", "small print", "small front", "small back"] },
   { canonical: "large 22x22", patterns: ["22x22", "large print", "big print", "big logo", "large front", "large back"] },
 ];
 
-const DELIVERY_PATTERNS: Array<{ canonical: AssistantLead["deliveryMethod"]; patterns: string[] }> = [
-  { canonical: "pickup", patterns: ["pickup", "collect", "collection"] },
-  { canonical: "delivery", patterns: ["delivery", "deliver", "post office", "courier"] },
-];
+let cachedBaseTrainingState: AssistantTrainingState | null = null;
 
-const COLORS = new Set([
-  "white",
-  "black",
-  "navy",
-  "red",
-  "blue",
-  "green",
-  "orange",
-  "yellow",
-  "grey",
-  "gray",
-  "pink",
-  "purple",
-  "maroon",
-  "beige",
-]);
-
-const SIZE_ALIASES = new Map([
-  ["xs", "XS"],
-  ["s", "S"],
-  ["m", "M"],
-  ["l", "L"],
-  ["xl", "XL"],
-  ["xxl", "2XL"],
-  ["2xl", "2XL"],
-  ["xxxl", "3XL"],
-  ["3xl", "3XL"],
-  ["xxxxl", "4XL"],
-  ["4xl", "4XL"],
-]);
-const SIZE_TOKENS = new Set(SIZE_ALIASES.keys());
-const SIZE_TOKEN_PATTERN = "xxxxl|xxxl|xxl|4xl|3xl|2xl|xs|xl|s|m|l";
-const SIZE_TEMPLATE_ORDER = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
-const SIZE_TEMPLATE_ORDER_INDEX = new Map<string, number>(SIZE_TEMPLATE_ORDER.map((size, index) => [size, index]));
-const NUMBER_WORD_VALUES: Record<string, number> = {
-  zero: 0,
-  one: 1,
-  two: 2,
-  three: 3,
-  four: 4,
-  five: 5,
-  six: 6,
-  seven: 7,
-  eight: 8,
-  nine: 9,
-  ten: 10,
-  eleven: 11,
-  twelve: 12,
-  thirteen: 13,
-  fourteen: 14,
-  fifteen: 15,
-  sixteen: 16,
-  seventeen: 17,
-  eighteen: 18,
-  nineteen: 19,
-};
-const TENS_WORD_VALUES: Record<string, number> = {
-  twenty: 20,
-  thirty: 30,
-  forty: 40,
-  fifty: 50,
-  sixty: 60,
-  seventy: 70,
-  eighty: 80,
-  ninety: 90,
-};
-
-export const ASSISTANT_FIELDS_IN_ORDER = [
-  "productType",
-  "quantity",
-  "color",
-  "printPositions",
-  "printSizes",
-  "logoReady",
-  "sizeBreakdown",
-  "sizes",
-  "deliveryMethod",
-  "clientName",
-  "phone",
-] as const;
-
-export const ASSISTANT_REQUIRED_FIELDS = [
-  "productType",
-  "quantity",
-  "printPositions",
-  "sizeBreakdown",
-  "clientName",
-  "email",
-  "phone",
-  "deadline",
-] as const;
-
-export type AssistantMessageRole = "user" | "assistant";
-
-export type AssistantRequiredField = (typeof ASSISTANT_REQUIRED_FIELDS)[number];
-
-export type AssistantAttachment = {
-  name: string;
-  url: string;
-  contentType: string | null;
-  size: number | null;
-  uploadedAt: string | null;
-};
-
-export type AssistantLead = {
-  clientName: string | null;
-  phone: string | null;
-  email: string | null;
-  productType: AssistantProductType | null;
-  quantity: number | null;
-  color: string | null;
-  sizes: string[];
-  sizeBreakdown: AssistantOrderLine[];
-  printPositions: string[];
-  printSizes: string[];
-  logoReady: boolean | null;
-  logoPending: boolean;
-  logoAttachment: AssistantAttachment | null;
-  deliveryMethod: "pickup" | "delivery" | null;
-  deadline: string | null;
-  notes: string | null;
-};
-
-export type AssistantOrderLine = {
-  color: string | null;
-  productType: AssistantProductType | null;
-  size: string;
-  quantity: number;
-};
-
-export type AssistantApprovedLeadSource = {
-  lead: AssistantLead;
-  status?: string | null;
-  sessionMessages?: string[];
-};
-
-export type AssistantKnowledgeSource = {
-  title: string;
-  content: string;
-};
-
-export type AssistantContextItem = {
-  source: "lead" | "knowledge";
-  text: string;
-  score: number;
-};
-
-export type AssistantChatResult = {
-  reply: string;
-  lead: AssistantLead;
-  updates: Partial<AssistantLead>;
-  missingFields: AssistantRequiredField[];
-  readyToSubmit: boolean;
-  suggestions: string[];
-  relatedContext: AssistantContextItem[];
-};
-
-export type AssistantKeywordStat = {
-  keyword: string;
-  count: number;
-};
-
-export type AssistantLearnedPrintPattern = {
-  positions: string[];
-  printSizes: string[];
-  count: number;
-};
-
-export type AssistantProductPlaybook = {
-  topColor: string | null;
-  topDeliveryMethod: AssistantLead["deliveryMethod"];
-  topPrintPattern: AssistantLearnedPrintPattern | null;
-};
-
-export type AssistantTrainingSnapshot = {
-  positiveKeywordCount: number;
-  fieldGroups: string[];
-  approvedLeadCount: number;
-  knowledgeCount: number;
-  topKeywords: AssistantKeywordStat[];
-  learnedProductAliases: Record<AssistantProductType, string[]>;
-  learnedProductAliasCount: number;
-  learnedProductPlaybooks: Record<AssistantProductType, AssistantProductPlaybook>;
-  updatedAt?: string | null;
-};
-
-export type AssistantTrainingState = AssistantTrainingSnapshot & {
-  positiveKeywords: Record<string, number>;
-  fieldKeywordCounts: Record<string, Record<string, number>>;
-};
-
-type LeadLike = Partial<Record<keyof AssistantLead, unknown>>;
-
-const FIELD_LABELS: Record<AssistantRequiredField, string> = {
-  productType: "product type",
-  quantity: "quantity",
-  printPositions: "print positions",
-  sizeBreakdown: "size breakdown",
-  clientName: "client name",
-  email: "email address",
-  phone: "whatsapp number",
-  deadline: "deadline",
-};
+function getBaseTrainingState() {
+  if (!cachedBaseTrainingState) {
+    cachedBaseTrainingState = buildLocalTrainingState({
+      baseSamples: BASE_SAMPLES,
+      baseFaq: BASE_FAQ,
+      baseAliases: BASE_ALIASES,
+      updatedAt: null,
+    });
+  }
+  return cachedBaseTrainingState;
+}
 
 function cleanString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function normalizeWords(text: string) {
-  return ` ${text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
-}
-
-function singularizeComparable(value: string) {
-  if (value.endsWith("ies") && value.length > 4) {
-    return `${value.slice(0, -3)}y`;
-  }
-  if (value.endsWith("es") && /(sh|ch|ss|x|z|o)$/.test(value.slice(0, -2))) {
-    return value.slice(0, -2);
-  }
-  if (value.endsWith("s") && value.length > 3 && !value.endsWith("ss")) {
-    return value.slice(0, -1);
-  }
-  return value;
-}
-
-function toComparableAliasKey(value: string) {
-  return singularizeComparable(value.toLowerCase().replace(/[^a-z0-9]+/g, ""));
-}
-
-function normalizeLearnedAliasPhrase(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9\s-]+/g, " ").replace(/\s+/g, " ").trim();
-}
-
-function buildSlidingPhrases(tokens: string[], maxSize = 3) {
-  const phrases = new Set<string>();
-  const cleaned = tokens.filter((token) => token && !/^\d+$/.test(token));
-
-  for (let size = 1; size <= maxSize; size += 1) {
-    for (let index = 0; index <= cleaned.length - size; index += 1) {
-      const slice = cleaned.slice(index, index + size);
-      if (!slice.length || slice.every((token) => PRODUCT_ALIAS_STOP_WORDS.has(token))) continue;
-      phrases.add(slice.join(" "));
-    }
-  }
-
-  return Array.from(phrases);
-}
-
-function levenshteinDistance(left: string, right: string) {
-  if (left === right) return 0;
-  if (!left.length) return right.length;
-  if (!right.length) return left.length;
-
-  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
-  const current = new Array<number>(right.length + 1).fill(0);
-
-  for (let row = 0; row < left.length; row += 1) {
-    current[0] = row + 1;
-    for (let column = 0; column < right.length; column += 1) {
-      const cost = left[row] === right[column] ? 0 : 1;
-      current[column + 1] = Math.min(
-        current[column] + 1,
-        previous[column + 1] + 1,
-        previous[column] + cost
-      );
-    }
-    for (let column = 0; column <= right.length; column += 1) {
-      previous[column] = current[column];
-    }
-  }
-
-  return previous[right.length];
-}
-
-function aliasKeysAreClose(left: string, right: string) {
-  if (!left || !right) return false;
-  if (left === right) return true;
-  if (left.length < 5 || right.length < 5) return false;
-  if (Math.abs(left.length - right.length) > 1) return false;
-  if (left[0] !== right[0]) return false;
-  return levenshteinDistance(left, right) <= 1;
-}
-
-function hasPattern(normalizedWords: string, pattern: string) {
-  const normalizedPattern = pattern.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-  if (!normalizedPattern) return false;
-  return normalizedWords.includes(` ${normalizedPattern} `);
-}
-
-function titleCase(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/\b([a-z])/g, (_, char: string) => char.toUpperCase())
-    .trim();
-}
-
 function normalizePhone(value: unknown) {
-  const digits = cleanString(value).replace(/[^\d]/g, "");
-  if (!digits) return null;
-  if (digits.length > 8 && digits.endsWith(digits.slice(-8))) {
-    return digits.slice(-8);
-  }
-  if (digits.length === 8) {
-    return digits;
-  }
-  return digits;
+  const match = PHONE_RE.exec(cleanString(value));
+  return match ? match[1] : null;
 }
 
 function normalizeQuantity(value: unknown) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value >= 1 && value <= 5000 ? value : null;
-  }
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) return Math.round(value);
   if (typeof value === "string" && value.trim()) {
     const parsed = Number(value);
-    return Number.isFinite(parsed) && parsed >= 1 && parsed <= 5000 ? parsed : null;
+    return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null;
   }
   return null;
 }
 
-function normalizeNullableNumber(value: unknown) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
-}
-
-function parseWordNumber(value: string) {
-  const tokens = value
-    .toLowerCase()
-    .replace(/-/g, " ")
-    .split(/\s+/)
-    .filter(Boolean);
-  if (!tokens.length) return null;
-
-  let total = 0;
-  let current = 0;
-  let usedToken = false;
-
-  for (const token of tokens) {
-    if (token === "and") continue;
-    if (token in NUMBER_WORD_VALUES) {
-      current += NUMBER_WORD_VALUES[token];
-      usedToken = true;
-      continue;
-    }
-    if (token in TENS_WORD_VALUES) {
-      current += TENS_WORD_VALUES[token];
-      usedToken = true;
-      continue;
-    }
-    if (token === "hundred" && current > 0) {
-      current *= 100;
-      usedToken = true;
-      continue;
-    }
-    if (token === "thousand" && current > 0) {
-      total += current * 1000;
-      current = 0;
-      usedToken = true;
-      continue;
-    }
-    return null;
-  }
-
-  if (!usedToken) return null;
-  return total + current;
-}
-
-function parseQuantityValue(value: string) {
-  const trimmed = value.trim().toLowerCase();
-  if (!trimmed) return null;
-
-  const numeric = normalizeQuantity(trimmed);
-  if (numeric !== null) return numeric;
-
-  const wordNumber = parseWordNumber(trimmed);
-  if (wordNumber !== null) {
-    return normalizeQuantity(wordNumber);
-  }
-
-  return null;
-}
-
-function parseLeadingQuantityValue(value: string) {
-  const words = value.trim().split(/\s+/).filter(Boolean);
-  for (let count = words.length; count >= 1; count -= 1) {
-    const quantity = parseQuantityValue(words.slice(0, count).join(" "));
-    if (quantity !== null) return quantity;
-  }
-  return null;
-}
-
-function extractRequestedQuantity(message: string) {
-  const trimmed = message.trim().toLowerCase();
-  const patterns = [
-    /(?:need|want|order|quote|require|get)\s+([a-z-]+(?:\s+[a-z-]+){0,2}|\d{1,4})\b/i,
-    /\bqty(?:\s*[:=-]?\s*|\s+)([a-z-]+(?:\s+[a-z-]+){0,2}|\d{1,4})\b/i,
-    /\bquantity(?:\s*[:=-]?\s*|\s+)([a-z-]+(?:\s+[a-z-]+){0,2}|\d{1,4})\b/i,
-    /\b([a-z-]+(?:\s+[a-z-]+){0,2}|\d{1,4})\s*(?:piece|pieces|pcs|shirts?|t[\s-]?shirts?|polos?|hoodies?|caps?)\b/i,
-  ];
-
-  for (const pattern of patterns) {
-    const match = pattern.exec(trimmed);
-    if (!match) continue;
-    const quantity = parseLeadingQuantityValue(match[1]);
-    if (quantity !== null) {
-      return quantity;
-    }
-  }
-
-  if (/^\d{1,4}$/.test(trimmed)) {
-    const quantity = Number(trimmed);
-    if (Number.isFinite(quantity) && quantity >= 1 && quantity <= 5000) {
-      return quantity;
-    }
-  }
-
-  return undefined;
-}
-
-function normalizeSize(value: string) {
-  const compact = value.trim().toLowerCase().replace(/\s+/g, "");
-  return SIZE_ALIASES.get(compact) || compact.toUpperCase();
-}
-
-function sortTemplateSizes(values: string[]) {
-  return Array.from(new Set(values.map(normalizeSize).filter(Boolean))).sort((left, right) => {
-    const leftIndex = SIZE_TEMPLATE_ORDER_INDEX.get(left);
-    const rightIndex = SIZE_TEMPLATE_ORDER_INDEX.get(right);
-    if (leftIndex !== undefined || rightIndex !== undefined) {
-      if (leftIndex === undefined) return 1;
-      if (rightIndex === undefined) return -1;
-      return leftIndex - rightIndex;
-    }
-    return left.localeCompare(right);
-  });
-}
-
-function dedupeSorted(values: string[], transform?: (value: string) => string) {
-  return Array.from(
-    new Set(
-      values
-        .map((value) => (transform ? transform(value) : value).trim())
-        .filter(Boolean)
-    )
+function normalizeArray(values: unknown, map: (value: string) => string | null) {
+  if (!Array.isArray(values)) return [];
+  return unique(
+    values
+      .map((value) => map(cleanString(value)))
+      .filter(Boolean) as string[]
   ).sort((left, right) => left.localeCompare(right));
 }
 
-function normalizeStringArray(value: unknown, transform?: (value: string) => string) {
-  if (!Array.isArray(value)) return [];
-  return dedupeSorted(
-    value
-      .map((entry) => cleanString(entry))
-      .filter(Boolean),
-    transform
-  );
-}
-
-function incrementCounter(target: Record<string, number>, key: string) {
-  target[key] = (target[key] || 0) + 1;
+function normalizeSize(value: string) {
+  const normalized = normalizeText(value);
+  if (normalized === "xs") return "XS";
+  if (normalized === "s") return "S";
+  if (normalized === "m") return "M";
+  if (normalized === "l") return "L";
+  if (normalized === "xl") return "XL";
+  if (normalized === "xxl" || normalized === "2xl") return "2XL";
+  if (normalized === "xxxl" || normalized === "3xl") return "3XL";
+  if (normalized === "xxxxl" || normalized === "4xl") return "4XL";
+  return value ? value.toUpperCase() : null;
 }
 
 function normalizeOrderLines(value: unknown): AssistantOrderLine[] {
   if (!Array.isArray(value)) return [];
-
-  return mergeOrderLines(
-    value
-      .map((entry) => {
-        const source = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
-        const productType = cleanString(source.productType).toLowerCase();
-        const color = cleanString(source.color).toLowerCase();
-        const size = normalizeSize(cleanString(source.size));
-        const quantity = normalizeQuantity(source.quantity);
-        return {
-          color: color || null,
-          productType:
-            productType === "t-shirt" || productType === "polo" || productType === "hoodie" || productType === "cap"
-              ? (productType as AssistantProductType)
-              : null,
-          size,
-          quantity: quantity || 0,
-        };
-      })
-      .filter((entry) => entry.size && entry.quantity > 0)
-  );
-}
-
-function getOrderLineKey(line: AssistantOrderLine) {
-  return `${line.color || ""}::${line.productType || ""}::${line.size}`;
-}
-
-function mergeOrderLines(lines: AssistantOrderLine[]) {
-  const map = new Map<string, AssistantOrderLine>();
-
-  lines.forEach((line) => {
-    const key = getOrderLineKey(line);
-    const existing = map.get(key);
-    if (existing) {
-      existing.quantity += line.quantity;
-    } else {
-      map.set(key, { ...line });
-    }
-  });
-
-  return Array.from(map.values()).sort((left, right) => {
-    const byColor = (left.color || "").localeCompare(right.color || "");
-    if (byColor !== 0) return byColor;
-    const byProduct = (left.productType || "").localeCompare(right.productType || "");
-    if (byProduct !== 0) return byProduct;
-    return left.size.localeCompare(right.size);
-  });
-}
-
-function getOrderLineTotal(lines: AssistantOrderLine[]) {
-  return lines.reduce((total, line) => total + line.quantity, 0);
-}
-
-function formatProductTypeLabel(productType: AssistantProductType | null) {
-  if (productType === "t-shirt") return "T-Shirt";
-  if (productType === "polo") return "Polo";
-  if (productType === "hoodie") return "Hoodie";
-  if (productType === "cap") return "Cap";
-  return "T-Shirt";
-}
-
-function formatOrderLine(line: AssistantOrderLine) {
-  const product = formatProductTypeLabel(line.productType);
-  return `Product: ${product} Colour: ${line.color ? titleCase(line.color) : "Not set"} Size: ${line.size} Quantity: ${line.quantity}`;
+  return value
+    .map((item) => {
+      const source = (item && typeof item === "object" ? item : {}) as Record<string, unknown>;
+      const productType = cleanString(source.productType).toLowerCase();
+      return {
+        color: cleanString(source.color).toLowerCase() || null,
+        productType:
+          productType === "t-shirt" || productType === "polo" || productType === "hoodie" || productType === "cap"
+            ? (productType as AssistantProductType)
+            : null,
+        size: normalizeSize(cleanString(source.size)) || cleanString(source.size),
+        quantity: normalizeQuantity(source.quantity) || 0,
+      };
+    })
+    .filter((line) => line.size && line.quantity > 0)
+    .sort((left, right) => left.size.localeCompare(right.size));
 }
 
 export function normalizeAssistantAttachment(value: unknown): AssistantAttachment | null {
-  if (!value || typeof value !== "object") return null;
-
-  const source = value as Record<string, unknown>;
-  const name = cleanString(source.name ?? source.filename);
+  const source = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
+  const name = cleanString(source.name);
   const url = cleanString(source.url);
   if (!name || !url) return null;
-
   return {
     name,
     url,
-    contentType: cleanString(source.contentType ?? source.type) || null,
-    size: normalizeNullableNumber(source.size),
+    contentType: cleanString(source.contentType) || null,
+    size: normalizeQuantity(source.size),
     uploadedAt: cleanString(source.uploadedAt) || null,
   };
-}
-
-function buildSizeTemplateLines(lead: AssistantLead) {
-  const lineTotals = new Map<string, number>();
-  lead.sizeBreakdown.forEach((line) => {
-    lineTotals.set(line.size, (lineTotals.get(line.size) || 0) + line.quantity);
-  });
-
-  const sizes = sortTemplateSizes([...lead.sizeBreakdown.map((line) => line.size), ...lead.sizes]);
-  const templateSizes = [...sizes];
-  for (const fallback of ["S", "M", "L", "XL"]) {
-    if (templateSizes.length >= 4) break;
-    if (!templateSizes.includes(fallback)) {
-      templateSizes.push(fallback);
-    }
-  }
-
-  const color = lead.color ? titleCase(lead.color) : "Black";
-  const product = formatProductTypeLabel(lead.productType);
-
-  return sortTemplateSizes(templateSizes)
-    .slice(0, Math.max(4, sizes.length || 0))
-    .map((size) => `Product: ${product} Colour: ${color} Size: ${size} Quantity: ${lineTotals.get(size) || 0}`);
-}
-
-function buildSizeBreakdownPrompt(lead: AssistantLead) {
-  const capturedTotal = getOrderLineTotal(lead.sizeBreakdown);
-
-  let intro = "Please send the full size breakdown in one message, one line per variation, like this:";
-  if (lead.quantity && capturedTotal > 0 && capturedTotal !== lead.quantity) {
-    if (capturedTotal < lead.quantity) {
-      intro = `I have ${capturedTotal} of ${lead.quantity} pieces captured so far. Please send the full corrected size breakdown like this:`;
-    } else {
-      intro = `The size lines add up to ${capturedTotal} pieces while the current total is ${lead.quantity}. Please send the full corrected size breakdown in this format:`;
-    }
-  }
-
-  return [
-    intro,
-    "",
-    "Copy, edit, and send this size template:",
-    "```",
-    ...buildSizeTemplateLines(lead),
-    "```",
-    "Replace each quantity with the real count and delete any size lines you do not need.",
-  ].join("\n");
-}
-
-function extractOrderLines(
-  message: string,
-  trainingState?: Pick<AssistantTrainingState, "learnedProductAliases"> | null
-) {
-  const segments = message
-    .split(/\n|;/)
-    .map((segment) => segment.trim())
-    .filter(Boolean);
-  const lines = (segments.length ? segments : [message])
-    .map((segment) => {
-      const sizeMatch = segment.match(new RegExp(`\\bsize\\b\\s*[:=-]?\\s*(${SIZE_TOKEN_PATTERN})\\b`, "i"));
-      const quantityMatch =
-        segment.match(/\b(?:quantity|qty|qte|quality)\b\s*[:=-]?\s*(\d{1,4})\b/i) ||
-        segment.match(/\bx\s*(\d{1,4})\b/i);
-      if (!sizeMatch || !quantityMatch) return null;
-
-      const color = Array.from(COLORS).find((candidate) => hasPattern(normalizeWords(segment), candidate)) || null;
-      const productType = detectProductType(segment, trainingState);
-      const quantity = Number(quantityMatch[1]);
-      if (!Number.isFinite(quantity) || quantity <= 0) return null;
-
-      return {
-        color,
-        productType,
-        size: normalizeSize(sizeMatch[1]),
-        quantity,
-      } satisfies AssistantOrderLine;
-    })
-    .filter((line): line is AssistantOrderLine => Boolean(line));
-
-  if (lines.length) {
-    return mergeOrderLines(lines);
-  }
-
-  const overallColor = Array.from(COLORS).find((candidate) => hasPattern(normalizeWords(message), candidate)) || null;
-  const overallProductType = detectProductType(message, trainingState);
-  const naturalLines: AssistantOrderLine[] = [];
-  const naturalSegments = message
-    .split(/\n|,|;|\/|\band\b/gi)
-    .map((segment) => segment.trim())
-    .filter(Boolean);
-
-  const sizeThenQuantityRe = new RegExp(
-    `\\b(?:size\\s*)?(${SIZE_TOKEN_PATTERN})\\b(?:\\s*(?:x|qty|quantity|=|:|-)\\s*|\\s+)(\\d{1,4}|[a-z-]+(?:\\s+[a-z-]+){0,2})\\b`,
-    "i"
-  );
-  const quantityThenSizeRe = new RegExp(
-    `\\b(\\d{1,4}|[a-z-]+(?:\\s+[a-z-]+){0,2})\\b\\s*(?:size\\s*)?(${SIZE_TOKEN_PATTERN})\\b`,
-    "i"
-  );
-
-  naturalSegments.forEach((segment) => {
-    const localColor =
-      Array.from(COLORS).find((candidate) => hasPattern(normalizeWords(segment), candidate)) || overallColor;
-    const localProductType = detectProductType(segment, trainingState) || overallProductType;
-    const sizeThenQuantity = sizeThenQuantityRe.exec(segment);
-    const quantityThenSize = quantityThenSizeRe.exec(segment);
-    const quantityValue = parseQuantityValue(
-      sizeThenQuantity?.[2] || quantityThenSize?.[1] || ""
-    );
-    const sizeValue = sizeThenQuantity?.[1] || quantityThenSize?.[2] || "";
-    if (!quantityValue || !sizeValue) return;
-
-    naturalLines.push({
-      color: localColor,
-      productType: localProductType,
-      size: normalizeSize(sizeValue),
-      quantity: quantityValue,
-    });
-  });
-
-  return mergeOrderLines(naturalLines);
-}
-
-export function createEmptyLearnedProductAliases(): Record<AssistantProductType, string[]> {
-  return {
-    "t-shirt": [],
-    polo: [],
-    hoodie: [],
-    cap: [],
-  };
-}
-
-export function createEmptyLearnedProductPlaybooks(): Record<AssistantProductType, AssistantProductPlaybook> {
-  return {
-    "t-shirt": { topColor: null, topDeliveryMethod: null, topPrintPattern: null },
-    polo: { topColor: null, topDeliveryMethod: null, topPrintPattern: null },
-    hoodie: { topColor: null, topDeliveryMethod: null, topPrintPattern: null },
-    cap: { topColor: null, topDeliveryMethod: null, topPrintPattern: null },
-  };
-}
-
-function getProductPatternCatalog(trainingState?: Pick<AssistantTrainingState, "learnedProductAliases"> | null) {
-  return PRODUCT_PATTERNS.map((product) => {
-    const patterns = dedupeSorted([
-      ...product.patterns,
-      ...(trainingState?.learnedProductAliases?.[product.canonical] || []),
-    ]);
-
-    return {
-      canonical: product.canonical,
-      patterns,
-      patternKeys: patterns.map(toComparableAliasKey).filter(Boolean),
-    };
-  });
-}
-
-function detectProductType(
-  message: string,
-  trainingState?: Pick<AssistantTrainingState, "learnedProductAliases"> | null
-): AssistantProductType | null {
-  const normalized = normalizeWords(message);
-  const candidateKeys = buildSlidingPhrases(tokenize(message), 3)
-    .map(toComparableAliasKey)
-    .filter(Boolean);
-
-  for (const product of getProductPatternCatalog(trainingState)) {
-    if (product.patterns.some((pattern) => hasPattern(normalized, pattern))) {
-      return product.canonical;
-    }
-
-    for (const candidateKey of candidateKeys) {
-      if (product.patternKeys.some((patternKey) => patternKey === candidateKey || aliasKeysAreClose(candidateKey, patternKey))) {
-        return product.canonical;
-      }
-    }
-  }
-
-  return null;
-}
-
-function candidateLooksLikeProductAlias(productType: AssistantProductType, phrase: string) {
-  const normalizedPhrase = normalizeLearnedAliasPhrase(phrase);
-  const aliasKey = toComparableAliasKey(normalizedPhrase);
-  if (!aliasKey || aliasKey.length < 4) return false;
-  const words = normalizedPhrase.split(" ").filter(Boolean);
-  if (words.length > 3) return false;
-  if (words.some((word) => PRODUCT_ALIAS_STOP_WORDS.has(word))) return false;
-
-  const hasOwnHint = PRODUCT_ROOT_HINTS[productType].some(
-    (hint) => aliasKey.includes(hint) || aliasKeysAreClose(aliasKey, hint)
-  );
-  if (!hasOwnHint) return false;
-
-  return !ASSISTANT_PRODUCT_TYPES.some(
-    (otherType) =>
-      otherType !== productType &&
-      PRODUCT_ROOT_HINTS[otherType].some(
-        (hint) => aliasKey.includes(hint) || aliasKeysAreClose(aliasKey, hint)
-      )
-  );
-}
-
-function looksLikeStandaloneName(message: string) {
-  const trimmed = message.trim();
-  if (!trimmed || trimmed.length < 3 || trimmed.length > 40) return false;
-  if (/\d|@|https?:\/\//i.test(trimmed)) return false;
-  if (!/^[A-Za-z][A-Za-z\s'-]*$/.test(trimmed)) return false;
-
-  const words = trimmed
-    .split(/\s+/)
-    .map((word) => word.replace(/[^A-Za-z'-]/g, "").toLowerCase())
-    .filter(Boolean);
-
-  if (!words.length || words.length > 3) return false;
-  if (words.some((word) => word.length < 2)) return false;
-  if (words.some((word) => NAME_RESPONSE_STOP_WORDS.has(word))) return false;
-
-  return true;
-}
-
-function inferContextualLeadUpdates(lead: AssistantLead, message: string, updates: Partial<AssistantLead>) {
-  const nextMissingField = missingAssistantFields(lead)[0];
-  if (
-    nextMissingField === "clientName" &&
-    !lead.clientName &&
-    !updates.clientName &&
-    !updates.phone &&
-    !updates.email &&
-    !updates.productType &&
-    !updates.quantity &&
-    !updates.color &&
-    !updates.printPositions?.length &&
-    !updates.printSizes?.length &&
-    looksLikeStandaloneName(message)
-  ) {
-    updates.clientName = titleCase(message);
-  }
-
-  return updates;
-}
-
-function learnProductAliasesFromApprovedLeads(approvedLeads: AssistantApprovedLeadSource[]) {
-  const learnedCounts: Record<AssistantProductType, Record<string, number>> = {
-    "t-shirt": {},
-    polo: {},
-    hoodie: {},
-    cap: {},
-  };
-  const builtInKeys = Object.fromEntries(
-    PRODUCT_PATTERNS.map((product) => [
-      product.canonical,
-      new Set(product.patterns.map(toComparableAliasKey)),
-    ])
-  ) as Record<AssistantProductType, Set<string>>;
-
-  approvedLeads.forEach((source) => {
-    if (source.status && source.status !== "approved") return;
-    const lead = normalizeAssistantLead(source.lead);
-    if (!lead.productType || !source.sessionMessages?.length) return;
-
-    source.sessionMessages.forEach((message) => {
-      const lower = message.toLowerCase();
-      if (!QUANTITY_CONTEXT_RE.test(lower) && !ORDER_CONTEXT_RE.test(lower)) return;
-
-      buildSlidingPhrases(tokenize(message), 3).forEach((phrase) => {
-        const normalizedPhrase = normalizeLearnedAliasPhrase(phrase);
-        const aliasKey = toComparableAliasKey(normalizedPhrase);
-        if (!aliasKey || builtInKeys[lead.productType!].has(aliasKey)) return;
-        if (!candidateLooksLikeProductAlias(lead.productType!, normalizedPhrase)) return;
-        incrementCounter(learnedCounts[lead.productType!], normalizedPhrase);
-      });
-    });
-  });
-
-  const learnedAliases = createEmptyLearnedProductAliases();
-  ASSISTANT_PRODUCT_TYPES.forEach((productType) => {
-    learnedAliases[productType] = Object.entries(learnedCounts[productType])
-      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
-      .slice(0, 12)
-      .map(([alias]) => alias);
-  });
-
-  return learnedAliases;
-}
-
-function getTopCountKey(counts: Record<string, number>) {
-  return Object.entries(counts).sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))[0]?.[0] || null;
-}
-
-function getPrintPatternKey(positions: string[], printSizes: string[]) {
-  return JSON.stringify({
-    positions: dedupeSorted(positions, (value) => value.toLowerCase()),
-    printSizes: dedupeSorted(printSizes, (value) => value.toLowerCase()),
-  });
-}
-
-function learnProductPlaybooksFromApprovedLeads(approvedLeads: AssistantApprovedLeadSource[]) {
-  const playbooks = createEmptyLearnedProductPlaybooks();
-  const colorCounts: Record<AssistantProductType, Record<string, number>> = {
-    "t-shirt": {},
-    polo: {},
-    hoodie: {},
-    cap: {},
-  };
-  const deliveryCounts: Record<AssistantProductType, Record<string, number>> = {
-    "t-shirt": {},
-    polo: {},
-    hoodie: {},
-    cap: {},
-  };
-  const printPatternCounts: Record<AssistantProductType, Record<string, AssistantLearnedPrintPattern>> = {
-    "t-shirt": {},
-    polo: {},
-    hoodie: {},
-    cap: {},
-  };
-
-  approvedLeads.forEach((source) => {
-    if (source.status && source.status !== "approved") return;
-    const lead = normalizeAssistantLead(source.lead);
-    if (!lead.productType) return;
-
-    if (lead.color) {
-      incrementCounter(colorCounts[lead.productType], lead.color);
-    }
-    if (lead.deliveryMethod) {
-      incrementCounter(deliveryCounts[lead.productType], lead.deliveryMethod);
-    }
-    if (lead.printPositions.length) {
-      const key = getPrintPatternKey(lead.printPositions, lead.printSizes);
-      const existing = printPatternCounts[lead.productType][key];
-      if (existing) {
-        existing.count += 1;
-      } else {
-        printPatternCounts[lead.productType][key] = {
-          positions: dedupeSorted(lead.printPositions, (value) => value.toLowerCase()),
-          printSizes: dedupeSorted(lead.printSizes, (value) => value.toLowerCase()),
-          count: 1,
-        };
-      }
-    }
-  });
-
-  ASSISTANT_PRODUCT_TYPES.forEach((productType) => {
-    const topColor = getTopCountKey(colorCounts[productType]);
-    const topDeliveryMethod = getTopCountKey(deliveryCounts[productType]) as AssistantLead["deliveryMethod"];
-    const topPrintPattern =
-      Object.values(printPatternCounts[productType]).sort(
-        (left, right) =>
-          right.count - left.count ||
-          left.positions.join("|").localeCompare(right.positions.join("|")) ||
-          left.printSizes.join("|").localeCompare(right.printSizes.join("|"))
-      )[0] || null;
-
-    playbooks[productType] = {
-      topColor,
-      topDeliveryMethod: topDeliveryMethod || null,
-      topPrintPattern,
-    };
-  });
-
-  return playbooks;
 }
 
 export function createEmptyAssistantLead(): AssistantLead {
   return {
     clientName: null,
+    companyName: null,
     phone: null,
     email: null,
     productType: null,
@@ -1026,6 +146,7 @@ export function createEmptyAssistantLead(): AssistantLead {
     sizeBreakdown: [],
     printPositions: [],
     printSizes: [],
+    printType: null,
     logoReady: null,
     logoPending: false,
     logoAttachment: null,
@@ -1039,22 +160,23 @@ export function normalizeAssistantLead(input: unknown): AssistantLead {
   const source = (input && typeof input === "object" ? input : {}) as LeadLike;
   const lead = createEmptyAssistantLead();
 
-  const clientName = cleanString(source.clientName);
-  lead.clientName = clientName ? titleCase(clientName) : null;
+  lead.clientName = cleanString(source.clientName) ? titleCase(cleanString(source.clientName)) : null;
+  lead.companyName = cleanString(source.companyName) ? titleCase(cleanString(source.companyName)) : null;
   lead.phone = normalizePhone(source.phone);
   lead.email = cleanString(source.email).toLowerCase() || null;
 
   const productType = cleanString(source.productType).toLowerCase();
-  if (productType === "t-shirt" || productType === "polo" || productType === "hoodie" || productType === "cap") {
-    lead.productType = productType;
+  if (ASSISTANT_PRODUCT_TYPES.includes(productType as AssistantProductType)) {
+    lead.productType = productType as AssistantProductType;
   }
 
   lead.quantity = normalizeQuantity(source.quantity);
   lead.color = cleanString(source.color).toLowerCase() || null;
-  lead.sizes = normalizeStringArray(source.sizes, normalizeSize);
+  lead.sizes = normalizeArray(source.sizes, normalizeSize);
   lead.sizeBreakdown = normalizeOrderLines(source.sizeBreakdown);
-  lead.printPositions = normalizeStringArray(source.printPositions, (value) => value.toLowerCase());
-  lead.printSizes = normalizeStringArray(source.printSizes, (value) => value.toLowerCase());
+  lead.printPositions = normalizeArray(source.printPositions, (value) => value.toLowerCase() || null);
+  lead.printSizes = normalizeArray(source.printSizes, (value) => value.toLowerCase() || null);
+  lead.printType = cleanString(source.printType).toLowerCase() || null;
   lead.logoReady = typeof source.logoReady === "boolean" ? source.logoReady : null;
   lead.logoPending = Boolean(source.logoPending);
   lead.logoAttachment = normalizeAssistantAttachment(source.logoAttachment);
@@ -1064,480 +186,386 @@ export function normalizeAssistantLead(input: unknown): AssistantLead {
     lead.deliveryMethod = deliveryMethod;
   }
 
-  lead.deadline = cleanString(source.deadline).toLowerCase() || null;
+  lead.deadline = cleanString(source.deadline) || null;
   lead.notes = cleanString(source.notes) || null;
   return lead;
 }
 
 export function tokenize(text: string) {
-  return Array.from(text.matchAll(WORD_RE)).map((match) => match[0].toLowerCase());
+  return normalizeText(text).split(/\s+/).filter(Boolean);
 }
 
 export function textToVector(text: string) {
-  const counts: Record<string, number> = {};
-  tokenize(text).forEach((token) => incrementCounter(counts, token));
-  return counts;
+  return termFrequency(tokenize(text));
 }
 
-export function cosineSimilarity(left: Record<string, number>, right: Record<string, number>) {
-  const leftKeys = Object.keys(left);
-  const rightKeys = Object.keys(right);
-  if (!leftKeys.length || !rightKeys.length) return 0;
+export { cosineSimilarity, ASSISTANT_PRODUCT_TYPES };
+export type {
+  AssistantApprovedLeadSource,
+  AssistantAttachment,
+  AssistantChatResult,
+  AssistantContextItem,
+  AssistantFeedbackEntry,
+  AssistantIntentSample,
+  AssistantKnowledgeSource,
+  AssistantLearnedPrintPattern,
+  AssistantLead,
+  AssistantMessageRole,
+  AssistantOrderLine,
+  AssistantProductPlaybook,
+  AssistantProductType,
+  AssistantRequiredField,
+  AssistantTrainingSnapshot,
+  AssistantTrainingState,
+  AssistantTurnDebug,
+} from "@/lib/ai/core/types";
 
-  let dot = 0;
-  let leftMagnitude = 0;
-  let rightMagnitude = 0;
-
-  leftKeys.forEach((key) => {
-    const value = left[key] || 0;
-    leftMagnitude += value * value;
-    dot += value * (right[key] || 0);
-  });
-
-  rightKeys.forEach((key) => {
-    const value = right[key] || 0;
-    rightMagnitude += value * value;
-  });
-
-  if (!leftMagnitude || !rightMagnitude) return 0;
-  return dot / (Math.sqrt(leftMagnitude) * Math.sqrt(rightMagnitude));
+function extractPrintSizeUpdates(message: string) {
+  const normalized = normalizeText(message);
+  const printSizes = unique(
+    PRINT_SIZE_PATTERNS.flatMap((pattern) =>
+      pattern.patterns.some((candidate) => normalized.includes(normalizeText(candidate))) ? [pattern.canonical] : []
+    )
+  ).sort((left, right) => left.localeCompare(right));
+  return printSizes;
 }
 
-export function leadToTrainingText(lead: AssistantLead) {
-  return [
-    lead.productType,
-    lead.quantity ? String(lead.quantity) : "",
-    lead.color,
-    lead.sizes.join(" "),
-    lead.sizeBreakdown.map(formatOrderLine).join(" "),
-    lead.printPositions.join(" "),
-    lead.printSizes.join(" "),
-    lead.deliveryMethod,
-    lead.deadline,
-    lead.notes,
-  ]
-    .filter(Boolean)
-    .join(" ");
+function getComboPrintUpdates(message: string) {
+  const normalized = normalizeText(message);
+  if (normalized.includes("small front and small back")) {
+    return {
+      printPositions: ["back", "front center"],
+      printSizes: ["small 9x9"],
+    };
+  }
+  if (normalized.includes("small front and large back")) {
+    return {
+      printPositions: ["back", "front center"],
+      printSizes: ["large 22x22", "small 9x9"],
+    };
+  }
+  if (normalized.includes("large front and large back")) {
+    return {
+      printPositions: ["back", "front center"],
+      printSizes: ["large 22x22"],
+    };
+  }
+  return null;
+}
+
+function extractLogoState(message: string) {
+  const normalized = normalizeText(message);
+  if (
+    normalized.includes("logo pending upload later") ||
+    normalized.includes("logo pending") ||
+    normalized.includes("upload logo later")
+  ) {
+    return { logoReady: true, logoPending: true };
+  }
+  if (normalized.includes("logo ready") || normalized.includes("logo attached") || normalized.includes("uploaded logo")) {
+    return { logoReady: true, logoPending: false };
+  }
+  if (
+    normalized.includes("no logo") ||
+    normalized.includes("logo not ready") ||
+    normalized.includes("logo later")
+  ) {
+    return { logoReady: false, logoPending: false };
+  }
+  return null;
+}
+
+function buildLeadUpdatesFromExtraction(
+  currentLead: AssistantLead,
+  message: string,
+  attachment: AssistantAttachment | null,
+  trainingState: AssistantTrainingState,
+  explicitExtraction = false
+) {
+  const entities = extractEntities(message, {
+    lead: currentLead,
+    aliasMap: trainingState.aliasMap,
+  });
+
+  const updates: Partial<AssistantLead> = {};
+
+  if (entities.fields.product) updates.productType = entities.fields.product.canonicalValue as AssistantProductType;
+  if (entities.fields.quantity) updates.quantity = Number(entities.fields.quantity.canonicalValue);
+  if (entities.fields.color) updates.color = String(entities.fields.color.canonicalValue);
+  if (entities.fields.sizes) updates.sizes = entities.fields.sizes.canonicalValue as string[];
+  if (entities.fields.print_position) {
+    updates.printPositions = unique(
+      (entities.fields.print_position.canonicalValue as string[]).map((value) => value.toLowerCase())
+    ).sort((left, right) => left.localeCompare(right));
+  }
+  if (entities.fields.print_type) updates.printType = String(entities.fields.print_type.canonicalValue).toLowerCase();
+  if (entities.fields.deadline) updates.deadline = String(entities.fields.deadline.value);
+  if (entities.fields.phone) updates.phone = String(entities.fields.phone.canonicalValue);
+  if (entities.fields.email) updates.email = String(entities.fields.email.canonicalValue);
+  if (entities.fields.company_name) updates.companyName = String(entities.fields.company_name.canonicalValue);
+  if (entities.fields.customer_name) updates.clientName = String(entities.fields.customer_name.canonicalValue);
+
+  if (entities.sizeBreakdown.length) {
+    updates.sizeBreakdown = entities.sizeBreakdown;
+    updates.sizes = unique(entities.sizeBreakdown.map((line) => line.size)).sort((left, right) => left.localeCompare(right));
+    updates.quantity = entities.sizeBreakdown.reduce((total, line) => total + line.quantity, 0);
+    if (!updates.productType && unique(entities.sizeBreakdown.map((line) => line.productType).filter(Boolean)).length === 1) {
+      updates.productType = entities.sizeBreakdown[0].productType;
+    }
+    if (!updates.color && unique(entities.sizeBreakdown.map((line) => line.color).filter(Boolean)).length === 1) {
+      updates.color = entities.sizeBreakdown[0].color;
+    }
+  }
+
+  const comboUpdates = getComboPrintUpdates(message);
+  if (comboUpdates) {
+    updates.printPositions = comboUpdates.printPositions;
+    updates.printSizes = comboUpdates.printSizes;
+  } else {
+    const printSizes = extractPrintSizeUpdates(message);
+    if (printSizes.length) {
+      updates.printSizes = printSizes;
+    }
+  }
+
+  const logoState = extractLogoState(message);
+  if (logoState) {
+    updates.logoReady = logoState.logoReady;
+    updates.logoPending = logoState.logoPending;
+  }
+
+  if (attachment) {
+    updates.logoAttachment = attachment;
+    updates.logoReady = true;
+    updates.logoPending = false;
+  }
+
+  if (explicitExtraction) {
+    return updates;
+  }
+
+  return { updates, entities };
 }
 
 export function extractLeadUpdates(
   message: string,
-  trainingState?: Pick<AssistantTrainingState, "learnedProductAliases"> | null
+  trainingState?: Pick<AssistantTrainingState, "aliasMap"> | null
 ): Partial<AssistantLead> {
-  const updates: Partial<AssistantLead> = {};
-  const lower = message.toLowerCase();
-  const normalized = normalizeWords(message);
-  const orderLines = extractOrderLines(message, trainingState);
-
-  const productType = detectProductType(message, trainingState);
-  if (productType) {
-    updates.productType = productType;
-  }
-
-  const phoneMatch = PHONE_RE.exec(message);
-  if (phoneMatch) {
-    updates.phone = phoneMatch[1];
-  }
-
-  const requestedQuantity = extractRequestedQuantity(message);
-  if (requestedQuantity !== undefined) {
-    updates.quantity = requestedQuantity;
-  }
-
-  const foundColor = Array.from(COLORS).find((color) => hasPattern(normalized, color));
-  if (foundColor) {
-    updates.color = foundColor;
-  }
-
-  const foundSizes = tokenize(lower)
-    .filter((token) => SIZE_TOKENS.has(token))
-    .map(normalizeSize);
-  if (foundSizes.length) {
-    updates.sizes = dedupeSorted(foundSizes);
-  }
-  if (orderLines.length) {
-    updates.sizeBreakdown = orderLines;
-    updates.sizes = dedupeSorted([
-      ...(updates.sizes || []),
-      ...orderLines.map((line) => line.size),
-    ]);
-    const total = getOrderLineTotal(orderLines);
-    if (total > 0) {
-      updates.quantity = total;
-    }
-    const lineProducts = Array.from(new Set(orderLines.map((line) => line.productType).filter(Boolean)));
-    if (lineProducts.length === 1) {
-      updates.productType = lineProducts[0] as AssistantProductType;
-    }
-    const lineColors = Array.from(new Set(orderLines.map((line) => line.color).filter(Boolean)));
-    if (lineColors.length === 1) {
-      updates.color = lineColors[0] as string;
-    }
-  }
-
-  const printPositions = new Set<string>();
-  if (LEFT_CHEST_PATTERNS.some((pattern) => hasPattern(normalized, pattern))) {
-    printPositions.add("front left chest");
-  }
-  if (BACK_PATTERNS.some((pattern) => hasPattern(normalized, pattern))) {
-    printPositions.add("back");
-  }
-  if (SLEEVE_PATTERNS.some((pattern) => hasPattern(normalized, pattern))) {
-    printPositions.add("sleeve");
-  }
-  const hasFrontCenter = FRONT_CENTER_PATTERNS.some((pattern) => hasPattern(normalized, pattern));
-  if (hasFrontCenter || (hasPattern(normalized, "front") && !printPositions.has("front left chest"))) {
-    printPositions.add("front center");
-  }
-  if (printPositions.size) {
-    updates.printPositions = Array.from(printPositions).sort((left, right) => left.localeCompare(right));
-  }
-
-  const printSizes = PRINT_SIZE_PATTERNS
-    .filter((pattern) => pattern.patterns.some((candidate) => hasPattern(normalized, candidate)))
-    .map((pattern) => pattern.canonical);
-  if (printSizes.length) {
-    updates.printSizes = dedupeSorted(printSizes);
-  }
-
-  for (const delivery of DELIVERY_PATTERNS) {
-    if (delivery.patterns.some((pattern) => hasPattern(normalized, pattern))) {
-      updates.deliveryMethod = delivery.canonical;
-      break;
-    }
-  }
-
-  if (
-    lower.includes("logo ready") ||
-    lower.includes("i have logo") ||
-    lower.includes("logo is ready")
-  ) {
-    updates.logoReady = true;
-    updates.logoPending = false;
-  } else if (
-    lower.includes("no logo") ||
-    lower.includes("logo not ready") ||
-    lower.includes("i don't have logo") ||
-    lower.includes("i do not have logo") ||
-    lower.includes("logo later")
-  ) {
-    updates.logoReady = false;
-    updates.logoPending = false;
-  }
-
-  if (
-    lower.includes("logo pending upload later") ||
-    lower.includes("logo pending") ||
-    lower.includes("upload logo later") ||
-    lower.includes("attach logo later")
-  ) {
-    updates.logoReady = true;
-    updates.logoPending = true;
-  }
-
-  const emailMatch = EMAIL_RE.exec(message);
-  if (emailMatch) {
-    updates.email = emailMatch[0].toLowerCase();
-  }
-
-  const nameMatch = NAME_RE.exec(message);
-  if (nameMatch) {
-    updates.clientName = titleCase(nameMatch[1]);
-  }
-
-  const deadlineMatch = DEADLINE_RE.exec(lower);
-  if (deadlineMatch) {
-    updates.deadline = deadlineMatch[1].toLowerCase();
-  } else {
-    const absoluteDeadlineMatch = ABSOLUTE_DATE_RE.exec(message);
-    if (absoluteDeadlineMatch) {
-      updates.deadline = absoluteDeadlineMatch[0].toLowerCase();
-    }
-  }
-
-  if (NOTE_RE.test(message)) {
-    updates.notes = message.trim();
-  }
-
-  return updates;
+  const base = getBaseTrainingState();
+  return buildLeadUpdatesFromExtraction(
+    createEmptyAssistantLead(),
+    message,
+    null,
+    {
+      ...base,
+      aliasMap: trainingState?.aliasMap || base.aliasMap,
+    },
+    true
+  ) as Partial<AssistantLead>;
 }
 
 export function mergeAssistantLeadUpdates(lead: AssistantLead, updates: Partial<AssistantLead>) {
   const merged = normalizeAssistantLead(lead);
 
+  if (updates.clientName !== undefined) merged.clientName = updates.clientName ? titleCase(updates.clientName) : null;
+  if (updates.companyName !== undefined) merged.companyName = updates.companyName ? titleCase(updates.companyName) : null;
+  if (updates.phone !== undefined) merged.phone = updates.phone ? normalizePhone(updates.phone) : null;
+  if (updates.email !== undefined) merged.email = updates.email ? cleanString(updates.email).toLowerCase() : null;
+  if (updates.productType !== undefined) merged.productType = updates.productType || null;
+  if (updates.quantity !== undefined) merged.quantity = normalizeQuantity(updates.quantity);
+  if (updates.color !== undefined) merged.color = updates.color ? cleanString(updates.color).toLowerCase() : null;
+  if (updates.printType !== undefined) merged.printType = updates.printType ? cleanString(updates.printType).toLowerCase() : null;
+  if (updates.deadline !== undefined) merged.deadline = updates.deadline ? cleanString(updates.deadline) : null;
+  if (updates.deliveryMethod !== undefined) merged.deliveryMethod = updates.deliveryMethod || null;
+  if (updates.notes !== undefined) merged.notes = updates.notes ? cleanString(updates.notes) : null;
+
   if (updates.sizes) {
-    merged.sizes = dedupeSorted([...merged.sizes, ...updates.sizes], normalizeSize);
+    merged.sizes = unique(updates.sizes.map((size) => normalizeSize(size) || size)).sort((left, right) => left.localeCompare(right));
   }
+
   if (updates.sizeBreakdown) {
-    merged.sizeBreakdown = mergeOrderLines(
-      updates.sizeBreakdown.map((line) => ({
-        ...line,
-        color: line.color || merged.color,
-        productType: line.productType || merged.productType,
-      }))
-    );
-    merged.sizes = dedupeSorted(
-      [
-        ...(updates.sizes || []),
-        ...merged.sizeBreakdown.map((line) => line.size),
-      ],
-      normalizeSize
-    );
-
-    const lineProducts = Array.from(
-      new Set(merged.sizeBreakdown.map((line) => line.productType).filter(Boolean))
-    ) as AssistantProductType[];
-    if (lineProducts.length === 1) {
-      merged.productType = lineProducts[0];
-    }
-
-    const lineColors = Array.from(
-      new Set(merged.sizeBreakdown.map((line) => line.color).filter(Boolean))
-    ) as string[];
-    if (lineColors.length === 1) {
-      merged.color = lineColors[0];
-    }
-
-    const lineTotal = getOrderLineTotal(merged.sizeBreakdown);
-    if (lineTotal > 0) {
-      merged.quantity = lineTotal;
-    }
+    merged.sizeBreakdown = normalizeOrderLines(updates.sizeBreakdown);
+    merged.sizes = unique(merged.sizeBreakdown.map((line) => line.size)).sort((left, right) => left.localeCompare(right));
+    const total = merged.sizeBreakdown.reduce((sum, line) => sum + line.quantity, 0);
+    if (total > 0) merged.quantity = total;
   }
+
   if (updates.printPositions) {
-    merged.printPositions = dedupeSorted([...merged.printPositions, ...updates.printPositions], (value) =>
-      value.toLowerCase()
+    merged.printPositions = unique(updates.printPositions.map((value) => value.toLowerCase())).sort((left, right) =>
+      left.localeCompare(right)
     );
   }
+
   if (updates.printSizes) {
-    merged.printSizes = dedupeSorted([...merged.printSizes, ...updates.printSizes], (value) => value.toLowerCase());
+    merged.printSizes = unique(updates.printSizes.map((value) => value.toLowerCase())).sort((left, right) =>
+      left.localeCompare(right)
+    );
   }
 
-  if (updates.clientName !== undefined) merged.clientName = updates.clientName;
-  if (updates.phone !== undefined) merged.phone = updates.phone;
-  if (updates.email !== undefined) merged.email = updates.email;
-  if (updates.productType !== undefined) merged.productType = updates.productType;
-  if (updates.quantity !== undefined && !updates.sizeBreakdown) merged.quantity = updates.quantity;
-  if (updates.color !== undefined) merged.color = updates.color;
   if (updates.logoReady !== undefined) merged.logoReady = updates.logoReady;
   if (updates.logoPending !== undefined) merged.logoPending = updates.logoPending;
-  if (updates.logoAttachment !== undefined) merged.logoAttachment = updates.logoAttachment;
-  if (updates.logoAttachment) {
-    merged.logoPending = false;
-    merged.logoReady = true;
-  }
-  if (updates.deliveryMethod !== undefined) merged.deliveryMethod = updates.deliveryMethod;
-  if (updates.deadline !== undefined) merged.deadline = updates.deadline;
-  if (updates.notes !== undefined) merged.notes = updates.notes;
+  if (updates.logoAttachment !== undefined) merged.logoAttachment = normalizeAssistantAttachment(updates.logoAttachment);
 
-  return normalizeAssistantLead(merged);
+  if (merged.logoAttachment) {
+    merged.logoReady = true;
+    merged.logoPending = false;
+  }
+
+  if (!merged.color && merged.sizeBreakdown.length) {
+    const colors = unique(merged.sizeBreakdown.map((line) => line.color).filter(Boolean) as string[]);
+    if (colors.length === 1) merged.color = colors[0];
+  }
+
+  if (!merged.productType && merged.sizeBreakdown.length) {
+    const products = unique(merged.sizeBreakdown.map((line) => line.productType).filter(Boolean) as AssistantProductType[]);
+    if (products.length === 1) merged.productType = products[0];
+  }
+
+  return merged;
 }
 
 export function missingAssistantFields(lead: AssistantLead) {
-  return ASSISTANT_REQUIRED_FIELDS.filter((field) => {
-    if (field === "sizeBreakdown") {
-      if (!lead.sizeBreakdown.length) return true;
-      if (lead.quantity && getOrderLineTotal(lead.sizeBreakdown) !== lead.quantity) return true;
-      return false;
-    }
-    const value = lead[field];
-    if (Array.isArray(value)) return value.length === 0;
-    return value === null || value === "";
-  });
+  const normalized = normalizeAssistantLead(lead);
+  const missing: AssistantRequiredField[] = [];
+  if (!normalized.productType) missing.push("productType");
+  if (!normalized.quantity) missing.push("quantity");
+  if (!normalized.printPositions.length) missing.push("printPositions");
+  if (!normalized.sizeBreakdown.length) missing.push("sizeBreakdown");
+  if (!normalized.clientName) missing.push("clientName");
+  if (!normalized.email) missing.push("email");
+  if (!normalized.phone) missing.push("phone");
+  if (!normalized.deadline) missing.push("deadline");
+  return missing;
 }
 
 export function assistantReadyToSubmit(lead: AssistantLead) {
   return missingAssistantFields(lead).length === 0;
 }
 
-export function formatAssistantFieldLabel(field: AssistantRequiredField) {
-  return FIELD_LABELS[field];
+export function leadToTrainingText(lead: AssistantLead) {
+  return formatLeadSummary(lead);
 }
 
-function buildFollowUpContactMessage(lead: AssistantLead) {
-  if (!lead.phone) return "";
-  return ` We will use ${lead.phone} to contact you back.`;
+function mapRetrievalMatchesToContext(matches: ReturnType<typeof retrieveTopMatches>): AssistantContextItem[] {
+  return matches.map((match) => ({
+    source:
+      match.kind === "past_lead"
+        ? "lead"
+        : match.kind === "approved_summary"
+          ? "lead"
+          : match.kind === "assistant_reply"
+            ? "reply"
+            : match.kind === "alias"
+              ? "alias"
+              : "faq",
+    text: match.answer || match.text,
+    score: match.score,
+    explanation: match.explanation,
+  }));
 }
 
-function formatReadableList(values: string[]) {
-  const cleaned = values.map((value) => titleCase(value)).filter(Boolean);
-  if (!cleaned.length) return "";
-  if (cleaned.length === 1) return cleaned[0];
-  if (cleaned.length === 2) return `${cleaned[0]} and ${cleaned[1]}`;
-  return `${cleaned.slice(0, -1).join(", ")}, and ${cleaned.at(-1)}`;
-}
-
-function formatLearnedPrintPattern(pattern: AssistantLearnedPrintPattern) {
-  const positions = formatReadableList(pattern.positions);
-  if (!pattern.printSizes.length) return positions;
-  return `${positions} with ${formatReadableList(pattern.printSizes)}`;
-}
-
-function learnedPrintPatternMatchesLead(lead: AssistantLead, pattern: AssistantLearnedPrintPattern) {
-  return (
-    getPrintPatternKey(lead.printPositions, []) === getPrintPatternKey(pattern.positions, []) ||
-    dedupeSorted(lead.printPositions, (value) => value.toLowerCase()).join("|") ===
-      dedupeSorted(pattern.positions, (value) => value.toLowerCase()).join("|")
-  );
-}
-
-function shouldPromptForLogoUpload(lead: AssistantLead, missingFields: AssistantRequiredField[]) {
-  return !missingFields.includes("sizeBreakdown") && !lead.logoAttachment && !lead.logoPending && lead.logoReady !== false;
-}
-
-export function nextAssistantQuestion(lead: AssistantLead, trainingState?: AssistantTrainingState | null) {
-  const missing = missingAssistantFields(lead);
-  const playbook = lead.productType ? trainingState?.learnedProductPlaybooks?.[lead.productType] : null;
-  if (shouldPromptForLogoUpload(lead, missing)) {
-    return (
-      "If the design or logo is ready, upload it as PNG, JPG, PDF, or AI. " +
-      "As soon as it is attached, I will collect your name, email address, WhatsApp number, and deadline."
-    );
-  }
-
-  if (!missing.length) {
-    if (lead.logoAttachment) {
-      return `Perfect. I have the main order details and the logo file.${buildFollowUpContactMessage(
-        lead
-      )} Type "summary" to review the lead or use "Send to Quotation Approval" in admin.`;
-    }
-    if (lead.logoPending) {
-      return `Perfect. I have the main order details, and the logo is marked as pending upload.${buildFollowUpContactMessage(
-        lead
-      )} Type "summary" to review the lead or use "Send to Quotation Approval" in admin.`;
-    }
-    return `Perfect. I have the main order details.${buildFollowUpContactMessage(
-      lead
-    )} If the design or logo is ready, upload it as PNG, JPG, PDF, or AI. Type "summary" to review the lead or use "Send to Quotation Approval" in admin.`;
-  }
-
-  const prompts: Record<AssistantRequiredField, string> = {
-    productType: "What do you want: T-shirt, polo, hoodie, or cap?",
-    quantity: "How many pieces do you need?",
-    printPositions:
-      "Where do you want the print: front left chest, front center, back, sleeve, small front and small back, small front and large back, or large front and large back?",
-    sizeBreakdown: buildSizeBreakdownPrompt(lead),
-    clientName: "What is your name?",
-    email: "What is your email address so we can reply to you later?",
-    phone: "What is your WhatsApp number so we can reply to you later?",
-    deadline: "What is your deadline?",
-  };
-
-  if (missing[0] === "printPositions" && playbook?.topPrintPattern?.positions.length) {
-    return `${prompts.printPositions} Most approved ${formatProductTypeLabel(lead.productType)} jobs use ${formatLearnedPrintPattern(
-      playbook.topPrintPattern
-    )}.`;
-  }
-
-  if (missing[0] === "sizeBreakdown") {
-    return `${prompts.sizeBreakdown}\n\nYou can also answer naturally, for example: 2 XL and 1 M.`;
-  }
-
-  return prompts[missing[0]];
-}
-
-export function buildAssistantSuggestions(
-  lead: AssistantLead,
-  message: string,
-  trainingState?: AssistantTrainingState | null
-) {
+function buildSuggestions(lead: AssistantLead, trainingState: AssistantTrainingState) {
   const suggestions: string[] = [];
-  const playbook = lead.productType ? trainingState?.learnedProductPlaybooks?.[lead.productType] : null;
-  if ((lead.productType === "polo" || lead.productType === "t-shirt") && !lead.printSizes.length) {
-    suggestions.push("You can choose small 9x9 for a chest logo or large 22x22 for a big print.");
-  }
-  if (lead.logoReady === false) {
-    suggestions.push("If the logo is not ready yet, you can still send the text, colors, and style you want.");
-  }
-  if (lead.logoPending) {
-    suggestions.push("The logo is marked as pending upload, so you can continue the quote and attach the file later.");
-  }
-  if (/\brestaurant\b|\bcompany\b/i.test(message)) {
-    suggestions.push("For company uniforms, front left chest plus a large back print is a common setup.");
-  }
-  if (!lead.printPositions.length && playbook?.topPrintPattern?.positions.length) {
+  if (!lead.productType) return suggestions;
+
+  const playbook = trainingState.learnedProductPlaybooks[lead.productType];
+  if (playbook?.topPrintPattern && !lead.printPositions.length) {
     suggestions.push(
-      `Learned from approved ${formatProductTypeLabel(lead.productType)} jobs: ${formatLearnedPrintPattern(
-        playbook.topPrintPattern
-      )}.`
+      `Most approved ${titleCase(lead.productType)} jobs use ${playbook.topPrintPattern.positions
+        .map(titleCase)
+        .join(" and ")} with ${playbook.topPrintPattern.printSizes.map(titleCase).join(" and ")}.`
     );
   }
-  if (lead.printPositions.length && !lead.printSizes.length && playbook?.topPrintPattern?.printSizes.length) {
-    if (learnedPrintPatternMatchesLead(lead, playbook.topPrintPattern)) {
-      suggestions.push(
-        `For this layout, approved ${formatProductTypeLabel(lead.productType)} jobs usually use ${formatReadableList(
-          playbook.topPrintPattern.printSizes
-        )}.`
-      );
-    }
-  }
-  if (!lead.deliveryMethod && playbook?.topDeliveryMethod) {
+
+  if (
+    playbook?.topPrintPattern &&
+    lead.printPositions.length &&
+    unique(lead.printPositions).sort().join("|") === playbook.topPrintPattern.positions.slice().sort().join("|") &&
+    !lead.printSizes.length &&
+    playbook.topPrintPattern.printSizes.length
+  ) {
     suggestions.push(
-      `Most approved ${formatProductTypeLabel(lead.productType)} jobs use ${titleCase(playbook.topDeliveryMethod)}.`
+      `Approved ${titleCase(lead.productType)} jobs usually use ${playbook.topPrintPattern.printSizes
+        .map(titleCase)
+        .join(" and ")} for this layout.`
     );
   }
-  if (lead.productType && lead.logoReady !== false && !lead.logoAttachment) {
-    suggestions.push("If the design or logo is ready, upload it as PNG, JPG, PDF, or AI.");
+
+  if (playbook?.topColor && !lead.color) {
+    suggestions.push(`Most approved ${titleCase(lead.productType)} jobs use ${titleCase(playbook.topColor)}.`);
   }
-  return suggestions.slice(0, 3);
-}
 
-export function formatLeadSummary(lead: AssistantLead) {
-  const rows: Array<[string, string | null]> = [
-    ["Name", lead.clientName],
-    ["Phone", lead.phone],
-    ["Email", lead.email],
-    ["Product", lead.productType],
-    ["Quantity", lead.quantity ? String(lead.quantity) : null],
-    ["Color", lead.color],
-    ["Sizes", lead.sizes.join(", ") || null],
-    ["Size breakdown", lead.sizeBreakdown.map(formatOrderLine).join(" | ") || null],
-    ["Print positions", lead.printPositions.join(", ") || null],
-    ["Print sizes", lead.printSizes.join(", ") || null],
-    ["Logo ready", lead.logoReady === null ? null : lead.logoReady ? "Yes" : "No"],
-    ["Logo pending", lead.logoPending ? "Yes" : null],
-    ["Logo file", lead.logoAttachment?.name || null],
-    ["Delivery", lead.deliveryMethod],
-    ["Deadline", lead.deadline],
-    ["Notes", lead.notes],
-  ];
-
-  return ["Lead summary:", ...rows.filter(([, value]) => value).map(([label, value]) => `- ${label}: ${value}`)].join("\n");
+  return suggestions;
 }
 
 export function retrieveAssistantContext(
   message: string,
-  approvedLeads: AssistantApprovedLeadSource[],
-  knowledgeItems: AssistantKnowledgeSource[]
+  approvedLeads: AssistantApprovedLeadSource[] = [],
+  knowledgeItems: AssistantKnowledgeSource[] = [],
+  trainingState?: AssistantTrainingState | null
 ) {
-  const queryVector = textToVector(message);
-  const related: AssistantContextItem[] = [];
+  const state =
+    trainingState ||
+    buildLocalTrainingState({
+      baseSamples: BASE_SAMPLES,
+      baseFaq: BASE_FAQ,
+      baseAliases: BASE_ALIASES,
+      approvedLeads,
+      knowledgeItems,
+      updatedAt: null,
+    });
 
-  approvedLeads.forEach((item) => {
-    if (item.status && item.status !== "approved") return;
-    const text = leadToTrainingText(normalizeAssistantLead(item.lead));
-    const score = cosineSimilarity(queryVector, textToVector(text));
-    if (score > 0.15) {
-      related.push({
-        source: "lead",
-        score,
-        text: `Past approved pattern: ${text}`,
-      });
-    }
+  return mapRetrievalMatchesToContext(
+    retrieveTopMatches({
+      query: message,
+      documents: state.retrievalDocuments,
+      index: state.retrievalIndex,
+      topK: 5,
+      threshold: state.retrievalIndexMetadata.threshold,
+    })
+  );
+}
+
+export function buildAssistantTrainingState(
+  approvedLeads: AssistantApprovedLeadSource[] = [],
+  knowledgeItems: AssistantKnowledgeSource[] = [],
+  feedbackEntries: AssistantFeedbackEntry[] = [],
+  updatedAt: string | null = null
+): AssistantTrainingState {
+  return buildLocalTrainingState({
+    baseSamples: BASE_SAMPLES,
+    baseFaq: BASE_FAQ,
+    baseAliases: BASE_ALIASES,
+    approvedLeads,
+    knowledgeItems,
+    feedbackEntries,
+    updatedAt,
   });
+}
 
-  knowledgeItems.forEach((item) => {
-    const text = [item.title, item.content].filter(Boolean).join(" ").trim();
-    const score = cosineSimilarity(queryVector, textToVector(text));
-    if (score > 0.15) {
-      related.push({
-        source: "knowledge",
-        score,
-        text: `Business knowledge: ${text}`,
-      });
-    }
-  });
+function mergeTrainingState(
+  trainingState: AssistantTrainingState | null | undefined,
+  approvedLeads: AssistantApprovedLeadSource[] = [],
+  knowledgeItems: AssistantKnowledgeSource[] = [],
+  feedbackEntries: AssistantFeedbackEntry[] = []
+) {
+  if (trainingState && !approvedLeads.length && !knowledgeItems.length && !feedbackEntries.length) {
+    return trainingState;
+  }
+  if (!approvedLeads.length && !knowledgeItems.length && !feedbackEntries.length) {
+    return getBaseTrainingState();
+  }
+  return buildAssistantTrainingState(
+    approvedLeads,
+    knowledgeItems,
+    feedbackEntries,
+    trainingState?.updatedAt || null
+  );
+}
 
-  return related.sort((left, right) => right.score - left.score).slice(0, 3);
+function explicitSummaryRequest(message: string) {
+  const normalized = normalizeText(message);
+  return normalized === "summary" || normalized.startsWith("summary ");
 }
 
 export function runAssistantTurn(input: {
@@ -1546,110 +574,89 @@ export function runAssistantTurn(input: {
   attachment?: AssistantAttachment | null;
   approvedLeads?: AssistantApprovedLeadSource[];
   knowledgeItems?: AssistantKnowledgeSource[];
+  feedbackEntries?: AssistantFeedbackEntry[];
   trainingState?: AssistantTrainingState | null;
 }): AssistantChatResult {
-  const updates = inferContextualLeadUpdates(
-    input.lead,
-    input.message,
-    extractLeadUpdates(input.message, input.trainingState)
-  );
+  const currentLead = normalizeAssistantLead(input.lead);
   const attachment = normalizeAssistantAttachment(input.attachment);
-  const lead = mergeAssistantLeadUpdates(input.lead, {
-    ...updates,
-    ...(attachment
-      ? {
-          logoReady: true,
-          logoAttachment: attachment,
-        }
-      : {}),
-  });
-  const relatedContext = retrieveAssistantContext(
-    input.message,
-    input.approvedLeads || [],
-    input.knowledgeItems || []
+  const message = cleanString(input.message);
+  const trainingState = mergeTrainingState(
+    input.trainingState,
+    input.approvedLeads,
+    input.knowledgeItems,
+    input.feedbackEntries
   );
-  const missingFields = missingAssistantFields(lead);
-  const readyToSubmit = missingFields.length === 0;
-  const normalizedMessage = input.message.trim().toLowerCase();
-  const receivedAttachment = Boolean(attachment);
-  const replacingAttachment = Boolean(input.lead.logoAttachment && attachment);
+  const summaryRequested = explicitSummaryRequest(message);
+  const intent = predictIntent(trainingState.intentModel, message || attachment?.name || "");
+  const extractionResult = buildLeadUpdatesFromExtraction(currentLead, message, attachment, trainingState) as {
+    updates: Partial<AssistantLead>;
+    entities: ReturnType<typeof extractEntities>;
+  };
+  const nextLead = mergeAssistantLeadUpdates(currentLead, extractionResult.updates);
+  const missingFields = missingAssistantFields(nextLead);
+  const retrievalMatches = retrieveTopMatches({
+    query: `${message} ${formatLeadSummary(nextLead)}`.trim(),
+    documents: trainingState.retrievalDocuments,
+    index: trainingState.retrievalIndex,
+    topK: 5,
+    threshold: trainingState.retrievalIndexMetadata.threshold,
+  });
+  const decision = decideNextAction({
+    intent,
+    lead: nextLead,
+    missingFields,
+    retrievalMatches,
+    hasEntityConflict: extractionResult.entities.conflicts.length > 0,
+    explicitSummaryRequest: summaryRequested,
+  });
+  const suggestions = buildSuggestions(nextLead, trainingState);
+  let reply = generateAssistantReply({
+    lead: nextLead,
+    decision,
+    missingFields,
+    retrievalMatches,
+    conflicts: extractionResult.entities.conflicts.map((conflict) => ({
+      field: conflict.field,
+      values: conflict.values,
+      explanation: conflict.explanation,
+    })),
+    explicitSummaryRequest: summaryRequested,
+    attachmentReceived: Boolean(attachment),
+    logoPendingAcknowledged: Boolean(extractionResult.updates.logoPending),
+  });
 
-  let reply = "";
-  if (normalizedMessage === "summary" || normalizedMessage === "show summary" || normalizedMessage === "show lead") {
-    reply = formatLeadSummary(lead);
-  } else if (normalizedMessage === "submit") {
-    if (readyToSubmit) {
-      reply = `${formatLeadSummary(lead)}\n\nThis lead is ready. Use "Send to Quotation Approval" in admin to save it.`;
-    } else {
-      const labels = missingFields.map(formatAssistantFieldLabel).join(", ");
-      reply = `I still need these details before submission: ${labels}. ${nextAssistantQuestion(lead, input.trainingState)}`;
-    }
-  } else {
-    const intro = relatedContext.length ? "I found similar past information that may help. " : "";
-    const attachmentAck = receivedAttachment
-      ? `${replacingAttachment ? "Logo updated" : "Logo received"} and attached to your request. `
-      : "";
-    const pendingLogoAck = updates.logoPending ? "Logo noted. The file is pending upload for now. " : "";
-    reply = `${intro}${attachmentAck}${pendingLogoAck}${nextAssistantQuestion(lead, input.trainingState)}`;
+  if (
+    missingFields[0] === "printPositions" &&
+    suggestions[0] &&
+    !reply.includes(suggestions[0])
+  ) {
+    reply = `${suggestions[0]}\n\n${reply}`;
   }
+
+  const debug = buildAssistantTurnDebug({
+    intent,
+    entities: extractionResult.entities,
+    missingFields,
+    retrievalMatches,
+    decision,
+  });
 
   return {
     reply,
-    lead,
-    updates,
+    lead: nextLead,
+    updates: extractionResult.updates,
     missingFields,
-    readyToSubmit,
-    suggestions: buildAssistantSuggestions(lead, input.message, input.trainingState),
-    relatedContext,
+    readyToSubmit: assistantReadyToSubmit(nextLead),
+    suggestions,
+    relatedContext: mapRetrievalMatchesToContext(retrievalMatches),
+    debug,
   };
 }
 
-export function buildAssistantTrainingState(
-  approvedLeads: AssistantApprovedLeadSource[],
-  knowledgeItems: AssistantKnowledgeSource[]
-): AssistantTrainingState {
-  const positiveKeywords: Record<string, number> = {};
-  const fieldKeywordCounts: Record<string, Record<string, number>> = {};
-  const learnedProductAliases = learnProductAliasesFromApprovedLeads(approvedLeads);
-  const learnedProductPlaybooks = learnProductPlaybooksFromApprovedLeads(approvedLeads);
-
-  approvedLeads.forEach((source) => {
-    if (source.status && source.status !== "approved") return;
-    const lead = normalizeAssistantLead(source.lead);
-    const tokens = tokenize(leadToTrainingText(lead));
-    tokens.forEach((token) => incrementCounter(positiveKeywords, token));
-
-    (["productType", "deliveryMethod", "color"] as const).forEach((field) => {
-      if (!lead[field]) return;
-      fieldKeywordCounts[field] = fieldKeywordCounts[field] || {};
-      tokens.forEach((token) => incrementCounter(fieldKeywordCounts[field], token));
-    });
-  });
-
-  knowledgeItems.forEach((item) => {
-    tokenize([item.title, item.content].filter(Boolean).join(" ")).forEach((token) =>
-      incrementCounter(positiveKeywords, token)
-    );
-  });
-
-  const topKeywords = Object.entries(positiveKeywords)
-    .sort((left, right) => right[1] - left[1])
-    .slice(0, 10)
-    .map(([keyword, count]) => ({ keyword, count }));
-
-  return {
-    positiveKeywords,
-    fieldKeywordCounts,
-    positiveKeywordCount: Object.keys(positiveKeywords).length,
-    fieldGroups: Object.keys(fieldKeywordCounts),
-    approvedLeadCount: approvedLeads.filter((item) => !item.status || item.status === "approved").length,
-    knowledgeCount: knowledgeItems.length,
-    topKeywords,
-    learnedProductAliases,
-    learnedProductAliasCount: Object.values(learnedProductAliases).reduce(
-      (total, aliases) => total + aliases.length,
-      0
-    ),
-    learnedProductPlaybooks,
-  };
-}
+export {
+  ASSISTANT_REQUIRED_FIELDS,
+  createEmptyLearnedProductAliases,
+  createEmptyLearnedProductPlaybooks,
+  formatAssistantFieldLabel,
+  formatLeadSummary,
+};

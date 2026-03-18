@@ -1,0 +1,6 @@
+{
+  "t-shirt": ["tshirt", "tshirts", "t shirt", "t shirts", "tee", "tees", "crewtee", "crewtees"],
+  "polo": ["polo", "polos", "polo shirt", "polo shirts", "poloshirt", "poloshirts"],
+  "hoodie": ["hoodie", "hoodies"],
+  "cap": ["cap", "caps", "hat", "hats"]
+}
