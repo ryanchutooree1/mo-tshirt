@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { doc, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import {
   Fragment,
@@ -35,7 +36,7 @@ import {
   type AssistantContextItem,
   type AssistantTrainingSnapshot,
 } from "@/lib/ai-assistant";
-import { storage } from "@/lib/firebase";
+import { db, storage } from "@/lib/firebase";
 import type {
   AssistantChatPayload,
   AssistantKnowledgeRecord,
@@ -48,6 +49,7 @@ import type {
 
 const LOGO_UPLOAD_ACCEPT = ".png,.jpg,.jpeg,.pdf,.ai,.eps,.svg";
 const MAX_LOGO_UPLOAD_BYTES = 10 * 1024 * 1024;
+const FALLBACK_UPLOAD_CHUNK_SIZE = 700_000;
 
 function generateSessionId() {
   return `admin-test-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -101,6 +103,31 @@ function getFriendlyLogoUploadError(error: unknown) {
     return "Firebase Storage quota is exceeded, so the logo file could not be uploaded.";
   }
   return error instanceof Error ? error.message : "Failed to upload logo.";
+}
+
+function buildFallbackUploadUrl(uploadId: string) {
+  return `/api/admin/ai-assistant/uploads/${encodeURIComponent(uploadId)}`;
+}
+
+function chunkString(value: string, size: number) {
+  const chunks: string[] = [];
+  for (let index = 0; index < value.length; index += size) {
+    chunks.push(value.slice(index, index + size));
+  }
+  return chunks;
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = "";
+
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    const slice = bytes.subarray(index, index + chunkSize);
+    binary += String.fromCharCode(...slice);
+  }
+
+  return btoa(binary);
 }
 
 function isImageAttachment(attachment: AssistantAttachment | null) {
@@ -403,19 +430,66 @@ export default function AdminAiAssistantPage() {
       }
     } catch (nextError) {
       if (isStorageQuotaExceededError(nextError)) {
-        setError(null);
-        const fallbackResult = await handleSendMessage({
-          message: `Logo pending upload later: ${file.name}`,
-          preserveDraft: true,
-        });
-        if (fallbackResult) {
-          setNotice(
-            `Firebase Storage quota is exceeded. Continuing with ${file.name} marked as pending upload so the flow can move forward.`
-          );
-        } else {
-          await refreshSession(currentSessionId);
+        try {
+          const uploadId = `${currentSessionId}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+          const base64 = arrayBufferToBase64(await file.arrayBuffer());
+          const chunks = chunkString(base64, FALLBACK_UPLOAD_CHUNK_SIZE);
+          const metaRef = doc(db, "aiAssistantUploads", uploadId);
+
+          await setDoc(metaRef, {
+            uploadId,
+            sessionId: currentSessionId,
+            filename: file.name,
+            contentType: file.type || null,
+            size: typeof file.size === "number" ? file.size : null,
+            chunkCount: chunks.length,
+            source: "firestore-fallback",
+            createdAt: serverTimestamp(),
+            createdAtIso: new Date().toISOString(),
+          });
+
+          const batch = writeBatch(db);
+          chunks.forEach((chunk, index) => {
+            batch.set(doc(db, "aiAssistantUploads", uploadId, "chunks", String(index).padStart(4, "0")), {
+              index,
+              data: chunk,
+            });
+          });
+          await batch.commit();
+
+          const fallbackResult = await handleSendMessage({
+            message: `Uploaded logo file: ${file.name}`,
+            attachment: {
+              name: file.name,
+              url: buildFallbackUploadUrl(uploadId),
+              contentType: file.type || null,
+              size: typeof file.size === "number" ? file.size : null,
+              uploadedAt: new Date().toISOString(),
+            },
+            preserveDraft: true,
+          });
+
+          if (fallbackResult) {
+            setError(null);
+            setNotice(`Storage quota is full, so ${file.name} was attached through the internal fallback upload.`);
+          } else {
+            await refreshSession(currentSessionId);
+            setPendingLogoFile(file);
+            setError("Storage quota is exceeded, and the internal fallback upload did not complete.");
+          }
+        } catch (fallbackError) {
+          setError(getFriendlyLogoUploadError(fallbackError));
           setPendingLogoFile(file);
-          setError("Firebase Storage quota is exceeded, and the fallback continuation did not complete.");
+          const pendingResult = await handleSendMessage({
+            message: `Logo pending upload later: ${file.name}`,
+            preserveDraft: true,
+          });
+          if (pendingResult) {
+            setNotice(
+              `Storage quota is full, so ${file.name} was marked as pending upload while the conversation continues.`
+            );
+            setError(null);
+          }
         }
       } else {
         setError(getFriendlyLogoUploadError(nextError));
