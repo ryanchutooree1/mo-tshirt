@@ -1,21 +1,21 @@
 import faqMemoryData from "../data/ai/faq-memory.json" with { type: "json" };
 import intentTrainingData from "../data/ai/intent-training.json" with { type: "json" };
 import productAliasesData from "../data/ai/product-aliases.json" with { type: "json" };
-import { predictIntent } from "./ai/core/classifier.ts";
-import { decideNextAction } from "./ai/core/decision-engine.ts";
-import { extractEntities } from "./ai/core/entities.ts";
-import { buildAssistantTurnDebug } from "./ai/core/explain.ts";
+import { predictIntent } from "./ai/core/classifier";
+import { decideNextAction } from "./ai/core/decision-engine";
+import { extractEntities } from "./ai/core/entities";
+import { buildAssistantTurnDebug } from "./ai/core/explain";
 import {
   buildAssistantTrainingState as buildLocalTrainingState,
   createEmptyLearnedProductAliases,
   createEmptyLearnedProductPlaybooks,
-} from "./ai/core/learning.ts";
-import { retrieveTopMatches } from "./ai/core/retrieval.ts";
+} from "./ai/core/learning";
+import { retrieveTopMatches } from "./ai/core/retrieval";
 import {
   formatAssistantFieldLabel,
   formatLeadSummary,
   generateAssistantReply,
-} from "./ai/core/response-generator.ts";
+} from "./ai/core/response-generator";
 import type {
   AssistantApprovedLeadSource,
   AssistantAttachment,
@@ -29,9 +29,9 @@ import type {
   AssistantProductType,
   AssistantRequiredField,
   AssistantTrainingState,
-} from "./ai/core/types.ts";
-import { ASSISTANT_PRODUCT_TYPES, ASSISTANT_REQUIRED_FIELDS } from "./ai/core/types.ts";
-import { cosineSimilarity, normalizeText, termFrequency, titleCase, unique } from "./ai/core/utils.ts";
+} from "./ai/core/types";
+import { ASSISTANT_PRODUCT_TYPES, ASSISTANT_REQUIRED_FIELDS } from "./ai/core/types";
+import { cosineSimilarity, normalizeText, termFrequency, titleCase, unique } from "./ai/core/utils";
 
 type LeadLike = Partial<Record<keyof AssistantLead, unknown>>;
 

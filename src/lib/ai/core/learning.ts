@@ -9,11 +9,11 @@ import type {
   AssistantProductType,
   AssistantTrainingSnapshot,
   AssistantTrainingState,
-} from "./types.ts";
-import { AI_INTENTS, ASSISTANT_PRODUCT_TYPES } from "./types.ts";
-import { trainIntentClassifier } from "./classifier.ts";
-import { buildRetrievalIndex, buildRetrievalMemoryDocuments, summarizeRetrievalIndex } from "./retrieval.ts";
-import { cleanString, hybridTokens, incrementCounter, normalizeText, unique } from "./utils.ts";
+} from "./types";
+import { AI_INTENTS, ASSISTANT_PRODUCT_TYPES } from "./types";
+import { trainIntentClassifier } from "./classifier";
+import { buildRetrievalIndex, buildRetrievalMemoryDocuments, summarizeRetrievalIndex } from "./retrieval";
+import { cleanString, hybridTokens, incrementCounter, normalizeText, unique } from "./utils";
 
 const PRODUCT_ROOT_HINTS: Record<AssistantProductType, string[]> = {
   "t-shirt": ["tshirt", "t shirt", "tee", "tees"],

@@ -1,5 +1,5 @@
-import { AI_INTENTS, type AssistantIntent, type AssistantIntentClassifierModel, type AssistantIntentPrediction, type AssistantIntentSample } from "./types.ts";
-import { clamp, cosineSimilarity, hybridTokens, incrementCounter, softmax, tfidfVector, unique } from "./utils.ts";
+import { AI_INTENTS, type AssistantIntent, type AssistantIntentClassifierModel, type AssistantIntentPrediction, type AssistantIntentSample } from "./types";
+import { clamp, cosineSimilarity, hybridTokens, incrementCounter, softmax, tfidfVector, unique } from "./utils";
 
 function createEmptyIntentCountMap() {
   return Object.fromEntries(AI_INTENTS.map((intent) => [intent, 0])) as Record<AssistantIntent, number>;

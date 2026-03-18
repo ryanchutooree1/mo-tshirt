@@ -407,6 +407,12 @@ const parseTimestamp = (value: unknown) => {
   if (typeof (value as FirestoreTimestampLike)?.seconds === "number") {
     return new Date((value as FirestoreTimestampLike).seconds! * 1000);
   }
+  if (value instanceof Date) {
+    return value;
+  }
+  if (typeof value !== "string" && typeof value !== "number") {
+    return null;
+  }
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 };

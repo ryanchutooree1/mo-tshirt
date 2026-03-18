@@ -4,7 +4,7 @@ import type {
   AssistantLead,
   AssistantRequiredField,
   AssistantRetrievalMatch,
-} from "./types.ts";
+} from "./types";
 
 const FAQ_THRESHOLD = 0.34;
 

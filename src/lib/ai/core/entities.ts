@@ -6,8 +6,8 @@ import type {
   AssistantLead,
   AssistantOrderLine,
   AssistantProductType,
-} from "./types.ts";
-import { clamp, cleanString, fuzzySimilarity, normalizeText, normalizeWhitespace, titleCase, tokenize, unique } from "./utils.ts";
+} from "./types";
+import { clamp, cleanString, fuzzySimilarity, normalizeText, normalizeWhitespace, titleCase, tokenize, unique } from "./utils";
 
 const PHONE_RE = /(?:\+?230)?[\s-]?([2455789]\d{7})\b/;
 const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
@@ -173,7 +173,8 @@ function bestAliasCandidates<T extends string>(
   const normalized = normalizeText(message);
   const candidates: AssistantEntityCandidate[] = [];
 
-  Object.entries(entries).forEach(([canonical, aliases]) => {
+  (Object.keys(entries) as T[]).forEach((canonical) => {
+    const aliases = entries[canonical];
     aliases.forEach((alias) => {
       const score = scoreAliasMatch(normalized, alias);
       if (score >= 0.82) {

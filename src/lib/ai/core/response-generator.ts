@@ -3,8 +3,8 @@ import type {
   AssistantLead,
   AssistantRequiredField,
   AssistantRetrievalMatch,
-} from "./types.ts";
-import { titleCase } from "./utils.ts";
+} from "./types";
+import { titleCase } from "./utils";
 
 const SIZE_TEMPLATE_ORDER = ["S", "M", "L", "XL"] as const;
 

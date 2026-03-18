@@ -7,8 +7,8 @@ import type {
   AssistantRetrievalIndex,
   AssistantRetrievalMatch,
   AssistantRetrievalMemoryItem,
-} from "./types.ts";
-import { cosineSimilarity, hybridTokens, incrementCounter, normalizeWhitespace, tfidfVector, unique } from "./utils.ts";
+} from "./types";
+import { cosineSimilarity, hybridTokens, incrementCounter, normalizeWhitespace, tfidfVector, unique } from "./utils";
 
 export function leadToRetrievalText(lead: AssistantLead) {
   return [

@@ -5,7 +5,7 @@ import type {
   AssistantRequiredField,
   AssistantRetrievalMatch,
   AssistantTurnDebug,
-} from "./types.ts";
+} from "./types";
 
 export function buildAssistantTurnDebug(input: {
   intent: AssistantIntentPrediction;

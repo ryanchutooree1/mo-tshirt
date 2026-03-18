@@ -38,6 +38,8 @@ type Product = {
   archived?: boolean;
   colors: Color[];
 };
+type DraftSizeValues = Record<string, { qty: number | ""; min: number | "" }>;
+type BulkSizeValues = Record<string, { qty: number; min: number }>;
 
 // ---------- Small helpers ----------
 const money = (v: number) => `Rs ${Number(v || 0).toLocaleString()}`;
@@ -49,6 +51,27 @@ const csvCell = (s: string) => `"${String(s).replace(/"/g, '""')}"`;
 
 function deepClone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
+}
+
+function buildDraftSizeValues(): DraftSizeValues {
+  return Object.fromEntries(DEFAULT_SIZES.map((size) => [size, { qty: "", min: "" }])) as DraftSizeValues;
+}
+
+function buildBulkSizeValues(color?: Color): BulkSizeValues {
+  if (!color) {
+    return Object.fromEntries(
+      DEFAULT_SIZES.map((size) => [size, { qty: 0, min: LOW_FALLBACK }])
+    ) as BulkSizeValues;
+  }
+  return Object.fromEntries(
+    DEFAULT_SIZES.map((size) => [
+      size,
+      {
+        qty: Number.isFinite(color.sizes[size]) ? color.sizes[size] : 0,
+        min: Number.isFinite(color.minStock?.[size] ?? NaN) ? (color.minStock?.[size] as number) : LOW_FALLBACK,
+      },
+    ])
+  ) as BulkSizeValues;
 }
 
 // ---------- Page ----------
@@ -81,9 +104,7 @@ export default function InventoryPage() {
 
   // Add color form
   const [ncColor, setNcColor] = useState("");
-  const [ncSizes, setNcSizes] = useState<Record<string, { qty: number | ""; min: number | "" }>>(
-    Object.fromEntries(DEFAULT_SIZES.map((s) => [s, { qty: "", min: "" }])) as any
-  );
+  const [ncSizes, setNcSizes] = useState<DraftSizeValues>(buildDraftSizeValues);
 
   // CSV import
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -190,9 +211,13 @@ export default function InventoryPage() {
   };
 
   const duplicateProduct = async (p: Product) => {
-    const copy = deepClone(p);
-    delete (copy as any).id;
-    copy.productName = `${p.productName} Copy`;
+    const copy: Omit<Product, "id"> = {
+      productName: `${p.productName} Copy`,
+      imageUrl: p.imageUrl,
+      price: p.price,
+      archived: p.archived,
+      colors: deepClone(p.colors),
+    };
     await addDoc(collection(db, "products"), copy);
   };
 
@@ -236,7 +261,7 @@ export default function InventoryPage() {
 
     // reset form
     setNcColor("");
-    setNcSizes(Object.fromEntries(DEFAULT_SIZES.map((s) => [s, { qty: "", min: "" }])) as any);
+    setNcSizes(buildDraftSizeValues());
     setShowColorModal(null);
     setExpanded(productId);
   };
@@ -385,7 +410,7 @@ export default function InventoryPage() {
             }
           }
         }
-        const upd: any = { colors };
+        const upd: { colors: Color[]; price?: number } = { colors };
         if (g.price !== undefined) upd.price = g.price;
         await updateDoc(doc(db, "products", existing.id), upd);
       }
@@ -1080,19 +1105,7 @@ function BulkEditModal({
   const p = products.find((x) => x.id === showBulkModal.productId);
   const color = p?.colors[showBulkModal.colorIdx];
 
-  const [local, setLocal] = useState<Record<string, { qty: number; min: number }>>(() => {
-    if (!p || !color)
-      return Object.fromEntries(DEFAULT_SIZES.map((s) => [s, { qty: 0, min: LOW_FALLBACK }])) as any;
-    return Object.fromEntries(
-      DEFAULT_SIZES.map((s) => [
-        s,
-        {
-          qty: Number.isFinite(color.sizes[s]) ? (color.sizes[s] as number) : 0,
-          min: Number.isFinite(color.minStock?.[s] ?? NaN) ? (color.minStock?.[s] as number) : LOW_FALLBACK,
-        },
-      ])
-    ) as any;
-  });
+  const [local, setLocal] = useState<BulkSizeValues>(() => buildBulkSizeValues(color));
 
   if (!p || !color) return null;
 

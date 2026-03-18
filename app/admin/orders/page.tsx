@@ -108,7 +108,6 @@ const DEFAULT_PREPARED_BY = "Mo T-Shirt Team";
 const ORDER_WORKFLOW = ["Pending", "In Process", "Completed", "Delivered"] as const;
 const ORDER_WORKFLOW_VISUAL = ["Process", "Completed", "Delivered", "Done"] as const;
 const ORDER_DOC_FLOW: OrderDocumentType[] = ["quotation", "invoice", "partial_receipt", "receipt"];
-const ORDER_DOC_FLOW_VISUAL = ["Quotation", "Invoice", "Partial Receipt", "Receipt", "Done"] as const;
 const ORDER_STATUS_OPTIONS = [
   "Select Status",
   "Pending",
@@ -1620,7 +1619,6 @@ function OrdersPageInner() {
                       ? "Done"
                       : ORDER_WORKFLOW_VISUAL[Math.min(workflowVisualIndex + 1, ORDER_WORKFLOW_VISUAL.length - 2)];
                 const isDocFlowDone = activeDocFlowIndex >= ORDER_DOC_FLOW.length - 1;
-                const documentVisualIndex = isDocFlowDone ? ORDER_DOC_FLOW_VISUAL.length - 1 : activeDocFlowIndex;
                 const nextDocType = activeDocType
                   ? isDocFlowDone
                     ? null

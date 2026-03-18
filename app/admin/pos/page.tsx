@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { db, storage } from '@/lib/firebase';
 import {
   addDoc,
-  arrayUnion,
   collection,
   doc,
   getDoc,
@@ -47,6 +46,31 @@ type CartItem = {
   unitPrice: number;
   lineTotal: number;
 };
+type InvoiceSettingsDoc = { invoiceNumber?: number };
+type CustomerDoc = {
+  customerName?: string;
+  customerPhone?: string;
+  customerAddress?: string;
+  customerEmail?: string;
+};
+type FirestoreTimestampLike = { seconds?: number };
+type HoldDoc = {
+  id: string;
+  customerName?: string;
+  phone?: string;
+  address?: string;
+  email?: string;
+  items?: CartItem[];
+  total?: number;
+  status?: string;
+  createdAt?: FirestoreTimestampLike | null;
+  reservedBy?: string;
+};
+type CheckoutStatus = 'In Process' | 'Urgent' | 'Completed';
+type PaymentType = 'Full Payment' | 'Part Payment';
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
 
 export default function POSPage() {
   // -------- Invoice number --------
@@ -77,8 +101,8 @@ export default function POSPage() {
   const cartItems = useMemo(() => cart.reduce((a, c) => a + c.quantity, 0), [cart]);
 
   // -------- Status & Payment --------
-  const [status, setStatus] = useState<'In Process' | 'Urgent' | 'Completed' | ''>('');
-  const [payment, setPayment] = useState<'Full Payment' | 'Part Payment' | ''>('');
+  const [status, setStatus] = useState<CheckoutStatus | ''>('');
+  const [payment, setPayment] = useState<PaymentType | ''>('');
   const [partAmount, setPartAmount] = useState<number | ''>('');
 
   // -------- Flow flags --------
@@ -86,7 +110,7 @@ export default function POSPage() {
   const [done, setDone] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [holdId, setHoldId] = useState<string | null>(null);
-  const [holds, setHolds] = useState<any[]>([]);
+  const [holds, setHolds] = useState<HoldDoc[]>([]);
   const USER_NAME = 'mo-owner'; // if you want dynamic, pull from auth/session
 
   // ---------- Init: invoice + live products ----------
@@ -104,7 +128,7 @@ export default function POSPage() {
         const ref = doc(db, 'invoiceSettings', 'currentInvoice');
         const snap = await getDoc(ref);
         if (snap.exists()) {
-          setInvoice((snap.data() as any).invoiceNumber || 1);
+          setInvoice((snap.data() as InvoiceSettingsDoc).invoiceNumber || 1);
         } else {
           await setDoc(ref, { invoiceNumber: 1 });
           setInvoice(1);
@@ -115,8 +139,11 @@ export default function POSPage() {
     })();
 
     const unsubHolds = onSnapshot(query(collection(db, 'posHolds')), snap => {
-      const list = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-      setHolds(list.sort((a,b)=> (b.createdAt?.seconds||0)-(a.createdAt?.seconds||0)).slice(0,20));
+      const list = snap.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...(docSnap.data() as Omit<HoldDoc, 'id'>),
+      }));
+      setHolds(list.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)).slice(0, 20));
     });
 
     return () => { unsub(); unsubHolds(); };
@@ -155,9 +182,12 @@ export default function POSPage() {
     // by name (case insensitive-like; fetch & filter)
     if (name) {
       const snap = await getDocs(collection(db, 'customers'));
-      const match = snap.docs.find(d => ((d.data() as any).customerName || '').toLowerCase() === name);
+      const match = snap.docs.find((docSnap) => {
+        const data = docSnap.data() as CustomerDoc;
+        return (data.customerName || '').toLowerCase() === name;
+      });
       if (match) {
-        const data = match.data() as any;
+        const data = match.data() as CustomerDoc;
         setCustomerName(data.customerName || '');
         setPhone(data.customerPhone || '');
         setAddress(data.customerAddress || '');
@@ -171,7 +201,7 @@ export default function POSPage() {
       const q = query(collection(db, 'customers'), where('customerPhone', '==', phoneClean));
       const snap = await getDocs(q);
       if (!snap.empty) {
-        const data = snap.docs[0].data() as any;
+        const data = snap.docs[0].data() as CustomerDoc;
         setCustomerName(data.customerName || '');
         setPhone(data.customerPhone || '');
         setAddress(data.customerAddress || '');
@@ -183,9 +213,12 @@ export default function POSPage() {
     // by email (case insensitive-like; fetch & filter)
     if (emailLower) {
       const snap = await getDocs(collection(db, 'customers'));
-      const match = snap.docs.find(d => ((d.data() as any).customerEmail || '').toLowerCase() === emailLower);
+      const match = snap.docs.find((docSnap) => {
+        const data = docSnap.data() as CustomerDoc;
+        return (data.customerEmail || '').toLowerCase() === emailLower;
+      });
       if (match) {
-        const data = match.data() as any;
+        const data = match.data() as CustomerDoc;
         setCustomerName(data.customerName || '');
         setPhone(data.customerPhone || '');
         setAddress(data.customerAddress || '');
@@ -214,12 +247,12 @@ export default function POSPage() {
       });
       setHoldId(ref.id);
       alert('Order put on hold. You can resume from the Holds list.');
-    } catch (e:any) {
-      alert(e?.message || 'Failed to hold');
+    } catch (error: unknown) {
+      alert(getErrorMessage(error, 'Failed to hold'));
     }
   };
 
-  const loadHold = (h: any) => {
+  const loadHold = (h: HoldDoc) => {
     setCustomerName(h.customerName || '');
     setPhone(h.phone || '');
     setAddress(h.address || '');
@@ -233,9 +266,9 @@ export default function POSPage() {
     setPdfUrl(null);
   };
 
-  const releaseHold = async (h: any) => {
+  const releaseHold = async (h: HoldDoc) => {
     try {
-      for (const it of (h.items||[])) {
+      for (const it of h.items || []) {
         const ref = doc(db, 'products', it.productId);
         await runTransaction(db, async (tx) => {
           const snap = await tx.get(ref);
@@ -303,8 +336,8 @@ export default function POSPage() {
 
         tx.update(productRef, { colors: copy.colors });
       });
-    } catch (e: any) {
-      return alert(e?.message || 'Failed to update stock');
+    } catch (error: unknown) {
+      return alert(getErrorMessage(error, 'Failed to update stock'));
     }
 
     const price = Number(unitPrice || 0);
@@ -457,9 +490,9 @@ export default function POSPage() {
 
       setDone(true);
       alert('Transaction completed!');
-    } catch (e: any) {
-      console.error(e);
-      alert(e?.message || 'Failed to complete transaction');
+    } catch (error: unknown) {
+      console.error(error);
+      alert(getErrorMessage(error, 'Failed to complete transaction'));
     } finally {
       setBusy(false);
     }
@@ -482,8 +515,8 @@ export default function POSPage() {
       });
       if (!res.ok) throw new Error(await res.text());
       alert('Email sent!');
-    } catch (e: any) {
-      alert(e?.message || 'Failed to send email');
+    } catch (error: unknown) {
+      alert(getErrorMessage(error, 'Failed to send email'));
     } finally {
       setBusy(false);
     }
@@ -739,7 +772,7 @@ export default function POSPage() {
               <Select
                 label="Status"
                 value={status}
-                onChange={(v) => setStatus(v as any)}
+                onChange={(v) => setStatus(v as CheckoutStatus | '')}
                 options={[
                   { label: 'Select…', value: '' },
                   { label: 'In Process', value: 'In Process' },
@@ -750,7 +783,7 @@ export default function POSPage() {
               <Select
                 label="Payment"
                 value={payment}
-                onChange={(v) => setPayment(v as any)}
+                onChange={(v) => setPayment(v as PaymentType | '')}
                 options={[
                   { label: 'Select…', value: '' },
                   { label: 'Full Payment', value: 'Full Payment' },
