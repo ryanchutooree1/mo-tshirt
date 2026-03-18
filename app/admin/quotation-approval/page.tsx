@@ -130,6 +130,48 @@ type QuoteRecord = {
   };
 };
 
+function QuoteAttachmentPreview({
+  src,
+  alt,
+}: {
+  src: string;
+  alt: string;
+}) {
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+
+  useEffect(() => {
+    setStatus("loading");
+  }, [src]);
+
+  return (
+    <div className="relative mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2">
+      {status !== "ready" && (
+        <div className="absolute inset-2 z-10 flex flex-col items-center justify-center gap-2 rounded-xl bg-white/85 text-slate-500 backdrop-blur-sm">
+          {status === "loading" ? (
+            <>
+              <FiRefreshCw className="h-4 w-4 animate-spin" />
+              <p className="text-xs font-medium text-slate-600">Loading preview...</p>
+            </>
+          ) : (
+            <p className="text-xs font-medium text-slate-600">Preview unavailable</p>
+          )}
+        </div>
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        className={`h-40 w-full rounded-xl object-contain transition-opacity duration-200 ${
+          status === "ready" ? "opacity-100" : "opacity-0"
+        }`}
+        loading="lazy"
+        onLoad={() => setStatus("ready")}
+        onError={() => setStatus("error")}
+      />
+    </div>
+  );
+}
+
 type DesignBrief = {
   product?: string;
   color?: string;
@@ -1934,15 +1976,10 @@ export default function QuotationApprovalPage() {
                                       ) : null}
                                     </div>
                                     {attachmentIsImage && attachment.url ? (
-                                      <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2">
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img
-                                          src={attachment.url}
-                                          alt={attachment.filename || "Attachment"}
-                                          className="h-40 w-full rounded-xl object-contain"
-                                          loading="lazy"
-                                        />
-                                      </div>
+                                      <QuoteAttachmentPreview
+                                        src={attachment.url}
+                                        alt={attachment.filename || "Attachment"}
+                                      />
                                     ) : !attachment.url ? (
                                       <div className="mt-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-500">
                                         Attachment received via email: {attachment.filename || `Attachment ${index + 1}`}
