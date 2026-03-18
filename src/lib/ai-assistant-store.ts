@@ -425,7 +425,7 @@ function getAssistantLeadQuantity(lead: AssistantLead) {
 
 function buildQuoteMessageFromAssistantLead(lead: AssistantLead) {
   const details = [
-    `Captured via AI assistant.`,
+    `Captured via Sales AI.`,
     `Product: ${formatAssistantProduct(lead.productType)}`,
     `Quantity: ${getAssistantLeadQuantity(lead)}`,
     lead.color ? `Color: ${titleCase(lead.color)}` : "",
@@ -479,7 +479,7 @@ function buildQuotePayloadFromAssistantLead(
     quantity: getAssistantLeadQuantity(lead),
     deadline: lead.deadline || "",
     notes: lead.notes || "",
-    source: "AI Assistant",
+    source: "Sales AI",
     delivery: lead.deliveryMethod ? titleCase(lead.deliveryMethod) : "",
     attachments: lead.logoAttachment
       ? [

@@ -119,9 +119,55 @@ const COLORS = new Set([
   "beige",
 ]);
 
-const SIZE_TOKENS = new Set(["xs", "s", "m", "l", "xl", "2xl", "3xl", "4xl"]);
+const SIZE_ALIASES = new Map([
+  ["xs", "XS"],
+  ["s", "S"],
+  ["m", "M"],
+  ["l", "L"],
+  ["xl", "XL"],
+  ["xxl", "2XL"],
+  ["2xl", "2XL"],
+  ["xxxl", "3XL"],
+  ["3xl", "3XL"],
+  ["xxxxl", "4XL"],
+  ["4xl", "4XL"],
+]);
+const SIZE_TOKENS = new Set(SIZE_ALIASES.keys());
+const SIZE_TOKEN_PATTERN = "xxxxl|xxxl|xxl|4xl|3xl|2xl|xs|xl|s|m|l";
 const SIZE_TEMPLATE_ORDER = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
 const SIZE_TEMPLATE_ORDER_INDEX = new Map<string, number>(SIZE_TEMPLATE_ORDER.map((size, index) => [size, index]));
+const NUMBER_WORD_VALUES: Record<string, number> = {
+  zero: 0,
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+  eleven: 11,
+  twelve: 12,
+  thirteen: 13,
+  fourteen: 14,
+  fifteen: 15,
+  sixteen: 16,
+  seventeen: 17,
+  eighteen: 18,
+  nineteen: 19,
+};
+const TENS_WORD_VALUES: Record<string, number> = {
+  twenty: 20,
+  thirty: 30,
+  forty: 40,
+  fifty: 50,
+  sixty: 60,
+  seventy: 70,
+  eighty: 80,
+  ninety: 90,
+};
 
 export const ASSISTANT_FIELDS_IN_ORDER = [
   "productType",
@@ -372,20 +418,86 @@ function normalizeNullableNumber(value: unknown) {
   return null;
 }
 
+function parseWordNumber(value: string) {
+  const tokens = value
+    .toLowerCase()
+    .replace(/-/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!tokens.length) return null;
+
+  let total = 0;
+  let current = 0;
+  let usedToken = false;
+
+  for (const token of tokens) {
+    if (token === "and") continue;
+    if (token in NUMBER_WORD_VALUES) {
+      current += NUMBER_WORD_VALUES[token];
+      usedToken = true;
+      continue;
+    }
+    if (token in TENS_WORD_VALUES) {
+      current += TENS_WORD_VALUES[token];
+      usedToken = true;
+      continue;
+    }
+    if (token === "hundred" && current > 0) {
+      current *= 100;
+      usedToken = true;
+      continue;
+    }
+    if (token === "thousand" && current > 0) {
+      total += current * 1000;
+      current = 0;
+      usedToken = true;
+      continue;
+    }
+    return null;
+  }
+
+  if (!usedToken) return null;
+  return total + current;
+}
+
+function parseQuantityValue(value: string) {
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return null;
+
+  const numeric = normalizeQuantity(trimmed);
+  if (numeric !== null) return numeric;
+
+  const wordNumber = parseWordNumber(trimmed);
+  if (wordNumber !== null) {
+    return normalizeQuantity(wordNumber);
+  }
+
+  return null;
+}
+
+function parseLeadingQuantityValue(value: string) {
+  const words = value.trim().split(/\s+/).filter(Boolean);
+  for (let count = words.length; count >= 1; count -= 1) {
+    const quantity = parseQuantityValue(words.slice(0, count).join(" "));
+    if (quantity !== null) return quantity;
+  }
+  return null;
+}
+
 function extractRequestedQuantity(message: string) {
   const trimmed = message.trim().toLowerCase();
   const patterns = [
-    /(?:need|want|order|quote|require|get)\s+(\d{1,4})\b/i,
-    /\bqty(?:\s*[:=-]?\s*|\s+)(\d{1,4})\b/i,
-    /\bquantity(?:\s*[:=-]?\s*|\s+)(\d{1,4})\b/i,
-    /\b(\d{1,4})\s*(?:piece|pieces|pcs|shirts?|t[\s-]?shirts?|polos?|hoodies?|caps?)\b/i,
+    /(?:need|want|order|quote|require|get)\s+([a-z-]+(?:\s+[a-z-]+){0,2}|\d{1,4})\b/i,
+    /\bqty(?:\s*[:=-]?\s*|\s+)([a-z-]+(?:\s+[a-z-]+){0,2}|\d{1,4})\b/i,
+    /\bquantity(?:\s*[:=-]?\s*|\s+)([a-z-]+(?:\s+[a-z-]+){0,2}|\d{1,4})\b/i,
+    /\b([a-z-]+(?:\s+[a-z-]+){0,2}|\d{1,4})\s*(?:piece|pieces|pcs|shirts?|t[\s-]?shirts?|polos?|hoodies?|caps?)\b/i,
   ];
 
   for (const pattern of patterns) {
     const match = pattern.exec(trimmed);
     if (!match) continue;
-    const quantity = Number(match[1]);
-    if (Number.isFinite(quantity) && quantity >= 1 && quantity <= 5000) {
+    const quantity = parseLeadingQuantityValue(match[1]);
+    if (quantity !== null) {
       return quantity;
     }
   }
@@ -401,7 +513,8 @@ function extractRequestedQuantity(message: string) {
 }
 
 function normalizeSize(value: string) {
-  return value.trim().toUpperCase();
+  const compact = value.trim().toLowerCase().replace(/\s+/g, "");
+  return SIZE_ALIASES.get(compact) || compact.toUpperCase();
 }
 
 function sortTemplateSizes(values: string[]) {
@@ -552,12 +665,12 @@ function buildSizeTemplateLines(lead: AssistantLead) {
 function buildSizeBreakdownPrompt(lead: AssistantLead) {
   const capturedTotal = getOrderLineTotal(lead.sizeBreakdown);
 
-  let intro = "Please send the size breakdown one line per variation, like this:";
+  let intro = "Please send the full size breakdown in one message, one line per variation, like this:";
   if (lead.quantity && capturedTotal > 0 && capturedTotal !== lead.quantity) {
     if (capturedTotal < lead.quantity) {
-      intro = `I have size lines for ${capturedTotal} of ${lead.quantity} pieces. Please send the remaining size lines like this:`;
+      intro = `I have ${capturedTotal} of ${lead.quantity} pieces captured so far. Please send the full corrected size breakdown like this:`;
     } else {
-      intro = `The size lines add up to ${capturedTotal} pieces while the total quantity is ${lead.quantity}. Please resend them in this format:`;
+      intro = `The size lines add up to ${capturedTotal} pieces while the current total is ${lead.quantity}. Please send the full corrected size breakdown in this format:`;
     }
   }
 
@@ -582,7 +695,7 @@ function extractOrderLines(
     .filter(Boolean);
   const lines = (segments.length ? segments : [message])
     .map((segment) => {
-      const sizeMatch = segment.match(/\bsize\b\s*[:=-]?\s*(xs|s|m|l|xl|2xl|3xl|4xl)\b/i);
+      const sizeMatch = segment.match(new RegExp(`\\bsize\\b\\s*[:=-]?\\s*(${SIZE_TOKEN_PATTERN})\\b`, "i"));
       const quantityMatch =
         segment.match(/\b(?:quantity|qty|qte|quality)\b\s*[:=-]?\s*(\d{1,4})\b/i) ||
         segment.match(/\bx\s*(\d{1,4})\b/i);
@@ -602,7 +715,48 @@ function extractOrderLines(
     })
     .filter((line): line is AssistantOrderLine => Boolean(line));
 
-  return mergeOrderLines(lines);
+  if (lines.length) {
+    return mergeOrderLines(lines);
+  }
+
+  const overallColor = Array.from(COLORS).find((candidate) => hasPattern(normalizeWords(message), candidate)) || null;
+  const overallProductType = detectProductType(message, trainingState);
+  const naturalLines: AssistantOrderLine[] = [];
+  const naturalSegments = message
+    .split(/\n|,|;|\/|\band\b/gi)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  const sizeThenQuantityRe = new RegExp(
+    `\\b(?:size\\s*)?(${SIZE_TOKEN_PATTERN})\\b(?:\\s*(?:x|qty|quantity|=|:|-)\\s*|\\s+)(\\d{1,4}|[a-z-]+(?:\\s+[a-z-]+){0,2})\\b`,
+    "i"
+  );
+  const quantityThenSizeRe = new RegExp(
+    `\\b(\\d{1,4}|[a-z-]+(?:\\s+[a-z-]+){0,2})\\b\\s*(?:size\\s*)?(${SIZE_TOKEN_PATTERN})\\b`,
+    "i"
+  );
+
+  naturalSegments.forEach((segment) => {
+    const localColor =
+      Array.from(COLORS).find((candidate) => hasPattern(normalizeWords(segment), candidate)) || overallColor;
+    const localProductType = detectProductType(segment, trainingState) || overallProductType;
+    const sizeThenQuantity = sizeThenQuantityRe.exec(segment);
+    const quantityThenSize = quantityThenSizeRe.exec(segment);
+    const quantityValue = parseQuantityValue(
+      sizeThenQuantity?.[2] || quantityThenSize?.[1] || ""
+    );
+    const sizeValue = sizeThenQuantity?.[1] || quantityThenSize?.[2] || "";
+    if (!quantityValue || !sizeValue) return;
+
+    naturalLines.push({
+      color: localColor,
+      productType: localProductType,
+      size: normalizeSize(sizeValue),
+      quantity: quantityValue,
+    });
+  });
+
+  return mergeOrderLines(naturalLines);
 }
 
 export function createEmptyLearnedProductAliases(): Record<AssistantProductType, string[]> {
@@ -999,7 +1153,13 @@ export function mergeAssistantLeadUpdates(lead: AssistantLead, updates: Partial<
     merged.sizes = dedupeSorted([...merged.sizes, ...updates.sizes], normalizeSize);
   }
   if (updates.sizeBreakdown) {
-    merged.sizeBreakdown = mergeOrderLines([...updates.sizeBreakdown]);
+    merged.sizeBreakdown = mergeOrderLines(
+      updates.sizeBreakdown.map((line) => ({
+        ...line,
+        color: line.color || merged.color,
+        productType: line.productType || merged.productType,
+      }))
+    );
     merged.sizes = dedupeSorted(
       [
         ...(updates.sizes || []),
@@ -1085,20 +1245,20 @@ export function nextAssistantQuestion(lead: AssistantLead) {
   const missing = missingAssistantFields(lead);
   if (shouldPromptForLogoUpload(lead, missing)) {
     return (
-      "If the design or logo is ready, use the upload button to attach PNG, JPG, PDF, or AI. " +
-      "Once it is uploaded, I will ask for your name, email address, WhatsApp number, and deadline."
+      "If the design or logo is ready, upload it as PNG, JPG, PDF, or AI. " +
+      "As soon as it is attached, I will collect your name, email address, WhatsApp number, and deadline."
     );
   }
 
   if (!missing.length) {
     if (lead.logoAttachment) {
-      return `Great. I have the main details and the logo file.${buildFollowUpContactMessage(
+      return `Perfect. I have the main order details and the logo file.${buildFollowUpContactMessage(
         lead
-      )} Type "summary" to review the lead or use "Submit lead" in admin.`;
+      )} Type "summary" to review the lead or use "Send to Quotation Approval" in admin.`;
     }
-    return `Great. I have the main details.${buildFollowUpContactMessage(
+    return `Perfect. I have the main order details.${buildFollowUpContactMessage(
       lead
-    )} If the design or logo is ready, use the upload button to attach PNG, JPG, PDF, or AI. Type "summary" to review the lead or use "Submit lead" in admin.`;
+    )} If the design or logo is ready, upload it as PNG, JPG, PDF, or AI. Type "summary" to review the lead or use "Send to Quotation Approval" in admin.`;
   }
 
   const prompts: Record<AssistantRequiredField, string> = {
@@ -1230,7 +1390,7 @@ export function runAssistantTurn(input: {
     reply = formatLeadSummary(lead);
   } else if (normalizedMessage === "submit") {
     if (readyToSubmit) {
-      reply = `${formatLeadSummary(lead)}\n\nThis lead is ready. Use "Submit lead" in admin to save it.`;
+      reply = `${formatLeadSummary(lead)}\n\nThis lead is ready. Use "Send to Quotation Approval" in admin to save it.`;
     } else {
       const labels = missingFields.map(formatAssistantFieldLabel).join(", ");
       reply = `I still need these details before submission: ${labels}. ${nextAssistantQuestion(lead)}`;

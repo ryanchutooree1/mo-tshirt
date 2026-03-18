@@ -12,6 +12,6 @@ export async function GET() {
     return NextResponse.json(overview);
   } catch (error) {
     console.error("ai-assistant:overview", error);
-    return NextResponse.json({ error: "Failed to load AI assistant overview." }, { status: 500 });
+    return NextResponse.json({ error: "Failed to load Sales AI overview." }, { status: 500 });
   }
 }

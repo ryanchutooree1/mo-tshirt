@@ -825,7 +825,7 @@ export default function OwnerDashboard() {
       Icon: Target,
     },
     {
-      label: "AI Assistant",
+      label: "Sales AI",
       description: "Test lead capture in admin",
       href: "/admin/ai-assistant",
       Icon: Sparkles,

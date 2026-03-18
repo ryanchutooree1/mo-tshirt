@@ -20,7 +20,7 @@ test("extracts core sales lead details from a realistic request", () => {
   assert.deepEqual(result.lead.printPositions, ["back", "front left chest"]);
   assert.deepEqual(result.lead.printSizes, ["large 22x22"]);
   assert.equal(result.readyToSubmit, false);
-  assert.match(result.reply, /Please send the size breakdown/);
+  assert.match(result.reply, /Please send the full size breakdown/i);
 });
 
 test("phone capture does not get mistaken for quantity", () => {
@@ -49,6 +49,17 @@ test("plural tshirts are recognized as t-shirt products", () => {
   assert.match(result.reply, /Where do you want the print/);
 });
 
+test("spoken quantities are recognized from natural customer requests", () => {
+  const result = runAssistantTurn({
+    lead: createEmptyAssistantLead(),
+    message: "I need three tshirts",
+  });
+
+  assert.equal(result.lead.productType, "t-shirt");
+  assert.equal(result.lead.quantity, 3);
+  assert.match(result.reply, /Where do you want the print/);
+});
+
 test("front and back combo choices are parsed into positions and print sizes", () => {
   const result = runAssistantTurn({
     lead: {
@@ -61,7 +72,7 @@ test("front and back combo choices are parsed into positions and print sizes", (
 
   assert.deepEqual(result.lead.printPositions, ["back", "front center"]);
   assert.deepEqual(result.lead.printSizes, ["large 22x22", "small 9x9"]);
-  assert.match(result.reply, /Please send the size breakdown/);
+  assert.match(result.reply, /Please send the full size breakdown/i);
 });
 
 test("plain name replies are accepted even if logo upload is still the next prompt", () => {
@@ -86,7 +97,7 @@ test("plain name replies are accepted even if logo upload is still the next prom
   });
 
   assert.equal(result.lead.clientName, "Sam Legoy");
-  assert.match(result.reply, /upload button/i);
+  assert.match(result.reply, /upload it as png, jpg, pdf, or ai/i);
 });
 
 test("size breakdown template lines are parsed into structured order lines", () => {
@@ -114,8 +125,8 @@ test("size breakdown template lines are parsed into structured order lines", () 
   assert.deepEqual(result.lead.sizes, ["M", "S"]);
   assert.equal(result.lead.sizeBreakdown.length, 2);
   assert.equal(result.lead.sizeBreakdown[0].quantity + result.lead.sizeBreakdown[1].quantity, 3);
-  assert.match(result.reply, /upload button/i);
-  assert.match(result.reply, /name, email address, WhatsApp number, and deadline/i);
+  assert.match(result.reply, /upload it as png, jpg, pdf, or ai/i);
+  assert.match(result.reply, /name, email address, whatsapp number, and deadline/i);
 });
 
 test("a size breakdown reply overrides a stale requested quantity and advances to the upload step", () => {
@@ -141,7 +152,7 @@ test("a size breakdown reply overrides a stale requested quantity and advances t
 
   assert.equal(result.lead.quantity, 4);
   assert.equal(result.lead.sizeBreakdown.length, 1);
-  assert.match(result.reply, /upload button/i);
+  assert.match(result.reply, /upload it as png, jpg, pdf, or ai/i);
   assert.equal(result.readyToSubmit, false);
 });
 
@@ -171,7 +182,7 @@ test("a new size breakdown reply replaces the previous breakdown instead of accu
     { color: "black", productType: "t-shirt", size: "M", quantity: 2 },
   ]);
   assert.deepEqual(result.lead.sizes, ["M"]);
-  assert.match(result.reply, /upload button/i);
+  assert.match(result.reply, /upload it as png, jpg, pdf, or ai/i);
 });
 
 test("a single kept size line is treated as the full breakdown when unused sizes were deleted", () => {
@@ -199,7 +210,63 @@ test("a single kept size line is treated as the full breakdown when unused sizes
   assert.deepEqual(result.lead.sizeBreakdown, [
     { color: "black", productType: "t-shirt", size: "XL", quantity: 1 },
   ]);
-  assert.match(result.reply, /upload button/i);
+  assert.match(result.reply, /upload it as png, jpg, pdf, or ai/i);
+});
+
+test("freeform size replies are parsed without the strict template syntax", () => {
+  const result = runAssistantTurn({
+    lead: {
+      clientName: null,
+      phone: null,
+      email: null,
+      productType: "t-shirt",
+      quantity: 3,
+      color: "black",
+      sizes: [],
+      sizeBreakdown: [],
+      printPositions: ["back"],
+      printSizes: [],
+      logoReady: null,
+      deliveryMethod: null,
+      deadline: null,
+      notes: null,
+    },
+    message: "2 XL and 1 M",
+  });
+
+  assert.equal(result.lead.quantity, 3);
+  assert.deepEqual(result.lead.sizeBreakdown, [
+    { color: "black", productType: "t-shirt", size: "M", quantity: 1 },
+    { color: "black", productType: "t-shirt", size: "XL", quantity: 2 },
+  ]);
+  assert.match(result.reply, /upload it as png, jpg, pdf, or ai/i);
+});
+
+test("size aliases like xxl are normalized in freeform replies", () => {
+  const result = runAssistantTurn({
+    lead: {
+      clientName: null,
+      phone: null,
+      email: null,
+      productType: "t-shirt",
+      quantity: 3,
+      color: "black",
+      sizes: [],
+      sizeBreakdown: [],
+      printPositions: ["back"],
+      printSizes: [],
+      logoReady: null,
+      deliveryMethod: null,
+      deadline: null,
+      notes: null,
+    },
+    message: "1 xxl and 2 xxxl",
+  });
+
+  assert.deepEqual(result.lead.sizeBreakdown, [
+    { color: "black", productType: "t-shirt", size: "2XL", quantity: 1 },
+    { color: "black", productType: "t-shirt", size: "3XL", quantity: 2 },
+  ]);
 });
 
 test("logo upload asks for email when the file is received", () => {
@@ -368,7 +435,7 @@ test("deadline date replies do not overwrite the original quantity", () => {
   assert.equal(result.lead.deadline, "09/12/2026");
   assert.equal(result.lead.quantity, 3);
   assert.equal(result.readyToSubmit, true);
-  assert.match(result.reply, /Great\. I have the main details and the logo file\./);
+  assert.match(result.reply, /Perfect\. I have the main order details and the logo file\./);
 });
 
 test("summary command returns the stored lead snapshot when all key fields are present", () => {

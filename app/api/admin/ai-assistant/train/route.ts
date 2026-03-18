@@ -12,6 +12,6 @@ export async function POST() {
     return NextResponse.json({ ok: true, training });
   } catch (error) {
     console.error("ai-assistant:train", error);
-    return NextResponse.json({ error: "Failed to retrain assistant." }, { status: 500 });
+    return NextResponse.json({ error: "Failed to retrain Sales AI." }, { status: 500 });
   }
 }

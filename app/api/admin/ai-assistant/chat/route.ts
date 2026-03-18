@@ -31,6 +31,6 @@ export async function POST(req: Request) {
     return NextResponse.json(result);
   } catch (error) {
     console.error("ai-assistant:chat", error);
-    return NextResponse.json({ error: "Failed to process assistant message." }, { status: 500 });
+    return NextResponse.json({ error: "Failed to process Sales AI message." }, { status: 500 });
   }
 }

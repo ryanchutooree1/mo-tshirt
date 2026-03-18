@@ -277,7 +277,7 @@ export default function AdminAiAssistantPage() {
     void refreshOverview()
       .catch((nextError: unknown) => {
         if (!alive) return;
-        setError(nextError instanceof Error ? nextError.message : "Failed to load AI assistant.");
+        setError(nextError instanceof Error ? nextError.message : "Failed to load Sales AI.");
       })
       .finally(() => {
         if (alive) {
@@ -362,7 +362,7 @@ export default function AdminAiAssistantPage() {
     const currentSessionId = session.sessionId;
     setUploadingLogo(true);
     setError(null);
-    setNotice("Uploading logo and waiting for the assistant reply...");
+    setNotice("Uploading logo and waiting for the AI reply...");
 
     try {
       const file = pendingLogoFile;
@@ -469,7 +469,7 @@ export default function AdminAiAssistantPage() {
         setKnowledgeTitle("");
         setKnowledgeContent("");
       });
-      setNotice("Knowledge saved and assistant retrained.");
+      setNotice("Knowledge saved and Sales AI retrained.");
       await refreshOverview();
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Failed to save knowledge.");
@@ -491,10 +491,10 @@ export default function AdminAiAssistantPage() {
           method: "POST",
         })
       );
-      setNotice("Assistant retrained from approved leads and saved knowledge.");
+      setNotice("Sales AI retrained from approved leads and saved knowledge.");
       await refreshOverview();
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Failed to retrain assistant.");
+      setError(nextError instanceof Error ? nextError.message : "Failed to retrain Sales AI.");
     } finally {
       setTraining(false);
     }
@@ -585,7 +585,7 @@ export default function AdminAiAssistantPage() {
         </div>
         <p className="mt-3 font-semibold text-emerald-950">Logo attached to this session</p>
         <p className="mt-1 text-xs leading-5 text-emerald-800">
-          The assistant has this file now. Review it below or upload a new version if needed.
+          Sales AI has this file now. Review it below or upload a new version if needed.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <a
@@ -729,10 +729,10 @@ export default function AdminAiAssistantPage() {
               </span>
               <p className="mt-6 text-xs font-semibold uppercase tracking-[0.38em] text-cyan-100/80">MO T-SHIRT AI Lab</p>
               <h1 className="mt-4 max-w-3xl font-sans text-4xl font-semibold leading-[0.95] tracking-tight sm:text-5xl xl:text-[4.2rem]">
-                Train and test the local sales assistant inside admin before any public launch.
+                Train and test your in-house sales AI inside admin before any public launch.
               </h1>
               <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">
-                This page keeps the assistant private while you validate order capture, submit sample leads, save knowledge, and approve or reject results for learning.
+                This page keeps your AI private while you validate order capture, submit sample leads, save knowledge, and approve or reject results for learning.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-slate-950/20 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur">
@@ -766,7 +766,7 @@ export default function AdminAiAssistantPage() {
               <HeroStat
                 label="Knowledge"
                 value={String(recentKnowledge.length)}
-                sub={recentKnowledge.length ? "Business notes already feeding the assistant" : "Knowledge base is empty"}
+                sub={recentKnowledge.length ? "Business notes already feeding Sales AI" : "Knowledge base is empty"}
                 accent="amber"
               />
             </div>
@@ -793,7 +793,7 @@ export default function AdminAiAssistantPage() {
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Testing Session</p>
-                <h2 className="mt-2 text-2xl font-semibold text-slate-950">Assistant console</h2>
+                <h2 className="mt-2 text-2xl font-semibold text-slate-950">Sales AI console</h2>
                 <p className="mt-1 text-sm text-slate-600">
                   Session: <span className="font-mono text-xs text-slate-700">{session.sessionId}</span>
                 </p>
@@ -1011,7 +1011,7 @@ export default function AdminAiAssistantPage() {
                     <Bot className="h-10 w-10 text-cyan-500" />
                     <h3 className="mt-4 text-lg font-semibold text-slate-900">No conversation yet</h3>
                     <p className="mt-2 max-w-md text-sm leading-6 text-slate-600">
-                      Start with a real customer-style request. The assistant will extract order details, ask for missing fields, and let you submit the lead from this admin test harness.
+                      Start with a real customer-style request. Sales AI will extract order details, ask for anything missing, and let you submit the lead from this admin test harness.
                     </p>
                   </div>
                 )}
@@ -1059,7 +1059,7 @@ export default function AdminAiAssistantPage() {
             {(lastSuggestions.length > 0 || lastRelatedContext.length > 0) && (
               <div className="mt-4 grid gap-4 md:grid-cols-2">
                 <div className="rounded-[1.4rem] border border-amber-200 bg-amber-50/80 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">Assistant suggestions</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">Sales AI suggestions</p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {lastSuggestions.length ? (
                       lastSuggestions.map((item) => (
@@ -1269,7 +1269,7 @@ export default function AdminAiAssistantPage() {
                     ))
                   ) : (
                     <span className="text-sm text-slate-600">
-                      The assistant only learns aliases from approved leads, so it adapts without training itself on bad chats.
+                      Sales AI only learns aliases from approved leads, so it adapts without training itself on bad chats.
                     </span>
                   )}
                 </div>
@@ -1388,7 +1388,7 @@ export default function AdminAiAssistantPage() {
                           {item.lead.clientName || "Unnamed lead"} · {item.lead.productType || "No product yet"}
                         </p>
                         <p className="mt-2 line-clamp-2 text-sm text-slate-600">
-                          {item.lastMessage || "No assistant reply stored yet."}
+                          {item.lastMessage || "No Sales AI reply stored yet."}
                         </p>
                       </div>
                       <span
