@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { doc, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import {
   Fragment,
   startTransition,
@@ -36,7 +35,7 @@ import {
   type AssistantContextItem,
   type AssistantTrainingSnapshot,
 } from "@/lib/ai-assistant";
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import type {
   AssistantChatPayload,
   AssistantKnowledgeRecord,
@@ -93,18 +92,6 @@ function formatAttachmentSize(value: number | null) {
   return `${Math.max(1, Math.round(value / 1024))} KB`;
 }
 
-function isStorageQuotaExceededError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error || "");
-  return /storage\/quota-exceeded|quota for bucket/i.test(message);
-}
-
-function getFriendlyLogoUploadError(error: unknown) {
-  if (isStorageQuotaExceededError(error)) {
-    return "Firebase Storage quota is exceeded, so the logo file could not be uploaded.";
-  }
-  return error instanceof Error ? error.message : "Failed to upload logo.";
-}
-
 function buildFallbackUploadUrl(uploadId: string) {
   return `/api/admin/ai-assistant/uploads/${encodeURIComponent(uploadId)}`;
 }
@@ -128,6 +115,42 @@ function arrayBufferToBase64(buffer: ArrayBuffer) {
   }
 
   return btoa(binary);
+}
+
+async function storeLogoUploadInternally(sessionId: string, file: File): Promise<AssistantAttachment> {
+  const uploadId = `${sessionId}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  const base64 = arrayBufferToBase64(await file.arrayBuffer());
+  const chunks = chunkString(base64, FALLBACK_UPLOAD_CHUNK_SIZE);
+  const metaRef = doc(db, "aiAssistantUploads", uploadId);
+
+  await setDoc(metaRef, {
+    uploadId,
+    sessionId,
+    filename: file.name,
+    contentType: file.type || null,
+    size: typeof file.size === "number" ? file.size : null,
+    chunkCount: chunks.length,
+    source: "internal-upload",
+    createdAt: serverTimestamp(),
+    createdAtIso: new Date().toISOString(),
+  });
+
+  const batch = writeBatch(db);
+  chunks.forEach((chunk, index) => {
+    batch.set(doc(db, "aiAssistantUploads", uploadId, "chunks", String(index).padStart(4, "0")), {
+      index,
+      data: chunk,
+    });
+  });
+  await batch.commit();
+
+  return {
+    name: file.name,
+    url: buildFallbackUploadUrl(uploadId),
+    contentType: file.type || null,
+    size: typeof file.size === "number" ? file.size : null,
+    uploadedAt: new Date().toISOString(),
+  };
 }
 
 function isImageAttachment(attachment: AssistantAttachment | null) {
@@ -279,6 +302,7 @@ export default function AdminAiAssistantPage() {
   const [sending, setSending] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
+  const [pendingLogoPreviewUrl, setPendingLogoPreviewUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [savingKnowledge, setSavingKnowledge] = useState(false);
   const [training, setTraining] = useState(false);
@@ -327,6 +351,20 @@ export default function AdminAiAssistantPage() {
       alive = false;
     };
   }, [refreshOverview]);
+
+  useEffect(() => {
+    if (!pendingLogoFile || !pendingLogoFile.type.startsWith("image/")) {
+      setPendingLogoPreviewUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(pendingLogoFile);
+    setPendingLogoPreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [pendingLogoFile]);
 
   async function handleSendMessage(options?: {
     message?: string;
@@ -406,20 +444,11 @@ export default function AdminAiAssistantPage() {
 
     try {
       setPendingLogoFile(null);
-      const safeName = file.name.replace(/[^a-z0-9._-]/gi, "_");
-      const uploadRef = ref(storage, `ai-assistant/${currentSessionId}/${Date.now()}-${safeName}`);
-      const snap = await uploadBytes(uploadRef, file);
-      const url = await getDownloadURL(snap.ref);
+      const attachment = await storeLogoUploadInternally(currentSessionId, file);
 
       const result = await handleSendMessage({
         message: `Uploaded logo file: ${file.name}`,
-        attachment: {
-          name: file.name,
-          url,
-          contentType: file.type || null,
-          size: typeof file.size === "number" ? file.size : null,
-          uploadedAt: new Date().toISOString(),
-        },
+        attachment,
         preserveDraft: true,
       });
       if (result) {
@@ -429,72 +458,8 @@ export default function AdminAiAssistantPage() {
         setPendingLogoFile(file);
       }
     } catch (nextError) {
-      if (isStorageQuotaExceededError(nextError)) {
-        try {
-          const uploadId = `${currentSessionId}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-          const base64 = arrayBufferToBase64(await file.arrayBuffer());
-          const chunks = chunkString(base64, FALLBACK_UPLOAD_CHUNK_SIZE);
-          const metaRef = doc(db, "aiAssistantUploads", uploadId);
-
-          await setDoc(metaRef, {
-            uploadId,
-            sessionId: currentSessionId,
-            filename: file.name,
-            contentType: file.type || null,
-            size: typeof file.size === "number" ? file.size : null,
-            chunkCount: chunks.length,
-            source: "firestore-fallback",
-            createdAt: serverTimestamp(),
-            createdAtIso: new Date().toISOString(),
-          });
-
-          const batch = writeBatch(db);
-          chunks.forEach((chunk, index) => {
-            batch.set(doc(db, "aiAssistantUploads", uploadId, "chunks", String(index).padStart(4, "0")), {
-              index,
-              data: chunk,
-            });
-          });
-          await batch.commit();
-
-          const fallbackResult = await handleSendMessage({
-            message: `Uploaded logo file: ${file.name}`,
-            attachment: {
-              name: file.name,
-              url: buildFallbackUploadUrl(uploadId),
-              contentType: file.type || null,
-              size: typeof file.size === "number" ? file.size : null,
-              uploadedAt: new Date().toISOString(),
-            },
-            preserveDraft: true,
-          });
-
-          if (fallbackResult) {
-            setError(null);
-            setNotice(`Storage quota is full, so ${file.name} was attached through the internal fallback upload.`);
-          } else {
-            await refreshSession(currentSessionId);
-            setPendingLogoFile(file);
-            setError("Storage quota is exceeded, and the internal fallback upload did not complete.");
-          }
-        } catch (fallbackError) {
-          setError(getFriendlyLogoUploadError(fallbackError));
-          setPendingLogoFile(file);
-          const pendingResult = await handleSendMessage({
-            message: `Logo pending upload later: ${file.name}`,
-            preserveDraft: true,
-          });
-          if (pendingResult) {
-            setNotice(
-              `Storage quota is full, so ${file.name} was marked as pending upload while the conversation continues.`
-            );
-            setError(null);
-          }
-        }
-      } else {
-        setError(getFriendlyLogoUploadError(nextError));
-        setPendingLogoFile(file);
-      }
+      setError(nextError instanceof Error ? nextError.message : "Failed to upload logo.");
+      setPendingLogoFile(file);
     } finally {
       setUploadingLogo(false);
     }
@@ -734,6 +699,17 @@ export default function AdminAiAssistantPage() {
             <span className="text-emerald-700">ready to send</span>
           </div>
         )}
+        {pendingLogoPreviewUrl && pendingLogoFile && (
+          <div className="mt-3 overflow-hidden rounded-2xl border border-emerald-200 bg-white p-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={pendingLogoPreviewUrl}
+              alt={pendingLogoFile.name}
+              className="max-h-64 w-full rounded-xl object-contain"
+              loading="lazy"
+            />
+          </div>
+        )}
         {isImageAttachment(logoAttachment) && (
           <div className="mt-3 overflow-hidden rounded-2xl border border-emerald-200 bg-white p-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -790,6 +766,17 @@ export default function AdminAiAssistantPage() {
             <span className="font-semibold">{pendingLogoFile.name}</span>
             {pendingLogoSize ? <span className="text-amber-700">{pendingLogoSize}</span> : null}
             <span className="text-amber-700">ready to send</span>
+          </div>
+        )}
+        {pendingLogoPreviewUrl && pendingLogoFile && (
+          <div className="mt-3 overflow-hidden rounded-2xl border border-amber-200 bg-white p-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={pendingLogoPreviewUrl}
+              alt={pendingLogoFile.name}
+              className="max-h-64 w-full rounded-xl object-contain"
+              loading="lazy"
+            />
           </div>
         )}
       </div>
@@ -1155,6 +1142,17 @@ export default function AdminAiAssistantPage() {
                           <p className="mt-3 text-xs text-cyan-700">
                             Logo selected. Press Submit logo to send it into this chat flow.
                           </p>
+                        )}
+                        {pendingLogoPreviewUrl && pendingLogoFile && (
+                          <div className="mt-3 overflow-hidden rounded-2xl border border-cyan-200 bg-white p-2">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={pendingLogoPreviewUrl}
+                              alt={pendingLogoFile.name}
+                              className="max-h-64 w-full rounded-xl object-contain"
+                              loading="lazy"
+                            />
+                          </div>
                         )}
                       </div>
                     )}
