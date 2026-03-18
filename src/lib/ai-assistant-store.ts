@@ -19,6 +19,7 @@ import {
   buildAssistantTrainingState,
   createEmptyAssistantLead,
   createEmptyLearnedProductAliases,
+  createEmptyLearnedProductPlaybooks,
   formatLeadSummary,
   missingAssistantFields,
   normalizeAssistantAttachment,
@@ -28,8 +29,10 @@ import {
   type AssistantApprovedLeadSource,
   type AssistantChatResult,
   type AssistantKnowledgeSource,
+  type AssistantLearnedPrintPattern,
   type AssistantLead,
   type AssistantMessageRole,
+  type AssistantProductPlaybook,
   type AssistantProductType,
   type AssistantRequiredField,
   type AssistantTrainingState,
@@ -254,6 +257,51 @@ function mapLearnedProductAliases(value: unknown): Record<AssistantProductType, 
   return fallback;
 }
 
+function mapLearnedPrintPattern(value: unknown): AssistantLearnedPrintPattern | null {
+  if (!value || typeof value !== "object") return null;
+
+  const source = value as Record<string, unknown>;
+  const positions = Array.isArray(source.positions)
+    ? source.positions.map((entry) => cleanString(entry).toLowerCase()).filter(Boolean)
+    : [];
+  const printSizes = Array.isArray(source.printSizes)
+    ? source.printSizes.map((entry) => cleanString(entry).toLowerCase()).filter(Boolean)
+    : [];
+
+  if (!positions.length) return null;
+
+  return {
+    positions: Array.from(new Set(positions)).sort((left, right) => left.localeCompare(right)),
+    printSizes: Array.from(new Set(printSizes)).sort((left, right) => left.localeCompare(right)),
+    count: asNumber(source.count, 0),
+  };
+}
+
+function mapLearnedProductPlaybooks(value: unknown): Record<AssistantProductType, AssistantProductPlaybook> {
+  const fallback = createEmptyLearnedProductPlaybooks();
+  if (!value || typeof value !== "object") return fallback;
+
+  const source = value as Record<string, unknown>;
+  ASSISTANT_PRODUCT_TYPES.forEach((productType) => {
+    const entry = source[productType];
+    if (!entry || typeof entry !== "object") return;
+    const record = entry as Record<string, unknown>;
+    const topColor = cleanNullableString(record.topColor)?.toLowerCase() || null;
+    const topDeliveryMethod = cleanString(record.topDeliveryMethod).toLowerCase();
+
+    fallback[productType] = {
+      topColor,
+      topDeliveryMethod:
+        topDeliveryMethod === "pickup" || topDeliveryMethod === "delivery"
+          ? topDeliveryMethod
+          : null,
+      topPrintPattern: mapLearnedPrintPattern(record.topPrintPattern),
+    };
+  });
+
+  return fallback;
+}
+
 function mapTrainingSnapshot(data: FirestoreLike | null): AssistantTrainingSnapshot | null {
   if (!data) return null;
   const topKeywords = Array.isArray(data.topKeywords)
@@ -280,6 +328,7 @@ function mapTrainingSnapshot(data: FirestoreLike | null): AssistantTrainingSnaps
       ? (data.positiveKeywords as Record<string, unknown>)
       : null;
   const learnedProductAliases = mapLearnedProductAliases(data.learnedProductAliases);
+  const learnedProductPlaybooks = mapLearnedProductPlaybooks(data.learnedProductPlaybooks);
 
   return {
     positiveKeywordCount: asNumber(
@@ -295,6 +344,7 @@ function mapTrainingSnapshot(data: FirestoreLike | null): AssistantTrainingSnaps
       data.learnedProductAliasCount,
       Object.values(learnedProductAliases).reduce((total, aliases) => total + aliases.length, 0)
     ),
+    learnedProductPlaybooks,
     updatedAt: timestampToIso(data.updatedAt, data.updatedAtIso),
   };
 }
@@ -878,6 +928,7 @@ export async function retrainAssistantModel(): Promise<AssistantTrainingSnapshot
     topKeywords: trainingState.topKeywords,
     learnedProductAliases: trainingState.learnedProductAliases,
     learnedProductAliasCount: trainingState.learnedProductAliasCount,
+    learnedProductPlaybooks: trainingState.learnedProductPlaybooks,
     updatedAt: nowIso,
   };
 }
@@ -896,6 +947,7 @@ async function persistTrainingState(trainingState: AssistantTrainingState, nowIs
       topKeywords: trainingState.topKeywords,
       learnedProductAliases: trainingState.learnedProductAliases,
       learnedProductAliasCount: trainingState.learnedProductAliasCount,
+      learnedProductPlaybooks: trainingState.learnedProductPlaybooks,
       updatedAt: serverTimestamp(),
       updatedAtIso: nowIso,
     },

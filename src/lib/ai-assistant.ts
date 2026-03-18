@@ -263,6 +263,18 @@ export type AssistantKeywordStat = {
   count: number;
 };
 
+export type AssistantLearnedPrintPattern = {
+  positions: string[];
+  printSizes: string[];
+  count: number;
+};
+
+export type AssistantProductPlaybook = {
+  topColor: string | null;
+  topDeliveryMethod: AssistantLead["deliveryMethod"];
+  topPrintPattern: AssistantLearnedPrintPattern | null;
+};
+
 export type AssistantTrainingSnapshot = {
   positiveKeywordCount: number;
   fieldGroups: string[];
@@ -271,6 +283,7 @@ export type AssistantTrainingSnapshot = {
   topKeywords: AssistantKeywordStat[];
   learnedProductAliases: Record<AssistantProductType, string[]>;
   learnedProductAliasCount: number;
+  learnedProductPlaybooks: Record<AssistantProductType, AssistantProductPlaybook>;
   updatedAt?: string | null;
 };
 
@@ -768,6 +781,15 @@ export function createEmptyLearnedProductAliases(): Record<AssistantProductType,
   };
 }
 
+export function createEmptyLearnedProductPlaybooks(): Record<AssistantProductType, AssistantProductPlaybook> {
+  return {
+    "t-shirt": { topColor: null, topDeliveryMethod: null, topPrintPattern: null },
+    polo: { topColor: null, topDeliveryMethod: null, topPrintPattern: null },
+    hoodie: { topColor: null, topDeliveryMethod: null, topPrintPattern: null },
+    cap: { topColor: null, topDeliveryMethod: null, topPrintPattern: null },
+  };
+}
+
 function getProductPatternCatalog(trainingState?: Pick<AssistantTrainingState, "learnedProductAliases"> | null) {
   return PRODUCT_PATTERNS.map((product) => {
     const patterns = dedupeSorted([
@@ -910,6 +932,85 @@ function learnProductAliasesFromApprovedLeads(approvedLeads: AssistantApprovedLe
   });
 
   return learnedAliases;
+}
+
+function getTopCountKey(counts: Record<string, number>) {
+  return Object.entries(counts).sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))[0]?.[0] || null;
+}
+
+function getPrintPatternKey(positions: string[], printSizes: string[]) {
+  return JSON.stringify({
+    positions: dedupeSorted(positions, (value) => value.toLowerCase()),
+    printSizes: dedupeSorted(printSizes, (value) => value.toLowerCase()),
+  });
+}
+
+function learnProductPlaybooksFromApprovedLeads(approvedLeads: AssistantApprovedLeadSource[]) {
+  const playbooks = createEmptyLearnedProductPlaybooks();
+  const colorCounts: Record<AssistantProductType, Record<string, number>> = {
+    "t-shirt": {},
+    polo: {},
+    hoodie: {},
+    cap: {},
+  };
+  const deliveryCounts: Record<AssistantProductType, Record<string, number>> = {
+    "t-shirt": {},
+    polo: {},
+    hoodie: {},
+    cap: {},
+  };
+  const printPatternCounts: Record<AssistantProductType, Record<string, AssistantLearnedPrintPattern>> = {
+    "t-shirt": {},
+    polo: {},
+    hoodie: {},
+    cap: {},
+  };
+
+  approvedLeads.forEach((source) => {
+    if (source.status && source.status !== "approved") return;
+    const lead = normalizeAssistantLead(source.lead);
+    if (!lead.productType) return;
+
+    if (lead.color) {
+      incrementCounter(colorCounts[lead.productType], lead.color);
+    }
+    if (lead.deliveryMethod) {
+      incrementCounter(deliveryCounts[lead.productType], lead.deliveryMethod);
+    }
+    if (lead.printPositions.length) {
+      const key = getPrintPatternKey(lead.printPositions, lead.printSizes);
+      const existing = printPatternCounts[lead.productType][key];
+      if (existing) {
+        existing.count += 1;
+      } else {
+        printPatternCounts[lead.productType][key] = {
+          positions: dedupeSorted(lead.printPositions, (value) => value.toLowerCase()),
+          printSizes: dedupeSorted(lead.printSizes, (value) => value.toLowerCase()),
+          count: 1,
+        };
+      }
+    }
+  });
+
+  ASSISTANT_PRODUCT_TYPES.forEach((productType) => {
+    const topColor = getTopCountKey(colorCounts[productType]);
+    const topDeliveryMethod = getTopCountKey(deliveryCounts[productType]) as AssistantLead["deliveryMethod"];
+    const topPrintPattern =
+      Object.values(printPatternCounts[productType]).sort(
+        (left, right) =>
+          right.count - left.count ||
+          left.positions.join("|").localeCompare(right.positions.join("|")) ||
+          left.printSizes.join("|").localeCompare(right.printSizes.join("|"))
+      )[0] || null;
+
+    playbooks[productType] = {
+      topColor,
+      topDeliveryMethod: topDeliveryMethod || null,
+      topPrintPattern,
+    };
+  });
+
+  return playbooks;
 }
 
 export function createEmptyAssistantLead(): AssistantLead {
@@ -1237,12 +1338,35 @@ function buildFollowUpContactMessage(lead: AssistantLead) {
   return ` We will use ${lead.phone} to contact you back.`;
 }
 
+function formatReadableList(values: string[]) {
+  const cleaned = values.map((value) => titleCase(value)).filter(Boolean);
+  if (!cleaned.length) return "";
+  if (cleaned.length === 1) return cleaned[0];
+  if (cleaned.length === 2) return `${cleaned[0]} and ${cleaned[1]}`;
+  return `${cleaned.slice(0, -1).join(", ")}, and ${cleaned.at(-1)}`;
+}
+
+function formatLearnedPrintPattern(pattern: AssistantLearnedPrintPattern) {
+  const positions = formatReadableList(pattern.positions);
+  if (!pattern.printSizes.length) return positions;
+  return `${positions} with ${formatReadableList(pattern.printSizes)}`;
+}
+
+function learnedPrintPatternMatchesLead(lead: AssistantLead, pattern: AssistantLearnedPrintPattern) {
+  return (
+    getPrintPatternKey(lead.printPositions, []) === getPrintPatternKey(pattern.positions, []) ||
+    dedupeSorted(lead.printPositions, (value) => value.toLowerCase()).join("|") ===
+      dedupeSorted(pattern.positions, (value) => value.toLowerCase()).join("|")
+  );
+}
+
 function shouldPromptForLogoUpload(lead: AssistantLead, missingFields: AssistantRequiredField[]) {
   return !missingFields.includes("sizeBreakdown") && !lead.logoAttachment && lead.logoReady !== false;
 }
 
-export function nextAssistantQuestion(lead: AssistantLead) {
+export function nextAssistantQuestion(lead: AssistantLead, trainingState?: AssistantTrainingState | null) {
   const missing = missingAssistantFields(lead);
+  const playbook = lead.productType ? trainingState?.learnedProductPlaybooks?.[lead.productType] : null;
   if (shouldPromptForLogoUpload(lead, missing)) {
     return (
       "If the design or logo is ready, upload it as PNG, JPG, PDF, or AI. " +
@@ -1273,11 +1397,26 @@ export function nextAssistantQuestion(lead: AssistantLead) {
     deadline: "What is your deadline?",
   };
 
+  if (missing[0] === "printPositions" && playbook?.topPrintPattern?.positions.length) {
+    return `${prompts.printPositions} Most approved ${formatProductTypeLabel(lead.productType)} jobs use ${formatLearnedPrintPattern(
+      playbook.topPrintPattern
+    )}.`;
+  }
+
+  if (missing[0] === "sizeBreakdown") {
+    return `${prompts.sizeBreakdown}\n\nYou can also answer naturally, for example: 2 XL and 1 M.`;
+  }
+
   return prompts[missing[0]];
 }
 
-export function buildAssistantSuggestions(lead: AssistantLead, message: string) {
+export function buildAssistantSuggestions(
+  lead: AssistantLead,
+  message: string,
+  trainingState?: AssistantTrainingState | null
+) {
   const suggestions: string[] = [];
+  const playbook = lead.productType ? trainingState?.learnedProductPlaybooks?.[lead.productType] : null;
   if ((lead.productType === "polo" || lead.productType === "t-shirt") && !lead.printSizes.length) {
     suggestions.push("You can choose small 9x9 for a chest logo or large 22x22 for a big print.");
   }
@@ -1286,6 +1425,27 @@ export function buildAssistantSuggestions(lead: AssistantLead, message: string) 
   }
   if (/\brestaurant\b|\bcompany\b/i.test(message)) {
     suggestions.push("For company uniforms, front left chest plus a large back print is a common setup.");
+  }
+  if (!lead.printPositions.length && playbook?.topPrintPattern?.positions.length) {
+    suggestions.push(
+      `Learned from approved ${formatProductTypeLabel(lead.productType)} jobs: ${formatLearnedPrintPattern(
+        playbook.topPrintPattern
+      )}.`
+    );
+  }
+  if (lead.printPositions.length && !lead.printSizes.length && playbook?.topPrintPattern?.printSizes.length) {
+    if (learnedPrintPatternMatchesLead(lead, playbook.topPrintPattern)) {
+      suggestions.push(
+        `For this layout, approved ${formatProductTypeLabel(lead.productType)} jobs usually use ${formatReadableList(
+          playbook.topPrintPattern.printSizes
+        )}.`
+      );
+    }
+  }
+  if (!lead.deliveryMethod && playbook?.topDeliveryMethod) {
+    suggestions.push(
+      `Most approved ${formatProductTypeLabel(lead.productType)} jobs use ${titleCase(playbook.topDeliveryMethod)}.`
+    );
   }
   if (lead.productType && lead.logoReady !== false && !lead.logoAttachment) {
     suggestions.push("If the design or logo is ready, upload it as PNG, JPG, PDF, or AI.");
@@ -1393,14 +1553,14 @@ export function runAssistantTurn(input: {
       reply = `${formatLeadSummary(lead)}\n\nThis lead is ready. Use "Send to Quotation Approval" in admin to save it.`;
     } else {
       const labels = missingFields.map(formatAssistantFieldLabel).join(", ");
-      reply = `I still need these details before submission: ${labels}. ${nextAssistantQuestion(lead)}`;
+      reply = `I still need these details before submission: ${labels}. ${nextAssistantQuestion(lead, input.trainingState)}`;
     }
   } else {
     const intro = relatedContext.length ? "I found similar past information that may help. " : "";
     const attachmentAck = receivedAttachment
       ? `${replacingAttachment ? "Logo updated" : "Logo received"} and attached to your request. `
       : "";
-    reply = `${intro}${attachmentAck}${nextAssistantQuestion(lead)}`;
+    reply = `${intro}${attachmentAck}${nextAssistantQuestion(lead, input.trainingState)}`;
   }
 
   return {
@@ -1409,7 +1569,7 @@ export function runAssistantTurn(input: {
     updates,
     missingFields,
     readyToSubmit,
-    suggestions: buildAssistantSuggestions(lead, input.message),
+    suggestions: buildAssistantSuggestions(lead, input.message, input.trainingState),
     relatedContext,
   };
 }
@@ -1421,6 +1581,7 @@ export function buildAssistantTrainingState(
   const positiveKeywords: Record<string, number> = {};
   const fieldKeywordCounts: Record<string, Record<string, number>> = {};
   const learnedProductAliases = learnProductAliasesFromApprovedLeads(approvedLeads);
+  const learnedProductPlaybooks = learnProductPlaybooksFromApprovedLeads(approvedLeads);
 
   approvedLeads.forEach((source) => {
     if (source.status && source.status !== "approved") return;
@@ -1459,5 +1620,6 @@ export function buildAssistantTrainingState(
       (total, aliases) => total + aliases.length,
       0
     ),
+    learnedProductPlaybooks,
   };
 }

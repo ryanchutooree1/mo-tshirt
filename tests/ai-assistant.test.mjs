@@ -73,6 +73,7 @@ test("front and back combo choices are parsed into positions and print sizes", (
   assert.deepEqual(result.lead.printPositions, ["back", "front center"]);
   assert.deepEqual(result.lead.printSizes, ["large 22x22", "small 9x9"]);
   assert.match(result.reply, /Please send the full size breakdown/i);
+  assert.match(result.reply, /2 XL and 1 M/i);
 });
 
 test("plain name replies are accepted even if logo upload is still the next prompt", () => {
@@ -513,6 +514,10 @@ test("training state learns from approved leads and saved knowledge", () => {
   assert.ok(training.topKeywords.length > 0);
   assert.ok(training.learnedProductAliases["t-shirt"].includes("crewtees"));
   assert.ok(training.learnedProductAliasCount > 0);
+  assert.equal(training.learnedProductPlaybooks["t-shirt"].topColor, "black");
+  assert.equal(training.learnedProductPlaybooks["t-shirt"].topDeliveryMethod, "delivery");
+  assert.deepEqual(training.learnedProductPlaybooks["t-shirt"].topPrintPattern?.positions, ["back", "front left chest"]);
+  assert.deepEqual(training.learnedProductPlaybooks["t-shirt"].topPrintPattern?.printSizes, ["large 22x22", "small 9x9"]);
 });
 
 test("runAssistantTurn uses learned aliases from approved sessions", () => {
@@ -550,4 +555,87 @@ test("runAssistantTurn uses learned aliases from approved sessions", () => {
 
   assert.equal(result.lead.productType, "t-shirt");
   assert.equal(result.lead.quantity, 3);
+});
+
+test("runAssistantTurn applies learned print playbook hints to the next question", () => {
+  const training = buildAssistantTrainingState(
+    [
+      {
+        status: "approved",
+        lead: {
+          clientName: "Ryan",
+          phone: "59883880",
+          email: null,
+          productType: "t-shirt",
+          quantity: 20,
+          color: "black",
+          sizes: ["M"],
+          sizeBreakdown: [{ color: "black", productType: "t-shirt", size: "M", quantity: 20 }],
+          printPositions: ["back", "front left chest"],
+          printSizes: ["large 22x22", "small 9x9"],
+          logoReady: true,
+          deliveryMethod: "pickup",
+          deadline: null,
+          notes: "staff uniforms",
+        },
+      },
+    ],
+    []
+  );
+
+  const result = runAssistantTurn({
+    lead: {
+      ...createEmptyAssistantLead(),
+      productType: "t-shirt",
+      quantity: 3,
+    },
+    message: "t-shirt confirmed",
+    trainingState: training,
+  });
+
+  assert.match(result.reply, /Most approved T-Shirt jobs use Back and Front Left Chest with Large 22x22 and Small 9x9\./);
+});
+
+test("runAssistantTurn applies learned print-size suggestions for matching layouts", () => {
+  const training = buildAssistantTrainingState(
+    [
+      {
+        status: "approved",
+        lead: {
+          clientName: "Ryan",
+          phone: "59883880",
+          email: null,
+          productType: "t-shirt",
+          quantity: 20,
+          color: "black",
+          sizes: ["M"],
+          sizeBreakdown: [{ color: "black", productType: "t-shirt", size: "M", quantity: 20 }],
+          printPositions: ["back", "front left chest"],
+          printSizes: ["large 22x22", "small 9x9"],
+          logoReady: true,
+          deliveryMethod: "pickup",
+          deadline: null,
+          notes: "staff uniforms",
+        },
+      },
+    ],
+    []
+  );
+
+  const result = runAssistantTurn({
+    lead: {
+      ...createEmptyAssistantLead(),
+      productType: "t-shirt",
+      quantity: 6,
+      printPositions: ["back", "front left chest"],
+    },
+    message: "front left chest and back",
+    trainingState: training,
+  });
+
+  assert.ok(
+    result.suggestions.some((item) =>
+      /approved T-Shirt jobs usually use Large 22x22 and Small 9x9/i.test(item)
+    )
+  );
 });
