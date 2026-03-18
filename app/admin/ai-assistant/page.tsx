@@ -91,6 +91,18 @@ function formatAttachmentSize(value: number | null) {
   return `${Math.max(1, Math.round(value / 1024))} KB`;
 }
 
+function isStorageQuotaExceededError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || "");
+  return /storage\/quota-exceeded|quota for bucket/i.test(message);
+}
+
+function getFriendlyLogoUploadError(error: unknown) {
+  if (isStorageQuotaExceededError(error)) {
+    return "Firebase Storage quota is exceeded, so the logo file could not be uploaded.";
+  }
+  return error instanceof Error ? error.message : "Failed to upload logo.";
+}
+
 function isImageAttachment(attachment: AssistantAttachment | null) {
   if (!attachment?.url) return false;
   if (attachment.contentType?.startsWith("image/")) return true;
@@ -390,8 +402,25 @@ export default function AdminAiAssistantPage() {
         setPendingLogoFile(file);
       }
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Failed to upload logo.");
-      setPendingLogoFile(file);
+      if (isStorageQuotaExceededError(nextError)) {
+        setError(null);
+        const fallbackResult = await handleSendMessage({
+          message: `Logo pending upload later: ${file.name}`,
+          preserveDraft: true,
+        });
+        if (fallbackResult) {
+          setNotice(
+            `Firebase Storage quota is exceeded. Continuing with ${file.name} marked as pending upload so the flow can move forward.`
+          );
+        } else {
+          await refreshSession(currentSessionId);
+          setPendingLogoFile(file);
+          setError("Firebase Storage quota is exceeded, and the fallback continuation did not complete.");
+        }
+      } else {
+        setError(getFriendlyLogoUploadError(nextError));
+        setPendingLogoFile(file);
+      }
     } finally {
       setUploadingLogo(false);
     }
@@ -524,8 +553,12 @@ export default function AdminAiAssistantPage() {
   const recentLeads = overview?.leads || [];
   const recentKnowledge = overview?.knowledge || [];
   const trainingSnapshot = overview?.training || null;
-  const canUploadLogo = !session.missingFields.includes("sizeBreakdown") && session.lead.logoReady !== false;
+  const canUploadLogo =
+    !session.missingFields.includes("sizeBreakdown") &&
+    session.lead.logoReady !== false &&
+    !session.lead.logoPending;
   const logoAttachment = session.lead.logoAttachment;
+  const logoPending = session.lead.logoPending;
   const pendingLogoSize = pendingLogoFile ? formatAttachmentSize(pendingLogoFile.size) : null;
   const assistantBubbleClass =
     "max-w-[85%] rounded-3xl border border-[#7dd3fc] bg-[rgba(255,255,255,0.96)] px-4 py-3 text-sm text-[#082f49] shadow-sm";
@@ -636,6 +669,53 @@ export default function AdminAiAssistantPage() {
               className="h-28 w-full rounded-xl object-contain"
               loading="lazy"
             />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function renderPendingLogoCard() {
+    if (!logoPending || logoAttachment) return null;
+
+    return (
+      <div data-thread-item className={assistantBubbleClass}>
+        <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          Upload pending
+        </div>
+        <p className="mt-3 font-semibold text-amber-950">Logo will be attached later</p>
+        <p className="mt-1 text-xs leading-5 text-amber-800">
+          Sales AI continued the flow without the file. Upload the logo again once storage is available.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingLogo || sending}
+            className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+            Upload logo now
+          </button>
+          {pendingLogoFile && (
+            <button
+              type="button"
+              onClick={() => void handleSubmitLogo()}
+              disabled={uploadingLogo || sending}
+              className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+              Submit logo
+            </button>
+          )}
+        </div>
+        {pendingLogoFile && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-amber-200 bg-white px-3 py-3 text-xs text-amber-900">
+            <Paperclip className="h-3.5 w-3.5" />
+            <span className="font-semibold">{pendingLogoFile.name}</span>
+            {pendingLogoSize ? <span className="text-amber-700">{pendingLogoSize}</span> : null}
+            <span className="text-amber-700">ready to send</span>
           </div>
         )}
       </div>
@@ -1006,6 +1086,7 @@ export default function AdminAiAssistantPage() {
                     )}
 
                     {canUploadLogo && logoAttachment && !hasInlineLogoStatus && renderLogoStatusCard()}
+                    {logoPending && !logoAttachment && renderPendingLogoCard()}
                   </>
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center rounded-[1.2rem] border border-dashed border-slate-200 bg-white/80 px-6 text-center">
@@ -1131,6 +1212,7 @@ export default function AdminAiAssistantPage() {
                   ["Print positions", session.lead.printPositions.join(", ") || "Not set"],
                   ["Print sizes", session.lead.printSizes.join(", ") || "Not set"],
                   ["Logo ready", session.lead.logoReady === null ? "Not set" : session.lead.logoReady ? "Yes" : "No"],
+                  ["Logo pending", session.lead.logoPending ? "Yes" : "No"],
                   ["Logo file", session.lead.logoAttachment?.name || "Not set"],
                   ["Delivery", session.lead.deliveryMethod || "Not set"],
                   ["Deadline", session.lead.deadline || "Not set"],

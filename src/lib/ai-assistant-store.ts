@@ -481,6 +481,7 @@ function buildQuoteMessageFromAssistantLead(lead: AssistantLead) {
     lead.color ? `Color: ${titleCase(lead.color)}` : "",
     lead.printPositions.length ? `Print positions: ${lead.printPositions.join(", ")}` : "",
     lead.printSizes.length ? `Print sizes: ${lead.printSizes.join(", ")}` : "",
+    lead.logoPending && !lead.logoAttachment ? "Artwork file pending upload." : "",
     lead.deadline ? `Deadline: ${lead.deadline}` : "",
     lead.deliveryMethod ? `Delivery: ${titleCase(lead.deliveryMethod)}` : "",
   ].filter(Boolean);
@@ -531,7 +532,7 @@ function buildQuotePayloadFromAssistantLead(
     notes: lead.notes || "",
     source: "Sales AI",
     delivery: lead.deliveryMethod ? titleCase(lead.deliveryMethod) : "",
-    attachments: lead.logoAttachment
+    attachments: lead.logoAttachment?.url
       ? [
           {
             label: "Logo file",

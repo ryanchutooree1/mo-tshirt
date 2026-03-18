@@ -218,6 +218,7 @@ export type AssistantLead = {
   printPositions: string[];
   printSizes: string[];
   logoReady: boolean | null;
+  logoPending: boolean;
   logoAttachment: AssistantAttachment | null;
   deliveryMethod: "pickup" | "delivery" | null;
   deadline: string | null;
@@ -1026,6 +1027,7 @@ export function createEmptyAssistantLead(): AssistantLead {
     printPositions: [],
     printSizes: [],
     logoReady: null,
+    logoPending: false,
     logoAttachment: null,
     deliveryMethod: null,
     deadline: null,
@@ -1054,6 +1056,7 @@ export function normalizeAssistantLead(input: unknown): AssistantLead {
   lead.printPositions = normalizeStringArray(source.printPositions, (value) => value.toLowerCase());
   lead.printSizes = normalizeStringArray(source.printSizes, (value) => value.toLowerCase());
   lead.logoReady = typeof source.logoReady === "boolean" ? source.logoReady : null;
+  lead.logoPending = Boolean(source.logoPending);
   lead.logoAttachment = normalizeAssistantAttachment(source.logoAttachment);
 
   const deliveryMethod = cleanString(source.deliveryMethod).toLowerCase();
@@ -1210,6 +1213,7 @@ export function extractLeadUpdates(
     lower.includes("logo is ready")
   ) {
     updates.logoReady = true;
+    updates.logoPending = false;
   } else if (
     lower.includes("no logo") ||
     lower.includes("logo not ready") ||
@@ -1218,6 +1222,17 @@ export function extractLeadUpdates(
     lower.includes("logo later")
   ) {
     updates.logoReady = false;
+    updates.logoPending = false;
+  }
+
+  if (
+    lower.includes("logo pending upload later") ||
+    lower.includes("logo pending") ||
+    lower.includes("upload logo later") ||
+    lower.includes("attach logo later")
+  ) {
+    updates.logoReady = true;
+    updates.logoPending = true;
   }
 
   const emailMatch = EMAIL_RE.exec(message);
@@ -1304,7 +1319,12 @@ export function mergeAssistantLeadUpdates(lead: AssistantLead, updates: Partial<
   if (updates.quantity !== undefined && !updates.sizeBreakdown) merged.quantity = updates.quantity;
   if (updates.color !== undefined) merged.color = updates.color;
   if (updates.logoReady !== undefined) merged.logoReady = updates.logoReady;
+  if (updates.logoPending !== undefined) merged.logoPending = updates.logoPending;
   if (updates.logoAttachment !== undefined) merged.logoAttachment = updates.logoAttachment;
+  if (updates.logoAttachment) {
+    merged.logoPending = false;
+    merged.logoReady = true;
+  }
   if (updates.deliveryMethod !== undefined) merged.deliveryMethod = updates.deliveryMethod;
   if (updates.deadline !== undefined) merged.deadline = updates.deadline;
   if (updates.notes !== undefined) merged.notes = updates.notes;
@@ -1361,7 +1381,7 @@ function learnedPrintPatternMatchesLead(lead: AssistantLead, pattern: AssistantL
 }
 
 function shouldPromptForLogoUpload(lead: AssistantLead, missingFields: AssistantRequiredField[]) {
-  return !missingFields.includes("sizeBreakdown") && !lead.logoAttachment && lead.logoReady !== false;
+  return !missingFields.includes("sizeBreakdown") && !lead.logoAttachment && !lead.logoPending && lead.logoReady !== false;
 }
 
 export function nextAssistantQuestion(lead: AssistantLead, trainingState?: AssistantTrainingState | null) {
@@ -1377,6 +1397,11 @@ export function nextAssistantQuestion(lead: AssistantLead, trainingState?: Assis
   if (!missing.length) {
     if (lead.logoAttachment) {
       return `Perfect. I have the main order details and the logo file.${buildFollowUpContactMessage(
+        lead
+      )} Type "summary" to review the lead or use "Send to Quotation Approval" in admin.`;
+    }
+    if (lead.logoPending) {
+      return `Perfect. I have the main order details, and the logo is marked as pending upload.${buildFollowUpContactMessage(
         lead
       )} Type "summary" to review the lead or use "Send to Quotation Approval" in admin.`;
     }
@@ -1423,6 +1448,9 @@ export function buildAssistantSuggestions(
   if (lead.logoReady === false) {
     suggestions.push("If the logo is not ready yet, you can still send the text, colors, and style you want.");
   }
+  if (lead.logoPending) {
+    suggestions.push("The logo is marked as pending upload, so you can continue the quote and attach the file later.");
+  }
   if (/\brestaurant\b|\bcompany\b/i.test(message)) {
     suggestions.push("For company uniforms, front left chest plus a large back print is a common setup.");
   }
@@ -1466,6 +1494,7 @@ export function formatLeadSummary(lead: AssistantLead) {
     ["Print positions", lead.printPositions.join(", ") || null],
     ["Print sizes", lead.printSizes.join(", ") || null],
     ["Logo ready", lead.logoReady === null ? null : lead.logoReady ? "Yes" : "No"],
+    ["Logo pending", lead.logoPending ? "Yes" : null],
     ["Logo file", lead.logoAttachment?.name || null],
     ["Delivery", lead.deliveryMethod],
     ["Deadline", lead.deadline],
@@ -1560,7 +1589,8 @@ export function runAssistantTurn(input: {
     const attachmentAck = receivedAttachment
       ? `${replacingAttachment ? "Logo updated" : "Logo received"} and attached to your request. `
       : "";
-    reply = `${intro}${attachmentAck}${nextAssistantQuestion(lead, input.trainingState)}`;
+    const pendingLogoAck = updates.logoPending ? "Logo noted. The file is pending upload for now. " : "";
+    reply = `${intro}${attachmentAck}${pendingLogoAck}${nextAssistantQuestion(lead, input.trainingState)}`;
   }
 
   return {

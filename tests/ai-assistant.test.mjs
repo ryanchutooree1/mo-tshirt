@@ -341,6 +341,36 @@ test("logo upload is acknowledged before asking for contact details", () => {
   assert.match(result.reply, /What is your name\?/);
 });
 
+test("logo pending upload later continues the flow without repeating the upload prompt", () => {
+  const result = runAssistantTurn({
+    lead: {
+      clientName: null,
+      phone: null,
+      email: null,
+      productType: "t-shirt",
+      quantity: 3,
+      color: "black",
+      sizes: ["M"],
+      sizeBreakdown: [{ color: "black", productType: "t-shirt", size: "M", quantity: 3 }],
+      printPositions: ["back"],
+      printSizes: [],
+      logoReady: null,
+      logoAttachment: null,
+      deliveryMethod: null,
+      deadline: null,
+      notes: null,
+    },
+    message: "Logo pending upload later: IMG_3618.PNG",
+  });
+
+  assert.equal(result.lead.logoReady, true);
+  assert.equal(result.lead.logoPending, true);
+  assert.equal(result.lead.logoAttachment, null);
+  assert.match(result.reply, /Logo noted\. The file is pending upload for now\./);
+  assert.match(result.reply, /What is your name\?/);
+  assert.equal(/upload it as png, jpg, pdf, or ai/i.test(result.reply), false);
+});
+
 test("after email is captured with a logo on file, the assistant asks for WhatsApp", () => {
   const result = runAssistantTurn({
     lead: {
