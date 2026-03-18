@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import NextImage from "next/image";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { storage } from "@/lib/firebase";
 import {
@@ -1935,12 +1934,13 @@ export default function QuotationApprovalPage() {
                                       ) : null}
                                     </div>
                                     {attachmentIsImage && attachment.url ? (
-                                      <div className="relative mt-3 h-40 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                                        <NextImage
+                                      <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
                                           src={attachment.url}
                                           alt={attachment.filename || "Attachment"}
-                                          fill
-                                          className="object-cover"
+                                          className="h-40 w-full rounded-xl object-contain"
+                                          loading="lazy"
                                         />
                                       </div>
                                     ) : !attachment.url ? (
