@@ -332,10 +332,10 @@ export default function AdminAiAssistantPage() {
       }
 
       await refreshOverview();
-      return true;
+      return result;
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Failed to send message.");
-      return false;
+      return null;
     } finally {
       setSending(false);
     }
@@ -360,18 +360,19 @@ export default function AdminAiAssistantPage() {
     if (!pendingLogoFile || uploadingLogo || sending) return;
 
     const currentSessionId = session.sessionId;
+    const file = pendingLogoFile;
     setUploadingLogo(true);
     setError(null);
     setNotice("Uploading logo and waiting for the AI reply...");
 
     try {
-      const file = pendingLogoFile;
+      setPendingLogoFile(null);
       const safeName = file.name.replace(/[^a-z0-9._-]/gi, "_");
       const uploadRef = ref(storage, `ai-assistant/${currentSessionId}/${Date.now()}-${safeName}`);
       const snap = await uploadBytes(uploadRef, file);
       const url = await getDownloadURL(snap.ref);
 
-      const sent = await handleSendMessage({
+      const result = await handleSendMessage({
         message: `Uploaded logo file: ${file.name}`,
         attachment: {
           name: file.name,
@@ -382,15 +383,15 @@ export default function AdminAiAssistantPage() {
         },
         preserveDraft: true,
       });
-      if (sent) {
-        setPendingLogoFile(null);
-        await refreshSession(currentSessionId);
+      if (result) {
         setNotice(`We have received the logo: ${file.name}. Review it in the chat thread or the Lead Snapshot panel.`);
       } else {
         await refreshSession(currentSessionId);
+        setPendingLogoFile(file);
       }
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Failed to upload logo.");
+      setPendingLogoFile(file);
     } finally {
       setUploadingLogo(false);
     }
