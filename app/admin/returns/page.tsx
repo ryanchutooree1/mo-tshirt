@@ -67,6 +67,29 @@ type ReturnReason =
 
 type ResolutionType = "Refund" | "Exchange" | "Repair" | "Store Credit";
 
+const STATUS_OPTIONS = [
+  "Requested",
+  "Approved",
+  "In Transit",
+  "Received",
+  "QC Passed",
+  "QC Failed",
+  "Refunded",
+  "Exchanged",
+  "Closed",
+] as const satisfies readonly RMAStatus[];
+
+const REASON_OPTIONS = [
+  "Defective",
+  "Wrong Size",
+  "Wrong Item",
+  "Quality Issue",
+  "Changed Mind",
+  "Other",
+] as const satisfies readonly ReturnReason[];
+
+const RESOLUTION_OPTIONS = ["Refund", "Exchange", "Repair", "Store Credit"] as const satisfies readonly ResolutionType[];
+
 export type RMA = {
   id: string;
   orderId: string;
@@ -181,6 +204,13 @@ const seed: RMA[] = [
 
 const money = (n: number | undefined) => (n == null ? "—" : `Rs ${n.toLocaleString()}`);
 
+function buildSelectedMap(rows: RMA[], checked: boolean) {
+  return rows.reduce<Record<string, boolean>>((acc, row) => {
+    acc[row.id] = checked;
+    return acc;
+  }, {});
+}
+
 function badgeForStatus(s: RMAStatus) {
   switch (s) {
     case "Requested":
@@ -263,10 +293,10 @@ export default function ReturnsPage() {
       qty: Number(patch.qty || 1),
       size: patch.size || "—",
       color: patch.color || "—",
-      reason: (patch.reason as any) || "Other",
+      reason: patch.reason || "Other",
       notes: patch.notes || "",
-      status: (patch.status as any) || "Requested",
-      resolution: (patch.resolution as any) || "Refund",
+      status: patch.status || "Requested",
+      resolution: patch.resolution || "Refund",
       createdAt: patch.createdAt || today,
       updatedAt: today,
       receivedAt: patch.receivedAt,
@@ -298,8 +328,10 @@ export default function ReturnsPage() {
   };
 
   function exportCSV() {
-    const cols = ["id","orderId","customer","email","phone","item","sku","qty","size","color","reason","status","resolution","createdAt","updatedAt","refundAmount","restockFee"];
-    const lines = [cols.join(",")].concat(filtered.map(r => cols.map(k => JSON.stringify((r as any)[k] ?? "")).join(",")));
+    const cols = [
+      "id","orderId","customer","email","phone","item","sku","qty","size","color","reason","status","resolution","createdAt","updatedAt","refundAmount","restockFee",
+    ] as const satisfies readonly (keyof RMA)[];
+    const lines = [cols.join(",")].concat(filtered.map((row) => cols.map((key) => JSON.stringify(row[key] ?? "")).join(",")));
     const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -341,14 +373,14 @@ export default function ReturnsPage() {
             <input value={q} onChange={(e)=> setQ(e.target.value)} placeholder="Search RMA / Order / Customer / Item" className="pl-9 pr-3 py-2 border rounded w-96"/>
             <Search className="absolute left-3 top-2.5 text-gray-400"/>
           </div>
-          <select value={status} onChange={(e)=> { setStatus(e.target.value as any); setPage(1); }} className="p-2 border rounded bg-white">
-            {(["All","Requested","Approved","In Transit","Received","QC Passed","QC Failed","Refunded","Exchanged","Closed"] as const).map(x=> <option key={x} value={x}>{x}</option>)}
+          <select value={status} onChange={(e)=> { setStatus(e.target.value as "All" | RMAStatus); setPage(1); }} className="p-2 border rounded bg-white">
+            {(["All", ...STATUS_OPTIONS] as const).map(x=> <option key={x} value={x}>{x}</option>)}
           </select>
-          <select value={reason} onChange={(e)=> { setReason(e.target.value as any); setPage(1); }} className="p-2 border rounded bg-white">
-            {(["All","Defective","Wrong Size","Wrong Item","Quality Issue","Changed Mind","Other"] as const).map(x=> <option key={x} value={x}>{x}</option>)}
+          <select value={reason} onChange={(e)=> { setReason(e.target.value as "All" | ReturnReason); setPage(1); }} className="p-2 border rounded bg-white">
+            {(["All", ...REASON_OPTIONS] as const).map(x=> <option key={x} value={x}>{x}</option>)}
           </select>
-          <select value={resolution} onChange={(e)=> { setResolution(e.target.value as any); setPage(1); }} className="p-2 border rounded bg-white">
-            {(["All","Refund","Exchange","Repair","Store Credit"] as const).map(x=> <option key={x} value={x}>{x}</option>)}
+          <select value={resolution} onChange={(e)=> { setResolution(e.target.value as "All" | ResolutionType); setPage(1); }} className="p-2 border rounded bg-white">
+            {(["All", ...RESOLUTION_OPTIONS] as const).map(x=> <option key={x} value={x}>{x}</option>)}
           </select>
 
           <div className="ml-auto flex items-center gap-2">
@@ -365,7 +397,7 @@ export default function ReturnsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-gray-50">
-                <th className="py-2 px-3 text-left"><input type="checkbox" onChange={(e)=> setSelected(slice.reduce((acc, r)=> (acc[r.id] = e.target.checked, acc), {} as any))}/></th>
+                <th className="py-2 px-3 text-left"><input type="checkbox" onChange={(e)=> setSelected(buildSelectedMap(slice, e.target.checked))}/></th>
                 <th className="py-2 px-3 text-left">RMA</th>
                 <th className="py-2 px-3 text-left">Order</th>
                 <th className="py-2 px-3 text-left">Customer</th>
@@ -504,7 +536,7 @@ function RMAForm({ value, onSave, onCancel }: { value?: RMA; onSave: (v: Partial
           <input value={v.sku || ''} onChange={(e)=> setV({...v, sku: e.target.value})} className="mt-1 w-full border rounded px-2 py-1" placeholder="TEE-BLK-M"/>
         </label>
         <label className="text-sm">Qty
-          <input type="number" value={v.qty as any || ''} onChange={(e)=> setV({...v, qty: Number(e.target.value)||0})} className="mt-1 w-full border rounded px-2 py-1"/>
+          <input type="number" value={v.qty ?? ''} onChange={(e)=> setV({...v, qty: Number(e.target.value)||0})} className="mt-1 w-full border rounded px-2 py-1"/>
         </label>
         <label className="text-sm">Size
           <input value={v.size || ''} onChange={(e)=> setV({...v, size: e.target.value})} className="mt-1 w-full border rounded px-2 py-1"/>
@@ -517,18 +549,18 @@ function RMAForm({ value, onSave, onCancel }: { value?: RMA; onSave: (v: Partial
       {/* Meta */}
       <div className="grid grid-cols-3 gap-3">
         <label className="text-sm">Reason
-          <select value={v.reason as any || 'Other'} onChange={(e)=> setV({...v, reason: e.target.value as any})} className="mt-1 w-full border rounded px-2 py-1">
-            {(["Defective","Wrong Size","Wrong Item","Quality Issue","Changed Mind","Other"] as const).map(x=> <option key={x}>{x}</option>)}
+          <select value={v.reason || 'Other'} onChange={(e)=> setV({...v, reason: e.target.value as ReturnReason})} className="mt-1 w-full border rounded px-2 py-1">
+            {REASON_OPTIONS.map(x=> <option key={x}>{x}</option>)}
           </select>
         </label>
         <label className="text-sm">Status
-          <select value={v.status as any || 'Requested'} onChange={(e)=> setV({...v, status: e.target.value as any})} className="mt-1 w-full border rounded px-2 py-1">
-            {(["Requested","Approved","In Transit","Received","QC Passed","QC Failed","Refunded","Exchanged","Closed"] as const).map(x=> <option key={x}>{x}</option>)}
+          <select value={v.status || 'Requested'} onChange={(e)=> setV({...v, status: e.target.value as RMAStatus})} className="mt-1 w-full border rounded px-2 py-1">
+            {STATUS_OPTIONS.map(x=> <option key={x}>{x}</option>)}
           </select>
         </label>
         <label className="text-sm">Resolution
-          <select value={v.resolution as any || 'Refund'} onChange={(e)=> setV({...v, resolution: e.target.value as any})} className="mt-1 w-full border rounded px-2 py-1">
-            {(["Refund","Exchange","Repair","Store Credit"] as const).map(x=> <option key={x}>{x}</option>)}
+          <select value={v.resolution || 'Refund'} onChange={(e)=> setV({...v, resolution: e.target.value as ResolutionType})} className="mt-1 w-full border rounded px-2 py-1">
+            {RESOLUTION_OPTIONS.map(x=> <option key={x}>{x}</option>)}
           </select>
         </label>
       </div>
@@ -536,10 +568,10 @@ function RMAForm({ value, onSave, onCancel }: { value?: RMA; onSave: (v: Partial
       {/* Money */}
       <div className="grid grid-cols-3 gap-3">
         <label className="text-sm">Refund Amount (Rs)
-          <input type="number" value={v.refundAmount as any || ''} onChange={(e)=> setV({...v, refundAmount: Number(e.target.value)||0})} className="mt-1 w-full border rounded px-2 py-1"/>
+          <input type="number" value={v.refundAmount ?? ''} onChange={(e)=> setV({...v, refundAmount: Number(e.target.value)||0})} className="mt-1 w-full border rounded px-2 py-1"/>
         </label>
         <label className="text-sm">Restock Fee (Rs)
-          <input type="number" value={v.restockFee as any || ''} onChange={(e)=> setV({...v, restockFee: Number(e.target.value)||0})} className="mt-1 w-full border rounded px-2 py-1"/>
+          <input type="number" value={v.restockFee ?? ''} onChange={(e)=> setV({...v, restockFee: Number(e.target.value)||0})} className="mt-1 w-full border rounded px-2 py-1"/>
         </label>
         <div className="text-sm">
           <div className="font-medium">Net to Refund</div>

@@ -194,6 +194,11 @@ type LogoAsset = {
   ratio: number;
 };
 
+type FirestoreTimestampLike = {
+  toDate?: () => Date;
+  seconds?: number;
+};
+
 const BUSINESS_INFO = {
   name: "MO T-SHIRT",
   addressLines: ["School Lane", "Surinam, 60907"],
@@ -394,10 +399,14 @@ const validateDraftBeforeSend = (value: QuoteDraft) => {
   return null;
 };
 
-const parseTimestamp = (value: any) => {
+const parseTimestamp = (value: unknown) => {
   if (!value) return null;
-  if (typeof value?.toDate === "function") return value.toDate();
-  if (typeof value?.seconds === "number") return new Date(value.seconds * 1000);
+  if (typeof (value as FirestoreTimestampLike)?.toDate === "function") {
+    return (value as FirestoreTimestampLike).toDate!();
+  }
+  if (typeof (value as FirestoreTimestampLike)?.seconds === "number") {
+    return new Date((value as FirestoreTimestampLike).seconds! * 1000);
+  }
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 };
@@ -941,7 +950,8 @@ export default function QuotationApprovalPage() {
       q,
       (snap) => {
         const next = snap.docs.map((docSnap) => {
-          const data = docSnap.data() as any;
+          const data = docSnap.data() as Partial<QuoteRecord> &
+            Record<string, unknown>;
           return {
             id: docSnap.id,
             ...data,
@@ -1020,7 +1030,7 @@ export default function QuotationApprovalPage() {
       return;
     }
     setDraft(buildDraftFromQuote(selected));
-  }, [selected?.id]);
+  }, [selected]);
 
   useEffect(() => {
     if (!draft) return;
@@ -1029,7 +1039,7 @@ export default function QuotationApprovalPage() {
     if (!prevType || prevType === draft.documentType) return;
     const nextTerms = getDefaultTerms(draft.documentType);
     setDraft((prev) => (prev ? { ...prev, terms: nextTerms } : prev));
-  }, [draft?.documentType]);
+  }, [draft]);
 
   const filtered = useMemo(() => {
     return quotes.filter((quote) => {
@@ -1072,7 +1082,7 @@ export default function QuotationApprovalPage() {
     if (draft.documentType === "receipt") return ["Paid"];
     if (draft.documentType === "partial_receipt") return ["Partially paid"];
     return ["Unpaid", "Partially paid", "Paid"];
-  }, [draft?.documentType]);
+  }, [draft]);
 
   const documentTypeLabel = useMemo(() => {
     if (!draft) return "";
@@ -1080,7 +1090,7 @@ export default function QuotationApprovalPage() {
     if (draft.documentType === "invoice") return "Invoice";
     if (draft.documentType === "receipt") return "Receipt";
     return "Partial receipt";
-  }, [draft?.documentType]);
+  }, [draft]);
 
   const selectedStatus: QuoteStatus = (selected?.status || "new") as QuoteStatus;
   const selectedPrimaryStatus = useMemo(() => {
@@ -1149,7 +1159,7 @@ export default function QuotationApprovalPage() {
         prev ? { ...prev, paymentStatus: paymentStatusOptions[0] } : prev
       );
     }
-  }, [draft?.documentType, paymentStatusOptions]);
+  }, [draft, paymentStatusOptions]);
 
   const updateDraftLine = (index: number, patch: Partial<QuoteLine>) => {
     if (!draft) return;
