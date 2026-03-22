@@ -43,13 +43,23 @@ export async function GET(req: Request) {
   }
 
   let target: URL;
-  try {
-    target = new URL(urlParam);
-  } catch {
-    return NextResponse.json({ error: "Invalid url." }, { status: 400 });
+  if (urlParam.startsWith("/")) {
+    if (!urlParam.startsWith("/api/shops/uploads/")) {
+      return NextResponse.json({ error: "URL not allowed." }, { status: 400 });
+    }
+    target = new URL(urlParam, req.url);
+  } else {
+    try {
+      target = new URL(urlParam);
+    } catch {
+      return NextResponse.json({ error: "Invalid url." }, { status: 400 });
+    }
   }
 
-  if (target.protocol !== "https:" || !ALLOWED_HOSTS.has(target.hostname)) {
+  if (
+    !(target.protocol === "https:" || (target.protocol === "http:" && target.hostname === "localhost")) ||
+    (!ALLOWED_HOSTS.has(target.hostname) && target.hostname !== new URL(req.url).hostname)
+  ) {
     return NextResponse.json({ error: "URL not allowed." }, { status: 400 });
   }
 

@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { storage } from "@/lib/firebase";
 import {
   DEFAULT_COLLECTION_POINT,
   DEFAULT_PICKUP_POINT,
@@ -103,7 +101,7 @@ const emptyForm: FormState = {
 };
 
 const money = (value: number) => `Rs ${Number(value || 0).toLocaleString()}`;
-const UPLOAD_PREFIX = "items";
+const MAX_UPLOAD_BYTES = 6 * 1024 * 1024;
 const IMAGE_RETRY_LIMIT = 2;
 const IMAGE_RETRY_DELAY_MS = 900;
 
@@ -367,8 +365,8 @@ export default function AdminShopsPage() {
       if (url) {
         setNotice("Photo uploaded. Save the item to apply it.");
       }
-    } catch (err: any) {
-      setError(err?.message || "Upload failed. Use an image URL instead.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Upload failed. Use an image URL instead.");
     }
   }
 
@@ -376,15 +374,25 @@ export default function AdminShopsPage() {
     if (!file) return form.photoUrl;
     setUploading(true);
     try {
-      const pathSafe = file.name.replace(/\s+/g, "-").toLowerCase();
-      const storageRef = ref(storage, `${UPLOAD_PREFIX}/${Date.now()}-${pathSafe}`);
-      await uploadBytes(storageRef, file);
-      const url = await getDownloadURL(storageRef);
+      const body = new FormData();
+      body.append("file", file);
+
+      const res = await fetch("/api/admin/shops/upload", {
+        method: "POST",
+        body,
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; url?: string };
+      if (!res.ok || !data?.url) {
+        throw new Error(data?.error || "Photo upload failed. Paste an image URL instead.");
+      }
+
+      const url = data.url;
       setForm((prev) => ({ ...prev, photoUrl: url }));
       setFile(null);
       return url;
     } catch (err) {
       console.error("upload error", err);
+      if (err instanceof Error) throw err;
       throw new Error("Photo upload failed. Paste an image URL instead.");
     } finally {
       setUploading(false);
@@ -931,7 +939,17 @@ export default function AdminShopsPage() {
                       id="shop-photo-upload"
                       type="file"
                       accept="image/*"
-                      onChange={(e) => setFile(e.target.files?.[0] || null)}
+                      onChange={(e) => {
+                        const nextFile = e.target.files?.[0] || null;
+                        if (nextFile && nextFile.size > MAX_UPLOAD_BYTES) {
+                          setError("Image must be 6 MB or smaller.");
+                          setFile(null);
+                          e.currentTarget.value = "";
+                          return;
+                        }
+                        setError(null);
+                        setFile(nextFile);
+                      }}
                       className="sr-only"
                     />
                     <label
