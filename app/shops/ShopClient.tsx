@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FiDownload } from "react-icons/fi";
 import { getWhatsAppUrl } from "@/data/work";
 import {
@@ -27,6 +27,8 @@ const DELIVERY_METHODS = [
 ] as const;
 
 const money = (value: number) => `Rs ${Number(value || 0).toLocaleString()}`;
+const IMAGE_RETRY_LIMIT = 2;
+const IMAGE_RETRY_DELAY_MS = 900;
 
 type ItemSelection = {
   color: string;
@@ -55,10 +57,42 @@ function ShopsLoading() {
 
 function ShopProductImage({ src, alt }: ShopProductImageProps) {
   const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+  const [retryNonce, setRetryNonce] = useState(0);
+  const retryAttemptsRef = useRef(0);
+  const retryTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
+    retryAttemptsRef.current = 0;
+    setRetryNonce(0);
     setStatus("loading");
+    return () => {
+      if (retryTimerRef.current !== null) {
+        window.clearTimeout(retryTimerRef.current);
+      }
+    };
   }, [src]);
+
+  function clearRetryTimer() {
+    if (retryTimerRef.current !== null) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+  }
+
+  function handleLoadError() {
+    const nextAttempt = retryAttemptsRef.current + 1;
+    if (nextAttempt > IMAGE_RETRY_LIMIT) {
+      setStatus("error");
+      return;
+    }
+
+    retryAttemptsRef.current = nextAttempt;
+    setStatus("loading");
+    clearRetryTimer();
+    retryTimerRef.current = window.setTimeout(() => {
+      setRetryNonce((current) => current + 1);
+    }, IMAGE_RETRY_DELAY_MS * nextAttempt);
+  }
 
   return (
     <>
@@ -76,6 +110,7 @@ function ShopProductImage({ src, alt }: ShopProductImageProps) {
         </div>
       )}
       <Image
+        key={`${src}-${retryNonce}`}
         src={src}
         alt={alt}
         fill
@@ -83,8 +118,11 @@ function ShopProductImage({ src, alt }: ShopProductImageProps) {
           status === "loaded" ? "opacity-100" : "opacity-0"
         }`}
         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-        onLoad={() => setStatus("loaded")}
-        onError={() => setStatus("error")}
+        onLoad={() => {
+          clearRetryTimer();
+          setStatus("loaded");
+        }}
+        onError={handleLoadError}
       />
     </>
   );
