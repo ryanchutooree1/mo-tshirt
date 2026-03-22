@@ -610,7 +610,7 @@ export function runAssistantTurn(input: {
     explicitSummaryRequest: summaryRequested,
   });
   const suggestions = buildSuggestions(nextLead, trainingState);
-  let reply = generateAssistantReply({
+  const reply = generateAssistantReply({
     lead: nextLead,
     decision,
     missingFields,

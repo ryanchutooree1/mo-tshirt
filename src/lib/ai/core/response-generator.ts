@@ -133,7 +133,7 @@ export function generateAssistantReply(input: {
   attachmentReceived: boolean;
   logoPendingAcknowledged: boolean;
 }) {
-  const { lead, decision, missingFields, retrievalMatches } = input;
+  const { lead, decision, missingFields } = input;
   const candidates: ResponseCandidate[] = [];
 
   if (input.attachmentReceived) {
