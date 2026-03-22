@@ -171,6 +171,27 @@ test("end-to-end assistant behavior stays structured and explainable without an 
   assert.ok(Array.isArray(finalTurn.debug.retrieved_examples));
 });
 
+test("combo print layouts continue to size breakdown instead of conflict clarification", () => {
+  const training = buildAssistantTrainingState([], [], [], "2026-03-18T00:00:00.000Z");
+
+  const firstTurn = runAssistantTurn({
+    lead: createEmptyAssistantLead(),
+    message: "Hi I need 3 tshirts",
+    trainingState: training,
+  });
+
+  const secondTurn = runAssistantTurn({
+    lead: firstTurn.lead,
+    message: "Small Front and Large Back",
+    trainingState: training,
+  });
+
+  assert.deepEqual(secondTurn.lead.printPositions, ["back", "front center"]);
+  assert.deepEqual(secondTurn.lead.printSizes, ["large 22x22", "small 9x9"]);
+  assert.match(secondTurn.reply, /Please send the full size breakdown/i);
+  assert.doesNotMatch(secondTurn.reply, /conflicting print position details/i);
+});
+
 test("assistant answers delivery questions from local FAQ memory", () => {
   const training = buildAssistantTrainingState([], [], [], "2026-03-18T00:00:00.000Z");
 

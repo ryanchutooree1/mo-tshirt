@@ -111,6 +111,7 @@ const NAME_STOP_WORDS = new Set([
   "summary",
   "upload",
 ]);
+const MULTI_VALUE_FIELDS = new Set<AssistantEntityKey>(["print_position"]);
 
 function numberFromToken(value: string) {
   const trimmed = normalizeText(value);
@@ -152,6 +153,7 @@ function detectConflicts(
   field: AssistantEntityKey,
   candidates: AssistantEntityCandidate[] | undefined
 ): AssistantEntityConflict[] {
+  if (MULTI_VALUE_FIELDS.has(field)) return [];
   if (!candidates || candidates.length < 2) return [];
   const ranked = rankCandidates(candidates);
   const top = ranked[0];
