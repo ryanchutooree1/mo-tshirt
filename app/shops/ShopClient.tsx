@@ -34,6 +34,11 @@ type ItemSelection = {
   quantity: number | "";
 };
 
+type ShopProductImageProps = {
+  src: string;
+  alt: string;
+};
+
 function ShopsLoading() {
   return (
     <main className="grid min-h-screen place-items-center bg-[#f7f7fb] text-neutral-900">
@@ -45,6 +50,43 @@ function ShopsLoading() {
         <p className="text-sm font-medium text-neutral-600">Loading…</p>
       </div>
     </main>
+  );
+}
+
+function ShopProductImage({ src, alt }: ShopProductImageProps) {
+  const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+
+  useEffect(() => {
+    setStatus("loading");
+  }, [src]);
+
+  return (
+    <>
+      {status === "loading" && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-[2px]">
+          <span
+            className="inline-flex h-10 w-10 animate-spin rounded-full border-4 border-neutral-200 border-t-[#FF6600]"
+            aria-hidden="true"
+          />
+        </div>
+      )}
+      {status === "error" && (
+        <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-400">
+          Image unavailable
+        </div>
+      )}
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        className={`object-cover transition-opacity duration-300 ${
+          status === "loaded" ? "opacity-100" : "opacity-0"
+        }`}
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        onLoad={() => setStatus("loaded")}
+        onError={() => setStatus("error")}
+      />
+    </>
   );
 }
 
@@ -433,13 +475,7 @@ export default function ShopClient() {
               <article key={item.id} className="group rounded-[28px] border border-neutral-200 bg-white/90 p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
                 <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-neutral-100">
                   {item.photoUrl ? (
-                    <Image
-                      src={item.photoUrl}
-                      alt={item.title}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    />
+                    <ShopProductImage src={item.photoUrl} alt={item.title} />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-xs text-neutral-400">
                       No photo
@@ -448,7 +484,7 @@ export default function ShopClient() {
                   {item.photoUrl && (
                     <a
                       href={`/api/shops/download?url=${encodeURIComponent(item.photoUrl)}&name=${encodeURIComponent(item.title)}`}
-                      className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-neutral-700 shadow-sm ring-1 ring-neutral-200 backdrop-blur transition hover:scale-105 hover:bg-white"
+                      className="absolute right-3 top-3 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-neutral-700 shadow-sm ring-1 ring-neutral-200 backdrop-blur transition hover:scale-105 hover:bg-white"
                       aria-label={`Download ${item.title} photo`}
                       title="Download image"
                     >
@@ -456,7 +492,7 @@ export default function ShopClient() {
                     </a>
                   )}
                   {!item.inStock && (
-                    <span className="absolute left-3 top-3 rounded-full bg-black px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white">
+                    <span className="absolute left-3 top-3 z-10 rounded-full bg-black px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white">
                       Out of stock
                     </span>
                   )}
