@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { storage } from "@/lib/firebase";
 import {
@@ -104,6 +104,98 @@ const emptyForm: FormState = {
 
 const money = (value: number) => `Rs ${Number(value || 0).toLocaleString()}`;
 const UPLOAD_PREFIX = "items";
+const IMAGE_RETRY_LIMIT = 2;
+const IMAGE_RETRY_DELAY_MS = 900;
+
+function AsyncCatalogImage({
+  src,
+  alt,
+  className,
+  fallbackClassName,
+  fallback,
+}: {
+  src: string;
+  alt: string;
+  className: string;
+  fallbackClassName?: string;
+  fallback?: React.ReactNode;
+}) {
+  const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+  const [retryNonce, setRetryNonce] = useState(0);
+  const retryAttemptsRef = useRef(0);
+  const retryTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    retryAttemptsRef.current = 0;
+    setRetryNonce(0);
+    setStatus("loading");
+    return () => {
+      if (retryTimerRef.current !== null) {
+        window.clearTimeout(retryTimerRef.current);
+      }
+    };
+  }, [src]);
+
+  function clearRetryTimer() {
+    if (retryTimerRef.current !== null) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+  }
+
+  function handleError() {
+    const nextAttempt = retryAttemptsRef.current + 1;
+    if (nextAttempt > IMAGE_RETRY_LIMIT) {
+      setStatus("error");
+      return;
+    }
+
+    retryAttemptsRef.current = nextAttempt;
+    setStatus("loading");
+    clearRetryTimer();
+    retryTimerRef.current = window.setTimeout(() => {
+      setRetryNonce((current) => current + 1);
+    }, IMAGE_RETRY_DELAY_MS * nextAttempt);
+  }
+
+  return (
+    <>
+      {status === "loading" && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-white/75 backdrop-blur-[2px]">
+          <span
+            className="inline-flex h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-sky-500"
+            aria-hidden="true"
+          />
+        </div>
+      )}
+      {status === "error" && (
+        <div
+          className={`absolute inset-0 flex items-center justify-center text-center text-[11px] text-slate-400 ${
+            fallbackClassName || ""
+          }`}
+        >
+          {fallback || "Image unavailable"}
+        </div>
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        key={`${src}-${retryNonce}`}
+        src={src}
+        alt={alt}
+        className={`${className} transition-opacity duration-300 ${
+          status === "loaded" ? "opacity-100" : "opacity-0"
+        }`}
+        loading="lazy"
+        decoding="async"
+        onLoad={() => {
+          clearRetryTimer();
+          setStatus("loaded");
+        }}
+        onError={handleError}
+      />
+    </>
+  );
+}
 
 export default function AdminShopsPage() {
   const [items, setItems] = useState<ShopItem[]>([]);
@@ -570,9 +662,16 @@ export default function AdminShopsPage() {
                     <li key={item.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-sky-200 hover:shadow-md">
                       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                         <div className="flex min-w-0 items-start gap-5">
-                          <div className="h-24 w-24 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2 shadow-sm">
+                          <div className="relative h-24 w-24 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2 shadow-sm">
                             {item.photoUrl ? (
-                              <img src={item.photoUrl} alt={item.title} className="h-full w-full object-contain" />
+                              <AsyncCatalogImage
+                                src={item.photoUrl}
+                                alt={item.title}
+                                className="h-full w-full object-contain"
+                                fallback={
+                                  <span className="px-3 leading-tight">Image unavailable</span>
+                                }
+                              />
                             ) : (
                               <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-400">
                                 <FiImage className="h-5 w-5" />
@@ -863,8 +962,12 @@ export default function AdminShopsPage() {
                   placeholder="Or paste an image URL"
                 />
                 {(previewUrl || form.photoUrl) && (
-                  <div className="h-32 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                    <img src={previewUrl || form.photoUrl} alt="Preview" className="h-full w-full object-cover" />
+                  <div className="relative h-32 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                    <AsyncCatalogImage
+                      src={previewUrl || form.photoUrl}
+                      alt="Preview"
+                      className="h-full w-full object-cover"
+                    />
                   </div>
                 )}
               </div>
