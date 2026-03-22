@@ -130,6 +130,9 @@ type QuoteRecord = {
   };
 };
 
+const ATTACHMENT_PREVIEW_RETRY_LIMIT = 2;
+const ATTACHMENT_PREVIEW_RETRY_DELAY_MS = 900;
+
 function QuoteAttachmentPreview({
   src,
   alt,
@@ -138,10 +141,43 @@ function QuoteAttachmentPreview({
   alt: string;
 }) {
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [retryNonce, setRetryNonce] = useState(0);
+  const retryAttemptsRef = useRef(0);
+  const retryTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
+    retryAttemptsRef.current = 0;
+    setRetryNonce(0);
     setStatus("loading");
+    return () => {
+      if (retryTimerRef.current !== null) {
+        window.clearTimeout(retryTimerRef.current);
+      }
+    };
   }, [src]);
+
+  function clearRetryTimer() {
+    if (retryTimerRef.current !== null) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+  }
+
+  function handleError() {
+    const nextAttempt = retryAttemptsRef.current + 1;
+    if (nextAttempt > ATTACHMENT_PREVIEW_RETRY_LIMIT) {
+      clearRetryTimer();
+      setStatus("error");
+      return;
+    }
+
+    retryAttemptsRef.current = nextAttempt;
+    setStatus("loading");
+    clearRetryTimer();
+    retryTimerRef.current = window.setTimeout(() => {
+      setRetryNonce((current) => current + 1);
+    }, ATTACHMENT_PREVIEW_RETRY_DELAY_MS * nextAttempt);
+  }
 
   return (
     <div className="relative mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2">
@@ -159,14 +195,18 @@ function QuoteAttachmentPreview({
       )}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
+        key={`${src}-${retryNonce}`}
         src={src}
         alt={alt}
         className={`h-40 w-full rounded-xl object-contain transition-opacity duration-200 ${
           status === "ready" ? "opacity-100" : "opacity-0"
         }`}
         loading="lazy"
-        onLoad={() => setStatus("ready")}
-        onError={() => setStatus("error")}
+        onLoad={() => {
+          clearRetryTimer();
+          setStatus("ready");
+        }}
+        onError={handleError}
       />
     </div>
   );
