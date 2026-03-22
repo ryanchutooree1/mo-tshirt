@@ -15,7 +15,12 @@ const NAME_RE =
   /(?:my name is|i am|i'm|name\s*:)\s+([A-Za-z][A-Za-z\s'&.-]{1,50}?)(?=\s+(?:and\b|phone\b|email\b|deadline\b)|$)/i;
 const COMPANY_RE =
   /(?:company(?: name)? is|from|for|business(?: name)? is|company\s*:)\s+([A-Za-z0-9][A-Za-z0-9\s&.,'-]{2,60}?)(?=\s+(?:deadline\b|phone\b|email\b|logo\b)|$)/i;
-const ABSOLUTE_DATE_RE = /\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{2}-\d{2})\b/i;
+const MONTH_NAME_RE_PART =
+  "(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)";
+const ABSOLUTE_DATE_RE = new RegExp(
+  `\\b(?:\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}|\\d{1,2}\\s+${MONTH_NAME_RE_PART}(?:\\s*,?\\s*\\d{2,4})?|\\d{4}-\\d{2}-\\d{2})\\b`,
+  "i"
+);
 const RELATIVE_DATE_RE =
   /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tomorrow|next week|this week|next monday|next tuesday|next wednesday|next thursday|next friday)\b/i;
 const ORDER_LINE_RE =

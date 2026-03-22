@@ -35,6 +35,15 @@ test("entity extraction captures structured sales fields with confidence-friendl
   assert.ok(accuracy >= 0.75, `expected >= 0.75 entity accuracy, got ${accuracy.toFixed(3)}`);
 });
 
+test("deadline extraction accepts text and slash date formats", () => {
+  const samples = ["02 May 2026", "02 May", "02/05/2026", "02/05/26", "02 May 26"];
+
+  samples.forEach((sample) => {
+    const updates = extractLeadUpdates(sample);
+    assert.equal(updates.deadline, sample);
+  });
+});
+
 test("retrieval returns relevant local memory items with explanations", () => {
   const training = buildAssistantTrainingState([], [], [], "2026-03-18T00:00:00.000Z");
 
