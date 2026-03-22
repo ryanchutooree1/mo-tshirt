@@ -625,14 +625,6 @@ export function runAssistantTurn(input: {
     logoPendingAcknowledged: Boolean(extractionResult.updates.logoPending),
   });
 
-  if (
-    missingFields[0] === "printPositions" &&
-    suggestions[0] &&
-    !reply.includes(suggestions[0])
-  ) {
-    reply = `${suggestions[0]}\n\n${reply}`;
-  }
-
   const debug = buildAssistantTurnDebug({
     intent,
     entities: extractionResult.entities,

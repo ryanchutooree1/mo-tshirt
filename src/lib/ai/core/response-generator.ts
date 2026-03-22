@@ -180,17 +180,10 @@ export function generateAssistantReply(input: {
   }
 
   if (decision.action === "suggest_best_option" && decision.targetField) {
-    const topMatch = retrievalMatches[0];
     const baseQuestion = promptForMissingField(decision.targetField, lead);
-    if (topMatch?.kind === "approved_summary" || topMatch?.kind === "past_lead") {
-      candidates.push({
-        text: `A similar approved order used this setup: ${topMatch.text}.\n\n${baseQuestion}`,
-        score: 0.92,
-      });
-    }
     candidates.push({
       text: baseQuestion,
-      score: 0.88,
+      score: 0.92,
     });
   }
 

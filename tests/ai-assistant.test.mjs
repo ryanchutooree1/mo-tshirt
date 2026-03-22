@@ -92,6 +92,42 @@ test("local learning adds aliases and retrieval memory from approved leads", () 
   assert.ok(training.retrievalDocuments.some((document) => document.kind === "assistant_reply"));
 });
 
+test("approved-order retrieval stays out of customer-facing replies", () => {
+  const training = buildAssistantTrainingState(
+    [
+      {
+        status: "approved",
+        lead: {
+          ...createEmptyAssistantLead(),
+          clientName: "Paul Sam",
+          productType: "t-shirt",
+          quantity: 3,
+          color: "black",
+          sizes: ["L"],
+          sizeBreakdown: [{ color: "black", productType: "t-shirt", size: "L", quantity: 3 }],
+          printPositions: ["back"],
+          printSizes: ["large 22x22"],
+          deadline: "08/05/2026",
+        },
+      },
+    ],
+    [],
+    [],
+    "2026-03-18T00:00:00.000Z"
+  );
+
+  const result = runAssistantTurn({
+    lead: createEmptyAssistantLead(),
+    message: "Hi i need 3 tshirts",
+    trainingState: training,
+  });
+
+  assert.match(result.reply, /Where do you want the print/i);
+  assert.doesNotMatch(result.reply, /A similar approved order used this setup/i);
+  assert.doesNotMatch(result.reply, /Most approved/i);
+  assert.ok(result.suggestions.some((item) => /Most approved/i.test(item)));
+});
+
 test("end-to-end assistant behavior stays structured and explainable without an LLM", () => {
   const training = buildAssistantTrainingState([], [], [], "2026-03-18T00:00:00.000Z");
 
