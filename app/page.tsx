@@ -245,52 +245,55 @@ export default function HomePage() {
               ))}
             </div>
 
-            <div className="mt-12 flex justify-center">
-              <div className="relative w-full max-w-3xl rounded-[28px] border border-[#EAEAEA] bg-white px-6 py-6 text-left shadow-sm">
-                <div className="absolute right-5 top-5">
+          </div>
+        </section>
+
+        <section className="px-6 py-16 sm:py-20">
+          <div className="mx-auto flex max-w-6xl justify-center">
+            <div className="relative w-full max-w-3xl rounded-[28px] border border-[#EAEAEA] bg-white px-6 py-6 text-left shadow-sm">
+              <div className="absolute right-5 top-5">
+                <Image
+                  src="/Postofficelogo.png"
+                  alt="Mauritius Post logo"
+                  width={104}
+                  height={104}
+                  className="h-16 w-16 object-contain"
+                />
+              </div>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <div className="flex-shrink-0">
                   <Image
-                    src="/Postofficelogo.png"
-                    alt="Mauritius Post logo"
-                    width={104}
-                    height={104}
-                    className="h-16 w-16 object-contain"
+                    src="/Postman.png"
+                    alt="Mauritius Post delivery"
+                    width={384}
+                    height={384}
+                    className="h-80 w-80 object-contain"
                   />
                 </div>
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                  <div className="flex-shrink-0">
-                    <Image
-                      src="/Postman.png"
-                      alt="Mauritius Post delivery"
-                      width={384}
-                      height={384}
-                      className="h-80 w-80 object-contain"
+                <div className="flex-1">
+                  <p className="text-xs uppercase tracking-[0.2em] text-orange-500">Track & Trace</p>
+                  <h3 className="mt-2 text-2xl font-semibold text-black">Track your Mauritius Post parcel</h3>
+                  <p className="mt-2 text-sm text-neutral-600">
+                    Enter your tracking code. Results open on the official Mauritius Post website.
+                  </p>
+                  <form
+                    action="https://www.mauritiuspost.mu/track-trace/"
+                    method="get"
+                    target="_blank"
+                    className="mt-4 flex flex-col gap-3 sm:flex-row"
+                  >
+                    <input
+                      name="tracking_code"
+                      placeholder="Tracking Code e.g HH123456785MU"
+                      className="w-full flex-1 rounded-full border border-neutral-200 px-4 py-2 text-sm focus:border-black focus:outline-none"
                     />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs uppercase tracking-[0.2em] text-orange-500">Track & Trace</p>
-                    <h3 className="mt-2 text-2xl font-semibold text-black">Track your Mauritius Post parcel</h3>
-                    <p className="mt-2 text-sm text-neutral-600">
-                      Enter your tracking code. Results open on the official Mauritius Post website.
-                    </p>
-                    <form
-                      action="https://www.mauritiuspost.mu/track-trace/"
-                      method="get"
-                      target="_blank"
-                      className="mt-4 flex flex-col gap-3 sm:flex-row"
+                    <button
+                      type="submit"
+                      className="inline-flex items-center justify-center rounded-full bg-[#FDD901] px-5 py-2 text-sm font-semibold text-black transition hover:brightness-95"
                     >
-                      <input
-                        name="tracking_code"
-                        placeholder="Tracking Code e.g HH123456785MU"
-                        className="w-full flex-1 rounded-full border border-neutral-200 px-4 py-2 text-sm focus:border-black focus:outline-none"
-                      />
-                      <button
-                        type="submit"
-                        className="inline-flex items-center justify-center rounded-full bg-[#FDD901] px-5 py-2 text-sm font-semibold text-black transition hover:brightness-95"
-                      >
-                        Track parcel
-                      </button>
-                    </form>
-                  </div>
+                      Track parcel
+                    </button>
+                  </form>
                 </div>
               </div>
             </div>
