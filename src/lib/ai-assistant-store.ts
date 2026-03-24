@@ -504,7 +504,7 @@ function buildLeadDocument(sessionId: string, lead: AssistantLead, nowIso: strin
 
 function formatAssistantProduct(productType: AssistantLead["productType"]) {
   if (productType === "t-shirt") return "T-Shirt";
-  if (productType === "polo") return "Polo Shirt";
+  if (productType === "polo") return "Poloshirt";
   if (productType === "hoodie") return "Hoodie";
   if (productType === "cap") return "Cap";
   return "Custom item";

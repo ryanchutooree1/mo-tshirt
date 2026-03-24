@@ -66,7 +66,7 @@ export type ShopOrderLine = {
 
 export const QUOTE_GARMENT_OPTIONS = [
   "T-Shirt",
-  "Polo Shirt",
+  "Poloshirt",
   "Hoodie",
   "Cap",
   "Other",
@@ -98,7 +98,7 @@ function normalizeColorKey(value: string) {
 
 function getQuoteGarmentFromShopTitle(title: string): QuoteGarmentOption {
   const normalized = String(title || "").trim().toLowerCase();
-  if (normalized.includes("polo")) return "Polo Shirt";
+  if (normalized.includes("polo")) return "Poloshirt";
   if (normalized.includes("hoodie")) return "Hoodie";
   if (normalized.includes("cap")) return "Cap";
   if (

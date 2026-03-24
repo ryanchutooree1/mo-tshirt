@@ -327,7 +327,7 @@ const DOC_TYPE_TONES: Record<DocumentType, string> = {
   receipt: "border-emerald-200 bg-emerald-50 text-emerald-700",
 };
 
-const QUICK_PRODUCT_LINES = ["T-Shirt", "Polo Shirt", "Hoodie", "Cap"];
+const QUICK_PRODUCT_LINES = ["T-Shirt", "Poloshirt", "Hoodie", "Cap"];
 
 const getQuoteDocumentType = (quote: QuoteRecord): DocumentType => quote.quote?.documentType || "quotation";
 

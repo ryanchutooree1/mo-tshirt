@@ -23,7 +23,7 @@ const products: Record<
     ],
   },
   polo: {
-    label: "Polo Shirt",
+    label: "Poloshirt",
     note: "Collar polo, 200-220gsm",
     tiers: [
       { min: 1, max: 9, price: 450 },
