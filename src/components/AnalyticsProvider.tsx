@@ -17,11 +17,15 @@ export default function AnalyticsProvider({ measurementId }: AnalyticsProviderPr
   const pathname = usePathname() || "/";
 
   useEffect(() => {
-    if (!measurementId || !isPublicTrackingPath(pathname) || typeof window === "undefined") return;
+    if (!isPublicTrackingPath(pathname) || typeof window === "undefined") return;
     trackPageView(`${pathname}${window.location.search}`);
-  }, [measurementId, pathname]);
+  }, [pathname]);
 
-  if (!measurementId || !isPublicTrackingPath(pathname)) {
+  if (!isPublicTrackingPath(pathname)) {
+    return null;
+  }
+
+  if (!measurementId) {
     return null;
   }
 

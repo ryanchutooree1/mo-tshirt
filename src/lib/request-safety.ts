@@ -34,6 +34,12 @@ export const API_RATE_LIMIT: RateLimitConfig = {
   windowMs: 60_000,
 };
 
+export const TRACKING_RATE_LIMIT: RateLimitConfig = {
+  scope: "tracking",
+  maxRequests: 240,
+  windowMs: 60_000,
+};
+
 export const CONTACT_RATE_LIMIT: RateLimitConfig = {
   scope: "contact",
   maxRequests: 6,

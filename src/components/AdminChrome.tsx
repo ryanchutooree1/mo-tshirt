@@ -27,6 +27,7 @@ const DEFAULT_TOP: NavItem[] = [
   QUOTE_ITEM,
   DESIGN_STUDIO_ITEM,
   { href: "/admin/analytics", label: "Analytics" },
+  { href: "/admin/tracking", label: "Tracking" },
   { href: "/admin/accounting", label: "Accounting" },
   FINANCE_ITEM,
   BUSINESS_VALUE_ITEM,
@@ -188,6 +189,21 @@ function normalizeNav(top: NavItem[], more: NavItem[]) {
   if (moreHasIot) {
     nextMore.push(IOT_ITEM);
   }
+
+  const knownHrefs = new Set([...nextTop, ...nextMore].map((item) => item.href));
+  DEFAULT_TOP.forEach((item) => {
+    if (!knownHrefs.has(item.href)) {
+      nextTop.push(item);
+      knownHrefs.add(item.href);
+    }
+  });
+  DEFAULT_MORE.forEach((item) => {
+    if (!knownHrefs.has(item.href)) {
+      nextMore.push(item);
+      knownHrefs.add(item.href);
+    }
+  });
+
   return { top: nextTop, more: nextMore };
 }
 
