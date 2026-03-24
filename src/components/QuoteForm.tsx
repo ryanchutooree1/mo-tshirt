@@ -82,18 +82,18 @@ const printMethodInfoByMethod: Partial<Record<string, PrintMethodInfo>> = {
     title: "Screen printing rule",
     description:
       "Minimum order is 10 pcs per design. That means 10 identical prints for one logo or artwork, not 10 pcs with 10 different designs.",
-    note: "If you have several logos or design versions, add each one separately below and tell us its quantity.",
+    note: "Screen printing makes use of paint. If you have several logos or design versions, add each one separately below and tell us its quantity.",
   },
   [VINYL_METHOD]: {
     title: "Vinyl Heat Press guide",
     description:
       "Best for simple logos, names, numbers, and clean shapes. It works well for smaller quantities and personalized pieces.",
-    note: "If the artwork has gradients, photos, or a lot of detail, DTF is usually the better option.",
+    note: "We make use of durable vinyl. If the artwork has gradients, photos, or a lot of detail, DTF is usually the better option.",
   },
   [DTF_METHOD]: {
-    title: "DTF guide",
+    title: "DTF (Direct-to-Film) guide",
     description:
-      "DTF stands for Direct-to-Film. It is best for full-color artwork, gradients, and detailed logos. It is a strong choice for smaller runs that are too complex for vinyl or not ideal for screen printing.",
+      "It is best for full-color artwork, gradients, and detailed logos. It is a strong choice for smaller runs that are too complex for vinyl or not ideal for screen printing.",
     note: "Send the clearest artwork file you have so we can confirm the print size and placement properly.",
   },
   [NOT_SURE_METHOD]: {
