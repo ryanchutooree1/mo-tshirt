@@ -59,9 +59,9 @@ type QuoteOptionsResponse = {
 
 const garmentOptions = [...QUOTE_GARMENT_OPTIONS];
 const sizeOptions = [...SIZE_ORDER];
-const DTF_METHOD = "1. DTF Printing ($$$)";
-const VINYL_METHOD = "2. Vinyl Heat Press Printing ($$)";
-const SCREEN_PRINTING_METHOD = "3. Screen Printing ($)";
+const DTF_METHOD = "1. DTF Printing (Price $$$)";
+const VINYL_METHOD = "2. Vinyl Heat Press Printing (Price $$)";
+const SCREEN_PRINTING_METHOD = "3. Screen Printing (Price $)";
 const NOT_SURE_METHOD = "Not sure";
 const printMethods = [
   DTF_METHOD,
