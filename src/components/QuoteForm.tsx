@@ -1,11 +1,17 @@
 "use client";
 
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { trackQuoteSubmit } from "@/lib/analytics";
 import { storage } from "@/lib/firebase";
+import {
+  QUOTE_GARMENT_OPTIONS,
+  SIZE_ORDER,
+  createQuoteColorOptionsByGarment,
+  type QuoteGarmentOption,
+} from "@/lib/shops";
 
 type QuoteFormProps = {
   source?: string;
@@ -27,6 +33,7 @@ type FormState = {
 
 type GarmentLine = {
   garment: string;
+  color: string;
   size: string;
   quantity: string;
 };
@@ -44,25 +51,13 @@ type PrintMethodInfo = {
   note?: string;
 };
 
-const garmentOptions = ["T-Shirt", "Polo Shirt", "Hoodie", "Cap", "Other"];
-const sizeOptions = [
-  "1 Yr",
-  "2 Yrs",
-  "4 Yrs",
-  "6 Yrs",
-  "8 Yrs",
-  "10 Yrs",
-  "12 Yrs",
-  "14 Yrs",
-  "XS",
-  "S",
-  "M",
-  "L",
-  "XL",
-  "2XL",
-  "3XL",
-  "4XL",
-];
+type QuoteOptionsResponse = {
+  colors?: string[];
+  colorsByGarment?: Partial<Record<QuoteGarmentOption, string[]>>;
+};
+
+const garmentOptions = [...QUOTE_GARMENT_OPTIONS];
+const sizeOptions = [...SIZE_ORDER];
 const printMethods = [
   "Screen Printing ($)",
   "Vinyl Heat Press Printing ($$)",
@@ -130,7 +125,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     deliveryPhone: "",
   });
   const [garmentLines, setGarmentLines] = useState<GarmentLine[]>([
-    { garment: garmentOptions[0], size: sizeOptions[0], quantity: "1" },
+    { garment: garmentOptions[0], color: "", size: sizeOptions[0], quantity: "1" },
   ]);
   const [printMethod, setPrintMethod] = useState<string>(printMethods[3]);
   const [artworkItems, setArtworkItems] = useState<ArtworkItem[]>([createArtworkItem(1)]);
@@ -142,6 +137,11 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [deliveryPhoneError, setDeliveryPhoneError] = useState<string | null>(null);
   const [deliveryPostCodeError, setDeliveryPostCodeError] = useState<string | null>(null);
+  const [availableColors, setAvailableColors] = useState<string[]>([]);
+  const [colorOptionsByGarment, setColorOptionsByGarment] = useState<
+    Record<QuoteGarmentOption, string[]>
+  >(() => createQuoteColorOptionsByGarment());
+  const [loadingColors, setLoadingColors] = useState(true);
 
   const isValidPhone = (value: string) => /^[0-9+()\s-]+$/.test(value);
   const isValidPostCode = (value: string) => /^\d+$/.test(value);
@@ -162,7 +162,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
   function addGarmentLine() {
     setGarmentLines((prev) => [
       ...prev,
-      { garment: garmentOptions[0], size: sizeOptions[0], quantity: "1" },
+      { garment: garmentOptions[0], color: "", size: sizeOptions[0], quantity: "1" },
     ]);
   }
 
@@ -236,6 +236,79 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
   const screenPrintingSelected = printMethod === SCREEN_PRINTING_METHOD;
   const selectedPrintMethodInfo = printMethodInfoByMethod[printMethod];
 
+  function getGarmentColorOptions(garment: string) {
+    const garmentKey = QUOTE_GARMENT_OPTIONS.includes(garment as QuoteGarmentOption)
+      ? (garment as QuoteGarmentOption)
+      : "Other";
+    const garmentColors = colorOptionsByGarment[garmentKey] || [];
+    return garmentColors.length ? garmentColors : availableColors;
+  }
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadQuoteOptions() {
+      try {
+        const res = await fetch("/api/quote-options");
+        const body = (await res.json().catch(() => ({}))) as QuoteOptionsResponse & {
+          error?: string;
+        };
+
+        if (!res.ok) {
+          throw new Error(body.error || "Failed to load quote options.");
+        }
+
+        if (!active) return;
+
+        const nextColors = Array.isArray(body.colors)
+          ? body.colors.map((entry) => String(entry || "").trim()).filter(Boolean)
+          : [];
+        const nextColorsByGarment = createQuoteColorOptionsByGarment();
+
+        QUOTE_GARMENT_OPTIONS.forEach((garment) => {
+          const garmentColors = body.colorsByGarment?.[garment];
+          nextColorsByGarment[garment] = Array.isArray(garmentColors)
+            ? garmentColors.map((entry) => String(entry || "").trim()).filter(Boolean)
+            : [];
+        });
+
+        setAvailableColors(nextColors);
+        setColorOptionsByGarment(nextColorsByGarment);
+      } catch (error) {
+        console.error("quote-options:load", error);
+        if (!active) return;
+        setAvailableColors([]);
+        setColorOptionsByGarment(createQuoteColorOptionsByGarment());
+      } finally {
+        if (active) setLoadingColors(false);
+      }
+    }
+
+    loadQuoteOptions();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    setGarmentLines((prev) => {
+      let changed = false;
+      const next = prev.map((line) => {
+        const garmentKey = QUOTE_GARMENT_OPTIONS.includes(line.garment as QuoteGarmentOption)
+          ? (line.garment as QuoteGarmentOption)
+          : "Other";
+        const garmentColors = colorOptionsByGarment[garmentKey]?.length
+          ? colorOptionsByGarment[garmentKey]
+          : availableColors;
+        if (!line.color || garmentColors.includes(line.color)) return line;
+        changed = true;
+        return { ...line, color: "" };
+      });
+      return changed ? next : prev;
+    });
+  }, [availableColors, colorOptionsByGarment]);
+
   function getScreenPrintingValidationMessage() {
     const filledArtworkItems = artworkItems.filter(
       (item) => item.file || item.label.trim() || item.quantity.trim()
@@ -297,13 +370,14 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
       : "Quote request submitted via the website.";
 
     const payload = new FormData();
-    const primaryLine = garmentLines[0] || { garment: "", size: "", quantity: "" };
+    const primaryLine = garmentLines[0] || { garment: "", color: "", size: "", quantity: "" };
     payload.append("name", form.name);
     payload.append("email", form.email);
     payload.append("message", summaryMessage);
     payload.append("website", website);
     payload.append("phone", form.phone);
     payload.append("garment", primaryLine.garment);
+    payload.append("color", primaryLine.color);
     payload.append("size", primaryLine.size);
     payload.append("printMethod", printMethod);
     payload.append("quantity", primaryLine.quantity);
@@ -379,7 +453,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           deliveryPostCode: "",
           deliveryPhone: "",
         });
-        setGarmentLines([{ garment: garmentOptions[0], size: sizeOptions[0], quantity: "1" }]);
+        setGarmentLines([{ garment: garmentOptions[0], color: "", size: sizeOptions[0], quantity: "1" }]);
         setPrintMethod(printMethods[3]);
         setArtworkItems([createArtworkItem(1)]);
         setNextArtworkId(2);
@@ -462,17 +536,53 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
         </div>
 
         <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-neutral-500">Colours are loaded from the current catalog availability.</p>
+            {!loadingColors && !availableColors.length ? (
+              <p className="text-xs text-amber-700">No live colours available right now. Add the preferred colour in notes if needed.</p>
+            ) : null}
+          </div>
           {garmentLines.map((line, index) => (
-            <div key={`${index}-${line.garment}`} className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div key={`${index}-${line.garment}`} className="grid grid-cols-1 gap-4 md:grid-cols-4">
               <div>
                 <label className="block text-sm font-medium text-neutral-700">Garment</label>
                 <select
                   value={line.garment}
-                  onChange={(e) => updateGarmentLine(index, { garment: e.target.value })}
+                  onChange={(e) => {
+                    const nextGarment = e.target.value;
+                    const nextColorOptions = getGarmentColorOptions(nextGarment);
+                    updateGarmentLine(index, {
+                      garment: nextGarment,
+                      color: nextColorOptions.includes(line.color) ? line.color : "",
+                    });
+                  }}
                   className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
                 >
                   {garmentOptions.map((opt) => (
                     <option key={opt}>{opt}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700">Color</label>
+                <select
+                  value={line.color}
+                  onChange={(e) => updateGarmentLine(index, { color: e.target.value })}
+                  required={getGarmentColorOptions(line.garment).length > 0}
+                  disabled={loadingColors && getGarmentColorOptions(line.garment).length === 0}
+                  className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none disabled:bg-neutral-50 disabled:text-neutral-400"
+                >
+                  <option value="">
+                    {loadingColors && getGarmentColorOptions(line.garment).length === 0
+                      ? "Loading colors..."
+                      : getGarmentColorOptions(line.garment).length
+                        ? "Select color"
+                        : "No colors available"}
+                  </option>
+                  {getGarmentColorOptions(line.garment).map((color) => (
+                    <option key={color} value={color}>
+                      {color}
+                    </option>
                   ))}
                 </select>
               </div>

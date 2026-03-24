@@ -37,6 +37,11 @@ import {
   FiUpload,
 } from "react-icons/fi";
 import { CONTACT_PHONE_DISPLAY } from "@/data/work";
+import {
+  formatQuoteGarmentDescription,
+  sortQuoteColors,
+  type QuoteGarmentLine as QuoteGarmentRequestLine,
+} from "@/lib/shops";
 
 type QuoteStatus = "new" | "review" | "approved" | "sent";
 
@@ -87,7 +92,7 @@ type QuoteRecord = {
   email: string;
   phone?: string;
   message?: string;
-  garments?: { garment?: string; size?: string; quantity?: string | number }[];
+  garments?: QuoteGarmentRequestLine[];
   printMethod?: string;
   quantity?: string | number;
   deadline?: string;
@@ -478,9 +483,8 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
     }));
     const fallbackLines: QuoteLine[] =
       quote.garments?.map((entry) => {
-        const sizeLabel = entry.size ? ` (${entry.size})` : "";
         return {
-          description: `${entry.garment || "Custom item"}${sizeLabel}`,
+          description: formatQuoteGarmentDescription(entry),
           quantity: safeNumber(entry.quantity, 0),
           unitPrice: "",
         };
@@ -524,9 +528,8 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
   const validUntilFallback = format(addDays(new Date(fallbackDate), 7), "yyyy-MM-dd");
   const fromGarments: QuoteLine[] =
     quote.garments?.map((entry) => {
-      const sizeLabel = entry.size ? ` (${entry.size})` : "";
       return {
-        description: `${entry.garment || "Custom item"}${sizeLabel}`,
+        description: formatQuoteGarmentDescription(entry),
         quantity: safeNumber(entry.quantity, 0),
         unitPrice: "",
       };
@@ -1037,17 +1040,27 @@ export default function QuotationApprovalPage() {
     () => parseDesignBrief(selected?.designBrief),
     [selected?.designBrief]
   );
-  const selectedSizeRows = useMemo(() => {
+  const selectedGarmentRows = useMemo(() => {
     if (selectedDesignBrief?.selectedSizes?.length) {
       return formatSizeRows(selectedDesignBrief.selectedSizes);
     }
     return (selected?.garments || [])
       .filter((entry) => safeNumber(entry.quantity, 0) > 0)
       .map((entry) => {
-        const sizeLabel = entry.size ? ` (${entry.size})` : "";
-        return `${entry.garment || "Item"}${sizeLabel} x ${safeNumber(entry.quantity, 0)}`;
+        return `${formatQuoteGarmentDescription(entry)} x ${safeNumber(entry.quantity, 0)}`;
       });
   }, [selectedDesignBrief, selected?.garments]);
+  const selectedRequestedColors = useMemo(() => {
+    if (selectedDesignBrief?.color?.trim()) {
+      return [selectedDesignBrief.color.trim()];
+    }
+
+    return sortQuoteColors(
+      (selected?.garments || [])
+        .map((entry) => String(entry.color || "").trim())
+        .filter(Boolean)
+    );
+  }, [selected, selectedDesignBrief]);
   const selectedClientNotes = useMemo(
     () => (selected ? extractClientNotes(selected, selectedDesignBrief) : ""),
     [selected, selectedDesignBrief]
@@ -1356,7 +1369,7 @@ export default function QuotationApprovalPage() {
         email: initialDraft.contactEmail,
         phone: initialDraft.contactPhone,
         message: "Created from Mo Admin",
-        garments: [{ garment: "Custom item", size: "", quantity: 1 }],
+        garments: [{ garment: "Custom item", color: "", size: "", quantity: 1 }],
         source: "Mo Admin",
         status: "review",
         quote: {
@@ -1831,10 +1844,10 @@ export default function QuotationApprovalPage() {
                   const readLabel = status === "new" ? "Unread" : "Read";
                   const selectedTone = selectedId === quote.id;
                   const stageLabel = status === "sent" ? `${DOC_TYPE_LABELS[docType]} sent` : DOC_TYPE_LABELS[docType];
-                  const sizePreview = (quote.garments || [])
+                  const garmentPreview = (quote.garments || [])
                     .filter((entry) => safeNumber(entry.quantity, 0) > 0)
                     .slice(0, 2)
-                    .map((entry) => `${entry.size || "size"} x ${safeNumber(entry.quantity, 0)}`)
+                    .map((entry) => `${formatQuoteGarmentDescription(entry)} x ${safeNumber(entry.quantity, 0)}`)
                     .join(", ");
                   const totalPieces = (quote.garments || []).reduce(
                     (sum, entry) => sum + safeNumber(entry.quantity, 0),
@@ -1887,7 +1900,7 @@ export default function QuotationApprovalPage() {
                         </span>
                       </div>
                       <div className={`mt-2 text-[11px] ${selectedTone ? "text-slate-300" : "text-slate-500"}`}>
-                        {totalPieces > 0 ? `${totalPieces} pcs${sizePreview ? ` • ${sizePreview}` : ""}` : "No quantity yet"}
+                        {totalPieces > 0 ? `${totalPieces} pcs${garmentPreview ? ` • ${garmentPreview}` : ""}` : "No quantity yet"}
                       </div>
                       <div className={`mt-3 flex items-center justify-between text-xs ${selectedTone ? "text-slate-200" : "text-slate-400"}`}>
                         <span>{createdAt}</span>
@@ -1966,7 +1979,7 @@ export default function QuotationApprovalPage() {
                           {selectedDesignBrief?.product || selected.garments?.[0]?.garment || "n/a"}
                         </p>
                         <p className="mt-2 text-sm text-slate-700">
-                          <span className="font-semibold">Selected sizes:</span> {selectedSizeRows.join(", ") || "n/a"}
+                          <span className="font-semibold">Selected garments:</span> {selectedGarmentRows.join(", ") || "n/a"}
                         </p>
                         <p className="mt-2 text-sm text-slate-700">
                           <span className="font-semibold">Total qty:</span> {selectedTotalQty > 0 ? selectedTotalQty : "n/a"}
@@ -1975,7 +1988,7 @@ export default function QuotationApprovalPage() {
                           <span className="font-semibold">Print:</span> {selectedDesignBrief?.printMethod || selected.printMethod || "n/a"}
                         </p>
                         <p className="mt-2 text-sm text-slate-700">
-                          <span className="font-semibold">Color:</span> {selectedDesignBrief?.color || "n/a"}
+                          <span className="font-semibold">Color:</span> {selectedRequestedColors.join(", ") || "n/a"}
                         </p>
                         {selectedDesignRows.length > 0 && (
                           <p className="mt-2 text-sm text-slate-700">

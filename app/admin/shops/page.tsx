@@ -6,7 +6,9 @@ import {
   DEFAULT_PICKUP_POINT,
   formatSizeLabel,
   getSizePrices,
+  normalizeList,
   SIZE_ORDER,
+  sortQuoteColors,
   type ShopItem,
 } from "@/lib/shops";
 import {
@@ -282,6 +284,11 @@ export default function AdminShopsPage() {
       return true;
     });
   }, [items, search, showActiveOnly, showInStockOnly]);
+
+  const sortedFormColors = useMemo(
+    () => sortQuoteColors(normalizeList(form.colors)),
+    [form.colors]
+  );
 
   function resetForm() {
     setEditingId(null);
@@ -702,7 +709,7 @@ export default function AdminShopsPage() {
                               )}
                             </div>
                             <p className="mt-2 text-xs text-slate-500">
-                              Colors: {item.colors.join(", ") || "-"}
+                              Colors: {sortQuoteColors(item.colors).join(", ") || "-"}
                             </p>
                             <div className="mt-3 grid gap-2 text-[11px] text-slate-700 sm:grid-cols-[repeat(auto-fit,minmax(96px,1fr))]">
                               {sizePrices.length ? (
@@ -797,6 +804,21 @@ export default function AdminShopsPage() {
                     className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
                     placeholder="Black, White, Navy"
                   />
+                  <p className="mt-2 text-xs text-slate-500">
+                    These colours feed the quote form dropdown. White, Black, and Navy Blue are pinned first there.
+                  </p>
+                  {sortedFormColors.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {sortedFormColors.map((color) => (
+                        <span
+                          key={color}
+                          className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600"
+                        >
+                          {color}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 

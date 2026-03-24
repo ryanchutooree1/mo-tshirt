@@ -64,6 +64,119 @@ export type ShopOrderLine = {
   quantity: number;
 };
 
+export const QUOTE_GARMENT_OPTIONS = [
+  "T-Shirt",
+  "Polo Shirt",
+  "Hoodie",
+  "Cap",
+  "Other",
+] as const;
+
+export type QuoteGarmentOption = (typeof QUOTE_GARMENT_OPTIONS)[number];
+
+export type QuoteGarmentLine = {
+  garment?: string;
+  color?: string;
+  size?: string;
+  quantity?: string | number;
+};
+
+const QUOTE_COLOR_PRIORITY = new Map<string, number>([
+  ["white", 0],
+  ["black", 1],
+  ["navy blue", 2],
+  ["navy", 3],
+]);
+
+function normalizeColorKey(value: string) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+function getQuoteGarmentFromShopTitle(title: string): QuoteGarmentOption {
+  const normalized = String(title || "").trim().toLowerCase();
+  if (normalized.includes("polo")) return "Polo Shirt";
+  if (normalized.includes("hoodie")) return "Hoodie";
+  if (normalized.includes("cap")) return "Cap";
+  if (
+    normalized.includes("t-shirt") ||
+    normalized.includes("t shirt") ||
+    normalized.includes("tee")
+  ) {
+    return "T-Shirt";
+  }
+  return "Other";
+}
+
+export function createQuoteColorOptionsByGarment(): Record<QuoteGarmentOption, string[]> {
+  return QUOTE_GARMENT_OPTIONS.reduce(
+    (acc, garment) => {
+      acc[garment] = [];
+      return acc;
+    },
+    {} as Record<QuoteGarmentOption, string[]>
+  );
+}
+
+export function sortQuoteColors(list: string[]): string[] {
+  const unique = new Map<string, string>();
+
+  list.forEach((entry) => {
+    const label = String(entry || "").trim();
+    const key = normalizeColorKey(label);
+    if (!label || !key || unique.has(key)) return;
+    unique.set(key, label);
+  });
+
+  return Array.from(unique.values()).sort((left, right) => {
+    const leftPriority =
+      QUOTE_COLOR_PRIORITY.get(normalizeColorKey(left)) ?? Number.MAX_SAFE_INTEGER;
+    const rightPriority =
+      QUOTE_COLOR_PRIORITY.get(normalizeColorKey(right)) ?? Number.MAX_SAFE_INTEGER;
+
+    if (leftPriority !== rightPriority) {
+      return leftPriority - rightPriority;
+    }
+
+    return left.localeCompare(right, undefined, { sensitivity: "base" });
+  });
+}
+
+export function getQuoteColorOptionsByGarment(
+  items: Pick<ShopItem, "title" | "colors">[]
+): Record<QuoteGarmentOption, string[]> {
+  const grouped = createQuoteColorOptionsByGarment();
+  const allColors = sortQuoteColors(
+    items.flatMap((item) => normalizeList(item.colors))
+  );
+
+  items.forEach((item) => {
+    const garment = getQuoteGarmentFromShopTitle(item.title);
+    if (garment === "Other") return;
+    normalizeList(item.colors).forEach((color) => {
+      grouped[garment].push(color);
+    });
+  });
+
+  return QUOTE_GARMENT_OPTIONS.reduce((acc, garment) => {
+    acc[garment] =
+      garment === "Other" ? allColors : sortQuoteColors(grouped[garment]);
+    return acc;
+  }, createQuoteColorOptionsByGarment());
+}
+
+export function formatQuoteGarmentDescription(entry: QuoteGarmentLine) {
+  const garment = String(entry.garment || "").trim() || "Custom item";
+  const color = String(entry.color || "").trim();
+  const size = normalizeSizeLabel(String(entry.size || "").trim());
+  const details = [color, size].filter(Boolean);
+
+  return details.length ? `${garment} (${details.join(" / ")})` : garment;
+}
+
 export function normalizeSizeLabel(size: string): string {
   return String(size || "").replace(/\s+Old$/i, "").trim();
 }

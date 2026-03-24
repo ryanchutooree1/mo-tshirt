@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
+  formatQuoteGarmentDescription,
+  type QuoteGarmentLine,
+} from "@/lib/shops";
+import {
   CONTACT_RATE_LIMIT,
   evaluateRequestRateLimit,
   getRateLimitHeaders,
@@ -16,6 +20,7 @@ type ParsedPayload = {
   website?: string;
   phone?: string;
   garment?: string;
+  color?: string;
   size?: string;
   printMethod?: string;
   quantity?: string | number;
@@ -28,7 +33,7 @@ type ParsedPayload = {
   deliveryAddress?: string;
   deliveryPostCode?: string;
   deliveryPhone?: string;
-  garments?: { garment?: string; size?: string; quantity?: string | number }[] | string;
+  garments?: QuoteGarmentLine[] | string;
   attachments?:
     | {
         label?: string;
@@ -212,6 +217,7 @@ export async function POST(req: Request) {
         website: form.get("website")?.toString(),
         phone: form.get("phone")?.toString(),
         garment: form.get("garment")?.toString(),
+        color: form.get("color")?.toString(),
         size: form.get("size")?.toString(),
         printMethod: form.get("printMethod")?.toString(),
         quantity: form.get("quantity")?.toString(),
@@ -245,6 +251,7 @@ export async function POST(req: Request) {
       website,
       phone,
       garment,
+      color,
       size,
       printMethod,
       quantity,
@@ -366,7 +373,7 @@ export async function POST(req: Request) {
         ? safeNotes
         : safeMessage;
     const sourceValue = formatValue(source);
-    const parsedGarments: { garment?: string; size?: string; quantity?: string | number }[] = (() => {
+    const parsedGarments: QuoteGarmentLine[] = (() => {
       if (!garments) return [];
       if (Array.isArray(garments)) return garments;
       if (typeof garments === "string") {
@@ -379,20 +386,14 @@ export async function POST(req: Request) {
       }
       return [];
     })();
-    const formatGarmentLine = (entry: {
-      garment?: string;
-      size?: string;
-      quantity?: string | number;
-    }) => {
-      const garmentName = formatValue(entry.garment);
-      const sizeValue = formatValue(entry.size);
+    const formatGarmentLine = (entry: QuoteGarmentLine) => {
+      const garmentName = formatQuoteGarmentDescription(entry);
       const quantityValue = formatValue(entry.quantity);
-      const sizeLabel = sizeValue !== "n/a" ? ` (${sizeValue})` : "";
-      return `${garmentName}${sizeLabel} x ${quantityValue}`;
+      return `${garmentName} x ${quantityValue}`;
     };
     const garmentsSummary = parsedGarments.length
       ? parsedGarments.map(formatGarmentLine).join(", ")
-      : formatGarmentLine({ garment, size, quantity });
+      : formatGarmentLine({ garment, color, size, quantity });
     const parsedAttachments = parseAttachmentList(attachments);
     if (parsedAttachments.length > MAX_EMAIL_ATTACHMENT_COUNT) {
       return json({ error: "Too many artwork attachments." }, 400);
@@ -451,7 +452,9 @@ export async function POST(req: Request) {
         email: safeEmail,
         phone: safePhone,
         message: safeMessage,
-        garments: parsedGarments.length ? parsedGarments : [{ garment, size, quantity }],
+        garments: parsedGarments.length
+          ? parsedGarments
+          : [{ garment, color, size, quantity }],
         printMethod: printMethod || "",
         quantity: quantity || "",
         deadline: deadline || "",
