@@ -4,7 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FiDownload } from "react-icons/fi";
+import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { getWhatsAppUrl } from "@/data/work";
+import { trackShopOrderSubmit, trackWhatsAppClick } from "@/lib/analytics";
 import {
   buildShopWhatsAppMessageForLines,
   formatSizeLabel,
@@ -433,9 +435,16 @@ export default function ShopClient() {
             </Link>
             <Link href="/#our-work" className="transition hover:text-black">Our Work</Link>
             <Link href="/#contact" className="transition hover:text-black">Contact</Link>
-            <a href={getWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="transition hover:text-black">
+            <TrackedWhatsAppLink
+              href={getWhatsAppUrl()}
+              trackingLocation="shops_header"
+              trackingSource="shops_page"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition hover:text-black"
+            >
               WhatsApp
-            </a>
+            </TrackedWhatsAppLink>
           </nav>
         </div>
         </header>
@@ -807,7 +816,23 @@ export default function ShopClient() {
               }`}
               aria-disabled={!canOrder}
               onClick={(e) => {
-                if (!canOrder) e.preventDefault();
+                if (!canOrder) {
+                  e.preventDefault();
+                  return;
+                }
+
+                trackWhatsAppClick({
+                  location: "shops_order_send",
+                  source: "shops_page",
+                });
+                trackShopOrderSubmit({
+                  line_items: orderLines.length,
+                  total_quantity: totalQty,
+                  delivery_method: deliveryMethod,
+                  delivery_required: deliveryInfoRequired,
+                  value: totalPrice,
+                  currency: "MUR",
+                });
               }}
             >
               Send Order on WhatsApp

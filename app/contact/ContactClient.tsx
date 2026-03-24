@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState, type FormEvent, type ChangeEvent } from "react";
 import MapCard from "@/components/MapCard";
-import { CONTACT_EMAIL } from "@/data/work";
+import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
+import { CONTACT_EMAIL, getWhatsAppUrl } from "@/data/work";
 
 export default function ContactClient() {
   const [name, setName] = useState("");
@@ -140,14 +141,16 @@ export default function ContactClient() {
               {loading ? "Sending..." : "Send message"}
             </button>
 
-            <a
-              href="https://wa.me/23059883880"
+            <TrackedWhatsAppLink
+              href={getWhatsAppUrl("Hi! I need help with my order.")}
+              trackingLocation="contact_page"
+              trackingSource="contact_page"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 px-4 py-2 border border-orange-500 text-orange-500 rounded-full hover:bg-orange-50 transition"
             >
               WhatsApp
-            </a>
+            </TrackedWhatsAppLink>
           </div>
 
           {result && (

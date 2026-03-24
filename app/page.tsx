@@ -9,6 +9,7 @@ import MapCard from "@/components/MapCard";
 import QuoteForm from "@/components/QuoteForm";
 import ZoomableImage from "@/components/ZoomableImage";
 import LocationJump from "@/components/LocationJump";
+import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { servicePageOverviewCards } from "@/data/service-pages";
 
 const pageTitle = "MO T-SHIRT PRINTING | Fastest in Mauritius";
@@ -98,12 +99,16 @@ const faqLd = {
 function ActionButtons() {
   return (
     <div className="mt-8 mx-auto flex w-full max-w-2xl flex-wrap items-center justify-center gap-3">
-      <a
+      <TrackedWhatsAppLink
         href={getWhatsAppUrl()}
+        trackingLocation="home_hero"
+        trackingSource="homepage"
+        target="_blank"
+        rel="noopener noreferrer"
         className="inline-flex items-center justify-center rounded-full bg-[#FF6600] px-6 py-3 text-sm font-medium text-white transition hover:bg-orange-600"
       >
         WhatsApp
-      </a>
+      </TrackedWhatsAppLink>
       <a
         href="#contact"
         className="inline-flex items-center justify-center rounded-full bg-black px-6 py-3 text-sm font-medium text-white transition hover:bg-neutral-800"
@@ -128,19 +133,31 @@ export default function HomePage() {
             className="flex w-full flex-wrap items-center justify-center gap-4 text-xs font-semibold text-black/70 sm:w-auto sm:justify-end sm:gap-6 sm:text-sm sm:font-medium"
           >
             {navLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                className={`whitespace-nowrap transition ${
-                  link.highlight
-                    ? "rounded-full bg-[#FF6600] px-3 py-1 text-white shadow-sm hover:bg-orange-600"
-                    : "text-black/70 hover:text-black"
-                }`}
-                target={link.label === "WhatsApp" ? "_blank" : undefined}
-                rel={link.label === "WhatsApp" ? "noopener noreferrer" : undefined}
-              >
-                {link.label}
-              </a>
+              link.label === "WhatsApp" ? (
+                <TrackedWhatsAppLink
+                  key={link.label}
+                  href={link.href}
+                  trackingLocation="home_header"
+                  trackingSource="homepage"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="whitespace-nowrap text-black/70 transition hover:text-black"
+                >
+                  {link.label}
+                </TrackedWhatsAppLink>
+              ) : (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  className={`whitespace-nowrap transition ${
+                    link.highlight
+                      ? "rounded-full bg-[#FF6600] px-3 py-1 text-white shadow-sm hover:bg-orange-600"
+                      : "text-black/70 hover:text-black"
+                  }`}
+                >
+                  {link.label}
+                </a>
+              )
             ))}
           </nav>
         </div>
@@ -476,12 +493,16 @@ export default function HomePage() {
                       <p className="mt-1 text-sm text-neutral-600">
                         Message us on WhatsApp and we’ll recommend the right print method for your logo.
                       </p>
-                      <a
+                      <TrackedWhatsAppLink
                         href={getWhatsAppUrl("Hi! I have a quick question about my T-shirt print.")}
+                        trackingLocation="home_faq"
+                        trackingSource="homepage"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="mt-3 inline-flex items-center justify-center rounded-full bg-[#FF6600] px-4 py-2 text-xs font-semibold text-white transition hover:bg-orange-600"
                       >
                         Ask on WhatsApp
-                      </a>
+                      </TrackedWhatsAppLink>
                     </div>
                   </div>
 
@@ -521,9 +542,16 @@ export default function HomePage() {
             <a href="https://www.tiktok.com/@mo_tshirt_mauritius" target="_blank" rel="noopener noreferrer" className="transition hover:text-white">
               TikTok
             </a>
-            <a href={getWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="transition hover:text-white">
+            <TrackedWhatsAppLink
+              href={getWhatsAppUrl()}
+              trackingLocation="home_footer"
+              trackingSource="homepage"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition hover:text-white"
+            >
               WhatsApp
-            </a>
+            </TrackedWhatsAppLink>
           </div>
           <p className="mt-6 text-xs text-white/80">
             © MO T-SHIRT — Mauritius’ trusted name in custom printing.

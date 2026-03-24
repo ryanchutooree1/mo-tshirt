@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { trackQuoteSubmit } from "@/lib/analytics";
 import { storage } from "@/lib/firebase";
 
 type QuoteFormProps = {
@@ -356,6 +358,14 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
       });
       const body = await res.json();
       if (res.ok) {
+        trackQuoteSubmit({
+          form_source: source,
+          print_method: printMethod,
+          garment_lines: garmentLines.length,
+          total_quantity: totalQuantity,
+          artwork_count: uploadedArtworkItems.length,
+          delivery_method: form.delivery,
+        });
         setResult({ ok: true, msg: body?.message || "Got it! We’ll reply soon." });
         setForm({
           name: "",
@@ -702,14 +712,16 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           >
             {loading ? "Sending…" : "Get my quote"}
           </button>
-          <a
+          <TrackedWhatsAppLink
             href={getWhatsAppUrl("Hi! Can you quote me for custom shirts?")}
+            trackingLocation="quote_form"
+            trackingSource={source}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center justify-center rounded-full border border-neutral-300 px-4 py-2 text-sm font-semibold text-black transition hover:border-black"
           >
             Or WhatsApp {CONTACT_PHONE_DISPLAY}
-          </a>
+          </TrackedWhatsAppLink>
         </div>
 
         {result && (

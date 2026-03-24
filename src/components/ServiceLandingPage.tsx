@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import Gallery from "@/components/Gallery";
 import QuoteForm from "@/components/QuoteForm";
+import ServicePageViewTracker from "@/components/ServicePageViewTracker";
+import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import type { ServicePageContent } from "@/data/service-pages";
 import { getServicePageBySlug } from "@/data/service-pages";
 import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
@@ -94,19 +96,23 @@ export default function ServiceLandingPage({ page }: ServiceLandingPageProps) {
             <a href="#quote" className="transition hover:text-black">
               Get Quote
             </a>
-            <a
+            <TrackedWhatsAppLink
               href={getWhatsAppUrl(`Hi! I need help with ${page.label.toLowerCase()} in Mauritius.`)}
+              trackingLocation="service_header"
+              trackingSource="service_page"
+              serviceSlug={page.slug}
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-full bg-[#FF6600] px-3 py-1 text-white shadow-sm transition hover:bg-orange-600"
             >
               WhatsApp
-            </a>
+            </TrackedWhatsAppLink>
           </nav>
         </div>
       </header>
 
       <main>
+        <ServicePageViewTracker slug={page.slug} label={page.label} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceLd) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
@@ -136,14 +142,17 @@ export default function ServiceLandingPage({ page }: ServiceLandingPageProps) {
                 >
                   Get a quote
                 </a>
-                <a
+                <TrackedWhatsAppLink
                   href={getWhatsAppUrl(`Hi! I need a quote for ${page.label.toLowerCase()}.`)}
+                  trackingLocation="service_hero"
+                  trackingSource="service_page"
+                  serviceSlug={page.slug}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center justify-center rounded-full bg-[#FF6600] px-6 py-3 text-sm font-semibold text-white transition hover:bg-orange-600"
                 >
                   WhatsApp now
-                </a>
+                </TrackedWhatsAppLink>
                 {page.extraAction ? (
                   <Link
                     href={page.extraAction.href}
@@ -215,14 +224,17 @@ export default function ServiceLandingPage({ page }: ServiceLandingPageProps) {
                     Share the garment, quantity, deadline, and artwork. We will point you toward the print method that actually suits the order.
                   </p>
                   <div className="mt-5 flex flex-wrap gap-3">
-                    <a
+                    <TrackedWhatsAppLink
                       href={getWhatsAppUrl(`Hi! I want advice on ${page.label.toLowerCase()}.`)}
+                      trackingLocation="service_callout"
+                      trackingSource="service_page"
+                      serviceSlug={page.slug}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center justify-center rounded-full bg-[#FF6600] px-5 py-2 text-sm font-semibold text-white transition hover:bg-orange-600"
                     >
                       Ask on WhatsApp
-                    </a>
+                    </TrackedWhatsAppLink>
                     <a
                       href={`tel:${CONTACT_TEL}`}
                       className="inline-flex items-center justify-center rounded-full border border-white/20 px-5 py-2 text-sm font-semibold text-white transition hover:border-white/50"
@@ -353,9 +365,17 @@ export default function ServiceLandingPage({ page }: ServiceLandingPageProps) {
             <Link href="/contact" className="transition hover:text-white">
               Contact
             </Link>
-            <a href={getWhatsAppUrl()} target="_blank" rel="noopener noreferrer" className="transition hover:text-white">
+            <TrackedWhatsAppLink
+              href={getWhatsAppUrl()}
+              trackingLocation="service_footer"
+              trackingSource="service_page"
+              serviceSlug={page.slug}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition hover:text-white"
+            >
               WhatsApp
-            </a>
+            </TrackedWhatsAppLink>
           </div>
           <p className="mt-6 text-center text-xs text-white/80">
             © MO T-SHIRT - Local apparel printing for Mauritius businesses, events, and teams.

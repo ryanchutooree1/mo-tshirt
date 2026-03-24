@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { Inter } from "next/font/google";
+import AnalyticsProvider from "@/components/AnalyticsProvider";
 import { SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
@@ -107,6 +108,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} antialiased bg-white text-black`}>
+        <AnalyticsProvider measurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
         <Script
           id="schema-local-business"
           type="application/ld+json"

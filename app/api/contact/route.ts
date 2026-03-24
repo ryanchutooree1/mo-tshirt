@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { isContentLengthWithinLimit, isRequestOriginAllowed } from "@/lib/request-safety";
+import {
+  CONTACT_RATE_LIMIT,
+  evaluateRequestRateLimit,
+  getRateLimitHeaders,
+  isContentLengthWithinLimit,
+  isRequestOriginAllowed,
+} from "@/lib/request-safety";
 
 type ParsedPayload = {
   name: string;
@@ -166,12 +172,28 @@ function resolveFromAddress(rawFrom: string | undefined, smtpUser: string | unde
 }
 
 export async function POST(req: Request) {
+  const rateLimitResult = evaluateRequestRateLimit(req.headers, CONTACT_RATE_LIMIT);
+  const rateLimitHeaders = getRateLimitHeaders(rateLimitResult);
+  const json = (body: Record<string, unknown>, status: number) =>
+    NextResponse.json(body, { status, headers: rateLimitHeaders });
+
+  if (!rateLimitResult.allowed) {
+    return json(
+      {
+        error: rateLimitResult.blocked
+          ? "Too many requests. Please try again in 30 minutes."
+          : "Too many requests. Please wait a moment and try again.",
+      },
+      429
+    );
+  }
+
   if (!isRequestOriginAllowed(req)) {
-    return NextResponse.json({ error: "Origin not allowed." }, { status: 403 });
+    return json({ error: "Origin not allowed." }, 403);
   }
 
   if (!isContentLengthWithinLimit(req.headers, MAX_CONTACT_REQUEST_BYTES)) {
-    return NextResponse.json({ error: "Payload too large." }, { status: 413 });
+    return json({ error: "Payload too large." }, 413);
   }
 
   try {
@@ -253,7 +275,7 @@ export async function POST(req: Request) {
     const honeypot = String(website ?? "").trim();
 
     if (honeypot) {
-      return NextResponse.json({ message: "Thanks! We received your message." }, { status: 200 });
+      return json({ message: "Thanks! We received your message." }, 200);
     }
 
     if (
@@ -263,19 +285,19 @@ export async function POST(req: Request) {
       safeMessage.length > MAX_CONTACT_MESSAGE_LENGTH ||
       safeNotes.length > MAX_CONTACT_NOTES_LENGTH
     ) {
-      return NextResponse.json({ error: "One or more fields are too long." }, { status: 400 });
+      return json({ error: "One or more fields are too long." }, 400);
     }
 
     if (!safeName || !safeMessage) {
-      return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
+      return json({ error: "Missing required fields." }, 400);
     }
 
     if (!safeEmail && !safePhone) {
-      return NextResponse.json({ error: "Provide an email or phone number." }, { status: 400 });
+      return json({ error: "Provide an email or phone number." }, 400);
     }
 
     if (safeEmail && !isValidEmail(safeEmail)) {
-      return NextResponse.json({ error: "Invalid email." }, { status: 400 });
+      return json({ error: "Invalid email." }, 400);
     }
 
     const allowedTypes = [
@@ -296,7 +318,7 @@ export async function POST(req: Request) {
         : [];
 
     if (requestFiles.length > MAX_EMAIL_ATTACHMENT_COUNT) {
-      return NextResponse.json({ error: "Too many files. Send up to 4 attachments." }, { status: 400 });
+      return json({ error: "Too many files. Send up to 4 attachments." }, 400);
     }
 
     const totalAttachmentBytes = requestFiles.reduce(
@@ -304,7 +326,7 @@ export async function POST(req: Request) {
       0
     );
     if (totalAttachmentBytes > MAX_TOTAL_ATTACHMENT_BYTES) {
-      return NextResponse.json({ error: "Attachments are too large. Keep the total under 15MB." }, { status: 400 });
+      return json({ error: "Attachments are too large. Keep the total under 15MB." }, 400);
     }
 
     const emailAttachments: { filename: string; content: Buffer; contentType?: string }[] = [];
@@ -313,13 +335,10 @@ export async function POST(req: Request) {
       const typeOk = allowedTypes.includes(currentFile.type || "");
       const sizeOk = typeof currentFile.size === "number" ? currentFile.size <= maxSize : true;
       if (!typeOk) {
-        return NextResponse.json(
-          { error: "Unsupported file type. Use PNG, JPG, WEBP, SVG, HEIC, or PDF." },
-          { status: 400 }
-        );
+        return json({ error: "Unsupported file type. Use PNG, JPG, WEBP, SVG, HEIC, or PDF." }, 400);
       }
       if (!sizeOk) {
-        return NextResponse.json({ error: "File too large. Max 5MB per file." }, { status: 400 });
+        return json({ error: "File too large. Max 5MB per file." }, 400);
       }
       const buffer = Buffer.from(await currentFile.arrayBuffer());
       emailAttachments.push({
@@ -376,7 +395,7 @@ export async function POST(req: Request) {
       : formatGarmentLine({ garment, size, quantity });
     const parsedAttachments = parseAttachmentList(attachments);
     if (parsedAttachments.length > MAX_EMAIL_ATTACHMENT_COUNT) {
-      return NextResponse.json({ error: "Too many artwork attachments." }, { status: 400 });
+      return json({ error: "Too many artwork attachments." }, 400);
     }
     const storedAttachments: QuoteAttachment[] = (() => {
       const normalizedAttachments = parsedAttachments.map((entry, index) => ({
@@ -569,22 +588,16 @@ export async function POST(req: Request) {
           mailOptions.attachments = emailAttachments;
         }
         await transporter.sendMail(mailOptions);
-        return NextResponse.json(
-          { message: "Thanks! We received your message.", quoteId },
-          { status: 200 }
-        );
+        return json({ message: "Thanks! We received your message.", quoteId }, 200);
       } catch {
         // Fall through to success without email if nodemailer not available
-        return NextResponse.json(
-          { message: "Received. Email not sent (mailer unavailable).", quoteId },
-          { status: 200 }
-        );
+        return json({ message: "Received. Email not sent (mailer unavailable).", quoteId }, 200);
       }
     }
 
     // No SMTP configured; acknowledge without sending
-    return NextResponse.json({ message: "Received. Email disabled.", quoteId }, { status: 200 });
+    return json({ message: "Received. Email disabled.", quoteId }, 200);
   } catch {
-    return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
+    return json({ error: "Invalid payload." }, 400);
   }
 }
