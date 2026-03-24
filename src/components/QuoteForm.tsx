@@ -47,8 +47,9 @@ type ArtworkItem = {
 
 type PrintMethodInfo = {
   title: string;
-  description: string;
+  description?: string;
   note?: string;
+  items?: string[];
 };
 
 type QuoteOptionsResponse = {
@@ -96,8 +97,12 @@ const printMethodInfoByMethod: Partial<Record<string, PrintMethodInfo>> = {
     note: "Send the clearest artwork file you have so we can confirm the print size and placement properly.",
   },
   [NOT_SURE_METHOD]: {
-    title: "We have 3 printing methods",
-    description: "Screen printing, vinyl heat press, and DTF. Choose Not sure if you want our recommendation.",
+    title: "Printing Methods:",
+    items: [
+      "DTF (Faster Process)",
+      "Vinyl Heat Press (Fast Process)",
+      "Screen Printing (Slower Process)",
+    ],
   },
 };
 
@@ -665,7 +670,16 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           {selectedPrintMethodInfo ? (
             <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-700">
               <p className="font-semibold text-neutral-900">{selectedPrintMethodInfo.title}</p>
-              <p className="mt-2">{selectedPrintMethodInfo.description}</p>
+              {selectedPrintMethodInfo.description ? (
+                <p className="mt-2">{selectedPrintMethodInfo.description}</p>
+              ) : null}
+              {selectedPrintMethodInfo.items?.length ? (
+                <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-neutral-700">
+                  {selectedPrintMethodInfo.items.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ol>
+              ) : null}
               {selectedPrintMethodInfo.note ? (
                 <p className="mt-2 text-xs text-neutral-500">{selectedPrintMethodInfo.note}</p>
               ) : null}
