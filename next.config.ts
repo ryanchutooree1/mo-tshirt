@@ -14,6 +14,11 @@ const nextConfig: NextConfig = {
         destination: "/",
         permanent: true,
       },
+      {
+        source: "/plain-t-shirts-mauritius",
+        destination: "/shops",
+        permanent: true,
+      },
     ];
   },
   images: {

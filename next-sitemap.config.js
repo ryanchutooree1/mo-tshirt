@@ -8,7 +8,6 @@ const servicePages = new Set([
   "/dtf-printing-mauritius",
   "/screen-printing-mauritius",
   "/rush-order-printing-mauritius",
-  "/plain-t-shirts-mauritius",
 ]);
 
 module.exports = {

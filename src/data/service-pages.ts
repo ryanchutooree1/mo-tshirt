@@ -405,64 +405,7 @@ export const servicePages: ServicePageContent[] = [
         answer: "For rush jobs, WhatsApp is the best first step. The form is still useful, but urgent jobs move faster when the conversation starts immediately.",
       },
     ],
-    relatedSlugs: ["event-shirts-mauritius", "t-shirt-printing-mauritius", "plain-t-shirts-mauritius"],
-  },
-  {
-    slug: "plain-t-shirts-mauritius",
-    label: "Plain T-Shirts",
-    title: "Plain T-Shirts Mauritius | Buy Blank T-Shirts by Size and Color",
-    description:
-      "Buy plain T-shirts in Mauritius with color, size, and delivery options. Good for fast blank stock orders, samples, team basics, and orders that may later move into printing.",
-    heroTitle: "Plain T-shirts in Mauritius for fast stock orders and easy reorders.",
-    heroBody:
-      "Not every job needs printing. If you need blank tees first, this page points you to our plain-stock ordering flow so you can choose color, size, and quantity quickly.",
-    eyebrow: "Blank stock",
-    summary: "Blank T-shirts for stock orders, samples, reorders, and projects that do not need printing yet.",
-    heroImage: "/all_products.jpg",
-    badges: ["Blank stock", "Size and color selection", "WhatsApp ordering"],
-    intro: [
-      "Some customers need a simple blank-stock order before they need print. That can be for team basics, resale, events, samples, or a later branding phase.",
-      "Our plain T-shirt flow is better for these cases because it lets you browse available items, check sizes, and send a structured WhatsApp order without filling a full print brief.",
-    ],
-    highlights: [
-      {
-        title: "Fastest route to plain stock",
-        copy: "If you do not need branding yet, the plain-shop flow is a better fit than a printing quote form.",
-      },
-      {
-        title: "Useful for samples and top-ups",
-        copy: "Good for size checking, stock planning, and simple repeat orders.",
-      },
-      {
-        title: "Easy handoff into printing later",
-        copy: "Plain orders can still become branded orders once the artwork and plan are ready.",
-      },
-    ],
-    bestFor: [
-      "Blank T-shirt purchases without printing",
-      "Sampling colours and sizes before production",
-      "Fast stock top-ups for teams and sellers",
-      "Orders that may move into branded print later",
-    ],
-    faqs: [
-      {
-        question: "Can I order plain shirts without printing?",
-        answer: "Yes. This page is specifically for customers who want blank stock and do not need printing yet.",
-      },
-      {
-        question: "Where do I choose colors and sizes?",
-        answer: "Use the plain-shop ordering flow to browse available products, colors, and size options, then send the order via WhatsApp.",
-      },
-      {
-        question: "Can a plain order turn into a printed order later?",
-        answer: "Yes. Many customers start with blanks, then come back for branding once the artwork and quantity are confirmed.",
-      },
-    ],
-    relatedSlugs: ["t-shirt-printing-mauritius", "rush-order-printing-mauritius", "polo-uniforms-mauritius"],
-    extraAction: {
-      href: "/shops",
-      label: "Browse plain stock",
-    },
+    relatedSlugs: ["event-shirts-mauritius", "t-shirt-printing-mauritius", "polo-uniforms-mauritius"],
   },
 ];
 
@@ -473,17 +416,6 @@ export const servicePageCards = servicePages.map(({ slug, label, summary }) => (
   label,
   summary,
 }));
-
-export const servicePageOverviewCards = servicePages.map(
-  ({ slug, label, summary, heroImage, eyebrow, badges }) => ({
-    slug,
-    label,
-    summary,
-    heroImage,
-    eyebrow,
-    badges: badges.slice(0, 2),
-  })
-);
 
 export function getServicePageBySlug(slug: string) {
   return servicePages.find((page) => page.slug === slug) || null;
