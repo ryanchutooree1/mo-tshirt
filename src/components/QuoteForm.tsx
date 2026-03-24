@@ -252,6 +252,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
 
   const totalQuantity = garmentLines.reduce((sum, line) => sum + Math.max(0, Number(line.quantity) || 0), 0);
   const screenPrintingSelected = printMethod === SCREEN_PRINTING_METHOD;
+  const showScreenPrintingWarning = screenPrintingSelected && totalQuantity < 10;
   const selectedPrintMethodInfo = printMethodInfoByMethod[printMethod];
 
   function getGarmentColorOptions(garment: string) {
@@ -684,7 +685,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           ) : null}
         </div>
 
-        {screenPrintingSelected && (
+        {showScreenPrintingWarning && (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             <p className="font-semibold">Screen printing selected</p>
             <p className="mt-1">
