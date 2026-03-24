@@ -544,7 +544,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
             {phoneError && <p className="mt-1 text-xs text-red-600">{phoneError}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Deadline</label>
+            <label className="block text-sm font-medium text-neutral-700">Deadline (optional)</label>
             <input
               value={form.deadline}
               onChange={(e) => update("deadline", e.target.value)}
