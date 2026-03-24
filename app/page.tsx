@@ -483,7 +483,7 @@ export default function HomePage() {
             </TrackedWhatsAppLink>
           </div>
           <p className="mt-6 text-xs text-white/80">
-            © MO T-SHIRT — Mauritius’ trusted name in custom printing.
+            © 2026 MO T-SHIRT — Mauritius’ trusted name in custom printing.
             <span className="mx-2 text-white/70">|</span>
             <Link href="/login" className="transition hover:text-white hover:underline">
               All Rights Reserved
