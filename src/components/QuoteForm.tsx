@@ -67,6 +67,7 @@ const printMethods = [
 const SCREEN_PRINTING_METHOD = printMethods[0];
 const VINYL_METHOD = printMethods[1];
 const DTF_METHOD = printMethods[2];
+const NOT_SURE_METHOD = printMethods[3];
 const deliveryOptions = [
   "Surinam Pickup (Free)",
   "Post Office Postage Delivery (Rs 100)",
@@ -93,6 +94,10 @@ const printMethodInfoByMethod: Partial<Record<string, PrintMethodInfo>> = {
     description:
       "Best for full-color artwork, gradients, and detailed logos. It is a strong choice for smaller runs that are too complex for vinyl or not ideal for screen printing.",
     note: "Send the clearest artwork file you have so we can confirm the print size and placement properly.",
+  },
+  [NOT_SURE_METHOD]: {
+    title: "We have 3 printing methods",
+    description: "Screen printing, vinyl heat press, and DTF. Choose Not sure if you want our recommendation.",
   },
 };
 
