@@ -632,7 +632,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                     <button
                       type="button"
                       onClick={() => removeGarmentLine(index)}
-                      className="inline-flex aspect-square h-9 w-9 items-center justify-center rounded-full border border-red-300 bg-gradient-to-br from-red-500 to-rose-500 text-lg font-semibold text-white shadow-[0_10px_20px_-14px_rgba(239,68,68,0.95)] transition hover:from-red-600 hover:to-rose-600"
+                      className="inline-flex aspect-square h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-gradient-to-br from-rose-50 to-red-100 text-lg font-semibold text-rose-600 shadow-[0_10px_20px_-16px_rgba(244,63,94,0.45)] transition hover:from-rose-100 hover:to-red-100 hover:text-rose-700"
                       aria-label="Remove garment"
                       title="Remove garment"
                     >
@@ -643,6 +643,18 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
               </div>
             </div>
           ))}
+          {garmentLines.length > 1 ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+              <div className="md:col-start-4">
+                <label className="block text-sm font-medium text-neutral-700">Total quantity</label>
+                <input
+                  readOnly
+                  value={`${totalQuantity || 0} pcs`}
+                  className="mt-1 w-full cursor-default rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm font-semibold text-neutral-700 shadow-[inset_0_1px_2px_rgba(15,23,42,0.06),0_14px_28px_-24px_rgba(15,23,42,0.35)] focus:outline-none"
+                />
+              </div>
+            </div>
+          ) : null}
           <button
             type="button"
             onClick={addGarmentLine}
