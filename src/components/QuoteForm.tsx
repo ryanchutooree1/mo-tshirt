@@ -85,15 +85,15 @@ const printMethodInfoByMethod: Partial<Record<string, PrintMethodInfo>> = {
     note: "If you have several logos or design versions, add each one separately below and tell us its quantity.",
   },
   [VINYL_METHOD]: {
-    title: "Vinyl heat press guide",
+    title: "Vinyl Heat Press guide",
     description:
       "Best for simple logos, names, numbers, and clean shapes. It works well for smaller quantities and personalized pieces.",
     note: "If the artwork has gradients, photos, or a lot of detail, DTF is usually the better option.",
   },
   [DTF_METHOD]: {
-    title: "DTF printing guide",
+    title: "DTF guide",
     description:
-      "Best for full-color artwork, gradients, and detailed logos. It is a strong choice for smaller runs that are too complex for vinyl or not ideal for screen printing.",
+      "DTF stands for Direct-to-Film. It is best for full-color artwork, gradients, and detailed logos. It is a strong choice for smaller runs that are too complex for vinyl or not ideal for screen printing.",
     note: "Send the clearest artwork file you have so we can confirm the print size and placement properly.",
   },
   [NOT_SURE_METHOD]: {
