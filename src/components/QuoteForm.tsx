@@ -843,7 +843,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           <button
             type="submit"
             disabled={loading || Boolean(emailError)}
-            className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+            className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 px-6 py-3 text-sm font-semibold text-white shadow-[0_20px_38px_-18px_rgba(249,115,22,0.9)] transition hover:-translate-y-0.5 hover:from-orange-600 hover:via-amber-500 hover:to-orange-700 disabled:translate-y-0 disabled:opacity-60"
           >
             {loading ? "Sending…" : "Get my quote"}
           </button>
