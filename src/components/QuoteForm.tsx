@@ -59,16 +59,16 @@ type QuoteOptionsResponse = {
 
 const garmentOptions = [...QUOTE_GARMENT_OPTIONS];
 const sizeOptions = [...SIZE_ORDER];
+const DTF_METHOD = "1. DTF Printing ($$$)";
+const VINYL_METHOD = "2. Vinyl Heat Press Printing ($$)";
+const SCREEN_PRINTING_METHOD = "3. Screen Printing ($)";
+const NOT_SURE_METHOD = "Not sure";
 const printMethods = [
-  "Screen Printing ($)",
-  "Vinyl Heat Press Printing ($$)",
-  "Direct-to-Film (DTF) Printing ($$$)",
-  "Not sure",
+  DTF_METHOD,
+  VINYL_METHOD,
+  SCREEN_PRINTING_METHOD,
+  NOT_SURE_METHOD,
 ];
-const SCREEN_PRINTING_METHOD = printMethods[0];
-const VINYL_METHOD = printMethods[1];
-const DTF_METHOD = printMethods[2];
-const NOT_SURE_METHOD = printMethods[3];
 const deliveryOptions = [
   "Surinam Pickup (Free)",
   "Post Office Postage Delivery (Rs 100)",
@@ -145,7 +145,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
   const [garmentLines, setGarmentLines] = useState<GarmentLine[]>([
     { garment: garmentOptions[0], color: "", size: sizeOptions[0], quantity: "1" },
   ]);
-  const [printMethod, setPrintMethod] = useState<string>(printMethods[3]);
+  const [printMethod, setPrintMethod] = useState<string>(NOT_SURE_METHOD);
   const [artworkItems, setArtworkItems] = useState<ArtworkItem[]>([createArtworkItem(1)]);
   const [nextArtworkId, setNextArtworkId] = useState(2);
   const [website, setWebsite] = useState("");
@@ -472,7 +472,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           deliveryPhone: "",
         });
         setGarmentLines([{ garment: garmentOptions[0], color: "", size: sizeOptions[0], quantity: "1" }]);
-        setPrintMethod(printMethods[3]);
+        setPrintMethod(NOT_SURE_METHOD);
         setArtworkItems([createArtworkItem(1)]);
         setNextArtworkId(2);
         setWebsite("");
