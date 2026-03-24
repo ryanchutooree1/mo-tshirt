@@ -359,9 +359,17 @@ export default function HomePage() {
                     href="https://maps.app.goo.gl/dBwPF4mC2xnPYtP2A"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center rounded-full bg-[linear-gradient(135deg,#4285F4_0%,#34A853_34%,#FBBC05_68%,#EA4335_100%)] px-5 py-2 text-sm font-semibold text-white shadow-[0_18px_30px_-18px_rgba(66,133,244,0.75)] transition hover:brightness-95"
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#4285F4_0%,#34A853_34%,#FBBC05_68%,#EA4335_100%)] px-5 py-2 text-sm font-semibold text-white shadow-[0_18px_30px_-18px_rgba(66,133,244,0.75)] transition hover:brightness-95"
                   >
                     Open Google Maps
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      className="h-4 w-4 shrink-0"
+                      fill="currentColor"
+                    >
+                      <path d="M6.28 19.14 4.86 17.72 14.59 8H7V6h11v11h-2V9.41l-9.72 9.73Z" />
+                    </svg>
                   </a>
                 </div>
               </div>
