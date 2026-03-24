@@ -287,7 +287,7 @@ export default function HomePage() {
                       />
                       <button
                         type="submit"
-                        className="inline-flex items-center justify-center rounded-full bg-[#F3E54E] px-5 py-2 text-sm font-semibold text-black transition hover:bg-[#EAD93E]"
+                        className="inline-flex items-center justify-center rounded-full bg-[#FDD901] px-5 py-2 text-sm font-semibold text-black transition hover:brightness-95"
                       >
                         Track parcel
                       </button>
