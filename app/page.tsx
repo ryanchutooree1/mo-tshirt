@@ -359,7 +359,7 @@ export default function HomePage() {
                     href="https://maps.app.goo.gl/dBwPF4mC2xnPYtP2A"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center rounded-full bg-black px-5 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800"
+                    className="inline-flex items-center justify-center rounded-full bg-[linear-gradient(135deg,#4285F4_0%,#34A853_34%,#FBBC05_68%,#EA4335_100%)] px-5 py-2 text-sm font-semibold text-white shadow-[0_18px_30px_-18px_rgba(66,133,244,0.75)] transition hover:brightness-95"
                   >
                     Open Google Maps
                   </a>

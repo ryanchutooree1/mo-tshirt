@@ -554,12 +554,9 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
         </div>
 
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs text-neutral-500">Colours are loaded from the current catalog availability.</p>
-            {!loadingColors && !availableColors.length ? (
-              <p className="text-xs text-amber-700">No live colours available right now. Add the preferred colour in notes if needed.</p>
-            ) : null}
-          </div>
+          {!loadingColors && !availableColors.length ? (
+            <p className="text-xs text-amber-700">No live colours available right now. Add the preferred colour in notes if needed.</p>
+          ) : null}
           {garmentLines.map((line, index) => (
             <div key={`${index}-${line.garment}`} className="grid grid-cols-1 gap-4 md:grid-cols-4">
               <div>
