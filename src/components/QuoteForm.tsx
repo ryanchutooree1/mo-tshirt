@@ -646,7 +646,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           <button
             type="button"
             onClick={addGarmentLine}
-            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_14px_32px_-14px_rgba(249,115,22,0.8)] transition hover:from-orange-600 hover:via-amber-500 hover:to-orange-700"
+            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 px-4 py-2 text-xs font-semibold text-white shadow-[0_12px_24px_-16px_rgba(249,115,22,0.75)] transition hover:from-orange-600 hover:via-amber-500 hover:to-orange-700"
           >
             Add more garment
           </button>
