@@ -111,6 +111,14 @@ function formatBytes(bytes: number) {
   return `${Math.round(bytes / (1024 * 102.4)) / 10} MB`;
 }
 
+function formatColorOptionLabel(color: string) {
+  const normalized = String(color || "").trim().toLowerCase();
+  if (normalized === "black" || normalized === "white") {
+    return `${color} (Faster)`;
+  }
+  return color;
+}
+
 export default function QuoteForm({ source = "Website", className }: QuoteFormProps) {
   const [form, setForm] = useState<FormState>({
     name: "",
@@ -581,7 +589,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                   </option>
                   {getGarmentColorOptions(line.garment).map((color) => (
                     <option key={color} value={color}>
-                      {color}
+                      {formatColorOptionLabel(color)}
                     </option>
                   ))}
                 </select>
