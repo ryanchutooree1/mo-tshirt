@@ -713,20 +713,8 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
         )}
 
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <label className="block text-sm font-medium text-neutral-700">Artwork / logos</label>
-              <p className="mt-1 text-xs text-neutral-500">
-                Upload one or more logo or design files. Use a separate row for each different design.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={addArtworkItem}
-              className="inline-flex items-center gap-2 rounded-full border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-black hover:text-black"
-            >
-              + Add another logo
-            </button>
+          <div>
+            <label className="block text-sm font-medium text-neutral-700">Upload your logo / artwork</label>
           </div>
 
           {artworkItems.map((item, index) => (
@@ -785,6 +773,14 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
               </div>
             </div>
           ))}
+
+          <button
+            type="button"
+            onClick={addArtworkItem}
+            className="inline-flex items-center gap-2 rounded-full border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-black hover:text-black"
+          >
+            + Add another logo
+          </button>
         </div>
 
         <div>
