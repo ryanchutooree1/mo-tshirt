@@ -796,6 +796,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                       ) : null}
                     </div>
                     <input
+                      id={`quote-artwork-file-${item.id}`}
                       key={`${item.id}-${item.file ? `${item.file.name}-${item.file.size}-${item.file.lastModified}` : "empty"}`}
                       type="file"
                       accept={artworkAccept}
@@ -803,8 +804,31 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                         event.currentTarget.value = "";
                       }}
                       onChange={(e) => handleFileChange(index, e)}
-                      className="mt-1 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                      className="hidden"
                     />
+                    <label
+                      htmlFor={`quote-artwork-file-${item.id}`}
+                      className="mt-1 flex min-h-[132px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-sky-200 bg-sky-50/40 px-4 py-6 text-center transition hover:border-sky-300 hover:bg-sky-50"
+                    >
+                      <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-sky-500 to-blue-500 px-5 py-2 text-sm font-semibold text-white shadow-[0_14px_28px_-18px_rgba(59,130,246,0.85)]">
+                        <svg
+                          aria-hidden="true"
+                          viewBox="0 0 24 24"
+                          className="h-4 w-4 fill-none stroke-current"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M12 16V7" />
+                          <path d="m8.5 10.5 3.5-3.5 3.5 3.5" />
+                          <path d="M20 16.5a3.5 3.5 0 0 1-3.5 3.5h-9A3.5 3.5 0 0 1 4 16.5" />
+                        </svg>
+                        {item.file ? "Replace Image" : "Upload Image"}
+                      </span>
+                      <span className="mt-3 text-sm font-medium text-neutral-600">
+                        {item.file ? item.file.name : "No file chosen"}
+                      </span>
+                    </label>
                     <p className="mt-1 text-xs text-neutral-500">Accepted: PNG, JPG, WEBP, SVG, HEIC, HEIF, PDF.</p>
                     <ArtworkFilePreview file={item.file} />
                     {item.file && (
