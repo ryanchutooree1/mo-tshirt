@@ -42,6 +42,7 @@ type GarmentLine = {
 type ArtworkItem = {
   id: number;
   label: string;
+  description: string;
   quantity: string;
   file: File | null;
 };
@@ -111,6 +112,7 @@ function createArtworkItem(id: number): ArtworkItem {
   return {
     id,
     label: "",
+    description: "",
     quantity: "",
     file: null,
   };
@@ -366,7 +368,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
 
   function getScreenPrintingValidationMessage() {
     const filledArtworkItems = artworkItems.filter(
-      (item) => item.file || item.label.trim() || item.quantity.trim()
+      (item) => item.file || item.label.trim() || item.description.trim() || item.quantity.trim()
     );
     const incompleteArtwork = filledArtworkItems.find((item) => !item.file);
     if (incompleteArtwork) {
@@ -459,6 +461,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
             const url = await getDownloadURL(snap.ref);
             return {
               label: item.label.trim() || `Logo ${index + 1}`,
+              description: item.description.trim() || null,
               quantity: item.quantity.trim() || null,
               url,
               filename: currentFile.name,
@@ -812,7 +815,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                     )}
                   </div>
 
-                  <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
+                  <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_180px]">
                     <div>
                       <label className="block text-sm font-medium text-neutral-700">Label</label>
                       <input
@@ -820,6 +823,15 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                         onChange={(e) => updateArtworkItem(index, { label: e.target.value })}
                         className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
                         placeholder={`Logo ${index + 1}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700">Little Description</label>
+                      <input
+                        value={item.description}
+                        onChange={(e) => updateArtworkItem(index, { description: e.target.value })}
+                        className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                        placeholder="Optional"
                       />
                     </div>
                     <div>

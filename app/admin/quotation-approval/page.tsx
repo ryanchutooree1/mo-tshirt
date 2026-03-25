@@ -79,6 +79,7 @@ type QuoteDraft = {
 
 type QuoteAttachment = {
   label?: string;
+  description?: string;
   quantity?: string | number | null;
   filename?: string;
   contentType?: string;
@@ -395,7 +396,7 @@ const getQuoteAttachments = (quote: QuoteRecord | null | undefined) => {
   if (!quote) return [] as QuoteAttachment[];
   if (Array.isArray(quote.attachments) && quote.attachments.length) {
     return quote.attachments.filter(
-      (entry) => Boolean(entry?.filename || entry?.url || entry?.label || entry?.quantity)
+      (entry) => Boolean(entry?.filename || entry?.url || entry?.label || entry?.description || entry?.quantity)
     );
   }
   if (quote.attachment) return [quote.attachment];
@@ -2031,6 +2032,7 @@ export default function QuotationApprovalPage() {
                                         <p className="text-sm font-medium text-slate-700">
                                           {attachment.filename || "Attachment"}
                                         </p>
+                                        {attachment.description ? <p>{attachment.description}</p> : null}
                                         {attachment.quantity ? <p>Qty: {attachment.quantity}</p> : null}
                                       </div>
                                       {attachment.url ? (

@@ -37,6 +37,7 @@ type ParsedPayload = {
   attachments?:
     | {
         label?: string;
+        description?: string;
         quantity?: string | number | null;
         url?: string;
         filename?: string;
@@ -54,6 +55,7 @@ type ParsedPayload = {
 
 type QuoteAttachment = {
   label?: string;
+  description?: string;
   quantity?: string | number | null;
   url?: string;
   filename?: string;
@@ -95,6 +97,7 @@ function parseAttachmentList(value: unknown): QuoteAttachment[] {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
     const source = entry as Record<string, unknown>;
     const label = typeof source.label === "string" ? source.label.trim() : "";
+    const description = typeof source.description === "string" ? source.description.trim() : "";
     const quantity =
       typeof source.quantity === "number"
         ? source.quantity
@@ -112,12 +115,13 @@ function parseAttachmentList(value: unknown): QuoteAttachment[] {
           ? Number(rawSize)
           : null;
 
-    if (!label && !quantity && !url && !filename && !contentType && parsedSize === null) {
+    if (!label && !description && !quantity && !url && !filename && !contentType && parsedSize === null) {
       return null;
     }
 
     return {
       ...(label ? { label } : {}),
+      ...(description ? { description } : {}),
       ...(quantity !== null ? { quantity } : {}),
       ...(url ? { url } : {}),
       ...(filename ? { filename } : {}),
@@ -439,6 +443,7 @@ export async function POST(req: Request) {
       const lines = [
         entry.filename || `attachment-${index + 1}`,
         entry.label ? `Label: ${entry.label}` : "",
+        entry.description ? `Description: ${entry.description}` : "",
         entry.quantity ? `Qty: ${entry.quantity}` : "",
         entry.url ? `URL: ${entry.url}` : "URL: Attached to email",
       ].filter(Boolean);
