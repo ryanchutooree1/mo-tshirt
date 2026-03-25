@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
@@ -127,6 +128,39 @@ function formatColorOptionLabel(color: string) {
     return `${color} (Faster)`;
   }
   return color;
+}
+
+function isPreviewableArtworkFile(file: File) {
+  return file.type.startsWith("image/") || /\.(png|jpe?g|webp|svg|heic|heif)$/i.test(file.name);
+}
+
+function ArtworkFilePreview({ file }: { file: File | null }) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!file || !isPreviewableArtworkFile(file)) {
+      setPreviewUrl(null);
+      return;
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(file);
+    setPreviewUrl(nextPreviewUrl);
+
+    return () => {
+      URL.revokeObjectURL(nextPreviewUrl);
+    };
+  }, [file]);
+
+  if (!file || !previewUrl) return null;
+
+  return (
+    <div className="mt-3 rounded-xl border border-neutral-200 bg-white p-2 shadow-sm">
+      <div className="relative h-24 overflow-hidden rounded-lg bg-neutral-50">
+        <Image src={previewUrl} alt={`${file.name} preview`} fill unoptimized className="object-contain" />
+      </div>
+      <p className="mt-2 text-[11px] font-medium text-neutral-500">Logo preview</p>
+    </div>
+  );
 }
 
 export default function QuoteForm({ source = "Website", className }: QuoteFormProps) {
@@ -773,10 +807,14 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                     <input
                       type="file"
                       accept={artworkAccept}
+                      onClick={(event) => {
+                        event.currentTarget.value = "";
+                      }}
                       onChange={(e) => handleFileChange(index, e)}
                       className="mt-1 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
                     />
                     <p className="mt-1 text-xs text-neutral-500">Accepted: PNG, JPG, WEBP, SVG, HEIC, HEIF, PDF.</p>
+                    <ArtworkFilePreview file={item.file} />
                     {item.file && (
                       <p className="mt-2 text-xs font-medium text-neutral-600">
                         {item.file.name}
