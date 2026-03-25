@@ -779,6 +779,27 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                     ) : null}
                   </div>
 
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-neutral-700">File</label>
+                    <input
+                      type="file"
+                      accept={artworkAccept}
+                      onClick={(event) => {
+                        event.currentTarget.value = "";
+                      }}
+                      onChange={(e) => handleFileChange(index, e)}
+                      className="mt-1 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    />
+                    <p className="mt-1 text-xs text-neutral-500">Accepted: PNG, JPG, WEBP, SVG, HEIC, HEIF, PDF.</p>
+                    <ArtworkFilePreview file={item.file} />
+                    {item.file && (
+                      <p className="mt-2 text-xs font-medium text-neutral-600">
+                        {item.file.name}
+                        {item.file.size ? ` · ${formatBytes(item.file.size)}` : ""}
+                      </p>
+                    )}
+                  </div>
+
                   <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
                     <div>
                       <label className="block text-sm font-medium text-neutral-700">Label</label>
@@ -800,27 +821,6 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                         placeholder="Optional"
                       />
                     </div>
-                  </div>
-
-                  <div className="mt-3">
-                    <label className="block text-sm font-medium text-neutral-700">File</label>
-                    <input
-                      type="file"
-                      accept={artworkAccept}
-                      onClick={(event) => {
-                        event.currentTarget.value = "";
-                      }}
-                      onChange={(e) => handleFileChange(index, e)}
-                      className="mt-1 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
-                    />
-                    <p className="mt-1 text-xs text-neutral-500">Accepted: PNG, JPG, WEBP, SVG, HEIC, HEIF, PDF.</p>
-                    <ArtworkFilePreview file={item.file} />
-                    {item.file && (
-                      <p className="mt-2 text-xs font-medium text-neutral-600">
-                        {item.file.name}
-                        {item.file.size ? ` · ${formatBytes(item.file.size)}` : ""}
-                      </p>
-                    )}
                   </div>
                 </div>
               ))}
