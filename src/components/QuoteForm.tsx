@@ -780,8 +780,20 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                   </div>
 
                   <div className="mt-3">
-                    <label className="block text-sm font-medium text-neutral-700">File</label>
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="block text-sm font-medium text-neutral-700">File</label>
+                      {item.file ? (
+                        <button
+                          type="button"
+                          onClick={() => updateArtworkItem(index, { file: null })}
+                          className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
+                        >
+                          Remove file
+                        </button>
+                      ) : null}
+                    </div>
                     <input
+                      key={`${item.id}-${item.file ? `${item.file.name}-${item.file.size}-${item.file.lastModified}` : "empty"}`}
                       type="file"
                       accept={artworkAccept}
                       onClick={(event) => {
