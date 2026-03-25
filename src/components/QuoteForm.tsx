@@ -155,14 +155,7 @@ function ArtworkFilePreview({ file }: { file: File | null }) {
 
   if (!file || !previewUrl) return null;
 
-  return (
-    <div className="mt-3 rounded-xl border border-neutral-200 bg-white p-2 shadow-sm">
-      <div className="relative h-24 overflow-hidden rounded-lg bg-neutral-50">
-        <Image src={previewUrl} alt={`${file.name} preview`} fill unoptimized className="object-contain" />
-      </div>
-      <p className="mt-2 text-[11px] font-medium text-neutral-500">Logo preview</p>
-    </div>
-  );
+  return <Image src={previewUrl} alt={`${file.name} preview`} fill unoptimized className="object-contain" />;
 }
 
 export default function QuoteForm({ source = "Website", className }: QuoteFormProps) {
@@ -808,35 +801,64 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                     />
                     <label
                       htmlFor={`quote-artwork-file-${item.id}`}
-                      className="mt-1 flex min-h-[132px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-sky-200 bg-sky-50/40 px-4 py-6 text-center transition hover:border-sky-300 hover:bg-sky-50"
+                      className={`mt-1 flex min-h-[132px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-sky-200 bg-sky-50/40 text-center transition hover:border-sky-300 hover:bg-sky-50 ${
+                        item.file ? "px-3 py-3" : "px-4 py-6"
+                      }`}
                     >
-                      <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-sky-500 to-blue-500 px-5 py-2 text-sm font-semibold text-white shadow-[0_14px_28px_-18px_rgba(59,130,246,0.85)]">
-                        <svg
-                          aria-hidden="true"
-                          viewBox="0 0 24 24"
-                          className="h-4 w-4 fill-none stroke-current"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M12 16V7" />
-                          <path d="m8.5 10.5 3.5-3.5 3.5 3.5" />
-                          <path d="M20 16.5a3.5 3.5 0 0 1-3.5 3.5h-9A3.5 3.5 0 0 1 4 16.5" />
-                        </svg>
-                        {item.file ? "Replace Image" : "Upload Image"}
-                      </span>
-                      <span className="mt-3 text-sm font-medium text-neutral-600">
-                        {item.file ? item.file.name : "No file chosen"}
-                      </span>
+                      {item.file ? (
+                        isPreviewableArtworkFile(item.file) ? (
+                          <div className="flex w-full flex-col items-center gap-3">
+                            <div className="relative h-28 w-full overflow-hidden rounded-xl bg-white/80">
+                              <ArtworkFilePreview file={item.file} />
+                            </div>
+                            <span className="text-sm font-medium text-neutral-700">
+                              {item.file.name}
+                              {item.file.size ? ` · ${formatBytes(item.file.size)}` : ""}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-3 text-center">
+                            <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-sky-600 shadow-sm">
+                              <svg
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                className="h-5 w-5 fill-none stroke-current"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                                <path d="M14 3v5h5" />
+                              </svg>
+                            </div>
+                            <span className="text-sm font-medium text-neutral-700">
+                              {item.file.name}
+                              {item.file.size ? ` · ${formatBytes(item.file.size)}` : ""}
+                            </span>
+                          </div>
+                        )
+                      ) : (
+                        <>
+                          <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-sky-500 to-blue-500 px-5 py-2 text-sm font-semibold text-white shadow-[0_14px_28px_-18px_rgba(59,130,246,0.85)]">
+                            <svg
+                              aria-hidden="true"
+                              viewBox="0 0 24 24"
+                              className="h-4 w-4 fill-none stroke-current"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M12 16V7" />
+                              <path d="m8.5 10.5 3.5-3.5 3.5 3.5" />
+                              <path d="M20 16.5a3.5 3.5 0 0 1-3.5 3.5h-9A3.5 3.5 0 0 1 4 16.5" />
+                            </svg>
+                            Upload Image
+                          </span>
+                          <span className="mt-3 text-sm font-medium text-neutral-600">No file chosen</span>
+                        </>
+                      )}
                     </label>
                     <p className="mt-1 text-xs text-neutral-500">Accepted: PNG, JPG, WEBP, SVG, HEIC, HEIF, PDF.</p>
-                    <ArtworkFilePreview file={item.file} />
-                    {item.file && (
-                      <p className="mt-2 text-xs font-medium text-neutral-600">
-                        {item.file.name}
-                        {item.file.size ? ` · ${formatBytes(item.file.size)}` : ""}
-                      </p>
-                    )}
                   </div>
 
                   <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_180px]">
