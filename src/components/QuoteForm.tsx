@@ -146,6 +146,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     { garment: garmentOptions[0], color: "", size: sizeOptions[0], quantity: "1" },
   ]);
   const [printMethod, setPrintMethod] = useState<string>(NOT_SURE_METHOD);
+  const [showArtworkSection, setShowArtworkSection] = useState(false);
   const [artworkItems, setArtworkItems] = useState<ArtworkItem[]>([createArtworkItem(1)]);
   const [nextArtworkId, setNextArtworkId] = useState(2);
   const [website, setWebsite] = useState("");
@@ -198,6 +199,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
   }
 
   function addArtworkItem() {
+    setShowArtworkSection(true);
     setArtworkItems((prev) => [...prev, createArtworkItem(nextArtworkId)]);
     setNextArtworkId((prev) => prev + 1);
   }
@@ -474,6 +476,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
         });
         setGarmentLines([{ garment: garmentOptions[0], color: "", size: sizeOptions[0], quantity: "1" }]);
         setPrintMethod(NOT_SURE_METHOD);
+        setShowArtworkSection(false);
         setArtworkItems([createArtworkItem(1)]);
         setNextArtworkId(2);
         setWebsite("");
@@ -713,74 +716,86 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
         )}
 
         <div className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-neutral-700">Upload your logo / artwork</label>
-          </div>
-
-          {artworkItems.map((item, index) => (
-            <div key={item.id} className="rounded-2xl border border-neutral-200 bg-neutral-50/80 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-neutral-900">Design {index + 1}</p>
-                {artworkItems.length > 1 ? (
-                  <button
-                    type="button"
-                    onClick={() => removeArtworkItem(index)}
-                    className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
-                  >
-                    Remove
-                  </button>
-                ) : null}
+          {!showArtworkSection ? (
+            <button
+              type="button"
+              onClick={() => setShowArtworkSection(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-black hover:text-black"
+            >
+              Upload logo
+            </button>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-neutral-700">Upload your logo / artwork</label>
               </div>
 
-              <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700">Label</label>
-                  <input
-                    value={item.label}
-                    onChange={(e) => updateArtworkItem(index, { label: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
-                    placeholder={`Logo ${index + 1}`}
-                  />
+              {artworkItems.map((item, index) => (
+                <div key={item.id} className="rounded-2xl border border-neutral-200 bg-neutral-50/80 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-neutral-900">Design {index + 1}</p>
+                    {artworkItems.length > 1 ? (
+                      <button
+                        type="button"
+                        onClick={() => removeArtworkItem(index)}
+                        className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
+                      >
+                        Remove
+                      </button>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700">Label</label>
+                      <input
+                        value={item.label}
+                        onChange={(e) => updateArtworkItem(index, { label: e.target.value })}
+                        className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                        placeholder={`Logo ${index + 1}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700">Qty for this design</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={item.quantity}
+                        onChange={(e) => updateArtworkItem(index, { quantity: e.target.value })}
+                        className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                        placeholder="Optional"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-neutral-700">File</label>
+                    <input
+                      type="file"
+                      accept={artworkAccept}
+                      onChange={(e) => handleFileChange(index, e)}
+                      className="mt-1 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                    />
+                    <p className="mt-1 text-xs text-neutral-500">Accepted: PNG, JPG, WEBP, SVG, HEIC, HEIF, PDF.</p>
+                    {item.file && (
+                      <p className="mt-2 text-xs font-medium text-neutral-600">
+                        {item.file.name}
+                        {item.file.size ? ` · ${formatBytes(item.file.size)}` : ""}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700">Qty for this design</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={item.quantity}
-                    onChange={(e) => updateArtworkItem(index, { quantity: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
-                    placeholder="Optional"
-                  />
-                </div>
-              </div>
+              ))}
 
-              <div className="mt-3">
-                <label className="block text-sm font-medium text-neutral-700">File</label>
-                <input
-                  type="file"
-                  accept={artworkAccept}
-                  onChange={(e) => handleFileChange(index, e)}
-                  className="mt-1 w-full cursor-pointer rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
-                />
-                <p className="mt-1 text-xs text-neutral-500">Accepted: PNG, JPG, WEBP, SVG, HEIC, HEIF, PDF.</p>
-                {item.file && (
-                  <p className="mt-2 text-xs font-medium text-neutral-600">
-                    {item.file.name}
-                    {item.file.size ? ` · ${formatBytes(item.file.size)}` : ""}
-                  </p>
-                )}
-              </div>
-            </div>
-          ))}
-
-          <button
-            type="button"
-            onClick={addArtworkItem}
-            className="inline-flex items-center gap-2 rounded-full border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-black hover:text-black"
-          >
-            + Add another logo
-          </button>
+              <button
+                type="button"
+                onClick={addArtworkItem}
+                className="inline-flex items-center gap-2 rounded-full border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-black hover:text-black"
+              >
+                + Add another logo
+              </button>
+            </>
+          )}
         </div>
 
         <div>
