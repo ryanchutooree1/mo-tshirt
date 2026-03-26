@@ -2151,9 +2151,8 @@ export default function QuotationApprovalPage() {
                     </div>
                   </div>
 
-                  <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_340px]">
-                    <div className="space-y-5">
-                      <div className={`${surfaceClass} p-6 sm:p-7`}>
+                  <div className="space-y-5">
+                    <div className={`${surfaceClass} p-6 sm:p-7`}>
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div>
                             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8d8377]">
@@ -2603,10 +2602,9 @@ export default function QuotationApprovalPage() {
                             </div>
                           </div>
                         </div>
-                      </div>
                     </div>
 
-                    <aside className="space-y-5 xl:sticky xl:top-24 xl:self-start">
+                    <div className="grid gap-5 xl:grid-cols-3">
                       <div className={`${surfaceClass} p-5`}>
                         <p className={labelClass}>Totals</p>
                         <div className="mt-5 space-y-3 text-sm text-[#5f5851]">
@@ -2843,7 +2841,7 @@ export default function QuotationApprovalPage() {
                           </div>
                         ) : null}
                       </div>
-                    </aside>
+                    </div>
                   </div>
                 </>
               ) : (
