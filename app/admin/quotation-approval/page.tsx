@@ -2397,9 +2397,9 @@ export default function QuotationApprovalPage() {
                             {draft.lines.map((line, index) => (
                               <div
                                 key={`line-${index}`}
-                                className="grid gap-3 rounded-[24px] border border-[#e8e0d7] bg-white p-4 sm:grid-cols-[1fr_96px_120px_120px_auto] sm:items-center"
+                                className="grid gap-3 rounded-[24px] border border-[#e8e0d7] bg-white p-4 md:grid-cols-[minmax(0,1.45fr)_92px_minmax(0,0.95fr)_112px_44px] md:items-center"
                               >
-                                <label className={`${labelClass} sm:hidden`}>
+                                <label className={`${labelClass} md:hidden`}>
                                   Description
                                   <input
                                     value={line.description}
@@ -2415,11 +2415,11 @@ export default function QuotationApprovalPage() {
                                   onChange={(e) =>
                                     updateDraftLine(index, { description: e.target.value })
                                   }
-                                  className="hidden rounded-2xl border border-[#e7dfd6] bg-[#fcfaf7] px-4 py-3 text-sm text-[#222222] outline-none transition placeholder:text-[#a59a8f] focus:border-[#ff5a5f] focus:ring-4 focus:ring-[#ff5a5f]/10 sm:block"
+                                  className="hidden min-w-0 rounded-2xl border border-[#e7dfd6] bg-[#fcfaf7] px-4 py-3 text-sm text-[#222222] outline-none transition placeholder:text-[#a59a8f] focus:border-[#ff5a5f] focus:ring-4 focus:ring-[#ff5a5f]/10 md:block"
                                   placeholder="e.g. T-Shirt (M) with front logo"
                                   aria-label="Line item description"
                                 />
-                                <label className={`${labelClass} sm:hidden`}>
+                                <label className={`${labelClass} md:hidden`}>
                                   Qty
                                   <input
                                     type="number"
@@ -2448,11 +2448,11 @@ export default function QuotationApprovalPage() {
                                           : safeNumber(e.target.value, 0),
                                     })
                                   }
-                                  className="hidden rounded-2xl border border-[#e7dfd6] bg-[#fcfaf7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#a59a8f] focus:border-[#ff5a5f] focus:ring-4 focus:ring-[#ff5a5f]/10 sm:block"
+                                  className="hidden min-w-0 rounded-2xl border border-[#e7dfd6] bg-[#fcfaf7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#a59a8f] focus:border-[#ff5a5f] focus:ring-4 focus:ring-[#ff5a5f]/10 md:block"
                                   placeholder="Qty"
                                   aria-label="Quantity"
                                 />
-                                <label className={`${labelClass} sm:hidden`}>
+                                <label className={`${labelClass} md:hidden`}>
                                   Unit price
                                   <input
                                     type="number"
@@ -2481,11 +2481,11 @@ export default function QuotationApprovalPage() {
                                           : safeNumber(e.target.value, 0),
                                     })
                                   }
-                                  className="hidden rounded-2xl border border-[#e7dfd6] bg-[#fcfaf7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#a59a8f] focus:border-[#ff5a5f] focus:ring-4 focus:ring-[#ff5a5f]/10 sm:block"
+                                  className="hidden min-w-0 rounded-2xl border border-[#e7dfd6] bg-[#fcfaf7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#a59a8f] focus:border-[#ff5a5f] focus:ring-4 focus:ring-[#ff5a5f]/10 md:block"
                                   placeholder="Unit price"
                                   aria-label="Unit price"
                                 />
-                                <div className="rounded-2xl border border-[#ece4dc] bg-[#fcfaf7] px-4 py-3 text-right text-sm font-semibold text-[#222222]">
+                                <div className="min-w-0 rounded-2xl border border-[#ece4dc] bg-[#fcfaf7] px-4 py-3 text-right text-sm font-semibold text-[#222222]">
                                   {formatMoney(
                                     safeNumber(line.quantity, 0) *
                                       safeNumber(line.unitPrice, 0),
@@ -2495,7 +2495,7 @@ export default function QuotationApprovalPage() {
                                 <button
                                   type="button"
                                   onClick={() => removeDraftLine(index)}
-                                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#ece4dc] bg-white text-[#8d8377] transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+                                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#ece4dc] bg-white text-[#8d8377] transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 md:justify-self-end"
                                   aria-label="Remove line item"
                                 >
                                   <FiXCircle className="h-4 w-4" />
