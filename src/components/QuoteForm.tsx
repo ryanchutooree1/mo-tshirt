@@ -869,25 +869,22 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                         </div>
                       </div>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => openArtworkPicker(item.id)}
-                        className="mt-1 flex min-h-[280px] w-full flex-col items-center justify-center rounded-[28px] border border-neutral-200 bg-white px-6 py-12 text-center transition hover:border-neutral-300 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-300"
-                      >
-                        <span className="inline-flex h-24 w-24 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 shadow-[0_12px_32px_-24px_rgba(15,23,42,0.55)]">
-                          <UploadCloud className="h-9 w-9" strokeWidth={1.8} />
-                        </span>
-                        <span className="mt-8 text-[clamp(1.9rem,3vw,2.4rem)] font-semibold tracking-[-0.03em] text-neutral-900">
-                          Upload logo
-                        </span>
-                        <span className="mt-4 max-w-2xl text-balance text-[clamp(1.1rem,2vw,1.35rem)] leading-relaxed text-neutral-500">
-                          Click to choose PNG, JPG, WEBP, SVG, HEIC, HEIF, or PDF artwork for this design.
-                        </span>
-                        <span className="mt-8 inline-flex items-center gap-3 rounded-full border border-neutral-300 bg-white px-7 py-4 text-base font-semibold text-neutral-700 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.45)]">
-                          <FileText className="h-6 w-6" strokeWidth={1.8} />
-                          Choose file
-                        </span>
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => openArtworkPicker(item.id)}
+                          className="mt-1 flex min-h-[220px] w-full flex-col items-center justify-center rounded-[28px] border-2 border-dashed border-sky-200 bg-sky-50/40 px-6 py-10 text-center transition hover:border-sky-300 hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                        >
+                          <span className="inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-sky-500 to-blue-500 px-7 py-4 text-base font-semibold text-white shadow-[0_18px_32px_-22px_rgba(59,130,246,0.85)]">
+                            <UploadCloud className="h-5 w-5" strokeWidth={2} />
+                            Upload Image
+                          </span>
+                          <span className="mt-7 text-[clamp(1.8rem,2.6vw,2.4rem)] font-medium tracking-[-0.03em] text-neutral-700">
+                            No file chosen
+                          </span>
+                        </button>
+                        <p className="mt-2 text-xs text-neutral-500">Accepted: PNG, JPG, WEBP, SVG, HEIC, HEIF, PDF.</p>
+                      </>
                     )}
                   </div>
 
