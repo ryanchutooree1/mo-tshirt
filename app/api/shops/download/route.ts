@@ -13,13 +13,32 @@ const EXT_BY_TYPE: Record<string, string> = {
   "image/webp": "webp",
   "image/avif": "avif",
   "image/gif": "gif",
+  "image/svg+xml": "svg",
+  "image/heic": "heic",
+  "image/heif": "heif",
+  "application/pdf": "pdf",
 };
 
-function sanitizeFilename(input: string) {
+function sanitizeFilenamePart(input: string) {
   const cleaned = input
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
+  return cleaned;
+}
+
+function sanitizeFilename(input: string) {
+  const trimmed = input.trim();
+  const extensionMatch = trimmed.match(/\.([a-z0-9]{2,10})$/i);
+  const extension = extensionMatch?.[1] ? sanitizeFilenamePart(extensionMatch[1]) : "";
+  const basenameSource = extensionMatch ? trimmed.slice(0, -extensionMatch[0].length) : trimmed;
+  const basename = sanitizeFilenamePart(basenameSource) || "tshirt";
+
+  if (extension) {
+    return `${basename}.${extension}`;
+  }
+
+  const cleaned = sanitizeFilenamePart(trimmed);
   return cleaned || "tshirt";
 }
 
@@ -31,6 +50,11 @@ function ensureExtension(name: string, contentType: string | null, urlPath: stri
   const match = urlPath.match(/\.[a-z0-9]{2,5}$/i);
   if (match) return `${name}${match[0]}`;
   return `${name}.jpg`;
+}
+
+function formatContentDisposition(filename: string) {
+  const asciiFallback = filename.replace(/[^\x20-\x7E]+/g, "").replace(/["\\]/g, "_") || "download";
+  return `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }
 
 export async function GET(req: Request) {
@@ -76,7 +100,7 @@ export async function GET(req: Request) {
     return new Response(response.body, {
       headers: {
         "Content-Type": contentType,
-        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Content-Disposition": formatContentDisposition(filename),
         "Cache-Control": "private, max-age=60",
       },
     });

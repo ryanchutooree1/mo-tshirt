@@ -403,6 +403,17 @@ const getQuoteAttachments = (quote: QuoteRecord | null | undefined) => {
   return [] as QuoteAttachment[];
 };
 
+const getQuoteAttachmentDownloadHref = (attachment: QuoteAttachment, index: number) => {
+  if (!attachment.url) return "";
+
+  const params = new URLSearchParams({
+    url: attachment.url,
+    name: attachment.filename || attachment.label || `attachment-${index + 1}`,
+  });
+
+  return `/api/shops/download?${params.toString()}`;
+};
+
 const getStorageUploadErrorMessage = (error: unknown) => {
   const code =
     error && typeof error === "object" && "code" in error ? String((error as { code?: unknown }).code || "") : "";
@@ -2031,6 +2042,7 @@ export default function QuotationApprovalPage() {
                             <div className="grid gap-3">
                               {selectedAttachments.map((attachment, index) => {
                                 const attachmentIsImage = Boolean(attachment.contentType?.startsWith("image/"));
+                                const attachmentDownloadHref = getQuoteAttachmentDownloadHref(attachment, index);
                                 return (
                                   <div
                                     key={`${attachment.url || attachment.filename || "attachment"}-${index}`}
@@ -2058,8 +2070,7 @@ export default function QuotationApprovalPage() {
                                             <FiFileText /> Open file
                                           </a>
                                           <a
-                                            href={attachment.url}
-                                            download={attachment.filename || true}
+                                            href={attachmentDownloadHref}
                                             className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-100"
                                             aria-label={`Download ${attachment.filename || "attachment"}`}
                                             title="Download file"
