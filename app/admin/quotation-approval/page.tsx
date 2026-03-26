@@ -403,6 +403,17 @@ const getQuoteAttachments = (quote: QuoteRecord | null | undefined) => {
   return [] as QuoteAttachment[];
 };
 
+const getStorageUploadErrorMessage = (error: unknown) => {
+  const code =
+    error && typeof error === "object" && "code" in error ? String((error as { code?: unknown }).code || "") : "";
+
+  if (code === "storage/quota-exceeded") {
+    return "Firebase Storage quota exceeded. Uploads are blocked until the bucket quota or billing plan is updated.";
+  }
+
+  return "Failed to upload file.";
+};
+
 const formatSizeRows = (sizes: { size?: string; quantity?: number }[]) =>
   sizes
     .filter((entry) => entry.size && safeNumber(entry.quantity, 0) > 0)
@@ -1502,8 +1513,9 @@ export default function QuotationApprovalPage() {
         updatedAt: serverTimestamp(),
       });
       setNotice(uploadedAttachments.length > 1 ? "Files uploaded." : "Attachment uploaded.");
-    } catch {
-      setNotice("Failed to upload file.");
+    } catch (error) {
+      console.error("quotes:attachment-upload", error);
+      setNotice(getStorageUploadErrorMessage(error));
     } finally {
       setUploadingAttachment(false);
     }

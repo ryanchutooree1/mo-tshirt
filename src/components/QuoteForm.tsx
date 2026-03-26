@@ -4,9 +4,7 @@ import Image from "next/image";
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { trackQuoteSubmit } from "@/lib/analytics";
-import { storage } from "@/lib/firebase";
 import {
   QUOTE_GARMENT_OPTIONS,
   SIZE_ORDER,
@@ -130,6 +128,20 @@ function formatColorOptionLabel(color: string) {
     return `${color} (Faster)`;
   }
   return color;
+}
+
+function buildArtworkAttachmentMetadata(item: ArtworkItem, index: number) {
+  const currentFile = item.file;
+  if (!currentFile) return null;
+
+  return {
+    label: item.label.trim() || `Logo ${index + 1}`,
+    description: item.description.trim() || null,
+    quantity: item.quantity.trim() || null,
+    filename: currentFile.name,
+    contentType: currentFile.type || "application/octet-stream",
+    size: currentFile.size || null,
+  };
 }
 
 function isPreviewableArtworkFile(file: File) {
@@ -443,37 +455,14 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
 
     const uploadedArtworkItems = artworkItems.filter((item) => item.file);
     if (uploadedArtworkItems.length) {
-      try {
-        const uploadBatch = Date.now();
-        const uploadedAttachments = await Promise.all(
-          uploadedArtworkItems.map(async (item, index) => {
-            const currentFile = item.file as File;
-            const safeName = currentFile.name.replace(/[^a-z0-9._-]/gi, "_");
-            const uploadRef = ref(storage, `quotes/${uploadBatch}-${index + 1}-${safeName}`);
-            const snap = await uploadBytes(uploadRef, currentFile);
-            const url = await getDownloadURL(snap.ref);
-            return {
-              label: item.label.trim() || `Logo ${index + 1}`,
-              description: item.description.trim() || null,
-              quantity: item.quantity.trim() || null,
-              url,
-              filename: currentFile.name,
-              contentType: currentFile.type || "application/octet-stream",
-              size: currentFile.size || null,
-            };
-          })
-        );
+      const attachmentMetadata = uploadedArtworkItems
+        .map((item, index) => buildArtworkAttachmentMetadata(item, index))
+        .filter((entry): entry is NonNullable<ReturnType<typeof buildArtworkAttachmentMetadata>> => Boolean(entry));
 
-        payload.append("attachments", JSON.stringify(uploadedAttachments));
-        uploadedArtworkItems.forEach((item) => {
-          if (item.file) payload.append("files", item.file);
-        });
-      } catch (err) {
-        console.error("quote:upload", err);
-        setResult({ ok: false, msg: "Failed to upload one of the artwork files. Please try again." });
-        setLoading(false);
-        return;
-      }
+      payload.append("attachments", JSON.stringify(attachmentMetadata));
+      uploadedArtworkItems.forEach((item) => {
+        if (item.file) payload.append("files", item.file);
+      });
     }
 
     try {
