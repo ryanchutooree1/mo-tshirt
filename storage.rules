@@ -1,0 +1,24 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedInAdmin() {
+      return request.auth != null;
+    }
+
+    // Admin DMS and generated invoices live under documents/.
+    match /documents/{allPaths=**} {
+      allow read, write: if isSignedInAdmin();
+    }
+
+    // Quote attachments are uploaded from the admin quotation workflow.
+    match /quotes/{allPaths=**} {
+      allow read, write: if isSignedInAdmin();
+    }
+
+    // Everything else is private by default.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

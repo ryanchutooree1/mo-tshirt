@@ -4,6 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import {
+  isFirebaseAdminAuthConfigured,
+  signInAdminWithFirebase,
+} from "@/lib/firebase-admin-client-auth";
 
 function LoginInner() {
   const router = useRouter();
@@ -30,6 +34,20 @@ function LoginInner() {
         setSubmitting(false);
         return;
       }
+
+      if (isFirebaseAdminAuthConfigured()) {
+        try {
+          await signInAdminWithFirebase(password);
+        } catch {
+          await fetch("/api/logout", { method: "POST" }).catch(() => null);
+          setError(
+            "Firebase admin sign-in failed. Create the Firebase Auth admin user and set NEXT_PUBLIC_FIREBASE_ADMIN_EMAIL before locking Storage rules."
+          );
+          setSubmitting(false);
+          return;
+        }
+      }
+
       router.push(next);
     } catch {
       setError("Network error. Please retry.");

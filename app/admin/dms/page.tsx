@@ -41,8 +41,8 @@ type DocItem = {
   updated?: string | null;
 };
 
-const ROOT_PATH = '';
 const DOCUMENTS_PATH = 'documents/';
+const ROOT_PATH = DOCUMENTS_PATH;
 
 export default function DMSPage() {
   const [currentPath, setCurrentPath] = useState<string>(ROOT_PATH);
@@ -202,9 +202,12 @@ export default function DMSPage() {
   }
   function navigateUp() {
     if (currentPath === ROOT_PATH) return;
-    const parts = currentPath.split('/').filter(Boolean);
+    const relativePath = currentPath.startsWith(ROOT_PATH)
+      ? currentPath.slice(ROOT_PATH.length)
+      : currentPath;
+    const parts = relativePath.split('/').filter(Boolean);
     parts.pop();
-    const newPath = parts.length ? `${parts.join('/')}/` : ROOT_PATH;
+    const newPath = parts.length ? `${ROOT_PATH}${parts.join('/')}/` : ROOT_PATH;
     setCurrentPath(newPath);
   }
 
@@ -423,7 +426,11 @@ export default function DMSPage() {
   }
 
   // breadcrumbs helper
-  const crumbs = currentPath.replace(/\/$/, '').split('/').filter(Boolean);
+  const crumbs = currentPath
+    .slice(ROOT_PATH.length)
+    .replace(/\/$/, '')
+    .split('/')
+    .filter(Boolean);
   const atBucketRoot = currentPath === ROOT_PATH;
 
   // UI helpers
@@ -472,7 +479,7 @@ export default function DMSPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-sky-600">DMS</p>
               <h1 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">Documents</h1>
               <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
-                Browse the full storage bucket, upload into any folder, and manage PDFs & images with quick previews and shareable links.
+                Browse the protected documents area, upload into any folder, and manage PDFs & images with quick previews and shareable links.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
@@ -488,16 +495,10 @@ export default function DMSPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               <button
-                onClick={() => setCurrentPath(ROOT_PATH)}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-              >
-                Bucket Root
-              </button>
-              <button
                 onClick={() => setCurrentPath(DOCUMENTS_PATH)}
                 className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
               >
-                Documents Folder
+                Documents Home
               </button>
               <button
                 onClick={createFolder}
@@ -566,7 +567,7 @@ export default function DMSPage() {
               Path:
               <span className="ml-2">
                 <button onClick={() => setCurrentPath(ROOT_PATH)} className="text-sky-600 font-semibold hover:underline">
-                  bucket
+                  documents
                 </button>
                 {atBucketRoot && <span className="ml-2 text-slate-400">/</span>}
                 {crumbs.map((c, idx) => (
@@ -575,7 +576,7 @@ export default function DMSPage() {
                     <button
                       onClick={() => {
                         const p = crumbs.slice(0, idx + 1).join('/');
-                        setCurrentPath(p ? `${p}/` : ROOT_PATH);
+                        setCurrentPath(p ? `${ROOT_PATH}${p}/` : ROOT_PATH);
                       }}
                       className="text-sky-600 font-semibold hover:underline ml-1"
                     >
@@ -646,7 +647,7 @@ export default function DMSPage() {
       {/* file list */}
       <div className="rounded-3xl border border-slate-200/70 bg-white/90 p-4 shadow-sm">
         {loading ? (
-          <div className="text-center py-8 text-slate-500">Loading bucket contents...</div>
+          <div className="text-center py-8 text-slate-500">Loading documents...</div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-8 text-slate-500">No files or folders found here.</div>
         ) : (

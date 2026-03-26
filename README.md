@@ -65,6 +65,14 @@ Set the admin password in `.env.local`:
 ADMIN_PASSWORD=your-strong-password
 ```
 
+To secure Firebase Storage, also create a Firebase Authentication email/password admin user that uses the same password as `ADMIN_PASSWORD`, then set:
+
+```
+NEXT_PUBLIC_FIREBASE_ADMIN_EMAIL=admin@example.com
+```
+
+Deploy the Storage rules in [`storage.rules`](/Users/ryanchutooree/mo-t-shirt/storage.rules) after that setup. See [`docs/firebase-storage-security.md`](/Users/ryanchutooree/mo-t-shirt/docs/firebase-storage-security.md) for the exact flow.
+
 ### Data + images
 
 - Shop items are stored in Firestore (collection: `shops`).

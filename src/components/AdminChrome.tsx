@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAdminTheme } from "@/admin/AdminThemeContext";
+import { signOutAdminFromFirebase } from "@/lib/firebase-admin-client-auth";
 
 type NavItem = { href: string; label: string };
 
@@ -273,7 +274,10 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
   }
 
   async function logout() {
-    await fetch("/api/logout", { method: "POST" });
+    await Promise.allSettled([
+      fetch("/api/logout", { method: "POST" }),
+      signOutAdminFromFirebase(),
+    ]);
     router.replace("/login");
   }
 
