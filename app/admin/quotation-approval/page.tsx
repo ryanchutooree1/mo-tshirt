@@ -1626,212 +1626,125 @@ export default function QuotationApprovalPage() {
     }
   };
 
+  const surfaceClass =
+    "rounded-[32px] border border-[#ebe4dc] bg-white shadow-[0_28px_56px_-38px_rgba(15,23,42,0.24)]";
+  const softSurfaceClass = "rounded-[28px] border border-[#efe7de] bg-[#fcfaf7]";
+  const fieldClass =
+    "mt-2 w-full rounded-2xl border border-[#e7dfd6] bg-white px-4 py-3 text-sm text-[#222222] outline-none transition placeholder:text-[#a59a8f] focus:border-[#ff5a5f] focus:ring-4 focus:ring-[#ff5a5f]/10";
+  const textAreaClass = `${fieldClass} min-h-[120px] resize-y`;
+  const labelClass = "text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8d8377]";
+  const secondaryButtonClass =
+    "inline-flex items-center justify-center gap-2 rounded-full border border-[#e8e0d7] bg-white px-4 py-2.5 text-xs font-semibold text-[#3e3934] transition hover:border-[#d8cec2] hover:bg-[#faf7f2] disabled:cursor-not-allowed disabled:border-[#efe7de] disabled:bg-[#f8f4ef] disabled:text-[#b0a59a]";
+  const darkButtonClass =
+    "inline-flex items-center justify-center gap-2 rounded-full bg-[#222222] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:bg-[#b7b0a7]";
+  const primaryButtonClass =
+    "inline-flex items-center justify-center gap-2 rounded-full bg-[#ff5a5f] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-[#e24f54] disabled:cursor-not-allowed disabled:bg-[#f4c4c6] disabled:text-white";
+
   return (
-    <div className="ceo-theme quotation-approval-page min-h-screen bg-[#f7f7fb] text-slate-900">
+    <div className="quotation-approval-page min-h-screen bg-[#fbf8f4] text-[#222222]">
       <div className="relative overflow-hidden">
-        <div className="pointer-events-none absolute -left-28 top-[-10rem] h-64 w-64 rounded-full bg-slate-200/70 blur-3xl" />
-        <div className="pointer-events-none absolute right-[-6rem] top-8 h-80 w-80 rounded-full bg-zinc-200/60 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-[-8rem] left-1/2 h-60 w-60 -translate-x-1/2 rounded-full bg-slate-100/70 blur-3xl" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[linear-gradient(180deg,rgba(255,247,240,0.95),rgba(251,248,244,0))]" />
+        <div className="pointer-events-none absolute -left-24 top-8 h-64 w-64 rounded-full bg-[#ffe2d0]/60 blur-3xl" />
+        <div className="pointer-events-none absolute right-[-4rem] top-24 h-72 w-72 rounded-full bg-[#ffd7db]/50 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-[-5rem] left-1/2 h-56 w-56 -translate-x-1/2 rounded-full bg-[#f0e8de] blur-3xl" />
 
-        <div className="relative mx-auto w-full max-w-6xl px-6 py-10">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-slate-500">MO Admin</p>
-              <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-                Quotation Approval
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm text-slate-600">
-                Approve quotes fast, generate PDFs, and send them straight to clients.
-              </p>
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] font-semibold">
-                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Live updates
-                </span>
-                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-600">
-                  Save and edit any time
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={createAdminQuote}
-                disabled={creatingQuote}
-                className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-60"
-              >
-                <FiPlus className="h-4 w-4" /> {creatingQuote ? "Creating..." : "New quotation"}
-              </button>
-              <button
-                type="button"
-                onClick={() => window.location.reload()}
-                className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800"
-              >
-                <FiRefreshCw className="h-4 w-4" /> Refresh
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-8 grid gap-4 lg:grid-cols-3">
-            {[
-              {
-                title: "Quotation PDF",
-                icon: FiFileText,
-                tone: "bg-orange-50 text-orange-600 ring-orange-200/70",
-                intro: "Use this before any work starts.",
-                purpose: "Purpose: to inform the client of prices and terms.",
-                status: "Status: not a legal payment document.",
-                uses: [
-                  "Client asks \"how much will it cost?\"",
-                  "You want client approval before production",
-                  "No money received yet",
-                ],
-                key: "Key point: a quotation can expire and can be changed.",
-              },
-              {
-                title: "Invoice PDF",
-                icon: FiSend,
-                tone: "bg-sky-50 text-sky-600 ring-sky-200/70",
-                intro: "Use this when you are asking for money.",
-                purpose: "Purpose: to request payment.",
-                status: "Status: official billing document.",
-                uses: [
-                  "Client has accepted the quotation",
-                  "You request 50% advance or full payment",
-                  "Work is about to start or completed",
-                ],
-                key: "Key point: an invoice creates a payment obligation.",
-              },
-              {
-                title: "Receipt PDF",
-                icon: FiCheckCircle,
-                tone: "bg-emerald-50 text-emerald-600 ring-emerald-200/70",
-                intro: "Use this after money is received.",
-                purpose: "Purpose: to confirm payment received.",
-                status: "Status: proof of payment.",
-                uses: [
-                  "Client pays the advance",
-                  "Client pays the balance",
-                  "Client asks for proof of payment",
-                ],
-                key: "Key point: a receipt always comes after payment, never before.",
-              },
-            ].map((card) => (
-              <div
-                key={card.title}
-                className="group rounded-[24px] border border-slate-200 bg-white/90 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ring-1 ${card.tone}`}>
-                    <card.icon className="h-5 w-5" />
-                  </div>
-                  <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                    PDF
+        <div className="relative mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
+          <header className={`${surfaceClass} relative overflow-hidden px-6 py-7 sm:px-8`}>
+            <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,rgba(255,90,95,0.12),transparent_68%)] lg:block" />
+            <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-[#8d8377]">
+                  Quotation Workbench
+                </p>
+                <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em] text-[#222222] sm:text-4xl">
+                  Client quotes, priced with less noise
+                </h1>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-[#6d655d]">
+                  A lighter admin flow for reviewing requests, building the PDF, and moving approved work straight into production.
+                </p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[#f4cdc0] bg-[#fff3ed] px-3 py-1.5 text-[11px] font-semibold text-[#9f4f34]">
+                    <span className="h-2 w-2 rounded-full bg-[#ff5a5f]" />
+                    Live inbox
+                  </span>
+                  <span className="rounded-full border border-[#ebe4dc] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#6d655d]">
+                    Save anytime
                   </span>
                 </div>
-                <p className="mt-4 text-sm font-semibold text-slate-800">{card.title}</p>
-                <p className="mt-2 text-sm text-slate-600">{card.intro}</p>
-                <p className="mt-2 text-sm text-slate-600">{card.purpose}</p>
-                <p className="mt-2 text-sm text-slate-600">{card.status}</p>
-                <p className="mt-3 text-xs uppercase tracking-[0.2em] text-slate-400">Use when</p>
-                <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-slate-600">
-                  {card.uses.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-                <p className="mt-3 text-sm font-medium text-slate-700">{card.key}</p>
               </div>
-            ))}
-          </div>
 
-          <div className="mt-4 rounded-[24px] border border-slate-200 bg-slate-900 px-5 py-4 text-white shadow-sm">
-            <p className="text-xs uppercase tracking-[0.35em] text-white/60">MO T-SHIRT flow</p>
-            <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-white/80">
-              {[
-                "Quotation",
-                "Invoice (50% advance)",
-                "Partial receipt",
-                "Production",
-                "Invoice (balance)",
-                "Receipt (final payment)",
-              ].map((step) => (
-                <span
-                  key={step}
-                  className="rounded-full border border-white/15 bg-white/10 px-3 py-1"
-                >
-                  {step}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            {[
-              { label: "Total", value: stats.total, icon: FiFileText, tone: "bg-slate-900 text-white ring-slate-200" },
-              { label: "New", value: stats.new, icon: FiClock, tone: "bg-orange-50 text-orange-600 ring-orange-200/70" },
-              { label: "In review", value: stats.review, icon: FiEdit2, tone: "bg-sky-50 text-sky-600 ring-sky-200/70" },
-              { label: "Approved", value: stats.approved, icon: FiCheckCircle, tone: "bg-emerald-50 text-emerald-600 ring-emerald-200/70" },
-              { label: "Sent", value: stats.sent, icon: FiSend, tone: "bg-cyan-50 text-cyan-600 ring-cyan-200/70" },
-            ].map((stat) => (
-              <div
-                key={stat.label}
-                className="rounded-[24px] border border-slate-200 bg-white/90 p-5 shadow-sm"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{stat.label}</p>
-                  <div className={`inline-flex h-9 w-9 items-center justify-center rounded-2xl ring-1 ${stat.tone}`}>
-                    <stat.icon className="h-4 w-4" />
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[
+                  { label: "Inbox", value: stats.total, note: "active requests" },
+                  { label: "Needs attention", value: stats.new + stats.review, note: "new or in review" },
+                  { label: "Sent", value: stats.sent, note: "already delivered" },
+                ].map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="rounded-[24px] border border-[#efe7de] bg-[#fcfaf7] px-4 py-4"
+                  >
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9a8f84]">
+                      {stat.label}
+                    </div>
+                    <div className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[#222222]">
+                      {stat.value}
+                    </div>
+                    <div className="text-xs text-[#7d7368]">{stat.note}</div>
                   </div>
-                </div>
-                <p className="mt-3 text-2xl font-semibold text-slate-900">{stat.value}</p>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
 
-          <div className="mt-8 grid gap-6 lg:grid-cols-[360px_1fr]">
-            <aside className="space-y-4 rounded-[28px] border border-slate-200 bg-white/90 p-4 shadow-sm lg:sticky lg:top-24 h-fit">
-              <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm">
-                <FiSearch className="h-4 w-4 text-slate-400" />
+            <div className="relative mt-6 grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
+              <div className={`${softSurfaceClass} p-4 sm:p-5`}>
+                <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-[#7d7368]">
+                  <span className="rounded-full bg-white px-3 py-1">1. Review request</span>
+                  <span className="rounded-full bg-white px-3 py-1">2. Build document</span>
+                  <span className="rounded-full bg-white px-3 py-1">3. Approve and send</span>
+                  <span className="rounded-full bg-white px-3 py-1">4. Move to orders</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 lg:justify-end">
+                <button
+                  type="button"
+                  onClick={createAdminQuote}
+                  disabled={creatingQuote}
+                  className={primaryButtonClass}
+                >
+                  <FiPlus className="h-4 w-4" />
+                  {creatingQuote ? "Creating..." : "New quotation"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className={secondaryButtonClass}
+                >
+                  <FiRefreshCw className="h-4 w-4" />
+                  Refresh inbox
+                </button>
+              </div>
+            </div>
+          </header>
+
+          <div className="mt-6 grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+            <aside className={`${surfaceClass} h-fit p-4 lg:sticky lg:top-24`}>
+              <div className="flex items-center gap-3 rounded-[24px] border border-[#ece4dc] bg-[#fcfaf7] px-4 py-3">
+                <FiSearch className="h-4 w-4 text-[#9a8f84]" />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-transparent text-sm outline-none"
-                  placeholder="Search name, email, phone..."
+                  className="w-full bg-transparent text-sm text-[#222222] outline-none placeholder:text-[#a59a8f]"
+                  placeholder="Search by name, email, phone..."
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-xs font-semibold">
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs font-semibold">
                 {([
-                  {
-                    key: "all",
-                    label: "All",
-                    count: stats.total,
-                    tone: "border-slate-200 bg-slate-100 text-slate-700 hover:border-slate-300",
-                  },
-                  {
-                    key: "new",
-                    label: STATUS_LABELS.new,
-                    count: stats.new,
-                    tone: "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300",
-                  },
-                  {
-                    key: "review",
-                    label: STATUS_LABELS.review,
-                    count: stats.review,
-                    tone: "border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-300",
-                  },
-                  {
-                    key: "approved",
-                    label: STATUS_LABELS.approved,
-                    count: stats.approved,
-                    tone: "border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300",
-                  },
-                  {
-                    key: "sent",
-                    label: STATUS_LABELS.sent,
-                    count: stats.sent,
-                    tone: "border-cyan-200 bg-cyan-50 text-cyan-700 hover:border-cyan-300",
-                  },
+                  { key: "all", label: "All", count: stats.total },
+                  { key: "new", label: STATUS_LABELS.new, count: stats.new },
+                  { key: "review", label: STATUS_LABELS.review, count: stats.review },
+                  { key: "approved", label: STATUS_LABELS.approved, count: stats.approved },
+                  { key: "sent", label: STATUS_LABELS.sent, count: stats.sent },
                 ] as const).map((filter) => {
                   const active = statusFilter === filter.key;
                   return (
@@ -1839,907 +1752,1111 @@ export default function QuotationApprovalPage() {
                       key={filter.key}
                       type="button"
                       onClick={() => setStatusFilter(filter.key)}
-                      className={`inline-flex items-center justify-between rounded-xl border px-3 py-2 text-left transition ${
-                        active ? "border-slate-900 bg-slate-900 text-white" : filter.tone
+                      className={`rounded-2xl border px-3 py-2.5 text-left transition ${
+                        active
+                          ? "border-[#ff5a5f] bg-[#fff1f2] text-[#cc484c]"
+                          : "border-[#ece4dc] bg-[#fcfaf7] text-[#6d655d] hover:border-[#d8cec2]"
                       }`}
                     >
-                      <span>{filter.label}</span>
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                          active ? "bg-white/20 text-white" : "bg-white/90 text-slate-700"
-                        }`}
-                      >
-                        {filter.count}
-                      </span>
+                      <div>{filter.label}</div>
+                      <div className="mt-1 text-[11px] text-inherit/80">{filter.count} items</div>
                     </button>
                   );
                 })}
               </div>
 
-              {loading && <p className="text-xs text-slate-500">Loading quotations...</p>}
-              {error && <p className="text-xs text-red-500">{error}</p>}
+              <div className="mt-4 flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8d8377]">
+                    Inbox
+                  </p>
+                  <p className="mt-1 text-sm text-[#6d655d]">
+                    {filtered.length} visible quotation{filtered.length === 1 ? "" : "s"}
+                  </p>
+                </div>
+                {loading ? <span className="text-xs text-[#8d8377]">Loading...</span> : null}
+              </div>
 
-              <div className="space-y-3">
+              {error ? (
+                <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {error}
+                </div>
+              ) : null}
+
+              <div className="mt-4 space-y-3">
                 {filtered.map((quote) => {
-                  const createdAt = quote.createdAt ? formatDistanceToNow(quote.createdAt, { addSuffix: true }) : "—";
                   const status = quote.status || "new";
                   const docType = getQuoteDocumentType(quote);
                   const primaryStatus = getPrimaryStatusMeta(status, docType);
-                  const readLabel = status === "new" ? "Unread" : "Read";
                   const selectedTone = selectedId === quote.id;
-                  const stageLabel = status === "sent" ? `${DOC_TYPE_LABELS[docType]} sent` : DOC_TYPE_LABELS[docType];
-                  const garmentPreview = (quote.garments || [])
-                    .filter((entry) => safeNumber(entry.quantity, 0) > 0)
-                    .slice(0, 2)
-                    .map((entry) => `${formatQuoteGarmentDescription(entry)} x ${safeNumber(entry.quantity, 0)}`)
-                    .join(", ");
                   const totalPieces = (quote.garments || []).reduce(
                     (sum, entry) => sum + safeNumber(entry.quantity, 0),
                     0
                   );
+                  const garmentPreview = (quote.garments || [])
+                    .filter((entry) => safeNumber(entry.quantity, 0) > 0)
+                    .slice(0, 2)
+                    .map((entry) => formatQuoteGarmentDescription(entry))
+                    .join(", ");
+                  const initials = (quote.name || quote.email || "Q")
+                    .split(/\s+/)
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map((part) => part[0]?.toUpperCase() || "")
+                    .join("");
+
                   return (
                     <button
                       key={quote.id}
                       type="button"
                       onClick={() => setSelectedId(quote.id)}
-                      className={`w-full rounded-[22px] border px-4 py-3 text-left shadow-sm transition ${
+                      className={`w-full rounded-[26px] border px-4 py-4 text-left transition ${
                         selectedTone
-                          ? "border-slate-900 bg-slate-900 text-white"
-                          : "border-slate-200 bg-white hover:border-slate-300 hover:shadow"
+                          ? "border-[#ffb2b5] bg-[#fff5f5] shadow-[0_18px_36px_-30px_rgba(255,90,95,0.7)]"
+                          : "border-[#ece4dc] bg-white hover:border-[#dacfc2] hover:bg-[#fefcf8]"
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold">{quote.name || "Unnamed client"}</p>
-                          <p className={`truncate text-xs ${selectedTone ? "text-slate-200" : "text-slate-500"}`}>
-                            {quote.email}
-                          </p>
-                        </div>
-                        <span
-                          className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${
-                            selectedTone ? "border-white/30 bg-white/10 text-white" : primaryStatus.tone
-                          }`}
-                        >
-                          {primaryStatus.label}
-                        </span>
-                      </div>
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <span
-                          className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
-                            selectedTone ? "border-white/30 bg-white/10 text-white" : DOC_TYPE_TONES[docType]
-                          }`}
-                        >
-                          {stageLabel}
-                        </span>
-                        <span
-                          className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold ${
                             selectedTone
-                              ? "border-white/30 bg-white/10 text-white"
-                              : status === "new"
-                                ? "border-rose-200 bg-rose-50 text-rose-700"
-                                : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              ? "bg-[#ff5a5f] text-white"
+                              : "bg-[#f6f1ea] text-[#5c554e]"
                           }`}
                         >
-                          {readLabel}
-                        </span>
-                      </div>
-                      <div className={`mt-2 text-[11px] ${selectedTone ? "text-slate-300" : "text-slate-500"}`}>
-                        {totalPieces > 0 ? `${totalPieces} pcs${garmentPreview ? ` • ${garmentPreview}` : ""}` : "No quantity yet"}
-                      </div>
-                      <div className={`mt-3 flex items-center justify-between text-xs ${selectedTone ? "text-slate-200" : "text-slate-400"}`}>
-                        <span>{createdAt}</span>
-                        <span>{quote.source || "Website"}</span>
+                          {initials || "Q"}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-[#222222]">
+                                {quote.name || "Unnamed client"}
+                              </p>
+                              <p className="truncate text-xs text-[#7b7268]">
+                                {quote.email || "No email"}
+                              </p>
+                            </div>
+                            <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${primaryStatus.tone}`}>
+                              {primaryStatus.label}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-xs leading-5 text-[#6d655d]">
+                            {garmentPreview || "No product line yet"}
+                            {totalPieces > 0 ? ` • ${totalPieces} pc${totalPieces > 1 ? "s" : ""}` : ""}
+                          </p>
+                          <div className="mt-3 flex items-center justify-between text-[11px] text-[#9a8f84]">
+                            <span>{quote.source || "Website"}</span>
+                            <span>
+                              {quote.createdAt
+                                ? formatDistanceToNow(quote.createdAt, { addSuffix: true })
+                                : "—"}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </button>
                   );
                 })}
-                {!filtered.length && !loading && (
-                  <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-center text-xs text-slate-500">
-                    No quotations match those filters.
+
+                {!filtered.length && !loading ? (
+                  <div className="rounded-[26px] border border-dashed border-[#ddd4ca] bg-[#fcfaf7] px-5 py-10 text-center text-sm text-[#8d8377]">
+                    No quotations match these filters.
                   </div>
-                )}
+                ) : null}
               </div>
             </aside>
 
             <section className="space-y-6">
               {selected && draft ? (
                 <>
-                  <div className="rounded-[28px] border border-slate-200 bg-white/90 p-6 shadow-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className={`${surfaceClass} overflow-hidden`}>
+                    <div className="grid gap-6 px-6 py-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_320px]">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Client</p>
-                        <h2 className="mt-2 text-2xl font-semibold text-slate-900">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8d8377]">
+                          Client Overview
+                        </p>
+                        <h2 className="mt-3 text-3xl font-semibold tracking-[-0.03em] text-[#222222]">
                           {draft.contactName || selected.name || "Walk-in client"}
                         </h2>
-                        <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-600">
-                          <span className="inline-flex items-center gap-1"><FiMail /> {draft.contactEmail || "No email yet"}</span>
-                          <span className="inline-flex items-center gap-1"><FiPhone /> {draft.contactPhone || "No phone yet"}</span>
-                        </div>
-                        <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-slate-500">
-                          <span className="rounded-full border border-slate-200 bg-white px-3 py-1">Source: {selected.source || "Website"}</span>
-                          {selected.delivery && (
-                            <span className="rounded-full border border-slate-200 bg-white px-3 py-1">
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <span className="inline-flex items-center gap-2 rounded-full border border-[#ece4dc] bg-[#fcfaf7] px-3 py-1.5 text-xs text-[#5d554d]">
+                            <FiMail className="h-3.5 w-3.5 text-[#ff5a5f]" />
+                            {draft.contactEmail || "No email yet"}
+                          </span>
+                          <span className="inline-flex items-center gap-2 rounded-full border border-[#ece4dc] bg-[#fcfaf7] px-3 py-1.5 text-xs text-[#5d554d]">
+                            <FiPhone className="h-3.5 w-3.5 text-[#ff5a5f]" />
+                            {draft.contactPhone || "No phone yet"}
+                          </span>
+                          <span className="rounded-full border border-[#ece4dc] bg-[#fcfaf7] px-3 py-1.5 text-xs text-[#5d554d]">
+                            Source: {selected.source || "Website"}
+                          </span>
+                          {selected.delivery ? (
+                            <span className="rounded-full border border-[#ece4dc] bg-[#fcfaf7] px-3 py-1.5 text-xs text-[#5d554d]">
                               Delivery: {selected.delivery}
                             </span>
-                          )}
+                          ) : null}
                         </div>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${selectedPrimaryStatus?.tone || STATUS_TONES.new}`}>
-                          {selectedPrimaryStatus?.label || STATUS_LABELS.new}
-                        </span>
-                        {selectedStatus !== "sent" && (
-                          <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${DOC_TYPE_TONES[draft.documentType]}`}>
+
+                      <div className={`${softSurfaceClass} p-5`}>
+                        <div className="flex flex-wrap gap-2">
+                          <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${selectedPrimaryStatus?.tone || STATUS_TONES.new}`}>
+                            {selectedPrimaryStatus?.label || STATUS_LABELS.new}
+                          </span>
+                          <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${DOC_TYPE_TONES[draft.documentType]}`}>
                             {DOC_TYPE_LABELS[draft.documentType]}
                           </span>
-                        )}
-                        <span
-                          className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                            selectedStatus === "new"
-                              ? "border-rose-200 bg-rose-50 text-rose-700"
-                              : "border-emerald-200 bg-emerald-50 text-emerald-700"
-                          }`}
-                        >
-                          {selectedStatus === "new" ? "Unread" : "Read"}
-                        </span>
-                        {selectedAttachments.length > 0 && (
-                          <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600">
-                            <FiFileText /> {selectedAttachments.length} file{selectedAttachments.length > 1 ? "s" : ""}
-                          </span>
-                        )}
-                        {selected.orderTransactionId && (
-                          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                            <FiCheckCircle /> In orders: {selected.orderTransactionId}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="mt-5 grid gap-4 lg:grid-cols-3">
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Request</p>
-                        <p className="mt-3 text-sm text-slate-700">
-                          <span className="font-semibold">Product:</span>{" "}
-                          {selectedDesignBrief?.product || selected.garments?.[0]?.garment || "n/a"}
-                        </p>
-                        <p className="mt-2 text-sm text-slate-700">
-                          <span className="font-semibold">Selected garments:</span> {selectedGarmentRows.join(", ") || "n/a"}
-                        </p>
-                        <p className="mt-2 text-sm text-slate-700">
-                          <span className="font-semibold">Total qty:</span> {selectedTotalQty > 0 ? selectedTotalQty : "n/a"}
-                        </p>
-                        <p className="mt-2 text-sm text-slate-700">
-                          <span className="font-semibold">Print:</span> {selectedDesignBrief?.printMethod || selected.printMethod || "n/a"}
-                        </p>
-                        <p className="mt-2 text-sm text-slate-700">
-                          <span className="font-semibold">Color:</span> {selectedRequestedColors.join(", ") || "n/a"}
-                        </p>
-                        {selectedDesignRows.length > 0 && (
-                          <p className="mt-2 text-sm text-slate-700">
-                            <span className="font-semibold">Design selected:</span> {selectedDesignRows.join(" | ")}
-                          </p>
-                        )}
-                        {safeNumber(selectedDesignBrief?.estimatedTotal, 0) > 0 && (
-                          <p className="mt-2 text-sm text-slate-700">
-                            <span className="font-semibold">Estimated total:</span> {formatMoney(safeNumber(selectedDesignBrief?.estimatedTotal, 0), "Rs")}
-                          </p>
-                        )}
-                        <p className="mt-2 text-sm text-slate-700">
-                          <span className="font-semibold">Rush:</span>{" "}
-                          {selectedDesignBrief ? (selectedDesignBrief.rush ? "Yes" : "No") : "n/a"}
-                        </p>
-                        <p className="mt-2 text-sm text-slate-700">
-                          <span className="font-semibold">Deadline:</span> {selectedDesignBrief?.deadline || selected.deadline || "n/a"}
-                        </p>
-                        {selectedClientNotes && (
-                          <p className="mt-2 text-sm text-slate-700">
-                            <span className="font-semibold">Notes:</span> {selectedClientNotes}
-                          </p>
-                        )}
-                        <div className="mt-4 space-y-2">
-                          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Artwork Files</p>
-                          {selectedAttachments.length ? (
-                            <div className="grid gap-3">
-                              {selectedAttachments.map((attachment, index) => {
-                                const attachmentIsImage = Boolean(attachment.contentType?.startsWith("image/"));
-                                const attachmentDownloadHref = getQuoteAttachmentDownloadHref(attachment, index);
-                                return (
-                                  <div
-                                    key={`${attachment.url || attachment.filename || "attachment"}-${index}`}
-                                    className="rounded-2xl border border-slate-200 bg-white p-3"
-                                  >
-                                    <div className="flex flex-wrap items-start justify-between gap-3">
-                                      <div className="space-y-1 text-xs text-slate-500">
-                                        <p className="font-semibold uppercase tracking-[0.18em] text-slate-400">
-                                          {attachment.label || `Design ${index + 1}`}
-                                        </p>
-                                        <p className="text-sm font-medium text-slate-700">
-                                          {attachment.filename || "Attachment"}
-                                        </p>
-                                        {attachment.description ? <p>{attachment.description}</p> : null}
-                                        {attachment.quantity ? <p>Qty: {attachment.quantity}</p> : null}
-                                      </div>
-                                      {attachment.url ? (
-                                        <div className="flex items-center gap-2">
-                                          <a
-                                            href={attachment.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
-                                          >
-                                            <FiFileText /> Open file
-                                          </a>
-                                          <a
-                                            href={attachmentDownloadHref}
-                                            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-100"
-                                            aria-label={`Download ${attachment.filename || "attachment"}`}
-                                            title="Download file"
-                                          >
-                                            <FiDownload />
-                                          </a>
-                                        </div>
-                                      ) : null}
-                                    </div>
-                                    {attachmentIsImage && attachment.url ? (
-                                      <QuoteAttachmentPreview
-                                        src={attachment.url}
-                                        alt={attachment.filename || "Attachment"}
-                                      />
-                                    ) : !attachment.url ? (
-                                      <div className="mt-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-xs text-slate-500">
-                                        Attachment received via email: {attachment.filename || `Attachment ${index + 1}`}
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-3 py-3 text-xs text-slate-500">
-                              No attachment uploaded yet.
-                            </div>
-                          )}
-                          <label
-                            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                              uploadingAttachment
-                                ? "border-slate-200 bg-slate-100 text-slate-400"
-                                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+                          <span
+                            className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                              selectedStatus === "new"
+                                ? "border-rose-200 bg-rose-50 text-rose-700"
+                                : "border-emerald-200 bg-emerald-50 text-emerald-700"
                             }`}
                           >
-                            <FiUpload /> {uploadingAttachment ? "Uploading..." : "Add file"}
-                            <input
-                              type="file"
-                              accept="image/*,application/pdf"
-                              multiple
-                              className="hidden"
-                              disabled={uploadingAttachment}
-                              onChange={(e) => {
-                                const files = Array.from(e.target.files || []);
-                                if (files.length) handleAttachmentUpload(files);
-                                e.currentTarget.value = "";
-                              }}
-                            />
-                          </label>
+                            {selectedStatus === "new" ? "Unread" : "Read"}
+                          </span>
                         </div>
-                      </div>
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Delivery</p>
-                        <div className="mt-3 space-y-2 text-sm text-slate-700">
-                          <div>
-                            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Method</p>
-                            <p className="font-medium">{selected.delivery || "n/a"}</p>
-                          </div>
-                          <div>
-                            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Recipient</p>
-                            <p>{selected.deliveryName || "Name not provided"}</p>
-                          </div>
-                          <div>
-                            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Address</p>
-                            <p>{selected.deliveryAddress || "Address not provided"}</p>
-                          </div>
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <div>
-                              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Post Code</p>
-                              <p>{selected.deliveryPostCode || "—"}</p>
+
+                        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                          <div className="rounded-2xl border border-[#ece4dc] bg-white px-4 py-3">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8d8377]">
+                              Quote number
                             </div>
-                            <div>
-                              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Phone</p>
-                              <p>{selected.deliveryPhone || "Phone not provided"}</p>
+                            <div className="mt-1 text-sm font-semibold text-[#222222]">
+                              {draft.documentNumber}
+                            </div>
+                          </div>
+                          <div className="rounded-2xl border border-[#ece4dc] bg-white px-4 py-3">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8d8377]">
+                              Order sync
+                            </div>
+                            <div className="mt-1 text-sm font-semibold text-[#222222]">
+                              {selected.orderTransactionId || "Not in orders yet"}
                             </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-4">
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Timeline</p>
-                        <p className="mt-3 text-sm text-slate-700">
-                          Created {selected.createdAt ? format(selected.createdAt, "dd MMM yyyy") : "—"}
-                        </p>
-                        <p className="mt-2 text-sm text-slate-700">
-                          Updated {selected.updatedAt ? format(selected.updatedAt, "dd MMM yyyy") : "—"}
-                        </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="rounded-[28px] border border-slate-200 bg-white/90 p-6 shadow-sm">
-                    <div>
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Quotation / Invoice Draft</p>
-                        <h3 className="mt-2 text-lg font-semibold text-slate-900">
-                          Price, approve, and send in minutes
-                        </h3>
+                  <div className="grid gap-4 xl:grid-cols-4">
+                    <div className={`${surfaceClass} p-5 xl:col-span-1`}>
+                      <p className={labelClass}>Request</p>
+                      <div className="mt-4 space-y-3 text-sm leading-6 text-[#5f5851]">
+                        <p>
+                          <span className="font-semibold text-[#222222]">Product</span>
+                          <br />
+                          {selectedDesignBrief?.product || selected.garments?.[0]?.garment || "n/a"}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-[#222222]">Garments</span>
+                          <br />
+                          {selectedGarmentRows.join(", ") || "n/a"}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-[#222222]">Print</span>
+                          <br />
+                          {selectedDesignBrief?.printMethod || selected.printMethod || "n/a"}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-[#222222]">Color</span>
+                          <br />
+                          {selectedRequestedColors.join(", ") || "n/a"}
+                        </p>
+                        <p>
+                          <span className="font-semibold text-[#222222]">Total quantity</span>
+                          <br />
+                          {selectedTotalQty > 0 ? selectedTotalQty : "n/a"}
+                        </p>
+                        {selectedDesignRows.length ? (
+                          <p>
+                            <span className="font-semibold text-[#222222]">Design</span>
+                            <br />
+                            {selectedDesignRows.join(" • ")}
+                          </p>
+                        ) : null}
+                        {selectedClientNotes ? (
+                          <p>
+                            <span className="font-semibold text-[#222222]">Notes</span>
+                            <br />
+                            {selectedClientNotes}
+                          </p>
+                        ) : null}
                       </div>
                     </div>
 
-                    <div className="mt-5 grid gap-4 lg:grid-cols-2">
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-                        <div className="flex items-start justify-between gap-4">
+                    <div className={`${surfaceClass} p-5 xl:col-span-1`}>
+                      <div className="flex items-center justify-between gap-3">
+                        <p className={labelClass}>Artwork</p>
+                        <label
+                          className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-semibold transition ${
+                            uploadingAttachment
+                              ? "border border-[#efe7de] bg-[#f8f4ef] text-[#b0a59a]"
+                              : "border border-[#ece4dc] bg-[#fcfaf7] text-[#5d554d] hover:border-[#dacfc2]"
+                          }`}
+                        >
+                          <FiUpload className="h-3.5 w-3.5" />
+                          {uploadingAttachment ? "Uploading..." : "Add file"}
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            multiple
+                            className="hidden"
+                            disabled={uploadingAttachment}
+                            onChange={(e) => {
+                              const files = Array.from(e.target.files || []);
+                              if (files.length) handleAttachmentUpload(files);
+                              e.currentTarget.value = "";
+                            }}
+                          />
+                        </label>
+                      </div>
+
+                      <div className="mt-4 space-y-3">
+                        {selectedAttachments.length ? (
+                          selectedAttachments.map((attachment, index) => {
+                            const attachmentIsImage = Boolean(
+                              attachment.contentType?.startsWith("image/")
+                            );
+                            const attachmentDownloadHref = getQuoteAttachmentDownloadHref(
+                              attachment,
+                              index
+                            );
+                            return (
+                              <div
+                                key={`${attachment.url || attachment.filename || "attachment"}-${index}`}
+                                className="rounded-[22px] border border-[#ece4dc] bg-[#fcfaf7] p-3.5"
+                              >
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9a8f84]">
+                                      {attachment.label || `Design ${index + 1}`}
+                                    </p>
+                                    <p className="mt-1 truncate text-sm font-semibold text-[#222222]">
+                                      {attachment.filename || "Attachment"}
+                                    </p>
+                                    {attachment.description ? (
+                                      <p className="mt-1 text-xs text-[#7b7268]">
+                                        {attachment.description}
+                                      </p>
+                                    ) : null}
+                                    {attachment.quantity ? (
+                                      <p className="mt-1 text-xs text-[#7b7268]">
+                                        Qty: {attachment.quantity}
+                                      </p>
+                                    ) : null}
+                                  </div>
+                                  {attachment.url ? (
+                                    <div className="flex items-center gap-2">
+                                      <a
+                                        href={attachment.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={secondaryButtonClass}
+                                      >
+                                        <FiFileText className="h-3.5 w-3.5" />
+                                        Open file
+                                      </a>
+                                      <a
+                                        href={attachmentDownloadHref}
+                                        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#e8e0d7] bg-white text-[#3e3934] transition hover:border-[#d8cec2] hover:bg-[#faf7f2]"
+                                        aria-label={`Download ${attachment.filename || "attachment"}`}
+                                        title="Download file"
+                                      >
+                                        <FiDownload className="h-4 w-4" />
+                                      </a>
+                                    </div>
+                                  ) : null}
+                                </div>
+                                {attachmentIsImage && attachment.url ? (
+                                  <QuoteAttachmentPreview
+                                    src={attachment.url}
+                                    alt={attachment.filename || "Attachment"}
+                                  />
+                                ) : !attachment.url ? (
+                                  <div className="mt-3 rounded-2xl border border-dashed border-[#ddd4ca] bg-white px-3 py-3 text-xs text-[#8d8377]">
+                                    Attachment received via email:{" "}
+                                    {attachment.filename || `Attachment ${index + 1}`}
+                                  </div>
+                                ) : null}
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="rounded-[22px] border border-dashed border-[#ddd4ca] bg-[#fcfaf7] px-4 py-8 text-center text-sm text-[#8d8377]">
+                            No attachment uploaded yet.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className={`${surfaceClass} p-5 xl:col-span-1`}>
+                      <p className={labelClass}>Delivery</p>
+                      <div className="mt-4 space-y-4 text-sm leading-6 text-[#5f5851]">
+                        <div>
+                          <p className="font-semibold text-[#222222]">Method</p>
+                          <p>{selected.delivery || "n/a"}</p>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-[#222222]">Recipient</p>
+                          <p>{selected.deliveryName || "Name not provided"}</p>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-[#222222]">Address</p>
+                          <p>{selected.deliveryAddress || "Address not provided"}</p>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
                           <div>
-                            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Document setup</p>
-                            <p className="mt-1 text-[11px] text-slate-500">
-                              These details appear on the PDF header.
+                            <p className="font-semibold text-[#222222]">Post code</p>
+                            <p>{selected.deliveryPostCode || "—"}</p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-[#222222]">Phone</p>
+                            <p>{selected.deliveryPhone || "Phone not provided"}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className={`${surfaceClass} p-5 xl:col-span-1`}>
+                      <p className={labelClass}>Timeline</p>
+                      <div className="mt-4 space-y-4">
+                        <div className="rounded-2xl border border-[#ece4dc] bg-[#fcfaf7] px-4 py-3">
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8d8377]">
+                            Created
+                          </div>
+                          <div className="mt-1 text-sm font-semibold text-[#222222]">
+                            {selected.createdAt ? format(selected.createdAt, "dd MMM yyyy") : "—"}
+                          </div>
+                        </div>
+                        <div className="rounded-2xl border border-[#ece4dc] bg-[#fcfaf7] px-4 py-3">
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8d8377]">
+                            Updated
+                          </div>
+                          <div className="mt-1 text-sm font-semibold text-[#222222]">
+                            {selected.updatedAt ? format(selected.updatedAt, "dd MMM yyyy") : "—"}
+                          </div>
+                        </div>
+                        {safeNumber(selectedDesignBrief?.estimatedTotal, 0) > 0 ? (
+                          <div className="rounded-2xl border border-[#f4cdc0] bg-[#fff4ee] px-4 py-3">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9a5c43]">
+                              Estimated total
+                            </div>
+                            <div className="mt-1 text-sm font-semibold text-[#222222]">
+                              {formatMoney(safeNumber(selectedDesignBrief?.estimatedTotal, 0), "Rs")}
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_340px]">
+                    <div className="space-y-5">
+                      <div className={`${surfaceClass} p-6 sm:p-7`}>
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8d8377]">
+                              Document Builder
+                            </p>
+                            <h3 className="mt-2 text-2xl font-semibold tracking-[-0.02em] text-[#222222]">
+                              Build the client-facing document
+                            </h3>
+                            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6d655d]">
+                              Edit the header, client details, line items, and notes in one focused workspace.
                             </p>
                           </div>
-                          <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                          <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${DOC_TYPE_TONES[draft.documentType]}`}>
                             {documentTypeLabel}
                           </span>
                         </div>
-                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                          <label className="text-xs font-medium text-slate-600">
-                            Type
-                            <select
-                              value={draft.documentType}
-                              onChange={(e) =>
-                                setDraft({ ...draft, documentType: e.target.value as DocumentType })
-                              }
-                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                            >
-                              <option value="quotation">Quotation</option>
-                              <option value="invoice">Invoice</option>
-                              <option value="partial_receipt">Partial receipt</option>
-                              <option value="receipt">Receipt</option>
-                            </select>
-                          </label>
-                          <label className="text-xs font-medium text-slate-600">
-                            Number
-                            <input
-                              value={draft.documentNumber}
-                              onChange={(e) => setDraft({ ...draft, documentNumber: e.target.value })}
-                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                              placeholder="Q-2026-001"
-                            />
-                          </label>
-                          <label className="text-xs font-medium text-slate-600 sm:col-span-2">
-                            Date
-                            <input
-                              type="date"
-                              value={draft.documentDate}
-                              onChange={(e) => setDraft({ ...draft, documentDate: e.target.value })}
-                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                            />
-                          </label>
-                          <label className="text-xs font-medium text-slate-600">
-                            {draft.documentType === "quotation" ? "Status" : "Payment status"}
-                            <select
-                              value={draft.paymentStatus}
-                              onChange={(e) => setDraft({ ...draft, paymentStatus: e.target.value })}
-                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                            >
-                              {paymentStatusOptions.map((status) => (
-                                <option key={status} value={status}>
-                                  {status}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <label className="text-xs font-medium text-slate-600">
-                            Prepared by
-                            <input
-                              value={draft.preparedBy}
-                              onChange={(e) => setDraft({ ...draft, preparedBy: e.target.value })}
-                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                              placeholder="Your name"
-                            />
-                          </label>
-                          <div className="sm:col-span-2">
-                            <p className="text-xs font-medium text-slate-600">Line items visibility</p>
-                            <div className="mt-2 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white p-1 text-xs font-semibold">
-                              <button
-                                type="button"
-                                onClick={() => setDraft({ ...draft, showLineItems: true })}
-                                className={`rounded-lg px-3 py-2 transition ${
-                                  draft.showLineItems
-                                    ? "bg-slate-900 text-white"
-                                    : "text-slate-600 hover:bg-slate-50"
-                                }`}
-                              >
-                                Detailed line items
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setDraft({ ...draft, showLineItems: false })}
-                                className={`rounded-lg px-3 py-2 transition ${
-                                  !draft.showLineItems
-                                    ? "bg-slate-900 text-white"
-                                    : "text-slate-600 hover:bg-slate-50"
-                                }`}
-                              >
-                                Summary only
-                              </button>
+
+                        <div className="mt-6 grid gap-5 lg:grid-cols-2">
+                          <div className={`${softSurfaceClass} p-5`}>
+                            <p className={labelClass}>Document setup</p>
+                            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                              <label className={labelClass}>
+                                Type
+                                <select
+                                  value={draft.documentType}
+                                  onChange={(e) =>
+                                    setDraft({ ...draft, documentType: e.target.value as DocumentType })
+                                  }
+                                  className={fieldClass}
+                                >
+                                  <option value="quotation">Quotation</option>
+                                  <option value="invoice">Invoice</option>
+                                  <option value="partial_receipt">Partial receipt</option>
+                                  <option value="receipt">Receipt</option>
+                                </select>
+                              </label>
+                              <label className={labelClass}>
+                                Number
+                                <input
+                                  value={draft.documentNumber}
+                                  onChange={(e) =>
+                                    setDraft({ ...draft, documentNumber: e.target.value })
+                                  }
+                                  className={fieldClass}
+                                  placeholder="Q-2026-001"
+                                />
+                              </label>
+                              <label className={`${labelClass} sm:col-span-2`}>
+                                Date
+                                <input
+                                  type="date"
+                                  value={draft.documentDate}
+                                  onChange={(e) =>
+                                    setDraft({ ...draft, documentDate: e.target.value })
+                                  }
+                                  className={fieldClass}
+                                />
+                              </label>
+                              <label className={labelClass}>
+                                {draft.documentType === "quotation" ? "Status" : "Payment status"}
+                                <select
+                                  value={draft.paymentStatus}
+                                  onChange={(e) =>
+                                    setDraft({ ...draft, paymentStatus: e.target.value })
+                                  }
+                                  className={fieldClass}
+                                >
+                                  {paymentStatusOptions.map((status) => (
+                                    <option key={status} value={status}>
+                                      {status}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className={labelClass}>
+                                Prepared by
+                                <input
+                                  value={draft.preparedBy}
+                                  onChange={(e) =>
+                                    setDraft({ ...draft, preparedBy: e.target.value })
+                                  }
+                                  className={fieldClass}
+                                  placeholder="Your name"
+                                />
+                              </label>
                             </div>
-                            <p className="mt-2 text-[11px] text-slate-500">
-                              Detailed shows each item and price. Summary hides lines and shows totals only.
-                            </p>
+
+                            <div className="mt-4">
+                              <p className={labelClass}>Line items visibility</p>
+                              <div className="mt-2 grid grid-cols-2 gap-2 rounded-[22px] border border-[#e7dfd6] bg-white p-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setDraft({ ...draft, showLineItems: true })}
+                                  className={`rounded-2xl px-3 py-2.5 text-xs font-semibold transition ${
+                                    draft.showLineItems
+                                      ? "bg-[#222222] text-white"
+                                      : "text-[#6d655d] hover:bg-[#faf7f2]"
+                                  }`}
+                                >
+                                  Detailed
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setDraft({ ...draft, showLineItems: false })}
+                                  className={`rounded-2xl px-3 py-2.5 text-xs font-semibold transition ${
+                                    !draft.showLineItems
+                                      ? "bg-[#222222] text-white"
+                                      : "text-[#6d655d] hover:bg-[#faf7f2]"
+                                  }`}
+                                >
+                                  Summary only
+                                </button>
+                              </div>
+                              <p className="mt-2 text-xs text-[#8d8377]">
+                                Detailed shows every line and price. Summary keeps only the totals on the PDF.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className={`${softSurfaceClass} p-5`}>
+                            <p className={labelClass}>Client details</p>
+                            <div className="mt-4 grid gap-4">
+                              <label className={labelClass}>
+                                Client contact name
+                                <input
+                                  value={draft.contactName}
+                                  onChange={(e) =>
+                                    setDraft({ ...draft, contactName: e.target.value })
+                                  }
+                                  className={fieldClass}
+                                  placeholder="Client name"
+                                />
+                              </label>
+                              <div className="grid gap-4 sm:grid-cols-2">
+                                <label className={labelClass}>
+                                  Client email
+                                  <input
+                                    type="email"
+                                    value={draft.contactEmail}
+                                    onChange={(e) =>
+                                      setDraft({ ...draft, contactEmail: e.target.value })
+                                    }
+                                    className={fieldClass}
+                                    placeholder="client@email.com"
+                                  />
+                                </label>
+                                <label className={labelClass}>
+                                  Phone / WhatsApp
+                                  <input
+                                    value={draft.contactPhone}
+                                    onChange={(e) =>
+                                      setDraft({ ...draft, contactPhone: e.target.value })
+                                    }
+                                    className={fieldClass}
+                                    placeholder="+230 ..."
+                                  />
+                                </label>
+                              </div>
+                              <label className={labelClass}>
+                                Client / Company name
+                                <input
+                                  value={draft.clientCompany}
+                                  onChange={(e) =>
+                                    setDraft({ ...draft, clientCompany: e.target.value })
+                                  }
+                                  className={fieldClass}
+                                  placeholder={selected?.name || "Client or company name"}
+                                />
+                              </label>
+                              <label className={labelClass}>
+                                Billing address
+                                <input
+                                  value={draft.clientAddress}
+                                  onChange={(e) =>
+                                    setDraft({ ...draft, clientAddress: e.target.value })
+                                  }
+                                  className={fieldClass}
+                                  placeholder="Street, city, postal code"
+                                />
+                              </label>
+                              <div className="grid gap-4 sm:grid-cols-2">
+                                <label className={labelClass}>
+                                  BRN
+                                  <input
+                                    value={draft.clientBrn}
+                                    onChange={(e) =>
+                                      setDraft({ ...draft, clientBrn: e.target.value })
+                                    }
+                                    className={fieldClass}
+                                    placeholder="Optional"
+                                  />
+                                </label>
+                                <label className={labelClass}>
+                                  VAT
+                                  <input
+                                    value={draft.clientVat}
+                                    onChange={(e) =>
+                                      setDraft({ ...draft, clientVat: e.target.value })
+                                    }
+                                    className={fieldClass}
+                                    placeholder="Optional"
+                                  />
+                                </label>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                          {draft.documentType === "invoice"
-                            ? "Invoice for"
-                            : draft.documentType === "receipt"
-                              ? "Receipt for"
-                              : draft.documentType === "partial_receipt"
-                                ? "Partial receipt for"
-                              : "Quotation for"}
-                        </p>
-                        <p className="mt-1 text-[11px] text-slate-500">Shown on the client section of the PDF.</p>
-                        <div className="mt-3 grid gap-3">
-                          <label className="text-xs font-medium text-slate-600">
-                            Client contact name
-                            <input
-                              value={draft.contactName}
-                              onChange={(e) => setDraft({ ...draft, contactName: e.target.value })}
-                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                              placeholder="Client name"
-                            />
-                          </label>
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <label className="text-xs font-medium text-slate-600">
-                              Client email
-                              <input
-                                type="email"
-                                value={draft.contactEmail}
-                                onChange={(e) => setDraft({ ...draft, contactEmail: e.target.value })}
-                                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                                placeholder="client@email.com"
-                              />
-                            </label>
-                            <label className="text-xs font-medium text-slate-600">
-                              Phone / WhatsApp
-                              <input
-                                value={draft.contactPhone}
-                                onChange={(e) => setDraft({ ...draft, contactPhone: e.target.value })}
-                                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                                placeholder="+230 ..."
-                              />
-                            </label>
+                        <div className={`${softSurfaceClass} mt-5 p-5`}>
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <p className={labelClass}>Line items</p>
+                              <p className="mt-2 text-sm text-[#6d655d]">
+                                Keep this section simple and readable for both you and the client.
+                              </p>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => addDraftLine("Product / Size")}
+                                className={secondaryButtonClass}
+                              >
+                                <FiPlus className="h-4 w-4" />
+                                Add custom line
+                              </button>
+                              {QUICK_PRODUCT_LINES.map((item) => (
+                                <button
+                                  key={item}
+                                  type="button"
+                                  onClick={() => addDraftLine(`${item} (M)`)}
+                                  className="inline-flex items-center gap-1 rounded-full border border-[#ece4dc] bg-white px-3 py-2 text-[11px] font-semibold text-[#5d554d] transition hover:border-[#dacfc2] hover:bg-[#faf7f2]"
+                                >
+                                  <FiPlus className="h-3.5 w-3.5" />
+                                  {item}
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                          <label className="text-xs font-medium text-slate-600">
-                            Client / Company name
-                            <input
-                              value={draft.clientCompany}
-                              onChange={(e) => setDraft({ ...draft, clientCompany: e.target.value })}
-                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                              placeholder={selected?.name || "Client or company name"}
-                            />
-                          </label>
-                          <label className="text-xs font-medium text-slate-600">
-                            Billing address
-                            <input
-                              value={draft.clientAddress}
-                              onChange={(e) => setDraft({ ...draft, clientAddress: e.target.value })}
-                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                              placeholder="Street, city, postal code"
-                            />
-                          </label>
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <label className="text-xs font-medium text-slate-600">
-                              BRN (Business Reg. No.)
-                              <input
-                                value={draft.clientBrn}
-                                onChange={(e) => setDraft({ ...draft, clientBrn: e.target.value })}
-                                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                                placeholder="Optional"
-                              />
-                            </label>
-                            <label className="text-xs font-medium text-slate-600">
-                              VAT (if applicable)
-                              <input
-                                value={draft.clientVat}
-                                onChange={(e) => setDraft({ ...draft, clientVat: e.target.value })}
-                                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                                placeholder="Optional"
-                              />
-                            </label>
+
+                          <div className="mt-5 space-y-3">
+                            {draft.lines.map((line, index) => (
+                              <div
+                                key={`line-${index}`}
+                                className="grid gap-3 rounded-[24px] border border-[#e8e0d7] bg-white p-4 sm:grid-cols-[1fr_96px_120px_120px_auto] sm:items-center"
+                              >
+                                <label className={`${labelClass} sm:hidden`}>
+                                  Description
+                                  <input
+                                    value={line.description}
+                                    onChange={(e) =>
+                                      updateDraftLine(index, { description: e.target.value })
+                                    }
+                                    className={fieldClass}
+                                    placeholder="e.g. T-Shirt (M) with front logo"
+                                  />
+                                </label>
+                                <input
+                                  value={line.description}
+                                  onChange={(e) =>
+                                    updateDraftLine(index, { description: e.target.value })
+                                  }
+                                  className="hidden rounded-2xl border border-[#e7dfd6] bg-[#fcfaf7] px-4 py-3 text-sm text-[#222222] outline-none transition placeholder:text-[#a59a8f] focus:border-[#ff5a5f] focus:ring-4 focus:ring-[#ff5a5f]/10 sm:block"
+                                  placeholder="e.g. T-Shirt (M) with front logo"
+                                  aria-label="Line item description"
+                                />
+                                <label className={`${labelClass} sm:hidden`}>
+                                  Qty
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={line.quantity}
+                                    onChange={(e) =>
+                                      updateDraftLine(index, {
+                                        quantity:
+                                          e.target.value === ""
+                                            ? ""
+                                            : safeNumber(e.target.value, 0),
+                                      })
+                                    }
+                                    className={fieldClass}
+                                  />
+                                </label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={line.quantity}
+                                  onChange={(e) =>
+                                    updateDraftLine(index, {
+                                      quantity:
+                                        e.target.value === ""
+                                          ? ""
+                                          : safeNumber(e.target.value, 0),
+                                    })
+                                  }
+                                  className="hidden rounded-2xl border border-[#e7dfd6] bg-[#fcfaf7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#a59a8f] focus:border-[#ff5a5f] focus:ring-4 focus:ring-[#ff5a5f]/10 sm:block"
+                                  placeholder="Qty"
+                                  aria-label="Quantity"
+                                />
+                                <label className={`${labelClass} sm:hidden`}>
+                                  Unit price
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={line.unitPrice}
+                                    onChange={(e) =>
+                                      updateDraftLine(index, {
+                                        unitPrice:
+                                          e.target.value === ""
+                                            ? ""
+                                            : safeNumber(e.target.value, 0),
+                                      })
+                                    }
+                                    className={fieldClass}
+                                  />
+                                </label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={line.unitPrice}
+                                  onChange={(e) =>
+                                    updateDraftLine(index, {
+                                      unitPrice:
+                                        e.target.value === ""
+                                          ? ""
+                                          : safeNumber(e.target.value, 0),
+                                    })
+                                  }
+                                  className="hidden rounded-2xl border border-[#e7dfd6] bg-[#fcfaf7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#a59a8f] focus:border-[#ff5a5f] focus:ring-4 focus:ring-[#ff5a5f]/10 sm:block"
+                                  placeholder="Unit price"
+                                  aria-label="Unit price"
+                                />
+                                <div className="rounded-2xl border border-[#ece4dc] bg-[#fcfaf7] px-4 py-3 text-right text-sm font-semibold text-[#222222]">
+                                  {formatMoney(
+                                    safeNumber(line.quantity, 0) *
+                                      safeNumber(line.unitPrice, 0),
+                                    draft.currency
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => removeDraftLine(index)}
+                                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#ece4dc] bg-white text-[#8d8377] transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+                                  aria-label="Remove line item"
+                                >
+                                  <FiXCircle className="h-4 w-4" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_0.9fr]">
+                          <div className={`${softSurfaceClass} p-5`}>
+                            <p className={labelClass}>Commercial details</p>
+                            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                              <label className={labelClass}>
+                                Currency
+                                <input
+                                  value={draft.currency}
+                                  onChange={(e) =>
+                                    setDraft({ ...draft, currency: e.target.value })
+                                  }
+                                  className={fieldClass}
+                                />
+                              </label>
+                              {draft.documentType === "quotation" ? (
+                                <label className={labelClass}>
+                                  Valid until
+                                  <input
+                                    type="date"
+                                    value={draft.validUntil}
+                                    onChange={(e) =>
+                                      setDraft({ ...draft, validUntil: e.target.value })
+                                    }
+                                    className={fieldClass}
+                                  />
+                                </label>
+                              ) : (
+                                <div className="rounded-[24px] border border-[#ece4dc] bg-white px-4 py-3">
+                                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8d8377]">
+                                    Document mode
+                                  </div>
+                                  <div className="mt-1 text-sm font-semibold text-[#222222]">
+                                    {documentTypeLabel}
+                                  </div>
+                                </div>
+                              )}
+                              <label className={labelClass}>
+                                Delivery fee
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={draft.deliveryFee}
+                                  onChange={(e) =>
+                                    setDraft({
+                                      ...draft,
+                                      deliveryFee: safeNumber(e.target.value, 0),
+                                    })
+                                  }
+                                  className={fieldClass}
+                                />
+                              </label>
+                              <label className={labelClass}>
+                                Discount
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={draft.discount}
+                                  onChange={(e) =>
+                                    setDraft({
+                                      ...draft,
+                                      discount: safeNumber(e.target.value, 0),
+                                    })
+                                  }
+                                  className={fieldClass}
+                                />
+                              </label>
+                            </div>
+                          </div>
+
+                          <div className={`${softSurfaceClass} p-5`}>
+                            <p className={labelClass}>Notes and terms</p>
+                            <div className="mt-4 grid gap-4">
+                              <label className={labelClass}>
+                                Notes to client
+                                <textarea
+                                  value={draft.notes}
+                                  onChange={(e) =>
+                                    setDraft({ ...draft, notes: e.target.value })
+                                  }
+                                  rows={4}
+                                  className={textAreaClass}
+                                  placeholder="Add any extra details, inclusions, or delivery notes..."
+                                />
+                              </label>
+                              <label className={labelClass}>
+                                Terms and payment details
+                                <textarea
+                                  value={draft.terms}
+                                  onChange={(e) =>
+                                    setDraft({ ...draft, terms: e.target.value })
+                                  }
+                                  rows={8}
+                                  className={textAreaClass}
+                                />
+                              </label>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="mt-5 space-y-3">
-                      {draft.lines.length > 0 && (
-                        <div className="hidden sm:grid sm:grid-cols-[1fr_110px_120px_120px_auto] gap-3 px-3 text-[11px] uppercase tracking-[0.2em] text-slate-400">
-                          <span>Description</span>
-                          <span className="text-right">Qty</span>
-                          <span className="text-right">Unit price</span>
-                          <span className="text-right">Line total</span>
-                          <span className="text-right">Remove</span>
-                        </div>
-                      )}
-                      {draft.lines.map((line, index) => (
-                        <div
-                          key={`line-${index}`}
-                          className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3 sm:grid-cols-[1fr_110px_120px_120px_auto] sm:items-center"
-                        >
-                          <input
-                            value={line.description}
-                            onChange={(e) => updateDraftLine(index, { description: e.target.value })}
-                            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                            placeholder="e.g., T-Shirt (M) with Logo Black"
-                            aria-label="Line item description"
-                          />
-                          <input
-                            type="number"
-                            min={0}
-                            value={line.quantity}
-                            onChange={(e) =>
-                              updateDraftLine(index, {
-                                quantity: e.target.value === "" ? "" : safeNumber(e.target.value, 0),
-                              })
-                            }
-                            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-right"
-                            placeholder="Qty"
-                            aria-label="Quantity"
-                          />
-                          <input
-                            type="number"
-                            min={0}
-                            value={line.unitPrice}
-                            onChange={(e) =>
-                              updateDraftLine(index, {
-                                unitPrice: e.target.value === "" ? "" : safeNumber(e.target.value, 0),
-                              })
-                            }
-                            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-right"
-                            placeholder="Unit price"
-                            aria-label="Unit price"
-                          />
-                          <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-right font-semibold text-slate-800">
-                            {formatMoney(
-                              safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0),
-                              draft.currency
-                            )}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeDraftLine(index)}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
-                            aria-label="Remove line item"
-                          >
-                            <FiXCircle className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Add more product</p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => addDraftLine("Product / Size")}
-                          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
-                        >
-                          <FiPlus className="h-4 w-4" /> Add custom line
-                        </button>
-                        {QUICK_PRODUCT_LINES.map((item) => (
-                          <button
-                            key={item}
-                            type="button"
-                            onClick={() => addDraftLine(`${item} (M)`)}
-                            className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
-                          >
-                            <FiPlus className="h-3.5 w-3.5" /> {item}
-                          </button>
-                        ))}
-                      </div>
-                      <p className="mt-2 text-[11px] text-slate-500">
-                        Example: <span className="font-semibold">T-Shirt (M) with Logo Samsung</span>.
-                      </p>
-                    </div>
-
-                    <div className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-                      <div className="space-y-4">
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <label className="text-xs font-medium text-slate-600">
-                            Currency
-                            <input
-                              value={draft.currency}
-                              onChange={(e) => setDraft({ ...draft, currency: e.target.value })}
-                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                            />
-                          </label>
-                          {draft.documentType === "quotation" && (
-                            <label className="text-xs font-medium text-slate-600">
-                              Valid until
-                              <input
-                                type="date"
-                                value={draft.validUntil}
-                                onChange={(e) => setDraft({ ...draft, validUntil: e.target.value })}
-                                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                              />
-                            </label>
-                          )}
-                          <label className="text-xs font-medium text-slate-600">
-                            Delivery fee
-                            <input
-                              type="number"
-                              min={0}
-                              value={draft.deliveryFee}
-                              onChange={(e) => setDraft({ ...draft, deliveryFee: safeNumber(e.target.value, 0) })}
-                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                            />
-                          </label>
-                          <label className="text-xs font-medium text-slate-600">
-                            Discount
-                            <input
-                              type="number"
-                              min={0}
-                              value={draft.discount}
-                              onChange={(e) => setDraft({ ...draft, discount: safeNumber(e.target.value, 0) })}
-                              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                            />
-                          </label>
-                        </div>
-                        <label className="text-xs font-medium text-slate-600">
-                          Notes to client
-                          <textarea
-                            value={draft.notes}
-                            onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
-                            rows={4}
-                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                            placeholder="Add any extra details or inclusions..."
-                          />
-                        </label>
-                        <label className="text-xs font-medium text-slate-600">
-                          Terms & payment details
-                          <textarea
-                            value={draft.terms}
-                            onChange={(e) => setDraft({ ...draft, terms: e.target.value })}
-                            rows={6}
-                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                          />
-                        </label>
-                      </div>
-
-                      <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-5">
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Totals</p>
-                        <div className="mt-4 space-y-2 text-sm text-slate-700">
+                    <aside className="space-y-5 xl:sticky xl:top-24 xl:self-start">
+                      <div className={`${surfaceClass} p-5`}>
+                        <p className={labelClass}>Totals</p>
+                        <div className="mt-5 space-y-3 text-sm text-[#5f5851]">
                           <div className="flex items-center justify-between">
                             <span>Subtotal</span>
-                            <span className="font-semibold">{formatMoney(totals.subtotal, draft.currency)}</span>
+                            <span className="font-semibold text-[#222222]">
+                              {formatMoney(totals.subtotal, draft.currency)}
+                            </span>
                           </div>
-                          {draft.deliveryFee > 0 && (
-                            <div className="flex items-center justify-between">
-                              <span>Delivery</span>
-                              <span className="font-semibold">{formatMoney(draft.deliveryFee, draft.currency)}</span>
+                          <div className="flex items-center justify-between">
+                            <span>Delivery</span>
+                            <span className="font-semibold text-[#222222]">
+                              {formatMoney(draft.deliveryFee, draft.currency)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>Discount</span>
+                            <span className="font-semibold text-[#222222]">
+                              {draft.discount > 0
+                                ? formatMoney(-draft.discount, draft.currency)
+                                : formatMoney(0, draft.currency)}
+                            </span>
+                          </div>
+                          <div className="rounded-[24px] bg-[#fff3f0] px-4 py-4">
+                            <div className="flex items-center justify-between text-base font-semibold text-[#222222]">
+                              <span>Total</span>
+                              <span>{formatMoney(totals.total, draft.currency)}</span>
                             </div>
-                          )}
-                          {draft.discount > 0 && (
-                            <div className="flex items-center justify-between text-rose-600">
-                              <span>Discount</span>
-                              <span className="font-semibold">{formatMoney(-draft.discount, draft.currency)}</span>
-                            </div>
-                          )}
-                          <div className="mt-4 flex items-center justify-between text-base font-semibold text-slate-900">
-                            <span>Total</span>
-                            <span>{formatMoney(totals.total, draft.currency)}</span>
                           </div>
                         </div>
-                        {draft.documentType === "partial_receipt" && (
-                          <div className="mt-4 space-y-3 text-sm text-slate-700">
-                            <label className="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+
+                        {draft.documentType === "partial_receipt" ? (
+                          <div className="mt-4 space-y-3">
+                            <label className={labelClass}>
                               Amount received
                               <input
                                 type="number"
                                 min={0}
                                 value={draft.amountReceived}
                                 onChange={(e) =>
-                                  setDraft({ ...draft, amountReceived: safeNumber(e.target.value, 0) })
+                                  setDraft({
+                                    ...draft,
+                                    amountReceived: safeNumber(e.target.value, 0),
+                                  })
                                 }
-                                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                                className={fieldClass}
                               />
                             </label>
-                            <div className="flex items-center justify-between text-sm font-semibold text-slate-900">
-                              <span>Balance due</span>
-                              <span>{formatMoney(totals.balanceDue, draft.currency)}</span>
+                            <div className="rounded-[24px] border border-[#ece4dc] bg-[#fcfaf7] px-4 py-3 text-sm">
+                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8d8377]">
+                                Balance due
+                              </div>
+                              <div className="mt-1 font-semibold text-[#222222]">
+                                {formatMoney(totals.balanceDue, draft.currency)}
+                              </div>
                             </div>
                           </div>
-                        )}
-                        <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                        ) : null}
+
+                        <div className="mt-5 grid gap-2">
                           <button
                             type="button"
                             onClick={handleDownloadPdf}
-                            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                            className={secondaryButtonClass}
                           >
-                            <FiDownload /> Download PDF
+                            <FiDownload className="h-4 w-4" />
+                            Download PDF
                           </button>
                           <button
                             type="button"
                             onClick={handleViewPdf}
-                            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                            className={secondaryButtonClass}
                           >
-                            <FiFileText /> View PDF
+                            <FiFileText className="h-4 w-4" />
+                            View PDF
                           </button>
                         </div>
                       </div>
-                    </div>
-                  </div>
 
-                  <div className="space-y-3">
-                    <div className="rounded-[24px] border border-slate-200 bg-white/95 p-4 sm:p-5">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-                          Approval Workflow
-                        </p>
-                        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-600">
-                          Follow Step 1 → Step 2 → Step 3
-                        </span>
-                      </div>
-
-                      <div className="mt-4 grid gap-3 lg:grid-cols-3">
-                        <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                              Step 1
+                      <div className={`${surfaceClass} p-5`}>
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className={labelClass}>Workflow</p>
+                            <p className="mt-1 text-sm text-[#6d655d]">
+                              Move through the three operational steps.
                             </p>
-                            <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500">
-                              Prepare
-                            </span>
                           </div>
-                          <p className="mt-2 text-sm font-semibold text-slate-900">Save quotation changes</p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            Confirm prices, quantities, delivery, and notes.
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => saveDraft()}
-                            disabled={saving}
-                            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-60"
-                          >
-                            <FiEdit2 /> {saving ? "Saving..." : "Save changes"}
-                          </button>
+                          <span className="rounded-full border border-[#ece4dc] bg-[#fcfaf7] px-3 py-1 text-[11px] font-semibold text-[#7d7368]">
+                            Step by step
+                          </span>
                         </div>
 
-                        <div className="rounded-2xl border border-emerald-200/70 bg-emerald-50/70 p-3.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700">
-                              Step 2
+                        <div className="mt-4 space-y-3">
+                          <div className="rounded-[24px] border border-[#ece4dc] bg-[#fcfaf7] p-4">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-semibold text-[#222222]">1. Save changes</p>
+                              <span className="text-[11px] text-[#8d8377]">Prepare</span>
+                            </div>
+                            <p className="mt-2 text-sm text-[#6d655d]">
+                              Confirm the pricing and document details first.
                             </p>
-                            <span
-                              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
-                                quoteIsMarkedApproved
-                                  ? "border-emerald-300 bg-emerald-100 text-emerald-700"
-                                  : "border-amber-300 bg-amber-50 text-amber-700"
-                              }`}
-                            >
-                              {quoteIsMarkedApproved ? "Done" : "Required"}
-                            </span>
-                          </div>
-                          <p className="mt-2 text-sm font-semibold text-slate-900">Approve quotation</p>
-                          <p className="mt-1 text-xs text-slate-600">
-                            Mark approved first, then optionally send the document by email.
-                          </p>
-                          <div className="mt-3 grid gap-2">
                             <button
                               type="button"
-                              onClick={() => saveDraft("approved")}
-                              disabled={saving || quoteIsMarkedApproved}
-                              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-emerald-200 bg-emerald-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+                              onClick={() => saveDraft()}
+                              disabled={saving}
+                              className={`mt-4 w-full ${secondaryButtonClass}`}
                             >
-                              <FiCheckCircle />{" "}
-                              {quoteIsMarkedApproved ? "Approved" : saving ? "Saving..." : "Mark approved"}
+                              <FiEdit2 className="h-4 w-4" />
+                              {saving ? "Saving..." : "Save quotation"}
                             </button>
+                          </div>
+
+                          <div className="rounded-[24px] border border-[#ffd8cf] bg-[#fff5f2] p-4">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-semibold text-[#222222]">2. Approve and send</p>
+                              <span className="text-[11px] text-[#b65b47]">
+                                {quoteIsMarkedApproved ? "Completed" : "Required"}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-sm text-[#6d655d]">
+                              Mark the quote approved, then send the finished document.
+                            </p>
+                            <div className="mt-4 grid gap-2">
+                              <button
+                                type="button"
+                                onClick={() => saveDraft("approved")}
+                                disabled={saving || quoteIsMarkedApproved}
+                                className={primaryButtonClass}
+                              >
+                                <FiCheckCircle className="h-4 w-4" />
+                                {quoteIsMarkedApproved
+                                  ? "Already approved"
+                                  : saving
+                                    ? "Saving..."
+                                    : "Mark approved"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleSend}
+                                disabled={
+                                  sending ||
+                                  !draft.contactEmail.trim() ||
+                                  Boolean(sendValidationError)
+                                }
+                                title={
+                                  !draft.contactEmail.trim()
+                                    ? "Add client email before sending."
+                                    : sendValidationError || "Ready to send."
+                                }
+                                className={darkButtonClass}
+                              >
+                                <FiSend className="h-4 w-4" />
+                                {sending
+                                  ? "Sending..."
+                                  : quoteHasBeenSent
+                                    ? "Sent to client"
+                                    : `Send ${DOC_TYPE_LABELS[draft.documentType].toLowerCase()}`}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="rounded-[24px] border border-[#ece4dc] bg-[#fcfaf7] p-4">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-semibold text-[#222222]">3. Move to orders</p>
+                              <span className="text-[11px] text-[#8d8377]">
+                                {quoteInOrders ? "Synced" : "Final step"}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-sm text-[#6d655d]">
+                              Create or sync the production order once the quote is approved.
+                            </p>
                             <button
                               type="button"
-                              onClick={handleSend}
-                              disabled={sending || !draft.contactEmail.trim() || Boolean(sendValidationError)}
-                              title={
-                                !draft.contactEmail.trim()
-                                  ? "Add client email before sending."
-                                  : sendValidationError || "Ready to send."
+                              onClick={moveToOrders}
+                              disabled={
+                                movingToOrders ||
+                                Boolean(sendValidationError) ||
+                                !quoteIsMarkedApproved
                               }
-                              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-300 bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+                              title={moveToOrdersTitle}
+                              className={`mt-4 w-full ${secondaryButtonClass}`}
                             >
-                              <FiSend />{" "}
-                              {sending
-                                ? "Sending..."
-                                : quoteHasBeenSent
-                                  ? "Sent to client"
-                                  : `Approve & send ${DOC_TYPE_LABELS[draft.documentType].toLowerCase()}`}
+                              <FiCheckCircle className="h-4 w-4" />
+                              {movingToOrders
+                                ? "Moving..."
+                                : quoteInOrders
+                                  ? "Sync with orders"
+                                  : "Move to orders"}
                             </button>
+                            {quoteInOrders ? (
+                              <p className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+                                Linked Order ID: {selected.orderTransactionId}
+                              </p>
+                            ) : null}
                           </div>
-                        </div>
-
-                        <div className="rounded-2xl border border-violet-200/70 bg-violet-50/60 p-3.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-violet-700">
-                              Step 3
-                            </p>
-                            <span
-                              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
-                                quoteInOrders
-                                  ? "border-violet-300 bg-violet-100 text-violet-700"
-                                  : "border-slate-200 bg-white text-slate-500"
-                              }`}
-                            >
-                              {quoteInOrders ? "Done" : "Final step"}
-                            </span>
-                          </div>
-                          <p className="mt-2 text-sm font-semibold text-slate-900">Move to Order Management</p>
-                          <p className="mt-1 text-xs text-slate-600">
-                            This creates or syncs the production order.
-                          </p>
-                          <button
-                            type="button"
-                            onClick={moveToOrders}
-                            disabled={movingToOrders || Boolean(sendValidationError) || !quoteIsMarkedApproved}
-                            title={moveToOrdersTitle}
-                            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-violet-200 bg-violet-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-violet-700 disabled:opacity-60"
-                          >
-                            <FiCheckCircle />{" "}
-                            {movingToOrders ? "Moving..." : quoteInOrders ? "Sync with Orders" : "Move to Orders"}
-                          </button>
-                          {quoteInOrders && (
-                            <p className="mt-2 rounded-xl border border-violet-200 bg-white px-3 py-2 text-[11px] font-medium text-violet-700">
-                              Linked Order ID: {selected.orderTransactionId}
-                            </p>
-                          )}
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex flex-wrap items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => updateSelectedStatus("review", "Marked as read.")}
-                        disabled={statusSaving || (selected.status || "new") !== "new"}
-                        className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-700 shadow-sm transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <FiClock /> {statusSaving ? "Updating..." : "Mark as read"}
-                      </button>
-                      <Link
-                        href="/admin/orders"
-                        className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-xs font-semibold text-sky-700 shadow-sm transition hover:bg-sky-100"
-                      >
-                        Open Order Management
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={handleDeleteQuote}
-                        disabled={deletingQuote}
-                        className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 shadow-sm transition hover:bg-rose-100 disabled:opacity-60"
-                      >
-                        <FiTrash2 /> {deletingQuote ? "Deleting..." : "Delete quotation"}
-                      </button>
-                      {sendValidationError && (
-                        <span className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                          <FiClock /> {sendValidationError}
-                        </span>
-                      )}
-                      {notice && (
-                        <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
-                          <FiClock /> {notice}
-                        </span>
-                      )}
-                    </div>
+                      <div className={`${surfaceClass} p-5`}>
+                        <p className={labelClass}>Admin actions</p>
+                        <div className="mt-4 grid gap-2">
+                          <button
+                            type="button"
+                            onClick={() => updateSelectedStatus("review", "Marked as read.")}
+                            disabled={statusSaving || (selected.status || "new") !== "new"}
+                            className={secondaryButtonClass}
+                          >
+                            <FiClock className="h-4 w-4" />
+                            {statusSaving ? "Updating..." : "Mark as read"}
+                          </button>
+                          <Link href="/admin/orders" className={secondaryButtonClass}>
+                            Open order management
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={handleDeleteQuote}
+                            disabled={deletingQuote}
+                            className="inline-flex items-center justify-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <FiTrash2 className="h-4 w-4" />
+                            {deletingQuote ? "Deleting..." : "Delete quotation"}
+                          </button>
+                        </div>
+
+                        {sendValidationError ? (
+                          <div className="mt-4 rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                            {sendValidationError}
+                          </div>
+                        ) : null}
+
+                        {notice ? (
+                          <div className="mt-4 rounded-[24px] border border-[#ece4dc] bg-[#fcfaf7] px-4 py-3 text-sm text-[#5f5851]">
+                            {notice}
+                          </div>
+                        ) : null}
+                      </div>
+                    </aside>
                   </div>
                 </>
               ) : (
-                <div className="rounded-[28px] border border-dashed border-slate-200 bg-white/80 px-6 py-12 text-center text-sm text-slate-500">
-                  Select a quote to begin approval.
+                <div className={`${surfaceClass} px-6 py-16 text-center`}>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8d8377]">
+                    Nothing selected
+                  </p>
+                  <h2 className="mt-3 text-2xl font-semibold tracking-[-0.02em] text-[#222222]">
+                    Select a quotation from the inbox
+                  </h2>
+                  <p className="mt-3 text-sm text-[#6d655d]">
+                    The full request, pricing workspace, PDF tools, and approval actions will appear here.
+                  </p>
                 </div>
               )}
             </section>
