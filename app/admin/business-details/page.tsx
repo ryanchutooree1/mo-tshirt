@@ -7,6 +7,7 @@ import {
   ClipboardList,
   Copy,
   CreditCard,
+  Mail,
   MapPin,
   MessageSquare,
   PencilLine,
@@ -66,6 +67,31 @@ const formatDate = (value?: number) => {
   });
 };
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function parseRecipientInput(value: string) {
+  const seen = new Set<string>();
+  const recipients: string[] = [];
+  const invalidEntries: string[] = [];
+
+  for (const entry of value.split(/[\n,;]+/g)) {
+    const trimmed = entry.trim();
+    if (!trimmed) continue;
+
+    const normalized = trimmed.toLowerCase();
+    if (!EMAIL_RE.test(normalized)) {
+      invalidEntries.push(trimmed);
+      continue;
+    }
+
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
+    recipients.push(normalized);
+  }
+
+  return { recipients, invalidEntries };
+}
+
 export default function BusinessDetailsPage() {
   const [details, setDetails] = useState<BusinessDetail[]>([]);
   const [search, setSearch] = useState("");
@@ -74,6 +100,11 @@ export default function BusinessDetailsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [copiedState, setCopiedState] = useState<{ id: string; label: string } | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
+  const [notificationDraft, setNotificationDraft] = useState("");
+  const [notificationLoading, setNotificationLoading] = useState(true);
+  const [notificationSaving, setNotificationSaving] = useState(false);
+  const [notificationError, setNotificationError] = useState<string | null>(null);
+  const [notificationSaved, setNotificationSaved] = useState(false);
 
   useEffect(() => {
     try {
@@ -100,6 +131,52 @@ export default function BusinessDetailsPage() {
     } catch {}
   }, [details]);
 
+  useEffect(() => {
+    let ignore = false;
+
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/settings/quotation-notifications", {
+          cache: "no-store",
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          throw new Error(
+            typeof data?.error === "string"
+              ? data.error
+              : "Failed to load quotation notification emails."
+          );
+        }
+
+        const recipients = Array.isArray(data?.recipients)
+          ? data.recipients.filter((entry: unknown): entry is string => typeof entry === "string")
+          : [];
+
+        if (!ignore) {
+          setNotificationDraft(recipients.join("\n"));
+          setNotificationError(null);
+        }
+      } catch (error) {
+        if (!ignore) {
+          setNotificationError(
+            error instanceof Error
+              ? error.message
+              : "Failed to load quotation notification emails."
+          );
+        }
+      } finally {
+        if (!ignore) {
+          setNotificationLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
   const stats = useMemo(() => {
     const total = details.length;
     const messageCount = details.filter((d) => d.category === "Message").length;
@@ -118,6 +195,11 @@ export default function BusinessDetailsPage() {
       })
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
   }, [details, search, categoryFilter]);
+
+  const parsedNotificationRecipients = useMemo(
+    () => parseRecipientInput(notificationDraft),
+    [notificationDraft]
+  );
 
   const resetDraft = () => {
     setDraft({ title: "", content: "", category: "Message" });
@@ -236,6 +318,57 @@ export default function BusinessDetailsPage() {
     window.setTimeout(() => setCopiedAll(false), 1400);
   };
 
+  const saveNotificationRecipients = async () => {
+    if (!parsedNotificationRecipients.recipients.length) {
+      setNotificationError("Add at least one valid email address.");
+      return;
+    }
+
+    if (parsedNotificationRecipients.invalidEntries.length) {
+      setNotificationError(
+        `Invalid email address${parsedNotificationRecipients.invalidEntries.length > 1 ? "es" : ""}: ${parsedNotificationRecipients.invalidEntries.join(", ")}`
+      );
+      return;
+    }
+
+    setNotificationSaving(true);
+    setNotificationError(null);
+    setNotificationSaved(false);
+
+    try {
+      const res = await fetch("/api/admin/settings/quotation-notifications", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recipients: parsedNotificationRecipients.recipients }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(
+          typeof data?.error === "string"
+            ? data.error
+            : "Failed to save quotation notification emails."
+        );
+      }
+
+      const recipients = Array.isArray(data?.recipients)
+        ? data.recipients.filter((entry: unknown): entry is string => typeof entry === "string")
+        : parsedNotificationRecipients.recipients;
+
+      setNotificationDraft(recipients.join("\n"));
+      setNotificationSaved(true);
+      window.setTimeout(() => setNotificationSaved(false), 1600);
+    } catch (error) {
+      setNotificationError(
+        error instanceof Error
+          ? error.message
+          : "Failed to save quotation notification emails."
+      );
+    } finally {
+      setNotificationSaving(false);
+    }
+  };
+
   const panelClass = "rounded-3xl border border-slate-200/70 bg-white/90 shadow-sm backdrop-blur";
 
   return (
@@ -294,6 +427,92 @@ export default function BusinessDetailsPage() {
             </div>
           </div>
         </header>
+
+        <section className={`${panelClass} p-6`} style={{ animation: "fadeUp 0.55s ease-out both" }}>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">
+                <Mail className="h-3.5 w-3.5" />
+                Website Quotations
+              </div>
+              <h2 className="mt-3 text-xl font-semibold text-slate-900">
+                Notification email recipients
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm text-slate-600">
+                Add one or more inboxes to receive every new website quotation email. Use one address per line or separate addresses with commas.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+              <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Recipients</div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">
+                {parsedNotificationRecipients.recipients.length}
+              </div>
+              <div className="text-xs text-slate-500">Quotation alerts</div>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+            <label className="grid gap-2 text-xs font-semibold text-slate-600">
+              Recipients
+              <textarea
+                rows={5}
+                value={notificationDraft}
+                onChange={(e) => {
+                  setNotificationDraft(e.target.value);
+                  setNotificationError(null);
+                  setNotificationSaved(false);
+                }}
+                disabled={notificationLoading || notificationSaving}
+                placeholder={"motshirtmauritius@gmail.com\nsales@example.com"}
+                className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
+              />
+            </label>
+
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={saveNotificationRecipients}
+                disabled={notificationLoading || notificationSaving}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-5 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-sm transition hover:bg-slate-800 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+              >
+                <Mail className="h-3.5 w-3.5" />
+                {notificationSaving ? "Saving..." : "Save recipients"}
+              </button>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-500">
+                These emails receive the `New Website Quotation` notification sent by the contact form.
+              </div>
+            </div>
+          </div>
+
+          {notificationError ? (
+            <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {notificationError}
+            </div>
+          ) : null}
+
+          {notificationSaved ? (
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+              <CheckCircle2 className="h-4 w-4" />
+              Recipients saved
+            </div>
+          ) : null}
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {parsedNotificationRecipients.recipients.map((recipient) => (
+              <span
+                key={recipient}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600"
+              >
+                <Mail className="h-3.5 w-3.5 text-slate-400" />
+                {recipient}
+              </span>
+            ))}
+            {!parsedNotificationRecipients.recipients.length && !notificationLoading ? (
+              <span className="text-sm text-slate-500">
+                No valid recipient saved yet.
+              </span>
+            ) : null}
+          </div>
+        </section>
 
         <section className="grid gap-6 lg:grid-cols-[0.55fr_1fr]">
           <div className={`${panelClass} p-6`}>

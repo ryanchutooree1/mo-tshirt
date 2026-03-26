@@ -12,6 +12,7 @@ import {
   isContentLengthWithinLimit,
   isRequestOriginAllowed,
 } from "@/lib/request-safety";
+import { getQuotationNotificationRecipients } from "@/lib/quotation-notification-settings";
 
 type ParsedPayload = {
   name: string;
@@ -582,9 +583,10 @@ export async function POST(req: Request) {
         });
 
         const subject = `New Website Quotation from ${safeName}`;
+        const notificationRecipients = await getQuotationNotificationRecipients();
         const mailOptions: Record<string, unknown> = {
           from,
-          to: user,
+          to: notificationRecipients.length ? notificationRecipients.join(", ") : user,
           subject,
           text,
           html,
