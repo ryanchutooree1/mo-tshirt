@@ -151,24 +151,99 @@ function isPreviewableArtworkFile(file: File) {
 
 function ArtworkFilePreview({ file }: { file: File | null }) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [dimensions, setDimensions] = useState({ width: 1200, height: 1200 });
 
   useEffect(() => {
     if (!file || !isPreviewableArtworkFile(file)) {
       setPreviewUrl(null);
+      setOpen(false);
+      setDimensions({ width: 1200, height: 1200 });
       return;
     }
 
     const nextPreviewUrl = URL.createObjectURL(file);
     setPreviewUrl(nextPreviewUrl);
 
+    const probeImage = new window.Image();
+    probeImage.onload = () => {
+      setDimensions({
+        width: probeImage.naturalWidth || 1200,
+        height: probeImage.naturalHeight || 1200,
+      });
+    };
+    probeImage.src = nextPreviewUrl;
+
     return () => {
       URL.revokeObjectURL(nextPreviewUrl);
     };
   }, [file]);
 
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
   if (!file || !previewUrl) return null;
 
-  return <Image src={previewUrl} alt={`${file.name} preview`} fill unoptimized className="object-contain" />;
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="group relative h-full w-full cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+        aria-label={`Zoom ${file.name}`}
+      >
+        <Image
+          src={previewUrl}
+          alt={`${file.name} preview`}
+          fill
+          unoptimized
+          className="object-contain transition group-hover:opacity-95"
+        />
+      </button>
+
+      {open ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="absolute inset-0 bg-black/60"
+            aria-label="Close zoom"
+          />
+          <div className="relative w-full max-w-5xl">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="absolute -top-10 right-0 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-neutral-700 shadow"
+            >
+              Close
+            </button>
+            <div className="overflow-hidden rounded-[28px] bg-white p-4 shadow-2xl">
+              <Image
+                src={previewUrl}
+                alt={`${file.name} preview`}
+                width={dimensions.width}
+                height={dimensions.height}
+                unoptimized
+                sizes="(max-width: 1024px) 95vw, 900px"
+                className="h-auto w-full object-contain"
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
 }
 
 export default function QuoteForm({ source = "Website", className }: QuoteFormProps) {
