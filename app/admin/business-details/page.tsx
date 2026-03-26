@@ -7,7 +7,6 @@ import {
   ClipboardList,
   Copy,
   CreditCard,
-  Mail,
   MapPin,
   MessageSquare,
   PencilLine,
@@ -67,36 +66,6 @@ const formatDate = (value?: number) => {
   });
 };
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function parseRecipientInput(value: string) {
-  const seen = new Set<string>();
-  const recipients: string[] = [];
-  const invalidEntries: string[] = [];
-
-  for (const entry of value.split(/[\n,;]+/g)) {
-    const trimmed = entry.trim();
-    if (!trimmed) continue;
-
-    const normalized = trimmed.toLowerCase();
-    if (!EMAIL_RE.test(normalized)) {
-      invalidEntries.push(trimmed);
-      continue;
-    }
-
-    if (seen.has(normalized)) continue;
-    seen.add(normalized);
-    recipients.push(normalized);
-  }
-
-  return { recipients, invalidEntries };
-}
-
-function haveSameRecipients(left: string[], right: string[]) {
-  if (left.length !== right.length) return false;
-  return left.every((recipient, index) => recipient === right[index]);
-}
-
 export default function BusinessDetailsPage() {
   const [details, setDetails] = useState<BusinessDetail[]>([]);
   const [search, setSearch] = useState("");
@@ -105,13 +74,6 @@ export default function BusinessDetailsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [copiedState, setCopiedState] = useState<{ id: string; label: string } | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
-  const [notificationRecipients, setNotificationRecipients] = useState<string[]>([]);
-  const [savedNotificationRecipients, setSavedNotificationRecipients] = useState<string[]>([]);
-  const [notificationInput, setNotificationInput] = useState("");
-  const [notificationLoading, setNotificationLoading] = useState(true);
-  const [notificationSaving, setNotificationSaving] = useState(false);
-  const [notificationError, setNotificationError] = useState<string | null>(null);
-  const [notificationSaved, setNotificationSaved] = useState(false);
 
   useEffect(() => {
     try {
@@ -138,54 +100,6 @@ export default function BusinessDetailsPage() {
     } catch {}
   }, [details]);
 
-  useEffect(() => {
-    let ignore = false;
-
-    (async () => {
-      try {
-        const res = await fetch("/api/admin/settings/quotation-notifications", {
-          cache: "no-store",
-        });
-        const data = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
-          throw new Error(
-            typeof data?.error === "string"
-              ? data.error
-              : "Failed to load quotation notification emails."
-          );
-        }
-
-        const recipients = Array.isArray(data?.recipients)
-          ? data.recipients.filter((entry: unknown): entry is string => typeof entry === "string")
-          : [];
-
-        if (!ignore) {
-          setNotificationRecipients(recipients);
-          setSavedNotificationRecipients(recipients);
-          setNotificationInput("");
-          setNotificationError(null);
-        }
-      } catch (error) {
-        if (!ignore) {
-          setNotificationError(
-            error instanceof Error
-              ? error.message
-              : "Failed to load quotation notification emails."
-          );
-        }
-      } finally {
-        if (!ignore) {
-          setNotificationLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
   const stats = useMemo(() => {
     const total = details.length;
     const messageCount = details.filter((d) => d.category === "Message").length;
@@ -204,11 +118,6 @@ export default function BusinessDetailsPage() {
       })
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
   }, [details, search, categoryFilter]);
-
-  const notificationHasChanges = useMemo(
-    () => !haveSameRecipients(notificationRecipients, savedNotificationRecipients),
-    [notificationRecipients, savedNotificationRecipients]
-  );
 
   const resetDraft = () => {
     setDraft({ title: "", content: "", category: "Message" });
@@ -327,86 +236,6 @@ export default function BusinessDetailsPage() {
     window.setTimeout(() => setCopiedAll(false), 1400);
   };
 
-  const addNotificationRecipients = () => {
-    const parsed = parseRecipientInput(notificationInput);
-
-    if (!parsed.recipients.length && !parsed.invalidEntries.length) {
-      setNotificationError("Enter at least one email address.");
-      return;
-    }
-
-    if (parsed.invalidEntries.length) {
-      setNotificationError(
-        `Invalid email address${parsed.invalidEntries.length > 1 ? "es" : ""}: ${parsed.invalidEntries.join(", ")}`
-      );
-      return;
-    }
-
-    const merged = [...notificationRecipients];
-    for (const recipient of parsed.recipients) {
-      if (!merged.includes(recipient)) {
-        merged.push(recipient);
-      }
-    }
-
-    setNotificationRecipients(merged);
-    setNotificationInput("");
-    setNotificationError(null);
-    setNotificationSaved(false);
-  };
-
-  const removeNotificationRecipient = (recipientToRemove: string) => {
-    setNotificationRecipients((prev) => prev.filter((recipient) => recipient !== recipientToRemove));
-    setNotificationError(null);
-    setNotificationSaved(false);
-  };
-
-  const saveNotificationRecipients = async () => {
-    if (!notificationRecipients.length) {
-      setNotificationError("Add at least one valid email address.");
-      return;
-    }
-
-    setNotificationSaving(true);
-    setNotificationError(null);
-    setNotificationSaved(false);
-
-    try {
-      const res = await fetch("/api/admin/settings/quotation-notifications", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipients: notificationRecipients }),
-      });
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(
-          typeof data?.error === "string"
-            ? data.error
-            : "Failed to save quotation notification emails."
-        );
-      }
-
-      const recipients = Array.isArray(data?.recipients)
-        ? data.recipients.filter((entry: unknown): entry is string => typeof entry === "string")
-        : notificationRecipients;
-
-      setNotificationRecipients(recipients);
-      setSavedNotificationRecipients(recipients);
-      setNotificationInput("");
-      setNotificationSaved(true);
-      window.setTimeout(() => setNotificationSaved(false), 1600);
-    } catch (error) {
-      setNotificationError(
-        error instanceof Error
-          ? error.message
-          : "Failed to save quotation notification emails."
-      );
-    } finally {
-      setNotificationSaving(false);
-    }
-  };
-
   const panelClass = "rounded-3xl border border-slate-200/70 bg-white/90 shadow-sm backdrop-blur";
 
   return (
@@ -465,174 +294,6 @@ export default function BusinessDetailsPage() {
             </div>
           </div>
         </header>
-
-        <section
-          className={`${panelClass} overflow-hidden`}
-          style={{ animation: "fadeUp 0.55s ease-out both" }}
-        >
-          <div className="grid lg:grid-cols-[minmax(0,1.2fr)_360px]">
-            <div className="p-6 sm:p-8 lg:border-r lg:border-slate-200/70">
-              <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">
-                <Mail className="h-3.5 w-3.5" />
-                Website Quotations
-              </div>
-              <h2 className="mt-4 text-xl font-semibold text-slate-900">
-                Notification routing
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm text-slate-600">
-                Manage the inboxes that receive each new website quotation. Add one address at a time or paste several separated by commas.
-              </p>
-
-              <div className="mt-6 rounded-[28px] border border-slate-200 bg-slate-50/80 p-4 sm:p-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                      Recipient Directory
-                    </div>
-                    <div className="mt-1 text-base font-semibold text-slate-900">
-                      Quotation alert inboxes
-                    </div>
-                  </div>
-                  <div className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
-                    {notificationRecipients.length} active
-                  </div>
-                </div>
-
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                  <input
-                    value={notificationInput}
-                    onChange={(e) => {
-                      setNotificationInput(e.target.value);
-                      setNotificationError(null);
-                      setNotificationSaved(false);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addNotificationRecipients();
-                      }
-                    }}
-                    disabled={notificationLoading || notificationSaving}
-                    placeholder="name@example.com, sales@example.com"
-                    className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
-                  />
-                  <button
-                    onClick={addNotificationRecipients}
-                    disabled={notificationLoading || notificationSaving}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-900 bg-slate-900 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-sm transition hover:bg-slate-800 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add Recipient
-                  </button>
-                </div>
-
-                <p className="mt-3 text-xs text-slate-500">
-                  Press Enter to add quickly. Duplicate email addresses are ignored automatically.
-                </p>
-              </div>
-
-              {notificationError ? (
-                <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                  {notificationError}
-                </div>
-              ) : null}
-
-              {notificationSaved ? (
-                <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                  <CheckCircle2 className="h-4 w-4" />
-                  Recipients saved
-                </div>
-              ) : null}
-
-              <div className="mt-5 grid gap-3">
-                {notificationRecipients.length ? (
-                  notificationRecipients.map((recipient) => (
-                    <div
-                      key={recipient}
-                      className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
-                    >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-600">
-                          <Mail className="h-4 w-4" />
-                        </span>
-                        <div className="min-w-0">
-                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                            Recipient
-                          </div>
-                          <div className="truncate text-sm font-semibold text-slate-800">
-                            {recipient}
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => removeNotificationRecipient(recipient)}
-                        disabled={notificationSaving}
-                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-300"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Remove
-                      </button>
-                    </div>
-                  ))
-                ) : !notificationLoading ? (
-                  <div className="rounded-[28px] border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-400 shadow-sm">
-                      <Mail className="h-5 w-5" />
-                    </div>
-                    <div className="mt-4 text-base font-semibold text-slate-700">
-                      No recipients configured
-                    </div>
-                    <p className="mt-2 text-sm text-slate-500">
-                      Add the inboxes that should receive website quotation notifications.
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            <aside className="bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(241,245,249,0.88))] p-6 sm:p-8">
-              <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-                  Delivery Summary
-                </div>
-                <div className="mt-4 text-4xl font-semibold tracking-tight text-slate-900">
-                  {notificationRecipients.length}
-                </div>
-                <div className="mt-2 text-sm text-slate-500">
-                  active {notificationRecipients.length === 1 ? "recipient" : "recipients"}
-                </div>
-
-                <div className="mt-5 space-y-3">
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                      Rule
-                    </div>
-                    <div className="mt-1 text-sm text-slate-600">
-                      Every new website quotation email is sent to this list.
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                      Input
-                    </div>
-                    <div className="mt-1 text-sm text-slate-600">
-                      Paste one address or several separated by commas, then save.
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  onClick={saveNotificationRecipients}
-                  disabled={notificationLoading || notificationSaving || !notificationHasChanges}
-                  className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-900 bg-slate-900 px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-sm transition hover:bg-slate-800 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
-                >
-                  <Mail className="h-4 w-4" />
-                  {notificationSaving ? "Saving..." : notificationHasChanges ? "Save Changes" : "Up to Date"}
-                </button>
-              </div>
-            </aside>
-          </div>
-        </section>
 
         <section className="grid gap-6 lg:grid-cols-[0.55fr_1fr]">
           <div className={`${panelClass} p-6`}>

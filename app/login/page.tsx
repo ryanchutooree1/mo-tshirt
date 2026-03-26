@@ -5,13 +5,24 @@ import Link from "next/link";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  canUseSharedStorageAuth,
+  type AdminPagePath,
+} from "@/lib/admin-access";
+import {
   isFirebaseAdminAuthConfigured,
   signInAdminWithFirebase,
+  signOutAdminFromFirebase,
 } from "@/lib/firebase-admin-client-auth";
+
+type AdminSessionPayload = {
+  allowedPages: AdminPagePath[];
+  isOwner: boolean;
+};
 
 function LoginInner() {
   const router = useRouter();
   const params = useSearchParams();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -26,7 +37,7 @@ function LoginInner() {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ email, password }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -35,17 +46,41 @@ function LoginInner() {
         return;
       }
 
-      if (isFirebaseAdminAuthConfigured()) {
+      const sessionRes = await fetch("/api/admin/session", { cache: "no-store" });
+      const sessionData = await sessionRes.json().catch(() => ({}));
+      const session = sessionData?.session as AdminSessionPayload | undefined;
+
+      if (
+        !sessionRes.ok ||
+        !session ||
+        !Array.isArray(session.allowedPages) ||
+        typeof session.isOwner !== "boolean"
+      ) {
+        await fetch("/api/logout", { method: "POST" }).catch(() => null);
+        setError("Admin login worked, but the session could not be loaded. Please try again.");
+        setSubmitting(false);
+        return;
+      }
+
+      const requiresSharedStorageAuth =
+        isFirebaseAdminAuthConfigured() &&
+        canUseSharedStorageAuth(session.allowedPages, {
+          isOwner: session.isOwner,
+        });
+
+      if (requiresSharedStorageAuth) {
         try {
           await signInAdminWithFirebase(password);
         } catch {
           await fetch("/api/logout", { method: "POST" }).catch(() => null);
           setError(
-            "Firebase admin sign-in failed. Create the Firebase Auth admin user and set NEXT_PUBLIC_FIREBASE_ADMIN_EMAIL before locking Storage rules."
+            "Admin login worked, but Firebase storage sign-in failed. Set NEXT_PUBLIC_FIREBASE_ADMIN_EMAIL and FIREBASE_ADMIN_AUTH_PASSWORD for shared admin storage access."
           );
           setSubmitting(false);
           return;
         }
+      } else {
+        await signOutAdminFromFirebase().catch(() => null);
       }
 
       router.push(next);
@@ -76,10 +111,27 @@ function LoginInner() {
             <div className="flex flex-col items-center text-center">
               <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={120} height={48} className="h-12 w-auto" />
               <h1 className="mt-6 text-2xl font-semibold tracking-tight">Admin Access</h1>
-              <p className="mt-2 text-sm text-neutral-600">Sign in with the admin password to manage MO T-SHIRT.</p>
+              <p className="mt-2 text-sm text-neutral-600">Use the owner password or a team account email and password.</p>
             </div>
 
             <form onSubmit={onSubmit} className="mt-8 space-y-6" aria-describedby={error ? "login-error" : undefined}>
+              <div>
+                <label htmlFor="email" className="text-sm font-medium text-neutral-800">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-[#EAEAEA] bg-white px-4 py-3 text-sm text-black shadow-sm focus:border-black focus:outline-none focus:ring-2 focus:ring-black/5"
+                  placeholder="team@mo-tshirt.mu"
+                  autoComplete="username"
+                />
+                <p className="mt-2 text-xs text-neutral-500">
+                  Optional for the owner login. Required for employee accounts.
+                </p>
+              </div>
               <div>
                 <label htmlFor="password" className="text-sm font-medium text-neutral-800">
                   Password

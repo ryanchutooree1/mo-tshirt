@@ -1,0 +1,325 @@
+export type AdminPagePath =
+  | "/admin"
+  | "/admin/orders"
+  | "/admin/pos"
+  | "/admin/clients"
+  | "/admin/contracts"
+  | "/admin/shops"
+  | "/admin/inventory"
+  | "/admin/quotation-approval"
+  | "/admin/design-studio"
+  | "/admin/ai-assistant"
+  | "/admin/analytics"
+  | "/admin/tracking"
+  | "/admin/accounting"
+  | "/admin/finance-freedom"
+  | "/admin/business-value"
+  | "/admin/automation"
+  | "/admin/dms"
+  | "/admin/iot"
+  | "/admin/business-notes"
+  | "/admin/business-details"
+  | "/admin/his-dream-life"
+  | "/admin/her-dream-life"
+  | "/admin/our-dream"
+  | "/admin/settings";
+
+export type AdminPermissionGroup =
+  | "Overview"
+  | "Sales"
+  | "Operations"
+  | "Insights"
+  | "Planning"
+  | "Administration";
+
+export type AdminPageOption = {
+  path: AdminPagePath;
+  label: string;
+  description: string;
+  group: AdminPermissionGroup;
+};
+
+export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
+  {
+    path: "/admin",
+    label: "Dashboard",
+    description: "Overview, KPIs, and quick actions.",
+    group: "Overview",
+  },
+  {
+    path: "/admin/orders",
+    label: "Orders",
+    description: "Transactions, order status, and payment follow-up.",
+    group: "Sales",
+  },
+  {
+    path: "/admin/pos",
+    label: "POS",
+    description: "Checkout, invoicing, and held orders.",
+    group: "Sales",
+  },
+  {
+    path: "/admin/clients",
+    label: "Clients",
+    description: "Customer records and relationship notes.",
+    group: "Sales",
+  },
+  {
+    path: "/admin/contracts",
+    label: "Contracts",
+    description: "Agreement tracking and contract records.",
+    group: "Sales",
+  },
+  {
+    path: "/admin/shops",
+    label: "Shops",
+    description: "Catalog items and shop content management.",
+    group: "Sales",
+  },
+  {
+    path: "/admin/quotation-approval",
+    label: "Quotation / Invoice",
+    description: "Quotes, invoices, and artwork follow-up.",
+    group: "Sales",
+  },
+  {
+    path: "/admin/design-studio",
+    label: "Design Studio",
+    description: "Garment design tools and quotation intake.",
+    group: "Sales",
+  },
+  {
+    path: "/admin/ai-assistant",
+    label: "Sales AI",
+    description: "AI assistant review, training, and leads.",
+    group: "Sales",
+  },
+  {
+    path: "/admin/inventory",
+    label: "Inventory",
+    description: "Products, stock, and pricing updates.",
+    group: "Operations",
+  },
+  {
+    path: "/admin/dms",
+    label: "DMS",
+    description: "Document storage and file management.",
+    group: "Operations",
+  },
+  {
+    path: "/admin/iot",
+    label: "IoT Control Center",
+    description: "Connected devices and automations.",
+    group: "Operations",
+  },
+  {
+    path: "/admin/analytics",
+    label: "Analytics",
+    description: "Traffic and performance analytics.",
+    group: "Insights",
+  },
+  {
+    path: "/admin/tracking",
+    label: "Tracking",
+    description: "Operational tracking and monitoring views.",
+    group: "Insights",
+  },
+  {
+    path: "/admin/accounting",
+    label: "Accounting",
+    description: "Financial records and account views.",
+    group: "Insights",
+  },
+  {
+    path: "/admin/finance-freedom",
+    label: "Finance Freedom",
+    description: "Financial planning and freedom dashboard.",
+    group: "Insights",
+  },
+  {
+    path: "/admin/business-value",
+    label: "Business Value",
+    description: "Business valuation and strategic metrics.",
+    group: "Insights",
+  },
+  {
+    path: "/admin/automation",
+    label: "Automation",
+    description: "Automation logs and scheduled actions.",
+    group: "Insights",
+  },
+  {
+    path: "/admin/business-notes",
+    label: "Business Notes",
+    description: "Internal notes, reminders, and references.",
+    group: "Planning",
+  },
+  {
+    path: "/admin/business-details",
+    label: "Business Details",
+    description: "Company information and copy-ready details.",
+    group: "Planning",
+  },
+  {
+    path: "/admin/his-dream-life",
+    label: "His Dream Life",
+    description: "Personal planning workspace.",
+    group: "Planning",
+  },
+  {
+    path: "/admin/her-dream-life",
+    label: "Her Dream Life",
+    description: "Personal planning workspace.",
+    group: "Planning",
+  },
+  {
+    path: "/admin/our-dream",
+    label: "Our Dream Life",
+    description: "Shared planning workspace.",
+    group: "Planning",
+  },
+  {
+    path: "/admin/settings",
+    label: "Settings",
+    description: "Notification routing and admin team access.",
+    group: "Administration",
+  },
+];
+
+export const ADMIN_PAGE_GROUPS: AdminPermissionGroup[] = [
+  "Overview",
+  "Sales",
+  "Operations",
+  "Insights",
+  "Planning",
+  "Administration",
+];
+
+export const ALL_ADMIN_PAGE_PATHS = ADMIN_PAGE_OPTIONS.map(
+  (option) => option.path
+) as AdminPagePath[];
+
+const ADMIN_PAGE_PATH_SET = new Set<AdminPagePath>(ALL_ADMIN_PAGE_PATHS);
+const ADMIN_PATHS_BY_LENGTH = [...ALL_ADMIN_PAGE_PATHS].sort(
+  (left, right) => right.length - left.length
+);
+
+export const DEFAULT_TOP_NAV_PATHS: AdminPagePath[] = [
+  "/admin/pos",
+  "/admin/clients",
+  "/admin/ai-assistant",
+  "/admin/contracts",
+  "/admin/shops",
+  "/admin/quotation-approval",
+  "/admin/design-studio",
+  "/admin/analytics",
+  "/admin/tracking",
+  "/admin/accounting",
+  "/admin/finance-freedom",
+  "/admin/business-value",
+  "/admin/dms",
+  "/admin/iot",
+  "/admin/business-notes",
+  "/admin/business-details",
+  "/admin/his-dream-life",
+  "/admin/her-dream-life",
+  "/admin/our-dream",
+];
+
+export const DEFAULT_MORE_NAV_PATHS: AdminPagePath[] = [
+  "/admin",
+  "/admin/orders",
+  "/admin/inventory",
+  "/admin/automation",
+  "/admin/settings",
+];
+
+export const SHARED_FIREBASE_AUTH_PAGE_PATHS: AdminPagePath[] = [
+  "/admin/dms",
+  "/admin/quotation-approval",
+];
+
+export function normalizeAdminAllowedPages(value: unknown) {
+  if (!Array.isArray(value)) return [] as AdminPagePath[];
+
+  const seen = new Set<AdminPagePath>();
+  const normalized: AdminPagePath[] = [];
+
+  for (const entry of value) {
+    if (typeof entry !== "string") continue;
+    if (!ADMIN_PAGE_PATH_SET.has(entry as AdminPagePath)) continue;
+
+    const pagePath = entry as AdminPagePath;
+    if (seen.has(pagePath)) continue;
+    seen.add(pagePath);
+    normalized.push(pagePath);
+  }
+
+  return normalized;
+}
+
+export function resolveAdminPagePath(pathname: string) {
+  if (pathname === "/iot") return "/admin/iot" as AdminPagePath;
+
+  for (const pagePath of ADMIN_PATHS_BY_LENGTH) {
+    if (pathname === pagePath || pathname.startsWith(`${pagePath}/`)) {
+      return pagePath;
+    }
+  }
+
+  return null;
+}
+
+export function resolveAdminApiPermission(pathname: string) {
+  if (pathname.startsWith("/api/admin/settings")) return "/admin/settings" as AdminPagePath;
+  if (pathname.startsWith("/api/admin/ai-assistant")) return "/admin/ai-assistant" as AdminPagePath;
+  if (pathname.startsWith("/api/admin/quotes")) return "/admin/quotation-approval" as AdminPagePath;
+  if (pathname.startsWith("/api/admin/shops")) return "/admin/shops" as AdminPagePath;
+  if (pathname.startsWith("/api/tuya/")) return "/admin/iot" as AdminPagePath;
+  return null;
+}
+
+export function hasAdminPageAccess(
+  allowedPages: AdminPagePath[],
+  pathname: string,
+  options?: { isOwner?: boolean }
+) {
+  if (options?.isOwner) return true;
+
+  const requiredPage = resolveAdminPagePath(pathname);
+  if (!requiredPage) return false;
+  return allowedPages.includes(requiredPage);
+}
+
+export function hasAdminApiAccess(
+  allowedPages: AdminPagePath[],
+  pathname: string,
+  options?: { isOwner?: boolean }
+) {
+  if (options?.isOwner) return true;
+
+  const requiredPage = resolveAdminApiPermission(pathname);
+  if (!requiredPage) return true;
+  return allowedPages.includes(requiredPage);
+}
+
+export function canUseSharedStorageAuth(
+  allowedPages: AdminPagePath[],
+  options?: { isOwner?: boolean }
+) {
+  if (options?.isOwner) return true;
+  return SHARED_FIREBASE_AUTH_PAGE_PATHS.some((pagePath) =>
+    allowedPages.includes(pagePath)
+  );
+}
+
+export function getAdminLandingPath(
+  allowedPages: AdminPagePath[],
+  options?: { isOwner?: boolean }
+) {
+  if (options?.isOwner) return "/admin";
+
+  const ordered = [...DEFAULT_MORE_NAV_PATHS, ...DEFAULT_TOP_NAV_PATHS];
+  const firstAllowed = ordered.find((path) => allowedPages.includes(path));
+  return firstAllowed || "/login";
+}

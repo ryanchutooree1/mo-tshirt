@@ -1,12 +1,33 @@
 import type { NextResponse } from "next/server";
+import type { AdminPagePath } from "@/lib/admin-access";
 
 export const ADMIN_AUTH_COOKIE = "admin-auth";
 
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
+const SESSION_VERSION = 2;
 const encoder = new TextEncoder();
 
 type CookieReader = {
   get(name: string): { value: string } | undefined;
+};
+
+export type AdminSession = {
+  version: number;
+  expiresAt: number;
+  nonce: string;
+  userId: string;
+  displayName: string;
+  email: string;
+  allowedPages: AdminPagePath[];
+  isOwner: boolean;
+};
+
+type AdminSessionSeed = {
+  userId: string;
+  displayName: string;
+  email: string;
+  allowedPages: AdminPagePath[];
+  isOwner: boolean;
 };
 
 function getAdminPassword() {
@@ -16,6 +37,10 @@ function getAdminPassword() {
 function getAdminSessionSecret() {
   const explicitSecret = (process.env.ADMIN_SESSION_SECRET || "").trim();
   return explicitSecret || getAdminPassword();
+}
+
+export function getAdminPasswordFromEnv() {
+  return getAdminPassword();
 }
 
 function getNowUnix() {
@@ -31,6 +56,24 @@ function toBase64Url(value: ArrayBuffer | Uint8Array) {
   }
 
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function fromBase64Url(value: string) {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padLength = (4 - (normalized.length % 4 || 4)) % 4;
+  const padded = normalized + "=".repeat(padLength);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return bytes;
+}
+
+function decodeUtf8(bytes: Uint8Array) {
+  return new TextDecoder().decode(bytes);
 }
 
 function constantTimeEqual(left: string, right: string) {
@@ -62,38 +105,76 @@ function createNonce() {
   return toBase64Url(bytes);
 }
 
-export function getAdminPasswordFromEnv() {
-  return getAdminPassword();
-}
-
-export async function createAdminSessionToken() {
+export async function createAdminSessionToken(seed: AdminSessionSeed) {
   const secret = getAdminSessionSecret();
   if (!secret) return null;
 
-  const expiresAt = getNowUnix() + SESSION_TTL_SECONDS;
-  const payload = `${expiresAt}.${createNonce()}`;
-  const signature = await signValue(payload, secret);
-  return `${payload}.${signature}`;
+  const payload = {
+    version: SESSION_VERSION,
+    expiresAt: getNowUnix() + SESSION_TTL_SECONDS,
+    nonce: createNonce(),
+    userId: seed.userId,
+    displayName: seed.displayName,
+    email: seed.email,
+    allowedPages: seed.allowedPages,
+    isOwner: seed.isOwner,
+  } satisfies AdminSession;
+
+  const serializedPayload = JSON.stringify(payload);
+  const encodedPayload = toBase64Url(encoder.encode(serializedPayload));
+  const signature = await signValue(encodedPayload, secret);
+  return `${encodedPayload}.${signature}`;
 }
 
-export async function verifyAdminSessionToken(token: string | null | undefined) {
-  if (!token) return false;
+export async function readAdminSessionToken(token: string | null | undefined) {
+  if (!token) return null;
 
   const secret = getAdminSessionSecret();
-  if (!secret) return false;
+  if (!secret) return null;
 
-  const [expiresAtText, nonce, signature, ...rest] = token.split(".");
-  if (!expiresAtText || !nonce || !signature || rest.length > 0) return false;
+  const [encodedPayload, signature, ...rest] = token.split(".");
+  if (!encodedPayload || !signature || rest.length > 0) return null;
 
-  const expiresAt = Number(expiresAtText);
-  if (!Number.isInteger(expiresAt) || expiresAt <= getNowUnix()) return false;
+  const expectedSignature = await signValue(encodedPayload, secret);
+  if (!constantTimeEqual(signature, expectedSignature)) return null;
 
-  const expectedSignature = await signValue(`${expiresAtText}.${nonce}`, secret);
-  return constantTimeEqual(signature, expectedSignature);
+  try {
+    const payload = JSON.parse(
+      decodeUtf8(fromBase64Url(encodedPayload))
+    ) as Partial<AdminSession>;
+
+    if (payload.version !== SESSION_VERSION) return null;
+    if (!Number.isInteger(payload.expiresAt) || Number(payload.expiresAt) <= getNowUnix()) {
+      return null;
+    }
+    if (typeof payload.nonce !== "string" || !payload.nonce) return null;
+    if (typeof payload.userId !== "string" || !payload.userId) return null;
+    if (typeof payload.displayName !== "string") return null;
+    if (typeof payload.email !== "string") return null;
+    if (!Array.isArray(payload.allowedPages)) return null;
+    if (typeof payload.isOwner !== "boolean") return null;
+
+    return {
+      version: SESSION_VERSION,
+      expiresAt: Number(payload.expiresAt),
+      nonce: payload.nonce,
+      userId: payload.userId,
+      displayName: payload.displayName,
+      email: payload.email,
+      allowedPages: payload.allowedPages as AdminPagePath[],
+      isOwner: payload.isOwner,
+    } satisfies AdminSession;
+  } catch {
+    return null;
+  }
+}
+
+export async function readAdminSession(cookieStore: CookieReader) {
+  return readAdminSessionToken(cookieStore.get(ADMIN_AUTH_COOKIE)?.value);
 }
 
 export async function hasAdminSession(cookieStore: CookieReader) {
-  return verifyAdminSessionToken(cookieStore.get(ADMIN_AUTH_COOKIE)?.value);
+  return Boolean(await readAdminSession(cookieStore));
 }
 
 export function applyAdminSessionCookie(response: NextResponse, token: string) {

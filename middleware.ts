@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { hasAdminSession } from "@/lib/admin-auth";
+import { readAdminSession } from "@/lib/admin-auth";
+import {
+  getAdminLandingPath,
+  hasAdminApiAccess,
+  hasAdminPageAccess,
+} from "@/lib/admin-access";
 import {
   API_RATE_LIMIT,
   CONTACT_RATE_LIMIT,
@@ -43,6 +48,32 @@ export async function middleware(req: NextRequest) {
     for (const [header, value] of Object.entries(getRateLimitHeaders(rateLimit))) {
       response.headers.set(header, value);
     }
+
+    const requiresAnyAdminSession =
+      pathname === "/api/admin/session" || pathname === "/api/admin/firebase-auth";
+    const requiresScopedAdminAccess =
+      pathname.startsWith("/api/admin/") || pathname.startsWith("/api/tuya/");
+
+    if (requiresAnyAdminSession || requiresScopedAdminAccess) {
+      const session = await readAdminSession(req.cookies);
+      if (!session) {
+        return applySecurityHeaders(
+          NextResponse.json({ error: "Unauthorized." }, { status: 401 })
+        );
+      }
+
+      if (
+        requiresScopedAdminAccess &&
+        !hasAdminApiAccess(session.allowedPages, pathname, {
+          isOwner: session.isOwner,
+        })
+      ) {
+        return applySecurityHeaders(
+          NextResponse.json({ error: "Forbidden." }, { status: 403 })
+        );
+      }
+    }
+
     return applySecurityHeaders(response);
   }
 
@@ -59,11 +90,30 @@ export async function middleware(req: NextRequest) {
   const isProtectedRoute = pathname.startsWith("/admin") || pathname === "/iot";
   if (!isProtectedRoute) return applySecurityHeaders(NextResponse.next());
 
-  if (await hasAdminSession(req.cookies)) return applySecurityHeaders(NextResponse.next());
+  const session = await readAdminSession(req.cookies);
+  if (!session) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = `?next=${encodeURIComponent(pathname + search)}`;
+    const response = NextResponse.redirect(url);
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return applySecurityHeaders(response);
+  }
 
+  if (
+    hasAdminPageAccess(session.allowedPages, pathname, {
+      isOwner: session.isOwner,
+    })
+  ) {
+    return applySecurityHeaders(NextResponse.next());
+  }
+
+  const fallbackPath = getAdminLandingPath(session.allowedPages, {
+    isOwner: session.isOwner,
+  });
   const url = req.nextUrl.clone();
-  url.pathname = "/login";
-  url.search = `?next=${encodeURIComponent(pathname + search)}`;
+  url.pathname = fallbackPath;
+  url.search = fallbackPath === "/login" ? "" : "?denied=1";
   const response = NextResponse.redirect(url);
   response.headers.set("X-Robots-Tag", "noindex, nofollow");
   return applySecurityHeaders(response);

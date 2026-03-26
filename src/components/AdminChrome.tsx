@@ -2,275 +2,235 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAdminTheme } from "@/admin/AdminThemeContext";
+import {
+  ADMIN_PAGE_OPTIONS,
+  ALL_ADMIN_PAGE_PATHS,
+  DEFAULT_MORE_NAV_PATHS,
+  DEFAULT_TOP_NAV_PATHS,
+  type AdminPagePath,
+} from "@/lib/admin-access";
 import { signOutAdminFromFirebase } from "@/lib/firebase-admin-client-auth";
 
-type NavItem = { href: string; label: string };
+type AdminSessionSummary = {
+  displayName: string;
+  email: string;
+  allowedPages: AdminPagePath[];
+  isOwner: boolean;
+};
 
-const SHOP_ITEM: NavItem = { href: "/admin/shops", label: "Shops" };
-const NOTES_ITEM: NavItem = { href: "/admin/business-notes", label: "Business Notes" };
-const DETAILS_ITEM: NavItem = { href: "/admin/business-details", label: "Business Details" };
-const QUOTE_ITEM: NavItem = { href: "/admin/quotation-approval", label: "Quotation / Invoice" };
-const DESIGN_STUDIO_ITEM: NavItem = { href: "/admin/design-studio", label: "Design Studio" };
-const AI_ASSISTANT_ITEM: NavItem = { href: "/admin/ai-assistant", label: "Sales AI" };
-const FINANCE_ITEM: NavItem = { href: "/admin/finance-freedom", label: "Finance Freedom" };
-const BUSINESS_VALUE_ITEM: NavItem = { href: "/admin/business-value", label: "Business Value" };
-const IOT_ITEM: NavItem = { href: "/admin/iot", label: "IoT Control Center" };
+const NAV_STORAGE = "admin-nav-v2";
 
-// Default nav groupings
-const DEFAULT_TOP: NavItem[] = [
-  { href: "/admin/pos", label: "POS" },
-  { href: "/admin/clients", label: "Clients" },
-  AI_ASSISTANT_ITEM,
-  { href: "/admin/contracts", label: "Contracts" },
-  SHOP_ITEM,
-  QUOTE_ITEM,
-  DESIGN_STUDIO_ITEM,
-  { href: "/admin/analytics", label: "Analytics" },
-  { href: "/admin/tracking", label: "Tracking" },
-  { href: "/admin/accounting", label: "Accounting" },
-  FINANCE_ITEM,
-  BUSINESS_VALUE_ITEM,
-  { href: "/admin/dms", label: "DMS" },
-  IOT_ITEM,
-  NOTES_ITEM,
-  DETAILS_ITEM,
-  { href: "/admin/his-dream-life", label: "His Dream Life" },
-  { href: "/admin/her-dream-life", label: "Her Dream Life" },
-  { href: "/admin/our-dream", label: "Our Dream Life" },
-];
+const PAGE_LABELS = new Map(
+  ADMIN_PAGE_OPTIONS.map((option) => [option.path, option.label])
+);
+const PAGE_DESCRIPTIONS = new Map(
+  ADMIN_PAGE_OPTIONS.map((option) => [option.path, option.description])
+);
+const ALL_PAGE_PATHS_SET = new Set<AdminPagePath>(ALL_ADMIN_PAGE_PATHS);
 
-const DEFAULT_MORE: NavItem[] = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/orders", label: "Orders" },
-  { href: "/admin/inventory", label: "Inventory" },
-];
+function toPagePath(value: unknown) {
+  const rawValue =
+    typeof value === "string"
+      ? value
+      : value && typeof value === "object" && "href" in value
+        ? value.href
+        : null;
 
-const NAV_STORAGE = "admin-nav-v1";
-
-function normalizeNav(top: NavItem[], more: NavItem[]) {
-  const topHasNotes = top.some((item) => item.href === NOTES_ITEM.href);
-  const moreHasNotes = more.some((item) => item.href === NOTES_ITEM.href);
-  const topHasDetails = top.some((item) => item.href === DETAILS_ITEM.href);
-  const moreHasDetails = more.some((item) => item.href === DETAILS_ITEM.href);
-  const topHasQuote = top.some((item) => item.href === QUOTE_ITEM.href);
-  const moreHasQuote = more.some((item) => item.href === QUOTE_ITEM.href);
-  const topHasDesignStudio = top.some((item) => item.href === DESIGN_STUDIO_ITEM.href);
-  const moreHasDesignStudio = more.some((item) => item.href === DESIGN_STUDIO_ITEM.href);
-  const topHasAiAssistant = top.some((item) => item.href === AI_ASSISTANT_ITEM.href);
-  const moreHasAiAssistant = more.some((item) => item.href === AI_ASSISTANT_ITEM.href);
-  const topHasFinance = top.some((item) => item.href === FINANCE_ITEM.href);
-  const moreHasFinance = more.some((item) => item.href === FINANCE_ITEM.href);
-  const topHasBusinessValue = top.some((item) => item.href === BUSINESS_VALUE_ITEM.href);
-  const moreHasBusinessValue = more.some((item) => item.href === BUSINESS_VALUE_ITEM.href);
-  const topHasIot = top.some((item) => item.href === IOT_ITEM.href);
-  const moreHasIot = more.some((item) => item.href === IOT_ITEM.href);
-  const cleanedTop = top.filter(
-    (item) =>
-      item.href !== SHOP_ITEM.href &&
-      item.href !== QUOTE_ITEM.href &&
-      item.href !== DESIGN_STUDIO_ITEM.href &&
-      item.href !== AI_ASSISTANT_ITEM.href &&
-      item.href !== FINANCE_ITEM.href &&
-      item.href !== IOT_ITEM.href &&
-      item.href !== BUSINESS_VALUE_ITEM.href &&
-      (item.href !== NOTES_ITEM.href || topHasNotes) &&
-      (item.href !== DETAILS_ITEM.href || topHasDetails)
-  );
-  const cleanedMore = more.filter(
-    (item) =>
-      item.href !== SHOP_ITEM.href &&
-      item.href !== QUOTE_ITEM.href &&
-      item.href !== DESIGN_STUDIO_ITEM.href &&
-      item.href !== AI_ASSISTANT_ITEM.href &&
-      item.href !== FINANCE_ITEM.href &&
-      item.href !== IOT_ITEM.href &&
-      item.href !== BUSINESS_VALUE_ITEM.href &&
-      (item.href !== NOTES_ITEM.href || !topHasNotes) &&
-      (item.href !== DETAILS_ITEM.href || !topHasDetails)
-  );
-  const nextTop = cleanedTop.slice();
-  const contractsIndex = nextTop.findIndex((item) => item.href === "/admin/contracts");
-  if (contractsIndex >= 0) {
-    nextTop.splice(contractsIndex + 1, 0, SHOP_ITEM);
-  } else {
-    nextTop.push(SHOP_ITEM);
-  }
-  if (topHasQuote || (!topHasQuote && !moreHasQuote)) {
-    const shopIndex = nextTop.findIndex((item) => item.href === SHOP_ITEM.href);
-    if (shopIndex >= 0) {
-      nextTop.splice(shopIndex + 1, 0, QUOTE_ITEM);
-    } else {
-      nextTop.push(QUOTE_ITEM);
-    }
-  }
-  if (topHasDesignStudio || (!topHasDesignStudio && !moreHasDesignStudio)) {
-    const quoteIndex = nextTop.findIndex((item) => item.href === QUOTE_ITEM.href);
-    if (quoteIndex >= 0) {
-      nextTop.splice(quoteIndex + 1, 0, DESIGN_STUDIO_ITEM);
-    } else {
-      nextTop.push(DESIGN_STUDIO_ITEM);
-    }
-  }
-  if (topHasAiAssistant || (!topHasAiAssistant && !moreHasAiAssistant)) {
-    const clientsIndex = nextTop.findIndex((item) => item.href === "/admin/clients");
-    if (clientsIndex >= 0) {
-      nextTop.splice(clientsIndex + 1, 0, AI_ASSISTANT_ITEM);
-    } else {
-      nextTop.push(AI_ASSISTANT_ITEM);
-    }
-  }
-  if (topHasFinance || (!topHasFinance && !moreHasFinance)) {
-    const accountingIndex = nextTop.findIndex((item) => item.href === "/admin/accounting");
-    if (accountingIndex >= 0) {
-      nextTop.splice(accountingIndex + 1, 0, FINANCE_ITEM);
-    } else {
-      nextTop.push(FINANCE_ITEM);
-    }
-  }
-  if (topHasBusinessValue || (!topHasBusinessValue && !moreHasBusinessValue)) {
-    const financeIndex = nextTop.findIndex((item) => item.href === FINANCE_ITEM.href);
-    if (financeIndex >= 0) {
-      nextTop.splice(financeIndex + 1, 0, BUSINESS_VALUE_ITEM);
-    } else {
-      nextTop.push(BUSINESS_VALUE_ITEM);
-    }
-  }
-  if (topHasIot || (!topHasIot && !moreHasIot)) {
-    const dmsIndex = nextTop.findIndex((item) => item.href === "/admin/dms");
-    if (dmsIndex >= 0) {
-      nextTop.splice(dmsIndex + 1, 0, IOT_ITEM);
-    } else {
-      nextTop.push(IOT_ITEM);
-    }
-  }
-  if (!topHasNotes && !moreHasNotes) {
-    const iotIndex = nextTop.findIndex((item) => item.href === IOT_ITEM.href);
-    if (iotIndex >= 0) {
-      nextTop.splice(iotIndex + 1, 0, NOTES_ITEM);
-    } else {
-      const dmsIndex = nextTop.findIndex((item) => item.href === "/admin/dms");
-      if (dmsIndex >= 0) {
-        nextTop.splice(dmsIndex + 1, 0, NOTES_ITEM);
-      } else {
-        nextTop.push(NOTES_ITEM);
-      }
-    }
-  }
-  if (!topHasDetails && !moreHasDetails) {
-    const notesIndex = nextTop.findIndex((item) => item.href === NOTES_ITEM.href);
-    if (notesIndex >= 0) {
-      nextTop.splice(notesIndex + 1, 0, DETAILS_ITEM);
-    } else {
-      const dmsIndex = nextTop.findIndex((item) => item.href === "/admin/dms");
-      if (dmsIndex >= 0) {
-        nextTop.splice(dmsIndex + 1, 0, DETAILS_ITEM);
-      } else {
-        nextTop.push(DETAILS_ITEM);
-      }
-    }
-  }
-  const nextMore = cleanedMore.slice();
-  if (moreHasQuote) {
-    nextMore.push(QUOTE_ITEM);
-  }
-  if (moreHasDesignStudio) {
-    nextMore.push(DESIGN_STUDIO_ITEM);
-  }
-  if (moreHasAiAssistant) {
-    nextMore.push(AI_ASSISTANT_ITEM);
-  }
-  if (moreHasFinance) {
-    nextMore.push(FINANCE_ITEM);
-  }
-  if (moreHasBusinessValue) {
-    nextMore.push(BUSINESS_VALUE_ITEM);
-  }
-  if (moreHasIot) {
-    nextMore.push(IOT_ITEM);
-  }
-
-  const knownHrefs = new Set([...nextTop, ...nextMore].map((item) => item.href));
-  DEFAULT_TOP.forEach((item) => {
-    if (!knownHrefs.has(item.href)) {
-      nextTop.push(item);
-      knownHrefs.add(item.href);
-    }
-  });
-  DEFAULT_MORE.forEach((item) => {
-    if (!knownHrefs.has(item.href)) {
-      nextMore.push(item);
-      knownHrefs.add(item.href);
-    }
-  });
-
-  return { top: nextTop, more: nextMore };
+  if (typeof rawValue !== "string") return null;
+  if (!ALL_PAGE_PATHS_SET.has(rawValue as AdminPagePath)) return null;
+  return rawValue as AdminPagePath;
 }
 
-export default function AdminChrome({ children }: { children: React.ReactNode }) {
+function normalizeNavOrder(topRaw: unknown, moreRaw: unknown) {
+  const seen = new Set<AdminPagePath>();
+  const top: AdminPagePath[] = [];
+  const more: AdminPagePath[] = [];
+
+  const appendPath = (target: AdminPagePath[], value: unknown) => {
+    const path = toPagePath(value);
+    if (!path || seen.has(path)) return;
+    seen.add(path);
+    target.push(path);
+  };
+
+  if (Array.isArray(topRaw)) {
+    topRaw.forEach((entry) => appendPath(top, entry));
+  }
+
+  if (Array.isArray(moreRaw)) {
+    moreRaw.forEach((entry) => appendPath(more, entry));
+  }
+
+  DEFAULT_TOP_NAV_PATHS.forEach((path) => appendPath(top, path));
+  DEFAULT_MORE_NAV_PATHS.forEach((path) => appendPath(more, path));
+
+  return { top, more };
+}
+
+function isNavPathActive(path: AdminPagePath, pathname: string) {
+  if (path === "/admin/iot" && pathname === "/iot") return true;
+  if (path === "/admin") return pathname === "/admin";
+  return pathname === path || pathname.startsWith(`${path}/`);
+}
+
+function getLabel(path: AdminPagePath) {
+  return PAGE_LABELS.get(path) || path;
+}
+
+function getDescription(path: AdminPagePath) {
+  return PAGE_DESCRIPTIONS.get(path) || "Open module";
+}
+
+export default function AdminChrome({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { theme, toggleTheme } = useAdminTheme();
   const isDark = theme === "dark";
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [topNav, setTopNav] = useState<NavItem[]>(DEFAULT_TOP);
-  const [moreNav, setMoreNav] = useState<NavItem[]>(DEFAULT_MORE);
+  const [hasLoadedNav, setHasLoadedNav] = useState(false);
+  const [topNav, setTopNav] = useState<AdminPagePath[]>(DEFAULT_TOP_NAV_PATHS);
+  const [moreNav, setMoreNav] = useState<AdminPagePath[]>(DEFAULT_MORE_NAV_PATHS);
+  const [session, setSession] = useState<AdminSessionSummary | null>(null);
 
-  // Load custom order
   useEffect(() => {
     try {
       const raw = localStorage.getItem(NAV_STORAGE);
       if (raw) {
         const parsed = JSON.parse(raw);
-        const parsedTop = Array.isArray(parsed?.top) ? parsed.top : DEFAULT_TOP;
-        const parsedMore = Array.isArray(parsed?.more) ? parsed.more : DEFAULT_MORE;
-        const normalized = normalizeNav(parsedTop, parsedMore);
+        const normalized = normalizeNavOrder(parsed?.top, parsed?.more);
         setTopNav(normalized.top);
         setMoreNav(normalized.more);
-        return;
+      } else {
+        const normalized = normalizeNavOrder(DEFAULT_TOP_NAV_PATHS, DEFAULT_MORE_NAV_PATHS);
+        setTopNav(normalized.top);
+        setMoreNav(normalized.more);
       }
-    } catch {}
-    const normalized = normalizeNav(DEFAULT_TOP, DEFAULT_MORE);
-    setTopNav(normalized.top);
-    setMoreNav(normalized.more);
+    } catch {
+      const normalized = normalizeNavOrder(DEFAULT_TOP_NAV_PATHS, DEFAULT_MORE_NAV_PATHS);
+      setTopNav(normalized.top);
+      setMoreNav(normalized.more);
+    } finally {
+      setHasLoadedNav(true);
+    }
   }, []);
 
-  // Persist order
   useEffect(() => {
+    if (!hasLoadedNav) return;
     try {
-      localStorage.setItem(NAV_STORAGE, JSON.stringify({ top: topNav, more: moreNav }));
+      localStorage.setItem(
+        NAV_STORAGE,
+        JSON.stringify({ top: topNav, more: moreNav })
+      );
     } catch {}
-  }, [topNav, moreNav]);
+  }, [hasLoadedNav, moreNav, topNav]);
 
+  useEffect(() => {
+    let ignore = false;
 
-  // Helpers to reorder
-  function moveWithin(list: "top" | "more", index: number, delta: number) {
-    const arr = list === "top" ? topNav : moreNav;
-    const next = arr.slice();
-    const newIndex = (index + delta + next.length) % next.length;
-    const [item] = next.splice(index, 1);
-    next.splice(newIndex, 0, item);
-    if (list === "top") {
-      setTopNav(next);
-    } else {
-      setMoreNav(next);
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/session", { cache: "no-store" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data?.session) return;
+
+        const nextSession = data.session as Partial<AdminSessionSummary>;
+        if (
+          ignore ||
+          !Array.isArray(nextSession.allowedPages) ||
+          typeof nextSession.displayName !== "string" ||
+          typeof nextSession.email !== "string" ||
+          typeof nextSession.isOwner !== "boolean"
+        ) {
+          return;
+        }
+
+        setSession({
+          displayName: nextSession.displayName,
+          email: nextSession.email,
+          allowedPages: nextSession.allowedPages as AdminPagePath[],
+          isOwner: nextSession.isOwner,
+        });
+      } catch {}
+    })();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (session && !session.isOwner) {
+      setEditing(false);
     }
+  }, [session]);
+
+  const canEditNavigation = session?.isOwner !== false;
+
+  const visiblePages = useMemo(() => {
+    if (!session || session.isOwner) {
+      return new Set<AdminPagePath>(ALL_ADMIN_PAGE_PATHS);
+    }
+    return new Set<AdminPagePath>(session.allowedPages);
+  }, [session]);
+
+  const visibleTopNav = useMemo(
+    () =>
+      topNav
+        .map((path, index) => ({ path, index }))
+        .filter((entry) => visiblePages.has(entry.path)),
+    [topNav, visiblePages]
+  );
+
+  const visibleMoreNav = useMemo(
+    () =>
+      moreNav
+        .map((path, index) => ({ path, index }))
+        .filter((entry) => visiblePages.has(entry.path)),
+    [moreNav, visiblePages]
+  );
+
+  const currentLabel = useMemo(() => {
+    const currentPath = ALL_ADMIN_PAGE_PATHS.find((path) =>
+      isNavPathActive(path, pathname)
+    );
+    return currentPath ? getLabel(currentPath) : "Admin";
+  }, [pathname]);
+
+  function moveWithin(list: "top" | "more", index: number, delta: number) {
+    const setList = list === "top" ? setTopNav : setMoreNav;
+    setList((current) => {
+      const next = current.slice();
+      const newIndex = (index + delta + next.length) % next.length;
+      const [item] = next.splice(index, 1);
+      next.splice(newIndex, 0, item);
+      return next;
+    });
   }
 
-  function moveBetween(from: "top" | "more", index: number) {
-    if (from === "top") {
-      const src = topNav.slice();
-      const [item] = src.splice(index, 1);
-      setTopNav(src);
-      setMoreNav((m) => [...m, item]);
-    } else {
-      const src = moreNav.slice();
-      const [item] = src.splice(index, 1);
-      setMoreNav(src);
-      setTopNav((t) => [...t, item]);
+  function moveBetween(list: "top" | "more", index: number) {
+    if (list === "top") {
+      setTopNav((currentTop) => {
+        const nextTop = currentTop.slice();
+        const [item] = nextTop.splice(index, 1);
+        setMoreNav((currentMore) => [...currentMore, item]);
+        return nextTop;
+      });
+      return;
     }
+
+    setMoreNav((currentMore) => {
+      const nextMore = currentMore.slice();
+      const [item] = nextMore.splice(index, 1);
+      setTopNav((currentTop) => [...currentTop, item]);
+      return nextMore;
+    });
   }
 
   async function logout() {
@@ -281,13 +241,13 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
     router.replace("/login");
   }
 
-
-  // Close menu on escape
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
   return (
@@ -298,7 +258,6 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
           : "bg-[#F5F5F7] text-[#1a1a1a]"
       }`}
     >
-      {/* Top bar (always visible) */}
       <div
         className={`sticky top-0 z-40 border-b backdrop-blur transition-colors ${
           isDark
@@ -306,92 +265,71 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
             : "border-gray-200 bg-white/90"
         }`}
       >
-        <div className="px-4 py-3 grid grid-cols-3 items-center">
+        <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3">
           <button
             type="button"
             aria-label="Open menu"
             aria-expanded={open}
-            onClick={() => setOpen((s) => !s)}
-            className={`inline-flex items-center justify-center rounded-xl border border-transparent p-2 transition justify-self-start ${
+            onClick={() => setOpen((value) => !value)}
+            className={`inline-flex items-center justify-center rounded-xl border border-transparent p-2 transition ${
               isDark
                 ? "text-slate-100 hover:border-slate-700 hover:bg-slate-800/70"
                 : "text-[#1a1a1a] hover:border-slate-200 hover:bg-slate-50"
             }`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="h-6 w-6"
+            >
               {open ? (
-                <path fillRule="evenodd" d="M6.225 4.811a1 1 0 0 1 1.414 0L12 9.172l4.361-4.36a1 1 0 1 1 1.414 1.414L13.414 10.586l4.36 4.361a1 1 0 0 1-1.414 1.414L12 12l-4.361 4.361a1 1 0 1 1-1.414-1.414l4.36-4.361-4.36-4.361a1 1 0 0 1 0-1.414Z" clipRule="evenodd" />
+                <path
+                  fillRule="evenodd"
+                  d="M6.225 4.811a1 1 0 0 1 1.414 0L12 9.172l4.361-4.36a1 1 0 1 1 1.414 1.414L13.414 10.586l4.36 4.361a1 1 0 0 1-1.414 1.414L12 12l-4.361 4.361a1 1 0 1 1-1.414-1.414l4.36-4.361-4.36-4.361a1 1 0 0 1 0-1.414Z"
+                  clipRule="evenodd"
+                />
               ) : (
-                <path fillRule="evenodd" d="M4.5 6.75A.75.75 0 0 1 5.25 6h13.5a.75.75 0 0 1 0 1.5H5.25A.75.75 0 0 1 4.5 6.75Zm0 5.25a.75.75 0 0 1 .75-.75h13.5a.75.75 0 0 1 0 1.5H5.25a.75.75 0 0 1-.75-.75Zm.75 4.5a.75.75 0 0 0 0 1.5h13.5a.75.75 0 0 0 0-1.5H5.25Z" clipRule="evenodd" />
+                <path
+                  fillRule="evenodd"
+                  d="M4.5 6.75A.75.75 0 0 1 5.25 6h13.5a.75.75 0 0 1 0 1.5H5.25A.75.75 0 0 1 4.5 6.75Zm0 5.25a.75.75 0 0 1 .75-.75h13.5a.75.75 0 0 1 0 1.5H5.25a.75.75 0 0 1-.75-.75Zm.75 4.5a.75.75 0 0 0 0 1.5h13.5a.75.75 0 0 0 0-1.5H5.25Z"
+                  clipRule="evenodd"
+                />
               )}
             </svg>
           </button>
-          <div
-            className={`justify-self-center text-xs font-semibold uppercase tracking-[0.32em] ${
-              isDark ? "text-slate-300" : "text-slate-600"
-            }`}
-          >
-            MO Admin
+
+          <div className="min-w-0">
+            <div
+              className={`text-[11px] font-semibold uppercase tracking-[0.28em] ${
+                isDark ? "text-slate-400" : "text-slate-500"
+              }`}
+            >
+              MO Admin
+            </div>
+            <div
+              className={`truncate text-sm font-semibold ${
+                isDark ? "text-slate-100" : "text-slate-800"
+              }`}
+            >
+              {currentLabel}
+            </div>
           </div>
+
           <div
-            className={`justify-self-end hidden sm:flex items-center gap-2 text-xs ${
-              isDark ? "text-slate-400" : "text-slate-500"
+            className={`hidden items-center gap-2 rounded-full border px-3 py-1.5 text-xs sm:inline-flex ${
+              isDark
+                ? "border-slate-800 bg-slate-900 text-slate-300"
+                : "border-slate-200 bg-white text-slate-600"
             }`}
           >
             <span className="h-2 w-2 rounded-full bg-emerald-400" />
-            Live
+            {session?.isOwner ? "Owner" : "Live"}
           </div>
         </div>
       </div>
 
-      {/* Sidebar removed for full-width pages; use drawer menu instead */}
-      <aside
-        className={`hidden fixed inset-y-0 left-0 w-64 border-r px-4 py-6 flex-col ${
-          isDark ? "border-slate-800 bg-slate-900" : "border-gray-200 bg-white"
-        }`}
-      >
-        <div className="px-1">
-          <div className="text-2xl font-semibold tracking-tight">MO Admin</div>
-          <div className={`mt-1 text-sm ${isDark ? "text-slate-400" : "text-gray-500"}`}>Operations</div>
-        </div>
-        <nav className="mt-6 space-y-1 flex-1">
-          {topNav.map((n) => {
-            const active = pathname === n.href || (n.href !== "/admin" && pathname.startsWith(n.href));
-            return (
-              <Link
-                key={n.href}
-                href={n.href}
-                className={`block px-3 py-2 rounded-lg transition-colors border ${
-                  active
-                    ? isDark
-                      ? "border-cyan-400/60 bg-slate-800"
-                      : "border-[#bfa37a] bg-[#f5f5f5]"
-                    : isDark
-                      ? "border-transparent hover:border-slate-700 hover:bg-slate-800/80"
-                      : "border-transparent hover:border-[#e5e5e5] hover:bg-[#f5f5f5]"
-                }`}
-              >
-                {n.label}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className={`pt-4 border-t ${isDark ? "border-slate-800" : "border-gray-200"}`}>
-          <button
-            onClick={logout}
-            className={`w-full px-3 py-2 rounded-lg text-sm border transition-colors ${
-              isDark
-                ? "border-rose-500/45 text-rose-200 hover:bg-rose-500/20"
-                : "border-[#bfa37a] text-[#1a1a1a] hover:bg-[#bfa37a] hover:text-white"
-            }`}
-          >
-            Logout
-          </button>
-        </div>
-      </aside>
-
-      {/* Drawer menu (works on all sizes) */}
-      {open && (
+      {open ? (
         <div className="fixed inset-0 z-50">
           <div
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
@@ -399,10 +337,10 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
             onClick={() => setOpen(false)}
           />
           <div
-            className={`absolute inset-y-0 left-0 w-[22rem] border-r p-5 flex flex-col shadow-2xl rounded-r-3xl transition-colors ${
+            className={`absolute inset-y-0 left-0 flex w-[22rem] flex-col rounded-r-3xl border-r p-5 shadow-2xl transition-colors ${
               isDark
-                ? "bg-slate-950 border-slate-800"
-                : "bg-white border-slate-200"
+                ? "border-slate-800 bg-slate-950"
+                : "border-slate-200 bg-white"
             }`}
             style={{ animation: "drawerIn 0.25s ease-out both" }}
           >
@@ -417,214 +355,290 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
                 aria-hidden
                 className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.12),transparent_60%)]"
               />
-              <div className="relative flex items-center justify-between">
-                <div>
+
+              <div className="relative flex items-start justify-between gap-3">
+                <div className="min-w-0">
                   <div
-                    className={`text-xs font-semibold uppercase tracking-[0.3em] ${
+                    className={`text-[11px] font-semibold uppercase tracking-[0.28em] ${
                       isDark ? "text-slate-400" : "text-slate-500"
                     }`}
                   >
-                    MO Admin
+                    {session?.isOwner ? "Owner Session" : "Team Session"}
                   </div>
-                  <div className={`mt-2 text-lg font-semibold ${isDark ? "text-white" : "text-slate-900"}`}>
-                    Command Center
+                  <div
+                    className={`mt-2 truncate text-lg font-semibold ${
+                      isDark ? "text-white" : "text-slate-900"
+                    }`}
+                  >
+                    {session?.displayName || "Admin"}
                   </div>
-                  <div className={`mt-1 text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                    Tap to jump between modules.
+                  <div
+                    className={`mt-1 truncate text-xs ${
+                      isDark ? "text-slate-400" : "text-slate-500"
+                    }`}
+                  >
+                    {session?.email || "Loading access profile..."}
                   </div>
                 </div>
+
+                {canEditNavigation ? (
+                  <button
+                    type="button"
+                    onClick={() => setEditing((value) => !value)}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                      editing
+                        ? isDark
+                          ? "border-cyan-300/60 bg-cyan-400/20 text-cyan-100"
+                          : "border-slate-900 bg-slate-900 text-white"
+                        : isDark
+                          ? "border-slate-700 bg-slate-900 text-slate-200 hover:border-slate-600 hover:bg-slate-800"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    {editing ? "Done" : "Edit"}
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="relative mt-4 grid gap-3">
                 <button
-                  onClick={() => setEditing((e) => !e)}
-                  className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                    editing
-                      ? isDark
-                        ? "border-cyan-300/60 bg-cyan-400/20 text-cyan-100"
-                        : "border-slate-900 bg-slate-900 text-white"
-                      : isDark
-                        ? "border-slate-700 bg-slate-900 text-slate-200 hover:border-slate-600 hover:bg-slate-800"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                  type="button"
+                  onClick={toggleTheme}
+                  className={`inline-flex items-center justify-center rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                    isDark
+                      ? "border-cyan-400/45 bg-cyan-400/15 text-cyan-100 hover:border-cyan-300/70 hover:bg-cyan-400/25"
+                      : "border-slate-300 bg-slate-100 text-slate-700 hover:border-slate-400 hover:bg-slate-200"
                   }`}
                 >
-                  {editing ? "Done" : "Edit"}
+                  {isDark ? "Switch To Light Mode" : "Switch To Dark Mode"}
                 </button>
+
+                <div
+                  className={`rounded-2xl border px-4 py-3 ${
+                    isDark
+                      ? "border-slate-700 bg-slate-950/60 text-slate-300"
+                      : "border-slate-200 bg-slate-50 text-slate-600"
+                  }`}
+                >
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    Access
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-inherit">
+                    {session?.isOwner
+                      ? "Full admin access"
+                      : `${session?.allowedPages.length || 0} page permissions assigned`}
+                  </div>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className={`relative mt-3 inline-flex w-full items-center justify-center rounded-xl border px-3 py-2 text-xs font-semibold transition ${
-                  isDark
-                    ? "border-cyan-400/45 bg-cyan-400/15 text-cyan-100 hover:border-cyan-300/70 hover:bg-cyan-400/25"
-                    : "border-slate-300 bg-slate-100 text-slate-700 hover:border-slate-400 hover:bg-slate-200"
-                }`}
-              >
-                {isDark ? "Switch To Light Mode" : "Switch To Dark Mode"}
-              </button>
             </div>
 
-            <nav className="mt-5 space-y-3 flex-1 min-h-0 overflow-y-auto pr-1">
-              <div
-                className={`text-[11px] font-semibold uppercase tracking-[0.28em] ${
-                  isDark ? "text-slate-500" : "text-slate-400"
-                }`}
-              >
-                Core
+            <nav className="mt-5 flex-1 space-y-4 overflow-y-auto pr-1">
+              <div>
+                <div
+                  className={`text-[11px] font-semibold uppercase tracking-[0.28em] ${
+                    isDark ? "text-slate-500" : "text-slate-400"
+                  }`}
+                >
+                  Core
+                </div>
+                <div className="mt-3 space-y-2">
+                  {visibleTopNav.map(({ path, index }) => {
+                    const active = isNavPathActive(path, pathname);
+                    const label = getLabel(path);
+                    return editing ? (
+                      <div
+                        key={path}
+                        className={`flex items-center gap-2 rounded-2xl border px-2 py-2 ${
+                          isDark
+                            ? "border-slate-700 bg-slate-900"
+                            : "border-slate-200 bg-white"
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          aria-label={`Move ${label} up`}
+                          onClick={() => moveWithin("top", index, -1)}
+                          className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+                            isDark
+                              ? "border-slate-700 text-slate-300 hover:bg-slate-800"
+                              : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          Up
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Move ${label} down`}
+                          onClick={() => moveWithin("top", index, 1)}
+                          className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+                            isDark
+                              ? "border-slate-700 text-slate-300 hover:bg-slate-800"
+                              : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          Down
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Move ${label} to more`}
+                          onClick={() => moveBetween("top", index)}
+                          className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+                            isDark
+                              ? "border-slate-700 text-slate-300 hover:bg-slate-800"
+                              : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          Move
+                        </button>
+                        <span
+                          className={`flex-1 rounded-xl border px-3 py-2 text-sm font-semibold ${
+                            isDark
+                              ? "border-slate-700 bg-slate-800 text-slate-200"
+                              : "border-slate-200 bg-slate-50 text-slate-700"
+                          }`}
+                        >
+                          {label}
+                        </span>
+                      </div>
+                    ) : (
+                      <Link
+                        key={path}
+                        href={path}
+                        onClick={() => setOpen(false)}
+                        className={`group flex items-center justify-between rounded-2xl border px-3 py-2 text-sm font-semibold transition ${
+                          active
+                            ? isDark
+                              ? "border-cyan-300/55 bg-cyan-400/18 text-cyan-100 shadow"
+                              : "border-slate-900 bg-slate-900 text-white shadow"
+                            : isDark
+                              ? "border-transparent text-slate-200 hover:border-slate-700 hover:bg-slate-800/70"
+                              : "border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50"
+                        }`}
+                        title={getDescription(path)}
+                      >
+                        <span>{label}</span>
+                        <span
+                          className={`h-2 w-2 rounded-full ${
+                            active
+                              ? "bg-emerald-400"
+                              : "bg-slate-300 group-hover:bg-slate-400"
+                          }`}
+                        />
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
-              {topNav.map((n, i) => {
-                const active = pathname === n.href || (n.href !== "/admin" && pathname.startsWith(n.href));
-                return editing ? (
-                  <div
-                    key={n.href}
-                    className={`flex items-center gap-2 rounded-2xl border px-2 py-2 ${
-                      isDark ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"
-                    }`}
-                  >
-                    <button
-                      aria-label="Up"
-                      onClick={() => moveWithin("top", i, -1)}
-                      className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
-                        isDark
-                          ? "border-slate-700 text-slate-300 hover:bg-slate-800"
-                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      Up
-                    </button>
-                    <button
-                      aria-label="Down"
-                      onClick={() => moveWithin("top", i, +1)}
-                      className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
-                        isDark
-                          ? "border-slate-700 text-slate-300 hover:bg-slate-800"
-                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      Down
-                    </button>
-                    <button
-                      aria-label="Move"
-                      onClick={() => moveBetween("top", i)}
-                      className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
-                        isDark
-                          ? "border-slate-700 text-slate-300 hover:bg-slate-800"
-                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      Move
-                    </button>
-                    <span
-                      className={`flex-1 rounded-xl border px-3 py-2 text-sm font-semibold ${
-                        isDark
-                          ? "border-slate-700 bg-slate-800 text-slate-200"
-                          : "border-slate-200 bg-slate-50 text-slate-700"
-                      }`}
-                    >
-                      {n.label}
-                    </span>
-                  </div>
-                ) : (
-                  <Link
-                    key={n.href}
-                    href={n.href}
-                    onClick={() => setOpen(false)}
-                    className={`group flex items-center justify-between rounded-2xl border px-3 py-2 text-sm font-semibold transition ${
-                      active
-                        ? isDark
-                          ? "border-cyan-300/55 bg-cyan-400/18 text-cyan-100 shadow"
-                          : "border-slate-900 bg-slate-900 text-white shadow"
-                        : isDark
-                          ? "border-transparent text-slate-200 hover:border-slate-700 hover:bg-slate-800/70"
-                          : "border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50"
-                    }`}
-                  >
-                    <span>{n.label}</span>
-                    <span
-                      className={`h-2 w-2 rounded-full ${
-                        active ? "bg-emerald-400" : "bg-slate-300 group-hover:bg-slate-400"
-                      }`}
-                    />
-                  </Link>
-                );
-              })}
-              {moreNav.map((n, i) => {
-                const active = pathname === n.href || (n.href !== "/admin" && pathname.startsWith(n.href));
-                return editing ? (
-                  <div
-                    key={n.href}
-                    className={`flex items-center gap-2 rounded-2xl border px-2 py-2 ${
-                      isDark ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"
-                    }`}
-                  >
-                    <button
-                      aria-label="Up"
-                      onClick={() => moveWithin("more", i, -1)}
-                      className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
-                        isDark
-                          ? "border-slate-700 text-slate-300 hover:bg-slate-800"
-                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      Up
-                    </button>
-                    <button
-                      aria-label="Down"
-                      onClick={() => moveWithin("more", i, +1)}
-                      className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
-                        isDark
-                          ? "border-slate-700 text-slate-300 hover:bg-slate-800"
-                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      Down
-                    </button>
-                    <button
-                      aria-label="Move"
-                      onClick={() => moveBetween("more", i)}
-                      className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
-                        isDark
-                          ? "border-slate-700 text-slate-300 hover:bg-slate-800"
-                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      Move
-                    </button>
-                    <span
-                      className={`flex-1 rounded-xl border px-3 py-2 text-sm font-semibold ${
-                        isDark
-                          ? "border-slate-700 bg-slate-800 text-slate-200"
-                          : "border-slate-200 bg-slate-50 text-slate-700"
-                      }`}
-                    >
-                      {n.label}
-                    </span>
-                  </div>
-                ) : (
-                  <Link
-                    key={n.href}
-                    href={n.href}
-                    onClick={() => setOpen(false)}
-                    className={`group flex items-center justify-between rounded-2xl border px-3 py-2 text-sm font-semibold transition ${
-                      active
-                        ? isDark
-                          ? "border-cyan-300/55 bg-cyan-400/18 text-cyan-100 shadow"
-                          : "border-slate-900 bg-slate-900 text-white shadow"
-                        : isDark
-                          ? "border-transparent text-slate-200 hover:border-slate-700 hover:bg-slate-800/70"
-                          : "border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50"
-                    }`}
-                  >
-                    <span>{n.label}</span>
-                    <span
-                      className={`h-2 w-2 rounded-full ${
-                        active ? "bg-emerald-400" : "bg-slate-300 group-hover:bg-slate-400"
-                      }`}
-                    />
-                  </Link>
-                );
-              })}
+
+              <div>
+                <div
+                  className={`text-[11px] font-semibold uppercase tracking-[0.28em] ${
+                    isDark ? "text-slate-500" : "text-slate-400"
+                  }`}
+                >
+                  More
+                </div>
+                <div className="mt-3 space-y-2">
+                  {visibleMoreNav.map(({ path, index }) => {
+                    const active = isNavPathActive(path, pathname);
+                    const label = getLabel(path);
+                    return editing ? (
+                      <div
+                        key={path}
+                        className={`flex items-center gap-2 rounded-2xl border px-2 py-2 ${
+                          isDark
+                            ? "border-slate-700 bg-slate-900"
+                            : "border-slate-200 bg-white"
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          aria-label={`Move ${label} up`}
+                          onClick={() => moveWithin("more", index, -1)}
+                          className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+                            isDark
+                              ? "border-slate-700 text-slate-300 hover:bg-slate-800"
+                              : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          Up
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Move ${label} down`}
+                          onClick={() => moveWithin("more", index, 1)}
+                          className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+                            isDark
+                              ? "border-slate-700 text-slate-300 hover:bg-slate-800"
+                              : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          Down
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Move ${label} to core`}
+                          onClick={() => moveBetween("more", index)}
+                          className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+                            isDark
+                              ? "border-slate-700 text-slate-300 hover:bg-slate-800"
+                              : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          Move
+                        </button>
+                        <span
+                          className={`flex-1 rounded-xl border px-3 py-2 text-sm font-semibold ${
+                            isDark
+                              ? "border-slate-700 bg-slate-800 text-slate-200"
+                              : "border-slate-200 bg-slate-50 text-slate-700"
+                          }`}
+                        >
+                          {label}
+                        </span>
+                      </div>
+                    ) : (
+                      <Link
+                        key={path}
+                        href={path}
+                        onClick={() => setOpen(false)}
+                        className={`group flex items-center justify-between rounded-2xl border px-3 py-2 text-sm font-semibold transition ${
+                          active
+                            ? isDark
+                              ? "border-cyan-300/55 bg-cyan-400/18 text-cyan-100 shadow"
+                              : "border-slate-900 bg-slate-900 text-white shadow"
+                            : isDark
+                              ? "border-transparent text-slate-200 hover:border-slate-700 hover:bg-slate-800/70"
+                              : "border-transparent text-slate-700 hover:border-slate-200 hover:bg-slate-50"
+                        }`}
+                        title={getDescription(path)}
+                      >
+                        <span>{label}</span>
+                        <span
+                          className={`h-2 w-2 rounded-full ${
+                            active
+                              ? "bg-emerald-400"
+                              : "bg-slate-300 group-hover:bg-slate-400"
+                          }`}
+                        />
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
             </nav>
-            <div className={`mt-4 pt-4 border-t ${isDark ? "border-slate-700" : "border-slate-200"}`}>
+
+            <div
+              className={`mt-4 border-t pt-4 ${
+                isDark ? "border-slate-700" : "border-slate-200"
+              }`}
+            >
               <button
-                onClick={() => { setOpen(false); logout(); }}
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  logout();
+                }}
                 className={`w-full rounded-full border px-4 py-2 text-sm font-semibold shadow-sm transition ${
                   isDark
                     ? "border-rose-500/45 bg-rose-500/15 text-rose-200 hover:border-rose-400/60 hover:bg-rose-500/25"
@@ -636,18 +650,18 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
             </div>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {/* Content */}
       <main className="ml-0">
         <div
-          className={`admin-page-shell min-h-screen p-4 sm:p-6 lg:p-8 transition-colors ${
+          className={`admin-page-shell min-h-screen p-4 transition-colors sm:p-6 lg:p-8 ${
             isDark ? "bg-slate-950 text-slate-100" : "bg-[#ffffff]"
           }`}
         >
           {children}
         </div>
       </main>
+
       <style jsx>{`
         @keyframes drawerIn {
           from {
@@ -659,6 +673,7 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
             transform: translateX(0);
           }
         }
+
         @keyframes fadeIn {
           from {
             opacity: 0;
