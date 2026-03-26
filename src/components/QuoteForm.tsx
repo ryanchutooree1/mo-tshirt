@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { FileImage, FileText, UploadCloud } from "lucide-react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
 import { trackQuoteSubmit } from "@/lib/analytics";
@@ -190,6 +191,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
   const [showArtworkSection, setShowArtworkSection] = useState(false);
   const [artworkItems, setArtworkItems] = useState<ArtworkItem[]>([createArtworkItem(1)]);
   const [nextArtworkId, setNextArtworkId] = useState(2);
+  const [pendingArtworkPickerId, setPendingArtworkPickerId] = useState<number | null>(null);
   const [website, setWebsite] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -202,6 +204,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     Record<QuoteGarmentOption, string[]>
   >(() => createQuoteColorOptionsByGarment());
   const [loadingColors, setLoadingColors] = useState(true);
+  const artworkInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
   const isValidPhone = (value: string) => /^[0-9+()\s-]+$/.test(value);
   const isValidPostCode = (value: string) => /^\d+$/.test(value);
@@ -240,13 +243,33 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
   }
 
   function addArtworkItem() {
+    const createdId = nextArtworkId;
     setShowArtworkSection(true);
-    setArtworkItems((prev) => [...prev, createArtworkItem(nextArtworkId)]);
+    setArtworkItems((prev) => [...prev, createArtworkItem(createdId)]);
     setNextArtworkId((prev) => prev + 1);
+    setPendingArtworkPickerId(createdId);
   }
 
   function removeArtworkItem(index: number) {
     setArtworkItems((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
+  }
+
+  function setArtworkInputRef(id: number, node: HTMLInputElement | null) {
+    if (node) {
+      artworkInputRefs.current[id] = node;
+      return;
+    }
+    delete artworkInputRefs.current[id];
+  }
+
+  function openArtworkPicker(id: number) {
+    setShowArtworkSection(true);
+    const targetInput = artworkInputRefs.current[id];
+    if (targetInput) {
+      targetInput.click();
+      return;
+    }
+    setPendingArtworkPickerId(id);
   }
 
   function handleEmailChange(e: ChangeEvent<HTMLInputElement>) {
@@ -297,6 +320,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
   const screenPrintingSelected = printMethod === SCREEN_PRINTING_METHOD;
   const showScreenPrintingWarning = screenPrintingSelected && totalQuantity < 10;
   const selectedPrintMethodInfo = printMethodInfoByMethod[printMethod];
+  const uploadedArtworkCount = artworkItems.filter((item) => item.file).length;
 
   function getGarmentColorOptions(garment: string) {
     const garmentKey = QUOTE_GARMENT_OPTIONS.includes(garment as QuoteGarmentOption)
@@ -370,6 +394,14 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
       return changed ? next : prev;
     });
   }, [availableColors, colorOptionsByGarment]);
+
+  useEffect(() => {
+    if (pendingArtworkPickerId === null) return;
+    const targetInput = artworkInputRefs.current[pendingArtworkPickerId];
+    if (!targetInput) return;
+    targetInput.click();
+    setPendingArtworkPickerId(null);
+  }, [artworkItems, pendingArtworkPickerId]);
 
   function getScreenPrintingValidationMessage() {
     const filledArtworkItems = artworkItems.filter(
@@ -735,24 +767,55 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
         )}
 
         <div className="space-y-3">
+          <div className="sr-only" aria-hidden="true">
+            {artworkItems.map((item) => (
+              <input
+                key={`${item.id}-${item.file ? `${item.file.name}-${item.file.size}-${item.file.lastModified}` : "empty"}`}
+                ref={(node) => setArtworkInputRef(item.id, node)}
+                id={`quote-artwork-file-${item.id}`}
+                type="file"
+                accept={artworkAccept}
+                onClick={(event) => {
+                  event.currentTarget.value = "";
+                }}
+                onChange={(e) => handleFileChange(artworkItems.findIndex((entry) => entry.id === item.id), e)}
+                className="sr-only"
+              />
+            ))}
+          </div>
+
           {!showArtworkSection ? (
             <button
               type="button"
-              onClick={() => setShowArtworkSection(true)}
-              className="inline-flex items-center gap-2 rounded-full border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-black hover:text-black"
+              onClick={() => openArtworkPicker(artworkItems[0]?.id ?? 1)}
+              className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-6 py-3 text-sm font-semibold text-neutral-800 shadow-[0_8px_20px_-18px_rgba(15,23,42,0.45)] transition hover:border-neutral-900 hover:bg-neutral-50"
             >
+              <UploadCloud className="h-4 w-4" />
               Upload logo
             </button>
           ) : (
             <>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700">Upload your logo / artwork</label>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700">Upload your logo / artwork</label>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    Click a design card to choose a file, then add notes or quantity if this artwork needs its own count.
+                  </p>
+                </div>
+                <div className="inline-flex items-center rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-semibold text-neutral-500">
+                  {uploadedArtworkCount
+                    ? `${uploadedArtworkCount} file${uploadedArtworkCount === 1 ? "" : "s"} added`
+                    : "No file chosen yet"}
+                </div>
               </div>
 
               {artworkItems.map((item, index) => (
-                <div key={item.id} className="rounded-2xl border border-neutral-200 bg-neutral-50/80 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-neutral-900">Design {index + 1}</p>
+                <div key={item.id} className="rounded-[28px] border border-neutral-200 bg-neutral-50/80 p-5 shadow-[0_20px_45px_-40px_rgba(15,23,42,0.55)]">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-lg font-semibold text-neutral-900">Design {index + 1}</p>
+                      <p className="mt-1 text-xs text-neutral-500">Upload one logo or artwork file for this design.</p>
+                    </div>
                     {artworkItems.length > 1 ? (
                       <button
                         type="button"
@@ -765,92 +828,68 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                   </div>
 
                   <div className="mt-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <label className="block text-sm font-medium text-neutral-700">File</label>
-                      {item.file ? (
-                        <button
-                          type="button"
-                          onClick={() => updateArtworkItem(index, { file: null })}
-                          className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
-                        >
-                          Remove file
-                        </button>
-                      ) : null}
-                    </div>
-                    <input
-                      id={`quote-artwork-file-${item.id}`}
-                      key={`${item.id}-${item.file ? `${item.file.name}-${item.file.size}-${item.file.lastModified}` : "empty"}`}
-                      type="file"
-                      accept={artworkAccept}
-                      onClick={(event) => {
-                        event.currentTarget.value = "";
-                      }}
-                      onChange={(e) => handleFileChange(index, e)}
-                      className="hidden"
-                    />
-                    <label
-                      htmlFor={`quote-artwork-file-${item.id}`}
-                      className={`mt-1 flex min-h-[132px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-sky-200 bg-sky-50/40 text-center transition hover:border-sky-300 hover:bg-sky-50 ${
-                        item.file ? "px-3 py-3" : "px-4 py-6"
-                      }`}
-                    >
-                      {item.file ? (
-                        isPreviewableArtworkFile(item.file) ? (
-                          <div className="flex w-full flex-col items-center gap-3">
-                            <div className="relative h-28 w-full overflow-hidden rounded-xl bg-white/80">
+                    <label className="block text-sm font-medium text-neutral-700">File</label>
+                    {item.file ? (
+                      <div className="mt-1 overflow-hidden rounded-[24px] border border-neutral-200 bg-white">
+                        <div className="grid gap-4 p-4 sm:grid-cols-[132px_minmax(0,1fr)] sm:items-center">
+                          <div className="relative flex h-28 items-center justify-center overflow-hidden rounded-2xl bg-neutral-100">
+                            {isPreviewableArtworkFile(item.file) ? (
                               <ArtworkFilePreview file={item.file} />
-                            </div>
-                            <span className="text-sm font-medium text-neutral-700">
-                              {item.file.name}
-                              {item.file.size ? ` · ${formatBytes(item.file.size)}` : ""}
-                            </span>
+                            ) : (
+                              <FileText className="h-8 w-8 text-neutral-400" />
+                            )}
                           </div>
-                        ) : (
-                          <div className="flex flex-col items-center gap-3 text-center">
-                            <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-sky-600 shadow-sm">
-                              <svg
-                                aria-hidden="true"
-                                viewBox="0 0 24 24"
-                                className="h-5 w-5 fill-none stroke-current"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
+
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-neutral-900">{item.file.name}</p>
+                            <p className="mt-1 text-sm text-neutral-500">
+                              {item.file.size ? `${formatBytes(item.file.size)} file ready to quote.` : "File ready to quote."}
+                            </p>
+                            <p className="mt-3 text-xs text-neutral-500">
+                              Accepted: PNG, JPG, WEBP, SVG, HEIC, HEIF, PDF.
+                            </p>
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openArtworkPicker(item.id)}
+                                className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-black hover:text-black"
                               >
-                                <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
-                                <path d="M14 3v5h5" />
-                              </svg>
+                                <UploadCloud className="h-4 w-4" />
+                                Replace file
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => updateArtworkItem(index, { file: null })}
+                                className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+                              >
+                                Remove file
+                              </button>
                             </div>
-                            <span className="text-sm font-medium text-neutral-700">
-                              {item.file.name}
-                              {item.file.size ? ` · ${formatBytes(item.file.size)}` : ""}
-                            </span>
                           </div>
-                        )
-                      ) : (
-                        <>
-                          <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-sky-500 to-blue-500 px-5 py-2 text-sm font-semibold text-white shadow-[0_14px_28px_-18px_rgba(59,130,246,0.85)]">
-                            <svg
-                              aria-hidden="true"
-                              viewBox="0 0 24 24"
-                              className="h-4 w-4 fill-none stroke-current"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="M12 16V7" />
-                              <path d="m8.5 10.5 3.5-3.5 3.5 3.5" />
-                              <path d="M20 16.5a3.5 3.5 0 0 1-3.5 3.5h-9A3.5 3.5 0 0 1 4 16.5" />
-                            </svg>
-                            Upload Image
-                          </span>
-                          <span className="mt-3 text-sm font-medium text-neutral-600">No file chosen</span>
-                        </>
-                      )}
-                    </label>
-                    <p className="mt-1 text-xs text-neutral-500">Accepted: PNG, JPG, WEBP, SVG, HEIC, HEIF, PDF.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => openArtworkPicker(item.id)}
+                        className="mt-1 flex w-full flex-col items-center justify-center rounded-[24px] border border-dashed border-neutral-300 bg-white px-5 py-8 text-center transition hover:border-neutral-500 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-300"
+                      >
+                        <span className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-neutral-200 bg-neutral-50 text-neutral-700">
+                          <UploadCloud className="h-5 w-5" />
+                        </span>
+                        <span className="mt-4 text-base font-semibold text-neutral-900">Upload logo</span>
+                        <span className="mt-1 max-w-md text-sm text-neutral-500">
+                          Click to choose PNG, JPG, WEBP, SVG, HEIC, HEIF, or PDF artwork for this design.
+                        </span>
+                        <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold text-neutral-700">
+                          <FileImage className="h-4 w-4" />
+                          Choose file
+                        </span>
+                      </button>
+                    )}
                   </div>
 
-                  <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_180px]">
+                  <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_180px]">
                     <div>
                       <label className="block text-sm font-medium text-neutral-700">Label</label>
                       <input
@@ -887,7 +926,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
               <button
                 type="button"
                 onClick={addArtworkItem}
-                className="inline-flex items-center gap-2 rounded-full border border-neutral-300 px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-black hover:text-black"
+                className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-black hover:text-black"
               >
                 + Add another logo
               </button>
