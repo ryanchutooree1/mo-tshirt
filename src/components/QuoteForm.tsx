@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { FileImage, FileText, UploadCloud } from "lucide-react";
+import { FileText, UploadCloud } from "lucide-react";
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
@@ -872,17 +872,19 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                       <button
                         type="button"
                         onClick={() => openArtworkPicker(item.id)}
-                        className="mt-1 flex w-full flex-col items-center justify-center rounded-[24px] border border-dashed border-neutral-300 bg-white px-5 py-8 text-center transition hover:border-neutral-500 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-300"
+                        className="mt-1 flex min-h-[280px] w-full flex-col items-center justify-center rounded-[28px] border border-neutral-200 bg-white px-6 py-12 text-center transition hover:border-neutral-300 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-300"
                       >
-                        <span className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-neutral-200 bg-neutral-50 text-neutral-700">
-                          <UploadCloud className="h-5 w-5" />
+                        <span className="inline-flex h-24 w-24 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 shadow-[0_12px_32px_-24px_rgba(15,23,42,0.55)]">
+                          <UploadCloud className="h-9 w-9" strokeWidth={1.8} />
                         </span>
-                        <span className="mt-4 text-base font-semibold text-neutral-900">Upload logo</span>
-                        <span className="mt-1 max-w-md text-sm text-neutral-500">
+                        <span className="mt-8 text-[clamp(1.9rem,3vw,2.4rem)] font-semibold tracking-[-0.03em] text-neutral-900">
+                          Upload logo
+                        </span>
+                        <span className="mt-4 max-w-2xl text-balance text-[clamp(1.1rem,2vw,1.35rem)] leading-relaxed text-neutral-500">
                           Click to choose PNG, JPG, WEBP, SVG, HEIC, HEIF, or PDF artwork for this design.
                         </span>
-                        <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold text-neutral-700">
-                          <FileImage className="h-4 w-4" />
+                        <span className="mt-8 inline-flex items-center gap-3 rounded-full border border-neutral-300 bg-white px-7 py-4 text-base font-semibold text-neutral-700 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.45)]">
+                          <FileText className="h-6 w-6" strokeWidth={1.8} />
                           Choose file
                         </span>
                       </button>
