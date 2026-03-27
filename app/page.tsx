@@ -25,7 +25,7 @@ export const metadata: Metadata = buildPageMetadata({
 const navLinks = [
   { label: "Home", href: "#top" },
   { label: "Quote Form", href: "#contact", buttonTone: "orange" as const },
-  { label: "MO AI Order", href: "#mo-ai-order", buttonTone: "dark" as const },
+  { label: "MO AI Order", href: "#mo-ai-order", buttonTone: "rainbow" as const },
   { label: "Plain Shops", href: "/shops" },
   { label: "Our Work", href: "#our-work" },
   { label: "Contact", href: "#contact" },
@@ -152,8 +152,8 @@ export default function HomePage() {
                     className={`whitespace-nowrap transition ${
                     link.buttonTone === "orange"
                       ? "rounded-full bg-[#FF6600] px-3 py-1 text-white shadow-sm hover:bg-orange-600"
-                      : link.buttonTone === "dark"
-                        ? "rounded-full bg-black px-3 py-1 text-white shadow-sm hover:bg-neutral-800"
+                      : link.buttonTone === "rainbow"
+                        ? "rounded-full bg-[linear-gradient(135deg,#22d3ee_0%,#8b5cf6_52%,#ec4899_100%)] px-3 py-1 font-semibold text-white shadow-[0_14px_28px_-16px_rgba(124,58,237,0.75)] hover:brightness-110"
                         : "text-black/70 hover:text-black"
                   }`}
                 >
