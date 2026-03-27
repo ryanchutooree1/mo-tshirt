@@ -216,6 +216,8 @@ test("partial size breakdowns keep the original quantity and ask only for the re
   assert.match(secondTurn.reply, /remaining 1 piece/i);
   assert.doesNotMatch(secondTurn.reply, /What size do you need/i);
   assert.match(secondTurn.reply, /Copy, edit, and send this size template/i);
+  assert.match(secondTurn.reply, /Product: T-Shirt Colour: White Size: M Quantity: 3/i);
+  assert.doesNotMatch(secondTurn.reply, /Quantity: 0/i);
 
   const thirdTurn = runAssistantTurn({
     lead: secondTurn.lead,

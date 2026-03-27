@@ -103,11 +103,23 @@ function buildSizeTemplate(lead: AssistantLead) {
   ).join("\n");
 }
 
+function buildExistingBreakdownTemplate(lead: AssistantLead) {
+  return lead.sizeBreakdown
+    .map((line) => {
+      const product = formatProductLabel(line.productType || lead.productType);
+      const color = titleCase(line.color || lead.color || "Black");
+      return `Product: ${product} Colour: ${color} Size: ${line.size} Quantity: ${line.quantity}`;
+    })
+    .join("\n");
+}
+
 function buildCopyEditSendBlock(lead: AssistantLead) {
+  const template = lead.sizeBreakdown.length ? buildExistingBreakdownTemplate(lead) : buildSizeTemplate(lead);
+
   return [
     "Copy, edit, and send this size template:",
     "```",
-    buildSizeTemplate(lead),
+    template,
     "```",
     "You can also answer naturally, for example: T-Shirt white M x 2 and Poloshirt black 4XL x 1.",
   ].join("\n");
