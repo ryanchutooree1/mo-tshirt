@@ -64,37 +64,6 @@ async function readJson<T>(response: Response) {
   return body as T;
 }
 
-const EXAMPLE_TRANSCRIPT: Array<{
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  attachment: AssistantAttachment | null;
-}> = [
-  {
-    id: "example-user",
-    role: "user",
-    content: "I need 15 black polos for staff with logo on the chest",
-    attachment: null,
-  },
-  {
-    id: "example-assistant",
-    role: "assistant",
-    content: [
-      "Noted: 15 Black Poloshirts. What size do you need? If the sizes are mixed, send a quick breakdown like M x 2 and L x 2.",
-      "",
-      "Copy, edit, and send this size template:",
-      "```",
-      "Product: Polo Colour: Black Size: S Quantity: 0",
-      "Product: Polo Colour: Black Size: M Quantity: 0",
-      "Product: Polo Colour: Black Size: L Quantity: 0",
-      "Product: Polo Colour: Black Size: XL Quantity: 0",
-      "```",
-      "You can also answer naturally, for example: T-Shirt white M x 2 and Poloshirt black 4XL x 1.",
-    ].join("\n"),
-    attachment: null,
-  },
-];
-
 export default function HomeAiOrder() {
   const [sessionId, setSessionId] = useState(() => generateSessionId());
   const [session, setSession] = useState<AssistantSessionDetail>(() => createDraftSession(sessionId));
@@ -114,8 +83,7 @@ export default function HomeAiOrder() {
     !session.lead.logoPending;
   const pendingLogoSize = pendingLogoFile ? formatAttachmentSize(pendingLogoFile.size) : null;
   const stillNeeded = session.missingFields.slice(0, 4).map(formatAssistantFieldLabel);
-  const displayMessages = session.messages.length ? session.messages : EXAMPLE_TRANSCRIPT;
-  const showingPreview = session.messages.length === 0;
+  const hasMessages = session.messages.length > 0;
 
   useEffect(() => {
     if (!pendingLogoFile) {
@@ -299,7 +267,7 @@ export default function HomeAiOrder() {
                 ))}
               </div>
             </div>
-            {!showingPreview && (
+            {hasMessages && (
               <button
                 type="button"
                 onClick={resetConversation}
@@ -315,64 +283,83 @@ export default function HomeAiOrder() {
             ref={messageListRef}
             className="mt-4 flex max-h-[18.5rem] flex-col gap-3 overflow-y-auto rounded-[26px] border border-[#efe8fa] bg-[linear-gradient(180deg,rgba(255,255,255,0.78),rgba(252,247,255,0.92))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] sm:p-5"
           >
-            {displayMessages.map((entry) => {
-              const userMessage = entry.role === "user";
-              return (
-                <div key={entry.id} className={`flex ${userMessage ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-[85%] rounded-[22px] border px-4 py-3 shadow-[0_20px_38px_-32px_rgba(74,39,150,0.22)] ${
-                      userMessage
-                        ? "border-[#eadbff] bg-[linear-gradient(135deg,#fff8fe_0%,#eefaff_52%,#fff6eb_100%)] text-[#1d1831]"
-                        : "border-[#ede6fb] bg-white/95 text-[#231f38]"
-                    }`}
-                  >
-                    <p
-                      className={`mb-2 text-[10px] font-semibold uppercase tracking-[0.24em] ${
+            {hasMessages ? (
+              session.messages.map((entry) => {
+                const userMessage = entry.role === "user";
+                return (
+                  <div key={entry.id} className={`flex ${userMessage ? "justify-end" : "justify-start"}`}>
+                    <div
+                      className={`max-w-[85%] rounded-[22px] border px-4 py-3 shadow-[0_20px_38px_-32px_rgba(74,39,150,0.22)] ${
                         userMessage
-                          ? "text-[#7a5de1]"
-                          : "bg-[linear-gradient(90deg,#06b6d4_0%,#8b5cf6_48%,#ec4899_100%)] bg-clip-text text-transparent"
+                          ? "border-[#eadbff] bg-[linear-gradient(135deg,#fff8fe_0%,#eefaff_52%,#fff6eb_100%)] text-[#1d1831]"
+                          : "border-[#ede6fb] bg-white/95 text-[#231f38]"
                       }`}
                     >
-                      {userMessage ? "You" : "MO AI"}
-                    </p>
-                    <p className="whitespace-pre-wrap text-sm leading-6">{entry.content}</p>
-                    {entry.attachment && (
-                      <div className="mt-3 space-y-3">
-                        <a
-                          href={entry.attachment.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold ${
-                            userMessage
-                              ? "border-[#e6d7ff] bg-white/80 text-[#5741b2]"
-                              : "border-[#d9eef7] bg-[#f4fbff] text-[#0f7490]"
-                          }`}
-                        >
-                          <Paperclip className="h-3.5 w-3.5" />
-                          <span className="truncate">{entry.attachment.name}</span>
-                          {formatAttachmentSize(entry.attachment.size) ? (
-                            <span className={userMessage ? "text-[#8f82c5]" : "text-[#5c9caf]"}>
-                              {formatAttachmentSize(entry.attachment.size)}
-                            </span>
-                          ) : null}
-                        </a>
-                        {isImageAttachment(entry.attachment) && (
-                          <div className="overflow-hidden rounded-[18px] border border-[#ebe2fa] bg-white p-2">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={entry.attachment.url}
-                              alt={entry.attachment.name}
-                              className="max-h-64 w-full rounded-2xl object-contain"
-                              loading="lazy"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
+                      <p
+                        className={`mb-2 text-[10px] font-semibold uppercase tracking-[0.24em] ${
+                          userMessage
+                            ? "text-[#7a5de1]"
+                            : "bg-[linear-gradient(90deg,#06b6d4_0%,#8b5cf6_48%,#ec4899_100%)] bg-clip-text text-transparent"
+                        }`}
+                      >
+                        {userMessage ? "You" : "MO AI"}
+                      </p>
+                      <p className="whitespace-pre-wrap text-sm leading-6">{entry.content}</p>
+                      {entry.attachment && (
+                        <div className="mt-3 space-y-3">
+                          <a
+                            href={entry.attachment.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold ${
+                              userMessage
+                                ? "border-[#e6d7ff] bg-white/80 text-[#5741b2]"
+                                : "border-[#d9eef7] bg-[#f4fbff] text-[#0f7490]"
+                            }`}
+                          >
+                            <Paperclip className="h-3.5 w-3.5" />
+                            <span className="truncate">{entry.attachment.name}</span>
+                            {formatAttachmentSize(entry.attachment.size) ? (
+                              <span className={userMessage ? "text-[#8f82c5]" : "text-[#5c9caf]"}>
+                                {formatAttachmentSize(entry.attachment.size)}
+                              </span>
+                            ) : null}
+                          </a>
+                          {isImageAttachment(entry.attachment) && (
+                            <div className="overflow-hidden rounded-[18px] border border-[#ebe2fa] bg-white p-2">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={entry.attachment.url}
+                                alt={entry.attachment.name}
+                                className="max-h-64 w-full rounded-2xl object-contain"
+                                loading="lazy"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
+                );
+              })
+            ) : (
+              <div className="flex min-h-[13rem] flex-col justify-center rounded-[22px] border border-dashed border-[#e8defa] bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(246,250,255,0.92),rgba(255,248,252,0.95))] px-5 py-6">
+                <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#e8dcff] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7a5de1]">
+                  Fresh chat
                 </div>
-              );
-            })}
+                <h4 className="mt-4 text-lg font-semibold text-[#1a1630]">A new conversation starts for every website visitor.</h4>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6e6783]">
+                  Nothing from another customer is carried into this window. Start with the real order request, for example:
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setMessage("I need 15 black polos for staff with logo on the chest")}
+                  className="mt-4 w-fit rounded-full border border-[#ddd4fb] bg-white px-4 py-2 text-sm font-medium text-[#5f4db8] transition hover:border-[#c7b5ff] hover:bg-[#faf7ff]"
+                >
+                  I need 15 black polos for staff with logo on the chest
+                </button>
+              </div>
+            )}
           </div>
 
           {notice ? (
