@@ -116,11 +116,39 @@ function formatKnownOrderStub(lead: AssistantLead) {
   return parts.join(" ").replace(/\s+/g, " ").trim();
 }
 
+function formatOrderHeading(lead: AssistantLead) {
+  return [
+    lead.quantity ? `${lead.quantity}` : "",
+    lead.color ? titleCase(lead.color) : "",
+    lead.productType ? formatProductLabelPlural(lead.productType, lead.quantity) : "",
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function formatBreakdownSummary(lead: AssistantLead) {
+  return lead.sizeBreakdown.map((line) => `${line.size} x ${line.quantity}`).join(" and ");
+}
+
 function targetedSizeBreakdownPrompt(lead: AssistantLead) {
   const knownOrder = formatKnownOrderStub(lead);
+  const orderHeading = formatOrderHeading(lead);
+  const breakdownTotal = lead.sizeBreakdown.reduce((sum, line) => sum + line.quantity, 0);
+  const remaining = lead.quantity && breakdownTotal < lead.quantity ? lead.quantity - breakdownTotal : 0;
+  const breakdownSummary = formatBreakdownSummary(lead);
 
   if (!lead.productType && (lead.quantity || lead.color || lead.sizes.length)) {
     return "I already have part of the order. What garment do you need, and what color and size should I quote?";
+  }
+
+  if (lead.productType && lead.quantity && lead.color && lead.sizeBreakdown.length && remaining > 0) {
+    return `Noted: ${orderHeading} with ${breakdownSummary}. What size is the remaining ${remaining} piece${remaining > 1 ? "s" : ""}?`;
+  }
+
+  if (lead.productType && lead.quantity && !lead.color && lead.sizeBreakdown.length && remaining > 0) {
+    return `Noted: ${orderHeading} with ${breakdownSummary}. What color do you need, and what about the remaining ${remaining} piece${remaining > 1 ? "s" : ""}?`;
   }
 
   if (lead.productType && !lead.quantity && lead.color && lead.sizes.length === 1) {

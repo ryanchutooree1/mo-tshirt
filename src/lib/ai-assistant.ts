@@ -160,6 +160,29 @@ function hydrateSingleVariantBreakdown(lead: AssistantLead) {
   };
 }
 
+function sizeBreakdownTotal(lines: AssistantOrderLine[]) {
+  return lines.reduce((sum, line) => sum + line.quantity, 0);
+}
+
+function sizeBreakdownIsComplete(lead: AssistantLead) {
+  const normalized = normalizeAssistantLead(lead);
+  if (!normalized.sizeBreakdown.length) return false;
+  const total = sizeBreakdownTotal(normalized.sizeBreakdown);
+  if (!normalized.quantity) return total > 0;
+  return total >= normalized.quantity;
+}
+
+function mergeSizeBreakdownLines(existing: AssistantOrderLine[], incoming: AssistantOrderLine[]) {
+  const merged = new Map<string, AssistantOrderLine>();
+
+  for (const line of [...existing, ...incoming]) {
+    const key = [line.productType || "", line.color || "", line.size].join("|");
+    merged.set(key, line);
+  }
+
+  return [...merged.values()].sort((left, right) => left.size.localeCompare(right.size));
+}
+
 export function normalizeAssistantAttachment(value: unknown): AssistantAttachment | null {
   const source = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
   const name = cleanString(source.name);
@@ -358,9 +381,15 @@ function buildLeadUpdatesFromExtraction(
       productType: line.productType || updates.productType || currentLead.productType || null,
       color: line.color || updates.color || currentLead.color || null,
     }));
+    const breakdownTotal = sizeBreakdownTotal(enrichedBreakdown);
+    const extractedQuantity = updates.quantity;
+    const knownQuantity =
+      entities.fields.quantity?.strategy === "derived"
+        ? Math.max(currentLead.quantity || 0, extractedQuantity || 0) || null
+        : extractedQuantity || currentLead.quantity;
     updates.sizeBreakdown = enrichedBreakdown;
     updates.sizes = unique(enrichedBreakdown.map((line) => line.size)).sort((left, right) => left.localeCompare(right));
-    updates.quantity = enrichedBreakdown.reduce((total, line) => total + line.quantity, 0);
+    updates.quantity = knownQuantity && knownQuantity > breakdownTotal ? knownQuantity : breakdownTotal;
     if (!updates.productType && unique(enrichedBreakdown.map((line) => line.productType).filter(Boolean)).length === 1) {
       updates.productType = enrichedBreakdown[0].productType;
     }
@@ -436,10 +465,22 @@ export function mergeAssistantLeadUpdates(lead: AssistantLead, updates: Partial<
   }
 
   if (updates.sizeBreakdown) {
-    merged.sizeBreakdown = normalizeOrderLines(updates.sizeBreakdown);
+    const incomingBreakdown = normalizeOrderLines(updates.sizeBreakdown).map((line) => ({
+      ...line,
+      color: line.color || merged.color || null,
+      productType: line.productType || merged.productType || null,
+    }));
+    const existingBreakdown = merged.sizeBreakdown.map((line) => ({
+      ...line,
+      color: line.color || merged.color || null,
+      productType: line.productType || merged.productType || null,
+    }));
+    merged.sizeBreakdown = mergeSizeBreakdownLines(existingBreakdown, incomingBreakdown);
     merged.sizes = unique(merged.sizeBreakdown.map((line) => line.size)).sort((left, right) => left.localeCompare(right));
-    const total = merged.sizeBreakdown.reduce((sum, line) => sum + line.quantity, 0);
-    if (total > 0) merged.quantity = total;
+    const total = sizeBreakdownTotal(merged.sizeBreakdown);
+    if (total > 0) {
+      merged.quantity = merged.quantity && merged.quantity > total ? merged.quantity : total;
+    }
   }
 
   if (updates.printPositions) {
@@ -484,7 +525,7 @@ export function mergeAssistantLeadUpdates(lead: AssistantLead, updates: Partial<
 export function missingAssistantFields(lead: AssistantLead) {
   const normalized = normalizeAssistantLead(lead);
   const missing: AssistantRequiredField[] = [];
-  if (!normalized.sizeBreakdown.length) missing.push("sizeBreakdown");
+  if (!sizeBreakdownIsComplete(normalized)) missing.push("sizeBreakdown");
   if (!normalized.printType) missing.push("printType");
   if (!normalized.deliveryMethod) missing.push("deliveryMethod");
   if (!normalized.clientName) missing.push("clientName");

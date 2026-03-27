@@ -26,6 +26,8 @@ const RELATIVE_DATE_RE =
 const ORDER_LINE_RE =
   /Product:\s*([A-Za-z -]+)\s+Colour:\s*([A-Za-z]+)\s+Size:\s*([A-Za-z0-9]+)\s+Quantity:\s*(\d+)/gi;
 const FREEFORM_SIZE_RE = /\b(\d+|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*(xs|s|m|l|xl|xxl|2xl|xxxl|3xl|xxxxl|4xl)\b/gi;
+const SIZE_X_QUANTITY_RE =
+  /\b(1\s*yr|2\s*yrs?|4\s*yrs?|6\s*yrs?|8\s*yrs?|10\s*yrs?|12\s*yrs?|14\s*yrs?|xs|s|m|l|xl|xxl|2xl|xxxl|3xl|xxxxl|4xl)\s*[x×]\s*(\d+|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/gi;
 const SIZE_WITH_PREFIX_RE =
   /\b(?:size\s*[:=-]?\s*|in\s+)(1\s*yr|2\s*yrs?|4\s*yrs?|6\s*yrs?|8\s*yrs?|10\s*yrs?|12\s*yrs?|14\s*yrs?|xs|s|m|l|xl|xxl|2xl|xxxl|3xl|xxxxl|4xl)\b/gi;
 const PRODUCT_SIZE_RE =
@@ -283,6 +285,23 @@ function extractSizeBreakdown(message: string, lead: AssistantLead | null) {
 
   if (freeformMatches.length) {
     return freeformMatches.sort((left, right) => left.size.localeCompare(right.size));
+  }
+
+  const sizeFirstMatches: AssistantOrderLine[] = [];
+  for (const match of message.matchAll(SIZE_X_QUANTITY_RE)) {
+    const size = normalizeSize(match[1]);
+    const quantity = numberFromToken(match[2]);
+    if (!size || quantity === null) continue;
+    sizeFirstMatches.push({
+      color: lead?.color || null,
+      productType: lead?.productType || null,
+      size,
+      quantity,
+    });
+  }
+
+  if (sizeFirstMatches.length) {
+    return sizeFirstMatches.sort((left, right) => left.size.localeCompare(right.size));
   }
 
   const sizeMentions = unique(

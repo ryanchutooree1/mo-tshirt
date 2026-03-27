@@ -187,6 +187,58 @@ test("assistant asks only for the missing garment details instead of repeating t
   assert.doesNotMatch(thirdTurn.reply, /What size do you need/i);
 });
 
+test("partial size breakdowns keep the original quantity and ask only for the remaining pieces", () => {
+  const training = buildAssistantTrainingState([], [], [], "2026-03-18T00:00:00.000Z");
+
+  const firstTurn = runAssistantTurn({
+    lead: createEmptyAssistantLead(),
+    message: "Hi I need 4 t-shirts",
+    trainingState: training,
+  });
+
+  const secondTurn = runAssistantTurn({
+    lead: firstTurn.lead,
+    message: "white\nM x 3",
+    trainingState: training,
+  });
+
+  assert.equal(secondTurn.lead.quantity, 4);
+  assert.equal(secondTurn.lead.color, "white");
+  assert.deepEqual(secondTurn.lead.sizeBreakdown, [
+    {
+      color: "white",
+      productType: "t-shirt",
+      size: "M",
+      quantity: 3,
+    },
+  ]);
+  assert.match(secondTurn.reply, /remaining 1 piece/i);
+  assert.doesNotMatch(secondTurn.reply, /What size do you need/i);
+
+  const thirdTurn = runAssistantTurn({
+    lead: secondTurn.lead,
+    message: "L x 1",
+    trainingState: training,
+  });
+
+  assert.equal(thirdTurn.lead.quantity, 4);
+  assert.deepEqual(thirdTurn.lead.sizeBreakdown, [
+    {
+      color: "white",
+      productType: "t-shirt",
+      size: "L",
+      quantity: 1,
+    },
+    {
+      color: "white",
+      productType: "t-shirt",
+      size: "M",
+      quantity: 3,
+    },
+  ]);
+  assert.match(thirdTurn.reply, /use the upload button here to attach it now/i);
+});
+
 test("end-to-end assistant behavior stays structured and explainable without an LLM", () => {
   const training = buildAssistantTrainingState([], [], [], "2026-03-18T00:00:00.000Z");
 
