@@ -1271,75 +1271,150 @@ function OrdersPageInner() {
     URL.revokeObjectURL(url);
   }
 
+  const workspaceMetrics = useMemo(() => {
+    return visibleRows.reduce(
+      (acc, d) => {
+        const base = d.data() as Txn;
+        const m = { ...base, ...(overrides[d.id] || {}) } as Txn;
+        const total =
+          typeof m.amount === "number"
+            ? m.amount
+            : Array.isArray(m.products)
+              ? m.products.reduce((sum, product) => sum + (product.price || 0), 0)
+              : 0;
+        const status = m.status || "Pending";
+        acc.visibleValue += total;
+        if (!isCompletedLikeStatus(status) && status !== "Cancelled") acc.active += 1;
+        if (status === "Urgent") acc.urgent += 1;
+        if (status === "Completed") acc.ready += 1;
+        if (Array.isArray(m.products)) {
+          acc.units += m.products.reduce((sum, product) => sum + (product.quantity || 0), 0);
+        }
+        return acc;
+      },
+      { active: 0, urgent: 0, ready: 0, visibleValue: 0, units: 0 }
+    );
+  }, [overrides, visibleRows]);
+
   return (
-    <main className="relative min-h-screen">
+    <main className="relative min-h-screen overflow-x-hidden bg-[#fbf7f2] text-slate-900">
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-40 right-[-12rem] h-80 w-80 rounded-full bg-[radial-gradient(circle_at_top,rgba(255,115,0,0.35),transparent_70%)] blur-3xl"
+        className="pointer-events-none absolute -top-28 right-[-10rem] h-[28rem] w-[28rem] rounded-full bg-[radial-gradient(circle_at_top,rgba(255,90,95,0.2),transparent_68%)] blur-3xl"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute left-[-10rem] top-40 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_top,rgba(14,116,144,0.25),transparent_70%)] blur-3xl"
+        className="pointer-events-none absolute left-[-12rem] top-52 h-[24rem] w-[24rem] rounded-full bg-[radial-gradient(circle_at_top,rgba(255,184,102,0.18),transparent_70%)] blur-3xl"
       />
-      <div className="relative mx-auto max-w-7xl space-y-6">
-        {/* Header & quick nav */}
+      <div className="relative mx-auto max-w-[1480px] space-y-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         <section
-          className="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 p-6 shadow-sm backdrop-blur"
+          className="relative overflow-hidden rounded-[36px] border border-[#e9dfd2] bg-[#fffdf9] p-6 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.42)] sm:p-8"
           style={{ animation: "fadeUp 0.6s ease-out both" }}
         >
           <div
             aria-hidden
-            className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,115,0,0.08),transparent_60%)]"
+            className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,90,95,0.08),transparent_58%)]"
           />
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div
+            aria-hidden
+            className="absolute bottom-0 right-0 h-48 w-48 rounded-full bg-[radial-gradient(circle_at_center,rgba(255,184,102,0.18),transparent_70%)]"
+          />
+          <div className="relative grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-orange-600">
+              <p className="inline-flex items-center rounded-full border border-[#f4d7cc] bg-[#fff5ef] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-[#d6473f]">
                 Order Management
               </p>
-              <h1 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">
+              <h1 className="mt-4 max-w-3xl text-4xl font-semibold tracking-[-0.04em] text-[#1f1f1b] sm:text-5xl">
                 Order Command Center
               </h1>
-              <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
-                Track, update, and fulfill orders with inventory-safe workflows and clean client handoffs.
+              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">
+                A lighter workspace for production, payment, and document handoff. Keep every order moving without the admin screen feeling dense.
               </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full bg-orange-100/70 px-3 py-1 text-xs font-semibold text-orange-700">
+              <div className="mt-6 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-2 rounded-full border border-[#f3d8ca] bg-[#fff4ea] px-3 py-1.5 text-xs font-semibold text-[#b86a1f]">
                   <FiShield className="h-4 w-4" /> Inventory-safe fulfillment
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                <span className="inline-flex items-center gap-2 rounded-full border border-[#e8e0d6] bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
                   Live status updates
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                <span className="inline-flex items-center gap-2 rounded-full border border-[#dceadf] bg-[#f3faf4] px-3 py-1.5 text-xs font-semibold text-emerald-700">
                   Clean invoice exports
                 </span>
               </div>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Link
+                  href="/admin/pos"
+                  className="inline-flex items-center justify-center rounded-full bg-[#1f2937] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#111827]"
+                >
+                  Open POS
+                </Link>
+                <Link
+                  href="/admin/dms"
+                  className="inline-flex items-center justify-center rounded-full border border-[#d8e3ea] bg-[#f5fafc] px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white"
+                >
+                  DMS
+                </Link>
+                <button
+                  onClick={exportVisibleToCSV}
+                  className="inline-flex items-center justify-center rounded-full border border-[#eadfce] bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-[#fff9f3]"
+                >
+                  <FiFileText className="mr-2 h-4 w-4" />
+                  Export CSV
+                </button>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href="/admin/pos"
-                className="inline-flex items-center justify-center rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
-              >
-                Open POS
-              </Link>
-              <Link
-                href="/admin/dms"
-                className="inline-flex items-center justify-center rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
-              >
-                DMS
-              </Link>
-              <button
-                onClick={exportVisibleToCSV}
-                className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-              >
-                Export CSV
-              </button>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-[30px] border border-[#ebe0d2] bg-white/90 p-5 shadow-[0_20px_50px_-38px_rgba(15,23,42,0.45)] sm:col-span-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  Workspace Pulse
+                </p>
+                <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+                  <div>
+                    <div className="text-4xl font-semibold tracking-[-0.05em] text-slate-900">
+                      {currency(workspaceMetrics.visibleValue)}
+                    </div>
+                    <p className="mt-2 max-w-xs text-sm leading-6 text-slate-600">
+                      Total value of the orders currently in view across this command center.
+                    </p>
+                  </div>
+                  <div className="rounded-[24px] border border-[#efe5da] bg-[#fff9f2] px-4 py-3 text-sm text-slate-600">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Active Filters
+                    </div>
+                    <div className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">
+                      {activeFilters.length}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-[28px] border border-[#ebe0d2] bg-white p-5 shadow-[0_18px_45px_-36px_rgba(15,23,42,0.42)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Open Queue</p>
+                <div className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-slate-900">
+                  {workspaceMetrics.active}
+                </div>
+                <p className="mt-2 text-sm text-slate-600">Orders still moving through production or delivery.</p>
+              </div>
+
+              <div className="rounded-[28px] border border-[#ebe0d2] bg-white p-5 shadow-[0_18px_45px_-36px_rgba(15,23,42,0.42)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Attention Now</p>
+                <div className="mt-3 flex items-end justify-between gap-3">
+                  <div className="text-3xl font-semibold tracking-[-0.04em] text-slate-900">
+                    {workspaceMetrics.urgent}
+                  </div>
+                  <span className="rounded-full border border-[#f3d8ca] bg-[#fff4ea] px-3 py-1 text-xs font-semibold text-[#b86a1f]">
+                    {selectMode ? `${selectedIds.size} selected` : `${workspaceMetrics.ready} ready to close`}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-slate-600">Urgent jobs stay visible while you batch work calmly.</p>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Summary Cards */}
         <section
-          className="grid grid-cols-2 gap-4 md:grid-cols-5"
+          className="grid grid-cols-2 gap-4 xl:grid-cols-5"
           style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.08s" }}
         >
           <Stat label="Today Revenue" value={currency(summary.todayRevenue)} tone="amber" icon={<FiDollarSign className="h-4 w-4" />} />
@@ -1349,139 +1424,81 @@ function OrdersPageInner() {
           <Stat label="Efficiency" value={`${summary.efficiencyValue}%`} tone="slate" icon={<FiTrendingUp className="h-4 w-4" />} />
         </section>
 
-        {/* Filters */}
         <section
-          className="sticky top-20 z-10 rounded-3xl border border-slate-200/70 bg-white/90 p-4 shadow-sm backdrop-blur"
+          className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]"
           style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.14s" }}
         >
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative flex-1 min-w-[220px]">
-                <FiSearch className="absolute left-3 top-2.5 text-slate-400" />
+          <div className="rounded-[32px] border border-[#e9dfd2] bg-[#fffdf9] p-5 shadow-[0_24px_60px_-46px_rgba(15,23,42,0.42)] sm:p-6">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+                    Search & Filter
+                  </p>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">
+                    Find the right order fast
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    Tighten the workspace without losing context.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Quick range</span>
+                  <button
+                    onClick={() => applyQuickRange(1)}
+                    className="rounded-full border border-[#eadfce] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-[#fff8f1]"
+                  >
+                    Today
+                  </button>
+                  <button
+                    onClick={() => applyQuickRange(7)}
+                    className="rounded-full border border-[#eadfce] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-[#fff8f1]"
+                  >
+                    7 days
+                  </button>
+                  <button
+                    onClick={() => applyQuickRange(30)}
+                    className="rounded-full border border-[#eadfce] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-[#fff8f1]"
+                  >
+                    30 days
+                  </button>
+                </div>
+              </div>
+
+              <div className="relative">
+                <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
-                  className="w-full rounded-full border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
-                  placeholder="Search customer, phone, or invoice..."
+                  className="w-full rounded-[22px] border border-[#eadfce] bg-white py-3.5 pl-11 pr-4 text-sm text-slate-700 shadow-sm outline-none transition focus:border-[#f1cdb8] focus:ring-4 focus:ring-[#fff1e6]"
+                  placeholder="Search customer, phone, email, or invoice..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Quick range</span>
-                <button
-                  onClick={() => applyQuickRange(1)}
-                  className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-                >
-                  Today
-                </button>
-                <button
-                  onClick={() => applyQuickRange(7)}
-                  className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-                >
-                  7 days
-                </button>
-                <button
-                  onClick={() => applyQuickRange(30)}
-                  className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-                >
-                  30 days
-                </button>
-              </div>
-
-              <div className="ml-auto flex flex-wrap items-center gap-2">
-                <button
-                  onClick={() => {
-                    setSearch("");
-                    setDateFrom("");
-                    setDateTo("");
-                    setStatusFilter("");
-                    setPaymentFilter("");
-                    setActiveTab("all");
-                  }}
-                  className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-                  title="Reset filters"
-                >
-                  Reset
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab("all");
-                  }}
-                  className={`rounded-full border px-4 py-2 text-xs font-semibold shadow-sm transition ${
-                    activeTab === "all"
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveTab("completed");
-                  }}
-                  className={`rounded-full border px-4 py-2 text-xs font-semibold shadow-sm transition ${
-                    activeTab === "completed"
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                  }`}
-                >
-                  Completed
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectMode((s) => !s);
-                    if (selectMode) setSelectedIds(new Set());
-                  }}
-                  className={`rounded-full border px-4 py-2 text-xs font-semibold shadow-sm transition ${
-                    selectMode
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                  }`}
-                >
-                  {selectMode ? "Cancel Select" : "Select"}
-                </button>
-                {selectMode && (
-                  <>
-                    <button
-                      onClick={() => setSelectedIds(new Set(visibleRows.map((d) => d.id)))}
-                      className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-                    >
-                      Select All
-                    </button>
-                    <button
-                      onClick={() => setSelectedIds(new Set())}
-                      className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-                    >
-                      Clear
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-500">From</label>
+                  <label className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">From</label>
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                    className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-[#f1cdb8] focus:ring-4 focus:ring-[#fff1e6]"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500">To</label>
+                  <label className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">To</label>
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                    className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-[#f1cdb8] focus:ring-4 focus:ring-[#fff1e6]"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500">Status</label>
+                  <label className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Status</label>
                 <select
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                    className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-[#f1cdb8] focus:ring-4 focus:ring-[#fff1e6]"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >
@@ -1494,9 +1511,9 @@ function OrdersPageInner() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-500">Payment</label>
+                  <label className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Payment</label>
                 <select
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                    className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-[#f1cdb8] focus:ring-4 focus:ring-[#fff1e6]"
                   value={paymentFilter}
                   onChange={(e) => setPaymentFilter(e.target.value)}
                 >
@@ -1509,78 +1526,219 @@ function OrdersPageInner() {
                 </select>
               </div>
             </div>
+            </div>
+          </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+          <div className="rounded-[32px] border border-[#e9dfd2] bg-[#fffaf5] p-5 shadow-[0_24px_60px_-46px_rgba(15,23,42,0.42)] sm:p-6">
+            <div className="flex h-full flex-col">
               <div>
-                Showing {visibleRows.length} of {rows.length} loaded
-                {hasMore && " • more available"}
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  Workspace Controls
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">
+                  Shape the view
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Use calmer toggles for batching, review, and cleanup.
+                </p>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {activeFilters.length === 0 ? (
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
-                    No filters active
-                  </span>
-                ) : (
-                  activeFilters.map((filter) => (
-                    <span key={filter} className="rounded-full border border-slate-200 bg-white px-3 py-1">
-                      {filter}
-                    </span>
-                  ))
-                )}
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                <button
+                  onClick={() => setActiveTab("all")}
+                  className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
+                    activeTab === "all"
+                      ? "border-[#1f2937] bg-[#1f2937] text-white"
+                      : "border-[#eadfce] bg-white text-slate-600 hover:bg-[#fff8f1]"
+                  }`}
+                >
+                  All Orders
+                </button>
+                <button
+                  onClick={() => setActiveTab("completed")}
+                  className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
+                    activeTab === "completed"
+                      ? "border-[#1f2937] bg-[#1f2937] text-white"
+                      : "border-[#eadfce] bg-white text-slate-600 hover:bg-[#fff8f1]"
+                  }`}
+                >
+                  Completed
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectMode((enabled) => !enabled);
+                    if (selectMode) setSelectedIds(new Set());
+                  }}
+                  className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
+                    selectMode
+                      ? "border-[#d6473f] bg-[#d6473f] text-white"
+                      : "border-[#eadfce] bg-white text-slate-600 hover:bg-[#fff8f1]"
+                  }`}
+                >
+                  {selectMode ? "Exit Select Mode" : "Select Orders"}
+                </button>
+              </div>
+
+              {selectMode && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setSelectedIds(new Set(visibleRows.map((d) => d.id)))}
+                    className="rounded-full border border-[#eadfce] bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-[#fff8f1]"
+                  >
+                    Select All Visible
+                  </button>
+                  <button
+                    onClick={() => setSelectedIds(new Set())}
+                    className="rounded-full border border-[#eadfce] bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-[#fff8f1]"
+                  >
+                    Clear Selection
+                  </button>
+                </div>
+              )}
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-[22px] border border-[#eadfce] bg-white px-4 py-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Visible Orders</div>
+                  <div className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">{visibleRows.length}</div>
+                </div>
+                <div className="rounded-[22px] border border-[#eadfce] bg-white px-4 py-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Loaded Rows</div>
+                  <div className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">{rows.length}</div>
+                </div>
+                <div className="rounded-[22px] border border-[#eadfce] bg-white px-4 py-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Units in View</div>
+                  <div className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">{workspaceMetrics.units}</div>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-[24px] border border-dashed border-[#e2d5c4] bg-white/80 p-4 text-sm text-slate-600">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Active filters
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {activeFilters.length === 0 ? (
+                        <span className="rounded-full border border-[#eadfce] bg-white px-3 py-1.5 text-xs font-semibold text-slate-500">
+                          No filters active
+                        </span>
+                      ) : (
+                        activeFilters.map((filter) => (
+                          <span key={filter} className="rounded-full border border-[#eadfce] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
+                            {filter}
+                          </span>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSearch("");
+                      setDateFrom("");
+                      setDateTo("");
+                      setStatusFilter("");
+                      setPaymentFilter("");
+                      setActiveTab("all");
+                    }}
+                    className="rounded-full border border-[#eadfce] bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-[#fff8f1]"
+                    title="Reset filters"
+                  >
+                    Reset All
+                  </button>
+                </div>
+                <p className="mt-4 text-xs text-slate-500">
+                  Showing {visibleRows.length} of {rows.length} loaded{hasMore ? " with more available" : ""}.
+                </p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Toast */}
         {toast && (
           <div
-            className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold shadow-sm ${
+            className={`inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-sm ${
               toast.type === "ok"
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                : "border-rose-200 bg-rose-50 text-rose-700"
+                ? "border-emerald-200 bg-[#f2fbf5] text-emerald-700"
+                : "border-rose-200 bg-[#fff3f2] text-rose-700"
             }`}
           >
             {toast.text}
           </div>
         )}
 
-        {/* List */}
-        <div
-          className="rounded-3xl border border-slate-200/70 bg-white/90 shadow-sm backdrop-blur"
+        <section
+          className="overflow-hidden rounded-[36px] border border-[#e9dfd2] bg-[#fffdf9] shadow-[0_30px_80px_-52px_rgba(15,23,42,0.42)]"
           style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.2s" }}
         >
+          <div className="border-b border-[#eee3d6] px-5 py-5 sm:px-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+                  Live Order Queue
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">
+                  Every order in one calm workspace
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+                  Open an order to update workflow, edit line items, and move cleanly into documents or delivery.
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-[20px] border border-[#eadfce] bg-white px-4 py-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Orders in View</div>
+                  <div className="mt-2 text-xl font-semibold tracking-[-0.03em] text-slate-900">{visibleRows.length}</div>
+                </div>
+                <div className="rounded-[20px] border border-[#eadfce] bg-white px-4 py-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Ready to Close</div>
+                  <div className="mt-2 text-xl font-semibold tracking-[-0.03em] text-slate-900">{workspaceMetrics.ready}</div>
+                </div>
+                <div className="rounded-[20px] border border-[#eadfce] bg-white px-4 py-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Selection</div>
+                  <div className="mt-2 text-xl font-semibold tracking-[-0.03em] text-slate-900">
+                    {selectMode ? selectedIds.size : 0}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {loading ? (
-            <div className="p-4 space-y-3">
+            <div className="space-y-4 p-4 sm:p-5">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="animate-pulse rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="h-4 bg-slate-200 rounded w-1/3" />
-                  <div className="mt-2 h-3 bg-slate-100 rounded w-1/4" />
+                <div key={i} className="animate-pulse rounded-[30px] border border-[#efe5da] bg-white p-5">
+                  <div className="h-4 w-1/3 rounded-full bg-[#efe4d6]" />
+                  <div className="mt-4 h-8 w-1/2 rounded-full bg-[#f6efe7]" />
+                  <div className="mt-5 grid gap-3 lg:grid-cols-2">
+                    <div className="h-32 rounded-[24px] bg-[#f8f3ec]" />
+                    <div className="h-32 rounded-[24px] bg-[#f8f3ec]" />
+                  </div>
                 </div>
               ))}
             </div>
           ) : visibleRows.length === 0 ? (
-            <div className="p-10 text-center text-slate-500">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+            <div className="p-10 text-center text-slate-500 sm:p-14">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f5eee5] text-slate-500">
                 <FiSearch className="h-5 w-5" />
               </div>
-              <div className="mt-3 text-base font-semibold text-slate-700">No transactions found.</div>
-              <p className="mt-1 text-sm text-slate-500">Try adjusting filters or create a new order.</p>
+              <div className="mt-4 text-xl font-semibold tracking-[-0.02em] text-slate-800">No transactions found.</div>
+              <p className="mt-2 text-sm leading-6 text-slate-500">Try relaxing the filters or create a fresh order from the POS.</p>
               <div className="mt-4">
                 <Link
                   href="/admin/pos"
-                  className="inline-flex items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                  className="inline-flex items-center justify-center rounded-full bg-[#1f2937] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#111827]"
                 >
                   Create a new order in POS
                 </Link>
               </div>
             </div>
           ) : (
-            <ul className="space-y-3 p-3">
+            <ul className="space-y-4 p-4 sm:p-5">
               {visibleRows.map((d) => {
                 const base = d.data() as Txn;
                 const m = { ...base, ...(overrides[d.id] || {}) } as Txn;
                 const id = d.id;
+                const products = Array.isArray(m.products) ? m.products : [];
                 const dt = m.transactionDate?.toDate?.() as Date | undefined;
                 const when = dt
                   ? `${dt.toLocaleDateString()} • ${dt.toLocaleTimeString([], {
@@ -1609,6 +1767,11 @@ function OrdersPageInner() {
                     : m.quoteId
                       ? "quotation"
                       : "invoice";
+                const customerLabel = m.customerName || m.phoneNumber || m.email || "Unknown Customer";
+                const customerInitial = customerLabel.trim().charAt(0).toUpperCase() || "?";
+                const selected = selectedIds.has(id);
+                const totalQty = products.reduce((sum, product) => sum + (product.quantity || 0), 0);
+                const sourceLabel = m.source || (m.quoteId ? "Quotation conversion" : "Direct order");
                 const activeDocFlowIndex = activeDocType ? ORDER_DOC_FLOW.findIndex((item) => item === activeDocType) : -1;
                 const workflowNextLabel =
                   workflowDone
@@ -1624,11 +1787,23 @@ function OrdersPageInner() {
                     ? null
                     : getNextDocumentType(activeDocType)
                   : ORDER_DOC_FLOW[0];
+                const workflowCaption = workflowDone
+                  ? "Production completed and the workflow is closed."
+                  : workflowReachedDelivered
+                    ? "Final confirmation is still needed before marking this order done."
+                    : `Current stage: ${currentStatus}. Advance only when the production step is complete.`;
+                const docCaption = docTypeLabel
+                  ? `Current document profile: ${docTypeLabel}.`
+                  : "No saved document profile yet. Start from quotation or invoice.";
 
                 return (
                   <li
                     key={id}
-                    className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 p-4 shadow-sm transition hover:border-orange-200 hover:shadow-md"
+                    className={`relative overflow-hidden rounded-[32px] border p-5 shadow-[0_22px_50px_-40px_rgba(15,23,42,0.42)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_28px_65px_-40px_rgba(15,23,42,0.45)] ${
+                      selected
+                        ? "border-[#f4b8a0] bg-[#fff8f3]"
+                        : "border-[#efe4d8] bg-white"
+                    }`}
                     data-row-id={id}
                     data-row={JSON.stringify({
                       invoiceNumber: m.invoiceNumber,
@@ -1646,404 +1821,515 @@ function OrdersPageInner() {
                   >
                     <div
                       aria-hidden
-                      className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[radial-gradient(circle_at_top,rgba(251,146,60,0.18),transparent_70%)]"
+                      className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-[radial-gradient(circle_at_top,rgba(255,184,102,0.2),transparent_70%)]"
                     />
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="flex min-w-0 flex-1 items-start gap-4">
-                        {selectMode && (
-                          <input
-                            type="checkbox"
-                            className="mt-1 h-4 w-4 rounded border-slate-300 text-orange-500 focus:ring-orange-200"
-                            checked={selectedIds.has(id)}
-                            onChange={(e) => {
-                              setSelectedIds((prev) => {
-                                const next = new Set(prev);
-                                if (e.target.checked) next.add(id); else next.delete(id);
-                                return next;
-                              });
-                            }}
-                          />
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-semibold text-slate-900">
-                              Invoice #{m.invoiceNumber || ""}
-                            </span>
-                            <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                              Order {id.slice(-6).toUpperCase()}
-                            </span>
-                            <span className="text-xs text-slate-400">{when}</span>
-                          </div>
-                          <div className="mt-1 text-sm text-slate-600">
-                            {m.customerName || m.phoneNumber || m.email || "Unknown Customer"}
-                          </div>
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {StatusBadge(m.status || "")}
-                            {PaymentBadge(m.paymentMethod || "")}
-                            <span className="text-xs text-slate-500 border border-slate-200 px-2 py-0.5 rounded-full bg-slate-50">
-                              Items: {Array.isArray(m.products) ? m.products.length : 0}
-                            </span>
-                            {m.quoteId && (
-                              <span className="text-xs text-violet-700 border border-violet-200 px-2 py-0.5 rounded-full bg-violet-50">
-                                From quotation
-                              </span>
-                            )}
-                            {docTypeLabel && (
-                              <span className="text-xs text-orange-700 border border-orange-200 px-2 py-0.5 rounded-full bg-orange-50">
-                                Doc profile: {docTypeLabel}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap items-center justify-end gap-2 lg:max-w-[54%]">
-                        <span className="rounded-full bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white">
-                          {currency(total)}
-                        </span>
-                        <button
-                          title="Quick invoice preview"
-                          onClick={() => quickPreviewInvoice(id, m)}
-                          className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white p-2 text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-                        >
-                          <FiPrinter />
-                        </button>
-                        <button
-                          title={expanded.has(id) ? "Hide items" : "Show items"}
-                          onClick={() =>
-                            setExpanded((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(id)) next.delete(id);
-                              else next.add(id);
-                              return next;
-                            })
-                          }
-                          className={`rounded-full border px-3 py-1.5 text-sm font-semibold shadow-sm transition ${
-                            expanded.has(id)
-                              ? "border-slate-900 bg-slate-900 text-white"
-                              : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                          }`}
-                        >
-                          {expanded.has(id) ? "Hide" : "Items"}
-                        </button>
-                        <button
-                          title="Mark Completed & adjust stock"
-                          onClick={() => markCompletedAndAdjust(id)}
-                          className="inline-flex items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 p-2 text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-100"
-                        >
-                          <FiCheckCircle />
-                        </button>
-                        <button
-                          title="Delete"
-                          onClick={() => deleteTxn(id)}
-                          className="inline-flex items-center justify-center rounded-full border border-rose-200 bg-rose-50 p-2 text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-100"
-                        >
-                          <FiTrash2 />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 grid gap-3 xl:grid-cols-2">
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3.5 dark:border-slate-700 dark:bg-slate-900/50">
-                        <div className="mb-2 flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-300">
-                            Workflow
-                          </span>
-                          {workflowDone ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-                              <FiCheckCircle className="h-3.5 w-3.5" />
-                              Done
-                            </span>
-                          ) : (
-                            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
-                              Next: {workflowNextLabel}
-                            </span>
+                    <div className="relative flex flex-col gap-5">
+                      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                        <div className="flex min-w-0 flex-1 items-start gap-4">
+                          {selectMode && (
+                            <input
+                              type="checkbox"
+                              className="mt-4 h-4 w-4 rounded border-slate-300 text-[#d6473f] focus:ring-[#f7d0ca]"
+                              checked={selected}
+                              onChange={(e) => {
+                                setSelectedIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (e.target.checked) next.add(id);
+                                  else next.delete(id);
+                                  return next;
+                                });
+                              }}
+                            />
                           )}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 text-[12px]">
-                          {ORDER_WORKFLOW_VISUAL.map((step, index) => {
-                            const state = workflowDone ? "done" : getFlowStepState(workflowVisualIndex, index);
-                            const className =
-                              state === "done"
-                                ? "border-emerald-200 bg-emerald-100 text-emerald-700"
-                                : state === "active"
-                                  ? "border-slate-800 bg-slate-900 text-white dark:border-slate-500 dark:bg-slate-800"
-                                  : "border-slate-200 bg-white text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300";
-                            return (
-                              <React.Fragment key={`${id}-workflow-wide-${step}`}>
-                                <span className={`rounded-full border px-3 py-1.5 font-semibold ${className}`}>
-                                  {step}
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] border border-[#efe2d2] bg-[#f8f1e8] text-lg font-semibold text-[#7c5530] shadow-inner">
+                            {customerInitial}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                              <span>{sourceLabel}</span>
+                              <span className="h-1 w-1 rounded-full bg-[#d8c7b4]" />
+                              <span>Order {id.slice(-6).toUpperCase()}</span>
+                              {when ? (
+                                <>
+                                  <span className="h-1 w-1 rounded-full bg-[#d8c7b4]" />
+                                  <span>{when}</span>
+                                </>
+                              ) : null}
+                            </div>
+                            <div className="mt-3 flex flex-wrap items-end gap-x-3 gap-y-2">
+                              <h3 className="text-[1.45rem] font-semibold tracking-[-0.03em] text-slate-900">
+                                {customerLabel}
+                              </h3>
+                              <span className="rounded-full border border-[#eadfce] bg-[#fffaf4] px-3 py-1 text-xs font-semibold text-slate-600">
+                                Invoice #{m.invoiceNumber || "Draft"}
+                              </span>
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500">
+                              <span>{m.phoneNumber || "Phone not set"}</span>
+                              <span>{m.email || "Email not set"}</span>
+                            </div>
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              {StatusBadge(m.status || "")}
+                              {PaymentBadge(m.paymentMethod || "")}
+                              <span className="rounded-full border border-[#eadfce] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
+                                {totalQty} pcs
+                              </span>
+                              <span className="rounded-full border border-[#eadfce] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
+                                {products.length} lines
+                              </span>
+                              {m.quoteId && (
+                                <span className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700">
+                                  Converted quote
                                 </span>
-                                {index < ORDER_WORKFLOW_VISUAL.length - 1 && <FiChevronRight className="text-slate-400" />}
-                              </React.Fragment>
-                            );
-                          })}
+                              )}
+                              {docTypeLabel && (
+                                <span className="rounded-full border border-[#f3d8ca] bg-[#fff4ea] px-3 py-1.5 text-xs font-semibold text-[#b86a1f]">
+                                  Document {docTypeLabel}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          {workflowDone ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1 text-[11px] font-semibold text-emerald-700">
-                              <FiCheckCircle className="h-3.5 w-3.5" />
-                              Workflow Done
-                            </span>
-                          ) : workflowReachedDelivered ? (
+
+                        <div className="flex shrink-0 flex-col gap-3 xl:items-end">
+                          <span className="rounded-full bg-[#1f2937] px-4 py-2 text-base font-semibold text-white shadow-sm">
+                            {currency(total)}
+                          </span>
+                          <div className="flex flex-wrap gap-2 xl:justify-end">
                             <button
-                              type="button"
-                              onClick={() => markWorkflowDone(id)}
-                              className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-600 px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-emerald-700"
+                              title="Quick invoice preview"
+                              onClick={() => quickPreviewInvoice(id, m)}
+                              className="inline-flex items-center gap-2 rounded-full border border-[#eadfce] bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-[#fff8f1]"
                             >
-                              <FiCheckCircle className="h-3.5 w-3.5" />
-                              Done
+                              <FiPrinter className="h-4 w-4" />
+                              Preview
                             </button>
-                          ) : (
                             <button
-                              type="button"
-                              onClick={() => advanceWorkflowStatus(id, currentStatus)}
-                              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-100"
+                              title={expanded.has(id) ? "Hide details" : "Open details"}
+                              onClick={() =>
+                                setExpanded((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(id)) next.delete(id);
+                                  else next.add(id);
+                                  return next;
+                                })
+                              }
+                              className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
+                                expanded.has(id)
+                                  ? "border-[#1f2937] bg-[#1f2937] text-white"
+                                  : "border-[#eadfce] bg-white text-slate-600 hover:bg-[#fff8f1]"
+                              }`}
                             >
-                              <FiCheckCircle className="h-3.5 w-3.5" />
-                              Advance to {workflowNextLabel}
+                              {expanded.has(id) ? "Hide details" : "Open details"}
                             </button>
-                          )}
+                            <button
+                              title="Mark Completed & adjust stock"
+                              onClick={() => markCompletedAndAdjust(id)}
+                              className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-[#f2fbf5] px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                            >
+                              <FiCheckCircle className="h-4 w-4" />
+                              Complete
+                            </button>
+                            <button
+                              title="Delete"
+                              onClick={() => deleteTxn(id)}
+                              className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-[#fff3f2] px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
+                            >
+                              <FiTrash2 className="h-4 w-4" />
+                              Delete
+                            </button>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="rounded-2xl border border-violet-200/70 bg-violet-50/70 px-4 py-3.5 dark:border-violet-500/40 dark:bg-violet-900/20">
-                        <div className="mb-2 flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-violet-700 dark:text-violet-300">
-                            Document Flow
-                          </span>
-                          {isDocFlowDone ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-                              <FiCheckCircle className="h-3.5 w-3.5" />
-                              Done
+                      <div className="grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
+                        <div className="rounded-[28px] border border-[#eee2d4] bg-[#fbf6ef] p-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8a6640]">
+                                Order Snapshot
+                              </p>
+                              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">
+                                The essentials stay readable before you open the full workspace.
+                              </p>
+                            </div>
+                            <span className="rounded-full border border-[#eadfce] bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                              {products.length > 0 ? `${products.length} line items` : "No line items"}
                             </span>
-                          ) : (
-                            <span className="rounded-full border border-violet-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-violet-700 dark:border-violet-400/50 dark:bg-slate-900/70 dark:text-violet-300">
-                              Next: {nextDocType ? ORDER_DOC_LABELS[nextDocType] : "Quotation"}
-                            </span>
-                          )}
+                          </div>
+
+                          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-[22px] border border-[#ede2d6] bg-white p-4">
+                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Source</div>
+                              <div className="mt-2 text-sm font-semibold text-slate-900">{sourceLabel}</div>
+                              <p className="mt-1 text-sm text-slate-500">{m.quoteId ? "Converted from a quotation." : "Captured directly as an order."}</p>
+                            </div>
+                            <div className="rounded-[22px] border border-[#ede2d6] bg-white p-4">
+                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Delivery Contact</div>
+                              <div className="mt-2 text-sm font-semibold text-slate-900">{m.phoneNumber || "Not set"}</div>
+                              <p className="mt-1 text-sm text-slate-500">{m.address || "Address not provided yet."}</p>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            {products.length > 0 ? (
+                              products.slice(0, 4).map((product, index) => {
+                                const variant = [product.color, product.size].filter(Boolean).join(" / ");
+                                return (
+                                  <span
+                                    key={`${id}-preview-${index}`}
+                                    className="rounded-full border border-[#eadfce] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600"
+                                  >
+                                    {product.product || "Item"}
+                                    {variant ? ` • ${variant}` : ""}
+                                    {product.quantity ? ` × ${product.quantity}` : ""}
+                                  </span>
+                                );
+                              })
+                            ) : (
+                              <span className="rounded-full border border-dashed border-[#d8c7b4] bg-white px-3 py-1.5 text-xs font-semibold text-slate-500">
+                                No line items on this order yet
+                              </span>
+                            )}
+                            {products.length > 4 && (
+                              <span className="rounded-full border border-[#eadfce] bg-white px-3 py-1.5 text-xs font-semibold text-slate-500">
+                                +{products.length - 4} more
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 text-[12px]">
-                          {ORDER_DOC_FLOW.map((docType, index) => {
-                            const state = getFlowStepState(activeDocFlowIndex, index);
-                            const className =
-                              state === "done"
-                                ? "border-violet-200 bg-violet-100 text-violet-700"
-                                : state === "active"
-                                  ? "border-orange-200 bg-orange-100 text-orange-700"
-                                  : "border-slate-200 bg-white text-slate-500";
-                            return (
-                              <React.Fragment key={`${id}-docflow-wide-${docType}`}>
+
+                        <div className="grid gap-4">
+                          <div className="rounded-[28px] border border-[#dce7ea] bg-[#f7fbfc] p-4">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                                  Production Flow
+                                </p>
+                                <p className="mt-2 text-sm leading-6 text-slate-600">{workflowCaption}</p>
+                              </div>
+                              {workflowDone ? (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1 text-[11px] font-semibold text-emerald-700">
+                                  <FiCheckCircle className="h-3.5 w-3.5" />
+                                  Done
+                                </span>
+                              ) : (
+                                <span className="rounded-full border border-[#dce7ea] bg-white px-3 py-1 text-[11px] font-semibold text-slate-600">
+                                  Next: {workflowNextLabel}
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px]">
+                              {ORDER_WORKFLOW_VISUAL.map((step, index) => {
+                                const state = workflowDone ? "done" : getFlowStepState(workflowVisualIndex, index);
+                                const className =
+                                  state === "done"
+                                    ? "border-emerald-200 bg-emerald-100 text-emerald-700"
+                                    : state === "active"
+                                      ? "border-[#1f2937] bg-[#1f2937] text-white"
+                                      : "border-[#dce7ea] bg-white text-slate-500";
+                                return (
+                                  <React.Fragment key={`${id}-workflow-wide-${step}`}>
+                                    <span className={`rounded-full border px-3 py-1.5 font-semibold ${className}`}>
+                                      {step}
+                                    </span>
+                                    {index < ORDER_WORKFLOW_VISUAL.length - 1 && <FiChevronRight className="text-slate-400" />}
+                                  </React.Fragment>
+                                );
+                              })}
+                            </div>
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              {workflowDone ? (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1.5 text-[11px] font-semibold text-emerald-700">
+                                  <FiCheckCircle className="h-3.5 w-3.5" />
+                                  Workflow done
+                                </span>
+                              ) : workflowReachedDelivered ? (
                                 <button
                                   type="button"
-                                  onClick={() => openDocumentStudioWithType(id, m, docType)}
-                                  className={`rounded-full border px-3 py-1.5 font-semibold transition hover:brightness-95 ${className}`}
-                                  title={`Open ${ORDER_DOC_LABELS[docType]} in Document Studio`}
+                                  onClick={() => markWorkflowDone(id)}
+                                  className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-600 px-4 py-2 text-[11px] font-semibold text-white transition hover:bg-emerald-700"
                                 >
-                                  {ORDER_DOC_LABELS[docType]}
+                                  <FiCheckCircle className="h-3.5 w-3.5" />
+                                  Mark done
                                 </button>
-                                {index < ORDER_DOC_FLOW.length - 1 && <FiChevronRight className="text-slate-400" />}
-                              </React.Fragment>
-                            );
-                          })}
-                        </div>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                          {!isDocFlowDone && nextDocType && (
-                            <button
-                              type="button"
-                              onClick={() => advanceDocumentFlow(id, m)}
-                              className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-violet-700 transition hover:bg-violet-100"
-                            >
-                              <FiChevronRight className="h-3.5 w-3.5" />
-                              Advance to {ORDER_DOC_LABELS[nextDocType]}
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => openDocumentStudio(id, m)}
-                            className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-[11px] font-semibold text-orange-700 transition hover:bg-orange-100"
-                          >
-                            <FiFileText className="h-3.5 w-3.5" />
-                            Document Studio
-                          </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => advanceWorkflowStatus(id, currentStatus)}
+                                  className="inline-flex items-center gap-2 rounded-full border border-[#dce7ea] bg-white px-4 py-2 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
+                                >
+                                  <FiCheckCircle className="h-3.5 w-3.5" />
+                                  Advance to {workflowNextLabel}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="rounded-[28px] border border-[#f1ddd6] bg-[#fff7f4] p-4">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#b86037]">
+                                  Document Lane
+                                </p>
+                                <p className="mt-2 text-sm leading-6 text-slate-600">{docCaption}</p>
+                              </div>
+                              {isDocFlowDone ? (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1 text-[11px] font-semibold text-emerald-700">
+                                  <FiCheckCircle className="h-3.5 w-3.5" />
+                                  Done
+                                </span>
+                              ) : (
+                                <span className="rounded-full border border-[#f1ddd6] bg-white px-3 py-1 text-[11px] font-semibold text-[#b86037]">
+                                  Next: {nextDocType ? ORDER_DOC_LABELS[nextDocType] : "Quotation"}
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px]">
+                              {ORDER_DOC_FLOW.map((docType, index) => {
+                                const state = getFlowStepState(activeDocFlowIndex, index);
+                                const className =
+                                  state === "done"
+                                    ? "border-[#f1ddd6] bg-[#ffece1] text-[#b86037]"
+                                    : state === "active"
+                                      ? "border-[#d6473f] bg-[#d6473f] text-white"
+                                      : "border-[#f1ddd6] bg-white text-slate-500";
+                                return (
+                                  <React.Fragment key={`${id}-docflow-wide-${docType}`}>
+                                    <button
+                                      type="button"
+                                      onClick={() => openDocumentStudioWithType(id, m, docType)}
+                                      className={`rounded-full border px-3 py-1.5 font-semibold transition hover:brightness-95 ${className}`}
+                                      title={`Open ${ORDER_DOC_LABELS[docType]} in Document Studio`}
+                                    >
+                                      {ORDER_DOC_LABELS[docType]}
+                                    </button>
+                                    {index < ORDER_DOC_FLOW.length - 1 && <FiChevronRight className="text-slate-400" />}
+                                  </React.Fragment>
+                                );
+                              })}
+                            </div>
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              {!isDocFlowDone && nextDocType && (
+                                <button
+                                  type="button"
+                                  onClick={() => advanceDocumentFlow(id, m)}
+                                  className="inline-flex items-center gap-2 rounded-full border border-[#f1ddd6] bg-white px-4 py-2 text-[11px] font-semibold text-[#b86037] transition hover:bg-[#fff0e8]"
+                                >
+                                  <FiChevronRight className="h-3.5 w-3.5" />
+                                  Advance to {ORDER_DOC_LABELS[nextDocType]}
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => openDocumentStudio(id, m)}
+                                className="inline-flex items-center gap-2 rounded-full border border-[#f3d8ca] bg-[#fff4ea] px-4 py-2 text-[11px] font-semibold text-[#b86a1f] transition hover:bg-[#ffead9]"
+                              >
+                                <FiFileText className="h-3.5 w-3.5" />
+                                Document Studio
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* order details */}
                     {expanded.has(id) && (
-                      <div className="mt-4 space-y-3">
-                        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-3 md:grid-cols-2">
-                          <label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                            Status
-                            <select
-                              className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
-                              value={m.status || "Select Status"}
-                              onChange={(e) => updateStatus(id, e.target.value)}
-                            >
-                              {ORDER_STATUS_OPTIONS.map((s) => (
-                                <option key={s} value={s}>
-                                  {s}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                            Payment
-                            <select
-                              className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
-                              value={m.paymentMethod || "Select Payment Status"}
-                              onChange={(e) => updatePayment(id, e.target.value)}
-                            >
-                              {ORDER_PAYMENT_OPTIONS.map((s) => (
-                                <option key={s} value={s}>
-                                  {s}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
+                      <div className="grid gap-4 xl:grid-cols-[0.92fr_1.08fr]">
+                        <div className="space-y-4">
+                          <div className="rounded-[28px] border border-[#eee2d4] bg-white p-4">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                              Operational Controls
+                            </p>
+                            <p className="mt-2 text-sm leading-6 text-slate-600">
+                              Update the order state and payment status without leaving the card.
+                            </p>
+                            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                              <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                Status
+                                <select
+                                  className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-[#fffaf4] px-4 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-[#f1cdb8] focus:ring-4 focus:ring-[#fff1e6]"
+                                  value={m.status || "Select Status"}
+                                  onChange={(e) => updateStatus(id, e.target.value)}
+                                >
+                                  {ORDER_STATUS_OPTIONS.map((s) => (
+                                    <option key={s} value={s}>
+                                      {s}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                Payment
+                                <select
+                                  className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-[#fffaf4] px-4 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-[#f1cdb8] focus:ring-4 focus:ring-[#fff1e6]"
+                                  value={m.paymentMethod || "Select Payment Status"}
+                                  onChange={(e) => updatePayment(id, e.target.value)}
+                                >
+                                  {ORDER_PAYMENT_OPTIONS.map((s) => (
+                                    <option key={s} value={s}>
+                                      {s}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                            </div>
+                          </div>
+
+                          <div className="rounded-[28px] border border-[#eee2d4] bg-[#fffaf5] p-4">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                              Client & Delivery
+                            </p>
+                            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                              <div className="rounded-[20px] border border-[#eadfce] bg-white p-4">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Phone</p>
+                                <p className="mt-2 text-sm font-semibold text-slate-900">{m.phoneNumber || "Not set"}</p>
+                              </div>
+                              <div className="rounded-[20px] border border-[#eadfce] bg-white p-4">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Email</p>
+                                <p className="mt-2 text-sm font-semibold text-slate-900">{m.email || "Not set"}</p>
+                              </div>
+                              <div className="rounded-[20px] border border-[#eadfce] bg-white p-4">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Address</p>
+                                <p className="mt-2 text-sm font-semibold text-slate-900">{m.address || "Not set"}</p>
+                              </div>
+                              <div className="rounded-[20px] border border-[#eadfce] bg-white p-4">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Source</p>
+                                <p className="mt-2 text-sm font-semibold text-slate-900">{m.source || "Order Management"}</p>
+                              </div>
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3 text-sm text-slate-600 md:grid-cols-2 xl:grid-cols-4">
-                          <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Phone</p>
-                            <p className="mt-1 font-medium text-slate-800">{m.phoneNumber || "Not set"}</p>
+                        <div className="rounded-[28px] border border-[#eee2d4] bg-white p-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                                Line Items
+                              </p>
+                              <p className="mt-2 text-sm leading-6 text-slate-600">
+                                Edit quantities and unit prices while keeping the order easy to scan.
+                              </p>
+                            </div>
+                            <span className="rounded-full border border-[#eadfce] bg-[#fffaf4] px-3 py-1 text-xs font-semibold text-slate-600">
+                              {products.length} lines
+                            </span>
                           </div>
-                          <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Email</p>
-                            <p className="mt-1 font-medium text-slate-800">{m.email || "Not set"}</p>
-                          </div>
-                          <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Address</p>
-                            <p className="mt-1 font-medium text-slate-800">{m.address || "Not set"}</p>
-                          </div>
-                          <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Source</p>
-                            <p className="mt-1 font-medium text-slate-800">{m.source || "Order Management"}</p>
-                          </div>
-                        </div>
 
-                        {Array.isArray(m.products) && m.products.length > 0 ? (
-                          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                            <table className="w-full text-sm">
-                              <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                <tr>
-                                  <th className="text-left px-3 py-2">Product</th>
-                                  <th className="text-left px-3 py-2">Color/Size</th>
-                                  <th className="text-left px-3 py-2">Qty</th>
-                                  <th className="text-left px-3 py-2">Unit</th>
-                                  <th className="text-left px-3 py-2">Total</th>
-                                  <th className="text-right px-3 py-2">Edit</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y">
-                                {m.products.map((p, idx) => {
-                                  const qty = p.quantity || 0;
-                                  const unit =
-                                    p.unitPrice != null
-                                      ? p.unitPrice!
-                                      : p.price && qty
-                                        ? p.price / qty
-                                        : 0;
-                                  const tot = p.price != null ? p.price! : unit * qty;
-                                  return (
-                                    <tr key={idx} className="text-slate-700">
-                                      <td className="px-3 py-2">
-                                        {p.product || "Item"}
-                                      </td>
-                                      <td className="px-3 py-2">
-                                        {[p.color, p.size]
-                                          .filter(Boolean)
-                                          .join(" / ")}
-                                      </td>
-                                      <td className="px-3 py-2">{qty}</td>
-                                      <td className="px-3 py-2">
-                                        Rs {unit.toFixed(2)}
-                                      </td>
-                                      <td className="px-3 py-2">
-                                        Rs {tot.toFixed(2)}
-                                      </td>
-                                      <td className="px-3 py-2 text-right">
-                                        <button
-                                          onClick={() => openEditLine(id, idx, p)}
-                                          className="text-sky-600 font-semibold hover:underline"
-                                        >
-                                          Edit
-                                        </button>
-                                      </td>
+                          {products.length > 0 ? (
+                            <div className="mt-4 overflow-hidden rounded-[22px] border border-[#efe4d8]">
+                              <div className="overflow-x-auto">
+                                <table className="min-w-full text-sm">
+                                  <thead className="bg-[#fbf6ef] text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                    <tr>
+                                      <th className="px-4 py-3 text-left">Product</th>
+                                      <th className="px-4 py-3 text-left">Color/Size</th>
+                                      <th className="px-4 py-3 text-left">Qty</th>
+                                      <th className="px-4 py-3 text-left">Unit</th>
+                                      <th className="px-4 py-3 text-left">Total</th>
+                                      <th className="px-4 py-3 text-right">Edit</th>
                                     </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
-                        ) : (
-                          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-6 text-sm text-slate-500">
-                            No line items on this order yet.
-                          </div>
-                        )}
+                                  </thead>
+                                  <tbody className="divide-y divide-[#efe4d8] bg-white">
+                                    {products.map((p, idx) => {
+                                      const qty = p.quantity || 0;
+                                      const unit =
+                                        p.unitPrice != null
+                                          ? p.unitPrice
+                                          : p.price && qty
+                                            ? p.price / qty
+                                            : 0;
+                                      const tot = p.price != null ? p.price : unit * qty;
+                                      return (
+                                        <tr key={idx} className="text-slate-700">
+                                          <td className="px-4 py-3 font-medium">{p.product || "Item"}</td>
+                                          <td className="px-4 py-3">{[p.color, p.size].filter(Boolean).join(" / ") || "—"}</td>
+                                          <td className="px-4 py-3">{qty}</td>
+                                          <td className="px-4 py-3">Rs {unit.toFixed(2)}</td>
+                                          <td className="px-4 py-3">Rs {tot.toFixed(2)}</td>
+                                          <td className="px-4 py-3 text-right">
+                                            <button
+                                              onClick={() => openEditLine(id, idx, p)}
+                                              className="rounded-full border border-[#d8e3ea] bg-[#f5fafc] px-3 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-white"
+                                            >
+                                              Edit
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="mt-4 rounded-[22px] border border-dashed border-[#d8c7b4] bg-[#fffaf4] px-4 py-8 text-sm text-slate-500">
+                              No line items on this order yet.
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
+                    </div>
                   </li>
                 );
               })}
             </ul>
           )}
-        </div>
+        </section>
 
-        {/* Load more */}
         {(hasMore || loadingMore) && !loading && (
           <div className="py-6 text-center">
             <button
               onClick={() => loadMore(false)}
               disabled={loadingMore}
-              className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-full bg-[#1f2937] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#111827] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <FiRefreshCw /> {loadingMore ? "Loading..." : "Load more"}
             </button>
           </div>
         )}
 
-        {/* Bulk bar */}
         {selectMode && (
-          <div className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-full border border-slate-200 bg-white/90 px-4 py-2 shadow-lg backdrop-blur">
+          <div className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 flex-wrap items-center gap-3 rounded-full border border-[#eadfce] bg-white/95 px-4 py-3 shadow-[0_24px_50px_-24px_rgba(15,23,42,0.45)] backdrop-blur">
             <span className="text-sm font-semibold text-slate-700">{selectedIds.size} selected</span>
             <button
               onClick={bulkDelete}
-              className="rounded-full bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-rose-700"
+              className="rounded-full bg-rose-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-rose-700"
             >
               Delete
             </button>
             <button
               onClick={bulkComplete}
-              className="rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+              className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700"
             >
               Mark Completed
             </button>
           </div>
         )}
 
-        {/* Edit modal */}
         {editOpen && editValue && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-5 shadow-xl">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-xl rounded-[30px] border border-[#eadfce] bg-[#fffdf9] p-6 shadow-[0_30px_80px_-40px_rgba(15,23,42,0.45)]">
               <div className="mb-4 flex items-center justify-between">
-                <div className="text-base font-semibold text-slate-900">Edit Product Line</div>
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Line Item</p>
+                  <div className="mt-2 text-xl font-semibold tracking-[-0.03em] text-slate-900">Edit Product Line</div>
+                </div>
                 <button
                   onClick={() => {
                     setEditOpen(false);
                   }}
-                  className="rounded-full border border-slate-200 px-2 py-1 text-slate-500 hover:bg-slate-50"
+                  className="rounded-full border border-[#eadfce] px-3 py-1.5 text-slate-500 transition hover:bg-white"
                 >
                   ✕
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <label className="text-sm text-slate-600">
                   Product
                   <input
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                    className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-white px-4 py-3 text-sm focus:border-[#f1cdb8] focus:outline-none focus:ring-4 focus:ring-[#fff1e6]"
                     value={editValue.product}
                     onChange={(e) =>
                       setEditValue((v) => ({ ...v!, product: e.target.value }))
@@ -2053,7 +2339,7 @@ function OrdersPageInner() {
                 <label className="text-sm text-slate-600">
                   Color
                   <input
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                    className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-white px-4 py-3 text-sm focus:border-[#f1cdb8] focus:outline-none focus:ring-4 focus:ring-[#fff1e6]"
                     value={editValue.color || ""}
                     onChange={(e) =>
                       setEditValue((v) => ({ ...v!, color: e.target.value }))
@@ -2063,7 +2349,7 @@ function OrdersPageInner() {
                 <label className="text-sm text-slate-600">
                   Size
                   <input
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                    className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-white px-4 py-3 text-sm focus:border-[#f1cdb8] focus:outline-none focus:ring-4 focus:ring-[#fff1e6]"
                     value={editValue.size || ""}
                     onChange={(e) =>
                       setEditValue((v) => ({ ...v!, size: e.target.value }))
@@ -2075,7 +2361,7 @@ function OrdersPageInner() {
                   <input
                     type="number"
                     min={1}
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                    className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-white px-4 py-3 text-sm focus:border-[#f1cdb8] focus:outline-none focus:ring-4 focus:ring-[#fff1e6]"
                     value={editValue.quantity}
                     onChange={(e) =>
                       setEditValue((v) => ({
@@ -2090,7 +2376,7 @@ function OrdersPageInner() {
                   <input
                     type="number"
                     step="0.01"
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                    className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-white px-4 py-3 text-sm focus:border-[#f1cdb8] focus:outline-none focus:ring-4 focus:ring-[#fff1e6]"
                     value={editValue.unitPrice ?? 0}
                     onChange={(e) =>
                       setEditValue((v) => ({
@@ -2105,13 +2391,13 @@ function OrdersPageInner() {
               <div className="mt-5 flex items-center justify-end gap-2">
                 <button
                   onClick={() => setEditOpen(false)}
-                  className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                  className="rounded-full border border-[#eadfce] px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-white"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={saveEditLine}
-                  className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                  className="rounded-full bg-[#1f2937] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#111827]"
                 >
                   Save
                 </button>
