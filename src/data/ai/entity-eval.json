@@ -35,5 +35,22 @@
       "printType": "not sure",
       "deliveryMethod": "pickup"
     }
+  },
+  {
+    "message": "I need 4 black t-shirts size M",
+    "expected": {
+      "productType": "t-shirt",
+      "quantity": 4,
+      "color": "black",
+      "sizes": ["M"],
+      "sizeBreakdown": [
+        {
+          "color": "black",
+          "productType": "t-shirt",
+          "size": "M",
+          "quantity": 4
+        }
+      ]
+    }
   }
 ]

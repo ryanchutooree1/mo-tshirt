@@ -44,6 +44,23 @@ test("deadline extraction accepts text and slash date formats", () => {
   });
 });
 
+test("single-variant garment messages are extracted without asking for the same details again", () => {
+  const updates = extractLeadUpdates("I need 4 black t-shirts size M");
+
+  assert.equal(updates.productType, "t-shirt");
+  assert.equal(updates.quantity, 4);
+  assert.equal(updates.color, "black");
+  assert.deepEqual(updates.sizes, ["M"]);
+  assert.deepEqual(updates.sizeBreakdown, [
+    {
+      color: "black",
+      productType: "t-shirt",
+      size: "M",
+      quantity: 4,
+    },
+  ]);
+});
+
 test("retrieval returns relevant local memory items with explanations", () => {
   const training = buildAssistantTrainingState([], [], [], "2026-03-18T00:00:00.000Z");
 
@@ -122,10 +139,52 @@ test("approved-order retrieval stays out of customer-facing replies", () => {
     trainingState: training,
   });
 
-  assert.match(result.reply, /Please send the full garment breakdown/i);
+  assert.match(result.reply, /What color and size do you need/i);
   assert.doesNotMatch(result.reply, /A similar approved order used this setup/i);
   assert.doesNotMatch(result.reply, /Most approved/i);
   assert.ok(result.suggestions.some((item) => /Most approved/i.test(item)));
+});
+
+test("assistant asks only for the missing garment details instead of repeating the full template", () => {
+  const training = buildAssistantTrainingState([], [], [], "2026-03-18T00:00:00.000Z");
+
+  const firstTurn = runAssistantTurn({
+    lead: createEmptyAssistantLead(),
+    message: "Hi I need 4 t-shirts",
+    trainingState: training,
+  });
+
+  assert.equal(firstTurn.lead.productType, "t-shirt");
+  assert.equal(firstTurn.lead.quantity, 4);
+  assert.match(firstTurn.reply, /What color and size do you need/i);
+  assert.doesNotMatch(firstTurn.reply, /Copy, edit, and send this size template/i);
+
+  const secondTurn = runAssistantTurn({
+    lead: firstTurn.lead,
+    message: "black",
+    trainingState: training,
+  });
+
+  assert.equal(secondTurn.lead.color, "black");
+  assert.match(secondTurn.reply, /What size do you need/i);
+  assert.doesNotMatch(secondTurn.reply, /What color and size do you need/i);
+
+  const thirdTurn = runAssistantTurn({
+    lead: secondTurn.lead,
+    message: "size M",
+    trainingState: training,
+  });
+
+  assert.deepEqual(thirdTurn.lead.sizeBreakdown, [
+    {
+      color: "black",
+      productType: "t-shirt",
+      size: "M",
+      quantity: 4,
+    },
+  ]);
+  assert.match(thirdTurn.reply, /use the upload button here to attach it now/i);
+  assert.doesNotMatch(thirdTurn.reply, /What size do you need/i);
 });
 
 test("end-to-end assistant behavior stays structured and explainable without an LLM", () => {
@@ -139,7 +198,7 @@ test("end-to-end assistant behavior stays structured and explainable without an 
 
   assert.equal(firstTurn.lead.productType, "t-shirt");
   assert.equal(firstTurn.lead.quantity, 3);
-  assert.match(firstTurn.reply, /Please send the full garment breakdown/i);
+  assert.match(firstTurn.reply, /What color and size do you need/i);
   assert.equal(firstTurn.debug.predicted_intent, "new_order");
   assert.ok(firstTurn.debug.intent_confidence > 0);
 
@@ -228,7 +287,7 @@ test("combo print layouts continue to size breakdown instead of conflict clarifi
 
   assert.deepEqual(secondTurn.lead.printPositions, ["back", "front center"]);
   assert.deepEqual(secondTurn.lead.printSizes, ["large 22x22", "small 9x9"]);
-  assert.match(secondTurn.reply, /Please send the full garment breakdown/i);
+  assert.match(secondTurn.reply, /What color and size do you need/i);
   assert.doesNotMatch(secondTurn.reply, /conflicting print position details/i);
 });
 

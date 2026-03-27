@@ -20,6 +20,15 @@ function formatProductLabel(value: string | null | undefined) {
   return titleCase(value);
 }
 
+function formatProductLabelPlural(value: string | null | undefined, quantity: number | null | undefined) {
+  const base = formatProductLabel(value);
+  if (!quantity || quantity === 1) return base;
+  if (base === "Poloshirt") return "Poloshirts";
+  if (base.endsWith("y")) return `${base.slice(0, -1)}ies`;
+  if (base.endsWith("s")) return base;
+  return `${base}s`;
+}
+
 function formatPrintMethodLabel(value: string | null | undefined) {
   if (!value) return "";
   if (value === "dtf printing") return "DTF Printing";
@@ -94,7 +103,67 @@ function buildSizeTemplate(lead: AssistantLead) {
   ).join("\n");
 }
 
+function formatKnownOrderStub(lead: AssistantLead) {
+  const quantity = lead.quantity || null;
+  const product = formatProductLabelPlural(lead.productType, quantity);
+  const sizeList = lead.sizes.join(", ");
+  const parts = [
+    quantity ? `${quantity}` : "",
+    lead.color ? titleCase(lead.color) : "",
+    product !== "Custom item" ? product : "",
+    sizeList ? `in size${lead.sizes.length > 1 ? "s" : ""} ${sizeList}` : "",
+  ].filter(Boolean);
+  return parts.join(" ").replace(/\s+/g, " ").trim();
+}
+
+function targetedSizeBreakdownPrompt(lead: AssistantLead) {
+  const knownOrder = formatKnownOrderStub(lead);
+
+  if (!lead.productType && (lead.quantity || lead.color || lead.sizes.length)) {
+    return "I already have part of the order. What garment do you need, and what color and size should I quote?";
+  }
+
+  if (lead.productType && !lead.quantity && lead.color && lead.sizes.length === 1) {
+    return `Noted: ${titleCase(lead.color)} ${formatProductLabel(lead.productType)} in size ${lead.sizes[0]}. How many pieces do you need?`;
+  }
+
+  if (lead.productType && !lead.quantity && lead.color) {
+    return `Noted: ${titleCase(lead.color)} ${formatProductLabelPlural(lead.productType, 2)}. How many pieces do you need, and what is the size breakdown?`;
+  }
+
+  if (lead.productType && !lead.quantity && lead.sizes.length === 1) {
+    return `Noted: ${formatProductLabel(lead.productType)} in size ${lead.sizes[0]}. How many pieces do you need, and what color should I quote?`;
+  }
+
+  if (lead.productType && lead.quantity && !lead.color && !lead.sizes.length) {
+    return `Noted: ${knownOrder}. What color and size do you need? If the sizes are mixed, send a quick breakdown like M x 2 and L x 2.`;
+  }
+
+  if (lead.productType && lead.quantity && lead.color && !lead.sizes.length) {
+    return `Noted: ${knownOrder}. What size do you need? If the sizes are mixed, send a quick breakdown like M x 2 and L x 2.`;
+  }
+
+  if (lead.productType && lead.quantity && !lead.color && lead.sizes.length === 1) {
+    return `Noted: ${knownOrder}. What color do you need?`;
+  }
+
+  if (lead.productType && lead.quantity && !lead.color && lead.sizes.length > 1) {
+    return `Noted: ${knownOrder}. What color do you need for these ${formatProductLabelPlural(lead.productType, lead.quantity)}?`;
+  }
+
+  if (lead.productType && lead.quantity && lead.color && lead.sizes.length > 1) {
+    return `Noted: ${knownOrder}. How many pieces do you need in each size?`;
+  }
+
+  return null;
+}
+
 function sizeBreakdownPrompt(lead: AssistantLead) {
+  const targetedPrompt = targetedSizeBreakdownPrompt(lead);
+  if (targetedPrompt) {
+    return targetedPrompt;
+  }
+
   return [
     "Please send the full garment breakdown in one message, one line per garment, color, and size, like this:",
     "",

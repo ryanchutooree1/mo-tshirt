@@ -88,6 +88,14 @@ function normalizeArray(values: unknown, map: (value: string) => string | null) 
 
 function normalizeSize(value: string) {
   const normalized = normalizeText(value);
+  if (normalized === "1yr" || normalized === "1yrs") return "1 Yr";
+  if (normalized === "2yr" || normalized === "2yrs") return "2 Yrs";
+  if (normalized === "4yr" || normalized === "4yrs") return "4 Yrs";
+  if (normalized === "6yr" || normalized === "6yrs") return "6 Yrs";
+  if (normalized === "8yr" || normalized === "8yrs") return "8 Yrs";
+  if (normalized === "10yr" || normalized === "10yrs") return "10 Yrs";
+  if (normalized === "12yr" || normalized === "12yrs") return "12 Yrs";
+  if (normalized === "14yr" || normalized === "14yrs") return "14 Yrs";
   if (normalized === "xs") return "XS";
   if (normalized === "s") return "S";
   if (normalized === "m") return "M";
@@ -117,6 +125,39 @@ function normalizeOrderLines(value: unknown): AssistantOrderLine[] {
     })
     .filter((line) => line.size && line.quantity > 0)
     .sort((left, right) => left.size.localeCompare(right.size));
+}
+
+function enrichBreakdownContext(lead: AssistantLead) {
+  if (!lead.sizeBreakdown.length) return lead;
+
+  const enriched = lead.sizeBreakdown.map((line) => ({
+    ...line,
+    color: line.color || lead.color || null,
+    productType: line.productType || lead.productType || null,
+  }));
+
+  return {
+    ...lead,
+    sizeBreakdown: enriched,
+  };
+}
+
+function hydrateSingleVariantBreakdown(lead: AssistantLead) {
+  if (lead.sizeBreakdown.length) return lead;
+  if (!lead.productType || !lead.quantity || !lead.color) return lead;
+  if (lead.sizes.length !== 1) return lead;
+
+  return {
+    ...lead,
+    sizeBreakdown: [
+      {
+        color: lead.color,
+        productType: lead.productType,
+        size: lead.sizes[0],
+        quantity: lead.quantity,
+      },
+    ],
+  };
 }
 
 export function normalizeAssistantAttachment(value: unknown): AssistantAttachment | null {
@@ -312,14 +353,19 @@ function buildLeadUpdatesFromExtraction(
   if (entities.fields.customer_name) updates.clientName = String(entities.fields.customer_name.canonicalValue);
 
   if (entities.sizeBreakdown.length) {
-    updates.sizeBreakdown = entities.sizeBreakdown;
-    updates.sizes = unique(entities.sizeBreakdown.map((line) => line.size)).sort((left, right) => left.localeCompare(right));
-    updates.quantity = entities.sizeBreakdown.reduce((total, line) => total + line.quantity, 0);
-    if (!updates.productType && unique(entities.sizeBreakdown.map((line) => line.productType).filter(Boolean)).length === 1) {
-      updates.productType = entities.sizeBreakdown[0].productType;
+    const enrichedBreakdown = entities.sizeBreakdown.map((line) => ({
+      ...line,
+      productType: line.productType || updates.productType || currentLead.productType || null,
+      color: line.color || updates.color || currentLead.color || null,
+    }));
+    updates.sizeBreakdown = enrichedBreakdown;
+    updates.sizes = unique(enrichedBreakdown.map((line) => line.size)).sort((left, right) => left.localeCompare(right));
+    updates.quantity = enrichedBreakdown.reduce((total, line) => total + line.quantity, 0);
+    if (!updates.productType && unique(enrichedBreakdown.map((line) => line.productType).filter(Boolean)).length === 1) {
+      updates.productType = enrichedBreakdown[0].productType;
     }
-    if (!updates.color && unique(entities.sizeBreakdown.map((line) => line.color).filter(Boolean)).length === 1) {
-      updates.color = entities.sizeBreakdown[0].color;
+    if (!updates.color && unique(enrichedBreakdown.map((line) => line.color).filter(Boolean)).length === 1) {
+      updates.color = enrichedBreakdown[0].color;
     }
   }
 
@@ -427,7 +473,12 @@ export function mergeAssistantLeadUpdates(lead: AssistantLead, updates: Partial<
     if (products.length === 1) merged.productType = products[0];
   }
 
-  return merged;
+  const hydrated = hydrateSingleVariantBreakdown(merged);
+  const enriched = enrichBreakdownContext(hydrated);
+  if (enriched.sizeBreakdown.length) {
+    enriched.sizes = unique(enriched.sizeBreakdown.map((line) => line.size)).sort((left, right) => left.localeCompare(right));
+  }
+  return enriched;
 }
 
 export function missingAssistantFields(lead: AssistantLead) {

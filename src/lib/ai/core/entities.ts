@@ -26,6 +26,10 @@ const RELATIVE_DATE_RE =
 const ORDER_LINE_RE =
   /Product:\s*([A-Za-z -]+)\s+Colour:\s*([A-Za-z]+)\s+Size:\s*([A-Za-z0-9]+)\s+Quantity:\s*(\d+)/gi;
 const FREEFORM_SIZE_RE = /\b(\d+|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*(xs|s|m|l|xl|xxl|2xl|xxxl|3xl|xxxxl|4xl)\b/gi;
+const SIZE_WITH_PREFIX_RE =
+  /\b(?:size\s*[:=-]?\s*|in\s+)(1\s*yr|2\s*yrs?|4\s*yrs?|6\s*yrs?|8\s*yrs?|10\s*yrs?|12\s*yrs?|14\s*yrs?|xs|s|m|l|xl|xxl|2xl|xxxl|3xl|xxxxl|4xl)\b/gi;
+const PRODUCT_SIZE_RE =
+  /\b(?:t[\s-]?shirts?|tees?|polos?|hoodies?|caps?|poloshirts?)\s+(?:in\s+|size\s+)?(1\s*yr|2\s*yrs?|4\s*yrs?|6\s*yrs?|8\s*yrs?|10\s*yrs?|12\s*yrs?|14\s*yrs?|xs|s|m|l|xl|xxl|2xl|xxxl|3xl|xxxxl|4xl)\b/gi;
 
 const PRODUCT_SEED_ALIASES: Record<AssistantProductType, string[]> = {
   "t-shirt": ["tshirt", "tshirts", "t shirt", "t shirts", "tee", "tees", "t-shirt", "t-shirts"],
@@ -80,6 +84,22 @@ const DELIVERY_METHOD_ALIASES = {
 } as const;
 
 const SIZE_ALIASES = new Map([
+  ["1yr", "1 Yr"],
+  ["1yrs", "1 Yr"],
+  ["2yr", "2 Yrs"],
+  ["2yrs", "2 Yrs"],
+  ["4yr", "4 Yrs"],
+  ["4yrs", "4 Yrs"],
+  ["6yr", "6 Yrs"],
+  ["6yrs", "6 Yrs"],
+  ["8yr", "8 Yrs"],
+  ["8yrs", "8 Yrs"],
+  ["10yr", "10 Yrs"],
+  ["10yrs", "10 Yrs"],
+  ["12yr", "12 Yrs"],
+  ["12yrs", "12 Yrs"],
+  ["14yr", "14 Yrs"],
+  ["14yrs", "14 Yrs"],
   ["xs", "XS"],
   ["s", "S"],
   ["m", "M"],
@@ -261,7 +281,36 @@ function extractSizeBreakdown(message: string, lead: AssistantLead | null) {
     });
   }
 
-  return freeformMatches.sort((left, right) => left.size.localeCompare(right.size));
+  if (freeformMatches.length) {
+    return freeformMatches.sort((left, right) => left.size.localeCompare(right.size));
+  }
+
+  const sizeMentions = unique(
+    [...Array.from(message.matchAll(SIZE_WITH_PREFIX_RE)), ...Array.from(message.matchAll(PRODUCT_SIZE_RE))]
+      .map((match) => normalizeSize(match[1]))
+      .filter(Boolean)
+  );
+  if (sizeMentions.length !== 1) {
+    return [];
+  }
+
+  const normalized = normalizeText(message);
+  const quantityMatch =
+    normalized.match(/\b(?:need|want|order|quote|for)\s+(\d+|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/) ||
+    normalized.match(/\b(\d+|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s+(?:pcs|pieces|shirts|tshirts|tshirt|polos|hoodies|caps)\b/);
+  const quantity = quantityMatch ? numberFromToken(quantityMatch[1]) : lead?.quantity || null;
+  if (quantity === null) {
+    return [];
+  }
+
+  return [
+    {
+      color: lead?.color || null,
+      productType: lead?.productType || null,
+      size: sizeMentions[0],
+      quantity,
+    },
+  ];
 }
 
 function detectQuantity(message: string, sizeBreakdown: AssistantOrderLine[]) {
