@@ -7,8 +7,8 @@ import type {
   AssistantRetrievalIndex,
   AssistantRetrievalMatch,
   AssistantRetrievalMemoryItem,
-} from "./types";
-import { cosineSimilarity, hybridTokens, incrementCounter, normalizeWhitespace, tfidfVector, unique } from "./utils";
+} from "./types.ts";
+import { cosineSimilarity, hybridTokens, incrementCounter, normalizeWhitespace, tfidfVector, unique } from "./utils.ts";
 
 export function leadToRetrievalText(lead: AssistantLead) {
   return [
@@ -16,7 +16,9 @@ export function leadToRetrievalText(lead: AssistantLead) {
     lead.quantity ? `${lead.quantity} pieces` : "",
     lead.color,
     lead.sizes.join(" "),
-    lead.sizeBreakdown.map((line) => `${line.size} ${line.quantity}`).join(" "),
+    lead.sizeBreakdown
+      .map((line) => [line.productType, line.color, line.size, line.quantity ? `${line.quantity}` : ""].filter(Boolean).join(" "))
+      .join(" "),
     lead.printPositions.join(" "),
     lead.printSizes.join(" "),
     lead.printType,

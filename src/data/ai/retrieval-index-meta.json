@@ -1,6 +1,6 @@
 {
   "documentCount": 25,
-  "avgTermsPerDocument": 45.56,
+  "avgTermsPerDocument": 46.64,
   "threshold": 0.18,
   "kindCounts": {
     "faq": 5,
@@ -30,7 +30,7 @@
     {
       "id": "faq-price",
       "kind": "faq",
-      "text": "Can you give a price immediately? Pricing depends on product, quantity, print setup, and deadline. The assistant captures those details first, then sends the request to Quotation Approval."
+      "text": "Can you give a price immediately? Pricing depends on the garment breakdown, print method, delivery method, artwork, and any deadline. The assistant captures those details first, then sends the request to Quotation Approval."
     },
     {
       "id": "alias-t-shirt-0",
@@ -58,5 +58,5 @@
       "text": "tee means t-shirt"
     }
   ],
-  "updatedAt": "2026-03-18T18:32:18.824Z"
+  "updatedAt": "2026-03-27T19:36:30.530Z"
 }

@@ -122,7 +122,7 @@ test("approved-order retrieval stays out of customer-facing replies", () => {
     trainingState: training,
   });
 
-  assert.match(result.reply, /Where do you want the print/i);
+  assert.match(result.reply, /Please send the full garment breakdown/i);
   assert.doesNotMatch(result.reply, /A similar approved order used this setup/i);
   assert.doesNotMatch(result.reply, /Most approved/i);
   assert.ok(result.suggestions.some((item) => /Most approved/i.test(item)));
@@ -139,30 +139,39 @@ test("end-to-end assistant behavior stays structured and explainable without an 
 
   assert.equal(firstTurn.lead.productType, "t-shirt");
   assert.equal(firstTurn.lead.quantity, 3);
-  assert.match(firstTurn.reply, /Where do you want the print:/i);
+  assert.match(firstTurn.reply, /Please send the full garment breakdown/i);
   assert.equal(firstTurn.debug.predicted_intent, "new_order");
   assert.ok(firstTurn.debug.intent_confidence > 0);
 
   const secondTurn = runAssistantTurn({
     lead: firstTurn.lead,
-    message: "front center",
-    trainingState: training,
-  });
-
-  assert.deepEqual(secondTurn.lead.printPositions, ["front center"]);
-  assert.match(secondTurn.reply, /Please send the full size breakdown/i);
-
-  const thirdTurn = runAssistantTurn({
-    lead: secondTurn.lead,
     message: "Product: T-Shirt Colour: Black Size: M Quantity: 3",
     trainingState: training,
   });
 
-  assert.equal(thirdTurn.lead.quantity, 3);
-  assert.match(thirdTurn.reply, /upload it as png, jpg, pdf, or ai/i);
+  assert.equal(secondTurn.lead.quantity, 3);
+  assert.match(secondTurn.reply, /What print method do you want/i);
+
+  const thirdTurn = runAssistantTurn({
+    lead: secondTurn.lead,
+    message: "Not sure",
+    trainingState: training,
+  });
+
+  assert.equal(thirdTurn.lead.printType, "not sure");
+  assert.match(thirdTurn.reply, /How would you like to receive the order/i);
+
+  const deliveryTurn = runAssistantTurn({
+    lead: thirdTurn.lead,
+    message: "Surinam pickup",
+    trainingState: training,
+  });
+
+  assert.equal(deliveryTurn.lead.deliveryMethod, "pickup");
+  assert.match(deliveryTurn.reply, /upload it as png, jpg, pdf, or ai/i);
 
   const uploadTurn = runAssistantTurn({
-    lead: thirdTurn.lead,
+    lead: deliveryTurn.lead,
     message: "Uploaded logo file: logo.png",
     attachment: {
       name: "logo.png",
@@ -192,19 +201,14 @@ test("end-to-end assistant behavior stays structured and explainable without an 
     message: "59393939",
     trainingState: training,
   });
-  const finalTurn = runAssistantTurn({
-    lead: phoneTurn.lead,
-    message: "08/05/2026",
-    trainingState: training,
-  });
 
-  assert.equal(finalTurn.readyToSubmit, true);
-  assert.equal(finalTurn.lead.clientName, "Paul Sam");
-  assert.equal(finalTurn.lead.email, "hello@gmail.com");
-  assert.equal(finalTurn.lead.phone, "59393939");
-  assert.equal(finalTurn.lead.deadline, "08/05/2026");
-  assert.equal(finalTurn.debug.chosen_action, "generate_summary");
-  assert.ok(Array.isArray(finalTurn.debug.retrieved_examples));
+  assert.equal(phoneTurn.readyToSubmit, true);
+  assert.equal(phoneTurn.lead.clientName, "Paul Sam");
+  assert.equal(phoneTurn.lead.email, "hello@gmail.com");
+  assert.equal(phoneTurn.lead.phone, "59393939");
+  assert.equal(phoneTurn.lead.deliveryMethod, "pickup");
+  assert.equal(phoneTurn.debug.chosen_action, "generate_summary");
+  assert.ok(Array.isArray(phoneTurn.debug.retrieved_examples));
 });
 
 test("combo print layouts continue to size breakdown instead of conflict clarification", () => {
@@ -224,7 +228,7 @@ test("combo print layouts continue to size breakdown instead of conflict clarifi
 
   assert.deepEqual(secondTurn.lead.printPositions, ["back", "front center"]);
   assert.deepEqual(secondTurn.lead.printSizes, ["large 22x22", "small 9x9"]);
-  assert.match(secondTurn.reply, /Please send the full size breakdown/i);
+  assert.match(secondTurn.reply, /Please send the full garment breakdown/i);
   assert.doesNotMatch(secondTurn.reply, /conflicting print position details/i);
 });
 

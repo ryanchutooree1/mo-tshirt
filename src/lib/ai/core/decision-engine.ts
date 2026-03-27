@@ -4,7 +4,7 @@ import type {
   AssistantLead,
   AssistantRequiredField,
   AssistantRetrievalMatch,
-} from "./types";
+} from "./types.ts";
 
 const FAQ_THRESHOLD = 0.34;
 
@@ -17,6 +17,19 @@ export function decideNextAction(input: {
   explicitSummaryRequest: boolean;
 }): AssistantDecision {
   const topFaq = input.retrievalMatches.find((match) => match.kind === "faq") || null;
+  const hasActiveOrderCapture = Boolean(
+    input.lead.productType ||
+      input.lead.quantity ||
+      input.lead.sizeBreakdown.length ||
+      input.lead.printPositions.length ||
+      input.lead.printType ||
+      input.lead.clientName ||
+      input.lead.email ||
+      input.lead.phone ||
+      input.lead.logoAttachment ||
+      input.lead.logoPending ||
+      input.lead.deadline
+  );
 
   if (input.hasEntityConflict) {
     return {
@@ -36,6 +49,7 @@ export function decideNextAction(input: {
     (input.intent.label === "ask_price" ||
       input.intent.label === "ask_delivery" ||
       input.intent.label === "ask_design_help") &&
+    !hasActiveOrderCapture &&
     topFaq &&
     topFaq.score >= FAQ_THRESHOLD
   ) {

@@ -6,8 +6,8 @@ import type {
   AssistantLead,
   AssistantOrderLine,
   AssistantProductType,
-} from "./types";
-import { clamp, cleanString, fuzzySimilarity, normalizeText, normalizeWhitespace, titleCase, tokenize, unique } from "./utils";
+} from "./types.ts";
+import { clamp, cleanString, fuzzySimilarity, normalizeText, normalizeWhitespace, titleCase, tokenize, unique } from "./utils.ts";
 
 const PHONE_RE = /(?:\+?230)?[\s-]?([2455789]\d{7})\b/;
 const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
@@ -59,10 +59,24 @@ const PRINT_POSITION_ALIASES = {
 
 const PRINT_TYPE_ALIASES = {
   "screen printing": ["screen printing", "screen print", "silk screen"],
-  dtf: ["dtf", "direct to film"],
-  vinyl: ["vinyl", "heat transfer vinyl", "htv"],
+  "dtf printing": ["dtf", "direct to film", "dtf printing"],
+  "vinyl heat press": ["vinyl", "vinyl heat press", "heat press", "heat transfer vinyl", "htv"],
+  "not sure": ["not sure", "not sure yet", "you choose", "advise me", "you decide"],
   embroidery: ["embroidery", "embroidered"],
   sublimation: ["sublimation", "sublimated"],
+} as const;
+
+const DELIVERY_METHOD_ALIASES = {
+  pickup: ["pickup", "pick up", "collect", "collection", "surinam pickup"],
+  delivery: [
+    "delivery",
+    "deliver",
+    "courier",
+    "post office",
+    "postage delivery",
+    "express delivery",
+    "delivery need to arrange first",
+  ],
 } as const;
 
 const SIZE_ALIASES = new Map([
@@ -102,16 +116,22 @@ const NAME_STOP_WORDS = new Set([
   "cap",
   "center",
   "delivery",
+  "dtf",
   "front",
   "hoodie",
   "logo",
+  "not",
   "polo",
+  "pickup",
+  "screen",
   "shirt",
+  "sure",
   "tshirt",
   "summary",
   "upload",
+  "vinyl",
 ]);
-const MULTI_VALUE_FIELDS = new Set<AssistantEntityKey>(["print_position"]);
+const MULTI_VALUE_FIELDS = new Set<AssistantEntityKey>(["print_position", "delivery_method"]);
 
 function numberFromToken(value: string) {
   const trimmed = normalizeText(value);
@@ -234,8 +254,8 @@ function extractSizeBreakdown(message: string, lead: AssistantLead | null) {
     const size = normalizeSize(match[2]);
     if (quantity === null || !size) continue;
     freeformMatches.push({
-      color: lead?.color || "black",
-      productType: lead?.productType || "t-shirt",
+      color: lead?.color || null,
+      productType: lead?.productType || null,
       size,
       quantity,
     });
@@ -355,6 +375,13 @@ export function extractEntities(
   const printTypeCandidates = bestAliasCandidates("print_type", message, PRINT_TYPE_ALIASES);
   if (printTypeCandidates[0]) fields.print_type = printTypeCandidates[0];
   printTypeCandidates.forEach((candidate) => pushCandidate(candidates, candidate));
+
+  const deliveryMethodCandidates = bestAliasCandidates("delivery_method", message, DELIVERY_METHOD_ALIASES);
+  const groupedDeliveryMethods = unique(deliveryMethodCandidates.map((candidate) => String(candidate.canonicalValue)));
+  if (deliveryMethodCandidates[0] && groupedDeliveryMethods.length === 1) {
+    fields.delivery_method = deliveryMethodCandidates[0];
+  }
+  deliveryMethodCandidates.forEach((candidate) => pushCandidate(candidates, candidate));
 
   const phoneMatch = PHONE_RE.exec(message);
   if (phoneMatch) {

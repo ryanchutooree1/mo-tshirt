@@ -3,8 +3,8 @@ import type {
   AssistantLead,
   AssistantRequiredField,
   AssistantRetrievalMatch,
-} from "./types";
-import { titleCase } from "./utils";
+} from "./types.ts";
+import { titleCase } from "./utils.ts";
 
 const SIZE_TEMPLATE_ORDER = ["S", "M", "L", "XL"] as const;
 
@@ -13,24 +13,42 @@ type ResponseCandidate = {
   score: number;
 };
 
+function formatProductLabel(value: string | null | undefined) {
+  if (!value) return "Custom item";
+  if (value === "t-shirt") return "T-Shirt";
+  if (value === "polo") return "Poloshirt";
+  return titleCase(value);
+}
+
+function formatPrintMethodLabel(value: string | null | undefined) {
+  if (!value) return "";
+  if (value === "dtf printing") return "DTF Printing";
+  if (value === "vinyl heat press") return "Vinyl Heat Press";
+  if (value === "screen printing") return "Screen Printing";
+  if (value === "not sure") return "Not sure";
+  return titleCase(value);
+}
+
+function formatDeliveryMethodLabel(value: AssistantLead["deliveryMethod"]) {
+  if (value === "pickup") return "Surinam Pickup";
+  if (value === "delivery") return "Delivery";
+  return "";
+}
+
 export function formatAssistantFieldLabel(field: AssistantRequiredField) {
   switch (field) {
-    case "productType":
-      return "product";
-    case "quantity":
-      return "quantity";
-    case "printPositions":
-      return "print position";
     case "sizeBreakdown":
-      return "size breakdown";
+      return "garment breakdown";
+    case "printType":
+      return "print method";
+    case "deliveryMethod":
+      return "delivery method";
     case "clientName":
       return "name";
     case "email":
       return "email";
     case "phone":
       return "WhatsApp number";
-    case "deadline":
-      return "deadline";
     default:
       return field;
   }
@@ -38,19 +56,25 @@ export function formatAssistantFieldLabel(field: AssistantRequiredField) {
 
 export function formatLeadSummary(lead: AssistantLead) {
   const rows: string[] = [];
-  rows.push(`Product: ${lead.productType ? titleCase(lead.productType) : "Not set"}`);
-  if (lead.quantity) rows.push(`Total qty: ${lead.quantity}`);
-  if (lead.color) rows.push(`Color: ${titleCase(lead.color)}`);
   if (lead.sizeBreakdown.length) {
     rows.push(
-      `Selected sizes: ${lead.sizeBreakdown
-        .map((line) => `${line.size} x ${line.quantity}`)
-        .join(", ")}`
+      `Garments: ${lead.sizeBreakdown
+        .map((line) => {
+          const product = formatProductLabel(line.productType || lead.productType);
+          const color = line.color || lead.color;
+          const variant = [color ? titleCase(color) : null, line.size].filter(Boolean).join(" / ");
+          return `${product}${variant ? ` (${variant})` : ""} x ${line.quantity}`;
+        })
+        .join("; ")}`
     );
+  } else {
+    rows.push(`Product: ${lead.productType ? formatProductLabel(lead.productType) : "Not set"}`);
   }
+  if (lead.quantity) rows.push(`Total qty: ${lead.quantity}`);
+  if (lead.color) rows.push(`Color: ${titleCase(lead.color)}`);
   if (lead.printPositions.length) rows.push(`Print: ${lead.printPositions.map(titleCase).join(", ")}`);
-  if (lead.printType) rows.push(`Print type: ${titleCase(lead.printType)}`);
-  if (lead.deliveryMethod) rows.push(`Delivery: ${titleCase(lead.deliveryMethod)}`);
+  if (lead.printType) rows.push(`Print method: ${formatPrintMethodLabel(lead.printType)}`);
+  if (lead.deliveryMethod) rows.push(`Delivery: ${formatDeliveryMethodLabel(lead.deliveryMethod)}`);
   if (lead.deadline) rows.push(`Deadline: ${lead.deadline}`);
   if (lead.clientName) rows.push(`Client: ${lead.clientName}`);
   if (lead.companyName) rows.push(`Company: ${lead.companyName}`);
@@ -72,48 +96,49 @@ function buildSizeTemplate(lead: AssistantLead) {
 
 function sizeBreakdownPrompt(lead: AssistantLead) {
   return [
-    "Please send the full size breakdown in one message, one line per variation, like this:",
+    "Please send the full garment breakdown in one message, one line per garment, color, and size, like this:",
     "",
     "Copy, edit, and send this size template:",
     "```",
     buildSizeTemplate(lead),
     "```",
-    "Replace each quantity with the real count and delete any size lines you do not need.",
+    "Replace each quantity with the real count, delete any lines you do not need, and add extra lines if you have more than one garment or color.",
     "",
-    "You can also answer naturally, for example: 2 XL and 1 M.",
+    "You can also answer naturally, for example: T-Shirt white M x 2 and Poloshirt black 4XL x 1.",
   ].join("\n");
 }
 
 function shouldPromptForLogoUpload(lead: AssistantLead, missingFields: AssistantRequiredField[]) {
-  return !missingFields.includes("sizeBreakdown") && !lead.logoAttachment && !lead.logoPending && lead.logoReady !== false;
+  return (
+    !lead.logoAttachment &&
+    !lead.logoPending &&
+    lead.logoReady !== false &&
+    missingFields.length > 0 &&
+    missingFields.every((field) => field === "clientName" || field === "email" || field === "phone")
+  );
 }
 
-function nextContactPrompt(missingFields: AssistantRequiredField[]) {
-  if (missingFields.includes("clientName")) return "What is your name?";
-  if (missingFields.includes("email")) return "What is your email address so we can reply to you later?";
-  if (missingFields.includes("phone")) return "What is your WhatsApp number so we can reply to you later?";
-  if (missingFields.includes("deadline")) return "What is your deadline?";
+function nextMissingFieldPrompt(lead: AssistantLead, missingFields: AssistantRequiredField[]) {
+  if (missingFields.length) {
+    return promptForMissingField(missingFields[0], lead);
+  }
   return "Please confirm the remaining order details.";
 }
 
 function promptForMissingField(field: AssistantRequiredField, lead: AssistantLead) {
   switch (field) {
-    case "productType":
-      return "What product do you need: T-Shirt, Polo, Hoodie, or Cap?";
-    case "quantity":
-      return "How many pieces do you need?";
-    case "printPositions":
-      return "Where do you want the print: front left chest, front center, back, sleeve, small front and small back, small front and large back, or large front and large back?";
     case "sizeBreakdown":
       return sizeBreakdownPrompt(lead);
+    case "printType":
+      return "What print method do you want: DTF Printing, Vinyl Heat Press, Screen Printing, or Not sure?";
+    case "deliveryMethod":
+      return "How would you like to receive the order: Surinam pickup or delivery?";
     case "clientName":
       return "What is your name?";
     case "email":
       return "What is your email address so we can reply to you later?";
     case "phone":
       return "What is your WhatsApp number so we can reply to you later?";
-    case "deadline":
-      return "What is your deadline?";
     default:
       return `Please send the ${formatAssistantFieldLabel(field)}.`;
   }
@@ -138,14 +163,14 @@ export function generateAssistantReply(input: {
 
   if (input.attachmentReceived) {
     candidates.push({
-      text: `Logo received and attached to your request. ${nextContactPrompt(missingFields)}`,
+      text: `Logo received and attached to your request. ${nextMissingFieldPrompt(lead, missingFields)}`,
       score: 1,
     });
   }
 
   if (input.logoPendingAcknowledged) {
     candidates.push({
-      text: `Logo noted. The file is pending upload for now. ${nextContactPrompt(missingFields)}`,
+      text: `Logo noted. The file is pending upload for now. ${nextMissingFieldPrompt(lead, missingFields)}`,
       score: 0.95,
     });
   }
@@ -174,7 +199,7 @@ export function generateAssistantReply(input: {
 
   if (shouldPromptForLogoUpload(lead, missingFields)) {
     candidates.push({
-      text: "If the design or logo is ready, upload it as PNG, JPG, PDF, or AI. As soon as it is attached, I will collect your name, email address, WhatsApp number, and deadline.",
+      text: "If the design or logo is ready, upload it as PNG, JPG, PDF, or AI. If not, I can still finish the contact details and quotation request.",
       score: 1.15,
     });
   }
@@ -196,7 +221,7 @@ export function generateAssistantReply(input: {
 
   if (decision.action === "escalate_to_human") {
     candidates.push({
-      text: "I’m not fully confident about that message yet. Please restate the request with the product, quantity, print, and any deadline so I can capture it properly.",
+      text: "I’m not fully confident about that message yet. Please restate the request with the garments, print method, delivery method, and contact details so I can capture it properly.",
       score: 0.85,
     });
   }

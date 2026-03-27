@@ -49,7 +49,7 @@ const COLLECTIONS = {
   modelState: "aiAssistantModelState",
 } as const;
 
-const MODEL_STATE_KEY = "local-sales-ai";
+const MODEL_STATE_KEY = "local-sales-ai-v2";
 
 type FirestoreLike = Record<string, unknown>;
 
@@ -188,6 +188,196 @@ function timestampToIso(value: unknown, fallback?: unknown) {
     return timestampToIso(fallback);
   }
   return null;
+}
+
+function mapGarmentToProductType(value: unknown): AssistantProductType | null {
+  const normalized = cleanString(value).toLowerCase();
+  if (!normalized) return null;
+  if (normalized.includes("polo")) return "polo";
+  if (normalized.includes("hoodie")) return "hoodie";
+  if (normalized.includes("cap") || normalized.includes("hat")) return "cap";
+  if (normalized.includes("shirt") || normalized.includes("tee")) return "t-shirt";
+  return null;
+}
+
+function normalizeAssistantSize(value: unknown) {
+  const normalized = cleanString(value).toUpperCase();
+  if (!normalized) return "";
+  if (normalized === "XXL") return "2XL";
+  if (normalized === "XXXL") return "3XL";
+  if (normalized === "XXXXL") return "4XL";
+  return normalized;
+}
+
+function normalizeAssistantDeliveryMethod(value: unknown): AssistantLead["deliveryMethod"] {
+  const normalized = cleanString(value).toLowerCase();
+  if (!normalized) return null;
+  if (normalized.includes("pickup") || normalized.includes("pick up") || normalized.includes("collect")) return "pickup";
+  if (
+    normalized.includes("delivery") ||
+    normalized.includes("deliver") ||
+    normalized.includes("courier") ||
+    normalized.includes("post office") ||
+    normalized.includes("postage") ||
+    normalized.includes("express")
+  ) {
+    return "delivery";
+  }
+  return null;
+}
+
+function normalizeAssistantPrintMethod(value: unknown) {
+  const normalized = cleanString(value).toLowerCase();
+  if (!normalized) return null;
+  if (normalized.includes("not sure")) return "not sure";
+  if (normalized.includes("screen")) return "screen printing";
+  if (normalized.includes("vinyl") || normalized.includes("heat press") || normalized.includes("htv")) {
+    return "vinyl heat press";
+  }
+  if (normalized.includes("dtf") || normalized.includes("direct to film")) return "dtf printing";
+  if (normalized.includes("embroider")) return "embroidery";
+  if (normalized.includes("sublim")) return "sublimation";
+  return cleanString(value) || null;
+}
+
+function formatAssistantPrintMethod(value: string | null | undefined) {
+  if (!value) return "";
+  if (value === "dtf printing") return "DTF Printing";
+  if (value === "vinyl heat press") return "Vinyl Heat Press";
+  if (value === "screen printing") return "Screen Printing";
+  if (value === "not sure") return "Not sure";
+  return titleCase(value);
+}
+
+function formatWebsitePrintMethod(value: string | null | undefined) {
+  if (!value) return "";
+  if (value === "dtf printing") return "1. DTF Printing (Price $$$)";
+  if (value === "vinyl heat press") return "2. Vinyl Heat Press Printing (Price $$)";
+  if (value === "screen printing") return "3. Screen Printing (Price $)";
+  if (value === "not sure") return "Not sure";
+  return formatAssistantPrintMethod(value);
+}
+
+function formatWebsiteDeliveryMethod(value: AssistantLead["deliveryMethod"]) {
+  if (value === "pickup") return "Surinam Pickup (Free)";
+  if (value === "delivery") return "Delivery (Need to arrange first)";
+  return "";
+}
+
+function normalizeQuoteGarments(value: unknown): AssistantLead["sizeBreakdown"] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      const source = (item && typeof item === "object" ? item : {}) as FirestoreLike;
+      const quantity = asNumber(source.quantity, 0);
+      const size = normalizeAssistantSize(source.size);
+      if (!size || quantity <= 0) return null;
+      return {
+        productType: mapGarmentToProductType(source.garment),
+        color: cleanString(source.color).toLowerCase() || null,
+        size,
+        quantity,
+      };
+    })
+    .filter((line): line is AssistantLead["sizeBreakdown"][number] => Boolean(line))
+    .sort((left, right) => left.size.localeCompare(right.size));
+}
+
+function normalizeQuoteAttachment(value: unknown): AssistantAttachment | null {
+  const source = (value && typeof value === "object" ? value : {}) as FirestoreLike;
+  const name = cleanString(source.filename || source.name);
+  const url = cleanString(source.url);
+  if (!name || !url) return null;
+  return {
+    name,
+    url,
+    contentType: cleanString(source.contentType) || null,
+    size: asNumber(source.size, 0) || null,
+    uploadedAt: null,
+  };
+}
+
+function buildQuoteLeadNotes(data: FirestoreLike) {
+  const notes = cleanString(data.notes);
+  const message = cleanString(data.message);
+  const genericWebsiteMessage = "quote request submitted via the website.";
+  const parts = [notes];
+  if (message && message.toLowerCase() !== genericWebsiteMessage && message !== notes) {
+    parts.push(message);
+  }
+  return parts.filter(Boolean).join("\n\n") || null;
+}
+
+function buildSyntheticQuoteSessionMessages(data: FirestoreLike, lead: AssistantLead) {
+  const lines: string[] = [];
+  if (lead.clientName) lines.push(`My name is ${lead.clientName}`);
+  if (lead.email) lines.push(`Email: ${lead.email}`);
+  if (lead.phone) lines.push(`Phone: ${lead.phone}`);
+  lead.sizeBreakdown.forEach((line) => {
+    const color = titleCase(line.color || lead.color) || "Not specified";
+    lines.push(
+      `Product: ${formatAssistantProduct(line.productType || lead.productType)} Colour: ${color} Size: ${line.size} Quantity: ${line.quantity}`
+    );
+  });
+  if (lead.printType) lines.push(`Print method: ${formatAssistantPrintMethod(lead.printType)}`);
+  if (data.delivery) lines.push(`Delivery: ${cleanString(data.delivery)}`);
+  if (lead.deadline) lines.push(`Deadline: ${lead.deadline}`);
+  if (lead.notes) lines.push(`Notes: ${lead.notes}`);
+  return lines.length ? [lines.join("\n")] : [];
+}
+
+function mapQuoteRecordToLeadSource(
+  id: string,
+  data: FirestoreLike,
+  options?: { includeSessionMessages?: boolean }
+): AssistantApprovedLeadSource | null {
+  if (cleanString(data.aiAssistantLeadId) || cleanString(data.source).toLowerCase() === "sales ai") {
+    return null;
+  }
+
+  const sizeBreakdown = normalizeQuoteGarments(data.garments);
+  const firstAttachment = Array.isArray(data.attachments)
+    ? normalizeQuoteAttachment(data.attachments[0])
+    : normalizeQuoteAttachment(data.attachment);
+
+  const lead = normalizeAssistantLead({
+    clientName: data.name,
+    companyName: null,
+    phone: data.phone || data.deliveryPhone,
+    email: data.email,
+    productType:
+      sizeBreakdown.length && new Set(sizeBreakdown.map((line) => line.productType).filter(Boolean)).size === 1
+        ? sizeBreakdown[0]?.productType
+        : null,
+    quantity: sizeBreakdown.reduce((sum, line) => sum + line.quantity, 0) || asNumber(data.quantity, 0) || null,
+    color:
+      sizeBreakdown.length && new Set(sizeBreakdown.map((line) => line.color).filter(Boolean)).size === 1
+        ? (sizeBreakdown.find((line) => line.color)?.color ?? null)
+        : null,
+    sizes: sizeBreakdown.map((line) => line.size),
+    sizeBreakdown,
+    printType: normalizeAssistantPrintMethod(data.printMethod),
+    deliveryMethod: normalizeAssistantDeliveryMethod(data.delivery),
+    deadline: cleanString(data.deadline) || null,
+    notes: buildQuoteLeadNotes(data),
+    logoReady: firstAttachment ? true : null,
+    logoPending: false,
+    logoAttachment: firstAttachment,
+  });
+
+  if (!lead.sizeBreakdown.length || !lead.clientName || !lead.email || !lead.printType || !lead.deliveryMethod) {
+    return null;
+  }
+
+  return {
+    id: `quote:${id}`,
+    lead,
+    status: cleanNullableString(data.status) || "submitted",
+    summary: formatLeadSummary(lead),
+    sessionId: null,
+    sessionMessages: options?.includeSessionMessages ? buildSyntheticQuoteSessionMessages(data, lead) : [],
+    acceptedReplies: [],
+  };
 }
 
 function mapSessionSummary(id: string, data: FirestoreLike, exists = true): AssistantSessionSummary {
@@ -422,20 +612,29 @@ async function getLeadSources(
   limitCount = 160,
   options?: { includeSessionMessages?: boolean }
 ): Promise<AssistantApprovedLeadSource[]> {
-  const snap = await getDocs(query(collection(db, COLLECTIONS.leads), orderBy("updatedAt", "desc"), limit(limitCount)));
-  const leads = snap.docs.map((item) => mapLeadRecord(item.id, item.data() as FirestoreLike));
+  const [leadsSnap, quotesSnap] = await Promise.all([
+    getDocs(query(collection(db, COLLECTIONS.leads), orderBy("updatedAt", "desc"), limit(limitCount))),
+    getDocs(query(collection(db, "quotes"), orderBy("updatedAt", "desc"), limit(limitCount))),
+  ]);
+  const leads = leadsSnap.docs.map((item) => mapLeadRecord(item.id, item.data() as FirestoreLike));
+  const quoteLeadSources = quotesSnap.docs
+    .map((item) => mapQuoteRecordToLeadSource(item.id, item.data() as FirestoreLike, options))
+    .filter(Boolean) as AssistantApprovedLeadSource[];
 
   if (!options?.includeSessionMessages) {
-    return leads.map((item) => ({
-      id: item.id,
-      lead: item.lead,
-      status: item.status,
-      summary: item.summary,
-      sessionId: item.sessionId,
-    }));
+    return [
+      ...leads.map((item) => ({
+        id: item.id,
+        lead: item.lead,
+        status: item.status,
+        summary: item.summary,
+        sessionId: item.sessionId,
+      })),
+      ...quoteLeadSources,
+    ];
   }
 
-  return Promise.all(
+  const aiLeadSources = await Promise.all(
     leads.map(async (item) => ({
       id: item.id,
       lead: item.lead,
@@ -446,6 +645,8 @@ async function getLeadSources(
       acceptedReplies: item.sessionId ? await getSessionAssistantMessages(item.sessionId) : [],
     }))
   );
+
+  return [...aiLeadSources, ...quoteLeadSources];
 }
 
 async function getKnowledgeSources(limitCount = 120): Promise<AssistantKnowledgeSource[]> {
@@ -526,19 +727,37 @@ function getAssistantLeadQuantity(lead: AssistantLead) {
   return fromBreakdown > 0 ? fromBreakdown : 1;
 }
 
+function formatAssistantGarmentSummary(lead: AssistantLead) {
+  if (lead.sizeBreakdown.length) {
+    return lead.sizeBreakdown
+      .map((line) => {
+        const product = formatAssistantProduct(line.productType || lead.productType);
+        const variant = [line.color ? titleCase(line.color) : lead.color ? titleCase(lead.color) : "", line.size]
+          .filter(Boolean)
+          .join(" / ");
+        return `${product}${variant ? ` (${variant})` : ""} x ${line.quantity}`;
+      })
+      .join(", ");
+  }
+
+  const product = formatAssistantProduct(lead.productType);
+  const color = lead.color ? titleCase(lead.color) : "";
+  const size = lead.sizes[0] || "";
+  const variant = [color, size].filter(Boolean).join(" / ");
+  return `${product}${variant ? ` (${variant})` : ""} x ${getAssistantLeadQuantity(lead)}`;
+}
+
 function buildQuoteMessageFromAssistantLead(lead: AssistantLead) {
   const details = [
     `Captured via Sales AI.`,
     lead.companyName ? `Company: ${lead.companyName}` : "",
-    `Product: ${formatAssistantProduct(lead.productType)}`,
-    `Quantity: ${getAssistantLeadQuantity(lead)}`,
-    lead.color ? `Color: ${titleCase(lead.color)}` : "",
+    `Garments: ${formatAssistantGarmentSummary(lead)}`,
     lead.printPositions.length ? `Print positions: ${lead.printPositions.join(", ")}` : "",
     lead.printSizes.length ? `Print sizes: ${lead.printSizes.join(", ")}` : "",
-    lead.printType ? `Print type: ${titleCase(lead.printType)}` : "",
+    lead.printType ? `Print method: ${formatAssistantPrintMethod(lead.printType)}` : "",
     lead.logoPending && !lead.logoAttachment ? "Artwork file pending upload." : "",
     lead.deadline ? `Deadline: ${lead.deadline}` : "",
-    lead.deliveryMethod ? `Delivery: ${titleCase(lead.deliveryMethod)}` : "",
+    lead.deliveryMethod ? `Delivery: ${formatWebsiteDeliveryMethod(lead.deliveryMethod)}` : "",
   ].filter(Boolean);
 
   if (lead.notes?.trim()) {
@@ -557,19 +776,23 @@ function buildQuotePayloadFromAssistantLead(
   const garments = lead.sizeBreakdown.length
     ? lead.sizeBreakdown.map((line) => ({
         garment: formatAssistantProduct(line.productType || lead.productType),
+        color: titleCase(line.color || lead.color),
         size: line.size,
         quantity: line.quantity,
       }))
     : [
         {
           garment: formatAssistantProduct(lead.productType),
+          color: titleCase(lead.color),
           size: lead.sizes[0] || "",
           quantity: getAssistantLeadQuantity(lead),
         },
       ];
 
-  const printSummary = [
-    lead.printPositions.length ? lead.printPositions.join(", ") : "",
+  const printSummary = formatWebsitePrintMethod(lead.printType);
+  const designPrintSummary = [
+    formatAssistantPrintMethod(lead.printType),
+    lead.printPositions.length ? `Placement: ${lead.printPositions.join(", ")}` : "",
     lead.printSizes.length ? `Sizes: ${lead.printSizes.join(", ")}` : "",
   ]
     .filter(Boolean)
@@ -586,7 +809,7 @@ function buildQuotePayloadFromAssistantLead(
     deadline: lead.deadline || "",
     notes: lead.notes || "",
     source: "Sales AI",
-    delivery: lead.deliveryMethod ? titleCase(lead.deliveryMethod) : "",
+    delivery: formatWebsiteDeliveryMethod(lead.deliveryMethod),
     attachments: lead.logoAttachment?.url
       ? [
           {
@@ -599,15 +822,15 @@ function buildQuotePayloadFromAssistantLead(
         ]
       : [],
     designBrief: {
-      product: formatAssistantProduct(lead.productType),
+      product: formatAssistantGarmentSummary(lead),
       color: titleCase(lead.color),
-      printMethod: printSummary,
+      printMethod: designPrintSummary,
       selectedSizes: lead.sizeBreakdown.map((line) => ({
         size: line.size,
         quantity: line.quantity,
       })),
       totalQty: getAssistantLeadQuantity(lead),
-      delivery: lead.deliveryMethod ? titleCase(lead.deliveryMethod) : "",
+      delivery: formatWebsiteDeliveryMethod(lead.deliveryMethod),
       deadline: lead.deadline || "",
       clientNotes: lead.notes || "",
     },

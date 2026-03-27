@@ -1,21 +1,21 @@
 import faqMemoryData from "../data/ai/faq-memory.json" with { type: "json" };
 import intentTrainingData from "../data/ai/intent-training.json" with { type: "json" };
 import productAliasesData from "../data/ai/product-aliases.json" with { type: "json" };
-import { predictIntent } from "./ai/core/classifier";
-import { decideNextAction } from "./ai/core/decision-engine";
-import { extractEntities } from "./ai/core/entities";
-import { buildAssistantTurnDebug } from "./ai/core/explain";
+import { predictIntent } from "./ai/core/classifier.ts";
+import { decideNextAction } from "./ai/core/decision-engine.ts";
+import { extractEntities } from "./ai/core/entities.ts";
+import { buildAssistantTurnDebug } from "./ai/core/explain.ts";
 import {
   buildAssistantTrainingState as buildLocalTrainingState,
   createEmptyLearnedProductAliases,
   createEmptyLearnedProductPlaybooks,
-} from "./ai/core/learning";
-import { retrieveTopMatches } from "./ai/core/retrieval";
+} from "./ai/core/learning.ts";
+import { retrieveTopMatches } from "./ai/core/retrieval.ts";
 import {
   formatAssistantFieldLabel,
   formatLeadSummary,
   generateAssistantReply,
-} from "./ai/core/response-generator";
+} from "./ai/core/response-generator.ts";
 import type {
   AssistantApprovedLeadSource,
   AssistantAttachment,
@@ -29,9 +29,9 @@ import type {
   AssistantProductType,
   AssistantRequiredField,
   AssistantTrainingState,
-} from "./ai/core/types";
-import { ASSISTANT_PRODUCT_TYPES, ASSISTANT_REQUIRED_FIELDS } from "./ai/core/types";
-import { cosineSimilarity, normalizeText, termFrequency, titleCase, unique } from "./ai/core/utils";
+} from "./ai/core/types.ts";
+import { ASSISTANT_PRODUCT_TYPES, ASSISTANT_REQUIRED_FIELDS } from "./ai/core/types.ts";
+import { cosineSimilarity, normalizeText, termFrequency, titleCase, unique } from "./ai/core/utils.ts";
 
 type LeadLike = Partial<Record<keyof AssistantLead, unknown>>;
 
@@ -218,7 +218,7 @@ export type {
   AssistantTrainingSnapshot,
   AssistantTrainingState,
   AssistantTurnDebug,
-} from "@/lib/ai/core/types";
+} from "./ai/core/types.ts";
 
 function extractPrintSizeUpdates(message: string) {
   const normalized = normalizeText(message);
@@ -299,6 +299,12 @@ function buildLeadUpdatesFromExtraction(
     ).sort((left, right) => left.localeCompare(right));
   }
   if (entities.fields.print_type) updates.printType = String(entities.fields.print_type.canonicalValue).toLowerCase();
+  if (entities.fields.delivery_method) {
+    const deliveryMethod = String(entities.fields.delivery_method.canonicalValue).toLowerCase();
+    if (deliveryMethod === "pickup" || deliveryMethod === "delivery") {
+      updates.deliveryMethod = deliveryMethod;
+    }
+  }
   if (entities.fields.deadline) updates.deadline = String(entities.fields.deadline.value);
   if (entities.fields.phone) updates.phone = String(entities.fields.phone.canonicalValue);
   if (entities.fields.email) updates.email = String(entities.fields.email.canonicalValue);
@@ -427,14 +433,12 @@ export function mergeAssistantLeadUpdates(lead: AssistantLead, updates: Partial<
 export function missingAssistantFields(lead: AssistantLead) {
   const normalized = normalizeAssistantLead(lead);
   const missing: AssistantRequiredField[] = [];
-  if (!normalized.productType) missing.push("productType");
-  if (!normalized.quantity) missing.push("quantity");
-  if (!normalized.printPositions.length) missing.push("printPositions");
   if (!normalized.sizeBreakdown.length) missing.push("sizeBreakdown");
+  if (!normalized.printType) missing.push("printType");
+  if (!normalized.deliveryMethod) missing.push("deliveryMethod");
   if (!normalized.clientName) missing.push("clientName");
   if (!normalized.email) missing.push("email");
   if (!normalized.phone) missing.push("phone");
-  if (!normalized.deadline) missing.push("deadline");
   return missing;
 }
 

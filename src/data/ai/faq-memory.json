@@ -26,7 +26,7 @@
   {
     "id": "faq-price",
     "question": "Can you give a price immediately?",
-    "answer": "Pricing depends on product, quantity, print setup, and deadline. The assistant captures those details first, then sends the request to Quotation Approval.",
+    "answer": "Pricing depends on the garment breakdown, print method, delivery method, artwork, and any deadline. The assistant captures those details first, then sends the request to Quotation Approval.",
     "tags": ["price", "quotation"]
   }
 ]

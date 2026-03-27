@@ -1,13 +1,13 @@
 {
-  "positiveKeywordCount": 769,
-  "classifierSampleCount": 52,
+  "positiveKeywordCount": 819,
+  "classifierSampleCount": 58,
   "classifierLabelCount": 8,
   "faqCount": 5,
   "retrievalDocumentCount": 25,
   "learnedProductAliasCount": 20,
   "retrievalIndexMetadata": {
     "documentCount": 25,
-    "avgTermsPerDocument": 45.56,
+    "avgTermsPerDocument": 46.64,
     "threshold": 0.18
   },
   "topKeywords": [
@@ -24,11 +24,23 @@
       "count": 18
     },
     {
-      "keyword": "the",
+      "keyword": " pr",
       "count": 13
     },
     {
       "keyword": "is ",
+      "count": 13
+    },
+    {
+      "keyword": "nt ",
+      "count": 13
+    },
+    {
+      "keyword": "the",
+      "count": 13
+    },
+    {
+      "keyword": " co",
       "count": 12
     },
     {
@@ -36,11 +48,11 @@
       "count": 11
     },
     {
-      "keyword": " co",
+      "keyword": " fo",
       "count": 11
     },
     {
-      "keyword": " fo",
+      "keyword": " is",
       "count": 11
     },
     {
@@ -52,16 +64,16 @@
       "count": 11
     },
     {
-      "keyword": "nt ",
-      "count": 11
-    },
-    {
       "keyword": "or ",
       "count": 11
     },
     {
-      "keyword": " is",
-      "count": 10
+      "keyword": "pri",
+      "count": 11
+    },
+    {
+      "keyword": "st ",
+      "count": 11
     },
     {
       "keyword": " yo",
@@ -72,25 +84,13 @@
       "count": 10
     },
     {
-      "keyword": "st ",
+      "keyword": "rin",
       "count": 10
     },
     {
-      "keyword": " ne",
-      "count": 9
-    },
-    {
-      "keyword": " pr",
-      "count": 9
-    },
-    {
-      "keyword": "and",
-      "count": 9
-    },
-    {
-      "keyword": "er ",
+      "keyword": " de",
       "count": 9
     }
   ],
-  "updatedAt": "2026-03-18T18:32:18.823Z"
+  "updatedAt": "2026-03-27T19:36:22.064Z"
 }

@@ -15,14 +15,12 @@ export const ASSISTANT_PRODUCT_TYPES = ["t-shirt", "polo", "hoodie", "cap"] as c
 export type AssistantProductType = (typeof ASSISTANT_PRODUCT_TYPES)[number];
 
 export const ASSISTANT_REQUIRED_FIELDS = [
-  "productType",
-  "quantity",
-  "printPositions",
   "sizeBreakdown",
+  "printType",
+  "deliveryMethod",
   "clientName",
   "email",
   "phone",
-  "deadline",
 ] as const;
 
 export type AssistantRequiredField = (typeof ASSISTANT_REQUIRED_FIELDS)[number];
@@ -106,6 +104,7 @@ export type AssistantEntityKey =
   | "color"
   | "print_position"
   | "print_type"
+  | "delivery_method"
   | "deadline"
   | "phone"
   | "email"
@@ -136,6 +135,7 @@ export type AssistantEntityExtractionResult = {
     color: AssistantEntityCandidate;
     print_position: AssistantEntityCandidate;
     print_type: AssistantEntityCandidate;
+    delivery_method: AssistantEntityCandidate;
     deadline: AssistantEntityCandidate;
     phone: AssistantEntityCandidate;
     email: AssistantEntityCandidate;

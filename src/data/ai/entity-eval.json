@@ -28,5 +28,12 @@
       "companyName": "Island Events Ltd",
       "phone": "59883880"
     }
+  },
+  {
+    "message": "Print method: Not sure and delivery is Surinam Pickup (Free)",
+    "expected": {
+      "printType": "not sure",
+      "deliveryMethod": "pickup"
+    }
   }
 ]

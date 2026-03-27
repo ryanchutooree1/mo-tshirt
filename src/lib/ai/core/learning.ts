@@ -9,11 +9,11 @@ import type {
   AssistantProductType,
   AssistantTrainingSnapshot,
   AssistantTrainingState,
-} from "./types";
-import { AI_INTENTS, ASSISTANT_PRODUCT_TYPES } from "./types";
-import { trainIntentClassifier } from "./classifier";
-import { buildRetrievalIndex, buildRetrievalMemoryDocuments, summarizeRetrievalIndex } from "./retrieval";
-import { cleanString, hybridTokens, incrementCounter, normalizeText, unique } from "./utils";
+} from "./types.ts";
+import { AI_INTENTS, ASSISTANT_PRODUCT_TYPES } from "./types.ts";
+import { trainIntentClassifier } from "./classifier.ts";
+import { buildRetrievalIndex, buildRetrievalMemoryDocuments, summarizeRetrievalIndex } from "./retrieval.ts";
+import { cleanString, hybridTokens, incrementCounter, normalizeText, unique } from "./utils.ts";
 
 const PRODUCT_ROOT_HINTS: Record<AssistantProductType, string[]> = {
   "t-shirt": ["tshirt", "t shirt", "tee", "tees"],
@@ -58,7 +58,7 @@ function inferIntentSample(message: string): AssistantIntentSample | null {
   if (/\b(summary|confirm|approved|go ahead|looks good)\b/.test(normalized)) {
     return { text: message, intent: "confirm_order" };
   }
-  if (/\b(product:|size:|quantity:|email|phone|deadline|my name is|i am|i'm)\b/.test(normalized)) {
+  if (/\b(product:|garment|size:|quantity:|print method|delivery|pickup|email|phone|whatsapp|deadline|my name is|i am|i'm)\b/.test(normalized)) {
     return { text: message, intent: "provide_details" };
   }
   if (/\b(need|want|order|looking for|get me|make)\b/.test(normalized)) {
