@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import {
   createEmptyAssistantLead,
-  formatAssistantFieldLabel,
   missingAssistantFields,
   type AssistantAttachment,
 } from "@/lib/ai-assistant";
@@ -82,7 +81,6 @@ export default function HomeAiOrder() {
     session.lead.logoReady !== false &&
     !session.lead.logoPending;
   const pendingLogoSize = pendingLogoFile ? formatAttachmentSize(pendingLogoFile.size) : null;
-  const stillNeeded = session.missingFields.slice(0, 4).map(formatAssistantFieldLabel);
   const hasMessages = session.messages.length > 0;
 
   useEffect(() => {
@@ -243,29 +241,6 @@ export default function HomeAiOrder() {
               <h3 className="mt-3 text-[1.8rem] font-semibold tracking-tight text-[#161224] sm:text-[2rem]">
                 Chat with MO AI Order
               </h3>
-              <p className="mt-2 text-sm leading-6 text-[#6e6783]">
-                {session.readyToSubmit
-                  ? "Order details captured. This request is ready for quotation approval."
-                  : `Still capturing: ${stillNeeded.join(", ")}.`}
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {stillNeeded.map((field, index) => (
-                  <span
-                    key={field}
-                    className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                      index % 4 === 0
-                        ? "border-cyan-200 bg-cyan-50 text-cyan-700"
-                        : index % 4 === 1
-                          ? "border-violet-200 bg-violet-50 text-violet-700"
-                          : index % 4 === 2
-                            ? "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700"
-                            : "border-amber-200 bg-amber-50 text-amber-700"
-                    }`}
-                  >
-                    {field}
-                  </span>
-                ))}
-              </div>
             </div>
             {hasMessages && (
               <button
@@ -343,21 +318,14 @@ export default function HomeAiOrder() {
                 );
               })
             ) : (
-              <div className="flex min-h-[13rem] flex-col justify-center rounded-[22px] border border-dashed border-[#e8defa] bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(246,250,255,0.92),rgba(255,248,252,0.95))] px-5 py-6">
-                <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#e8dcff] bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7a5de1]">
-                  Fresh chat
+              <div className="flex min-h-[13rem] items-center justify-center rounded-[22px] border border-dashed border-[#e8defa] bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(246,250,255,0.92),rgba(255,248,252,0.95))] px-5 py-6">
+                <div className="relative flex h-16 w-16 items-center justify-center rounded-full border border-[#eadcff] bg-[linear-gradient(135deg,rgba(34,211,238,0.14),rgba(168,85,247,0.16),rgba(244,114,182,0.14))] shadow-[0_18px_44px_-30px_rgba(124,58,237,0.45)]">
+                  <div
+                    aria-hidden
+                    className="absolute inset-2 rounded-full bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(252,246,255,0.92))]"
+                  />
+                  <Bot className="relative h-7 w-7 text-[#7a5de1]" />
                 </div>
-                <h4 className="mt-4 text-lg font-semibold text-[#1a1630]">A new conversation starts for every website visitor.</h4>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6e6783]">
-                  Nothing from another customer is carried into this window. Start with the real order request, for example:
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setMessage("I need 15 black polos for staff with logo on the chest")}
-                  className="mt-4 w-fit rounded-full border border-[#ddd4fb] bg-white px-4 py-2 text-sm font-medium text-[#5f4db8] transition hover:border-[#c7b5ff] hover:bg-[#faf7ff]"
-                >
-                  I need 15 black polos for staff with logo on the chest
-                </button>
               </div>
             )}
           </div>
