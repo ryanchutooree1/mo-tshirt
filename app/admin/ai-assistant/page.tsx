@@ -685,17 +685,6 @@ export default function AdminAiAssistantPage() {
             {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
             Upload new logo
           </button>
-          {pendingLogoFile && (
-            <button
-              type="button"
-              onClick={() => void handleSubmitLogo()}
-              disabled={uploadingLogo || sending}
-              className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-[linear-gradient(135deg,#065f46_0%,#10b981_100%)] px-3 py-2 text-xs font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-              Submit logo
-            </button>
-          )}
         </div>
         {pendingLogoFile && (
           <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-300/20 bg-white/[0.05] px-3 py-3 text-xs text-emerald-100">
@@ -714,6 +703,19 @@ export default function AdminAiAssistantPage() {
               className="max-h-64 w-full rounded-xl object-contain"
               loading="lazy"
             />
+          </div>
+        )}
+        {pendingLogoFile && (
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              onClick={() => void handleSubmitLogo()}
+              disabled={uploadingLogo || sending}
+              className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-[linear-gradient(135deg,#065f46_0%,#10b981_100%)] px-3 py-2 text-xs font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+              Submit logo
+            </button>
           </div>
         )}
         {isImageAttachment(logoAttachment) && (
@@ -754,17 +756,6 @@ export default function AdminAiAssistantPage() {
             {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
             Upload logo now
           </button>
-          {pendingLogoFile && (
-            <button
-              type="button"
-              onClick={() => void handleSubmitLogo()}
-              disabled={uploadingLogo || sending}
-              className="inline-flex items-center gap-2 rounded-full border border-fuchsia-300/30 bg-[linear-gradient(135deg,#7c2d12_0%,#c026d3_100%)] px-3 py-2 text-xs font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-              Submit logo
-            </button>
-          )}
         </div>
         {pendingLogoFile && (
           <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-fuchsia-300/20 bg-white/[0.05] px-3 py-3 text-xs text-fuchsia-100">
@@ -783,6 +774,19 @@ export default function AdminAiAssistantPage() {
               className="max-h-64 w-full rounded-xl object-contain"
               loading="lazy"
             />
+          </div>
+        )}
+        {pendingLogoFile && (
+          <div className="mt-3 flex justify-end">
+            <button
+              type="button"
+              onClick={() => void handleSubmitLogo()}
+              disabled={uploadingLogo || sending}
+              className="inline-flex items-center gap-2 rounded-full border border-fuchsia-300/30 bg-[linear-gradient(135deg,#7c2d12_0%,#c026d3_100%)] px-3 py-2 text-xs font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+              Submit logo
+            </button>
           </div>
         )}
       </div>
