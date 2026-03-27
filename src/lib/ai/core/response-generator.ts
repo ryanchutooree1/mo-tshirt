@@ -103,6 +103,16 @@ function buildSizeTemplate(lead: AssistantLead) {
   ).join("\n");
 }
 
+function buildCopyEditSendBlock(lead: AssistantLead) {
+  return [
+    "Copy, edit, and send this size template:",
+    "```",
+    buildSizeTemplate(lead),
+    "```",
+    "You can also answer naturally, for example: T-Shirt white M x 2 and Poloshirt black 4XL x 1.",
+  ].join("\n");
+}
+
 function formatKnownOrderStub(lead: AssistantLead) {
   const quantity = lead.quantity || null;
   const product = formatProductLabelPlural(lead.productType, quantity);
@@ -189,19 +199,15 @@ function targetedSizeBreakdownPrompt(lead: AssistantLead) {
 function sizeBreakdownPrompt(lead: AssistantLead) {
   const targetedPrompt = targetedSizeBreakdownPrompt(lead);
   if (targetedPrompt) {
-    return targetedPrompt;
+    return [targetedPrompt, "", buildCopyEditSendBlock(lead)].join("\n");
   }
 
   return [
     "Please send the full garment breakdown in one message, one line per garment, color, and size, like this:",
     "",
-    "Copy, edit, and send this size template:",
-    "```",
-    buildSizeTemplate(lead),
-    "```",
-    "Replace each quantity with the real count, delete any lines you do not need, and add extra lines if you have more than one garment or color.",
+    buildCopyEditSendBlock(lead),
     "",
-    "You can also answer naturally, for example: T-Shirt white M x 2 and Poloshirt black 4XL x 1.",
+    "Replace each quantity with the real count, delete any lines you do not need, and add extra lines if you have more than one garment or color.",
   ].join("\n");
 }
 

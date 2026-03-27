@@ -157,7 +157,7 @@ test("assistant asks only for the missing garment details instead of repeating t
   assert.equal(firstTurn.lead.productType, "t-shirt");
   assert.equal(firstTurn.lead.quantity, 4);
   assert.match(firstTurn.reply, /What color and size do you need/i);
-  assert.doesNotMatch(firstTurn.reply, /Copy, edit, and send this size template/i);
+  assert.match(firstTurn.reply, /Copy, edit, and send this size template/i);
 
   const secondTurn = runAssistantTurn({
     lead: firstTurn.lead,
@@ -168,6 +168,7 @@ test("assistant asks only for the missing garment details instead of repeating t
   assert.equal(secondTurn.lead.color, "black");
   assert.match(secondTurn.reply, /What size do you need/i);
   assert.doesNotMatch(secondTurn.reply, /What color and size do you need/i);
+  assert.match(secondTurn.reply, /Copy, edit, and send this size template/i);
 
   const thirdTurn = runAssistantTurn({
     lead: secondTurn.lead,
@@ -214,6 +215,7 @@ test("partial size breakdowns keep the original quantity and ask only for the re
   ]);
   assert.match(secondTurn.reply, /remaining 1 piece/i);
   assert.doesNotMatch(secondTurn.reply, /What size do you need/i);
+  assert.match(secondTurn.reply, /Copy, edit, and send this size template/i);
 
   const thirdTurn = runAssistantTurn({
     lead: secondTurn.lead,
