@@ -150,10 +150,26 @@ test("end-to-end assistant behavior stays structured and explainable without an 
   });
 
   assert.equal(secondTurn.lead.quantity, 3);
-  assert.match(secondTurn.reply, /What print method do you want/i);
+  assert.match(secondTurn.reply, /use the upload button here to attach it now/i);
+
+  const uploadTurn = runAssistantTurn({
+    lead: secondTurn.lead,
+    message: "Uploaded logo file: logo.png",
+    attachment: {
+      name: "logo.png",
+      url: "/local/logo.png",
+      contentType: "image/png",
+      size: 1234,
+      uploadedAt: "2026-03-18T00:00:00.000Z",
+    },
+    trainingState: training,
+  });
+
+  assert.match(uploadTurn.reply, /Logo received and attached to your request\. What print method do you want/i);
+  assert.equal(uploadTurn.lead.logoAttachment?.name, "logo.png");
 
   const thirdTurn = runAssistantTurn({
-    lead: secondTurn.lead,
+    lead: uploadTurn.lead,
     message: "Not sure",
     trainingState: training,
   });
@@ -168,26 +184,10 @@ test("end-to-end assistant behavior stays structured and explainable without an 
   });
 
   assert.equal(deliveryTurn.lead.deliveryMethod, "pickup");
-  assert.match(deliveryTurn.reply, /upload it as png, jpg, pdf, or ai/i);
-
-  const uploadTurn = runAssistantTurn({
-    lead: deliveryTurn.lead,
-    message: "Uploaded logo file: logo.png",
-    attachment: {
-      name: "logo.png",
-      url: "/local/logo.png",
-      contentType: "image/png",
-      size: 1234,
-      uploadedAt: "2026-03-18T00:00:00.000Z",
-    },
-    trainingState: training,
-  });
-
-  assert.match(uploadTurn.reply, /Logo received and attached to your request/i);
-  assert.equal(uploadTurn.lead.logoAttachment?.name, "logo.png");
+  assert.match(deliveryTurn.reply, /What is your name/i);
 
   const nameTurn = runAssistantTurn({
-    lead: uploadTurn.lead,
+    lead: deliveryTurn.lead,
     message: "Paul Sam",
     trainingState: training,
   });

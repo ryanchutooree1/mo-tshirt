@@ -110,11 +110,11 @@ function sizeBreakdownPrompt(lead: AssistantLead) {
 
 function shouldPromptForLogoUpload(lead: AssistantLead, missingFields: AssistantRequiredField[]) {
   return (
+    !missingFields.includes("sizeBreakdown") &&
     !lead.logoAttachment &&
     !lead.logoPending &&
     lead.logoReady !== false &&
-    missingFields.length > 0 &&
-    missingFields.every((field) => field === "clientName" || field === "email" || field === "phone")
+    missingFields.includes("printType")
   );
 }
 
@@ -199,7 +199,7 @@ export function generateAssistantReply(input: {
 
   if (shouldPromptForLogoUpload(lead, missingFields)) {
     candidates.push({
-      text: "If the design or logo is ready, upload it as PNG, JPG, PDF, or AI. If not, I can still finish the contact details and quotation request.",
+      text: "If the design or logo is ready, use the upload button here to attach it now.",
       score: 1.15,
     });
   }
