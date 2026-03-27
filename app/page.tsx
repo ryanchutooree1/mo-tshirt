@@ -5,6 +5,7 @@ import { getWhatsAppUrl, CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL } fro
 import { buildPageMetadata } from "@/lib/seo";
 import { HiOutlineCheckBadge, HiOutlineBolt, HiOutlineGlobeAlt, HiOutlineSparkles } from "react-icons/hi2";
 import Gallery from "@/components/Gallery";
+import HomeAiOrder from "@/components/HomeAiOrder";
 import MapCard from "@/components/MapCard";
 import QuoteForm from "@/components/QuoteForm";
 import ZoomableImage from "@/components/ZoomableImage";
@@ -23,7 +24,8 @@ export const metadata: Metadata = buildPageMetadata({
 
 const navLinks = [
   { label: "Home", href: "#top" },
-  { label: "Quote Form", href: "#contact", highlight: true },
+  { label: "Quote Form", href: "#contact", buttonTone: "orange" as const },
+  { label: "MO AI Order", href: "#mo-ai-order", buttonTone: "dark" as const },
   { label: "Plain Shops", href: "/shops" },
   { label: "Our Work", href: "#our-work" },
   { label: "Contact", href: "#contact" },
@@ -145,12 +147,14 @@ export default function HomePage() {
                 </TrackedWhatsAppLink>
               ) : (
                 <a
-                  key={link.label}
-                  href={link.href}
-                  className={`whitespace-nowrap transition ${
-                    link.highlight
+                    key={link.label}
+                    href={link.href}
+                    className={`whitespace-nowrap transition ${
+                    link.buttonTone === "orange"
                       ? "rounded-full bg-[#FF6600] px-3 py-1 text-white shadow-sm hover:bg-orange-600"
-                      : "text-black/70 hover:text-black"
+                      : link.buttonTone === "dark"
+                        ? "rounded-full bg-black px-3 py-1 text-white shadow-sm hover:bg-neutral-800"
+                        : "text-black/70 hover:text-black"
                   }`}
                 >
                   {link.label}
@@ -349,6 +353,10 @@ export default function HomePage() {
                   />
                 </div>
               </div>
+            </div>
+
+            <div id="mo-ai-order" className="mx-auto mt-12 max-w-6xl scroll-mt-24 sm:scroll-mt-28">
+              <HomeAiOrder />
             </div>
 
             <div id="location" className="mx-auto mt-12 max-w-5xl scroll-mt-24 sm:scroll-mt-28">

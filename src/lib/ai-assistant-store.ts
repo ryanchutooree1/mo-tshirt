@@ -747,9 +747,14 @@ function formatAssistantGarmentSummary(lead: AssistantLead) {
   return `${product}${variant ? ` (${variant})` : ""} x ${getAssistantLeadQuantity(lead)}`;
 }
 
-function buildQuoteMessageFromAssistantLead(lead: AssistantLead) {
+function getAssistantLeadSource(sessionId: string) {
+  return sessionId.startsWith("web-order-") ? "MO AI Order" : "Sales AI";
+}
+
+function buildQuoteMessageFromAssistantLead(sessionId: string, lead: AssistantLead) {
+  const sourceLabel = getAssistantLeadSource(sessionId);
   const details = [
-    `Captured via Sales AI.`,
+    `Captured via ${sourceLabel}.`,
     lead.companyName ? `Company: ${lead.companyName}` : "",
     `Garments: ${formatAssistantGarmentSummary(lead)}`,
     lead.printPositions.length ? `Print positions: ${lead.printPositions.join(", ")}` : "",
@@ -773,6 +778,7 @@ function buildQuotePayloadFromAssistantLead(
   lead: AssistantLead,
   nowIso: string
 ) {
+  const sourceLabel = getAssistantLeadSource(sessionId);
   const garments = lead.sizeBreakdown.length
     ? lead.sizeBreakdown.map((line) => ({
         garment: formatAssistantProduct(line.productType || lead.productType),
@@ -802,13 +808,13 @@ function buildQuotePayloadFromAssistantLead(
     name: lead.clientName || "",
     email: lead.email || "",
     phone: lead.phone || "",
-    message: buildQuoteMessageFromAssistantLead(lead),
+    message: buildQuoteMessageFromAssistantLead(sessionId, lead),
     garments,
     printMethod: printSummary,
     quantity: getAssistantLeadQuantity(lead),
     deadline: lead.deadline || "",
     notes: lead.notes || "",
-    source: "Sales AI",
+    source: sourceLabel,
     delivery: formatWebsiteDeliveryMethod(lead.deliveryMethod),
     attachments: lead.logoAttachment?.url
       ? [
