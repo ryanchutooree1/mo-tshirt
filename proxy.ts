@@ -30,7 +30,7 @@ function resolveApiRateLimit(pathname: string) {
   return API_RATE_LIMIT;
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
   if (pathname.startsWith("/api/")) {
