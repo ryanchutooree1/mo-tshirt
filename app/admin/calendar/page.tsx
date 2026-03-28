@@ -25,7 +25,6 @@ function CalculatorCard() {
     try {
       if (!allowed.test(s)) return null;
       const replaced = s.replace(/%/g, '*0.01');
-      // eslint-disable-next-line no-new-func
       const val = Function(`"use strict"; return (${replaced})`)();
       return typeof val === 'number' && isFinite(val) ? val : null;
     } catch {

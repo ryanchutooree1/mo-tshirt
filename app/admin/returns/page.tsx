@@ -1,14 +1,10 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
+import React, { useMemo, useState } from "react";
 import clsx from "clsx";
 import { format, addDays } from "date-fns";
 import {
-  ArchiveRestore,
   BadgeAlert,
-  BadgeCheck,
-  Box,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
@@ -16,18 +12,10 @@ import {
   Coins,
   CreditCard,
   Download,
-  FileText,
-  Filter,
   PackageOpen,
   Plus,
-  Printer,
-  RefreshCcw,
   Replace,
   Search,
-  ShieldCheck,
-  Trash2,
-  Truck,
-  Undo2,
   XCircle,
 } from "lucide-react";
 
@@ -627,6 +615,7 @@ function RMAForm({ value, onSave, onCancel }: { value?: RMA; onSave: (v: Partial
           <div className="grid grid-cols-3 gap-2">
             {v.pictures.map((src, i)=> (
               <div key={i} className="relative group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={src} alt={`Return evidence ${i + 1}`} className="w-full h-24 object-cover rounded"/>
                 <button onClick={()=> setV(s=> ({...s, pictures: (s.pictures||[]).filter((_,idx)=> idx!==i)}))} className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded opacity-0 group-hover:opacity-100"><XCircle className="w-4 h-4"/></button>
               </div>

@@ -5,7 +5,6 @@ import Link from "next/link";
 import { db } from "@/lib/firebase";
 import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query as firestoreQuery, Timestamp, updateDoc, where } from "firebase/firestore";
 import {
-  LineChart,
   Line,
   AreaChart,
   Area,
@@ -25,19 +24,10 @@ import {
   FileText,
   ReceiptText,
   Banknote,
-  ArrowUpRight,
-  ArrowDownRight,
   Wallet,
-  BookOpen,
   DollarSign,
-  PiggyBank,
-  Calculator,
   FileUp,
-  Search,
   Plus,
-  Filter,
-  CheckCircle2,
-  XCircle,
   ChevronRight,
   ChevronLeft,
   TrendingUp,
@@ -91,20 +81,6 @@ type LedgerEntry = {
 
 const monthLabels = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
-const invoicesSeed: Invoice[] = new Array(36).fill(null).map((_, i) => {
-  const d = new Date(2025, (i % 12), (i % 27) + 1);
-  const amt = 2500 + (i % 7) * 450 + (i % 5) * 120;
-  const status: Invoice["status"] = i % 9 === 0 ? "Overdue" : i % 3 === 0 ? "Unpaid" : i % 4 === 0 ? "Partially Paid" : "Paid";
-  return {
-    id: `INV-${String(1000 + i)}`,
-    date: format(d, "yyyy-MM-dd"),
-    customer: ["Acme Ltd", "Globex", "Soylent", "Initech", "Umbrella", "Hooli"][i % 6],
-    amount: amt,
-    vat: 15,
-    status,
-  };
-});
-
 /* --------------------------- Firestore Fetch -------------------------- */
 
 type TxnDoc = {
@@ -147,13 +123,6 @@ type BudgetDoc = {
 const currency = (n: number) => `Rs ${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 
 function sum(arr: number[]) { return arr.reduce((a, b) => a + b, 0); }
-
-function agingBucket(days: number) {
-  if (days <= 30) return "0-30";
-  if (days <= 60) return "31-60";
-  if (days <= 90) return "61-90";
-  return ">90";
-}
 
 function classNames(...xs: (string | false | undefined)[]) { return xs.filter(Boolean).join(" "); }
 
@@ -241,25 +210,32 @@ function StatusPill({ s }: { s: Invoice["status"] }) {
 /* ---------------------------- Main Page ---------------------------- */
 
 export default function AccountingPage() {
-  const [now, setNow] = useState<Date | null>(null);
+  const [now, setNow] = useState<Date>(() => new Date());
   useEffect(() => {
-    setNow(new Date());
     const id = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);
   }, []);
-  const today = now ?? new Date();
-  const yStart = new Date(today.getFullYear(), 0, 1);
-  const yEnd = today;
+  const today = now;
+  const yStart = useMemo(() => new Date(today.getFullYear(), 0, 1), [today]);
+  const yEnd = useMemo(
+    () => new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59),
+    [today]
+  );
   const quarter = Math.floor(today.getMonth() / 3) + 1 as 1|2|3|4;
-  const qStart = new Date(today.getFullYear(), (quarter-1)*3, 1);
-  const qEnd = new Date(today.getFullYear(), (quarter*3)-1, 1);
-  qEnd.setMonth(qEnd.getMonth()+1); qEnd.setDate(0); // end of quarter
+  const qStart = useMemo(() => new Date(today.getFullYear(), (quarter - 1) * 3, 1), [today, quarter]);
+  const qEnd = useMemo(() => {
+    const end = new Date(today.getFullYear(), (quarter * 3) - 1, 1);
+    end.setMonth(end.getMonth() + 1);
+    end.setDate(0);
+    end.setHours(23, 59, 59, 999);
+    return end;
+  }, [today, quarter]);
 
   // Firestore-backed rows
   const [txnRows, setTxnRows] = useState<TxnDoc[]>([]);
   const [accRows, setAccRows] = useState<AccountDoc[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [, setLoading] = useState(true);
+  const [, setError] = useState<string | null>(null);
   const [budget, setBudget] = useState<BudgetDoc | null>(null);
 
   useEffect(() => {
@@ -272,14 +248,14 @@ export default function AccountingPage() {
         const qTxn = firestoreQuery(
           collection(db, "transactions"),
           where("transactionDate", ">=", Timestamp.fromDate(yStart)),
-          where("transactionDate", "<=", Timestamp.fromDate(new Date(yEnd.getFullYear(), yEnd.getMonth(), yEnd.getDate(), 23,59,59))),
+          where("transactionDate", "<=", Timestamp.fromDate(yEnd)),
           orderBy("transactionDate", "desc")
         );
         // Account rows (income/expense) if present
         const qAcc = firestoreQuery(
           collection(db, "account"),
           where("transactionDate", ">=", Timestamp.fromDate(yStart)),
-          where("transactionDate", "<=", Timestamp.fromDate(new Date(yEnd.getFullYear(), yEnd.getMonth(), yEnd.getDate(), 23,59,59))),
+          where("transactionDate", "<=", Timestamp.fromDate(yEnd)),
           orderBy("transactionDate", "desc")
         );
         // Try to load budget if present (by doc id `YYYY-Q#` in `budget` collection)
@@ -309,7 +285,7 @@ export default function AccountingPage() {
     }
     run();
     return () => { cancelled = true; };
-  }, [yStart.getTime(), yEnd.getTime()]);
+  }, [quarter, yEnd, yStart]);
 
   // Invoices view (derived from transactions)
   const invoicesDerived: Invoice[] = useMemo(() => {
@@ -377,16 +353,6 @@ export default function AccountingPage() {
   const apTotal = useMemo(() => accRows.filter(r => (r.type||'')==='expense' && (String(r.status||'').toLowerCase() !== 'paid')).reduce((a, r) => a + (Number(r.amount)||0), 0), [accRows]);
   // Cash balance approximation (income - expenses YTD)
   const cashBalance = ytdRevenue - ytdExpenses;
-
-  // AR aging
-  const aging = useMemo(() => {
-    const buckets: Record<string, number> = { "0-30": 0, "31-60": 0, "61-90": 0, ">90": 0 };
-    ar.forEach((inv) => {
-      const days = Math.floor((today.getTime() - new Date(inv.date).getTime()) / (1000*60*60*24));
-      buckets[agingBucket(Math.max(0, days))] += inv.amount;
-    });
-    return buckets;
-  }, [ar, today]);
 
   // Bank lines (mock) & matching
   const [bankLines, setBankLines] = useState<BankLine[]>([]);
@@ -589,7 +555,7 @@ export default function AccountingPage() {
   const qActuals = useMemo(() => {
     const inQuarter = (d: any) => {
       const dt = (d instanceof Timestamp) ? d.toDate() : new Date(d || Date.now());
-      return dt >= qStart && dt <= new Date(qEnd.getFullYear(), qEnd.getMonth(), qEnd.getDate(), 23,59,59);
+      return dt >= qStart && dt <= qEnd;
     };
     let revenue = 0, cogs = 0, opex = 0;
     accRows.forEach(r => {
@@ -603,7 +569,7 @@ export default function AccountingPage() {
       }
     });
     return { revenue, cogs, opex, net: revenue - cogs - opex };
-  }, [accRows, qStart.getTime(), qEnd.getTime()]);
+  }, [accRows, qEnd, qStart]);
 
   /* ----------------------------- UI -------------------------------- */
 

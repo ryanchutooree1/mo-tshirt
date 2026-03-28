@@ -1,33 +1,28 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
 import {
   addDoc,
   collection,
   deleteDoc,
   doc,
-  getDoc,
   getDocs,
   limit,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
-  setDoc,
   Timestamp,
   updateDoc,
-  where,
   startAfter
 } from 'firebase/firestore';
 import { format } from 'date-fns';
 import clsx from 'clsx';
 import {
   Play,
-  Pause,
   Plus,
   Trash2,
-  Edit3,
   Clock3,
   CalendarClock,
   ToggleLeft,
@@ -41,8 +36,6 @@ import {
   ListChecks,
   Copy,
   RefreshCw,
-  Download,
-  Info,
 } from 'lucide-react';
 
 /**
@@ -128,10 +121,6 @@ type RunLog = {
 
 const DEFAULT_TZ = 'Indian/Mauritius';
 
-function tzNow() {
-  return new Date(); // client local; for display only
-}
-
 function nextDaily(time: string): Date {
   // time "HH:mm"
   const [h, m] = time.split(':').map(Number);
@@ -146,7 +135,6 @@ function nextWeekly(time: string, days: number[]): Date {
   // days: 1..7 (Mon..Sun)
   const [h, m] = time.split(':').map(Number);
   const now = new Date();
-  const curDow = ((now.getDay() + 6) % 7) + 1; // convert Sun(0)->7, Mon->1
   for (let offset = 0; offset < 14; offset++) {
     const d = new Date(now);
     d.setDate(now.getDate() + offset);
@@ -170,38 +158,6 @@ function humanTrigger(t: TriggerSchedule | TriggerEvent): string {
     return `Cron ${t.cron}`;
   }
   return `Event: ${t.source}${t.op ? ' ' + t.op : ''}`;
-}
-
-function tinyTemplate(s: string, ctx: any): string {
-  // Replaces {{path.to.value}} from ctx
-  return s.replace(/{{\s*([\w.]+)\s*}}/g, (_, k) => {
-    const parts = k.split('.');
-    let cur: any = ctx;
-    for (const p of parts) cur = cur?.[p];
-    return (cur ?? '').toString();
-  });
-}
-
-function safeEvalCondition(cond: Condition, payload: any): boolean {
-  const raw = cond.field.split('.').reduce<any>((acc, key) => acc?.[key], payload);
-  const valStr = cond.value;
-  const numVal = Number(valStr);
-  const a = raw;
-  const b = isNaN(numVal) ? valStr : numVal;
-
-  switch (cond.op) {
-    case '==': return a == b;
-    case '!=': return a != b;
-    case '>': return Number(a) > Number(b);
-    case '>=': return Number(a) >= Number(b);
-    case '<': return Number(a) < Number(b);
-    case '<=': return Number(a) <= Number(b);
-    case 'contains': return String(a ?? '').toLowerCase().includes(String(b ?? '').toLowerCase());
-    case 'not_contains': return !String(a ?? '').toLowerCase().includes(String(b ?? '').toLowerCase());
-    case 'in': return String(b).split(',').map(s=>s.trim()).includes(String(a));
-    case 'not_in': return !String(b).split(',').map(s=>s.trim()).includes(String(a));
-    default: return false;
-  }
 }
 
 /* --------------------------- Page Component ----------------------- */
@@ -232,7 +188,7 @@ export default function AutomationPage() {
     return () => unsub();
   }, []);
 
-  async function loadLogs(reset=false) {
+  const loadLogs = useCallback(async (reset = false) => {
     const col = collection(db, 'automation_logs');
     let qy = query(col, orderBy('at', 'desc'), limit(LOGS_PAGE));
     if (!reset && logsCursor) qy = query(col, orderBy('at', 'desc'), startAfter(logsCursor), limit(LOGS_PAGE));
@@ -242,9 +198,9 @@ export default function AutomationPage() {
     if (reset) setLogs(rows); else setLogs(prev => [...prev, ...rows]);
     setLogsCursor(snap.docs[snap.docs.length - 1]);
     setLogsHasMore(snap.size === LOGS_PAGE);
-  }
+  }, [logsCursor]);
 
-  useEffect(() => { loadLogs(true); }, []);
+  useEffect(() => { void loadLogs(true); }, [loadLogs]);
 
   /* ----------------------- Actions: Save / Run ---------------------- */
 
@@ -298,7 +254,7 @@ export default function AutomationPage() {
       const j = await res.json();
       alert(j.ok ? 'Run queued' : `Failed: ${j.error || 'Unknown error'}`);
       await loadLogs(true);
-    } catch (e: any) {
+    } catch {
       alert('Bad sample JSON or network error');
     } finally {
       setRunning(null);

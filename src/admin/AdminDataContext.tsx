@@ -5,6 +5,13 @@ import { collection, getDocs, limit, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 type ProductLine = { quantity?: number; unitPrice?: number; price?: number };
+type FirestoreDateValue = Date | { toDate?: () => Date } | null | undefined;
+function resolveTxnDate(value: FirestoreDateValue) {
+  if (value instanceof Date) return value;
+  if (value?.toDate) return value.toDate();
+  return new Date();
+}
+
 type Txn = {
   amount?: number;
   status?: string;
@@ -12,7 +19,7 @@ type Txn = {
   customerName?: string;
   phoneNumber?: string;
   email?: string;
-  transactionDate?: any;
+  transactionDate?: FirestoreDateValue;
 };
 
 export type AdminMetrics = {
@@ -34,7 +41,6 @@ function sumProducts(products?: ProductLine[]) {
 }
 
 export function AdminDataProvider({ children }: { children: React.ReactNode }) {
-  const [ready, setReady] = useState(false);
   const [metrics, setMetrics] = useState<AdminMetrics>({
     ready: false,
     todayRevenue: 0,
@@ -65,7 +71,7 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
         snap.forEach((d) => {
           const m = d.data() as Txn;
           const amount = typeof m.amount === "number" ? m.amount : sumProducts(m.products);
-          const ts: Date = (m.transactionDate?.toDate?.() as Date) || new Date(m.transactionDate || Date.now());
+          const ts = resolveTxnDate(m.transactionDate);
           const key = ts.toISOString().slice(0, 10);
           if (key === todayKey) {
             todayRevenue += amount;
@@ -93,10 +99,9 @@ export function AdminDataProvider({ children }: { children: React.ReactNode }) {
         };
         if (!cancelled) {
           setMetrics(value);
-          setReady(true);
         }
       } catch {
-        if (!cancelled) setReady(true);
+        // Keep the provider mounted even if the snapshot fails.
       }
     }
 
@@ -113,4 +118,3 @@ export function useAdminMetrics() {
   const ctx = useContext(AdminDataCtx);
   return ctx;
 }
-

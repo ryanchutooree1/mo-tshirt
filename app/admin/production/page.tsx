@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { format, addDays } from "date-fns";
@@ -12,7 +12,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
   Line,
   PieChart,
   Pie,
@@ -22,21 +21,14 @@ import {
   Factory,
   Play,
   Pause,
-  SquareCheck,
-  SquareX,
   Plus,
   Search,
-  Filter,
   Printer,
   QrCode,
   Users,
   Wrench,
   AlertTriangle,
   Clock4,
-  ChevronRight,
-  ChevronLeft,
-  Settings2,
-  Check,
   CalendarClock,
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
@@ -91,10 +83,7 @@ const seed: WorkOrder[] = [
 
 /* ----------------------------- Helpers ---------------------------- */
 
-const currency = (n: number) => `Rs ${n.toLocaleString()}`;
 const fmt = (d: string) => format(new Date(d), "dd MMM");
-
-function classNames(...xs: (string | false | undefined)[]) { return xs.filter(Boolean).join(" "); }
 
 function isLate(wo: WorkOrder) {
   const today = format(new Date(), "yyyy-MM-dd");
@@ -449,7 +438,6 @@ function Drawer({ children, onClose }: { children: React.ReactNode; onClose: () 
 
 function WOForm({ value, onSave, onCancel }: { value?: WorkOrder; onSave: (v: Partial<WorkOrder>)=>void; onCancel: ()=>void }) {
   const [v, setV] = useState<Partial<WorkOrder>>(value || { priority: 'Normal', workstation: 'DTF', due: format(new Date(), 'yyyy-MM-dd') } as any);
-  const id = v.id || "(auto)";
 
   return (
     <div className="space-y-4">
