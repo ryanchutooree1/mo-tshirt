@@ -615,7 +615,7 @@ export default function InventoryPage() {
                     <div className="flex flex-wrap items-start gap-4">
                       <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100/80">
                         {p.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
+                           
                           <img src={p.imageUrl} alt={p.productName} className="h-full w-full object-cover" />
                         ) : (
                           <FiBox className="h-5 w-5 text-slate-400" />

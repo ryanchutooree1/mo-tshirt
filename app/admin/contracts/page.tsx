@@ -54,7 +54,7 @@ function computePositions(radii: number[], containerWidth: number, gap = 16) {
 /* --------------------------- Component -------------------------- */
 export default function AdminContractsPage() {
   // Replace SAMPLE_CONTRACTS with your real data source if needed.
-  const [contracts, setContracts] = useState<Contract[]>(SAMPLE_CONTRACTS);
+  const contracts = SAMPLE_CONTRACTS;
 
   // UI state
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
@@ -113,7 +113,7 @@ export default function AdminContractsPage() {
   // auto-select largest on first load for confidence
   useEffect(() => {
     if (prepared.length > 0) setSelectedId(prepared[0].id);
-  }, []); // only initial mount
+  }, [prepared]);
 
   /* -------------------- Export SVG -> PNG -------------------- */
   async function exportPNG(filename = "contracts-bubbles.png") {
@@ -165,7 +165,7 @@ export default function AdminContractsPage() {
     setSelectedId((s) => (s === id ? null : id));
   }
 
-  function handleMouseMove(e: React.MouseEvent, c: Contract, index: number) {
+  function handleMouseMove(e: React.MouseEvent, c: Contract) {
     const svgRect = svgRef.current?.getBoundingClientRect();
     if (!svgRect) return;
     const x = e.clientX - svgRect.left + 8;
@@ -325,13 +325,11 @@ export default function AdminContractsPage() {
 
                   const isSelected = selectedId === c.id;
                   const isTop = topIds.includes(c.id);
-                  const ring = isSelected ? { stroke: "rgba(11,92,255,0.14)", width: 10 } : undefined;
-
                   return (
                     <g key={c.id} transform={`translate(${x}, ${y})`} className="group" role="button" tabIndex={0}
                        onClick={() => handleBubbleClick(c.id)}
                        onKeyDown={(e) => { if (e.key === "Enter") handleBubbleClick(c.id); }}
-                       onMouseMove={(e) => handleMouseMove(e, c, idx)}
+                       onMouseMove={(e) => handleMouseMove(e, c)}
                        onMouseLeave={handleMouseLeave}
                        aria-label={`${c.name}, MUR ${fmtMoney(c.value)}`}
                     >

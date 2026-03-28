@@ -181,7 +181,7 @@ export default function AnalysisPage() {
     }
     run();
     return () => { cancelled = true; };
-  }, [start.getTime(), end.getTime()]);
+  }, [end, start]);
 
   // ----------------------------------------------------------
   // KPIs & Aggregations

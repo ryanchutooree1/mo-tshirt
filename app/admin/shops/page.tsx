@@ -177,7 +177,7 @@ function AsyncCatalogImage({
           {fallback || "Image unavailable"}
         </div>
       )}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
+      { }
       <img
         key={`${src}-${retryNonce}`}
         src={src}

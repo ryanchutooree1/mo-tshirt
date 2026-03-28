@@ -696,7 +696,7 @@ export default function AdminAiAssistantPage() {
         )}
         {pendingLogoPreviewUrl && pendingLogoFile && (
           <div className="mt-3 overflow-hidden rounded-2xl border border-emerald-300/20 bg-white/[0.05] p-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            { }
             <img
               src={pendingLogoPreviewUrl}
               alt={pendingLogoFile.name}
@@ -720,7 +720,7 @@ export default function AdminAiAssistantPage() {
         )}
         {isImageAttachment(logoAttachment) && (
           <div className="mt-3 overflow-hidden rounded-2xl border border-emerald-300/20 bg-white/[0.05] p-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            { }
             <img
               src={logoAttachment.url}
               alt={logoAttachment.name}
@@ -767,7 +767,7 @@ export default function AdminAiAssistantPage() {
         )}
         {pendingLogoPreviewUrl && pendingLogoFile && (
           <div className="mt-3 overflow-hidden rounded-2xl border border-fuchsia-300/20 bg-white/[0.05] p-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+            { }
             <img
               src={pendingLogoPreviewUrl}
               alt={pendingLogoFile.name}
@@ -1066,7 +1066,7 @@ export default function AdminAiAssistantPage() {
                                         : "border-cyan-300/20 bg-white/[0.04]"
                                     }`}
                                   >
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    { }
                                     <img
                                       src={message.attachment.url}
                                       alt={message.attachment.name}
@@ -1148,7 +1148,7 @@ export default function AdminAiAssistantPage() {
                         )}
                         {pendingLogoPreviewUrl && pendingLogoFile && (
                           <div className="mt-3 overflow-hidden rounded-2xl border border-cyan-300/20 bg-white/[0.05] p-2">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            { }
                             <img
                               src={pendingLogoPreviewUrl}
                               alt={pendingLogoFile.name}
@@ -1346,7 +1346,7 @@ export default function AdminAiAssistantPage() {
                     <p className="mt-2 text-sm text-slate-300">Review it here, then open the original file if needed.</p>
                     {isImageAttachment(session.lead.logoAttachment) && (
                       <div className="mt-3 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-2">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        { }
                         <img
                           src={session.lead.logoAttachment.url}
                           alt={session.lead.logoAttachment.name}

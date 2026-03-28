@@ -302,7 +302,7 @@ export default function HomeAiOrder() {
                           </a>
                           {isImageAttachment(entry.attachment) && (
                             <div className="overflow-hidden rounded-[18px] border border-[#ebe2fa] bg-white p-2">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              { }
                               <img
                                 src={entry.attachment.url}
                                 alt={entry.attachment.name}
@@ -368,7 +368,7 @@ export default function HomeAiOrder() {
               ) : null}
               {pendingLogoPreviewUrl && pendingLogoFile ? (
                 <div className="mt-3 overflow-hidden rounded-[20px] border border-[#ebe2fa] bg-white p-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  { }
                   <img
                     src={pendingLogoPreviewUrl}
                     alt={pendingLogoFile.name}
