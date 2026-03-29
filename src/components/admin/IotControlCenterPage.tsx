@@ -1344,26 +1344,32 @@ export default function IotControlCenterPage() {
         }
 
         :global(.admin-root.admin-light) .iot-deck {
-          --iot-bg-1: #eef6ff;
-          --iot-bg-2: #e4f0ff;
-          --iot-bg-3: #f5f9ff;
-          --iot-surface: rgba(255, 255, 255, 0.82);
-          --iot-surface-strong: rgba(246, 251, 255, 0.94);
-          --iot-border: rgba(51, 65, 85, 0.2);
-          --iot-text: #0f1d34;
-          --iot-muted: #41546f;
-          --iot-kicker: #0c7cb2;
-          --iot-chip-bg: rgba(238, 246, 255, 0.95);
-          --iot-chip-border: rgba(56, 189, 248, 0.35);
-          --iot-input-bg: rgba(255, 255, 255, 0.96);
-          --iot-toggle-bg: rgba(226, 232, 240, 0.96);
-          --iot-toggle-text: #24415f;
-          --iot-toggle-active-bg: linear-gradient(135deg, #0f766e 0%, #059669 100%);
-          --iot-toggle-active-text: #f8fafc;
-          --iot-success: #059669;
-          --iot-danger: #e11d48;
-          --iot-warn: #b45309;
-          box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+          --iot-bg-1: #ffffff;
+          --iot-bg-2: #ffffff;
+          --iot-bg-3: #ffffff;
+          --iot-surface: rgba(255, 255, 255, 0.96);
+          --iot-surface-strong: rgba(255, 255, 255, 0.98);
+          --iot-border: rgba(34, 34, 34, 0.1);
+          --iot-text: #222222;
+          --iot-muted: #6a6a6a;
+          --iot-kicker: #6a6a6a;
+          --iot-chip-bg: rgba(255, 255, 255, 0.98);
+          --iot-chip-border: rgba(34, 34, 34, 0.12);
+          --iot-input-bg: rgba(255, 255, 255, 0.98);
+          --iot-toggle-bg: rgba(255, 255, 255, 0.98);
+          --iot-toggle-text: #222222;
+          --iot-toggle-active-bg: #222222;
+          --iot-toggle-active-text: #ffffff;
+          --iot-success: #222222;
+          --iot-danger: #222222;
+          --iot-warn: #222222;
+          background: #ffffff;
+          box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+        }
+
+        :global(.admin-root.admin-light) .iot-glow,
+        :global(.admin-root.admin-light) .iot-grid-pattern {
+          display: none;
         }
 
         .iot-glow {
@@ -1487,6 +1493,12 @@ export default function IotControlCenterPage() {
           transition: transform 0.2s ease, filter 0.2s ease, opacity 0.2s ease;
         }
 
+        :global(.admin-root.admin-light) .iot-refresh {
+          border-color: rgba(34, 34, 34, 0.12);
+          background: #222222;
+          color: #ffffff;
+        }
+
         .iot-refresh:hover:not(:disabled) {
           transform: translateY(-1px);
           filter: brightness(1.12);
@@ -1563,18 +1575,18 @@ export default function IotControlCenterPage() {
         }
 
         :global(.admin-root.admin-light) .iot-alert-danger {
-          background: rgba(254, 226, 226, 0.78);
-          color: #be123c;
+          background: rgba(255, 255, 255, 0.96);
+          color: #222222;
         }
 
         :global(.admin-root.admin-light) .iot-alert-warn {
-          background: rgba(254, 243, 199, 0.78);
-          color: #92400e;
+          background: rgba(255, 255, 255, 0.96);
+          color: #222222;
         }
 
         :global(.admin-root.admin-light) .iot-alert-info {
-          background: rgba(220, 252, 231, 0.78);
-          color: #047857;
+          background: rgba(255, 255, 255, 0.96);
+          color: #222222;
         }
 
         .iot-missing {
@@ -1719,8 +1731,14 @@ export default function IotControlCenterPage() {
         }
 
         :global(.admin-root.admin-light) .auto-status-idle {
-          background: rgba(241, 245, 249, 0.9);
-          color: #334155;
+          background: rgba(255, 255, 255, 0.96);
+          color: #222222;
+        }
+
+        :global(.admin-root.admin-light) .auto-status-success,
+        :global(.admin-root.admin-light) .auto-status-error {
+          background: rgba(255, 255, 255, 0.96);
+          color: #222222;
         }
 
         .iot-automation-meta {
@@ -1806,18 +1824,8 @@ export default function IotControlCenterPage() {
         :global(.admin-root.admin-light) .iot-run-btn,
         :global(.admin-root.admin-light) .iot-delete-btn,
         :global(.admin-root.admin-light) .iot-ghost-btn {
-          background: rgba(255, 255, 255, 0.92);
-          color: #0f1d34;
-        }
-
-        :global(.admin-root.admin-light) .iot-run-btn {
-          background: linear-gradient(135deg, rgba(14, 116, 144, 0.16), rgba(2, 132, 199, 0.18));
-          color: #0c4a6e;
-        }
-
-        :global(.admin-root.admin-light) .iot-delete-btn {
-          background: rgba(254, 226, 226, 0.88);
-          color: #be123c;
+          background: rgba(255, 255, 255, 0.98);
+          color: #222222;
         }
 
         .iot-device-grid {
@@ -1890,8 +1898,8 @@ export default function IotControlCenterPage() {
         }
 
         :global(.admin-root.admin-light) .iot-device-orb {
-          background: linear-gradient(145deg, rgba(209, 250, 229, 0.95), rgba(224, 242, 254, 0.95));
-          color: #0f766e;
+          background: rgba(255, 255, 255, 0.98);
+          color: #222222;
         }
 
         .iot-device-kicker {
@@ -1939,7 +1947,8 @@ export default function IotControlCenterPage() {
         }
 
         :global(.admin-root.admin-light) .iot-device-spotlight {
-          background: linear-gradient(145deg, rgba(236, 253, 245, 0.96), rgba(255, 255, 255, 0.96));
+          border-color: rgba(34, 34, 34, 0.1);
+          background: rgba(255, 255, 255, 0.98);
         }
 
         .iot-device-spotlight-copy span,
@@ -2020,18 +2029,18 @@ export default function IotControlCenterPage() {
         }
 
         :global(.admin-root.admin-light) .state-online {
-          color: #047857;
-          background: rgba(167, 243, 208, 0.7);
+          color: #222222;
+          background: rgba(255, 255, 255, 0.98);
         }
 
         :global(.admin-root.admin-light) .state-offline {
-          color: #be123c;
-          background: rgba(254, 205, 211, 0.72);
+          color: #222222;
+          background: rgba(255, 255, 255, 0.98);
         }
 
         :global(.admin-root.admin-light) .state-unknown {
-          color: #1d4ed8;
-          background: rgba(191, 219, 254, 0.72);
+          color: #222222;
+          background: rgba(255, 255, 255, 0.98);
         }
 
         .iot-mini-btn {

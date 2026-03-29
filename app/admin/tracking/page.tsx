@@ -193,10 +193,10 @@ function MetricCard({
   helper: string;
 }) {
   return (
-    <div className="rounded-[28px] border border-[#d8cfbf] bg-white p-5 shadow-sm">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8b6f47]">{label}</p>
-      <p className="mt-3 text-3xl font-semibold text-[#20160f]">{value}</p>
-      <p className="mt-2 text-sm text-[#6a5848]">{helper}</p>
+    <div className="rounded-[28px] border border-[#ebebeb] bg-white p-5 shadow-sm">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#6a6a6a]">{label}</p>
+      <p className="mt-3 text-3xl font-semibold text-[#222222]">{value}</p>
+      <p className="mt-2 text-sm text-[#6a6a6a]">{helper}</p>
     </div>
   );
 }
@@ -350,16 +350,16 @@ export default function TrackingPage() {
   const recentEvents = useMemo(() => events.slice(0, 25), [events]);
 
   return (
-    <main className="min-h-screen bg-[#f5efe4] px-6 py-8 text-[#20160f]">
+    <main className="min-h-screen bg-white px-6 py-8 text-[#222222]">
       <div className="mx-auto max-w-7xl space-y-8">
-        <section className="rounded-[36px] border border-[#d8cfbf] bg-white px-6 py-6 shadow-sm sm:px-8">
+        <section className="rounded-[36px] border border-[#ebebeb] bg-white px-6 py-6 shadow-sm sm:px-8">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8b6f47]">Admin Tracking</p>
-              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[#20160f] sm:text-4xl">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#6a6a6a]">Admin Tracking</p>
+              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-[#222222] sm:text-4xl">
                 Website tracking dashboard
               </h1>
-              <p className="mt-3 max-w-3xl text-sm text-[#6a5848] sm:text-base">
+              <p className="mt-3 max-w-3xl text-sm text-[#6a6a6a] sm:text-base">
                 Follow public page views, WhatsApp clicks, quote submits, service-page visits, and shop-order sends in one place.
               </p>
             </div>
@@ -372,7 +372,7 @@ export default function TrackingPage() {
                   className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition ${
                     preset === option
                       ? 'bg-[#20160f] text-white'
-                      : 'border border-[#d8cfbf] bg-[#f8f3ea] text-[#6a5848] hover:border-[#8b6f47]'
+                      : 'border border-[#ebebeb] bg-white text-[#6a6a6a] hover:border-[#d7d7d7] hover:bg-[#f7f7f7]'
                   }`}
                 >
                   {option}
@@ -380,13 +380,13 @@ export default function TrackingPage() {
               ))}
               <Link
                 href="/admin/analytics"
-                className="inline-flex items-center rounded-full border border-[#d8cfbf] bg-[#f8f3ea] px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#6a5848] transition hover:border-[#8b6f47]"
+                className="inline-flex items-center rounded-full border border-[#ebebeb] bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#6a6a6a] transition hover:border-[#d7d7d7] hover:bg-[#f7f7f7]"
               >
                 Financial Analytics
               </Link>
             </div>
           </div>
-          <p className="mt-4 text-xs text-[#8b6f47]">
+          <p className="mt-4 text-xs text-[#6a6a6a]">
             Range: {format(range.start, 'd MMM yyyy')} to {format(range.end, 'd MMM yyyy')} · last {events.length} tracked events loaded
           </p>
         </section>
@@ -405,13 +405,13 @@ export default function TrackingPage() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[1.35fr_0.85fr]">
-          <div className="rounded-[32px] border border-[#d8cfbf] bg-white p-6 shadow-sm">
+          <div className="rounded-[32px] border border-[#ebebeb] bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8b6f47]">Trend</p>
-                <h2 className="mt-2 text-2xl font-semibold text-[#20160f]">Daily tracking activity</h2>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#6a6a6a]">Trend</p>
+                <h2 className="mt-2 text-2xl font-semibold text-[#222222]">Daily tracking activity</h2>
               </div>
-              {loading ? <span className="text-xs text-[#8b6f47]">Loading…</span> : null}
+              {loading ? <span className="text-xs text-[#6a6a6a]">Loading…</span> : null}
             </div>
             <div className="mt-6 h-[320px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -426,9 +426,9 @@ export default function TrackingPage() {
                       <stop offset="95%" stopColor="#ea580c" stopOpacity={0.02} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid stroke="#efe7d7" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fill: '#8b6f47', fontSize: 12 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fill: '#8b6f47', fontSize: 12 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <CartesianGrid stroke="#ebebeb" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fill: '#6a6a6a', fontSize: 12 }} tickLine={false} axisLine={false} />
+                  <YAxis tick={{ fill: '#6a6a6a', fontSize: 12 }} tickLine={false} axisLine={false} allowDecimals={false} />
                   <Tooltip />
                   <Area
                     type="monotone"
@@ -449,15 +449,15 @@ export default function TrackingPage() {
             </div>
           </div>
 
-          <div className="rounded-[32px] border border-[#d8cfbf] bg-white p-6 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8b6f47]">Mix</p>
-            <h2 className="mt-2 text-2xl font-semibold text-[#20160f]">Tracked event types</h2>
+          <div className="rounded-[32px] border border-[#ebebeb] bg-white p-6 shadow-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#6a6a6a]">Mix</p>
+            <h2 className="mt-2 text-2xl font-semibold text-[#222222]">Tracked event types</h2>
             <div className="mt-6 h-[320px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={eventMix}>
-                  <CartesianGrid stroke="#efe7d7" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fill: '#8b6f47', fontSize: 12 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fill: '#8b6f47', fontSize: 12 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <CartesianGrid stroke="#ebebeb" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fill: '#6a6a6a', fontSize: 12 }} tickLine={false} axisLine={false} />
+                  <YAxis tick={{ fill: '#6a6a6a', fontSize: 12 }} tickLine={false} axisLine={false} allowDecimals={false} />
                   <Tooltip />
                   <Bar dataKey="count" radius={[10, 10, 0, 0]}>
                     {eventMix.map((entry) => (
@@ -471,73 +471,73 @@ export default function TrackingPage() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-3">
-          <div className="rounded-[32px] border border-[#d8cfbf] bg-white p-6 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8b6f47]">Top Pages</p>
+          <div className="rounded-[32px] border border-[#ebebeb] bg-white p-6 shadow-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#6a6a6a]">Top Pages</p>
             <div className="mt-4 space-y-3">
               {topPages.length ? topPages.map((row) => (
-                <div key={row.label} className="flex items-center justify-between gap-3 rounded-2xl bg-[#f8f3ea] px-4 py-3 text-sm">
-                  <span className="truncate font-medium text-[#20160f]">{formatTrackingPath(row.label)}</span>
-                  <span className="font-semibold text-[#8b6f47]">{row.count}</span>
+                <div key={row.label} className="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-sm ring-1 ring-[#ebebeb]">
+                  <span className="truncate font-medium text-[#222222]">{formatTrackingPath(row.label)}</span>
+                  <span className="font-semibold text-[#6a6a6a]">{row.count}</span>
                 </div>
-              )) : <p className="text-sm text-[#6a5848]">No page views yet.</p>}
+              )) : <p className="text-sm text-[#6a6a6a]">No page views yet.</p>}
             </div>
           </div>
 
-          <div className="rounded-[32px] border border-[#d8cfbf] bg-white p-6 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8b6f47]">Top CTA Locations</p>
+          <div className="rounded-[32px] border border-[#ebebeb] bg-white p-6 shadow-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#6a6a6a]">Top CTA Locations</p>
             <div className="mt-4 space-y-3">
               {topWhatsAppLocations.length ? topWhatsAppLocations.map((row) => (
-                <div key={row.label} className="flex items-center justify-between gap-3 rounded-2xl bg-[#f8f3ea] px-4 py-3 text-sm">
-                  <span className="truncate font-medium text-[#20160f]">{row.label}</span>
-                  <span className="font-semibold text-[#8b6f47]">{row.count}</span>
+                <div key={row.label} className="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-sm ring-1 ring-[#ebebeb]">
+                  <span className="truncate font-medium text-[#222222]">{row.label}</span>
+                  <span className="font-semibold text-[#6a6a6a]">{row.count}</span>
                 </div>
-              )) : <p className="text-sm text-[#6a5848]">No WhatsApp clicks yet.</p>}
+              )) : <p className="text-sm text-[#6a6a6a]">No WhatsApp clicks yet.</p>}
             </div>
           </div>
 
-          <div className="rounded-[32px] border border-[#d8cfbf] bg-white p-6 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8b6f47]">Top Service Pages</p>
+          <div className="rounded-[32px] border border-[#ebebeb] bg-white p-6 shadow-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#6a6a6a]">Top Service Pages</p>
             <div className="mt-4 space-y-3">
               {topServicePages.length ? topServicePages.map((row) => (
-                <div key={row.label} className="flex items-center justify-between gap-3 rounded-2xl bg-[#f8f3ea] px-4 py-3 text-sm">
-                  <span className="truncate font-medium text-[#20160f]">{row.label}</span>
-                  <span className="font-semibold text-[#8b6f47]">{row.count}</span>
+                <div key={row.label} className="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-sm ring-1 ring-[#ebebeb]">
+                  <span className="truncate font-medium text-[#222222]">{row.label}</span>
+                  <span className="font-semibold text-[#6a6a6a]">{row.count}</span>
                 </div>
-              )) : <p className="text-sm text-[#6a5848]">No service-page visits yet.</p>}
+              )) : <p className="text-sm text-[#6a6a6a]">No service-page visits yet.</p>}
             </div>
           </div>
         </section>
 
-        <section className="rounded-[32px] border border-[#d8cfbf] bg-white p-6 shadow-sm">
+        <section className="rounded-[32px] border border-[#ebebeb] bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8b6f47]">Recent Events</p>
-              <h2 className="mt-2 text-2xl font-semibold text-[#20160f]">Latest tracking activity</h2>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#6a6a6a]">Recent Events</p>
+              <h2 className="mt-2 text-2xl font-semibold text-[#222222]">Latest tracking activity</h2>
             </div>
-            {loading ? <span className="text-xs text-[#8b6f47]">Refreshing…</span> : null}
+            {loading ? <span className="text-xs text-[#6a6a6a]">Refreshing…</span> : null}
           </div>
 
-          <div className="mt-6 overflow-hidden rounded-[24px] border border-[#eadfcd]">
-            <div className="hidden grid-cols-[170px_170px_minmax(0,1fr)_220px] gap-4 bg-[#f8f3ea] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8b6f47] md:grid">
+          <div className="mt-6 overflow-hidden rounded-[24px] border border-[#ebebeb]">
+            <div className="hidden grid-cols-[170px_170px_minmax(0,1fr)_220px] gap-4 bg-white px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6a6a6a] md:grid">
               <span>Time</span>
               <span>Event</span>
               <span>Path</span>
               <span>Details</span>
             </div>
-            <div className="divide-y divide-[#efe7d7]">
+            <div className="divide-y divide-[#ebebeb]">
               {recentEvents.length ? recentEvents.map((event) => {
                 const detail = formatTrackingDetail(event);
 
                 return (
                   <div key={event.id} className="grid gap-2 px-4 py-4 text-sm md:grid-cols-[170px_170px_minmax(0,1fr)_220px] md:gap-4">
-                    <span className="text-[#6a5848]">{format(event.createdAt, 'd MMM yyyy HH:mm')}</span>
-                    <span className="font-semibold text-[#20160f]">{EVENT_LABELS[event.name]}</span>
-                    <span className="truncate text-[#20160f]">{formatTrackingPath(event.path)}</span>
-                    <span className="truncate text-[#6a5848]">{detail}</span>
+                    <span className="text-[#6a6a6a]">{format(event.createdAt, 'd MMM yyyy HH:mm')}</span>
+                    <span className="font-semibold text-[#222222]">{EVENT_LABELS[event.name]}</span>
+                    <span className="truncate text-[#222222]">{formatTrackingPath(event.path)}</span>
+                    <span className="truncate text-[#6a6a6a]">{detail}</span>
                   </div>
                 );
               }) : (
-                <div className="px-4 py-8 text-sm text-[#6a5848]">
+                <div className="px-4 py-8 text-sm text-[#6a6a6a]">
                   No tracking events yet. Public visits and tracked actions will appear here automatically.
                 </div>
               )}

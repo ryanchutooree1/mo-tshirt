@@ -1004,7 +1004,7 @@ export default function OwnerDashboard() {
         isDark ? "text-white" : "text-slate-900"
       }`}
     >
-      <div className={`pointer-events-none absolute inset-0 ${isDark ? "opacity-80" : "opacity-100"}`}>
+      <div className={`pointer-events-none absolute inset-0 ${isDark ? "opacity-80" : "opacity-0"}`}>
         <div
           className={`absolute -top-40 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full blur-3xl ${
             isDark
@@ -1027,20 +1027,20 @@ export default function OwnerDashboard() {
             className={`absolute inset-0 ${
               isDark
                 ? "bg-[linear-gradient(120deg,rgba(15,23,42,0.95),rgba(10,36,62,0.88))]"
-                : "bg-[linear-gradient(125deg,rgba(255,255,255,0.96),rgba(250,250,250,0.94),rgba(255,243,246,0.9))]"
+                : "bg-white"
             }`}
           />
           <div
             className={`absolute inset-0 [background-size:20px_20px] ${
               isDark
                 ? "opacity-30 [background-image:radial-gradient(rgba(148,163,184,0.32)_1px,transparent_1px)]"
-                : "opacity-25 [background-image:radial-gradient(rgba(34,34,34,0.1)_1px,transparent_1px)]"
+                : "opacity-0"
             }`}
           />
 
           <div className="relative grid gap-8 xl:grid-cols-[1.4fr_0.9fr]">
             <div>
-              <p className={`text-xs uppercase tracking-[0.28em] ${isDark ? "text-cyan-200/80" : "text-[#d12f5f]"}`}>
+              <p className={`text-xs uppercase tracking-[0.28em] ${isDark ? "text-cyan-200/80" : "text-[#6a6a6a]"}`}>
                 MO Admin HQ
               </p>
               <h1
@@ -1055,13 +1055,13 @@ export default function OwnerDashboard() {
               </p>
               <p className={`mt-3 text-sm ${isDark ? "text-slate-200/95" : "text-slate-700"}`}>
                 {formattedDate} • Primary{" "}
-                <span className={`font-semibold ${isDark ? "text-cyan-200" : "text-sky-700"}`}>{numerologyToday.primary}</span> • Secondary{" "}
-                <span className={`font-semibold ${isDark ? "text-emerald-200" : "text-emerald-700"}`}>{numerologyToday.secondary}</span>
+                <span className={`font-semibold ${isDark ? "text-cyan-200" : "text-[#222222]"}`}>{numerologyToday.primary}</span> • Secondary{" "}
+                <span className={`font-semibold ${isDark ? "text-emerald-200" : "text-[#222222]"}`}>{numerologyToday.secondary}</span>
               </p>
               <p className={`mt-1 text-xs ${isDark ? "text-slate-300" : "text-slate-600"}`}>
                 Tomorrow ({tomorrowCalc.dateStr}) • Primary{" "}
-                <span className={`font-medium ${isDark ? "text-cyan-100" : "text-sky-700"}`}>{tomorrowCalc.primary}</span> • Secondary{" "}
-                <span className={`font-medium ${isDark ? "text-emerald-100" : "text-emerald-700"}`}>{tomorrowCalc.secondary}</span>
+                <span className={`font-medium ${isDark ? "text-cyan-100" : "text-[#222222]"}`}>{tomorrowCalc.primary}</span> • Secondary{" "}
+                <span className={`font-medium ${isDark ? "text-emerald-100" : "text-[#222222]"}`}>{tomorrowCalc.secondary}</span>
               </p>
 
               <div className="mt-6 flex flex-wrap gap-2.5">
@@ -1660,11 +1660,9 @@ export default function OwnerDashboard() {
         }
 
         .ceo-theme-light {
-          --ceo-bg: #fbfbfb;
+          --ceo-bg: #ffffff;
           --ceo-text: #222222;
-          background:
-            radial-gradient(120% 90% at 50% -20%, rgba(255, 56, 92, 0.14), transparent 65%),
-            linear-gradient(145deg, #ffffff 0%, #fbfbfb 48%, #f7f7f7 100%);
+          background: #ffffff;
           color: var(--ceo-text);
         }
 
@@ -1680,16 +1678,23 @@ export default function OwnerDashboard() {
           color: #6a6a6a !important;
         }
 
-        .ceo-theme-light :is(.text-cyan-100, .text-cyan-200) {
-          color: #d12f5f !important;
-        }
-
-        .ceo-theme-light :is(.text-emerald-100, .text-emerald-200) {
-          color: #047857 !important;
-        }
-
-        .ceo-theme-light :is(.text-amber-100, .text-amber-200) {
-          color: #b45309 !important;
+        .ceo-theme-light :is(
+          .text-cyan-100,
+          .text-cyan-200,
+          .text-emerald-100,
+          .text-emerald-200,
+          .text-amber-100,
+          .text-amber-200,
+          .text-rose-100,
+          .text-rose-200,
+          .text-blue-100,
+          .text-blue-200,
+          .text-indigo-100,
+          .text-indigo-200,
+          .text-teal-100,
+          .text-teal-200
+        ) {
+          color: #222222 !important;
         }
 
         .ceo-theme-light :is(.border-white\/10, .border-white\/15, .border-white\/20, .border-white\/30) {
@@ -1704,12 +1709,40 @@ export default function OwnerDashboard() {
           background-color: #222222 !important;
         }
 
-        .ceo-theme-light :is(.border-cyan-300\/40, .border-cyan-300\/55, .border-cyan-300\/60, .border-cyan-400\/45) {
-          border-color: rgba(255, 56, 92, 0.28) !important;
+        .ceo-theme-light :is(
+          .border-cyan-300\/30,
+          .border-cyan-300\/35,
+          .border-cyan-300\/40,
+          .border-cyan-300\/55,
+          .border-cyan-300\/60,
+          .border-cyan-400\/45,
+          .border-emerald-300\/30,
+          .border-emerald-400\/35,
+          .border-emerald-400\/45,
+          .border-amber-400\/45,
+          .border-rose-400\/45,
+          .border-blue-300\/35,
+          .border-indigo-300\/35,
+          .border-teal-300\/35
+        ) {
+          border-color: rgba(34, 34, 34, 0.1) !important;
         }
 
-        .ceo-theme-light :is(.bg-cyan-400\/15, .bg-cyan-400\/18, .bg-cyan-300\/10, .bg-cyan-100) {
-          background-color: rgba(255, 56, 92, 0.1) !important;
+        .ceo-theme-light :is(
+          .bg-cyan-400\/15,
+          .bg-cyan-400\/18,
+          .bg-cyan-300\/10,
+          .bg-cyan-300\/12,
+          .bg-cyan-100,
+          .bg-emerald-300\/10,
+          .bg-emerald-400\/10,
+          .bg-amber-400\/12,
+          .bg-rose-400\/12,
+          .bg-blue-300\/15,
+          .bg-indigo-300\/15,
+          .bg-teal-300\/15
+        ) {
+          background-color: rgba(255, 255, 255, 0.92) !important;
         }
 
         .animate-rise {

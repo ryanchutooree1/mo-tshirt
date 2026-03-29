@@ -728,7 +728,7 @@ export default function BusinessValuePage() {
 
   if (!loaded) {
     return (
-      <main className="min-h-screen bg-[#f7f7fb] text-slate-900">
+      <main className="min-h-screen bg-white text-slate-900">
         <div className="mx-auto flex min-h-screen w-full max-w-7xl items-center justify-center px-4 py-10 sm:px-6">
           <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600 shadow-sm">
             Loading business value tracker...
@@ -738,14 +738,14 @@ export default function BusinessValuePage() {
     );
   }
 
-  const panelClass = "rounded-[28px] border border-slate-200 bg-white/90 shadow-sm backdrop-blur";
+  const panelClass = "rounded-[28px] border border-slate-200 bg-white shadow-sm";
   const firstVisibleIndex = filteredSortedItems.length
     ? (currentPage - 1) * pageSize + 1
     : 0;
   const lastVisibleIndex = Math.min(currentPage * pageSize, filteredSortedItems.length);
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#f7f7fb] text-slate-900">
+    <main className="min-h-screen overflow-x-hidden bg-white text-slate-900">
       <div className="relative overflow-x-hidden">
 
         <div className="relative mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
@@ -786,16 +786,16 @@ export default function BusinessValuePage() {
                 <span
                   className={`rounded-full border px-3 py-1 text-xs font-semibold ${
                     syncState === "error"
-                      ? "border-rose-200 bg-rose-50 text-rose-700"
-                      : syncState === "saving"
-                        ? "border-amber-200 bg-amber-50 text-amber-700"
-                        : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      ? "border-slate-200 bg-white text-slate-700"
+                    : syncState === "saving"
+                        ? "border-slate-200 bg-white text-slate-700"
+                        : "border-slate-200 bg-white text-slate-700"
                   }`}
                 >
                   {syncState === "saving" ? "Saving..." : syncState === "error" ? "Save failed" : "Saved"}
                 </span>
                 {snapshotLabel ? (
-                  <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                  <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
                     {snapshotLabel}
                   </span>
                 ) : null}
@@ -804,34 +804,34 @@ export default function BusinessValuePage() {
           </header>
 
           <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-            <article className="rounded-3xl border border-cyan-100 bg-white/90 p-5 shadow-sm">
+            <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-[11px] uppercase tracking-[0.26em] text-slate-400">Business value</p>
               <p className="mt-2 text-2xl font-semibold text-slate-900">{formatCurrency(totalBusinessValue)}</p>
               <p className="mt-1 text-xs text-slate-500">Live estimated value</p>
             </article>
 
-            <article className="rounded-3xl border border-amber-100 bg-white/90 p-5 shadow-sm">
+            <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-[11px] uppercase tracking-[0.26em] text-slate-400">Invested value</p>
               <p className="mt-2 text-2xl font-semibold text-slate-900">{formatCurrency(totalInvestedValue)}</p>
               <p className="mt-1 text-xs text-slate-500">Total cash invested</p>
             </article>
 
-            <article className="rounded-3xl border border-emerald-100 bg-white/90 p-5 shadow-sm">
+            <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-[11px] uppercase tracking-[0.26em] text-slate-400">Growth</p>
-              <p className={`mt-2 text-2xl font-semibold ${totalGrowth >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">
                 {totalGrowth >= 0 ? "+" : "-"}
                 {formatCurrency(Math.abs(totalGrowth))}
               </p>
               <p className="mt-1 text-xs text-slate-500">Current - invested</p>
             </article>
 
-            <article className="rounded-3xl border border-violet-100 bg-white/90 p-5 shadow-sm">
+            <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-[11px] uppercase tracking-[0.26em] text-slate-400">Snapshot streak</p>
               <p className="mt-2 text-2xl font-semibold text-slate-900">{snapshotStreak} day{snapshotStreak === 1 ? "" : "s"}</p>
               <p className="mt-1 text-xs text-slate-500">Consecutive saved days</p>
             </article>
 
-            <article className="rounded-3xl border border-slate-200 bg-white/90 p-5 shadow-sm">
+            <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
               <p className="text-[11px] uppercase tracking-[0.26em] text-slate-400">Goal progress</p>
               <p className="mt-2 text-2xl font-semibold text-slate-900">{goalProgress.toFixed(1)}%</p>
               <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">

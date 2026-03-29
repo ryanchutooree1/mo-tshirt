@@ -853,13 +853,33 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
     hidden: { opacity: 0, y: 14 },
     show: { opacity: 1, y: 0 },
   };
+  const pageClassName = isAdminMode
+    ? "min-h-screen bg-white [font-family:var(--font-studio-body)] text-slate-900"
+    : "min-h-screen bg-[linear-gradient(145deg,#fff7ea_0%,#fffdf8_45%,#ecfeff_100%)] [font-family:var(--font-studio-body)] text-slate-900";
+  const studioNameClass = isAdminMode
+    ? "rounded-full bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600 shadow-sm"
+    : "rounded-full bg-white/90 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-orange-600 shadow-sm";
+  const heroPanelClass = isAdminMode
+    ? "mt-8 max-w-5xl rounded-[28px] border border-[#ebebeb] bg-white p-6 shadow-[0_16px_40px_rgba(15,23,42,0.08)] sm:p-8"
+    : "mt-8 max-w-5xl rounded-[28px] border border-white/70 bg-white/70 p-6 shadow-[0_16px_40px_rgba(15,23,42,0.08)] backdrop-blur-sm sm:p-8";
+  const accentTextClass = isAdminMode ? "text-slate-600" : "text-orange-600";
+  const sidePanelClass = isAdminMode
+    ? "rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_16px_45px_rgba(15,23,42,0.08)] sm:p-6"
+    : "rounded-[28px] border border-[#ecdcc8] bg-white/95 p-5 shadow-[0_16px_45px_rgba(15,23,42,0.08)] sm:p-6";
+  const estimateCardClass = isAdminMode
+    ? "rounded-2xl border border-slate-200 bg-white p-4"
+    : "rounded-2xl border border-orange-200 bg-gradient-to-br from-[#fff7ed] to-[#fefce8] p-4";
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(145deg,#fff7ea_0%,#fffdf8_45%,#ecfeff_100%)] [font-family:var(--font-studio-body)] text-slate-900">
+    <div className={pageClassName}>
       <div className="relative overflow-hidden">
-        <div className="pointer-events-none absolute -top-20 left-0 h-80 w-80 rounded-full bg-[#f97316]/20 blur-3xl" />
-        <div className="pointer-events-none absolute right-0 top-24 h-80 w-80 rounded-full bg-[#14b8a6]/20 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-[#22c55e]/10 blur-3xl" />
+        {!isAdminMode ? (
+          <>
+            <div className="pointer-events-none absolute -top-20 left-0 h-80 w-80 rounded-full bg-[#f97316]/20 blur-3xl" />
+            <div className="pointer-events-none absolute right-0 top-24 h-80 w-80 rounded-full bg-[#14b8a6]/20 blur-3xl" />
+            <div className="pointer-events-none absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-[#22c55e]/10 blur-3xl" />
+          </>
+        ) : null}
 
         <motion.section
           initial="hidden"
@@ -875,13 +895,13 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
               <ArrowLeft className="h-4 w-4" />
               {backLabel}
             </Link>
-            <p className="rounded-full bg-white/90 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-orange-600 shadow-sm">
+            <p className={studioNameClass}>
               {studioName}
             </p>
           </motion.div>
 
-          <motion.div variants={containerAnim} className="mt-8 max-w-5xl rounded-[28px] border border-white/70 bg-white/70 p-6 shadow-[0_16px_40px_rgba(15,23,42,0.08)] backdrop-blur-sm sm:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-orange-600">{studioBanner}</p>
+          <motion.div variants={containerAnim} className={heroPanelClass}>
+            <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${accentTextClass}`}>{studioBanner}</p>
             <h1 className="mt-2 text-4xl font-semibold tracking-tight text-slate-900 [font-family:var(--font-studio-display)] sm:text-6xl">
               Design your T-Shirt
             </h1>
@@ -898,8 +918,8 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
           </motion.div>
 
           <motion.div variants={containerAnim} className="mt-8 grid gap-6 xl:grid-cols-[1fr_1.45fr_1fr]">
-            <article className="rounded-[28px] border border-[#ecdcc8] bg-white/95 p-5 shadow-[0_16px_45px_rgba(15,23,42,0.08)] sm:p-6">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-orange-600">
+            <article className={sidePanelClass}>
+              <div className={`flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] ${accentTextClass}`}>
                 <WandSparkles className="h-4 w-4" />
                 Setup
               </div>
@@ -1470,8 +1490,8 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
                   </label>
                 </div>
 
-                <div className="rounded-2xl border border-orange-200 bg-gradient-to-br from-[#fff7ed] to-[#fefce8] p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-600">Live estimate</p>
+                <div className={estimateCardClass}>
+                  <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${accentTextClass}`}>Live estimate</p>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-slate-600">
                     <div className="rounded-xl bg-white px-3 py-2">
                       <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Unit price</p>
