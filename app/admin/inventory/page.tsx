@@ -25,6 +25,7 @@ import {
   FiUpload,
   FiXCircle,
 } from "react-icons/fi";
+import { formatMoney as formatDisplayMoney } from "@/lib/money";
 
 // ---------- Types ----------
 type SizeMap = Record<string, number>;
@@ -42,7 +43,7 @@ type DraftSizeValues = Record<string, { qty: number | ""; min: number | "" }>;
 type BulkSizeValues = Record<string, { qty: number; min: number }>;
 
 // ---------- Small helpers ----------
-const money = (v: number) => `Rs ${Number(v || 0).toLocaleString()}`;
+const money = (v: number) => formatDisplayMoney(v);
 const sum = (obj: Record<string, number> = {}) =>
   Object.values(obj).reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
 const DEFAULT_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];

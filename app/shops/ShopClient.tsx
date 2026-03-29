@@ -7,6 +7,7 @@ import { FiDownload } from "react-icons/fi";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { getWhatsAppUrl } from "@/data/work";
 import { trackShopOrderSubmit, trackWhatsAppClick } from "@/lib/analytics";
+import { formatMoney as formatDisplayMoney } from "@/lib/money";
 import {
   buildShopWhatsAppMessageForLines,
   formatSizeLabel,
@@ -23,12 +24,12 @@ import {
 
 const DELIVERY_METHODS = [
   { value: "Surinam pickup", label: "Surinam Pickup (Free)", fee: 0 },
-  { value: "Post Office Postage Delivery", label: "Post Office Postage Delivery (Rs 100)", fee: 100 },
-  { value: "Post Office Express Delivery", label: "Post Office Express Delivery (Rs 150)", fee: 150 },
+  { value: "Post Office Postage Delivery", label: `Post Office Postage Delivery (${formatDisplayMoney(100)})`, fee: 100 },
+  { value: "Post Office Express Delivery", label: `Post Office Express Delivery (${formatDisplayMoney(150)})`, fee: 150 },
   { value: "Delivery (Need to arrange first)", label: "Delivery (Need to arrange first)", fee: 0 },
 ] as const;
 
-const money = (value: number) => `Rs ${Number(value || 0).toLocaleString()}`;
+const money = (value: number) => formatDisplayMoney(value);
 const IMAGE_RETRY_LIMIT = 2;
 const IMAGE_RETRY_DELAY_MS = 900;
 

@@ -28,6 +28,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
+import { formatMoney as formatDisplayMoney } from "@/lib/money";
 
 type ProductId = "tshirt" | "polo" | "hoodie";
 type MethodId = "dtf" | "screen" | "vinyl";
@@ -76,8 +77,8 @@ type SizeField = (typeof SIZE_FIELDS)[number];
 
 const DELIVERY_OPTIONS = [
   "Surinam Pickup (Free)",
-  "Post Office Postage Delivery (Rs 100)",
-  "Post Office Express Delivery (Rs 150)",
+  `Post Office Postage Delivery (${formatDisplayMoney(100)})`,
+  `Post Office Express Delivery (${formatDisplayMoney(150)})`,
   "Delivery (Need to arrange first)",
 ];
 const PICKUP_OPTION = DELIVERY_OPTIONS[0];
@@ -717,7 +718,7 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
       designSelections.length ? `Design selected: ${designSelections.join(" | ")}` : "",
       `Selected sizes: ${sizes}`,
       `Total qty: ${totalQty}`,
-      `Estimated total: Rs ${withCommas(totalPrice)}`,
+      `Estimated total: ${formatDisplayMoney(totalPrice)}`,
       `Delivery: ${delivery}`,
       client.deliveryName ? `Delivery name: ${client.deliveryName}` : "",
       client.deliveryAddress ? `Delivery address: ${client.deliveryAddress}` : "",
@@ -919,7 +920,7 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
                     >
                       <p className="text-sm font-semibold">{option.label}</p>
                       <p className={`mt-1 text-xs ${productId === option.id ? "text-slate-300" : "text-slate-500"}`}>
-                        From Rs {withCommas(option.baseUnit)} / unit
+                        From {formatDisplayMoney(option.baseUnit)} / unit
                       </p>
                     </button>
                   ))}
@@ -1412,7 +1413,7 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
                 <PreviewStat label="Lead time" value={product.leadTime} />
                 <PreviewStat label="Min order" value={`${product.minQty} pcs`} />
-                <PreviewStat label="Color surcharge" value={color.premium ? `+Rs ${color.premium}` : "Included"} />
+                <PreviewStat label="Color surcharge" value={color.premium ? `+${formatDisplayMoney(color.premium)}` : "Included"} />
               </div>
             </article>
 
@@ -1474,7 +1475,7 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
                   <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-slate-600">
                     <div className="rounded-xl bg-white px-3 py-2">
                       <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Unit price</p>
-                      <p className="text-base font-semibold text-slate-900">Rs {withCommas(unitPrice)}</p>
+                      <p className="text-base font-semibold text-slate-900">{formatDisplayMoney(unitPrice)}</p>
                     </div>
                     <div className="rounded-xl bg-white px-3 py-2">
                       <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Total qty</p>
@@ -1486,12 +1487,12 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
                     </div>
                     <div className="rounded-xl bg-white px-3 py-2">
                       <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Estimated total</p>
-                      <p className="text-base font-semibold text-slate-900">Rs {withCommas(totalPrice)}</p>
+                      <p className="text-base font-semibold text-slate-900">{formatDisplayMoney(totalPrice)}</p>
                     </div>
                   </div>
                   {(setupFee > 0 || rushFee > 0) && (
                     <p className="mt-2 text-xs text-slate-500">
-                      {setupFee > 0 ? `Setup: Rs ${withCommas(setupFee)}.` : ""} {rushFee > 0 ? `Rush: Rs ${withCommas(rushFee)}.` : ""}
+                      {setupFee > 0 ? `Setup: ${formatDisplayMoney(setupFee)}.` : ""} {rushFee > 0 ? `Rush: ${formatDisplayMoney(rushFee)}.` : ""}
                     </p>
                   )}
                 </div>

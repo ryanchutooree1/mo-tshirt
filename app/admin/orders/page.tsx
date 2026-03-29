@@ -41,6 +41,7 @@ import {
   FiPlus,
 } from "react-icons/fi";
 import jsPDF from "jspdf";
+import { formatMoney as formatDisplayMoney } from "@/lib/money";
 
 type ProductLine = {
   product: string;
@@ -192,9 +193,7 @@ const addDaysIso = (isoDate: string, days: number) => {
 };
 
 const formatMoney = (value: number, currency = "Rs") => {
-  const amount = safeNumber(value, 0);
-  const sign = amount < 0 ? "-" : "";
-  return `${sign}${currency} ${Math.abs(amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  return formatDisplayMoney(safeNumber(value, 0), currency);
 };
 
 const getDefaultPaymentStatus = (docType: OrderDocumentType) => {
@@ -817,10 +816,7 @@ function OrdersPageInner() {
 
   // helpers
   function currency(n: number) {
-    return `Rs ${Number(n || 0).toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
+    return formatDisplayMoney(n);
   }
 
   async function confirmPassword(): Promise<boolean> {
@@ -2227,8 +2223,8 @@ function OrdersPageInner() {
                                           <td className="px-4 py-3 font-medium">{p.product || "Item"}</td>
                                           <td className="px-4 py-3">{[p.color, p.size].filter(Boolean).join(" / ") || "—"}</td>
                                           <td className="px-4 py-3">{qty}</td>
-                                          <td className="px-4 py-3">Rs {unit.toFixed(2)}</td>
-                                          <td className="px-4 py-3">Rs {tot.toFixed(2)}</td>
+                                          <td className="px-4 py-3">{formatDisplayMoney(unit)}</td>
+                                          <td className="px-4 py-3">{formatDisplayMoney(tot)}</td>
                                           <td className="px-4 py-3 text-right">
                                             <button
                                               onClick={() => openEditLine(id, idx, p)}

@@ -29,9 +29,10 @@ import {
   FiTag,
   FiUser,
 } from 'react-icons/fi';
+import { formatMoney as formatDisplayMoney, formatMoneyValue } from '@/lib/money';
 
 // If you want to show currency consistently
-const money = (n: number) => `Rs ${Number(n || 0).toFixed(2)}`;
+const money = (n: number) => formatDisplayMoney(n);
 
 // Firestore shapes we expect
 type SizeMap = Record<string, number>;
@@ -1482,8 +1483,8 @@ async function generateInvoicePDFBlob(input: {
     const line =
       (it.product + (it.color ? ` (${it.color}/${it.size})` : '')).padEnd(27).slice(0,27) +
       String(it.quantity).padStart(4) + '  ' +
-      String(it.unitPrice.toFixed(2)).padStart(7) + '  ' +
-      String(it.price.toFixed(2)).padStart(7);
+      formatMoneyValue(it.unitPrice).padStart(12) + '  ' +
+      formatMoneyValue(it.price).padStart(12);
     doc.text(line, 14, y);
     y += 5;
   });
@@ -1491,11 +1492,11 @@ async function generateInvoicePDFBlob(input: {
   y += 5;
   doc.text('--------------------------------------------------', 14, y); y += 5;
   doc.setFont('helvetica', 'bold');
-  doc.text(`TOTAL: Rs ${input.total.toFixed(2)}`, 14, y); y += 6;
+  doc.text(`TOTAL: ${formatDisplayMoney(input.total)}`, 14, y); y += 6;
 
   doc.setFont('helvetica', 'normal');
   const payLine = input.payment === 'Part Payment'
-    ? `Payment: Part • Paid Rs ${input.partAmount.toFixed(2)} • Due Rs ${(input.total - input.partAmount).toFixed(2)}`
+    ? `Payment: Part • Paid ${formatDisplayMoney(input.partAmount)} • Due ${formatDisplayMoney(input.total - input.partAmount)}`
     : 'Payment: Full';
   doc.text(payLine, 14, y); y += 5;
   doc.text(`Status: ${input.status}`, 14, y); y += 5;

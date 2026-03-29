@@ -325,35 +325,12 @@ export default function AdminChrome({
       <div
         className={`sticky top-0 z-40 border-b backdrop-blur-xl transition-colors ${topBarClass}`}
       >
-        <div className="relative z-10 mx-auto flex max-w-[1760px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex min-w-0 items-center gap-3">
-            <div
-              className={`flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold ${
-                isDark
-                  ? "border border-slate-700 bg-slate-900 text-slate-100"
-                  : "bg-[linear-gradient(135deg,#ff385c,#e61e4d)] text-white shadow-[0_12px_28px_rgba(255,56,92,0.24)]"
-              }`}
-            >
-              MO
-            </div>
-            <div className="min-w-0">
-              <div className={`text-[11px] font-semibold uppercase tracking-[0.28em] ${subtleLabelClass}`}>
-                MO Admin
-              </div>
-              <div className={`truncate text-sm font-semibold ${isDark ? "text-slate-100" : "text-[#222222]"}`}>
-                {currentLabel}
-              </div>
-              <div className={`hidden truncate text-xs sm:block ${profileMetaClass}`}>
-                Clean internal workspace
-              </div>
-            </div>
+        <div className="relative z-10 mx-auto flex max-w-[1760px] items-center gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex shrink-0 items-center gap-2">
             <div className={rolePillClass}>
               <span className={`h-2 w-2 rounded-full ${isDark ? "bg-emerald-400" : "bg-[#ff385c]"}`} />
               {session?.isOwner ? "Owner" : "Live"}
             </div>
-          </div>
-
-          <div className="flex items-center gap-2">
             <button
               type="button"
               aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
@@ -391,6 +368,29 @@ export default function AdminChrome({
                 )}
               </svg>
             </button>
+          </div>
+
+          <div className="flex min-w-0 items-center gap-3">
+            <div
+              className={`flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold ${
+                isDark
+                  ? "border border-slate-700 bg-slate-900 text-slate-100"
+                  : "bg-[linear-gradient(135deg,#ff385c,#e61e4d)] text-white shadow-[0_12px_28px_rgba(255,56,92,0.24)]"
+              }`}
+            >
+              MO
+            </div>
+            <div className="min-w-0">
+              <div className={`text-[11px] font-semibold uppercase tracking-[0.28em] ${subtleLabelClass}`}>
+                MO Admin
+              </div>
+              <div className={`truncate text-sm font-semibold ${isDark ? "text-slate-100" : "text-[#222222]"}`}>
+                {currentLabel}
+              </div>
+              <div className={`hidden truncate text-xs sm:block ${profileMetaClass}`}>
+                Clean internal workspace
+              </div>
+            </div>
           </div>
         </div>
       </div>

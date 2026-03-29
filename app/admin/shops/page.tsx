@@ -11,6 +11,7 @@ import {
   sortQuoteColors,
   type ShopItem,
 } from "@/lib/shops";
+import { formatMoney as formatDisplayMoney } from "@/lib/money";
 import {
   FiActivity,
   FiBarChart2,
@@ -102,7 +103,7 @@ const emptyForm: FormState = {
   inStock: true,
 };
 
-const money = (value: number) => `Rs ${Number(value || 0).toLocaleString()}`;
+const money = (value: number) => formatDisplayMoney(value);
 const MAX_UPLOAD_BYTES = 6 * 1024 * 1024;
 const IMAGE_RETRY_LIMIT = 2;
 const IMAGE_RETRY_DELAY_MS = 900;

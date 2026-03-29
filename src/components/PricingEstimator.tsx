@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { getWhatsAppUrl } from "@/data/work";
+import { formatMoney as formatDisplayMoney } from "@/lib/money";
 
 type ProductKey = "tshirt" | "polo" | "hoodie";
 
@@ -116,9 +117,9 @@ export default function PricingEstimator() {
       </label>
 
       <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Stat label="Est. unit" value={`MUR ${unitPrice.toLocaleString()}`} />
-        <Stat label="Est. total" value={`MUR ${total.toLocaleString()}`} />
-        <Stat label="Rush fee" value={rush ? `+ MUR ${rushFee.toLocaleString()}` : "None"} />
+        <Stat label="Est. unit" value={formatDisplayMoney(unitPrice, "MUR")} />
+        <Stat label="Est. total" value={formatDisplayMoney(total, "MUR")} />
+        <Stat label="Rush fee" value={rush ? `+ ${formatDisplayMoney(rushFee, "MUR")}` : "None"} />
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">

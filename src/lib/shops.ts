@@ -1,3 +1,5 @@
+import { formatMoney as formatDisplayMoney } from "@/lib/money";
+
 export const DEFAULT_PICKUP_POINT = "Nouvelle France";
 export const DEFAULT_COLLECTION_POINT = "Surinam";
 export const SIZE_ORDER = [
@@ -365,10 +367,10 @@ export function buildShopWhatsAppMessageForLines(
         `Qty: ${line.quantity}`,
       ];
       if (Number.isFinite(line.unitPrice)) {
-        parts.push(`Price: Rs ${Number(line.unitPrice || 0).toLocaleString()}`);
+        parts.push(`Price: ${formatDisplayMoney(line.unitPrice)}`);
       }
       if (Number.isFinite(line.lineTotal)) {
-        parts.push(`Line total: Rs ${Number(line.lineTotal || 0).toLocaleString()}`);
+        parts.push(`Line total: ${formatDisplayMoney(line.lineTotal)}`);
       }
       message.push(parts.join(" | "));
     });
@@ -385,13 +387,13 @@ export function buildShopWhatsAppMessageForLines(
   }
   if (totals) {
     if (Number.isFinite(totals.subtotal)) {
-      message.push(`Subtotal: Rs ${Number(totals.subtotal || 0).toLocaleString()}`);
+      message.push(`Subtotal: ${formatDisplayMoney(totals.subtotal)}`);
     }
     if (Number.isFinite(totals.deliveryFee) && (totals.deliveryFee || 0) > 0) {
-      message.push(`Delivery fee (${deliveryMethod}): Rs ${Number(totals.deliveryFee || 0).toLocaleString()}`);
+      message.push(`Delivery fee (${deliveryMethod}): ${formatDisplayMoney(totals.deliveryFee)}`);
     }
     if (Number.isFinite(totals.total)) {
-      message.push(`Total: Rs ${Number(totals.total || 0).toLocaleString()}`);
+      message.push(`Total: ${formatDisplayMoney(totals.total)}`);
     }
   }
   return message.join("\n");

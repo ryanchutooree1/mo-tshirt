@@ -26,6 +26,7 @@ import {
 } from "react-icons/fi";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { formatMoney as formatDisplayMoney } from "@/lib/money";
 
 type AssetCategory =
   | "Printing Machines"
@@ -255,7 +256,7 @@ const formatDateLong = (dateKey: string) => {
   });
 };
 
-const formatCurrency = (value: number) => `Rs ${Math.round(value || 0).toLocaleString()}`;
+const formatCurrency = (value: number) => formatDisplayMoney(value);
 
 const lineTotal = (item: ValuationItem) => {
   return toNonNegativeNumber(item.quantity) * toNonNegativeNumber(item.currentUnitValue);
@@ -1182,10 +1183,10 @@ export default function BusinessValuePage() {
                         interval="preserveStartEnd"
                       />
                       <YAxis
-                        tickFormatter={(value) => `Rs ${Math.round(value).toLocaleString()}`}
+                        tickFormatter={formatCurrency}
                         tick={{ fontSize: 11 }}
                         stroke="#94a3b8"
-                        width={84}
+                        width={110}
                       />
                       <Tooltip
                         formatter={(value: number) => formatCurrency(value)}

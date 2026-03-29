@@ -18,6 +18,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { formatMoney as formatDisplayMoney } from "@/lib/money";
 import { addDays, format, formatDistanceToNow } from "date-fns";
 import { jsPDF } from "jspdf";
 import {
@@ -486,10 +487,7 @@ const parseTimestamp = (value: unknown) => {
 };
 
 const formatMoney = (value: number, currency = "Rs") => {
-  const amount = Number(value || 0);
-  const sign = amount < 0 ? "-" : "";
-  const abs = Math.abs(amount);
-  return `${sign}${currency}\u00A0${abs.toLocaleString()}`;
+  return formatDisplayMoney(value, currency);
 };
 
 const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {

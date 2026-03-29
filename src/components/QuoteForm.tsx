@@ -72,8 +72,8 @@ const printMethods = [
 ];
 const deliveryOptions = [
   "Surinam Pickup (Free)",
-  "Post Office Postage Delivery (Rs 100)",
-  "Post Office Express Delivery (Rs 150)",
+  "Post Office Postage Delivery (Rs 100.00)",
+  "Post Office Express Delivery (Rs 150.00)",
   "Delivery (Need to arrange first)",
 ];
 const artworkAccept =

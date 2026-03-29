@@ -14,6 +14,7 @@ import {
 import { FiPlus, FiTrash2 } from "react-icons/fi";
 import { doc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { formatMoney as formatDisplayMoney } from "@/lib/money";
 
 type MoneyLine = {
   id: string;
@@ -40,7 +41,7 @@ const DEFAULT_EXPENSES: MoneyLine[] = [
 
 const FINANCE_DOC_REF = doc(db, "adminSettings", "financeFreedom");
 
-const formatCurrency = (value: number) => `Rs ${Math.round(value || 0).toLocaleString()}`;
+const formatCurrency = (value: number) => formatDisplayMoney(value);
 
 const toNumber = (value: string) => {
   const parsed = Number(value);

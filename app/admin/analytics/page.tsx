@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import React, { useEffect, useMemo, useState } from 'react';
 import { db } from '@/lib/firebase';
+import { formatMoney as formatDisplayMoney } from '@/lib/money';
 import {
   collection,
   getDocs,
@@ -74,7 +75,7 @@ type TxnDoc = {
 // ------------------------------------------------------------
 
 const pretty = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
-const prettyMoney = (n: number) => `Rs ${n.toLocaleString(undefined, { minimumFractionDigits: 0 })}`;
+const prettyMoney = (n: number) => formatDisplayMoney(n);
 
 function startEndForPreset(preset: '7d' | '30d' | '90d' | 'ytd') {
   const now = new Date();
@@ -400,7 +401,7 @@ export default function AnalysisPage() {
         },{
           label: "Orders",
           value: pretty(metrics.ordersCount),
-          sub: `AOV ${prettyMoney(Math.round(metrics.aov||0))}`,
+          sub: `AOV ${prettyMoney(metrics.aov || 0)}`,
         }].map((c, i) => (
           <motion.div
             key={i}
@@ -433,7 +434,7 @@ export default function AnalysisPage() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
-                <YAxis />
+                <YAxis tickFormatter={prettyMoney} width={110} />
                 <Tooltip formatter={(v: any) => prettyMoney(Number(v))} />
                 <Area type="monotone" dataKey="value" stroke="#f97316" fill="url(#grad)" />
               </AreaChart>
@@ -502,7 +503,7 @@ export default function AnalysisPage() {
               <LineChart data={weekdayData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="day" />
-                <YAxis />
+                <YAxis tickFormatter={prettyMoney} width={110} />
                 <Tooltip formatter={(v: any) => prettyMoney(Number(v))} />
                 <Line type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} dot={false} />
               </LineChart>
@@ -517,7 +518,7 @@ export default function AnalysisPage() {
               <BarChart data={topProducts}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" hide />
-                <YAxis />
+                <YAxis tickFormatter={prettyMoney} width={110} />
                 <Tooltip formatter={(v: any) => prettyMoney(Number(v))} />
                 <Bar dataKey="value" fill="#f59e0b" radius={[6,6,0,0]} />
               </BarChart>
@@ -526,7 +527,7 @@ export default function AnalysisPage() {
           <div className="mt-3 text-sm text-gray-600 flex flex-wrap gap-2">
             {topProducts.map((p, i) => (
               <a key={i} href={`/admin/inventory`} className="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 border">
-                {p.name} · {prettyMoney(Math.round(p.value))}
+                {p.name} · {prettyMoney(p.value)}
               </a>
             ))}
           </div>
@@ -541,7 +542,7 @@ export default function AnalysisPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={topCustomers} layout="vertical" margin={{ left: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
+                <XAxis type="number" tickFormatter={prettyMoney} />
                 <YAxis dataKey="name" type="category" width={120} />
                 <Tooltip formatter={(v: any) => prettyMoney(Number(v))} />
               <Bar dataKey="value" fill="#3b82f6" radius={[0,6,6,0]} />

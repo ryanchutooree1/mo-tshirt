@@ -38,6 +38,7 @@ import {
 } from "firebase/firestore";
 import { format, formatDistanceToNow, subDays } from "date-fns";
 import { db } from "@/lib/firebase";
+import { formatMoney as formatDisplayMoney } from "@/lib/money";
 import { useAdminMetrics } from "@/admin/AdminDataContext";
 import { useAdminTheme } from "@/admin/AdminThemeContext";
 
@@ -185,7 +186,7 @@ function sumProducts(products: unknown): number {
 }
 
 function money(value: number) {
-  return `Rs ${Math.round(value || 0).toLocaleString()}`;
+  return formatDisplayMoney(value);
 }
 
 function dayKey(value: Date) {

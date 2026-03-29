@@ -18,6 +18,7 @@ import {
   Search,
   XCircle,
 } from "lucide-react";
+import { formatMoney as formatDisplayMoney } from "@/lib/money";
 
 /*
   RETURNS (RMA) PAGE — Next.js Client Component
@@ -190,7 +191,7 @@ const seed: RMA[] = [
 
 /* ---------------------------- Utilities ---------------------------- */
 
-const money = (n: number | undefined) => (n == null ? "—" : `Rs ${n.toLocaleString()}`);
+const money = (n: number | undefined) => (n == null ? "—" : formatDisplayMoney(n));
 
 function buildSelectedMap(rows: RMA[], checked: boolean) {
   return rows.reduce<Record<string, boolean>>((acc, row) => {
@@ -351,7 +352,7 @@ export default function ReturnsPage() {
         <KPI label="QC Pending" value={qcPending} sub="Awaiting inspection" icon={<BadgeAlert className="w-5 h-5"/>} danger />
         <KPI label="Refunds Due" value={refundDue} sub="Ready to pay" icon={<CreditCard className="w-5 h-5"/>} />
         <KPI label="Exchanges Due" value={exchangeDue} sub="Ship replacements" icon={<Replace className="w-5 h-5"/>} />
-        <KPI label="This Month" value={`Rs ${rows.reduce((a,r)=> a + (r.refundAmount||0),0).toLocaleString()}`} sub="Refunded total" icon={<Coins className="w-5 h-5"/>} />
+        <KPI label="This Month" value={formatDisplayMoney(rows.reduce((a, r) => a + (r.refundAmount || 0), 0))} sub="Refunded total" icon={<Coins className="w-5 h-5"/>} />
       </section>
 
       {/* FILTERS */}

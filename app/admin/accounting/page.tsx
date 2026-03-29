@@ -20,6 +20,7 @@ import {
   Cell,
 } from "recharts";
 import { format, isValid as isValidDateFn } from "date-fns";
+import { formatMoney as formatDisplayMoney } from "@/lib/money";
 import {
   FileText,
   ReceiptText,
@@ -120,7 +121,7 @@ type BudgetDoc = {
 
 /* ----------------------------- Helpers ------------------------------ */
 
-const currency = (n: number) => `Rs ${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+const currency = (n: number) => formatDisplayMoney(n);
 
 function sum(arr: number[]) { return arr.reduce((a, b) => a + b, 0); }
 

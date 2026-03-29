@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { formatMoneyValue } from "@/lib/money";
 
 type Contract = {
   id: string;
@@ -21,7 +22,7 @@ const SAMPLE_CONTRACTS: Contract[] = [
 ];
 
 function fmtMoney(n: number) {
-  return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  return formatMoneyValue(n);
 }
 
 /* ------------------- Helpers: packing, sizing ------------------ */

@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import React, { useState } from "react";
+import { formatMoney as formatDisplayMoney } from "@/lib/money";
 
 /**
  * Admin Calculator page
@@ -57,7 +58,7 @@ function CalculatorCard() {
           className="w-full border rounded-lg px-3 py-2"
         />
         <div className="mt-1 text-sm text-gray-600">
-          {result !== null ? <>Result: <span className="font-semibold">Rs {result.toFixed(2)}</span></> : ' '}
+          {result !== null ? <>Result: <span className="font-semibold">{formatDisplayMoney(result)}</span></> : ' '}
         </div>
       </div>
 
@@ -98,7 +99,7 @@ function CalculatorCard() {
             />
           </div>
           <div className="text-xs text-gray-600">
-            Profit: <span className="font-semibold">Rs {profit.toFixed(2)}</span> •
+            Profit: <span className="font-semibold">{formatDisplayMoney(profit)}</span> •
             {' '}Margin: <span className="font-semibold">{isFinite(margin) ? margin.toFixed(1) : '0.0'}%</span> •
             {' '}Markup: <span className="font-semibold">{isFinite(markup) ? markup.toFixed(1) : '0.0'}%</span>
           </div>
@@ -115,7 +116,7 @@ function CalculatorCard() {
               className="w-20 border rounded-lg px-2 py-1"
             />
             <div className="text-xs text-gray-600 ml-auto">
-              Price + VAT: <span className="font-semibold">Rs {priceWithVat.toFixed(2)}</span>
+              Price + VAT: <span className="font-semibold">{formatDisplayMoney(priceWithVat)}</span>
             </div>
           </div>
           <div className="flex gap-2">
