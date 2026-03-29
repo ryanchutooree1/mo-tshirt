@@ -200,13 +200,27 @@ body {
     .bg-\[\#F5F5F7\],
     .bg-\[\#f7f7fb\],
     .bg-\[\#f6f7f9\],
+    .bg-\[\#f7f7f7\],
+    .bg-\[\#f4f4f4\],
+    .bg-\[\#f3f4f6\],
     .bg-\[\#f5f7fb\],
     .bg-\[\#f8fafc\],
     .bg-\[\#f5f5f5\],
     .bg-slate-50,
     .bg-slate-100,
+    .bg-slate-200,
     .bg-gray-50,
-    .bg-gray-100
+    .bg-gray-100,
+    .bg-gray-200,
+    .bg-gray-300,
+    .bg-neutral-50,
+    .bg-neutral-100,
+    .bg-neutral-200,
+    .bg-neutral-300,
+    .bg-zinc-50,
+    .bg-zinc-100,
+    .bg-zinc-200,
+    .bg-zinc-300
   ) {
   background-color: #0f172a !important;
 }
@@ -218,8 +232,22 @@ body {
     .text-slate-900,
     .text-slate-800,
     .text-slate-700,
+    .text-gray-900,
+    .text-gray-800,
     .text-gray-700,
-    .text-gray-600
+    .text-gray-600,
+    .text-neutral-900,
+    .text-neutral-800,
+    .text-neutral-700,
+    .text-neutral-600,
+    .text-zinc-900,
+    .text-zinc-800,
+    .text-zinc-700,
+    .text-zinc-600,
+    .text-\[\#222222\],
+    .text-\[\#1f1f1b\],
+    .text-\[\#1a1a1a\],
+    .text-\[\#484848\]
   ) {
   color: #e2e8f0 !important;
 }
@@ -229,7 +257,22 @@ body {
     .text-slate-500,
     .text-slate-400,
     .text-gray-500,
+    .text-gray-500,
     .text-gray-400
+  ) {
+  color: #94a3b8 !important;
+}
+
+.admin-root.admin-dark :is(
+    .text-neutral-500,
+    .text-neutral-400,
+    .text-zinc-500,
+    .text-zinc-400,
+    .text-\[\#6a6a6a\],
+    .text-\[\#717171\],
+    .text-\[\#8a8a8a\],
+    .text-\[\#999999\],
+    .text-\[\#b0b0b0\]
   ) {
   color: #94a3b8 !important;
 }
@@ -240,10 +283,24 @@ body {
     .border-slate-300,
     .border-slate-400,
     .border-gray-200,
+    .border-gray-300,
+    .border-gray-400,
     .border-gray-100,
+    .border-neutral-200,
+    .border-neutral-300,
+    .border-neutral-400,
+    .border-zinc-200,
+    .border-zinc-300,
+    .border-zinc-400,
     .border-emerald-100,
     .border-rose-100,
     .border-amber-100,
+    .border-\[\#d7d7d7\],
+    .border-\[\#dddddd\],
+    .border-\[\#d9d9d9\],
+    .border-\[\#cfcfcf\],
+    .border-\[\#c7c7c7\],
+    .border-\[\#ececec\],
     .border-\[\#e5e5e5\],
     .border-\[\#bfa37a\]
   ) {
@@ -265,6 +322,49 @@ body {
 
 .admin-root.admin-dark :is(input, textarea)::placeholder {
   color: #64748b;
+}
+
+.admin-root.admin-dark .admin-page-shell :is(.border, .border-t, .border-b, .border-l, .border-r):not(
+    [class*="border-"]
+  ) {
+  border-color: #334155 !important;
+}
+
+.admin-root.admin-dark .admin-page-shell :is(button, a, summary) {
+  color: inherit;
+}
+
+.admin-root.admin-dark .admin-page-shell svg {
+  color: inherit;
+}
+
+.admin-root.admin-dark .admin-page-shell .recharts-text,
+.admin-root.admin-dark .admin-page-shell .recharts-cartesian-axis-tick-value,
+.admin-root.admin-dark .admin-page-shell .recharts-legend-item-text {
+  fill: #cbd5e1 !important;
+  color: #cbd5e1 !important;
+}
+
+.admin-root.admin-dark .admin-page-shell .recharts-cartesian-grid line,
+.admin-root.admin-dark .admin-page-shell .recharts-polar-grid line,
+.admin-root.admin-dark .admin-page-shell .recharts-polar-grid-concentric path,
+.admin-root.admin-dark .admin-page-shell .recharts-reference-line line {
+  stroke: #334155 !important;
+}
+
+.admin-root.admin-dark .admin-page-shell .recharts-tooltip-wrapper :is(.bg-white, .bg-gray-50, .bg-slate-50) {
+  background-color: #111827 !important;
+}
+
+.admin-root.admin-dark .admin-page-shell .recharts-default-tooltip {
+  background-color: #111827 !important;
+  border-color: #334155 !important;
+  border-radius: 14px;
+  box-shadow: 0 16px 36px rgb(2 6 23 / 0.35) !important;
+}
+
+.admin-root.admin-dark .admin-page-shell .recharts-default-tooltip :is(p, span, li) {
+  color: #e2e8f0 !important;
 }
 
 /* Normalize light utility surfaces to dark on non-dashboard admin pages */
