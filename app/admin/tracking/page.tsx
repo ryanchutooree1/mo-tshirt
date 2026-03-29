@@ -112,6 +112,77 @@ function countBy(values: string[]) {
     .sort((left, right) => right.count - left.count);
 }
 
+function readStringParam(params: Record<string, TrackingParamValue>, key: string) {
+  const value = params[key];
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function readNumberParam(params: Record<string, TrackingParamValue>, key: string) {
+  const value = params[key];
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function joinDetailParts(parts: Array<string | null>) {
+  return parts.filter(Boolean).join(' · ');
+}
+
+function formatTrackingPath(path: string) {
+  const clean = String(path || '').trim();
+  if (!clean) return 'n/a';
+  if (clean === '/' || clean.startsWith('/?')) return 'Homepage';
+  return clean;
+}
+
+function pluralize(value: number, singular: string, plural = `${singular}s`) {
+  return `${value} ${value === 1 ? singular : plural}`;
+}
+
+function formatTrackingDetail(event: TrackingEventDoc) {
+  const directDetail = String(
+    event.params.location ||
+      event.params.service_label ||
+      event.params.service_slug ||
+      event.params.form_source ||
+      event.params.source ||
+      event.referrer ||
+      event.params.page_title ||
+      event.params.page_location ||
+      ''
+  ).trim();
+
+  if (directDetail) {
+    return directDetail;
+  }
+
+  if (event.name === 'generate_lead') {
+    const garmentLines = readNumberParam(event.params, 'garment_lines');
+    const totalQuantity = readNumberParam(event.params, 'total_quantity');
+    const deliveryMethod = readStringParam(event.params, 'delivery_method');
+    const detail = joinDetailParts([
+      garmentLines !== null ? pluralize(garmentLines, 'garment line') : null,
+      totalQuantity !== null ? `${totalQuantity} pcs` : null,
+      deliveryMethod || null,
+    ]);
+
+    if (detail) return detail;
+  }
+
+  if (event.name === 'shop_order_submit') {
+    const lineItems = readNumberParam(event.params, 'line_items');
+    const totalQuantity = readNumberParam(event.params, 'total_quantity');
+    const deliveryMethod = readStringParam(event.params, 'delivery_method');
+    const detail = joinDetailParts([
+      lineItems !== null ? pluralize(lineItems, 'line item') : null,
+      totalQuantity !== null ? `${totalQuantity} pcs` : null,
+      deliveryMethod || null,
+    ]);
+
+    if (detail) return detail;
+  }
+
+  return formatTrackingPath(event.path);
+}
+
 function MetricCard({
   label,
   value,
@@ -405,7 +476,7 @@ export default function TrackingPage() {
             <div className="mt-4 space-y-3">
               {topPages.length ? topPages.map((row) => (
                 <div key={row.label} className="flex items-center justify-between gap-3 rounded-2xl bg-[#f8f3ea] px-4 py-3 text-sm">
-                  <span className="truncate font-medium text-[#20160f]">{row.label}</span>
+                  <span className="truncate font-medium text-[#20160f]">{formatTrackingPath(row.label)}</span>
                   <span className="font-semibold text-[#8b6f47]">{row.count}</span>
                 </div>
               )) : <p className="text-sm text-[#6a5848]">No page views yet.</p>}
@@ -455,15 +526,14 @@ export default function TrackingPage() {
             </div>
             <div className="divide-y divide-[#efe7d7]">
               {recentEvents.length ? recentEvents.map((event) => {
-                const detail =
-                  String(event.params.location || event.params.service_slug || event.params.form_source || event.params.source || event.referrer || '');
+                const detail = formatTrackingDetail(event);
 
                 return (
                   <div key={event.id} className="grid gap-2 px-4 py-4 text-sm md:grid-cols-[170px_170px_minmax(0,1fr)_220px] md:gap-4">
                     <span className="text-[#6a5848]">{format(event.createdAt, 'd MMM yyyy HH:mm')}</span>
                     <span className="font-semibold text-[#20160f]">{EVENT_LABELS[event.name]}</span>
-                    <span className="truncate text-[#20160f]">{event.path || 'n/a'}</span>
-                    <span className="truncate text-[#6a5848]">{detail || 'n/a'}</span>
+                    <span className="truncate text-[#20160f]">{formatTrackingPath(event.path)}</span>
+                    <span className="truncate text-[#6a5848]">{detail}</span>
                   </div>
                 );
               }) : (
