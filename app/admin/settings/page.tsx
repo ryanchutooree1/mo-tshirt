@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
+  Database,
+  HardDrive,
   Mail,
   PencilLine,
   Plus,
@@ -11,11 +13,14 @@ import {
   UserCog,
   Users,
 } from "lucide-react";
+import { getMetadata, list, ref as storageRef } from "firebase/storage";
 import {
   ADMIN_PAGE_GROUPS,
   ADMIN_PAGE_OPTIONS,
   type AdminPagePath,
 } from "@/lib/admin-access";
+import { storage } from "@/lib/firebase";
+import { isFirebaseAdminAuthConfigured, signInAdminWithFirebase } from "@/lib/firebase-admin-client-auth";
 
 type AdminUserSummary = {
   email: string;
@@ -27,6 +32,15 @@ type AdminUserSummary = {
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const DEFAULT_FIREBASE_STORAGE_LIMIT_GB = 5;
+
+type UsageSnapshot = {
+  usedBytes: number;
+  limitBytes: number;
+  note: string;
+  provider: string;
+  isEstimate?: boolean;
+};
 
 const EMPTY_USER_DRAFT = {
   email: "",
@@ -86,6 +100,60 @@ function getInitials(displayName: string, email: string) {
   return email.slice(0, 2).toUpperCase();
 }
 
+function toBytesFromGb(value: string | undefined, fallbackGb: number) {
+  const parsed = Number(value);
+  const gb = Number.isFinite(parsed) && parsed > 0 ? parsed : fallbackGb;
+  return Math.round(gb * 1024 * 1024 * 1024);
+}
+
+function formatStorageBytes(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  const exponent = Math.min(
+    Math.floor(Math.log(value) / Math.log(1024)),
+    units.length - 1
+  );
+  const sized = value / Math.pow(1024, exponent);
+  return `${sized.toFixed(exponent === 0 ? 0 : exponent === 1 ? 1 : 2)} ${units[exponent]}`;
+}
+
+function getUsagePercent(usedBytes: number, limitBytes: number) {
+  if (!Number.isFinite(usedBytes) || !Number.isFinite(limitBytes) || limitBytes <= 0) {
+    return 0;
+  }
+  return Math.max(0, Math.min(100, (usedBytes / limitBytes) * 100));
+}
+
+async function sumStoragePrefix(path: string): Promise<number> {
+  async function walk(folderPath: string, pageToken?: string): Promise<number> {
+    const page = await list(storageRef(storage, folderPath), {
+      maxResults: 1000,
+      pageToken,
+    });
+
+    const metadata = await Promise.all(
+      page.items.map((item) => getMetadata(item).catch(() => null))
+    );
+    const fileBytes = metadata.reduce(
+      (total, item) => total + (typeof item?.size === "number" ? item.size : 0),
+      0
+    );
+    const nestedBytes = await Promise.all(
+      page.prefixes.map((prefix) => walk(prefix.fullPath))
+    );
+    const currentTotal =
+      fileBytes + nestedBytes.reduce((total, value) => total + value, 0);
+
+    if (!page.nextPageToken) {
+      return currentTotal;
+    }
+
+    return currentTotal + (await walk(folderPath, page.nextPageToken));
+  }
+
+  return walk(path);
+}
+
 export default function SettingsPage() {
   const [notificationRecipients, setNotificationRecipients] = useState<string[]>([]);
   const [savedNotificationRecipients, setSavedNotificationRecipients] = useState<string[]>([]);
@@ -102,6 +170,12 @@ export default function SettingsPage() {
   const [userSaved, setUserSaved] = useState(false);
   const [editingUserEmail, setEditingUserEmail] = useState<string | null>(null);
   const [userDraft, setUserDraft] = useState(EMPTY_USER_DRAFT);
+  const [firebaseUsage, setFirebaseUsage] = useState<UsageSnapshot | null>(null);
+  const [firebaseUsageLoading, setFirebaseUsageLoading] = useState(true);
+  const [firebaseUsageError, setFirebaseUsageError] = useState<string | null>(null);
+  const [hostingUsage, setHostingUsage] = useState<UsageSnapshot | null>(null);
+  const [hostingUsageLoading, setHostingUsageLoading] = useState(true);
+  const [hostingUsageError, setHostingUsageError] = useState<string | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -162,6 +236,115 @@ export default function SettingsPage() {
         if (!ignore) {
           setNotificationLoading(false);
           setUsersLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    const firebaseLimitBytes = toBytesFromGb(
+      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_LIMIT_GB,
+      DEFAULT_FIREBASE_STORAGE_LIMIT_GB
+    );
+
+    (async () => {
+      setFirebaseUsageLoading(true);
+      setFirebaseUsageError(null);
+
+      try {
+        if (!isFirebaseAdminAuthConfigured()) {
+          throw new Error("Firebase storage admin auth is not configured.");
+        }
+
+        await signInAdminWithFirebase();
+        const [documentsBytes, quotesBytes] = await Promise.all([
+          sumStoragePrefix("documents"),
+          sumStoragePrefix("quotes"),
+        ]);
+
+        if (!ignore) {
+          setFirebaseUsage({
+            usedBytes: documentsBytes + quotesBytes,
+            limitBytes: firebaseLimitBytes,
+            provider: "Firebase Storage",
+            note: "Counts files stored in the documents and quotes folders.",
+          });
+        }
+      } catch (error) {
+        if (!ignore) {
+          setFirebaseUsageError(
+            error instanceof Error
+              ? error.message
+              : "Failed to load Firebase storage usage."
+          );
+        }
+      } finally {
+        if (!ignore) {
+          setFirebaseUsageLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    (async () => {
+      setHostingUsageLoading(true);
+      setHostingUsageError(null);
+
+      try {
+        const res = await fetch("/api/admin/settings/storage", {
+          cache: "no-store",
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          throw new Error(
+            typeof data?.error === "string"
+              ? data.error
+              : "Failed to load host storage usage."
+          );
+        }
+
+        if (!ignore) {
+          setHostingUsage({
+            usedBytes:
+              typeof data?.usedBytes === "number" ? data.usedBytes : 0,
+            limitBytes:
+              typeof data?.limitBytes === "number" ? data.limitBytes : 0,
+            provider:
+              typeof data?.provider === "string"
+                ? data.provider
+                : "MO T-SHIRT Host",
+            note:
+              typeof data?.note === "string"
+                ? data.note
+                : "Estimated from the current host footprint.",
+            isEstimate: Boolean(data?.isEstimate),
+          });
+        }
+      } catch (error) {
+        if (!ignore) {
+          setHostingUsageError(
+            error instanceof Error
+              ? error.message
+              : "Failed to load host storage usage."
+          );
+        }
+      } finally {
+        if (!ignore) {
+          setHostingUsageLoading(false);
         }
       }
     })();
@@ -432,6 +615,42 @@ export default function SettingsPage() {
             </div>
           </div>
         </header>
+
+        <section className={`${panelClass} p-6 sm:p-8`}>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-700">
+                <HardDrive className="h-3.5 w-3.5" />
+                Storage Overview
+              </div>
+              <h2 className="mt-4 text-xl font-semibold text-slate-900">
+                Storage usage
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm text-slate-600">
+                Track how much Firebase bucket space and MO T-SHIRT host footprint are currently in use.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-4 xl:grid-cols-2">
+            <StorageUsageCard
+              title="Firebase Storage"
+              subtitle="Documents and quotation attachments"
+              icon={<Database className="h-4 w-4" />}
+              usage={firebaseUsage}
+              loading={firebaseUsageLoading}
+              error={firebaseUsageError}
+            />
+            <StorageUsageCard
+              title={hostingUsage?.provider || "MO T-SHIRT Host"}
+              subtitle="Current host footprint"
+              icon={<HardDrive className="h-4 w-4" />}
+              usage={hostingUsage}
+              loading={hostingUsageLoading}
+              error={hostingUsageError}
+            />
+          </div>
+        </section>
 
         <section className={`${panelClass} overflow-hidden`}>
           <div className="grid lg:grid-cols-[minmax(0,1.2fr)_360px]">
@@ -888,5 +1107,79 @@ export default function SettingsPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+function StorageUsageCard({
+  title,
+  subtitle,
+  icon,
+  usage,
+  loading,
+  error,
+}: {
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  usage: UsageSnapshot | null;
+  loading: boolean;
+  error: string | null;
+}) {
+  const usedBytes = usage?.usedBytes ?? 0;
+  const limitBytes = usage?.limitBytes ?? 0;
+  const percentage = getUsagePercent(usedBytes, limitBytes);
+
+  return (
+    <div className="rounded-[28px] border border-slate-200 bg-slate-50/80 p-5 sm:p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+            {title}
+          </div>
+          <div className="mt-1 text-base font-semibold text-slate-900">
+            {subtitle}
+          </div>
+        </div>
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm">
+          {icon}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="mt-6 space-y-3">
+          <div className="h-3 rounded-full bg-slate-200" />
+          <div className="h-3 w-2/3 rounded-full bg-slate-200" />
+        </div>
+      ) : error ? (
+        <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {error}
+        </div>
+      ) : usage ? (
+        <>
+          <div className="mt-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <div className="text-3xl font-semibold tracking-tight text-slate-900">
+                {percentage.toFixed(1)}%
+              </div>
+              <div className="mt-1 text-sm text-slate-500">
+                {formatStorageBytes(usedBytes)} used of {formatStorageBytes(limitBytes)}
+              </div>
+            </div>
+            <div className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+              {usage.isEstimate ? "Estimate" : "Live"}
+            </div>
+          </div>
+
+          <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-200">
+            <div
+              className="h-full rounded-full bg-slate-900 transition-all"
+              style={{ width: `${percentage}%` }}
+            />
+          </div>
+
+          <p className="mt-3 text-sm text-slate-500">{usage.note}</p>
+        </>
+      ) : null}
+    </div>
   );
 }
