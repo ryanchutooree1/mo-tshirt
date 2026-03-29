@@ -37,6 +37,14 @@ type AdminUserSummary = {
   updatedAt: number;
 };
 
+type AdminSessionSummary = {
+  userId: string;
+  displayName: string;
+  email: string;
+  allowedPages: AdminPagePath[];
+  isOwner: boolean;
+};
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DEFAULT_FIREBASE_STORAGE_LIMIT_GB = 5;
 
@@ -176,6 +184,8 @@ export default function SettingsPage() {
   const [userSaved, setUserSaved] = useState(false);
   const [editingUserEmail, setEditingUserEmail] = useState<string | null>(null);
   const [userDraft, setUserDraft] = useState(EMPTY_USER_DRAFT);
+  const [currentAdminSession, setCurrentAdminSession] = useState<AdminSessionSummary | null>(null);
+  const [sharedFirebaseAdminEmail, setSharedFirebaseAdminEmail] = useState<string | null>(null);
   const [resettingUserEmail, setResettingUserEmail] = useState<string | null>(null);
   const [resetNotice, setResetNotice] = useState<string | null>(null);
   const [resetError, setResetError] = useState<string | null>(null);
@@ -185,6 +195,66 @@ export default function SettingsPage() {
   const [hostingUsage, setHostingUsage] = useState<UsageSnapshot | null>(null);
   const [hostingUsageLoading, setHostingUsageLoading] = useState(true);
   const [hostingUsageError, setHostingUsageError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let ignore = false;
+
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/session", { cache: "no-store" });
+        const data = await res.json().catch(() => ({}));
+
+        if (!ignore && res.ok && data?.session && typeof data.session.email === "string") {
+          setCurrentAdminSession({
+            userId:
+              typeof data.session.userId === "string"
+                ? data.session.userId
+                : data.session.email,
+            displayName:
+              typeof data.session.displayName === "string"
+                ? data.session.displayName
+                : "Admin",
+            email: data.session.email,
+            allowedPages: Array.isArray(data.session.allowedPages)
+              ? data.session.allowedPages.filter(
+                  (entry: unknown): entry is AdminPagePath => typeof entry === "string"
+                )
+              : [],
+            isOwner: Boolean(data.session.isOwner),
+          });
+        }
+      } catch {
+        // Keep settings usable if the session summary fails to load.
+      }
+    })();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/firebase-auth", {
+          cache: "no-store",
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (!ignore && res.ok && typeof data?.email === "string" && data.email.trim()) {
+          setSharedFirebaseAdminEmail(data.email.trim().toLowerCase());
+        }
+      } catch {
+        // This account is optional and may not be available to every admin.
+      }
+    })();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -398,6 +468,33 @@ export default function SettingsPage() {
   const editingUser = useMemo(
     () => users.find((user) => user.email === editingUserEmail) ?? null,
     [editingUserEmail, users]
+  );
+
+  const managedUserEmailSet = useMemo(
+    () => new Set(users.map((user) => user.email.toLowerCase())),
+    [users]
+  );
+
+  const showCurrentAdminCard = useMemo(() => {
+    if (!currentAdminSession?.email) return false;
+    return !managedUserEmailSet.has(currentAdminSession.email.toLowerCase());
+  }, [currentAdminSession, managedUserEmailSet]);
+
+  const showSharedFirebaseAdminCard = useMemo(() => {
+    if (!sharedFirebaseAdminEmail) return false;
+    if (managedUserEmailSet.has(sharedFirebaseAdminEmail.toLowerCase())) return false;
+    if (
+      currentAdminSession?.email &&
+      currentAdminSession.email.toLowerCase() === sharedFirebaseAdminEmail.toLowerCase()
+    ) {
+      return false;
+    }
+    return true;
+  }, [currentAdminSession, managedUserEmailSet, sharedFirebaseAdminEmail]);
+
+  const hasDirectoryAccounts = useMemo(
+    () => users.length > 0 || showCurrentAdminCard || showSharedFirebaseAdminCard,
+    [showCurrentAdminCard, showSharedFirebaseAdminCard, users.length]
   );
 
   const addNotificationRecipients = () => {
@@ -1123,9 +1220,80 @@ export default function SettingsPage() {
                   Authentication Directory
                 </div>
                 <div className="mt-3 text-sm text-slate-600">
-                  This list is your admin user directory. Password resets are sent through Firebase Auth while page access stays controlled here.
+                  This list shows the workspace owner, the shared Firebase admin account, and any managed admin users. Password resets are sent through Firebase Auth while page access stays controlled here.
                 </div>
               </div>
+
+              {showCurrentAdminCard ? (
+                <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-sm font-semibold text-slate-700">
+                        {getInitials(
+                          currentAdminSession?.displayName || "Owner",
+                          currentAdminSession?.email || "owner"
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="truncate text-base font-semibold text-slate-900">
+                          {currentAdminSession?.displayName || "Workspace Owner"}
+                        </div>
+                        <div className="truncate text-sm text-slate-500">
+                          {currentAdminSession?.email || "—"}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                        Active
+                      </span>
+                      <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                        Owner Account
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                    This is the current workspace owner session. Owner access stays unrestricted across all admin pages.
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-600">
+                      Full workspace access
+                    </span>
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-600">
+                      {currentAdminSession?.allowedPages.length || 0} page grants in session
+                    </span>
+                  </div>
+                </div>
+              ) : null}
+
+              {showSharedFirebaseAdminCard ? (
+                <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-sm font-semibold text-slate-700">
+                        {getInitials("Firebase Admin", sharedFirebaseAdminEmail || "firebase")}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="truncate text-base font-semibold text-slate-900">
+                          Shared Firebase Admin
+                        </div>
+                        <div className="truncate text-sm text-slate-500">
+                          {sharedFirebaseAdminEmail}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                      Firebase Auth
+                    </span>
+                  </div>
+
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                    This shared Firebase account is used for connected storage and admin authentication tasks across the workspace.
+                  </div>
+                </div>
+              ) : null}
 
               {users.length ? (
                 users.map((user) => (
@@ -1217,13 +1385,13 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 ))
-              ) : !usersLoading ? (
+              ) : !usersLoading && !hasDirectoryAccounts ? (
                 <div className="rounded-[28px] border border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center">
                   <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-400 shadow-sm">
                     <Users className="h-5 w-5" />
                   </div>
                   <div className="mt-4 text-base font-semibold text-slate-700">
-                    No admin accounts yet
+                    No directory accounts yet
                   </div>
                   <p className="mt-2 text-sm text-slate-500">
                     Create the first managed admin user to give a team member controlled workspace access.
