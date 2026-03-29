@@ -1826,11 +1826,11 @@ function OrdersPageInner() {
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                               <span>{sourceLabel}</span>
-                              <span className="h-1 w-1 rounded-full bg-[#d8c7b4]" />
+                              <span className="h-1 w-1 rounded-full bg-slate-300" />
                               <span>Order {id.slice(-6).toUpperCase()}</span>
                               {when ? (
                                 <>
-                                  <span className="h-1 w-1 rounded-full bg-[#d8c7b4]" />
+                                  <span className="h-1 w-1 rounded-full bg-slate-300" />
                                   <span>{when}</span>
                                 </>
                               ) : null}
@@ -1850,10 +1850,10 @@ function OrdersPageInner() {
                             <div className="mt-4 flex flex-wrap gap-2">
                               {StatusBadge(m.status || "")}
                               {PaymentBadge(m.paymentMethod || "")}
-                              <span className="rounded-full border border-[#eadfce] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
+                              <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
                                 {totalQty} pcs
                               </span>
-                              <span className="rounded-full border border-[#eadfce] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
+                              <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
                                 {products.length} lines
                               </span>
                               {m.quoteId && (
@@ -1896,7 +1896,7 @@ function OrdersPageInner() {
                               className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
                                 expanded.has(id)
                                   ? "border-[#1f2937] bg-[#1f2937] text-white"
-                                  : "border-[#eadfce] bg-white text-slate-600 hover:bg-[#fff8f1]"
+                                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                               }`}
                             >
                               {expanded.has(id) ? "Hide details" : "Open details"}
@@ -1904,7 +1904,7 @@ function OrdersPageInner() {
                             <button
                               title="Mark Completed & adjust stock"
                               onClick={() => markCompletedAndAdjust(id)}
-                              className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-[#f2fbf5] px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                             >
                               <FiCheckCircle className="h-4 w-4" />
                               Complete
@@ -1912,7 +1912,7 @@ function OrdersPageInner() {
                             <button
                               title="Delete"
                               onClick={() => deleteTxn(id)}
-                              className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-[#fff3f2] px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
+                              className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
                             >
                               <FiTrash2 className="h-4 w-4" />
                               Delete
@@ -1922,28 +1922,28 @@ function OrdersPageInner() {
                       </div>
 
                       <div className="grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
-                        <div className="rounded-[28px] border border-[#eee2d4] bg-[#fbf6ef] p-4">
+                        <div className="rounded-[28px] border border-slate-200 bg-white p-4">
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8a6640]">
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
                                 Order Snapshot
                               </p>
                               <p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">
                                 The essentials stay readable before you open the full workspace.
                               </p>
                             </div>
-                            <span className="rounded-full border border-[#eadfce] bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                            <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
                               {products.length > 0 ? `${products.length} line items` : "No line items"}
                             </span>
                           </div>
 
                           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                            <div className="rounded-[22px] border border-[#ede2d6] bg-white p-4">
+                            <div className="rounded-[22px] border border-slate-200 bg-white p-4">
                               <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Source</div>
                               <div className="mt-2 text-sm font-semibold text-slate-900">{sourceLabel}</div>
                               <p className="mt-1 text-sm text-slate-500">{m.quoteId ? "Converted from a quotation." : "Captured directly as an order."}</p>
                             </div>
-                            <div className="rounded-[22px] border border-[#ede2d6] bg-white p-4">
+                            <div className="rounded-[22px] border border-slate-200 bg-white p-4">
                               <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Delivery Contact</div>
                               <div className="mt-2 text-sm font-semibold text-slate-900">{m.phoneNumber || "Not set"}</div>
                               <p className="mt-1 text-sm text-slate-500">{m.address || "Address not provided yet."}</p>
@@ -1957,7 +1957,7 @@ function OrdersPageInner() {
                                 return (
                                   <span
                                     key={`${id}-preview-${index}`}
-                                    className="rounded-full border border-[#eadfce] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600"
+                                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600"
                                   >
                                     {product.product || "Item"}
                                     {variant ? ` • ${variant}` : ""}
@@ -1966,12 +1966,12 @@ function OrdersPageInner() {
                                 );
                               })
                             ) : (
-                              <span className="rounded-full border border-dashed border-[#d8c7b4] bg-white px-3 py-1.5 text-xs font-semibold text-slate-500">
+                              <span className="rounded-full border border-dashed border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500">
                                 No line items on this order yet
                               </span>
                             )}
                             {products.length > 4 && (
-                              <span className="rounded-full border border-[#eadfce] bg-white px-3 py-1.5 text-xs font-semibold text-slate-500">
+                              <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500">
                                 +{products.length - 4} more
                               </span>
                             )}
@@ -1979,7 +1979,7 @@ function OrdersPageInner() {
                         </div>
 
                         <div className="grid gap-4">
-                          <div className="rounded-[28px] border border-[#dce7ea] bg-[#f7fbfc] p-4">
+                          <div className="rounded-[28px] border border-slate-200 bg-white p-4">
                             <div className="flex flex-wrap items-start justify-between gap-3">
                               <div>
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
@@ -1988,12 +1988,12 @@ function OrdersPageInner() {
                                 <p className="mt-2 text-sm leading-6 text-slate-600">{workflowCaption}</p>
                               </div>
                               {workflowDone ? (
-                                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1 text-[11px] font-semibold text-emerald-700">
+                                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700">
                                   <FiCheckCircle className="h-3.5 w-3.5" />
                                   Done
                                 </span>
                               ) : (
-                                <span className="rounded-full border border-[#dce7ea] bg-white px-3 py-1 text-[11px] font-semibold text-slate-600">
+                                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-600">
                                   Next: {workflowNextLabel}
                                 </span>
                               )}
@@ -2003,10 +2003,10 @@ function OrdersPageInner() {
                                 const state = workflowDone ? "done" : getFlowStepState(workflowVisualIndex, index);
                                 const className =
                                   state === "done"
-                                    ? "border-emerald-200 bg-emerald-100 text-emerald-700"
+                                    ? "border-slate-200 bg-white text-slate-700"
                                     : state === "active"
                                       ? "border-[#1f2937] bg-[#1f2937] text-white"
-                                      : "border-[#dce7ea] bg-white text-slate-500";
+                                      : "border-slate-200 bg-white text-slate-500";
                                 return (
                                   <React.Fragment key={`${id}-workflow-wide-${step}`}>
                                     <span className={`rounded-full border px-3 py-1.5 font-semibold ${className}`}>
@@ -2019,7 +2019,7 @@ function OrdersPageInner() {
                             </div>
                             <div className="mt-4 flex flex-wrap gap-2">
                               {workflowDone ? (
-                                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1.5 text-[11px] font-semibold text-emerald-700">
+                                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700">
                                   <FiCheckCircle className="h-3.5 w-3.5" />
                                   Workflow done
                                 </span>
@@ -2027,7 +2027,7 @@ function OrdersPageInner() {
                                 <button
                                   type="button"
                                   onClick={() => markWorkflowDone(id)}
-                                  className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-600 px-4 py-2 text-[11px] font-semibold text-white transition hover:bg-emerald-700"
+                                  className="inline-flex items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-[11px] font-semibold text-white transition hover:bg-slate-800"
                                 >
                                   <FiCheckCircle className="h-3.5 w-3.5" />
                                   Mark done
@@ -2036,7 +2036,7 @@ function OrdersPageInner() {
                                 <button
                                   type="button"
                                   onClick={() => advanceWorkflowStatus(id, currentStatus)}
-                                  className="inline-flex items-center gap-2 rounded-full border border-[#dce7ea] bg-white px-4 py-2 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
+                                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
                                 >
                                   <FiCheckCircle className="h-3.5 w-3.5" />
                                   Advance to {workflowNextLabel}
@@ -2045,21 +2045,21 @@ function OrdersPageInner() {
                             </div>
                           </div>
 
-                          <div className="rounded-[28px] border border-[#f1ddd6] bg-[#fff7f4] p-4">
+                          <div className="rounded-[28px] border border-slate-200 bg-white p-4">
                             <div className="flex flex-wrap items-start justify-between gap-3">
                               <div>
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#b86037]">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
                                   Document Lane
                                 </p>
                                 <p className="mt-2 text-sm leading-6 text-slate-600">{docCaption}</p>
                               </div>
                               {isDocFlowDone ? (
-                                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1 text-[11px] font-semibold text-emerald-700">
+                                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700">
                                   <FiCheckCircle className="h-3.5 w-3.5" />
                                   Done
                                 </span>
                               ) : (
-                                <span className="rounded-full border border-[#f1ddd6] bg-white px-3 py-1 text-[11px] font-semibold text-[#b86037]">
+                                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-600">
                                   Next: {nextDocType ? ORDER_DOC_LABELS[nextDocType] : "Quotation"}
                                 </span>
                               )}
@@ -2069,10 +2069,10 @@ function OrdersPageInner() {
                                 const state = getFlowStepState(activeDocFlowIndex, index);
                                 const className =
                                   state === "done"
-                                    ? "border-[#f1ddd6] bg-[#ffece1] text-[#b86037]"
+                                    ? "border-slate-200 bg-white text-slate-700"
                                     : state === "active"
-                                      ? "border-[#d6473f] bg-[#d6473f] text-white"
-                                      : "border-[#f1ddd6] bg-white text-slate-500";
+                                      ? "border-[#1f2937] bg-[#1f2937] text-white"
+                                      : "border-slate-200 bg-white text-slate-500";
                                 return (
                                   <React.Fragment key={`${id}-docflow-wide-${docType}`}>
                                     <button
@@ -2093,7 +2093,7 @@ function OrdersPageInner() {
                                 <button
                                   type="button"
                                   onClick={() => advanceDocumentFlow(id, m)}
-                                  className="inline-flex items-center gap-2 rounded-full border border-[#f1ddd6] bg-white px-4 py-2 text-[11px] font-semibold text-[#b86037] transition hover:bg-[#fff0e8]"
+                                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
                                 >
                                   <FiChevronRight className="h-3.5 w-3.5" />
                                   Advance to {ORDER_DOC_LABELS[nextDocType]}
@@ -2102,7 +2102,7 @@ function OrdersPageInner() {
                               <button
                                 type="button"
                                 onClick={() => openDocumentStudio(id, m)}
-                                className="inline-flex items-center gap-2 rounded-full border border-[#f3d8ca] bg-[#fff4ea] px-4 py-2 text-[11px] font-semibold text-[#b86a1f] transition hover:bg-[#ffead9]"
+                                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
                               >
                                 <FiFileText className="h-3.5 w-3.5" />
                                 Document Studio
@@ -2115,7 +2115,7 @@ function OrdersPageInner() {
                     {expanded.has(id) && (
                       <div className="grid gap-4 xl:grid-cols-[0.92fr_1.08fr]">
                         <div className="space-y-4">
-                          <div className="rounded-[28px] border border-[#eee2d4] bg-white p-4">
+                          <div className="rounded-[28px] border border-slate-200 bg-white p-4">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
                               Operational Controls
                             </p>
@@ -2126,7 +2126,7 @@ function OrdersPageInner() {
                               <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                                 Status
                                 <select
-                                  className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-[#fffaf4] px-4 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-[#f1cdb8] focus:ring-4 focus:ring-[#fff1e6]"
+                                  className="mt-2 w-full rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-100"
                                   value={m.status || "Select Status"}
                                   onChange={(e) => updateStatus(id, e.target.value)}
                                 >
@@ -2140,7 +2140,7 @@ function OrdersPageInner() {
                               <label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                                 Payment
                                 <select
-                                  className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-[#fffaf4] px-4 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-[#f1cdb8] focus:ring-4 focus:ring-[#fff1e6]"
+                                  className="mt-2 w-full rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-100"
                                   value={m.paymentMethod || "Select Payment Status"}
                                   onChange={(e) => updatePayment(id, e.target.value)}
                                 >
@@ -2154,24 +2154,24 @@ function OrdersPageInner() {
                             </div>
                           </div>
 
-                          <div className="rounded-[28px] border border-[#eee2d4] bg-[#fffaf5] p-4">
+                          <div className="rounded-[28px] border border-slate-200 bg-white p-4">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
                               Client & Delivery
                             </p>
                             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                              <div className="rounded-[20px] border border-[#eadfce] bg-white p-4">
+                              <div className="rounded-[20px] border border-slate-200 bg-white p-4">
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Phone</p>
                                 <p className="mt-2 text-sm font-semibold text-slate-900">{m.phoneNumber || "Not set"}</p>
                               </div>
-                              <div className="rounded-[20px] border border-[#eadfce] bg-white p-4">
+                              <div className="rounded-[20px] border border-slate-200 bg-white p-4">
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Email</p>
                                 <p className="mt-2 text-sm font-semibold text-slate-900">{m.email || "Not set"}</p>
                               </div>
-                              <div className="rounded-[20px] border border-[#eadfce] bg-white p-4">
+                              <div className="rounded-[20px] border border-slate-200 bg-white p-4">
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Address</p>
                                 <p className="mt-2 text-sm font-semibold text-slate-900">{m.address || "Not set"}</p>
                               </div>
-                              <div className="rounded-[20px] border border-[#eadfce] bg-white p-4">
+                              <div className="rounded-[20px] border border-slate-200 bg-white p-4">
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Source</p>
                                 <p className="mt-2 text-sm font-semibold text-slate-900">{m.source || "Order Management"}</p>
                               </div>
@@ -2179,7 +2179,7 @@ function OrdersPageInner() {
                           </div>
                         </div>
 
-                        <div className="rounded-[28px] border border-[#eee2d4] bg-white p-4">
+                        <div className="rounded-[28px] border border-slate-200 bg-white p-4">
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
                               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
@@ -2189,16 +2189,16 @@ function OrdersPageInner() {
                                 Edit quantities and unit prices while keeping the order easy to scan.
                               </p>
                             </div>
-                            <span className="rounded-full border border-[#eadfce] bg-[#fffaf4] px-3 py-1 text-xs font-semibold text-slate-600">
+                            <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
                               {products.length} lines
                             </span>
                           </div>
 
                           {products.length > 0 ? (
-                            <div className="mt-4 overflow-hidden rounded-[22px] border border-[#efe4d8]">
+                            <div className="mt-4 overflow-hidden rounded-[22px] border border-slate-200">
                               <div className="overflow-x-auto">
                                 <table className="min-w-full text-sm">
-                                  <thead className="bg-[#fbf6ef] text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                  <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                                     <tr>
                                       <th className="px-4 py-3 text-left">Product</th>
                                       <th className="px-4 py-3 text-left">Color/Size</th>
@@ -2208,7 +2208,7 @@ function OrdersPageInner() {
                                       <th className="px-4 py-3 text-right">Edit</th>
                                     </tr>
                                   </thead>
-                                  <tbody className="divide-y divide-[#efe4d8] bg-white">
+                                  <tbody className="divide-y divide-slate-200 bg-white">
                                     {products.map((p, idx) => {
                                       const qty = p.quantity || 0;
                                       const unit =
@@ -2228,7 +2228,7 @@ function OrdersPageInner() {
                                           <td className="px-4 py-3 text-right">
                                             <button
                                               onClick={() => openEditLine(id, idx, p)}
-                                              className="rounded-full border border-[#d8e3ea] bg-[#f5fafc] px-3 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-white"
+                                              className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                                             >
                                               Edit
                                             </button>
@@ -2241,7 +2241,7 @@ function OrdersPageInner() {
                               </div>
                             </div>
                           ) : (
-                            <div className="mt-4 rounded-[22px] border border-dashed border-[#d8c7b4] bg-[#fffaf4] px-4 py-8 text-sm text-slate-500">
+                            <div className="mt-4 rounded-[22px] border border-dashed border-slate-200 bg-white px-4 py-8 text-sm text-slate-500">
                               No line items on this order yet.
                             </div>
                           )}
@@ -2269,17 +2269,17 @@ function OrdersPageInner() {
         )}
 
         {selectMode && (
-          <div className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 flex-wrap items-center gap-3 rounded-full border border-[#eadfce] bg-white/95 px-4 py-3 shadow-[0_24px_50px_-24px_rgba(15,23,42,0.45)] backdrop-blur">
+          <div className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 flex-wrap items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-3 shadow-[0_24px_50px_-24px_rgba(15,23,42,0.18)]">
             <span className="text-sm font-semibold text-slate-700">{selectedIds.size} selected</span>
             <button
               onClick={bulkDelete}
-              className="rounded-full bg-rose-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-rose-700"
+              className="rounded-full border border-rose-200 bg-white px-4 py-2 text-xs font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50"
             >
               Delete
             </button>
             <button
               onClick={bulkComplete}
-              className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+              className="rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800"
             >
               Mark Completed
             </button>
@@ -2288,7 +2288,7 @@ function OrdersPageInner() {
 
         {editOpen && editValue && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-xl rounded-[30px] border border-[#eadfce] bg-[#fffdf9] p-6 shadow-[0_30px_80px_-40px_rgba(15,23,42,0.45)]">
+            <div className="w-full max-w-xl rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_30px_80px_-40px_rgba(15,23,42,0.24)]">
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Line Item</p>
@@ -2298,7 +2298,7 @@ function OrdersPageInner() {
                   onClick={() => {
                     setEditOpen(false);
                   }}
-                  className="rounded-full border border-[#eadfce] px-3 py-1.5 text-slate-500 transition hover:bg-white"
+                  className="rounded-full border border-slate-200 px-3 py-1.5 text-slate-500 transition hover:bg-slate-50"
                 >
                   ✕
                 </button>
@@ -2308,7 +2308,7 @@ function OrdersPageInner() {
                 <label className="text-sm text-slate-600">
                   Product
                   <input
-                    className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-white px-4 py-3 text-sm focus:border-[#f1cdb8] focus:outline-none focus:ring-4 focus:ring-[#fff1e6]"
+                    className="mt-2 w-full rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm focus:border-slate-300 focus:outline-none focus:ring-4 focus:ring-slate-100"
                     value={editValue.product}
                     onChange={(e) =>
                       setEditValue((v) => ({ ...v!, product: e.target.value }))
@@ -2318,7 +2318,7 @@ function OrdersPageInner() {
                 <label className="text-sm text-slate-600">
                   Color
                   <input
-                    className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-white px-4 py-3 text-sm focus:border-[#f1cdb8] focus:outline-none focus:ring-4 focus:ring-[#fff1e6]"
+                    className="mt-2 w-full rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm focus:border-slate-300 focus:outline-none focus:ring-4 focus:ring-slate-100"
                     value={editValue.color || ""}
                     onChange={(e) =>
                       setEditValue((v) => ({ ...v!, color: e.target.value }))
@@ -2328,7 +2328,7 @@ function OrdersPageInner() {
                 <label className="text-sm text-slate-600">
                   Size
                   <input
-                    className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-white px-4 py-3 text-sm focus:border-[#f1cdb8] focus:outline-none focus:ring-4 focus:ring-[#fff1e6]"
+                    className="mt-2 w-full rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm focus:border-slate-300 focus:outline-none focus:ring-4 focus:ring-slate-100"
                     value={editValue.size || ""}
                     onChange={(e) =>
                       setEditValue((v) => ({ ...v!, size: e.target.value }))
@@ -2340,7 +2340,7 @@ function OrdersPageInner() {
                   <input
                     type="number"
                     min={1}
-                    className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-white px-4 py-3 text-sm focus:border-[#f1cdb8] focus:outline-none focus:ring-4 focus:ring-[#fff1e6]"
+                    className="mt-2 w-full rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm focus:border-slate-300 focus:outline-none focus:ring-4 focus:ring-slate-100"
                     value={editValue.quantity}
                     onChange={(e) =>
                       setEditValue((v) => ({
@@ -2355,7 +2355,7 @@ function OrdersPageInner() {
                   <input
                     type="number"
                     step="0.01"
-                    className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-white px-4 py-3 text-sm focus:border-[#f1cdb8] focus:outline-none focus:ring-4 focus:ring-[#fff1e6]"
+                    className="mt-2 w-full rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm focus:border-slate-300 focus:outline-none focus:ring-4 focus:ring-slate-100"
                     value={editValue.unitPrice ?? 0}
                     onChange={(e) =>
                       setEditValue((v) => ({
@@ -2370,7 +2370,7 @@ function OrdersPageInner() {
               <div className="mt-5 flex items-center justify-end gap-2">
                 <button
                   onClick={() => setEditOpen(false)}
-                  className="rounded-full border border-[#eadfce] px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-white"
+                  className="rounded-full border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
                 >
                   Cancel
                 </button>
@@ -2624,7 +2624,7 @@ function OrdersPageInner() {
                             />
                             <button
                               onClick={() => removeDocLine(index)}
-                              className="inline-flex items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-700 transition hover:bg-rose-100"
+                              className="inline-flex items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-700 transition hover:bg-rose-50"
                               title="Remove line"
                             >
                               <FiTrash2 />
@@ -2744,7 +2744,7 @@ function OrdersPageInner() {
                       );
                       window.location.href = `mailto:${encodeURIComponent(docDraft.clientEmail)}?subject=${subject}&body=${body}`;
                     }}
-                    className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-100"
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                   >
                     <FiSend /> Quick send
                   </button>

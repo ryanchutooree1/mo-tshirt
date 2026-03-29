@@ -844,46 +844,40 @@ export default function POSPage() {
         }
 
         .pos-performance {
-          --pos-bg-main: #f3f8ff;
-          --pos-bg-panel: rgba(255, 255, 255, 0.9);
-          --pos-bg-panel-strong: rgba(255, 255, 255, 0.98);
+          --pos-bg-main: #ffffff;
+          --pos-bg-panel: #ffffff;
+          --pos-bg-panel-strong: #ffffff;
           --pos-border: rgba(15, 23, 42, 0.12);
-          --pos-border-strong: rgba(14, 165, 233, 0.28);
+          --pos-border-strong: rgba(15, 23, 42, 0.12);
           --pos-text: #0f172a;
           --pos-muted: #536176;
           --pos-soft: #7b8aa1;
-          --pos-accent: #0ea5e9;
-          --pos-accent-2: #10b981;
-          --pos-accent-3: #f59e0b;
+          --pos-accent: #475569;
+          --pos-accent-2: #475569;
+          --pos-accent-3: #475569;
           --pos-danger: #f43f5e;
-          --pos-chip-bg: rgba(15, 23, 42, 0.04);
+          --pos-chip-bg: #ffffff;
           --pos-input-bg: #ffffff;
           color: var(--pos-text);
-          background:
-            radial-gradient(920px 420px at 12% -12%, rgba(56, 189, 248, 0.2), transparent 60%),
-            radial-gradient(780px 420px at 88% 0%, rgba(16, 185, 129, 0.15), transparent 64%),
-            var(--pos-bg-main);
+          background: var(--pos-bg-main);
         }
 
         .admin-root.admin-dark .pos-performance {
-          --pos-bg-main: #020617;
-          --pos-bg-panel: rgba(6, 15, 36, 0.82);
-          --pos-bg-panel-strong: rgba(8, 19, 46, 0.95);
-          --pos-border: rgba(56, 189, 248, 0.23);
-          --pos-border-strong: rgba(56, 189, 248, 0.42);
-          --pos-text: #e2e8f0;
-          --pos-muted: #9baeca;
-          --pos-soft: #7d8da6;
-          --pos-accent: #38bdf8;
-          --pos-accent-2: #34d399;
-          --pos-accent-3: #fbbf24;
-          --pos-danger: #fb7185;
-          --pos-chip-bg: rgba(51, 65, 85, 0.34);
-          --pos-input-bg: rgba(8, 23, 50, 0.88);
-          background:
-            radial-gradient(920px 460px at 8% -10%, rgba(56, 189, 248, 0.17), transparent 62%),
-            radial-gradient(860px 460px at 92% -8%, rgba(20, 184, 166, 0.18), transparent 64%),
-            #020617;
+          --pos-bg-main: #ffffff;
+          --pos-bg-panel: #ffffff;
+          --pos-bg-panel-strong: #ffffff;
+          --pos-border: rgba(15, 23, 42, 0.12);
+          --pos-border-strong: rgba(15, 23, 42, 0.12);
+          --pos-text: #0f172a;
+          --pos-muted: #536176;
+          --pos-soft: #7b8aa1;
+          --pos-accent: #475569;
+          --pos-accent-2: #475569;
+          --pos-accent-3: #475569;
+          --pos-danger: #e11d48;
+          --pos-chip-bg: #ffffff;
+          --pos-input-bg: #ffffff;
+          background: #ffffff;
         }
 
         .posperf-grid {
@@ -891,16 +885,16 @@ export default function POSPage() {
           position: absolute;
           inset: 0;
           background-image:
-            linear-gradient(to right, rgba(148, 163, 184, 0.1) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(148, 163, 184, 0.1) 1px, transparent 1px);
+            linear-gradient(to right, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
           background-size: 42px 42px;
           mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.55), transparent 80%);
         }
 
         .admin-root.admin-dark .posperf-grid {
           background-image:
-            linear-gradient(to right, rgba(56, 189, 248, 0.1) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(56, 189, 248, 0.1) 1px, transparent 1px);
+            linear-gradient(to right, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
         }
 
         .posperf-glow {
@@ -916,20 +910,19 @@ export default function POSPage() {
         .posperf-glow-left {
           left: -160px;
           top: 160px;
-          background: rgba(14, 165, 233, 0.35);
+          background: transparent;
         }
 
         .posperf-glow-right {
           right: -160px;
           top: 20px;
-          background: rgba(16, 185, 129, 0.3);
+          background: transparent;
         }
 
         .posperf-panel {
           border-radius: 28px;
           border: 1px solid var(--pos-border);
-          background: linear-gradient(140deg, var(--pos-bg-panel-strong), var(--pos-bg-panel));
-          backdrop-filter: blur(10px);
+          background: var(--pos-bg-panel-strong);
           box-shadow: 0 16px 35px rgba(15, 23, 42, 0.12);
           padding: 1.35rem;
         }
@@ -948,7 +941,7 @@ export default function POSPage() {
           content: '';
           position: absolute;
           inset: 0;
-          background: radial-gradient(circle at 20% 10%, rgba(56, 189, 248, 0.12), transparent 45%);
+          background: none;
           pointer-events: none;
         }
 
@@ -973,7 +966,7 @@ export default function POSPage() {
           letter-spacing: 0.3em;
           font-size: 0.72rem;
           font-weight: 700;
-          color: var(--pos-accent);
+          color: var(--pos-soft);
         }
 
         .posperf-title {
@@ -1005,11 +998,11 @@ export default function POSPage() {
         }
 
         .posperf-chip-sky {
-          color: var(--pos-accent);
+          color: var(--pos-text);
         }
 
         .posperf-chip-emerald {
-          color: var(--pos-accent-2);
+          color: var(--pos-text);
         }
 
         .posperf-chip-slate {
@@ -1074,7 +1067,7 @@ export default function POSPage() {
         .posperf-subcard {
           border-radius: 18px;
           border: 1px solid var(--pos-border);
-          background: linear-gradient(145deg, var(--pos-bg-panel-strong), var(--pos-chip-bg));
+          background: #ffffff;
           padding: 0.85rem;
         }
 
@@ -1089,39 +1082,39 @@ export default function POSPage() {
         }
 
         .posperf-metric-icon-slate {
-          color: #cbd5e1;
-          background: rgba(71, 85, 105, 0.28);
+          color: #475569;
+          background: #ffffff;
         }
 
         .posperf-metric-icon-sky {
-          color: #7dd3fc;
-          background: rgba(56, 189, 248, 0.2);
+          color: #475569;
+          background: #ffffff;
         }
 
         .posperf-metric-icon-emerald {
-          color: #6ee7b7;
-          background: rgba(16, 185, 129, 0.2);
+          color: #475569;
+          background: #ffffff;
         }
 
         .posperf-metric-icon-amber {
-          color: #fcd34d;
-          background: rgba(245, 158, 11, 0.2);
+          color: #475569;
+          background: #ffffff;
         }
 
         .posperf-metric-glow-slate {
-          background: rgba(100, 116, 139, 0.2);
+          background: transparent;
         }
 
         .posperf-metric-glow-sky {
-          background: rgba(56, 189, 248, 0.22);
+          background: transparent;
         }
 
         .posperf-metric-glow-emerald {
-          background: rgba(16, 185, 129, 0.22);
+          background: transparent;
         }
 
         .posperf-metric-glow-amber {
-          background: rgba(245, 158, 11, 0.24);
+          background: transparent;
         }
 
         .posperf-btn {
@@ -1148,14 +1141,14 @@ export default function POSPage() {
         }
 
         .posperf-btn-solid {
-          background: linear-gradient(120deg, #0f172a, #1e293b);
+          background: #0f172a;
           color: #f8fafc;
-          border-color: rgba(51, 65, 85, 0.65);
+          border-color: rgba(15, 23, 42, 0.9);
         }
 
         .admin-root.admin-dark .posperf-btn-solid {
-          background: linear-gradient(120deg, #0b132e, #132348);
-          border-color: rgba(56, 189, 248, 0.35);
+          background: #0f172a;
+          border-color: rgba(15, 23, 42, 0.9);
         }
 
         .posperf-btn-ghost {
@@ -1165,21 +1158,21 @@ export default function POSPage() {
         }
 
         .posperf-btn-primary {
-          background: linear-gradient(120deg, #0284c7, #0ea5e9);
+          background: #0f172a;
           color: white;
-          border-color: rgba(14, 165, 233, 0.45);
+          border-color: rgba(15, 23, 42, 0.9);
         }
 
         .posperf-btn-success {
-          background: linear-gradient(120deg, #059669, #10b981);
+          background: #0f172a;
           color: white;
-          border-color: rgba(16, 185, 129, 0.4);
+          border-color: rgba(15, 23, 42, 0.9);
         }
 
         .posperf-btn-danger {
-          background: linear-gradient(120deg, #e11d48, #f43f5e);
-          color: white;
-          border-color: rgba(244, 63, 94, 0.45);
+          background: #ffffff;
+          color: var(--pos-danger);
+          border-color: rgba(244, 63, 94, 0.35);
         }
 
         .posperf-btn-mini,
@@ -1195,7 +1188,7 @@ export default function POSPage() {
         .posperf-btn-danger-mini {
           color: var(--pos-danger);
           border-color: rgba(244, 63, 94, 0.35);
-          background: rgba(244, 63, 94, 0.1);
+          background: #ffffff;
         }
 
         .posperf-link-danger {
@@ -1265,8 +1258,8 @@ export default function POSPage() {
         .posperf-input:focus,
         .posperf-select:focus {
           outline: none;
-          border-color: var(--pos-accent);
-          box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+          border-color: rgba(15, 23, 42, 0.22);
+          box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.18);
         }
 
         .posperf-input:disabled,
@@ -1278,7 +1271,7 @@ export default function POSPage() {
         .posperf-flow {
           border-radius: 18px;
           border: 1px solid var(--pos-border);
-          background: linear-gradient(140deg, var(--pos-bg-panel-strong), var(--pos-bg-panel));
+          background: #ffffff;
           padding: 0.95rem;
           display: flex;
           flex-direction: column;
@@ -1313,7 +1306,7 @@ export default function POSPage() {
           display: block;
           height: 100%;
           border-radius: 9999px;
-          background: linear-gradient(90deg, var(--pos-accent), var(--pos-accent-2));
+          background: #94a3b8;
           transition: width 300ms ease;
         }
 
@@ -1324,8 +1317,8 @@ export default function POSPage() {
         }
 
         .posperf-success {
-          border-color: rgba(16, 185, 129, 0.42);
-          background: linear-gradient(140deg, rgba(16, 185, 129, 0.11), var(--pos-bg-panel-strong));
+          border-color: var(--pos-border);
+          background: #ffffff;
         }
       `}</style>
     </main>
@@ -1364,7 +1357,7 @@ function StatCard({
   const theme = tones[tone] ?? tones.slate;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-[var(--pos-border)] bg-[linear-gradient(145deg,var(--pos-bg-panel-strong),var(--pos-chip-bg))] p-4">
+    <div className="relative overflow-hidden rounded-2xl border border-[var(--pos-border)] bg-white p-4">
       <div className="flex items-center justify-between gap-2">
         <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--pos-soft)]">{label}</div>
         {icon && <span className={`posperf-metric-icon ${theme.icon}`}>{icon}</span>}

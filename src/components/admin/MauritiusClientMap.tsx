@@ -36,82 +36,28 @@ type HotspotCluster = {
   clients: ClientMapRecord[];
 };
 
+const NEUTRAL_DISTRICT_STYLE = {
+  glow: "rgba(148, 163, 184, 0.18)",
+  chip: "border-slate-200 bg-white text-slate-700",
+  badge: "bg-white text-slate-900",
+  bar: "from-slate-300 to-slate-200",
+  text: "text-slate-700",
+  stroke: "#cbd5e1",
+} as const;
+
 const DISTRICT_STYLES: Record<
   MauritiusDistrict,
   { glow: string; chip: string; badge: string; bar: string; text: string; stroke: string }
 > = {
-  "Black River": {
-    glow: "rgba(59, 130, 246, 0.3)",
-    chip: "border-blue-200 bg-blue-50 text-blue-700",
-    badge: "bg-blue-500 text-white",
-    bar: "from-blue-400 to-cyan-300",
-    text: "text-blue-700",
-    stroke: "#60a5fa",
-  },
-  Flacq: {
-    glow: "rgba(34, 197, 94, 0.3)",
-    chip: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    badge: "bg-emerald-500 text-white",
-    bar: "from-emerald-400 to-lime-300",
-    text: "text-emerald-700",
-    stroke: "#34d399",
-  },
-  "Grand Port": {
-    glow: "rgba(249, 115, 22, 0.3)",
-    chip: "border-orange-200 bg-orange-50 text-orange-700",
-    badge: "bg-orange-500 text-white",
-    bar: "from-orange-400 to-amber-300",
-    text: "text-orange-700",
-    stroke: "#fb923c",
-  },
-  Moka: {
-    glow: "rgba(168, 85, 247, 0.3)",
-    chip: "border-violet-200 bg-violet-50 text-violet-700",
-    badge: "bg-violet-500 text-white",
-    bar: "from-violet-400 to-fuchsia-300",
-    text: "text-violet-700",
-    stroke: "#a78bfa",
-  },
-  Pamplemousses: {
-    glow: "rgba(6, 182, 212, 0.3)",
-    chip: "border-cyan-200 bg-cyan-50 text-cyan-700",
-    badge: "bg-cyan-500 text-white",
-    bar: "from-cyan-400 to-sky-300",
-    text: "text-cyan-700",
-    stroke: "#22d3ee",
-  },
-  "Plaines Wilhems": {
-    glow: "rgba(244, 63, 94, 0.3)",
-    chip: "border-rose-200 bg-rose-50 text-rose-700",
-    badge: "bg-rose-500 text-white",
-    bar: "from-rose-400 to-pink-300",
-    text: "text-rose-700",
-    stroke: "#fb7185",
-  },
-  "Port Louis": {
-    glow: "rgba(71, 85, 105, 0.28)",
-    chip: "border-slate-200 bg-slate-50 text-slate-700",
-    badge: "bg-slate-600 text-white",
-    bar: "from-slate-500 to-slate-300",
-    text: "text-slate-700",
-    stroke: "#94a3b8",
-  },
-  "Riviere du Rempart": {
-    glow: "rgba(234, 179, 8, 0.3)",
-    chip: "border-amber-200 bg-amber-50 text-amber-700",
-    badge: "bg-amber-500 text-slate-950",
-    bar: "from-amber-400 to-yellow-300",
-    text: "text-amber-700",
-    stroke: "#fbbf24",
-  },
-  Savanne: {
-    glow: "rgba(20, 184, 166, 0.3)",
-    chip: "border-teal-200 bg-teal-50 text-teal-700",
-    badge: "bg-teal-500 text-white",
-    bar: "from-teal-400 to-cyan-300",
-    text: "text-teal-700",
-    stroke: "#2dd4bf",
-  },
+  "Black River": NEUTRAL_DISTRICT_STYLE,
+  Flacq: NEUTRAL_DISTRICT_STYLE,
+  "Grand Port": NEUTRAL_DISTRICT_STYLE,
+  Moka: NEUTRAL_DISTRICT_STYLE,
+  Pamplemousses: NEUTRAL_DISTRICT_STYLE,
+  "Plaines Wilhems": NEUTRAL_DISTRICT_STYLE,
+  "Port Louis": NEUTRAL_DISTRICT_STYLE,
+  "Riviere du Rempart": NEUTRAL_DISTRICT_STYLE,
+  Savanne: NEUTRAL_DISTRICT_STYLE,
 };
 
 function getDistrictStyle(district: MauritiusDistrict) {
@@ -329,14 +275,10 @@ export function MauritiusClientHeatmap({
       className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.85fr)]"
       style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.12s" }}
     >
-      <div className="relative overflow-hidden rounded-[2rem] border border-slate-200/70 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.95),rgba(240,249,255,0.9)_40%,rgba(248,250,252,0.95)_100%)] p-5 shadow-sm">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(14,165,233,0.14),transparent_28%),radial-gradient(circle_at_82%_14%,rgba(249,115,22,0.12),transparent_24%),radial-gradient(circle_at_50%_92%,rgba(236,72,153,0.1),transparent_30%)]"
-        />
+      <div className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-sky-600">Mauritius orbital map</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-500">Mauritius orbital map</p>
             <h2 className="mt-3 text-2xl font-semibold text-slate-950 sm:text-[2rem]">
               Navigate the island demand like a live command surface.
             </h2>
@@ -690,31 +632,27 @@ function MauritiusOrbitalScene({
   const activeProjection = activeCluster ? projectOrbitalPoint(toOrbitalPoint(activeCluster.x, activeCluster.y), view) : null;
 
   return (
-    <div className="relative mt-6 overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-slate-950 px-4 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:px-6">
-      <div
-        aria-hidden
-        className="absolute inset-0 bg-[radial-gradient(circle_at_50%_38%,rgba(34,211,238,0.14),transparent_30%),radial-gradient(circle_at_50%_100%,rgba(59,130,246,0.12),transparent_34%),linear-gradient(180deg,rgba(15,23,42,0.92),rgba(2,6,23,0.99))]"
-      />
+    <div className="relative mt-6 overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white px-4 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:px-6">
       <div
         aria-hidden
         className="absolute inset-0 opacity-30"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(148,163,184,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.08) 1px, transparent 1px), radial-gradient(rgba(255,255,255,0.8) 1px, transparent 1px)",
+            "linear-gradient(rgba(148,163,184,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.08) 1px, transparent 1px), radial-gradient(rgba(148,163,184,0.45) 1px, transparent 1px)",
           backgroundSize: "48px 48px, 48px 48px, 150px 150px",
           backgroundPosition: "0 0, 0 0, 18px 26px",
         }}
       />
 
       <div className="relative flex flex-wrap items-center justify-between gap-3">
-        <div className="rounded-full border border-white/15 bg-slate-950/[0.55] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-white/[0.72] backdrop-blur">
+        <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-600">
           Drag to orbit · Scroll to zoom · Tap a hotspot to inspect
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => setAutoOrbit((current) => !current)}
-            className="rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white/[0.82] transition hover:border-white/30 hover:bg-white/10"
+            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
           >
             {autoOrbit ? (
               <span className="inline-flex items-center gap-2">
@@ -729,7 +667,7 @@ function MauritiusOrbitalScene({
           <button
             type="button"
             onClick={resetView}
-            className="rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-white/[0.82] transition hover:border-white/30 hover:bg-white/10"
+            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
           >
             <span className="inline-flex items-center gap-2">
               <FiRotateCcw className="h-3.5 w-3.5" /> Reset view
@@ -785,21 +723,21 @@ function MauritiusOrbitalScene({
       >
         <div
           aria-hidden
-          className="absolute inset-0 rounded-[1.6rem] bg-[radial-gradient(circle_at_50%_46%,rgba(34,211,238,0.18),transparent_24%),radial-gradient(circle_at_50%_95%,rgba(125,211,252,0.08),transparent_30%)]"
+          className="absolute inset-0 rounded-[1.6rem] bg-[radial-gradient(circle_at_50%_46%,rgba(148,163,184,0.12),transparent_24%),radial-gradient(circle_at_50%_95%,rgba(148,163,184,0.08),transparent_30%)]"
         />
 
         <div
           aria-hidden
-          className="absolute left-1/2 top-[53%] h-[82%] w-[82%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-200/10 blur-md"
+          className="absolute left-1/2 top-[53%] h-[82%] w-[82%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-200 blur-md"
         />
         <div
           aria-hidden
-          className="absolute left-1/2 top-[53%] h-[78%] w-[78%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-200/20 animate-spin"
+          className="absolute left-1/2 top-[53%] h-[78%] w-[78%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-200 animate-spin"
           style={{ animationDuration: "22s" }}
         />
         <div
           aria-hidden
-          className="absolute left-1/2 top-[53%] h-[72%] w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle_at_36%_28%,rgba(250,250,255,0.72),rgba(103,232,249,0.22)_20%,rgba(22,78,99,0.18)_44%,rgba(8,47,73,0.92)_72%,rgba(2,6,23,0.98)_100%)] shadow-[0_0_60px_rgba(34,211,238,0.18),inset_0_0_70px_rgba(255,255,255,0.08)]"
+          className="absolute left-1/2 top-[53%] h-[72%] w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle_at_36%_28%,rgba(255,255,255,0.98),rgba(248,250,252,0.95)_30%,rgba(241,245,249,0.96)_70%,rgba(226,232,240,0.98)_100%)] shadow-[0_0_40px_rgba(148,163,184,0.12),inset_0_0_30px_rgba(255,255,255,0.8)]"
         />
 
         <svg
@@ -810,9 +748,9 @@ function MauritiusOrbitalScene({
           <defs>
             <radialGradient id="orbital-atmosphere" cx="35%" cy="28%" r="70%">
               <stop offset="0%" stopColor="rgba(255,255,255,0.42)" />
-              <stop offset="30%" stopColor="rgba(34,211,238,0.24)" />
-              <stop offset="75%" stopColor="rgba(8,47,73,0.1)" />
-              <stop offset="100%" stopColor="rgba(2,6,23,0)" />
+              <stop offset="30%" stopColor="rgba(148,163,184,0.18)" />
+              <stop offset="75%" stopColor="rgba(226,232,240,0.1)" />
+              <stop offset="100%" stopColor="rgba(255,255,255,0)" />
             </radialGradient>
           </defs>
           <circle cx="50" cy="50" r="48" fill="url(#orbital-atmosphere)" />
@@ -888,15 +826,15 @@ function MauritiusOrbitalScene({
               data-orbital-stop
               onClick={() => onSelectDistrict(active ? "all" : district)}
               className={cn(
-                "absolute -translate-x-1/2 -translate-y-1/2 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/[0.58] backdrop-blur transition hover:border-white/35 hover:text-white/[0.92]",
-                active && "border-white/45 bg-white/[0.12] text-white"
+                "absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 transition hover:border-slate-300 hover:text-slate-700",
+                active && "border-slate-900 bg-slate-900 text-white"
               )}
               style={{
                 left: `${projection.left}%`,
                 top: `${projection.top}%`,
                 zIndex: 10 + Math.round((projection.depth + 1) * 20),
                 boxShadow: active ? `0 0 0 1px ${getDistrictStyle(district).stroke} inset` : "none",
-                opacity: clamp(0.32 + projection.scale * 0.24, 0.28, 0.76),
+                opacity: clamp(0.45 + projection.scale * 0.12, 0.4, 0.92),
               }}
             >
               {district} · {count}
@@ -916,7 +854,7 @@ function MauritiusOrbitalScene({
               <span
                 key={cluster.key}
                 aria-hidden
-                className="pointer-events-none absolute rounded-full border border-white/15 blur-[1px]"
+                className="pointer-events-none absolute rounded-full border border-slate-200 blur-[1px]"
                 style={{
                   left: `${projection.left}%`,
                   top: `${projection.top}%`,
@@ -959,7 +897,7 @@ function MauritiusOrbitalScene({
               />
               <span
                 aria-hidden
-                className="absolute left-1/2 top-1/2 animate-ping rounded-full border border-white/20"
+                className="absolute left-1/2 top-1/2 animate-ping rounded-full border border-slate-300"
                 style={{
                   width: `${bubbleSize * 0.86}px`,
                   height: `${bubbleSize * 0.86}px`,
@@ -971,8 +909,9 @@ function MauritiusOrbitalScene({
               <span
                 className={cn(
                   "relative flex items-center justify-center rounded-[1.15rem] border border-white/20 px-4 font-semibold shadow-[0_10px_30px_rgba(2,6,23,0.42)]",
+                  "border-slate-200 shadow-[0_10px_24px_rgba(15,23,42,0.08)]",
                   style.badge,
-                  active && "ring-4 ring-white/18"
+                  active && "ring-4 ring-slate-200"
                 )}
                 style={{
                   minWidth: `${bubbleSize}px`,
@@ -985,6 +924,7 @@ function MauritiusOrbitalScene({
               <span
                 className={cn(
                   "pointer-events-none absolute left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-full border border-white/18 bg-slate-950/[0.78] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-white/[0.82] shadow-lg backdrop-blur md:block",
+                  "border-slate-200 bg-white text-slate-700 shadow-md",
                   labelBelow ? "top-full mt-3" : "bottom-full mb-3"
                 )}
               >
@@ -996,21 +936,21 @@ function MauritiusOrbitalScene({
 
         {!clusters.length && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="rounded-full border border-white/10 bg-white/[0.06] px-5 py-2.5 text-sm text-white/70 backdrop-blur">
+            <div className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm text-slate-600">
               Start pinning clients to unlock the orbital map.
             </div>
           </div>
         )}
 
         <div className="absolute bottom-4 left-4 flex flex-wrap gap-2">
-          <span className="rounded-full border border-white/[0.12] bg-slate-950/[0.6] px-3 py-1.5 text-xs font-semibold text-white/[0.72] backdrop-blur">
+          <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
             Zoom {view.zoom.toFixed(2)}x
           </span>
-          <span className="rounded-full border border-white/[0.12] bg-slate-950/[0.6] px-3 py-1.5 text-xs font-semibold text-white/[0.72] backdrop-blur">
+          <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
             Hotspots {sceneClusters.length}
           </span>
           {!!unpinnedCount && (
-            <span className="rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-100 backdrop-blur">
+            <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
               Unpinned {unpinnedCount}
             </span>
           )}
@@ -1064,22 +1004,18 @@ export function MauritiusLocationPicker({
               notes: value?.notes || null,
             });
           }}
-          className="relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-slate-950 p-4 text-left shadow-sm"
+          className="relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white p-4 text-left shadow-sm"
         >
-          <div
-            aria-hidden
-            className="absolute inset-0 bg-[radial-gradient(circle_at_25%_20%,rgba(56,189,248,0.18),transparent_28%),radial-gradient(circle_at_78%_15%,rgba(249,115,22,0.14),transparent_24%),linear-gradient(180deg,rgba(15,23,42,0.94),rgba(2,6,23,0.98))]"
-          />
           <div className="relative aspect-[1/1.08]">
             <MauritiusIslandArtwork muted />
             <span
-              className="absolute z-20 flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white bg-orange-500 shadow-[0_0_0_8px_rgba(249,115,22,0.2)]"
+              className="absolute z-20 flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white bg-slate-900 shadow-[0_0_0_8px_rgba(148,163,184,0.18)]"
               style={{ left: `${previewX}%`, top: `${previewY}%` }}
             />
           </div>
-          <div className="relative mt-4 flex items-center justify-between gap-3 text-xs text-white/75">
+          <div className="relative mt-4 flex items-center justify-between gap-3 text-xs text-slate-600">
             <span>Click anywhere on Mauritius to drop a client pin.</span>
-            <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 font-semibold">
+            <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold">
               {resolved ? `${resolved.hotspotLabel} · ${resolved.district}` : "No pin yet"}
             </span>
           </div>
@@ -1107,7 +1043,7 @@ export function MauritiusLocationPicker({
                   notes: value?.notes || null,
                 });
               }}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
             >
               <option value="">No district selected</option>
               {MAURITIUS_DISTRICTS.map((district) => (
@@ -1137,7 +1073,7 @@ export function MauritiusLocationPicker({
                     : null
                 );
               }}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
             >
               <option value="">Choose a hotspot</option>
               {districtHotspots.map((hotspot) => (
@@ -1163,7 +1099,7 @@ export function MauritiusLocationPicker({
                 })
               }
               placeholder="School campaign, corporate cluster, reseller..."
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
             />
           </label>
 
@@ -1172,7 +1108,7 @@ export function MauritiusLocationPicker({
               <button
                 type="button"
                 onClick={() => applyManualLocation(addressGuess)}
-                className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100"
+                className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
               >
                 Use address guess: {addressGuess.hotspotLabel}
               </button>

@@ -270,28 +270,16 @@ export default function ClientsPage() {
     }`;
 
   return (
-    <main className="relative min-h-screen">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-40 right-[-12rem] h-80 w-80 rounded-full bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.35),transparent_70%)] blur-3xl"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-[-10rem] top-48 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.25),transparent_70%)] blur-3xl"
-      />
+    <main className="relative min-h-screen bg-white">
       <div className="relative mx-auto max-w-7xl space-y-6 px-6 py-8">
         {/* Hero */}
         <section
-          className="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 p-6 shadow-sm backdrop-blur"
+          className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
           style={{ animation: 'fadeUp 0.6s ease-out both' }}
         >
-          <div
-            aria-hidden
-            className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_60%)]"
-          />
           <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-sky-600">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
                 Clients
               </p>
               <h1 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">
@@ -301,16 +289,16 @@ export default function ClientsPage() {
                 Keep your best customers close with VIP tagging, clean data, live Mauritius pinning, and a market heatmap that shows where to push harder next.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
                   <FiUsers className="h-4 w-4" /> Smart CRM
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
                   <FiShield className="h-4 w-4" /> Duplicate checks
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
                   <FiStar className="h-4 w-4" /> VIP prioritization
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-fuchsia-50 px-3 py-1 text-xs font-semibold text-fuchsia-700">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
                   <FiMapPin className="h-4 w-4" /> Mauritius heatmap
                 </span>
               </div>
@@ -324,7 +312,7 @@ export default function ClientsPage() {
               </button>
               <button
                 onClick={() => setEditing(createEmptyClient())}
-                className="inline-flex items-center gap-2 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+                className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
               >
                 <FiPlus className="h-4 w-4" /> Add Client
               </button>
@@ -364,13 +352,13 @@ export default function ClientsPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by name, phone, email…"
-                className="w-full rounded-full border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-200 sm:w-72"
+                className="w-full rounded-full border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100 sm:w-72"
               />
             </div>
             <select
               value={minStars}
               onChange={(e) => setMinStars(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-              className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+              className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
             >
               <option value="all">All stars</option>
               <option value={1}>★ 1+</option>
@@ -382,7 +370,7 @@ export default function ClientsPage() {
             <select
               value={locationFilter}
               onChange={(e) => setLocationFilter((e.target.value || 'all') as LocationFilter)}
-              className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+              className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
             >
               <option value="all">All Mauritius</option>
               <option value="unlocated">Unpinned only</option>
@@ -396,7 +384,7 @@ export default function ClientsPage() {
               type="button"
               aria-pressed={hasPhoneOnly}
               onClick={() => setHasPhoneOnly((v) => !v)}
-              className={togglePill(hasPhoneOnly, 'border-emerald-200 bg-emerald-50 text-emerald-700')}
+              className={togglePill(hasPhoneOnly, 'border-slate-900 bg-slate-900 text-white')}
             >
               <FiPhone className="h-4 w-4" /> Has phone
             </button>
@@ -404,7 +392,7 @@ export default function ClientsPage() {
               type="button"
               aria-pressed={hasEmailOnly}
               onClick={() => setHasEmailOnly((v) => !v)}
-              className={togglePill(hasEmailOnly, 'border-sky-200 bg-sky-50 text-sky-700')}
+              className={togglePill(hasEmailOnly, 'border-slate-900 bg-slate-900 text-white')}
             >
               <FiMail className="h-4 w-4" /> Has email
             </button>
@@ -425,7 +413,7 @@ export default function ClientsPage() {
             const location = resolvedById.get(c.id);
 
             return (
-              <div key={c.id} className="overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 shadow-sm transition hover:border-sky-200 hover:shadow-md">
+              <div key={c.id} className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:border-slate-300 hover:shadow-md">
                 {/* Header */}
                 <div className="border-b border-slate-100/80 p-4">
                   <div className="flex items-start justify-between gap-3">
@@ -435,17 +423,17 @@ export default function ClientsPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <div className="text-base font-semibold text-slate-900">{c.customerName}</div>
                           {(c.starRating || 1) >= 4 && (
-                            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-amber-700">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border border-slate-200 bg-white text-slate-700">
                               VIP
                             </span>
                           )}
                           {(phoneDup || emailDup) && (
-                            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border border-rose-200 bg-rose-50 text-rose-700">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border border-slate-200 bg-white text-slate-700">
                               Duplicate
                             </span>
                           )}
                           {location && (
-                            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border border-slate-200 bg-white text-slate-700">
                               {location.hotspotLabel}
                             </span>
                           )}
@@ -469,7 +457,7 @@ export default function ClientsPage() {
                         <FiEdit2 className="h-3.5 w-3.5" /> Edit
                       </button>
                       <button
-                        className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-100"
+                        className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-white px-3 py-1 text-xs font-semibold text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-50"
                         onClick={() => setConfirmDelete({ id: c.id, name: c.customerName })}
                       >
                         <FiTrash2 className="h-3.5 w-3.5" /> Delete
@@ -509,7 +497,7 @@ export default function ClientsPage() {
                   <Row label="Zone" icon={<FiMapPin className="h-4 w-4 text-fuchsia-400" />}>
                     {location ? (
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full border border-fuchsia-200 bg-fuchsia-50 px-2.5 py-1 text-xs font-semibold text-fuchsia-700">
+                        <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700">
                           {location.hotspotLabel}
                         </span>
                         <span className="text-xs text-slate-500">{location.district}</span>
@@ -554,7 +542,7 @@ export default function ClientsPage() {
             <p className="mt-1 text-sm text-slate-500">Try clearing filters or add a new client.</p>
             <button
               onClick={() => setEditing(createEmptyClient())}
-              className="mt-4 inline-flex items-center gap-2 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600"
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
             >
               <FiPlus className="h-4 w-4" /> Add Client
             </button>
@@ -614,37 +602,37 @@ function StatCard({
   const tones = {
     slate: {
       border: 'border-slate-200',
-      bg: 'from-slate-50 via-white to-white',
-      accent: 'bg-slate-100 text-slate-700',
-      glow: 'bg-slate-200/40',
+      bg: 'from-white via-white to-white',
+      accent: 'border border-slate-200 bg-white text-slate-700',
+      glow: 'bg-transparent',
       value: 'text-slate-900',
     },
     sky: {
-      border: 'border-sky-100',
-      bg: 'from-sky-50 via-white to-white',
-      accent: 'bg-sky-100 text-sky-700',
-      glow: 'bg-sky-200/40',
+      border: 'border-slate-200',
+      bg: 'from-white via-white to-white',
+      accent: 'border border-slate-200 bg-white text-slate-700',
+      glow: 'bg-transparent',
       value: 'text-slate-900',
     },
     emerald: {
-      border: 'border-emerald-100',
-      bg: 'from-emerald-50 via-white to-white',
-      accent: 'bg-emerald-100 text-emerald-700',
-      glow: 'bg-emerald-200/40',
+      border: 'border-slate-200',
+      bg: 'from-white via-white to-white',
+      accent: 'border border-slate-200 bg-white text-slate-700',
+      glow: 'bg-transparent',
       value: 'text-slate-900',
     },
     amber: {
-      border: 'border-amber-100',
-      bg: 'from-amber-50 via-white to-white',
-      accent: 'bg-amber-100 text-amber-700',
-      glow: 'bg-amber-200/40',
+      border: 'border-slate-200',
+      bg: 'from-white via-white to-white',
+      accent: 'border border-slate-200 bg-white text-slate-700',
+      glow: 'bg-transparent',
       value: 'text-slate-900',
     },
     rose: {
-      border: 'border-rose-100',
-      bg: 'from-rose-50 via-white to-white',
-      accent: 'bg-rose-100 text-rose-700',
-      glow: 'bg-rose-200/40',
+      border: 'border-slate-200',
+      bg: 'from-white via-white to-white',
+      accent: 'border border-slate-200 bg-white text-slate-700',
+      glow: 'bg-transparent',
       value: 'text-slate-900',
     },
   } as const;
@@ -705,7 +693,7 @@ function Stars({ value, onChange }: { value: number; onChange: (v: number) => vo
           key={i}
           onClick={() => onChange(i)}
           aria-label={`Set ${i} star${i > 1 ? 's' : ''}`}
-          className={`text-lg transition ${i <= value ? 'text-amber-500' : 'text-slate-300 hover:text-amber-400'}`}
+          className={`text-lg transition ${i <= value ? 'text-slate-700' : 'text-slate-300 hover:text-slate-500'}`}
           title={`${i} star${i > 1 ? 's' : ''}`}
         >
           {i <= value ? '★' : '☆'}
@@ -742,7 +730,7 @@ function ClientModal({
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
           />
         </label>
         <label className="block">
@@ -750,7 +738,7 @@ function ClientModal({
           <input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
           />
         </label>
         <label className="block">
@@ -758,7 +746,7 @@ function ClientModal({
           <input
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
           />
         </label>
         <label className="block">
@@ -766,7 +754,7 @@ function ClientModal({
           <input
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
           />
         </label>
 
@@ -783,14 +771,14 @@ function ClientModal({
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             placeholder="vip, school, company"
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
           />
         </label>
 
         <div className="pt-2">
           <div className="mb-2 flex items-center justify-between gap-3">
             <span className="text-sm font-semibold text-slate-600">Mauritius pin location</span>
-            <span className="rounded-full bg-fuchsia-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-fuchsia-700">
+            <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-700">
               Dynamic map
             </span>
           </div>
@@ -803,7 +791,7 @@ function ClientModal({
           Cancel
         </button>
         <button
-          className="rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-600 disabled:opacity-60"
+          className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-60"
           disabled={!name.trim()}
           onClick={() =>
             onSave({
@@ -851,13 +839,13 @@ function ConfirmDeleteModal({
           value={code}
           onChange={(e) => setCode(e.target.value)}
           placeholder={required}
-          className="rounded-full border border-slate-200 px-3 py-2 text-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
+          className="rounded-full border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
         />
         <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50" onClick={onCancel}>
           Cancel
         </button>
         <button
-          className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:opacity-60"
+          className="rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50 disabled:opacity-60"
           disabled={code !== required}
           onClick={() => onConfirm(code)}
         >

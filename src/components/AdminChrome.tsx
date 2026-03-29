@@ -250,7 +250,7 @@ export default function AdminChrome({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
-  const rootClass = isDark ? "bg-slate-950 text-slate-100" : "bg-[#fbfbfb] text-[#222222]";
+  const rootClass = isDark ? "bg-slate-950 text-slate-100" : "bg-white text-[#222222]";
   const topBarClass = isDark
     ? "border-slate-800 bg-slate-950/85"
     : "border-[#ebebeb] bg-white/92 shadow-[0_10px_30px_rgba(0,0,0,0.04)]";
@@ -262,26 +262,26 @@ export default function AdminChrome({
     : "hidden shrink-0 items-center gap-2 rounded-full border border-[#ebebeb] bg-white px-3 py-1.5 text-xs text-[#6a6a6a] shadow-[0_4px_14px_rgba(0,0,0,0.04)] sm:inline-flex";
   const drawerPanelClass = isDark
     ? "border-slate-800 bg-slate-950"
-    : "border-[#ebebeb] bg-white/96 shadow-[0_24px_60px_rgba(0,0,0,0.12)] backdrop-blur-xl";
+    : "border-[#ebebeb] bg-white shadow-[0_24px_60px_rgba(0,0,0,0.12)]";
   const profileCardClass = isDark
     ? "border-slate-700 bg-slate-900"
-    : "border-[#ebebeb] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,247,247,0.98))] shadow-[0_10px_28px_rgba(0,0,0,0.06)]";
+    : "border-[#ebebeb] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.06)]";
   const subtleLabelClass = isDark ? "text-slate-500" : "text-[#8a8a8a]";
   const profileMetaClass = isDark ? "text-slate-400" : "text-[#6a6a6a]";
   const editButtonClass = (active: boolean) =>
     active
       ? isDark
         ? "border-cyan-300/60 bg-cyan-400/20 text-cyan-100"
-        : "border-[#ff385c] bg-[#ff385c] text-white shadow-[0_8px_20px_rgba(255,56,92,0.2)]"
+        : "border-[#222222] bg-[#222222] text-white shadow-[0_8px_20px_rgba(0,0,0,0.16)]"
       : isDark
         ? "border-slate-700 bg-slate-900 text-slate-200 hover:border-slate-600 hover:bg-slate-800"
         : "border-[#ebebeb] bg-white text-[#484848] hover:border-[#d7d7d7] hover:bg-[#f7f7f7]";
   const themeButtonClass = isDark
     ? "border-cyan-400/45 bg-cyan-400/15 text-cyan-100 hover:border-cyan-300/70 hover:bg-cyan-400/25"
-    : "border-[#ffd2dc] bg-[#fff5f7] text-[#d12f5f] hover:border-[#ffb8c7] hover:bg-[#ffe9ef]";
+    : "border-[#ebebeb] bg-white text-[#484848] hover:border-[#d7d7d7] hover:bg-[#f7f7f7]";
   const accessCardClass = isDark
     ? "border-slate-700 bg-slate-950/60 text-slate-300"
-    : "border-[#ebebeb] bg-[#f7f7f7] text-[#6a6a6a]";
+    : "border-[#ebebeb] bg-white text-[#6a6a6a]";
   const editRowClass = isDark
     ? "border-slate-700 bg-slate-900"
     : "border-[#ebebeb] bg-white";
@@ -290,10 +290,10 @@ export default function AdminChrome({
     : "border-[#ebebeb] text-[#6a6a6a] hover:bg-[#f7f7f7]";
   const editLabelClass = isDark
     ? "border-slate-700 bg-slate-800 text-slate-200"
-    : "border-[#ebebeb] bg-[#f7f7f7] text-[#222222]";
+    : "border-[#ebebeb] bg-white text-[#222222]";
   const navActiveClass = isDark
     ? "border-cyan-300/55 bg-cyan-400/18 text-cyan-100 shadow"
-    : "border-[#ffd2dc] bg-[#fff5f7] text-[#d12f5f] shadow-[0_10px_24px_rgba(255,56,92,0.12)]";
+    : "border-[#222222] bg-[#222222] text-white shadow-[0_10px_24px_rgba(0,0,0,0.12)]";
   const navInactiveClass = isDark
     ? "border-transparent text-slate-200 hover:border-slate-700 hover:bg-slate-800/70"
     : "border-transparent text-[#484848] hover:border-[#ebebeb] hover:bg-[#f7f7f7]";
@@ -302,7 +302,7 @@ export default function AdminChrome({
     : "admin-page-shell airbnb-admin-shell relative min-h-screen bg-transparent p-4 text-[#222222] transition-colors sm:p-6 lg:p-8";
   const logoutButtonClass = isDark
     ? "border-rose-500/45 bg-rose-500/15 text-rose-200 hover:border-rose-400/60 hover:bg-rose-500/25"
-    : "border-[#ffd2dc] bg-[#fff5f7] text-[#d12f5f] hover:border-[#ffb8c7] hover:bg-[#ffe9ef]";
+    : "border-rose-200 bg-white text-rose-700 hover:border-rose-300 hover:bg-rose-50";
 
   return (
     <div className={`min-h-screen transition-colors ${rootClass}`}>
@@ -312,39 +312,13 @@ export default function AdminChrome({
             aria-hidden
             className="pointer-events-none fixed inset-x-0 top-0 z-0 h-44 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0))]"
           />
-          <div
-            aria-hidden
-            className="pointer-events-none fixed right-[-5rem] top-0 z-0 h-72 w-72 rounded-full bg-[#ffe3ea]/85 blur-3xl"
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none fixed left-[-6rem] top-20 z-0 h-64 w-64 rounded-full bg-[#f3f4f6] blur-3xl"
-          />
         </>
       ) : null}
       <div
         className={`sticky top-0 z-40 border-b backdrop-blur-xl transition-colors ${topBarClass}`}
       >
-        <div className="relative z-10 mx-auto flex max-w-[1760px] items-center gap-4 px-4 py-4 sm:px-6 lg:px-8">
+        <div className="relative z-10 mx-auto flex max-w-[1760px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex shrink-0 items-center gap-2">
-            <div className={rolePillClass}>
-              <span className={`h-2 w-2 rounded-full ${isDark ? "bg-emerald-400" : "bg-[#ff385c]"}`} />
-              {session?.isOwner ? "Owner" : "Live"}
-            </div>
-            <button
-              type="button"
-              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-              onClick={toggleTheme}
-              className={circleButtonClass}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
-                {isDark ? (
-                  <path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0-16a.75.75 0 0 1 .75.75V4a.75.75 0 0 1-1.5 0V2.75A.75.75 0 0 1 12 2Zm0 18a.75.75 0 0 1 .75.75V22a.75.75 0 0 1-1.5 0v-1.25A.75.75 0 0 1 12 20Zm10-8a.75.75 0 0 1-.75.75H20a.75.75 0 0 1 0-1.5h1.25A.75.75 0 0 1 22 12ZM4 12a.75.75 0 0 1-.75.75H2a.75.75 0 0 1 0-1.5h1.25A.75.75 0 0 1 4 12Zm14.364 6.364a.75.75 0 0 1 1.06 1.06l-.884.884a.75.75 0 1 1-1.06-1.06l.884-.884ZM6.52 6.52a.75.75 0 0 1 1.06 0l.884.884a.75.75 0 1 1-1.06 1.06L6.52 7.58a.75.75 0 0 1 0-1.06Zm12.944 0a.75.75 0 0 1 0 1.06l-.884.884a.75.75 0 1 1-1.06-1.06l.884-.884a.75.75 0 0 1 1.06 0ZM7.58 17.404a.75.75 0 0 1 0 1.06l-.884.884a.75.75 0 1 1-1.06-1.06l.884-.884a.75.75 0 0 1 1.06 0Z" />
-                ) : (
-                  <path d="M21 12.79A9 9 0 0 1 11.21 3a.75.75 0 0 0-.95-.73A10.5 10.5 0 1 0 21.73 13.74a.75.75 0 0 0-.73-.95Z" />
-                )}
-              </svg>
-            </button>
             <button
               type="button"
               aria-label="Open menu"
@@ -368,19 +342,28 @@ export default function AdminChrome({
                 )}
               </svg>
             </button>
+            <button
+              type="button"
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              onClick={toggleTheme}
+              className={circleButtonClass}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+                {isDark ? (
+                  <path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0-16a.75.75 0 0 1 .75.75V4a.75.75 0 0 1-1.5 0V2.75A.75.75 0 0 1 12 2Zm0 18a.75.75 0 0 1 .75.75V22a.75.75 0 0 1-1.5 0v-1.25A.75.75 0 0 1 12 20Zm10-8a.75.75 0 0 1-.75.75H20a.75.75 0 0 1 0-1.5h1.25A.75.75 0 0 1 22 12ZM4 12a.75.75 0 0 1-.75.75H2a.75.75 0 0 1 0-1.5h1.25A.75.75 0 0 1 4 12Zm14.364 6.364a.75.75 0 0 1 1.06 1.06l-.884.884a.75.75 0 1 1-1.06-1.06l.884-.884ZM6.52 6.52a.75.75 0 0 1 1.06 0l.884.884a.75.75 0 1 1-1.06 1.06L6.52 7.58a.75.75 0 0 1 0-1.06Zm12.944 0a.75.75 0 0 1 0 1.06l-.884.884a.75.75 0 1 1-1.06-1.06l.884-.884a.75.75 0 0 1 1.06 0ZM7.58 17.404a.75.75 0 0 1 0 1.06l-.884.884a.75.75 0 1 1-1.06-1.06l.884-.884a.75.75 0 0 1 1.06 0Z" />
+                ) : (
+                  <path d="M21 12.79A9 9 0 0 1 11.21 3a.75.75 0 0 0-.95-.73A10.5 10.5 0 1 0 21.73 13.74a.75.75 0 0 0-.73-.95Z" />
+                )}
+              </svg>
+            </button>
+            <div className={rolePillClass}>
+              <span className={`h-2 w-2 rounded-full ${isDark ? "bg-emerald-400" : "bg-[#ff385c]"}`} />
+              {session?.isOwner ? "Owner" : "Live"}
+            </div>
           </div>
 
-          <div className="flex min-w-0 items-center gap-3">
-            <div
-              className={`flex h-12 w-12 items-center justify-center rounded-full text-sm font-semibold ${
-                isDark
-                  ? "border border-slate-700 bg-slate-900 text-slate-100"
-                  : "bg-[linear-gradient(135deg,#ff385c,#e61e4d)] text-white shadow-[0_12px_28px_rgba(255,56,92,0.24)]"
-              }`}
-            >
-              MO
-            </div>
-            <div className="min-w-0">
+          <div className="ml-auto flex min-w-0 items-center justify-end gap-3">
+            <div className="min-w-0 text-right">
               <div className={`text-[11px] font-semibold uppercase tracking-[0.28em] ${subtleLabelClass}`}>
                 MO Admin
               </div>
@@ -390,6 +373,15 @@ export default function AdminChrome({
               <div className={`hidden truncate text-xs sm:block ${profileMetaClass}`}>
                 Clean internal workspace
               </div>
+            </div>
+            <div
+              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                isDark
+                  ? "border border-slate-700 bg-slate-900 text-slate-100"
+                  : "bg-[#222222] text-white shadow-[0_12px_28px_rgba(0,0,0,0.14)]"
+              }`}
+            >
+              MO
             </div>
           </div>
         </div>
@@ -409,15 +401,6 @@ export default function AdminChrome({
             <div
               className={`relative overflow-hidden rounded-[28px] border p-4 transition-colors ${profileCardClass}`}
             >
-              <div
-                aria-hidden
-                className={`absolute inset-0 ${
-                  isDark
-                    ? "bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.12),transparent_60%)]"
-                    : "bg-[radial-gradient(circle_at_top_right,rgba(255,56,92,0.1),transparent_60%)]"
-                }`}
-              />
-
               <div className="relative flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className={`text-[11px] font-semibold uppercase tracking-[0.28em] ${profileMetaClass}`}>
@@ -635,14 +618,6 @@ export default function AdminChrome({
               <div
                 aria-hidden
                 className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,0.92))]"
-              />
-              <div
-                aria-hidden
-                className="pointer-events-none absolute right-[-5rem] top-20 h-72 w-72 rounded-full bg-[#ffe8ee] blur-3xl"
-              />
-              <div
-                aria-hidden
-                className="pointer-events-none absolute left-[-4rem] top-80 h-64 w-64 rounded-full bg-[#f3f4f6] blur-3xl"
               />
             </>
           ) : null}
