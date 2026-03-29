@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Database,
   HardDrive,
+  KeyRound,
   Mail,
   PencilLine,
   Plus,
@@ -28,6 +29,8 @@ import {
 type AdminUserSummary = {
   email: string;
   displayName: string;
+  authProvider: "firebase" | "legacy";
+  firebaseUid: string | null;
   allowedPages: AdminPagePath[];
   isActive: boolean;
   createdAt: number;
@@ -173,6 +176,9 @@ export default function SettingsPage() {
   const [userSaved, setUserSaved] = useState(false);
   const [editingUserEmail, setEditingUserEmail] = useState<string | null>(null);
   const [userDraft, setUserDraft] = useState(EMPTY_USER_DRAFT);
+  const [resettingUserEmail, setResettingUserEmail] = useState<string | null>(null);
+  const [resetNotice, setResetNotice] = useState<string | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
   const [firebaseUsage, setFirebaseUsage] = useState<UsageSnapshot | null>(null);
   const [firebaseUsageLoading, setFirebaseUsageLoading] = useState(true);
   const [firebaseUsageError, setFirebaseUsageError] = useState<string | null>(null);
@@ -379,9 +385,19 @@ export default function SettingsPage() {
     [users]
   );
 
+  const firebaseUsers = useMemo(
+    () => users.filter((user) => user.authProvider === "firebase"),
+    [users]
+  );
+
   const totalGrantedPages = useMemo(
     () => users.reduce((count, user) => count + user.allowedPages.length, 0),
     [users]
+  );
+
+  const editingUser = useMemo(
+    () => users.find((user) => user.email === editingUserEmail) ?? null,
+    [editingUserEmail, users]
   );
 
   const addNotificationRecipients = () => {
@@ -498,6 +514,8 @@ export default function SettingsPage() {
     });
     setUserError(null);
     setUserSaved(false);
+    setResetError(null);
+    setResetNotice(null);
   };
 
   const saveUser = async () => {
@@ -513,6 +531,15 @@ export default function SettingsPage() {
     }
 
     if (!editingUserEmail && userDraft.password.trim().length < 8) {
+      setUserError("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (
+      editingUserEmail &&
+      userDraft.password.trim() &&
+      userDraft.password.trim().length < 8
+    ) {
       setUserError("Password must be at least 8 characters.");
       return;
     }
@@ -561,6 +588,8 @@ export default function SettingsPage() {
         return [...others, user].sort((left, right) => left.createdAt - right.createdAt);
       });
       setUserSaved(true);
+      setResetError(null);
+      setResetNotice(null);
       resetUserDraft({ preserveSaved: true });
     } catch (error) {
       setUserError(
@@ -571,50 +600,87 @@ export default function SettingsPage() {
     }
   };
 
-  const panelClass = "rounded-[32px] border border-slate-200/70 bg-white/90 shadow-sm backdrop-blur";
+  const sendResetLink = async (user: AdminUserSummary) => {
+    setResettingUserEmail(user.email);
+    setResetError(null);
+    setResetNotice(null);
+
+    try {
+      const res = await fetch("/api/admin/settings/users/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(
+          typeof data?.error === "string"
+            ? data.error
+            : "Failed to send password reset email."
+        );
+      }
+
+      const nextUser = data?.user as AdminUserSummary | undefined;
+      if (nextUser && typeof nextUser.email === "string") {
+        setUsers((current) =>
+          current
+            .map((entry) => (entry.email === nextUser.email ? nextUser : entry))
+            .sort((left, right) => left.createdAt - right.createdAt)
+        );
+      }
+
+      setResetNotice(
+        user.authProvider === "legacy"
+          ? `Reset link sent to ${user.email}. This admin is now using Firebase Auth.`
+          : `Reset link sent to ${user.email}.`
+      );
+      window.setTimeout(() => setResetNotice(null), 2400);
+    } catch (error) {
+      setResetError(
+        error instanceof Error
+          ? error.message
+          : "Failed to send password reset email."
+      );
+    } finally {
+      setResettingUserEmail(null);
+    }
+  };
+
+  const panelClass = "rounded-[32px] border border-slate-200 bg-white shadow-sm";
 
   return (
-    <main className="relative min-h-screen bg-[#F5F5F7] text-[#1a1a1a]">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-28 right-[-9rem] h-80 w-80 rounded-full bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.18),transparent_72%)] blur-3xl"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-[-10rem] top-60 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_top,rgba(15,23,42,0.12),transparent_72%)] blur-3xl"
-      />
-
+    <main className="relative min-h-screen bg-white text-[#1a1a1a]">
       <div className="relative mx-auto flex max-w-7xl flex-col gap-8 px-4 py-10 sm:px-6">
         <header className={`${panelClass} relative overflow-hidden p-8`}>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_60%)]" />
           <div className="relative flex flex-wrap items-start justify-between gap-6">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-700">
                 <ShieldCheck className="h-3.5 w-3.5" />
-                Admin Settings
+                Workspace Control
               </div>
               <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">
-                Team access and notification routing
+                Workspace settings
               </h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-                Control who receives quotation emails and which admin pages each employee can use.
-                Owner access stays unrestricted.
+                Use this page as the main control room for storage, quotation routing,
+                Firebase admin authentication, and page access across the MO T-SHIRT workspace.
               </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Recipients</div>
+                <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Notification Routes</div>
                 <div className="mt-2 text-2xl font-semibold text-slate-900">{notificationRecipients.length}</div>
                 <div className="text-xs text-slate-500">Quotation inboxes</div>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Users</div>
+                <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Admin Users</div>
                 <div className="mt-2 text-2xl font-semibold text-slate-900">{users.length}</div>
-                <div className="text-xs text-slate-500">Managed admin accounts</div>
+                <div className="text-xs text-slate-500">{firebaseUsers.length} using Firebase Auth</div>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Access Grants</div>
+                <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Page Grants</div>
                 <div className="mt-2 text-2xl font-semibold text-slate-900">{totalGrantedPages}</div>
                 <div className="text-xs text-slate-500">Pages assigned across staff</div>
               </div>
@@ -661,7 +727,7 @@ export default function SettingsPage() {
         <section className={`${panelClass} overflow-hidden`}>
           <div className="grid lg:grid-cols-[minmax(0,1.2fr)_360px]">
             <div className="p-6 sm:p-8 lg:border-r lg:border-slate-200/70">
-              <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700">
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-700">
                 <Mail className="h-3.5 w-3.5" />
                 Website Quotations
               </div>
@@ -779,7 +845,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <aside className="bg-[linear-gradient(180deg,rgba(248,250,252,0.95),rgba(241,245,249,0.88))] p-6 sm:p-8">
+            <aside className="bg-slate-50/70 p-6 sm:p-8">
               <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
                   Delivery Summary
@@ -826,15 +892,16 @@ export default function SettingsPage() {
         <section className={`${panelClass} p-6 sm:p-8`}>
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-700">
                 <Users className="h-3.5 w-3.5" />
-                Team Access
+                Admin Access
               </div>
               <h2 className="mt-4 text-xl font-semibold text-slate-900">
-                Create and manage admin users
+                Admin authentication and access
               </h2>
               <p className="mt-2 max-w-3xl text-sm text-slate-600">
-                Create employee accounts, set their passwords, and choose exactly which admin pages they can access.
+                Create Firebase-backed admin accounts, send password reset links,
+                and choose exactly which admin pages each team member can use.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -844,9 +911,9 @@ export default function SettingsPage() {
                 <div className="text-xs text-slate-500">Accounts created</div>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Active users</div>
-                <div className="mt-2 text-2xl font-semibold text-slate-900">{activeUsers.length}</div>
-                <div className="text-xs text-slate-500">Can sign in now</div>
+                <div className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Firebase auth</div>
+                <div className="mt-2 text-2xl font-semibold text-slate-900">{firebaseUsers.length}</div>
+                <div className="text-xs text-slate-500">{activeUsers.length} active right now</div>
               </div>
             </div>
           </div>
@@ -859,7 +926,7 @@ export default function SettingsPage() {
                     {editingUserEmail ? "Edit User" : "Create User"}
                   </div>
                   <div className="mt-1 text-lg font-semibold text-slate-900">
-                    {editingUserEmail ? "Update employee access" : "New team account"}
+                    {editingUserEmail ? "Update admin access" : "New admin account"}
                   </div>
                 </div>
                 {editingUserEmail ? (
@@ -910,9 +977,23 @@ export default function SettingsPage() {
                       setUserError(null);
                       setUserSaved(false);
                     }}
-                    placeholder={editingUserEmail ? "Leave blank to keep current password" : "Minimum 8 characters"}
-                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                    disabled={editingUser?.authProvider === "firebase"}
+                    placeholder={
+                      editingUser?.authProvider === "firebase"
+                        ? "Use the reset link action for Firebase users"
+                        : editingUserEmail
+                          ? "Leave blank to keep current login method"
+                          : "Minimum 8 characters"
+                    }
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
                   />
+                  <span className="text-[11px] font-normal leading-5 text-slate-500">
+                    {editingUser?.authProvider === "firebase"
+                      ? "This user already signs in with Firebase Auth. Send a reset link below if they need a new password."
+                      : editingUser?.authProvider === "legacy"
+                        ? "Enter a new password to move this legacy account onto Firebase Auth, or send a reset link from the user list."
+                        : "This password creates the Firebase sign-in for the new admin account."}
+                  </span>
                 </label>
               </div>
 
@@ -997,9 +1078,22 @@ export default function SettingsPage() {
               ) : null}
 
               {userSaved ? (
-                <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
                   <CheckCircle2 className="h-4 w-4" />
                   User saved
+                </div>
+              ) : null}
+
+              {resetError ? (
+                <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {resetError}
+                </div>
+              ) : null}
+
+              {resetNotice ? (
+                <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
+                  <KeyRound className="h-4 w-4" />
+                  {resetNotice}
                 </div>
               ) : null}
 
@@ -1026,10 +1120,10 @@ export default function SettingsPage() {
             <aside className="space-y-4">
               <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-                  Managed Users
+                  Authentication Directory
                 </div>
                 <div className="mt-3 text-sm text-slate-600">
-                  Employees sign in with their email and password. Owner access remains full.
+                  This list is your admin user directory. Password resets are sent through Firebase Auth while page access stays controlled here.
                 </div>
               </div>
 
@@ -1051,16 +1145,27 @@ export default function SettingsPage() {
                           <div className="truncate text-sm text-slate-500">{user.email}</div>
                         </div>
                       </div>
-                      <span
-                        className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
-                          user.isActive
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                            : "border-slate-200 bg-slate-100 text-slate-500"
-                        }`}
-                      >
-                        {user.isActive ? "Active" : "Paused"}
-                      </span>
+                      <div className="flex flex-col items-end gap-2">
+                        <span
+                          className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
+                            user.isActive
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              : "border-slate-200 bg-slate-100 text-slate-500"
+                          }`}
+                        >
+                          {user.isActive ? "Active" : "Paused"}
+                        </span>
+                        <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                          {user.authProvider === "firebase" ? "Firebase Auth" : "Legacy Auth"}
+                        </span>
+                      </div>
                     </div>
+
+                    {user.authProvider === "legacy" ? (
+                      <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                        This account still uses the legacy admin password system. Send a reset link to move it to Firebase Auth.
+                      </div>
+                    ) : null}
 
                     <div className="mt-4 flex flex-wrap gap-2">
                       {user.allowedPages.slice(0, 4).map((pagePath) => {
@@ -1081,17 +1186,34 @@ export default function SettingsPage() {
                       ) : null}
                     </div>
 
-                    <div className="mt-4 flex items-center justify-between gap-3 text-xs text-slate-500">
-                      <div>
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+                      <div className="flex flex-col gap-1">
                         Updated {formatDateTime(user.updatedAt)}
+                        <span>
+                          Created {formatDateTime(user.createdAt)}
+                        </span>
                       </div>
-                      <button
-                        onClick={() => startEditingUser(user)}
-                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
-                      >
-                        <PencilLine className="h-3.5 w-3.5" />
-                        Edit access
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => sendResetLink(user)}
+                          disabled={resettingUserEmail === user.email}
+                          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                        >
+                          <KeyRound className="h-3.5 w-3.5" />
+                          {resettingUserEmail === user.email
+                            ? "Sending..."
+                            : user.authProvider === "legacy"
+                              ? "Reset + Migrate"
+                              : "Send reset link"}
+                        </button>
+                        <button
+                          onClick={() => startEditingUser(user)}
+                          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                        >
+                          <PencilLine className="h-3.5 w-3.5" />
+                          Edit access
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))
@@ -1101,10 +1223,10 @@ export default function SettingsPage() {
                     <Users className="h-5 w-5" />
                   </div>
                   <div className="mt-4 text-base font-semibold text-slate-700">
-                    No employee accounts yet
+                    No admin accounts yet
                   </div>
                   <p className="mt-2 text-sm text-slate-500">
-                    Create the first managed admin user to give a team member limited access.
+                    Create the first managed admin user to give a team member controlled workspace access.
                   </p>
                 </div>
               ) : null}

@@ -181,7 +181,7 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
   {
     path: "/admin/settings",
     label: "Settings",
-    description: "Notification routing and admin team access.",
+    description: "Workspace controls for storage, admin access, and routing.",
     group: "Administration",
   },
 ];

@@ -13,6 +13,12 @@ import {
   normalizeAdminAllowedPages,
   type AdminPagePath,
 } from "@/lib/admin-access";
+import {
+  createFirebaseEmailPasswordUser,
+  isFirebaseAuthAdminError,
+  sendFirebasePasswordResetEmail,
+  verifyFirebaseEmailPassword,
+} from "@/lib/firebase-auth-admin";
 
 const ADMIN_USERS_COLLECTION = "adminUsers";
 const PASSWORD_ITERATIONS = 210_000;
@@ -20,11 +26,15 @@ const PASSWORD_KEY_LENGTH_BITS = 256;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const encoder = new TextEncoder();
 
+export type AdminAuthProvider = "firebase" | "legacy";
+
 type AdminUserRecord = {
   email: string;
   displayName: string;
   passwordHash: string;
   passwordSalt: string;
+  authProvider: AdminAuthProvider;
+  firebaseUid: string | null;
   allowedPages: AdminPagePath[];
   isActive: boolean;
   createdAt: number;
@@ -34,6 +44,8 @@ type AdminUserRecord = {
 export type AdminUserSummary = {
   email: string;
   displayName: string;
+  authProvider: AdminAuthProvider;
+  firebaseUid: string | null;
   allowedPages: AdminPagePath[];
   isActive: boolean;
   createdAt: number;
@@ -75,12 +87,6 @@ export function isValidAdminUserEmail(value: string) {
   return EMAIL_RE.test(normalizeAdminUserEmail(value));
 }
 
-function createSalt() {
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  return toBase64Url(bytes);
-}
-
 async function derivePasswordHash(password: string, salt: string) {
   const pepper = getAdminPasswordPepper();
   if (!pepper) {
@@ -109,10 +115,48 @@ async function derivePasswordHash(password: string, salt: string) {
   return toBase64Url(derivedBits);
 }
 
+function resolveAuthProvider(record: Partial<AdminUserRecord>): AdminAuthProvider {
+  if (record.authProvider === "firebase") return "firebase";
+  if (typeof record.firebaseUid === "string" && record.firebaseUid.trim()) {
+    return "firebase";
+  }
+  return "legacy";
+}
+
+function normalizeFirebaseUid(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function normalizeRecord(
+  record: Partial<AdminUserRecord>,
+  fallbackEmail?: string
+): AdminUserRecord | null {
+  const emailSource =
+    typeof record.email === "string" ? record.email : fallbackEmail ?? "";
+  const email = normalizeAdminUserEmail(emailSource);
+  if (!isValidAdminUserEmail(email)) return null;
+
+  return {
+    email,
+    displayName:
+      typeof record.displayName === "string" ? sanitizeDisplayName(record.displayName) : "Admin User",
+    passwordHash: typeof record.passwordHash === "string" ? record.passwordHash : "",
+    passwordSalt: typeof record.passwordSalt === "string" ? record.passwordSalt : "",
+    authProvider: resolveAuthProvider(record),
+    firebaseUid: normalizeFirebaseUid(record.firebaseUid),
+    allowedPages: sanitizeAllowedPages(record.allowedPages),
+    isActive: record.isActive !== false,
+    createdAt: typeof record.createdAt === "number" ? record.createdAt : 0,
+    updatedAt: typeof record.updatedAt === "number" ? record.updatedAt : 0,
+  };
+}
+
 function toSummary(record: AdminUserRecord) {
   return {
     email: record.email,
     displayName: record.displayName,
+    authProvider: record.authProvider,
+    firebaseUid: record.firebaseUid,
     allowedPages: record.allowedPages,
     isActive: record.isActive,
     createdAt: record.createdAt,
@@ -134,23 +178,60 @@ function sanitizeAllowedPages(value: unknown): AdminPagePath[] {
   return normalized.length ? normalized : ["/admin" as AdminPagePath];
 }
 
+function createTemporaryFirebasePassword() {
+  return `${crypto.randomUUID()}Aa1!`;
+}
+
+async function attachFirebaseAuthIdentity(input: {
+  email: string;
+  displayName: string;
+  password: string;
+}) {
+  try {
+    const created = await createFirebaseEmailPasswordUser({
+      email: input.email,
+      password: input.password,
+      displayName: input.displayName,
+    });
+
+    return {
+      authProvider: "firebase" as const,
+      firebaseUid: created.localId,
+    };
+  } catch (error) {
+    if (!isFirebaseAuthAdminError(error, "EMAIL_EXISTS")) {
+      throw error;
+    }
+
+    const existing = await verifyFirebaseEmailPassword({
+      email: input.email,
+      password: input.password,
+    }).catch((verifyError) => {
+      if (isFirebaseAuthAdminError(verifyError)) {
+        throw new Error(
+          "A Firebase Auth account already exists for that email. Use its current password or send a reset link from settings."
+        );
+      }
+
+      throw verifyError;
+    });
+
+    return {
+      authProvider: "firebase" as const,
+      firebaseUid: existing.localId,
+    };
+  }
+}
+
 export async function listAdminUsers() {
   const snap = await getDocs(query(collection(db, ADMIN_USERS_COLLECTION), orderBy("createdAt", "asc")));
   return snap.docs
     .map((docSnap) => {
-      const data = docSnap.data() as Partial<AdminUserRecord>;
-      if (typeof data.email !== "string") return null;
-
-      return toSummary({
-        email: data.email,
-        displayName: typeof data.displayName === "string" ? data.displayName : "Admin User",
-        passwordHash: typeof data.passwordHash === "string" ? data.passwordHash : "",
-        passwordSalt: typeof data.passwordSalt === "string" ? data.passwordSalt : "",
-        allowedPages: sanitizeAllowedPages(data.allowedPages),
-        isActive: data.isActive !== false,
-        createdAt: typeof data.createdAt === "number" ? data.createdAt : 0,
-        updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : 0,
-      });
+      const record = normalizeRecord(
+        docSnap.data() as Partial<AdminUserRecord>,
+        docSnap.id
+      );
+      return record ? toSummary(record) : null;
     })
     .filter((entry): entry is AdminUserSummary => Boolean(entry));
 }
@@ -176,16 +257,22 @@ export async function createAdminUser(input: {
     throw new Error("An admin user with that email already exists.");
   }
 
-  const passwordSalt = createSalt();
-  const passwordHash = await derivePasswordHash(input.password, passwordSalt);
   const now = Date.now();
   const allowedPages = sanitizeAllowedPages(input.allowedPages);
+  const displayName = sanitizeDisplayName(input.displayName);
+  const firebaseIdentity = await attachFirebaseAuthIdentity({
+    email,
+    displayName,
+    password: input.password,
+  });
 
   await setDoc(ref, {
     email,
-    displayName: sanitizeDisplayName(input.displayName),
-    passwordHash,
-    passwordSalt,
+    displayName,
+    passwordHash: "",
+    passwordSalt: "",
+    authProvider: firebaseIdentity.authProvider,
+    firebaseUid: firebaseIdentity.firebaseUid,
     allowedPages,
     isActive: true,
     createdAt: now,
@@ -194,7 +281,9 @@ export async function createAdminUser(input: {
 
   return {
     email,
-    displayName: sanitizeDisplayName(input.displayName),
+    displayName,
+    authProvider: firebaseIdentity.authProvider,
+    firebaseUid: firebaseIdentity.firebaseUid,
     allowedPages,
     isActive: true,
     createdAt: now,
@@ -216,26 +305,55 @@ export async function updateAdminUser(input: {
     throw new Error("Admin user not found.");
   }
 
-  const existing = snap.data() as AdminUserRecord;
+  const existing = normalizeRecord(
+    snap.data() as Partial<AdminUserRecord>,
+    email
+  );
+  if (!existing) {
+    throw new Error("Admin user record is invalid.");
+  }
+
   const nextPassword = typeof input.password === "string" ? input.password.trim() : "";
   if (nextPassword && nextPassword.length < 8) {
     throw new Error("Password must be at least 8 characters.");
   }
 
-  const passwordSalt = nextPassword ? createSalt() : existing.passwordSalt;
-  const passwordHash = nextPassword
-    ? await derivePasswordHash(nextPassword, passwordSalt)
-    : existing.passwordHash;
   const updatedAt = Date.now();
+  const nextDisplayName =
+    typeof input.displayName === "string"
+      ? sanitizeDisplayName(input.displayName)
+      : sanitizeDisplayName(existing.displayName);
+  const authProvider = resolveAuthProvider(existing);
+  let nextAuthProvider: AdminAuthProvider = authProvider;
+  let nextFirebaseUid = existing.firebaseUid;
+  let passwordHash = existing.passwordHash;
+  let passwordSalt = existing.passwordSalt;
+
+  if (authProvider === "firebase") {
+    if (nextPassword) {
+      throw new Error(
+        "Use the password reset action for Firebase-managed users."
+      );
+    }
+  } else if (nextPassword) {
+    const firebaseIdentity = await attachFirebaseAuthIdentity({
+      email,
+      displayName: nextDisplayName,
+      password: nextPassword,
+    });
+    nextAuthProvider = firebaseIdentity.authProvider;
+    nextFirebaseUid = firebaseIdentity.firebaseUid;
+    passwordHash = "";
+    passwordSalt = "";
+  }
 
   const nextRecord: AdminUserRecord = {
     email,
-    displayName:
-      typeof input.displayName === "string"
-        ? sanitizeDisplayName(input.displayName)
-        : sanitizeDisplayName(existing.displayName),
+    displayName: nextDisplayName,
     passwordHash,
     passwordSalt,
+    authProvider: nextAuthProvider,
+    firebaseUid: nextFirebaseUid,
     allowedPages:
       input.allowedPages !== undefined
         ? sanitizeAllowedPages(input.allowedPages)
@@ -257,23 +375,87 @@ export async function verifyManagedAdminCredentials(emailInput: string, password
   const snap = await getDoc(getUserRef(email));
   if (!snap.exists()) return null;
 
-  const data = snap.data() as Partial<AdminUserRecord>;
-  if (data.isActive === false) return null;
-  if (typeof data.passwordHash !== "string" || typeof data.passwordSalt !== "string") {
-    return null;
+  const record = normalizeRecord(
+    snap.data() as Partial<AdminUserRecord>,
+    email
+  );
+  if (!record || !record.isActive) return null;
+
+  if (resolveAuthProvider(record) === "firebase") {
+    try {
+      await verifyFirebaseEmailPassword({
+        email,
+        password,
+      });
+      return toSummary(record);
+    } catch (error) {
+      if (isFirebaseAuthAdminError(error)) {
+        return null;
+      }
+      throw error;
+    }
   }
 
-  const actualHash = await derivePasswordHash(password, data.passwordSalt);
-  if (!constantTimeEqual(actualHash, data.passwordHash)) return null;
+  if (!record.passwordHash || !record.passwordSalt) return null;
 
-  return {
-    email,
-    displayName: typeof data.displayName === "string" ? data.displayName : email,
-    allowedPages: sanitizeAllowedPages(data.allowedPages),
-    isActive: true,
-    createdAt: typeof data.createdAt === "number" ? data.createdAt : Date.now(),
-    updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : Date.now(),
-  } satisfies AdminUserSummary;
+  const actualHash = await derivePasswordHash(password, record.passwordSalt);
+  if (!constantTimeEqual(actualHash, record.passwordHash)) return null;
+
+  return toSummary(record);
+}
+
+export async function sendAdminUserPasswordReset(emailInput: string) {
+  const email = normalizeAdminUserEmail(emailInput);
+  if (!isValidAdminUserEmail(email)) {
+    throw new Error("Enter a valid email address.");
+  }
+
+  const ref = getUserRef(email);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    throw new Error("Admin user not found.");
+  }
+
+  const existing = normalizeRecord(
+    snap.data() as Partial<AdminUserRecord>,
+    email
+  );
+  if (!existing) {
+    throw new Error("Admin user record is invalid.");
+  }
+
+  let nextRecord = existing;
+
+  if (resolveAuthProvider(existing) === "legacy") {
+    let firebaseUid = existing.firebaseUid;
+
+    try {
+      const created = await createFirebaseEmailPasswordUser({
+        email,
+        password: createTemporaryFirebasePassword(),
+        displayName: existing.displayName,
+      });
+      firebaseUid = created.localId;
+    } catch (error) {
+      if (!isFirebaseAuthAdminError(error, "EMAIL_EXISTS")) {
+        throw error;
+      }
+    }
+
+    nextRecord = {
+      ...existing,
+      authProvider: "firebase",
+      firebaseUid,
+      passwordHash: "",
+      passwordSalt: "",
+      updatedAt: Date.now(),
+    };
+
+    await setDoc(ref, nextRecord);
+  }
+
+  await sendFirebasePasswordResetEmail(email);
+  return toSummary(nextRecord);
 }
 
 export function getOwnerAllowedPages() {
