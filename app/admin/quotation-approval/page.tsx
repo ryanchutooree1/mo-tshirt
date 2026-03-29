@@ -2124,7 +2124,7 @@ export default function QuotationApprovalPage() {
                             Created
                           </div>
                           <div className="mt-1 text-sm font-semibold text-[#222222]">
-                            {selected.createdAt ? format(selected.createdAt, "dd MMM yyyy") : "—"}
+                            {selected.createdAt ? format(selected.createdAt, "dd MMM yyyy, HH:mm") : "—"}
                           </div>
                         </div>
                         <div className="rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] px-4 py-3">
@@ -2132,7 +2132,7 @@ export default function QuotationApprovalPage() {
                             Updated
                           </div>
                           <div className="mt-1 text-sm font-semibold text-[#222222]">
-                            {selected.updatedAt ? format(selected.updatedAt, "dd MMM yyyy") : "—"}
+                            {selected.updatedAt ? format(selected.updatedAt, "dd MMM yyyy, HH:mm") : "—"}
                           </div>
                         </div>
                         {safeNumber(selectedDesignBrief?.estimatedTotal, 0) > 0 ? (
