@@ -817,7 +817,10 @@ function OrdersPageInner() {
 
   // helpers
   function currency(n: number) {
-    return `Rs ${n.toFixed(2)}`;
+    return `Rs ${Number(n || 0).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
   }
 
   async function confirmPassword(): Promise<boolean> {

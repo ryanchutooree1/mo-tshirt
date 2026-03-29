@@ -258,8 +258,8 @@ export default function AdminChrome({
     ? "inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-slate-100 transition hover:border-slate-600 hover:bg-slate-800"
     : "inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#ebebeb] bg-white text-[#222222] shadow-[0_4px_14px_rgba(0,0,0,0.04)] transition hover:border-[#d7d7d7] hover:bg-[#f7f7f7] hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)]";
   const rolePillClass = isDark
-    ? "hidden translate-x-2 items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-slate-300 sm:inline-flex"
-    : "hidden translate-x-2 items-center gap-2 rounded-full border border-[#ebebeb] bg-white px-3 py-1.5 text-xs text-[#6a6a6a] shadow-[0_4px_14px_rgba(0,0,0,0.04)] sm:inline-flex";
+    ? "hidden shrink-0 items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-slate-300 sm:inline-flex"
+    : "hidden shrink-0 items-center gap-2 rounded-full border border-[#ebebeb] bg-white px-3 py-1.5 text-xs text-[#6a6a6a] shadow-[0_4px_14px_rgba(0,0,0,0.04)] sm:inline-flex";
   const drawerPanelClass = isDark
     ? "border-slate-800 bg-slate-950"
     : "border-[#ebebeb] bg-white/96 shadow-[0_24px_60px_rgba(0,0,0,0.12)] backdrop-blur-xl";
@@ -347,13 +347,13 @@ export default function AdminChrome({
                 Clean internal workspace
               </div>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2">
             <div className={rolePillClass}>
               <span className={`h-2 w-2 rounded-full ${isDark ? "bg-emerald-400" : "bg-[#ff385c]"}`} />
               {session?.isOwner ? "Owner" : "Live"}
             </div>
+          </div>
+
+          <div className="flex items-center gap-2">
             <button
               type="button"
               aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}

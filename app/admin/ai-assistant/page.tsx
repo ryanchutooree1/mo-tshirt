@@ -50,11 +50,11 @@ const LOGO_UPLOAD_ACCEPT = ".png,.jpg,.jpeg,.pdf,.ai,.eps,.svg";
 const MAX_LOGO_UPLOAD_BYTES = 10 * 1024 * 1024;
 const FALLBACK_UPLOAD_CHUNK_SIZE = 700_000;
 const GALAXY_PANEL_CLASS =
-  "rounded-[1.8rem] border border-white/10 bg-[linear-gradient(180deg,rgba(6,10,24,0.9),rgba(10,17,39,0.82))] p-5 shadow-[0_24px_64px_rgba(3,6,20,0.45)] backdrop-blur-xl";
+  "rounded-[1.8rem] border border-slate-200 bg-white p-5 shadow-[0_20px_48px_rgba(15,23,42,0.08)]";
 const GALAXY_SUBPANEL_CLASS =
-  "rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))]";
+  "rounded-2xl border border-slate-200 bg-white";
 const GALAXY_INPUT_CLASS =
-  "w-full rounded-2xl border border-white/10 bg-[rgba(8,11,26,0.88)] px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-fuchsia-400/60 focus:ring-4 focus:ring-fuchsia-500/15";
+  "w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:ring-4 focus:ring-slate-100";
 
 function generateSessionId() {
   return `admin-test-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -215,12 +215,12 @@ function formatSizeBreakdown(
 
 function leadStatusClass(status: string) {
   if (status === "approved") {
-    return "border-emerald-400/25 bg-emerald-400/10 text-emerald-200";
+    return "border-emerald-200 bg-white text-emerald-700";
   }
   if (status === "rejected") {
-    return "border-rose-400/25 bg-rose-400/10 text-rose-200";
+    return "border-rose-200 bg-white text-rose-700";
   }
-  return "border-amber-400/25 bg-amber-400/10 text-amber-200";
+  return "border-amber-200 bg-white text-amber-700";
 }
 
 async function readJson<T>(response: Response) {
@@ -241,10 +241,10 @@ function MiniStat({
   sub: string;
 }) {
   return (
-    <div className="rounded-[1.35rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-4 shadow-[0_18px_34px_rgba(2,6,23,0.26)] backdrop-blur">
+    <div className="rounded-[1.35rem] border border-slate-200 bg-white p-4 shadow-[0_14px_32px_rgba(15,23,42,0.06)]">
       <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-slate-400">{label}</p>
-      <p className="mt-3 text-[2rem] font-semibold leading-none text-slate-50">{value}</p>
-      <p className="mt-2 text-sm leading-6 text-slate-300">{sub}</p>
+      <p className="mt-3 text-[2rem] font-semibold leading-none text-slate-900">{value}</p>
+      <p className="mt-2 text-sm leading-6 text-slate-600">{sub}</p>
     </div>
   );
 }
@@ -262,30 +262,30 @@ function HeroStat({
 }) {
   const topEdgeClass =
     accent === "amber"
-      ? "from-fuchsia-300/80 via-fuchsia-200/30 to-white/0"
+      ? "from-slate-300 via-slate-200 to-white"
       : accent === "emerald"
-        ? "from-indigo-300/80 via-violet-200/30 to-white/0"
-        : "from-cyan-200/80 via-cyan-100/30 to-white/0";
+        ? "from-slate-300 via-slate-200 to-white"
+        : "from-slate-300 via-slate-200 to-white";
 
   const labelClass =
     accent === "amber"
-      ? "text-fuchsia-100/85"
+      ? "text-slate-500"
       : accent === "emerald"
-        ? "text-indigo-100/85"
-        : "text-cyan-100/85";
+        ? "text-slate-500"
+        : "text-slate-500";
 
   const subClass =
     accent === "amber"
-      ? "text-fuchsia-50/82"
+      ? "text-slate-600"
       : accent === "emerald"
-        ? "text-indigo-50/82"
-        : "text-slate-200";
+        ? "text-slate-600"
+        : "text-slate-600";
 
   return (
-    <div className="relative overflow-hidden rounded-[1.6rem] border border-white/12 bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.03))] p-5 shadow-[0_20px_52px_rgba(2,6,23,0.34)] backdrop-blur-md">
+    <div className="relative overflow-hidden rounded-[1.6rem] border border-slate-200 bg-white p-5 shadow-[0_16px_36px_rgba(15,23,42,0.06)]">
       <div aria-hidden className={`absolute inset-x-0 top-0 h-px bg-gradient-to-r ${topEdgeClass}`} />
       <p className={`text-[11px] font-semibold uppercase tracking-[0.32em] ${labelClass}`}>{label}</p>
-      <p className="mt-5 text-4xl font-semibold leading-none text-white">{value}</p>
+      <p className="mt-5 text-4xl font-semibold leading-none text-slate-900">{value}</p>
       <p className={`mt-3 max-w-[16rem] text-sm leading-6 ${subClass}`}>{sub}</p>
     </div>
   );
@@ -606,7 +606,7 @@ export default function AdminAiAssistantPage() {
   const logoPending = session.lead.logoPending;
   const pendingLogoSize = pendingLogoFile ? formatAttachmentSize(pendingLogoFile.size) : null;
   const assistantBubbleClass =
-    "max-w-[85%] rounded-3xl border border-cyan-300/25 bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(14,31,55,0.84))] px-4 py-3 text-sm text-cyan-50 shadow-[0_18px_36px_rgba(8,15,35,0.34)] backdrop-blur";
+    "max-w-[85%] rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-[0_12px_28px_rgba(15,23,42,0.06)]";
   const orderedMessages = [...session.messages].sort((left, right) => {
     const leftTime = left.createdAt ? Date.parse(left.createdAt) : 0;
     const rightTime = right.createdAt ? Date.parse(right.createdAt) : 0;
@@ -658,12 +658,12 @@ export default function AdminAiAssistantPage() {
 
     return (
       <div data-thread-item className={assistantBubbleClass}>
-        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-200">
+        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
           <CheckCircle2 className="h-3.5 w-3.5" />
           Upload complete
         </div>
-        <p className="mt-3 font-semibold text-emerald-100">Logo attached to this session</p>
-        <p className="mt-1 text-xs leading-5 text-emerald-200/85">
+        <p className="mt-3 font-semibold text-slate-900">Logo attached to this session</p>
+        <p className="mt-1 text-xs leading-5 text-slate-500">
           Sales AI has this file now. Review it below or upload a new version if needed.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -671,7 +671,7 @@ export default function AdminAiAssistantPage() {
             href={logoAttachment.url}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-white/[0.06] px-3 py-2 text-xs font-semibold text-emerald-100 transition hover:bg-white/[0.1]"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
           >
             <Paperclip className="h-3.5 w-3.5" />
             Review logo
@@ -680,22 +680,22 @@ export default function AdminAiAssistantPage() {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadingLogo || sending}
-            className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-[linear-gradient(135deg,#065f46_0%,#10b981_100%)] px-3 py-2 text-xs font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
             Upload new logo
           </button>
         </div>
         {pendingLogoFile && (
-          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-300/20 bg-white/[0.05] px-3 py-3 text-xs text-emerald-100">
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-xs text-slate-600">
             <Paperclip className="h-3.5 w-3.5" />
             <span className="font-semibold">{pendingLogoFile.name}</span>
-            {pendingLogoSize ? <span className="text-emerald-200/80">{pendingLogoSize}</span> : null}
-            <span className="text-emerald-200/80">ready to send</span>
+            {pendingLogoSize ? <span className="text-slate-500">{pendingLogoSize}</span> : null}
+            <span className="text-slate-500">ready to send</span>
           </div>
         )}
         {pendingLogoPreviewUrl && pendingLogoFile && (
-          <div className="mt-3 overflow-hidden rounded-2xl border border-emerald-300/20 bg-white/[0.05] p-2">
+          <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2">
             { }
             <img
               src={pendingLogoPreviewUrl}
@@ -711,7 +711,7 @@ export default function AdminAiAssistantPage() {
               type="button"
               onClick={() => void handleSubmitLogo()}
               disabled={uploadingLogo || sending}
-              className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-[linear-gradient(135deg,#065f46_0%,#10b981_100%)] px-3 py-2 text-xs font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
               Submit logo
@@ -719,7 +719,7 @@ export default function AdminAiAssistantPage() {
           </div>
         )}
         {isImageAttachment(logoAttachment) && (
-          <div className="mt-3 overflow-hidden rounded-2xl border border-emerald-300/20 bg-white/[0.05] p-2">
+          <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2">
             { }
             <img
               src={logoAttachment.url}
@@ -738,12 +738,12 @@ export default function AdminAiAssistantPage() {
 
     return (
       <div data-thread-item className={assistantBubbleClass}>
-        <div className="inline-flex items-center gap-2 rounded-full border border-fuchsia-300/25 bg-fuchsia-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-fuchsia-200">
+        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-700">
           <CheckCircle2 className="h-3.5 w-3.5" />
           Upload pending
         </div>
-        <p className="mt-3 font-semibold text-fuchsia-100">Logo will be attached later</p>
-        <p className="mt-1 text-xs leading-5 text-fuchsia-200/85">
+        <p className="mt-3 font-semibold text-slate-900">Logo will be attached later</p>
+        <p className="mt-1 text-xs leading-5 text-slate-500">
           Sales AI continued the flow without the file. Upload the logo again once storage is available.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -751,22 +751,22 @@ export default function AdminAiAssistantPage() {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadingLogo || sending}
-            className="inline-flex items-center gap-2 rounded-full border border-fuchsia-300/30 bg-[linear-gradient(135deg,#7c2d12_0%,#c026d3_100%)] px-3 py-2 text-xs font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
             Upload logo now
           </button>
         </div>
         {pendingLogoFile && (
-          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-fuchsia-300/20 bg-white/[0.05] px-3 py-3 text-xs text-fuchsia-100">
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-xs text-slate-600">
             <Paperclip className="h-3.5 w-3.5" />
             <span className="font-semibold">{pendingLogoFile.name}</span>
-            {pendingLogoSize ? <span className="text-fuchsia-200/80">{pendingLogoSize}</span> : null}
-            <span className="text-fuchsia-200/80">ready to send</span>
+            {pendingLogoSize ? <span className="text-slate-500">{pendingLogoSize}</span> : null}
+            <span className="text-slate-500">ready to send</span>
           </div>
         )}
         {pendingLogoPreviewUrl && pendingLogoFile && (
-          <div className="mt-3 overflow-hidden rounded-2xl border border-fuchsia-300/20 bg-white/[0.05] p-2">
+          <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2">
             { }
             <img
               src={pendingLogoPreviewUrl}
@@ -782,7 +782,7 @@ export default function AdminAiAssistantPage() {
               type="button"
               onClick={() => void handleSubmitLogo()}
               disabled={uploadingLogo || sending}
-              className="inline-flex items-center gap-2 rounded-full border border-fuchsia-300/30 bg-[linear-gradient(135deg,#7c2d12_0%,#c026d3_100%)] px-3 py-2 text-xs font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
               Submit logo
@@ -794,39 +794,22 @@ export default function AdminAiAssistantPage() {
   }
 
   return (
-    <main className="ai-assistant-page relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_22%),radial-gradient(circle_at_top_right,rgba(217,70,239,0.16),transparent_24%),radial-gradient(circle_at_50%_120%,rgba(79,70,229,0.24),transparent_28%),linear-gradient(180deg,#030712_0%,#081124_32%,#0b1330_68%,#111827_100%)] text-slate-100">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-[-10rem] top-14 h-80 w-80 rounded-full bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.22),transparent_72%)] blur-3xl"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute right-[-8rem] top-24 h-96 w-96 rounded-full bg-[radial-gradient(circle_at_center,rgba(217,70,239,0.24),transparent_72%)] blur-3xl"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute bottom-[-10rem] left-1/3 h-96 w-96 rounded-full bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.24),transparent_72%)] blur-3xl"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-60 [background-image:radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.7)_0,rgba(255,255,255,0)_1.5px),radial-gradient(circle_at_78%_32%,rgba(255,255,255,0.45)_0,rgba(255,255,255,0)_1.2px),radial-gradient(circle_at_64%_72%,rgba(255,255,255,0.5)_0,rgba(255,255,255,0)_1.6px),radial-gradient(circle_at_34%_82%,rgba(255,255,255,0.35)_0,rgba(255,255,255,0)_1.2px)]"
-      />
-
+    <main className="ai-assistant-page relative min-h-screen overflow-hidden bg-white text-slate-900">
       <div className="relative mx-auto max-w-7xl px-6 py-8 lg:py-10">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
             <Link
               href="/admin"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-slate-300 transition hover:text-white"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900"
             >
               ← Back to admin dashboard
             </Link>
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100 shadow-sm backdrop-blur">
+              <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 shadow-sm">
                 <TestTube2 className="h-3.5 w-3.5" />
                 Admin testing first
               </span>
-              <span className="inline-flex items-center gap-2 rounded-full border border-fuchsia-300/25 bg-fuchsia-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-fuchsia-100 shadow-sm backdrop-blur">
+              <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 shadow-sm">
                 <DatabaseZap className="h-3.5 w-3.5" />
                 Firestore backed
               </span>
@@ -848,7 +831,7 @@ export default function AdminAiAssistantPage() {
                     setLoadingOverview(false);
                   });
               }}
-              className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-5 py-2.5 text-sm font-semibold text-slate-100 shadow-[0_16px_28px_rgba(2,6,23,0.22)] backdrop-blur transition hover:-translate-y-0.5 hover:border-cyan-300/35 hover:bg-white/[0.1]"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-[0_12px_24px_rgba(15,23,42,0.06)] transition hover:bg-slate-50"
             >
               <RefreshCw className={`h-4 w-4 ${loadingOverview ? "animate-spin" : ""}`} />
               Refresh
@@ -856,7 +839,7 @@ export default function AdminAiAssistantPage() {
             <button
               type="button"
               onClick={handleRetrain}
-              className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#312e81_0%,#9333ea_52%,#06b6d4_100%)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_20px_34px_rgba(88,28,135,0.32)] transition hover:-translate-y-0.5 hover:brightness-105"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_16px_28px_rgba(15,23,42,0.18)] transition hover:bg-slate-800"
             >
               {training ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <BrainCircuit className="h-4 w-4" />}
               Retrain
@@ -864,42 +847,30 @@ export default function AdminAiAssistantPage() {
           </div>
         </div>
 
-        <section className="relative isolate overflow-hidden rounded-[2.25rem] border border-white/10 bg-[linear-gradient(135deg,#090f23_0%,#131b44_28%,#4c1d95_66%,#7c3aed_100%)] px-6 py-7 shadow-[0_32px_110px_rgba(2,6,23,0.4)] sm:px-8 sm:py-9 lg:px-10 lg:py-10">
-          <div
-            aria-hidden
-            className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18),transparent_24%),radial-gradient(circle_at_78%_26%,rgba(34,211,238,0.16),transparent_26%),radial-gradient(circle_at_bottom_right,rgba(217,70,239,0.14),transparent_24%)]"
-          />
-          <div
-            aria-hidden
-            className="absolute -left-16 bottom-0 h-56 w-56 rounded-full bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.28),transparent_68%)] blur-3xl"
-          />
-          <div
-            aria-hidden
-            className="absolute right-0 top-0 h-64 w-64 rounded-full bg-[radial-gradient(circle_at_center,rgba(217,70,239,0.28),transparent_68%)] blur-3xl"
-          />
+        <section className="relative isolate overflow-hidden rounded-[2.25rem] border border-slate-200 bg-white px-6 py-7 shadow-[0_24px_60px_rgba(15,23,42,0.08)] sm:px-8 sm:py-9 lg:px-10 lg:py-10">
           <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1.35fr)_360px] lg:items-start xl:grid-cols-[minmax(0,1.35fr)_390px]">
-            <div className="max-w-3xl text-white">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-100/90 backdrop-blur">
+            <div className="max-w-3xl text-slate-900">
+              <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-700">
                 <Sparkles className="h-3.5 w-3.5" />
                 Private training cockpit
               </span>
-              <p className="mt-6 text-xs font-semibold uppercase tracking-[0.38em] text-cyan-100/80">MO T-SHIRT AI Lab</p>
+              <p className="mt-6 text-xs font-semibold uppercase tracking-[0.38em] text-slate-500">MO T-SHIRT AI Lab</p>
               <h1 className="mt-4 max-w-3xl font-sans text-4xl font-semibold leading-[0.95] tracking-tight sm:text-5xl xl:text-[4.2rem]">
                 Train and test your in-house sales AI inside admin before any public launch.
               </h1>
-              <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">
+              <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
                 This page keeps your AI private while you validate order capture, submit sample leads, save knowledge, and approve or reject results for learning.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-slate-950/20 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700">
                   <Bot className="h-3.5 w-3.5" />
                   Chat-driven lead capture
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-slate-950/20 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700">
                   <MessageSquareText className="h-3.5 w-3.5" />
                   Session playback
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-slate-950/20 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700">
                   <Sparkles className="h-3.5 w-3.5" />
                   Feedback-driven retraining
                 </span>
@@ -931,10 +902,10 @@ export default function AdminAiAssistantPage() {
 
         {(notice || error) && (
           <div
-            className={`mt-6 rounded-2xl border px-4 py-3 text-sm shadow-[0_16px_32px_rgba(2,6,23,0.24)] ${
+            className={`mt-6 rounded-2xl border bg-white px-4 py-3 text-sm shadow-[0_12px_24px_rgba(15,23,42,0.06)] ${
               error
-                ? "border-rose-400/25 bg-rose-500/10 text-rose-100"
-                : "border-emerald-400/25 bg-emerald-500/10 text-emerald-100"
+                ? "border-rose-200 text-rose-700"
+                : "border-emerald-200 text-emerald-700"
             }`}
           >
             <div className="flex items-start gap-2">
@@ -946,12 +917,12 @@ export default function AdminAiAssistantPage() {
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[1.45fr_1fr]">
           <section className={GALAXY_PANEL_CLASS}>
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">Testing Session</p>
-                <h2 className="mt-2 text-2xl font-semibold text-white">Sales AI console</h2>
-                <p className="mt-1 text-sm text-slate-300">
-                  Session: <span className="font-mono text-xs text-cyan-100">{session.sessionId}</span>
+                <h2 className="mt-2 text-2xl font-semibold text-slate-900">Sales AI console</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Session: <span className="font-mono text-xs text-slate-700">{session.sessionId}</span>
                 </p>
               </div>
 
@@ -959,7 +930,7 @@ export default function AdminAiAssistantPage() {
                 <button
                   type="button"
                   onClick={startFreshSession}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-semibold text-slate-100 shadow-sm transition hover:border-fuchsia-300/35 hover:bg-white/[0.08]"
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
                 >
                   <Sparkles className="h-4 w-4" />
                   New session
@@ -967,7 +938,7 @@ export default function AdminAiAssistantPage() {
                 <button
                   type="button"
                   onClick={() => void handleSendMessage({ message: "summary" })}
-                  className="inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/15"
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                   Summary
                 </button>
@@ -975,7 +946,7 @@ export default function AdminAiAssistantPage() {
                   type="button"
                   onClick={handleSubmitLead}
                   disabled={submitting || !session.readyToSubmit || Boolean(session.submittedLeadId)}
-                  className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#4338ca_0%,#9333ea_52%,#06b6d4_100%)] px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_28px_rgba(91,33,182,0.3)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_14px_24px_rgba(15,23,42,0.16)] transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ArrowUpRight className="h-4 w-4" />}
                   {session.submittedLeadId ? "Already in Quotation Approval" : "Send to Quotation Approval"}
@@ -989,17 +960,17 @@ export default function AdminAiAssistantPage() {
                   key={prompt}
                   type="button"
                   onClick={() => void handleSendMessage({ message: prompt })}
-                  className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-slate-100 shadow-sm transition hover:border-cyan-300/35 hover:bg-cyan-400/10 hover:text-cyan-100"
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
                 >
                   {prompt}
                 </button>
               ))}
             </div>
 
-            <div className="mt-4 min-h-[26rem] rounded-[1.5rem] border border-white/10 bg-[linear-gradient(180deg,rgba(4,9,24,0.96),rgba(8,16,34,0.9))] p-4 shadow-inner shadow-black/30">
+            <div className="mt-4 min-h-[26rem] rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
               <div ref={messageListRef} className="h-[25rem] space-y-3 overflow-y-auto pr-1">
                 {loadingSession ? (
-                  <div className="flex h-full items-center justify-center text-sm text-slate-400">
+                  <div className="flex h-full items-center justify-center text-sm text-slate-500">
                     <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                     Loading session
                   </div>
@@ -1014,10 +985,10 @@ export default function AdminAiAssistantPage() {
                       const isUploadMessage = isLogoUploadMessage(message);
                       const printPrompt = message.role === "assistant" ? parsePrintPositionPrompt(message.content) : null;
                       const messageBubbleClass = isUploadMessage
-                        ? "ml-auto max-w-[88%] rounded-[2rem] border border-fuchsia-300/20 bg-[linear-gradient(180deg,#22113f_0%,#0f172a_100%)] px-4 py-4 text-white shadow-[0_20px_40px_rgba(15,23,42,0.34)]"
+                        ? "ml-auto max-w-[88%] rounded-[2rem] border border-slate-300 bg-slate-50 px-4 py-4 text-slate-900 shadow-[0_12px_24px_rgba(15,23,42,0.06)]"
                         : `max-w-[85%] rounded-3xl px-4 py-3 text-sm shadow-sm ${
                             message.role === "user"
-                              ? "ml-auto border border-fuchsia-300/20 bg-[linear-gradient(135deg,#312e81_0%,#6d28d9_55%,#7e22ce_100%)] text-white shadow-[0_18px_38px_rgba(88,28,135,0.3)]"
+                              ? "ml-auto border border-slate-300 bg-slate-50 text-slate-900 shadow-[0_10px_24px_rgba(15,23,42,0.06)]"
                               : assistantBubbleClass
                           }`;
 
@@ -1026,17 +997,17 @@ export default function AdminAiAssistantPage() {
                       <div data-thread-item className={messageBubbleClass}>
                             {isUploadMessage ? (
                               <div className="space-y-3">
-                                <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-200">
+                                <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-600">
                                   <Paperclip className="h-3.5 w-3.5" />
                                   Logo uploaded
                                 </div>
-                                <div className="rounded-[1.6rem] border border-white/10 bg-white/[0.05] px-4 py-3">
-                                  <p className="text-xl font-semibold tracking-tight text-white">{message.attachment?.name || message.content}</p>
+                                <div className="rounded-[1.6rem] border border-slate-200 bg-white px-4 py-3">
+                                  <p className="text-xl font-semibold tracking-tight text-slate-900">{message.attachment?.name || message.content}</p>
                                 </div>
                               </div>
                             ) : printPrompt ? (
                               <div className="space-y-3">
-                                <p className="text-base font-medium leading-6 text-cyan-50">{printPrompt.question}</p>
+                                <p className="text-base font-medium leading-6 text-slate-900">{printPrompt.question}</p>
                                 <div className="flex flex-wrap gap-2">
                                   {printPrompt.options.map((option) => (
                                     <button
@@ -1044,7 +1015,7 @@ export default function AdminAiAssistantPage() {
                                       type="button"
                                       onClick={() => void handleSendMessage({ message: option })}
                                       disabled={sending || uploadingLogo}
-                                      className="inline-flex rounded-full border border-cyan-300/25 bg-cyan-400/10 px-3 py-1.5 text-xs font-semibold tracking-[0.04em] text-cyan-100 shadow-sm"
+                                      className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold tracking-[0.04em] text-slate-700 shadow-sm"
                                     >
                                       {option}
                                     </button>
@@ -1061,9 +1032,9 @@ export default function AdminAiAssistantPage() {
                                     className={`overflow-hidden rounded-2xl border p-2 ${
                                       message.role === "user"
                                         ? isUploadMessage
-                                          ? "border-white/10 bg-white/[0.04]"
-                                          : "border-white/15 bg-white/10"
-                                        : "border-cyan-300/20 bg-white/[0.04]"
+                                          ? "border-slate-200 bg-white"
+                                          : "border-slate-200 bg-white"
+                                        : "border-slate-200 bg-white"
                                     }`}
                                   >
                                     { }
@@ -1071,7 +1042,7 @@ export default function AdminAiAssistantPage() {
                                       src={message.attachment.url}
                                       alt={message.attachment.name}
                                       className={`w-full rounded-xl object-contain ${
-                                        isUploadMessage ? "max-h-64 bg-slate-900/40" : "max-h-48"
+                                        isUploadMessage ? "max-h-64 bg-slate-50" : "max-h-48"
                                       }`}
                                       loading="lazy"
                                     />
@@ -1084,9 +1055,9 @@ export default function AdminAiAssistantPage() {
                                   className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm ${
                                     message.role === "user"
                                       ? isUploadMessage
-                                        ? "border-white/10 bg-white/[0.07] text-white"
-                                        : "border-white/15 bg-white/10 text-white"
-                                      : "border-cyan-300/20 bg-white/[0.05] text-cyan-50"
+                                        ? "border-slate-200 bg-white text-slate-700"
+                                        : "border-slate-200 bg-white text-slate-700"
+                                      : "border-slate-200 bg-white text-slate-700"
                                   }`}
                                 >
                                   <Paperclip className="h-4 w-4 shrink-0" />
@@ -1103,9 +1074,9 @@ export default function AdminAiAssistantPage() {
                               className={`mt-2 text-[11px] uppercase tracking-[0.18em] ${
                                 message.role === "user"
                                   ? isUploadMessage
-                                    ? "text-slate-300/90"
-                                    : "text-slate-300"
-                                  : "text-cyan-200/70"
+                                    ? "text-slate-400"
+                                    : "text-slate-400"
+                                  : "text-slate-400"
                               }`}
                             >
                               {message.role} · {formatDateTime(message.createdAt)}
@@ -1126,28 +1097,28 @@ export default function AdminAiAssistantPage() {
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={uploadingLogo || sending}
-                            className="inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-[linear-gradient(135deg,#0f766e_0%,#06b6d4_100%)] px-3 py-2 text-xs font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
                             Upload logo
                           </button>
                           {pendingLogoFile && (
                             <>
-                              <span className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-white/[0.05] px-3 py-2 text-xs font-semibold text-cyan-50">
+                              <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700">
                                 <Paperclip className="h-3.5 w-3.5" />
                                 {pendingLogoFile.name}
-                                {pendingLogoSize ? <span className="text-cyan-200/80">{pendingLogoSize}</span> : null}
+                                {pendingLogoSize ? <span className="text-slate-500">{pendingLogoSize}</span> : null}
                               </span>
                             </>
                           )}
                         </div>
                         {pendingLogoFile && (
-                          <p className="mt-3 text-xs text-cyan-200/80">
+                          <p className="mt-3 text-xs text-slate-500">
                             Logo selected. Press Submit logo to send it into this chat flow.
                           </p>
                         )}
                         {pendingLogoPreviewUrl && pendingLogoFile && (
-                          <div className="mt-3 overflow-hidden rounded-2xl border border-cyan-300/20 bg-white/[0.05] p-2">
+                          <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2">
                             { }
                             <img
                               src={pendingLogoPreviewUrl}
@@ -1163,7 +1134,7 @@ export default function AdminAiAssistantPage() {
                               type="button"
                               onClick={() => void handleSubmitLogo()}
                               disabled={uploadingLogo || sending}
-                              className="inline-flex items-center gap-2 rounded-full border border-emerald-300/30 bg-[linear-gradient(135deg,#065f46_0%,#10b981_100%)] px-3 py-2 text-xs font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               {uploadingLogo ? (
                                 <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -1181,10 +1152,10 @@ export default function AdminAiAssistantPage() {
                     {logoPending && !logoAttachment && renderPendingLogoCard()}
                   </>
                 ) : (
-                  <div className="flex h-full flex-col items-center justify-center rounded-[1.2rem] border border-dashed border-white/12 bg-white/[0.03] px-6 text-center">
-                    <Bot className="h-10 w-10 text-cyan-300" />
-                    <h3 className="mt-4 text-lg font-semibold text-white">No conversation yet</h3>
-                    <p className="mt-2 max-w-md text-sm leading-6 text-slate-300">
+                  <div className="flex h-full flex-col items-center justify-center rounded-[1.2rem] border border-dashed border-slate-200 bg-slate-50 px-6 text-center">
+                    <Bot className="h-10 w-10 text-slate-400" />
+                    <h3 className="mt-4 text-lg font-semibold text-slate-900">No conversation yet</h3>
+                    <p className="mt-2 max-w-md text-sm leading-6 text-slate-600">
                       Start with a real customer-style request. Sales AI will extract order details, ask for anything missing, and let you submit the lead from this admin test harness.
                     </p>
                   </div>
@@ -1192,7 +1163,7 @@ export default function AdminAiAssistantPage() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-[1.5rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] p-4">
+            <div className="mt-4 rounded-[1.5rem] border border-slate-200 bg-white p-4">
               <label htmlFor="assistant-composer" className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
                 Send a test message
               </label>
@@ -1213,7 +1184,7 @@ export default function AdminAiAssistantPage() {
               />
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-xs text-slate-400">Press Enter to send. Shift+Enter adds a new line.</p>
+                  <p className="text-xs text-slate-500">Press Enter to send. Shift+Enter adds a new line.</p>
                   {!canUploadLogo && (
                     <span className="text-xs text-slate-500">The upload step appears in the chat after the size breakdown is captured.</span>
                   )}
@@ -1222,7 +1193,7 @@ export default function AdminAiAssistantPage() {
                   type="button"
                   onClick={() => void handleSendMessage()}
                   disabled={!draft.trim() || sending || uploadingLogo}
-                  className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#4338ca_0%,#9333ea_55%,#06b6d4_100%)] px-4 py-2 text-sm font-semibold text-white shadow-[0_16px_28px_rgba(91,33,182,0.32)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-[0_14px_24px_rgba(15,23,42,0.16)] transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {sending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <SendHorizontal className="h-4 w-4" />}
                   Send message
@@ -1232,38 +1203,38 @@ export default function AdminAiAssistantPage() {
 
             {(lastSuggestions.length > 0 || lastRelatedContext.length > 0) && (
               <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <div className="rounded-[1.4rem] border border-fuchsia-300/20 bg-fuchsia-400/10 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-fuchsia-100">Sales AI suggestions</p>
+                <div className="rounded-[1.4rem] border border-slate-200 bg-white p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Sales AI suggestions</p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {lastSuggestions.length ? (
                       lastSuggestions.map((item) => (
                         <span
                           key={item}
-                          className="inline-flex rounded-full border border-fuchsia-300/20 bg-white/[0.07] px-3 py-1.5 text-xs font-medium text-fuchsia-50"
+                          className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700"
                         >
                           {item}
                         </span>
                       ))
                     ) : (
-                      <span className="text-sm text-fuchsia-100/80">No extra suggestions on the last reply.</span>
+                      <span className="text-sm text-slate-500">No extra suggestions on the last reply.</span>
                     )}
                   </div>
                 </div>
 
-                <div className="rounded-[1.4rem] border border-cyan-300/20 bg-cyan-400/10 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-100">Retrieved context</p>
+                <div className="rounded-[1.4rem] border border-slate-200 bg-white p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Retrieved context</p>
                   <div className="mt-3 space-y-2">
                     {lastRelatedContext.length ? (
                       lastRelatedContext.map((item) => (
-                        <div key={`${item.source}-${item.text}`} className="rounded-2xl border border-cyan-300/20 bg-white/[0.07] px-3 py-2 text-sm text-slate-100">
+                        <div key={`${item.source}-${item.text}`} className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
                           <p>{item.text}</p>
-                          <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-cyan-200/80">
+                          <p className="mt-1 text-[11px] uppercase tracking-[0.18em] text-slate-400">
                             {item.source} · match {Math.round(item.score * 100)}%
                           </p>
                         </div>
                       ))
                     ) : (
-                      <span className="text-sm text-cyan-100/80">No related approved patterns or knowledge surfaced yet.</span>
+                      <span className="text-sm text-slate-500">No related approved patterns or knowledge surfaced yet.</span>
                     )}
                   </div>
                 </div>
