@@ -608,8 +608,8 @@ function OrdersPageInner() {
   // local UI overrides (e.g., status/payment changed without refetch)
   const [overrides, setOverrides] = useState<Record<string, Partial<Txn>>>({});
 
-  // per-row expand state
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // single-row accordion expand state
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // edit modal
   const [editOpen, setEditOpen] = useState(false);
@@ -1778,6 +1778,16 @@ function OrdersPageInner() {
                 const docCaption = docTypeLabel
                   ? `Current document profile: ${docTypeLabel}.`
                   : "No saved document profile yet. Start from quotation or invoice.";
+                const isExpanded = expandedId === id;
+                const compactProducts = products.slice(0, 2);
+                const hiddenProductCount = Math.max(products.length - compactProducts.length, 0);
+                const compactAddress = m.address || "Address not provided yet.";
+                const compactDocCurrentLabel = docTypeLabel || "Not started";
+                const compactDocNextLabel = isDocFlowDone
+                  ? "Done"
+                  : nextDocType
+                    ? ORDER_DOC_LABELS[nextDocType]
+                    : "Quotation";
 
                 return (
                   <li
@@ -1884,22 +1894,17 @@ function OrdersPageInner() {
                               Preview
                             </button>
                             <button
-                              title={expanded.has(id) ? "Hide details" : "Open details"}
+                              title={isExpanded ? "Show less" : "Show more"}
                               onClick={() =>
-                                setExpanded((prev) => {
-                                  const next = new Set(prev);
-                                  if (next.has(id)) next.delete(id);
-                                  else next.add(id);
-                                  return next;
-                                })
+                                setExpandedId((current) => (current === id ? null : id))
                               }
                               className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
-                                expanded.has(id)
+                                isExpanded
                                   ? "border-[#1f2937] bg-[#1f2937] text-white"
                                   : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                               }`}
                             >
-                              {expanded.has(id) ? "Hide details" : "Open details"}
+                              {isExpanded ? "Show less" : "Show more"}
                             </button>
                             <button
                               title="Mark Completed & adjust stock"
@@ -1921,6 +1926,114 @@ function OrdersPageInner() {
                         </div>
                       </div>
 
+                      <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-[1.35fr_0.8fr_0.8fr_0.8fr]">
+                        <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 p-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                                Items
+                              </p>
+                              <p className="mt-1 text-sm text-slate-600">
+                                Show the first products first, then open the full order only when needed.
+                              </p>
+                            </div>
+                            <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                              {totalQty} pcs
+                            </span>
+                          </div>
+
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            {compactProducts.length ? (
+                              compactProducts.map((product, index) => {
+                                const variant = [product.color, product.size].filter(Boolean).join(" / ");
+                                return (
+                                  <span
+                                    key={`${id}-compact-${index}`}
+                                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600"
+                                  >
+                                    {product.product || "Item"}
+                                    {variant ? ` • ${variant}` : ""}
+                                    {product.quantity ? ` × ${product.quantity}` : ""}
+                                  </span>
+                                );
+                              })
+                            ) : (
+                              <span className="rounded-full border border-dashed border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500">
+                                No line items on this order yet
+                              </span>
+                            )}
+                            {hiddenProductCount > 0 ? (
+                              <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500">
+                                +{hiddenProductCount} more
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 p-4">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                            Delivery
+                          </p>
+                          <p className="mt-3 text-sm font-semibold text-slate-900">
+                            {m.phoneNumber || "Phone not set"}
+                          </p>
+                          <p className="mt-1 line-clamp-2 text-sm text-slate-500">
+                            {compactAddress}
+                          </p>
+                          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                            {sourceLabel}
+                          </p>
+                        </div>
+
+                        <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                                Production
+                              </p>
+                              <p className="mt-3 text-sm font-semibold text-slate-900">
+                                {workflowDone ? "Done" : currentStatus}
+                              </p>
+                              <p className="mt-1 text-sm text-slate-500">
+                                Next: {workflowDone ? "Closed" : workflowNextLabel}
+                              </p>
+                            </div>
+                            <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${
+                              workflowDone
+                                ? "border-emerald-200 bg-white text-emerald-700"
+                                : "border-slate-200 bg-white text-slate-600"
+                            }`}>
+                              {workflowDone ? "Done" : "Active"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                                Documents
+                              </p>
+                              <p className="mt-3 text-sm font-semibold text-slate-900">
+                                {compactDocCurrentLabel}
+                              </p>
+                              <p className="mt-1 text-sm text-slate-500">
+                                Next: {compactDocNextLabel}
+                              </p>
+                            </div>
+                            <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${
+                              isDocFlowDone
+                                ? "border-emerald-200 bg-white text-emerald-700"
+                                : "border-slate-200 bg-white text-slate-600"
+                            }`}>
+                              {isDocFlowDone ? "Done" : "Open"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                    {isExpanded && (
+                      <div className="space-y-4">
                       <div className="grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
                         <div className="rounded-[28px] border border-slate-200 bg-white p-4">
                           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1952,7 +2065,7 @@ function OrdersPageInner() {
 
                           <div className="mt-4 flex flex-wrap gap-2">
                             {products.length > 0 ? (
-                              products.slice(0, 4).map((product, index) => {
+                              products.slice(0, 6).map((product, index) => {
                                 const variant = [product.color, product.size].filter(Boolean).join(" / ");
                                 return (
                                   <span
@@ -1970,9 +2083,9 @@ function OrdersPageInner() {
                                 No line items on this order yet
                               </span>
                             )}
-                            {products.length > 4 && (
+                            {products.length > 6 && (
                               <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500">
-                                +{products.length - 4} more
+                                +{products.length - 6} more in the full table
                               </span>
                             )}
                           </div>
@@ -2112,7 +2225,6 @@ function OrdersPageInner() {
                         </div>
                       </div>
 
-                    {expanded.has(id) && (
                       <div className="grid gap-4 xl:grid-cols-[0.92fr_1.08fr]">
                         <div className="space-y-4">
                           <div className="rounded-[28px] border border-slate-200 bg-white p-4">
@@ -2246,6 +2358,7 @@ function OrdersPageInner() {
                             </div>
                           )}
                         </div>
+                      </div>
                       </div>
                     )}
                     </div>
