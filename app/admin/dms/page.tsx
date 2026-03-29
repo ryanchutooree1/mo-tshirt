@@ -12,6 +12,10 @@ import {
   getMetadata,
 } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
+import {
+  ensureAdminFirebaseSession,
+  isFirebaseAdminAuthConfigured,
+} from '@/lib/firebase-admin-client-auth';
 import clsx from 'clsx';
 import {
   FiUploadCloud,
@@ -61,6 +65,7 @@ export default function DMSPage() {
   const [dragOver, setDragOver] = useState(false);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [sortBy, setSortBy] = useState<'name' | 'date' | 'size'>('name');
+  const [storageReady, setStorageReady] = useState<boolean>(() => !isFirebaseAdminAuthConfigured());
   const debouncer = useRef<number | null>(null);
   const [zoom, setZoom] = useState<number>(1);
 
@@ -74,11 +79,41 @@ export default function DMSPage() {
     return () => clearTimeout(id);
   }, [message]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function connectStorage() {
+      if (!isFirebaseAdminAuthConfigured()) {
+        setStorageReady(true);
+        return;
+      }
+
+      try {
+        await ensureAdminFirebaseSession();
+        if (!cancelled) {
+          setStorageReady(true);
+        }
+      } catch (err: any) {
+        console.error('storage auth error', err);
+        if (cancelled) return;
+        setLoading(false);
+        setMessage({ type: 'err', text: `Failed to connect storage: ${err?.message ?? err}` });
+      }
+    }
+
+    connectStorage();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // initial load or when path/sort changes -> reset list & load first page
   useEffect(() => {
+    if (!storageReady) return;
     resetAndLoad();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPath, sortBy]);
+  }, [storageReady, currentPath, sortBy]);
 
   // search debounce over currently loaded items
   useEffect(() => {
@@ -116,6 +151,19 @@ export default function DMSPage() {
     });
   };
 
+  async function withStorageAuthRetry<T>(operation: () => Promise<T>) {
+    try {
+      return await operation();
+    } catch (err: any) {
+      if (err?.code !== 'storage/unauthorized' || !isFirebaseAdminAuthConfigured()) {
+        throw err;
+      }
+
+      await ensureAdminFirebaseSession();
+      return operation();
+    }
+  }
+
   async function resetAndLoad() {
     setLoading(true);
     setItems([]);
@@ -124,7 +172,7 @@ export default function DMSPage() {
     setNextPageToken(undefined);
     setHasMore(false);
     try {
-      const { entries, nextToken } = await fetchPage(undefined);
+      const { entries, nextToken } = await withStorageAuthRetry(() => fetchPage(undefined));
       setItems(entries);
       setFiltered(sortItems(entries));
       setNextPageToken(nextToken);
@@ -141,7 +189,7 @@ export default function DMSPage() {
     if (!nextPageToken || paging) return;
     setPaging(true);
     try {
-      const { entries, nextToken } = await fetchPage(nextPageToken);
+      const { entries, nextToken } = await withStorageAuthRetry(() => fetchPage(nextPageToken));
       const combined = sortItems([...items, ...entries]);
       setItems(combined);
       setFiltered(combined.filter(i => i.name.toLowerCase().includes(search.trim().toLowerCase() || '')));

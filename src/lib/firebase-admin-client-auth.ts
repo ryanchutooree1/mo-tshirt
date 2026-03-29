@@ -2,6 +2,7 @@
 
 import {
   browserLocalPersistence,
+  onAuthStateChanged,
   setPersistence,
   signInWithEmailAndPassword,
   signOut,
@@ -14,9 +15,7 @@ export function isFirebaseAdminAuthConfigured() {
   return firebaseAdminEmail.length > 0;
 }
 
-export async function signInAdminWithFirebase(fallbackPassword?: string) {
-  if (!firebaseAdminEmail) return;
-
+async function resolveFirebaseAdminCredentials(fallbackPassword?: string) {
   let email = firebaseAdminEmail;
   let password = (fallbackPassword || "").trim();
 
@@ -35,8 +34,52 @@ export async function signInAdminWithFirebase(fallbackPassword?: string) {
     throw new Error("Firebase admin auth password is not configured.");
   }
 
+  return { email, password };
+}
+
+async function waitForFirebaseAuthState() {
+  if (auth.currentUser) return;
+
+  await new Promise<void>((resolve) => {
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      () => {
+        unsubscribe();
+        resolve();
+      },
+      () => {
+        unsubscribe();
+        resolve();
+      }
+    );
+  });
+}
+
+export async function signInAdminWithFirebase(fallbackPassword?: string) {
+  if (!firebaseAdminEmail) return;
+
   await setPersistence(auth, browserLocalPersistence);
+  const { email, password } = await resolveFirebaseAdminCredentials(fallbackPassword);
   await signInWithEmailAndPassword(auth, email, password);
+}
+
+export async function ensureAdminFirebaseSession(fallbackPassword?: string) {
+  if (!firebaseAdminEmail) return false;
+
+  await setPersistence(auth, browserLocalPersistence);
+  await waitForFirebaseAuthState();
+
+  if (auth.currentUser?.email === firebaseAdminEmail) {
+    return true;
+  }
+
+  if (auth.currentUser) {
+    await signOut(auth);
+  }
+
+  const { email, password } = await resolveFirebaseAdminCredentials(fallbackPassword);
+  await signInWithEmailAndPassword(auth, email, password);
+  return true;
 }
 
 export async function signOutAdminFromFirebase() {
