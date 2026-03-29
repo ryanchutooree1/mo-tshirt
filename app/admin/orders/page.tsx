@@ -1300,31 +1300,15 @@ function OrdersPageInner() {
   }, [overrides, visibleRows]);
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-[#fbf7f2] text-slate-900">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-28 right-[-10rem] h-[28rem] w-[28rem] rounded-full bg-[radial-gradient(circle_at_top,rgba(255,90,95,0.2),transparent_68%)] blur-3xl"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-[-12rem] top-52 h-[24rem] w-[24rem] rounded-full bg-[radial-gradient(circle_at_top,rgba(255,184,102,0.18),transparent_70%)] blur-3xl"
-      />
+    <main className="relative min-h-screen overflow-x-hidden bg-white text-slate-900">
       <div className="relative mx-auto max-w-[1480px] space-y-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         <section
-          className="relative overflow-hidden rounded-[36px] border border-[#e9dfd2] bg-[#fffdf9] p-6 shadow-[0_30px_80px_-48px_rgba(15,23,42,0.42)] sm:p-8"
+          className="relative overflow-hidden rounded-[36px] border border-slate-200 bg-white p-6 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.14)] sm:p-8"
           style={{ animation: "fadeUp 0.6s ease-out both" }}
         >
-          <div
-            aria-hidden
-            className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,90,95,0.08),transparent_58%)]"
-          />
-          <div
-            aria-hidden
-            className="absolute bottom-0 right-0 h-48 w-48 rounded-full bg-[radial-gradient(circle_at_center,rgba(255,184,102,0.18),transparent_70%)]"
-          />
           <div className="relative grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
             <div>
-              <p className="inline-flex items-center rounded-full border border-[#f4d7cc] bg-[#fff5ef] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-[#d6473f]">
+              <p className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-700">
                 Order Management
               </p>
               <h1 className="mt-4 max-w-3xl text-4xl font-semibold tracking-[-0.04em] text-[#1f1f1b] sm:text-5xl">
@@ -1334,13 +1318,13 @@ function OrdersPageInner() {
                 A lighter workspace for production, payment, and document handoff. Keep every order moving without the admin screen feeling dense.
               </p>
               <div className="mt-6 flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full border border-[#f3d8ca] bg-[#fff4ea] px-3 py-1.5 text-xs font-semibold text-[#b86a1f]">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
                   <FiShield className="h-4 w-4" /> Inventory-safe fulfillment
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-[#e8e0d6] bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
                   Live status updates
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-[#dceadf] bg-[#f3faf4] px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
                   Clean invoice exports
                 </span>
               </div>
@@ -1353,13 +1337,13 @@ function OrdersPageInner() {
                 </Link>
                 <Link
                   href="/admin/dms"
-                  className="inline-flex items-center justify-center rounded-full border border-[#d8e3ea] bg-[#f5fafc] px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white"
+                  className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                   DMS
                 </Link>
                 <button
                   onClick={exportVisibleToCSV}
-                  className="inline-flex items-center justify-center rounded-full border border-[#eadfce] bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-[#fff9f3]"
+                  className="inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                   <FiFileText className="mr-2 h-4 w-4" />
                   Export CSV
@@ -1368,7 +1352,7 @@ function OrdersPageInner() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-[30px] border border-[#ebe0d2] bg-white/90 p-5 shadow-[0_20px_50px_-38px_rgba(15,23,42,0.45)] sm:col-span-2">
+              <div className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.12)] sm:col-span-2">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
                   Workspace Pulse
                 </p>
@@ -1381,7 +1365,7 @@ function OrdersPageInner() {
                       Total value of the orders currently in view across this command center.
                     </p>
                   </div>
-                  <div className="rounded-[24px] border border-[#efe5da] bg-[#fff9f2] px-4 py-3 text-sm text-slate-600">
+                  <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
                     <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Active Filters
                     </div>
@@ -1392,7 +1376,7 @@ function OrdersPageInner() {
                 </div>
               </div>
 
-              <div className="rounded-[28px] border border-[#ebe0d2] bg-white p-5 shadow-[0_18px_45px_-36px_rgba(15,23,42,0.42)]">
+              <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_45px_-36px_rgba(15,23,42,0.12)]">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Open Queue</p>
                 <div className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-slate-900">
                   {workspaceMetrics.active}
@@ -1400,13 +1384,13 @@ function OrdersPageInner() {
                 <p className="mt-2 text-sm text-slate-600">Orders still moving through production or delivery.</p>
               </div>
 
-              <div className="rounded-[28px] border border-[#ebe0d2] bg-white p-5 shadow-[0_18px_45px_-36px_rgba(15,23,42,0.42)]">
+              <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_18px_45px_-36px_rgba(15,23,42,0.12)]">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Attention Now</p>
                 <div className="mt-3 flex items-end justify-between gap-3">
                   <div className="text-3xl font-semibold tracking-[-0.04em] text-slate-900">
                     {workspaceMetrics.urgent}
                   </div>
-                  <span className="rounded-full border border-[#f3d8ca] bg-[#fff4ea] px-3 py-1 text-xs font-semibold text-[#b86a1f]">
+                  <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
                     {selectMode ? `${selectedIds.size} selected` : `${workspaceMetrics.ready} ready to close`}
                   </span>
                 </div>
@@ -1431,7 +1415,7 @@ function OrdersPageInner() {
           className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]"
           style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.14s" }}
         >
-          <div className="rounded-[32px] border border-[#e9dfd2] bg-[#fffdf9] p-5 shadow-[0_24px_60px_-46px_rgba(15,23,42,0.42)] sm:p-6">
+          <div className="rounded-[32px] border border-slate-200 bg-white p-5 shadow-[0_22px_54px_-42px_rgba(15,23,42,0.12)] sm:p-6">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
@@ -1450,19 +1434,19 @@ function OrdersPageInner() {
                   <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">Quick range</span>
                   <button
                     onClick={() => applyQuickRange(1)}
-                    className="rounded-full border border-[#eadfce] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-[#fff8f1]"
+                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                   >
                     Today
                   </button>
                   <button
                     onClick={() => applyQuickRange(7)}
-                    className="rounded-full border border-[#eadfce] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-[#fff8f1]"
+                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                   >
                     7 days
                   </button>
                   <button
                     onClick={() => applyQuickRange(30)}
-                    className="rounded-full border border-[#eadfce] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-[#fff8f1]"
+                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                   >
                     30 days
                   </button>
@@ -1472,7 +1456,7 @@ function OrdersPageInner() {
               <div className="relative">
                 <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
-                  className="w-full rounded-[22px] border border-[#eadfce] bg-white py-3.5 pl-11 pr-4 text-sm text-slate-700 shadow-sm outline-none transition focus:border-[#f1cdb8] focus:ring-4 focus:ring-[#fff1e6]"
+                  className="w-full rounded-[22px] border border-slate-200 bg-white py-3.5 pl-11 pr-4 text-sm text-slate-700 shadow-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-100"
                   placeholder="Search customer, phone, email, or invoice..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -1484,7 +1468,7 @@ function OrdersPageInner() {
                   <label className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">From</label>
                 <input
                   type="date"
-                    className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-[#f1cdb8] focus:ring-4 focus:ring-[#fff1e6]"
+                    className="mt-2 w-full rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-100"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
                 />
@@ -1493,7 +1477,7 @@ function OrdersPageInner() {
                   <label className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">To</label>
                 <input
                   type="date"
-                    className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-[#f1cdb8] focus:ring-4 focus:ring-[#fff1e6]"
+                    className="mt-2 w-full rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-100"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
                 />
@@ -1501,7 +1485,7 @@ function OrdersPageInner() {
               <div>
                   <label className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Status</label>
                 <select
-                    className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-[#f1cdb8] focus:ring-4 focus:ring-[#fff1e6]"
+                    className="mt-2 w-full rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-100"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >
@@ -1516,7 +1500,7 @@ function OrdersPageInner() {
               <div>
                   <label className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Payment</label>
                 <select
-                    className="mt-2 w-full rounded-[18px] border border-[#eadfce] bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-[#f1cdb8] focus:ring-4 focus:ring-[#fff1e6]"
+                    className="mt-2 w-full rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-slate-300 focus:ring-4 focus:ring-slate-100"
                   value={paymentFilter}
                   onChange={(e) => setPaymentFilter(e.target.value)}
                 >
@@ -1532,7 +1516,7 @@ function OrdersPageInner() {
             </div>
           </div>
 
-          <div className="rounded-[32px] border border-[#e9dfd2] bg-[#fffaf5] p-5 shadow-[0_24px_60px_-46px_rgba(15,23,42,0.42)] sm:p-6">
+          <div className="rounded-[32px] border border-slate-200 bg-white p-5 shadow-[0_22px_54px_-42px_rgba(15,23,42,0.12)] sm:p-6">
             <div className="flex h-full flex-col">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
@@ -1552,7 +1536,7 @@ function OrdersPageInner() {
                   className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
                     activeTab === "all"
                       ? "border-[#1f2937] bg-[#1f2937] text-white"
-                      : "border-[#eadfce] bg-white text-slate-600 hover:bg-[#fff8f1]"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                   }`}
                 >
                   All Orders
@@ -1562,7 +1546,7 @@ function OrdersPageInner() {
                   className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
                     activeTab === "completed"
                       ? "border-[#1f2937] bg-[#1f2937] text-white"
-                      : "border-[#eadfce] bg-white text-slate-600 hover:bg-[#fff8f1]"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                   }`}
                 >
                   Completed
@@ -1574,8 +1558,8 @@ function OrdersPageInner() {
                   }}
                   className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
                     selectMode
-                      ? "border-[#d6473f] bg-[#d6473f] text-white"
-                      : "border-[#eadfce] bg-white text-slate-600 hover:bg-[#fff8f1]"
+                      ? "border-[#1f2937] bg-[#1f2937] text-white"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                   }`}
                 >
                   {selectMode ? "Exit Select Mode" : "Select Orders"}
@@ -1586,13 +1570,13 @@ function OrdersPageInner() {
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     onClick={() => setSelectedIds(new Set(visibleRows.map((d) => d.id)))}
-                    className="rounded-full border border-[#eadfce] bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-[#fff8f1]"
+                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
                   >
                     Select All Visible
                   </button>
                   <button
                     onClick={() => setSelectedIds(new Set())}
-                    className="rounded-full border border-[#eadfce] bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-[#fff8f1]"
+                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
                   >
                     Clear Selection
                   </button>
@@ -1600,21 +1584,21 @@ function OrdersPageInner() {
               )}
 
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-[22px] border border-[#eadfce] bg-white px-4 py-4">
+                <div className="rounded-[22px] border border-slate-200 bg-white px-4 py-4">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Visible Orders</div>
                   <div className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">{visibleRows.length}</div>
                 </div>
-                <div className="rounded-[22px] border border-[#eadfce] bg-white px-4 py-4">
+                <div className="rounded-[22px] border border-slate-200 bg-white px-4 py-4">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Loaded Rows</div>
                   <div className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">{rows.length}</div>
                 </div>
-                <div className="rounded-[22px] border border-[#eadfce] bg-white px-4 py-4">
+                <div className="rounded-[22px] border border-slate-200 bg-white px-4 py-4">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Units in View</div>
                   <div className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-900">{workspaceMetrics.units}</div>
                 </div>
               </div>
 
-              <div className="mt-5 rounded-[24px] border border-dashed border-[#e2d5c4] bg-white/80 p-4 text-sm text-slate-600">
+              <div className="mt-5 rounded-[24px] border border-dashed border-slate-200 bg-white p-4 text-sm text-slate-600">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -1622,12 +1606,12 @@ function OrdersPageInner() {
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {activeFilters.length === 0 ? (
-                        <span className="rounded-full border border-[#eadfce] bg-white px-3 py-1.5 text-xs font-semibold text-slate-500">
+                        <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500">
                           No filters active
                         </span>
                       ) : (
                         activeFilters.map((filter) => (
-                          <span key={filter} className="rounded-full border border-[#eadfce] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
+                          <span key={filter} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
                             {filter}
                           </span>
                         ))
@@ -1643,7 +1627,7 @@ function OrdersPageInner() {
                       setPaymentFilter("");
                       setActiveTab("all");
                     }}
-                    className="rounded-full border border-[#eadfce] bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-[#fff8f1]"
+                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
                     title="Reset filters"
                   >
                     Reset All
@@ -1661,8 +1645,8 @@ function OrdersPageInner() {
           <div
             className={`inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-sm ${
               toast.type === "ok"
-                ? "border-emerald-200 bg-[#f2fbf5] text-emerald-700"
-                : "border-rose-200 bg-[#fff3f2] text-rose-700"
+                ? "border-emerald-200 bg-white text-emerald-700"
+                : "border-rose-200 bg-white text-rose-700"
             }`}
           >
             {toast.text}
@@ -1670,10 +1654,10 @@ function OrdersPageInner() {
         )}
 
         <section
-          className="overflow-hidden rounded-[36px] border border-[#e9dfd2] bg-[#fffdf9] shadow-[0_30px_80px_-52px_rgba(15,23,42,0.42)]"
+          className="overflow-hidden rounded-[36px] border border-slate-200 bg-white shadow-[0_24px_60px_-42px_rgba(15,23,42,0.14)]"
           style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.2s" }}
         >
-          <div className="border-b border-[#eee3d6] px-5 py-5 sm:px-6">
+          <div className="border-b border-slate-200 px-5 py-5 sm:px-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
@@ -1688,15 +1672,15 @@ function OrdersPageInner() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-[20px] border border-[#eadfce] bg-white px-4 py-3">
+                <div className="rounded-[20px] border border-slate-200 bg-white px-4 py-3">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Orders in View</div>
                   <div className="mt-2 text-xl font-semibold tracking-[-0.03em] text-slate-900">{visibleRows.length}</div>
                 </div>
-                <div className="rounded-[20px] border border-[#eadfce] bg-white px-4 py-3">
+                <div className="rounded-[20px] border border-slate-200 bg-white px-4 py-3">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Ready to Close</div>
                   <div className="mt-2 text-xl font-semibold tracking-[-0.03em] text-slate-900">{workspaceMetrics.ready}</div>
                 </div>
-                <div className="rounded-[20px] border border-[#eadfce] bg-white px-4 py-3">
+                <div className="rounded-[20px] border border-slate-200 bg-white px-4 py-3">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Selection</div>
                   <div className="mt-2 text-xl font-semibold tracking-[-0.03em] text-slate-900">
                     {selectMode ? selectedIds.size : 0}
@@ -1709,19 +1693,19 @@ function OrdersPageInner() {
           {loading ? (
             <div className="space-y-4 p-4 sm:p-5">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="animate-pulse rounded-[30px] border border-[#efe5da] bg-white p-5">
-                  <div className="h-4 w-1/3 rounded-full bg-[#efe4d6]" />
-                  <div className="mt-4 h-8 w-1/2 rounded-full bg-[#f6efe7]" />
+                <div key={i} className="animate-pulse rounded-[30px] border border-slate-200 bg-white p-5">
+                  <div className="h-4 w-1/3 rounded-full bg-slate-200" />
+                  <div className="mt-4 h-8 w-1/2 rounded-full bg-slate-100" />
                   <div className="mt-5 grid gap-3 lg:grid-cols-2">
-                    <div className="h-32 rounded-[24px] bg-[#f8f3ec]" />
-                    <div className="h-32 rounded-[24px] bg-[#f8f3ec]" />
+                    <div className="h-32 rounded-[24px] bg-slate-100" />
+                    <div className="h-32 rounded-[24px] bg-slate-100" />
                   </div>
                 </div>
               ))}
             </div>
           ) : visibleRows.length === 0 ? (
             <div className="p-10 text-center text-slate-500 sm:p-14">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f5eee5] text-slate-500">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white text-slate-500">
                 <FiSearch className="h-5 w-5" />
               </div>
               <div className="mt-4 text-xl font-semibold tracking-[-0.02em] text-slate-800">No transactions found.</div>
@@ -1804,8 +1788,8 @@ function OrdersPageInner() {
                     key={id}
                     className={`relative overflow-hidden rounded-[32px] border p-5 shadow-[0_22px_50px_-40px_rgba(15,23,42,0.42)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_28px_65px_-40px_rgba(15,23,42,0.45)] ${
                       selected
-                        ? "border-[#f4b8a0] bg-[#fff8f3]"
-                        : "border-[#efe4d8] bg-white"
+                        ? "border-slate-300 bg-white"
+                        : "border-slate-200 bg-white"
                     }`}
                     data-row-id={id}
                     data-row={JSON.stringify({
@@ -1822,10 +1806,6 @@ function OrdersPageInner() {
                       date: when,
                     })}
                   >
-                    <div
-                      aria-hidden
-                      className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-[radial-gradient(circle_at_top,rgba(255,184,102,0.2),transparent_70%)]"
-                    />
                     <div className="relative flex flex-col gap-5">
                       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                         <div className="flex min-w-0 flex-1 items-start gap-4">
@@ -1844,7 +1824,7 @@ function OrdersPageInner() {
                               }}
                             />
                           )}
-                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] border border-[#efe2d2] bg-[#f8f1e8] text-lg font-semibold text-[#7c5530] shadow-inner">
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] border border-slate-200 bg-white text-lg font-semibold text-slate-700 shadow-inner">
                             {customerInitial}
                           </div>
                           <div className="min-w-0 flex-1">
@@ -1863,7 +1843,7 @@ function OrdersPageInner() {
                               <h3 className="text-[1.45rem] font-semibold tracking-[-0.03em] text-slate-900">
                                 {customerLabel}
                               </h3>
-                              <span className="rounded-full border border-[#eadfce] bg-[#fffaf4] px-3 py-1 text-xs font-semibold text-slate-600">
+                              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
                                 Invoice #{m.invoiceNumber || "Draft"}
                               </span>
                             </div>
@@ -1881,12 +1861,12 @@ function OrdersPageInner() {
                                 {products.length} lines
                               </span>
                               {m.quoteId && (
-                                <span className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-semibold text-violet-700">
+                                <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
                                   Converted quote
                                 </span>
                               )}
                               {docTypeLabel && (
-                                <span className="rounded-full border border-[#f3d8ca] bg-[#fff4ea] px-3 py-1.5 text-xs font-semibold text-[#b86a1f]">
+                                <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
                                   Document {docTypeLabel}
                                 </span>
                               )}
@@ -1902,7 +1882,7 @@ function OrdersPageInner() {
                             <button
                               title="Quick invoice preview"
                               onClick={() => quickPreviewInvoice(id, m)}
-                              className="inline-flex items-center gap-2 rounded-full border border-[#eadfce] bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-[#fff8f1]"
+                              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
                             >
                               <FiPrinter className="h-4 w-4" />
                               Preview
@@ -2831,38 +2811,38 @@ function Stat({
 }) {
   const tones = {
     amber: {
-      border: "border-amber-100",
-      bg: "from-amber-50 via-white to-white",
-      accent: "bg-amber-100 text-amber-700",
-      glow: "bg-amber-200/40",
+      border: "border-slate-200",
+      bg: "from-white via-white to-white",
+      accent: "bg-white text-slate-700 border border-slate-200",
+      glow: "bg-transparent",
       value: "text-slate-900",
     },
     sky: {
-      border: "border-sky-100",
-      bg: "from-sky-50 via-white to-white",
-      accent: "bg-sky-100 text-sky-700",
-      glow: "bg-sky-200/40",
+      border: "border-slate-200",
+      bg: "from-white via-white to-white",
+      accent: "bg-white text-slate-700 border border-slate-200",
+      glow: "bg-transparent",
       value: "text-slate-900",
     },
     emerald: {
-      border: "border-emerald-100",
-      bg: "from-emerald-50 via-white to-white",
-      accent: "bg-emerald-100 text-emerald-700",
-      glow: "bg-emerald-200/40",
+      border: "border-slate-200",
+      bg: "from-white via-white to-white",
+      accent: "bg-white text-slate-700 border border-slate-200",
+      glow: "bg-transparent",
       value: "text-slate-900",
     },
     violet: {
-      border: "border-violet-100",
-      bg: "from-violet-50 via-white to-white",
-      accent: "bg-violet-100 text-violet-700",
-      glow: "bg-violet-200/40",
+      border: "border-slate-200",
+      bg: "from-white via-white to-white",
+      accent: "bg-white text-slate-700 border border-slate-200",
+      glow: "bg-transparent",
       value: "text-slate-900",
     },
     slate: {
       border: "border-slate-200",
-      bg: "from-slate-50 via-white to-white",
-      accent: "bg-slate-100 text-slate-700",
-      glow: "bg-slate-200/40",
+      bg: "from-white via-white to-white",
+      accent: "bg-white text-slate-700 border border-slate-200",
+      glow: "bg-transparent",
       value: "text-slate-900",
     },
   } as const;
@@ -2891,14 +2871,14 @@ function Stat({
 // UI helpers
 function StatusBadge(status: string) {
   const map: Record<string, string> = {
-    Pending: "bg-amber-50 text-amber-700 border-amber-200",
-    "In Process": "bg-sky-50 text-sky-700 border-sky-200",
-    Urgent: "bg-rose-50 text-rose-700 border-rose-200",
-    Completed: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    Delivered: "bg-teal-50 text-teal-700 border-teal-200",
-    Cancelled: "bg-slate-100 text-slate-600 border-slate-300",
+    Pending: "bg-white text-amber-700 border-amber-200",
+    "In Process": "bg-white text-sky-700 border-sky-200",
+    Urgent: "bg-white text-rose-700 border-rose-200",
+    Completed: "bg-white text-emerald-700 border-emerald-200",
+    Delivered: "bg-white text-teal-700 border-teal-200",
+    Cancelled: "bg-white text-slate-600 border-slate-300",
   };
-  const cls = map[status] || "bg-slate-50 text-slate-600 border-slate-200";
+  const cls = map[status] || "bg-white text-slate-600 border-slate-200";
   return (
     <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${cls}`}>{status || "—"}</span>
   );
@@ -2906,11 +2886,11 @@ function StatusBadge(status: string) {
 
 function PaymentBadge(method: string) {
   const map: Record<string, string> = {
-    "Full Payment": "bg-emerald-50 text-emerald-700 border-emerald-200",
-    "Part Payment": "bg-violet-50 text-violet-700 border-violet-200",
-    Unpaid: "bg-amber-50 text-amber-700 border-amber-200",
+    "Full Payment": "bg-white text-emerald-700 border-emerald-200",
+    "Part Payment": "bg-white text-violet-700 border-violet-200",
+    Unpaid: "bg-white text-amber-700 border-amber-200",
   };
-  const cls = map[method] || "bg-slate-50 text-slate-600 border-slate-200";
+  const cls = map[method] || "bg-white text-slate-600 border-slate-200";
   return (
     <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${cls}`}>{method || "—"}</span>
   );

@@ -500,12 +500,9 @@ body {
   --tw-ring-color: rgb(196 181 253 / 0.34) !important;
 }
 
-/* Restore the AI assistant testing page palette inside the dark admin shell */
+/* Keep the AI assistant page neutral even inside the dark admin shell */
 .admin-root.admin-dark .ai-assistant-page {
-  background:
-    radial-gradient(circle at top left, rgba(245, 158, 11, 0.14), transparent 24%),
-    radial-gradient(circle at top right, rgba(56, 189, 248, 0.14), transparent 28%),
-    linear-gradient(180deg, #f5f7fb 0%, #f7fbff 42%, #eef4ff 100%) !important;
+  background: #ffffff !important;
   color: #0f172a !important;
 }
 

@@ -1247,15 +1247,15 @@ export default function AdminAiAssistantPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-400">Lead Snapshot</p>
-                  <h2 className="mt-2 text-2xl font-semibold text-white">Current extracted lead</h2>
+                  <h2 className="mt-2 text-2xl font-semibold text-slate-900">Current extracted lead</h2>
                 </div>
                 <span
                   className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${
                     session.submittedLeadId
-                      ? "border-cyan-300/25 bg-cyan-400/10 text-cyan-100"
+                      ? "border-slate-200 bg-white text-slate-700"
                       : session.readyToSubmit
-                        ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-100"
-                        : "border-amber-400/25 bg-amber-400/10 text-amber-100"
+                        ? "border-emerald-200 bg-white text-emerald-700"
+                        : "border-amber-200 bg-white text-amber-700"
                   }`}
                 >
                   {session.submittedLeadId ? "Submitted" : session.readyToSubmit ? "Ready to submit" : "Missing details"}
@@ -1282,7 +1282,7 @@ export default function AdminAiAssistantPage() {
                 ].map(([label, value]) => (
                   <div key={label} className={`${GALAXY_SUBPANEL_CLASS} px-4 py-3`}>
                     <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">{label}</p>
-                    <p className="mt-2 text-sm font-medium text-slate-100">{value}</p>
+                    <p className="mt-2 text-sm font-medium text-slate-800">{value}</p>
                   </div>
                 ))}
               </div>
@@ -1294,29 +1294,29 @@ export default function AdminAiAssistantPage() {
                     session.missingFields.map((field) => (
                       <span
                         key={field}
-                        className="inline-flex rounded-full border border-amber-400/25 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-100"
+                        className="inline-flex rounded-full border border-amber-200 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700"
                       >
                         {formatAssistantFieldLabel(field)}
                       </span>
                     ))
                   ) : (
-                    <span className="inline-flex rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-100">
+                    <span className="inline-flex rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700">
                       All required details captured
                     </span>
                   )}
                 </div>
                 {session.lead.notes && (
-                  <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3">
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Notes</p>
-                    <p className="mt-2 whitespace-pre-wrap text-sm text-slate-200">{session.lead.notes}</p>
+                    <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{session.lead.notes}</p>
                   </div>
                 )}
                 {session.lead.logoAttachment?.url && (
-                  <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3">
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">Uploaded logo</p>
-                    <p className="mt-2 text-sm text-slate-300">Review it here, then open the original file if needed.</p>
+                    <p className="mt-2 text-sm text-slate-600">Review it here, then open the original file if needed.</p>
                     {isImageAttachment(session.lead.logoAttachment) && (
-                      <div className="mt-3 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] p-2">
+                      <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2">
                         { }
                         <img
                           src={session.lead.logoAttachment.url}
@@ -1330,7 +1330,7 @@ export default function AdminAiAssistantPage() {
                       href={session.lead.logoAttachment.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="mt-3 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/15"
+                      className="mt-3 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                     >
                       <Paperclip className="h-4 w-4" />
                       {session.lead.logoAttachment.name}
@@ -1344,9 +1344,9 @@ export default function AdminAiAssistantPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-400">Learning State</p>
-                  <h2 className="mt-2 text-2xl font-semibold text-white">Training overview</h2>
+                  <h2 className="mt-2 text-2xl font-semibold text-slate-900">Training overview</h2>
                 </div>
-                <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100 shadow-sm">
+                <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm">
                   <BrainCircuit className="h-6 w-6" />
                 </span>
               </div>
@@ -1376,17 +1376,17 @@ export default function AdminAiAssistantPage() {
                     trainingSnapshot.fieldGroups.map((fieldGroup) => (
                       <span
                         key={fieldGroup.field}
-                        className="inline-flex rounded-full border border-cyan-300/20 bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-cyan-100"
+                        className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
                       >
                         {fieldGroup.field} · {fieldGroup.examples.length} examples
                       </span>
                     ))
                   ) : (
-                    <span className="text-sm text-slate-300">No training groups yet.</span>
+                    <span className="text-sm text-slate-500">No training groups yet.</span>
                   )}
                 </div>
-                <p className="mt-4 text-sm text-slate-300">
-                  Last retrained: <span className="font-medium text-white">{formatDateTime(trainingSnapshot?.updatedAt || null)}</span>
+                <p className="mt-4 text-sm text-slate-600">
+                  Last retrained: <span className="font-medium text-slate-900">{formatDateTime(trainingSnapshot?.updatedAt || null)}</span>
                 </p>
               </div>
 
@@ -1402,19 +1402,19 @@ export default function AdminAiAssistantPage() {
                             aliases.map((alias) => (
                               <span
                                 key={`${productType}-${alias}`}
-                                className="inline-flex rounded-full border border-emerald-300/20 bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-emerald-100"
+                                className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
                               >
                                 {alias}
                               </span>
                             ))
                           ) : (
-                            <span className="text-sm text-slate-400">No learned aliases yet.</span>
+                            <span className="text-sm text-slate-500">No learned aliases yet.</span>
                           )}
                         </div>
                       </div>
                     ))
                   ) : (
-                    <span className="text-sm text-slate-300">
+                    <span className="text-sm text-slate-500">
                       Sales AI only learns aliases from approved leads, so it adapts without training itself on bad chats.
                     </span>
                   )}
@@ -1428,13 +1428,13 @@ export default function AdminAiAssistantPage() {
                     trainingSnapshot.topKeywords.map((item) => (
                       <span
                         key={item.keyword}
-                        className="inline-flex rounded-full border border-white/10 bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-slate-100"
+                        className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
                       >
                         {item.keyword} · {item.count}
                       </span>
                     ))
                   ) : (
-                    <span className="text-sm text-slate-300">Top keywords will appear after approvals or saved knowledge.</span>
+                    <span className="text-sm text-slate-500">Top keywords will appear after approvals or saved knowledge.</span>
                   )}
                 </div>
               </div>
@@ -1444,9 +1444,9 @@ export default function AdminAiAssistantPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-400">Knowledge Base</p>
-                  <h2 className="mt-2 text-2xl font-semibold text-white">Add business guidance</h2>
+                  <h2 className="mt-2 text-2xl font-semibold text-slate-900">Add business guidance</h2>
                 </div>
-                <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-fuchsia-300/20 bg-fuchsia-400/10 text-fuchsia-100 shadow-sm">
+                <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm">
                   <DatabaseZap className="h-6 w-6" />
                 </span>
               </div>
@@ -1469,7 +1469,7 @@ export default function AdminAiAssistantPage() {
                     type="button"
                     onClick={handleSaveKnowledge}
                     disabled={savingKnowledge || !knowledgeTitle.trim() || !knowledgeContent.trim()}
-                    className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#7c3aed_0%,#ec4899_100%)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {savingKnowledge ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <DatabaseZap className="h-4 w-4" />}
                     Save knowledge
@@ -1483,8 +1483,8 @@ export default function AdminAiAssistantPage() {
                     <div key={item.id} className={`${GALAXY_SUBPANEL_CLASS} p-4`}>
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-sm font-semibold text-white">{item.title}</p>
-                          <p className="mt-2 text-sm leading-6 text-slate-300">{item.content}</p>
+                          <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                          <p className="mt-2 text-sm leading-6 text-slate-600">{item.content}</p>
                         </div>
                         <span className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
                           {formatDateTime(item.createdAt)}
@@ -1493,7 +1493,7 @@ export default function AdminAiAssistantPage() {
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-white/12 bg-white/[0.03] p-4 text-sm text-slate-300">
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
                     No knowledge items saved yet.
                   </div>
                 )}
@@ -1507,9 +1507,9 @@ export default function AdminAiAssistantPage() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-400">Recent Sessions</p>
-                <h2 className="mt-2 text-2xl font-semibold text-white">Replay test runs</h2>
+                <h2 className="mt-2 text-2xl font-semibold text-slate-900">Replay test runs</h2>
               </div>
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.05] text-slate-100 shadow-sm">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm">
                 <MessageSquareText className="h-6 w-6" />
               </span>
             </div>
@@ -1523,25 +1523,25 @@ export default function AdminAiAssistantPage() {
                     onClick={() => void refreshSession(item.sessionId)}
                     className={`w-full rounded-2xl border px-4 py-4 text-left transition ${
                       session.sessionId === item.sessionId
-                        ? "border-cyan-300/30 bg-cyan-400/10 shadow-[0_18px_32px_rgba(6,182,212,0.14)]"
-                        : "border-white/10 bg-white/[0.04] hover:border-fuchsia-300/20 hover:bg-white/[0.07]"
+                        ? "border-slate-900 bg-slate-50 shadow-[0_14px_28px_rgba(15,23,42,0.06)]"
+                        : "border-slate-200 bg-white hover:bg-slate-50"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="font-mono text-xs text-slate-300">{item.sessionId}</p>
-                        <p className="mt-2 text-sm font-semibold text-white">
+                        <p className="font-mono text-xs text-slate-500">{item.sessionId}</p>
+                        <p className="mt-2 text-sm font-semibold text-slate-900">
                           {item.lead.clientName || "Unnamed lead"} · {item.lead.productType || "No product yet"}
                         </p>
-                        <p className="mt-2 line-clamp-2 text-sm text-slate-300">
+                        <p className="mt-2 line-clamp-2 text-sm text-slate-600">
                           {item.lastMessage || "No Sales AI reply stored yet."}
                         </p>
                       </div>
                       <span
                         className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${
                           item.readyToSubmit
-                            ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-100"
-                            : "border-amber-400/25 bg-amber-400/10 text-amber-100"
+                            ? "border-emerald-200 bg-white text-emerald-700"
+                            : "border-amber-200 bg-white text-amber-700"
                         }`}
                       >
                         {item.readyToSubmit ? "Ready" : "In progress"}
@@ -1553,7 +1553,7 @@ export default function AdminAiAssistantPage() {
                   </button>
                 ))
               ) : (
-                <div className="rounded-2xl border border-dashed border-white/12 bg-white/[0.03] p-4 text-sm text-slate-300">
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
                   No sessions yet. Start a fresh session above and send a message.
                 </div>
               )}
@@ -1564,9 +1564,9 @@ export default function AdminAiAssistantPage() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-400">Recent Leads</p>
-                <h2 className="mt-2 text-2xl font-semibold text-white">Approve or reject submissions</h2>
+                <h2 className="mt-2 text-2xl font-semibold text-slate-900">Approve or reject submissions</h2>
               </div>
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-300/20 bg-emerald-400/10 text-emerald-100 shadow-sm">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm">
                 <CheckCircle2 className="h-6 w-6" />
               </span>
             </div>
@@ -1577,17 +1577,17 @@ export default function AdminAiAssistantPage() {
                   <div key={lead.id} className={`${GALAXY_SUBPANEL_CLASS} p-4`}>
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-white">
+                        <p className="text-sm font-semibold text-slate-900">
                           {lead.lead.clientName || "Unnamed client"} · {lead.lead.productType || "No product"}
                         </p>
-                        <p className="mt-1 text-sm text-slate-300">
+                        <p className="mt-1 text-sm text-slate-600">
                           Qty {lead.lead.quantity || 0} · {lead.lead.color || "No color"} · {lead.lead.printPositions.join(", ") || "No print positions"}
                         </p>
                         <p className="mt-2 text-xs uppercase tracking-[0.16em] text-slate-400">
                           Session {lead.sessionId || "n/a"} · {formatDateTime(lead.updatedAt)}
                         </p>
                         {lead.quoteId && (
-                          <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100">
+                          <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-700">
                             Quotation Approval ID {lead.quoteId}
                           </p>
                         )}
@@ -1598,7 +1598,7 @@ export default function AdminAiAssistantPage() {
                     </div>
 
                     {lead.feedbackComment && (
-                      <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.05] px-3 py-2 text-sm text-slate-200">
+                      <div className="mt-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
                         {lead.feedbackComment}
                       </div>
                     )}
@@ -1607,14 +1607,14 @@ export default function AdminAiAssistantPage() {
                       <button
                         type="button"
                         onClick={() => void handleFeedback(lead, "approved")}
-                        className="rounded-full bg-[linear-gradient(135deg,#065f46_0%,#10b981_100%)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-105"
+                        className="rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50"
                       >
                         Approve
                       </button>
                       <button
                         type="button"
                         onClick={() => void handleFeedback(lead, "rejected")}
-                        className="rounded-full bg-[linear-gradient(135deg,#881337_0%,#f43f5e_100%)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-105"
+                        className="rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
                       >
                         Reject
                       </button>
@@ -1622,7 +1622,7 @@ export default function AdminAiAssistantPage() {
                   </div>
                 ))
               ) : (
-                <div className="rounded-2xl border border-dashed border-white/12 bg-white/[0.03] p-4 text-sm text-slate-300">
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
                   Submitted leads will appear here for approval testing.
                 </div>
               )}
