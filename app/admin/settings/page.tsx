@@ -20,7 +20,10 @@ import {
   type AdminPagePath,
 } from "@/lib/admin-access";
 import { storage } from "@/lib/firebase";
-import { isFirebaseAdminAuthConfigured, signInAdminWithFirebase } from "@/lib/firebase-admin-client-auth";
+import {
+  ensureAdminFirebaseSession,
+  isFirebaseAdminAuthConfigured,
+} from "@/lib/firebase-admin-client-auth";
 
 type AdminUserSummary = {
   email: string;
@@ -262,7 +265,10 @@ export default function SettingsPage() {
           throw new Error("Firebase storage admin auth is not configured.");
         }
 
-        await signInAdminWithFirebase();
+        const hasFirebaseSession = await ensureAdminFirebaseSession();
+        if (!hasFirebaseSession) {
+          throw new Error("Firebase storage session is unavailable.");
+        }
         const [documentsBytes, quotesBytes] = await Promise.all([
           sumStoragePrefix("documents"),
           sumStoragePrefix("quotes"),
