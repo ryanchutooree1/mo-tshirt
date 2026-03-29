@@ -177,9 +177,9 @@ export default function InventoryPage() {
 
   const productStatus = (p: Product) => {
     const { lowCount, outCount } = totals(p);
-    if (outCount > 0) return { label: "Out", cls: "border border-rose-200 bg-rose-50 text-rose-700" };
-    if (lowCount > 0) return { label: "Low", cls: "border border-amber-200 bg-amber-50 text-amber-700" };
-    return { label: "OK", cls: "border border-emerald-200 bg-emerald-50 text-emerald-700" };
+    if (outCount > 0) return { label: "Out", cls: "border border-slate-200 bg-white text-slate-700" };
+    if (lowCount > 0) return { label: "Low", cls: "border border-slate-200 bg-white text-slate-700" };
+    return { label: "OK", cls: "border border-slate-200 bg-white text-slate-700" };
   };
 
   // ---------- Mutations ----------
@@ -461,28 +461,16 @@ export default function InventoryPage() {
     }`;
 
   return (
-    <main className="relative min-h-screen">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-40 right-[-12rem] h-80 w-80 rounded-full bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.35),transparent_70%)] blur-3xl"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-[-10rem] top-48 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_top,rgba(14,116,144,0.25),transparent_70%)] blur-3xl"
-      />
+    <main className="relative min-h-screen bg-white">
       <div className="relative mx-auto max-w-7xl space-y-6 px-6 py-8">
         {/* Hero */}
         <section
-          className="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 p-6 shadow-sm backdrop-blur"
+          className="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white p-6 shadow-sm"
           style={{ animation: "fadeUp 0.6s ease-out both" }}
         >
-          <div
-            aria-hidden
-            className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.08),transparent_60%)]"
-          />
           <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-600">
                 Inventory
               </p>
               <h1 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">
@@ -492,13 +480,13 @@ export default function InventoryPage() {
                 Monitor stock health, prevent shortages, and keep pricing accurate with live inventory safety checks.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
                   <FiLayers className="h-4 w-4" /> Live stock levels
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
                   <FiAlertTriangle className="h-4 w-4" /> Low stock alerts
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
                   CSV import / export
                 </span>
               </div>
@@ -529,7 +517,7 @@ export default function InventoryPage() {
               </button>
               <button
                 onClick={() => setShowAddProduct(true)}
-                className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+                className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
               >
                 <FiPlus className="h-4 w-4" /> Add product
               </button>
@@ -542,16 +530,16 @@ export default function InventoryPage() {
           className="grid grid-cols-2 gap-4 md:grid-cols-5"
           style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.08s" }}
         >
-          <StatCard label="Products" value={filtered.length} tone="slate" icon={<FiPackage className="h-4 w-4" />} />
-          <StatCard label="Total Units" value={overall.totalUnits} tone="sky" icon={<FiLayers className="h-4 w-4" />} />
-          <StatCard label="Stock Value" value={money(overall.totalValue)} tone="emerald" icon={<FiDollarSign className="h-4 w-4" />} />
-          <StatCard label="Low Stock" value={overall.low} tone="amber" icon={<FiAlertTriangle className="h-4 w-4" />} />
-          <StatCard label="Out of Stock" value={overall.out} tone="rose" icon={<FiXCircle className="h-4 w-4" />} />
+          <StatCard label="Products" value={filtered.length} icon={<FiPackage className="h-4 w-4" />} />
+          <StatCard label="Total Units" value={overall.totalUnits} icon={<FiLayers className="h-4 w-4" />} />
+          <StatCard label="Stock Value" value={money(overall.totalValue)} icon={<FiDollarSign className="h-4 w-4" />} />
+          <StatCard label="Low Stock" value={overall.low} icon={<FiAlertTriangle className="h-4 w-4" />} />
+          <StatCard label="Out of Stock" value={overall.out} icon={<FiXCircle className="h-4 w-4" />} />
         </section>
 
         {/* Filters */}
         <section
-          className="sticky top-20 z-10 rounded-3xl border border-slate-200/70 bg-white/90 p-4 shadow-sm backdrop-blur"
+          className="sticky top-20 z-10 rounded-3xl border border-slate-200/70 bg-white p-4 shadow-sm"
           style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.14s" }}
         >
           <div className="flex flex-wrap items-start gap-3">
@@ -561,7 +549,7 @@ export default function InventoryPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search product"
-                className="w-full rounded-full border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-200 sm:w-72"
+                className="w-full rounded-full border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200 sm:w-72"
               />
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -569,7 +557,7 @@ export default function InventoryPage() {
                 type="button"
                 aria-pressed={showLowOnly}
                 onClick={() => setShowLowOnly((v) => !v)}
-                className={togglePill(showLowOnly, "border-amber-200 bg-amber-50 text-amber-700")}
+                className={togglePill(showLowOnly, "border-slate-200 bg-white text-slate-700")}
               >
                 <FiAlertTriangle className="h-4 w-4" /> Low stock
               </button>
@@ -577,7 +565,7 @@ export default function InventoryPage() {
                 type="button"
                 aria-pressed={showOutOnly}
                 onClick={() => setShowOutOnly((v) => !v)}
-                className={togglePill(showOutOnly, "border-rose-200 bg-rose-50 text-rose-700")}
+                className={togglePill(showOutOnly, "border-slate-200 bg-white text-slate-700")}
               >
                 <FiXCircle className="h-4 w-4" /> Out of stock
               </button>
@@ -608,7 +596,7 @@ export default function InventoryPage() {
             return (
               <div
                 key={p.id}
-                className="group overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 shadow-sm transition hover:border-emerald-200/70 hover:shadow-md"
+                className="group overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-sm transition hover:border-slate-300 hover:shadow-md"
               >
                 {/* Card header */}
                 <div className="border-b border-slate-100/80 p-4">
@@ -652,7 +640,7 @@ export default function InventoryPage() {
                           type="number"
                           defaultValue={p.price ?? ""}
                           placeholder="0"
-                          className="w-28 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-right text-sm shadow-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                          className="w-28 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-right text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
                           onBlur={(e) => editProductPrice(p.id, e.target.value === "" ? "" : Number(e.target.value))}
                         />
                       </div>
@@ -693,7 +681,7 @@ export default function InventoryPage() {
                           Reset
                         </button>
                         <button
-                          className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-100"
+                          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
                           onClick={() => setConfirmDelete({ scope: "product", productId: p.id })}
                           title="Delete product"
                         >
@@ -750,7 +738,7 @@ export default function InventoryPage() {
                               Bulk edit
                             </button>
                             <button
-                              className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[11px] font-semibold text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-100"
+                              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
                               onClick={() => setConfirmDelete({ scope: "color", productId: p.id, colorIdx: cIdx })}
                               title="Delete color"
                             >
@@ -781,12 +769,7 @@ export default function InventoryPage() {
                                   .sort((a, b) => DEFAULT_SIZES.indexOf(a[0]) - DEFAULT_SIZES.indexOf(b[0]))
                                   .map(([size, qty]) => {
                                     const min = c.minStock?.[size] ?? LOW_FALLBACK;
-                                    const tone =
-                                      qty <= 0
-                                        ? "border-rose-200 text-rose-700"
-                                        : qty <= min
-                                        ? "border-amber-200 text-amber-700"
-                                        : "border-emerald-200 text-emerald-700";
+                                    const tone = "border-slate-200 text-slate-700";
                                     return (
                                       <tr key={`${p.id}-${c.color}-${size}`} className="text-slate-700">
                                         <td className="px-3 py-2">{size}</td>
@@ -795,7 +778,7 @@ export default function InventoryPage() {
                                             type="number"
                                             value={qty}
                                             onChange={(e) => updateQty(p.id, cIdx, size, parseInt(e.target.value) || 0)}
-                                            className={`w-24 rounded-lg border px-2 py-1 text-right ${tone} focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200`}
+                                            className={`w-24 rounded-lg border px-2 py-1 text-right ${tone} focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200`}
                                           />
                                         </td>
                                         <td className="px-3 py-2 text-right align-middle">
@@ -803,12 +786,12 @@ export default function InventoryPage() {
                                             type="number"
                                             value={min}
                                             onChange={(e) => updateMin(p.id, cIdx, size, parseInt(e.target.value) || 0)}
-                                            className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-right focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                                            className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-right focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
                                           />
                                         </td>
                                         <td className="px-3 py-2 text-right align-middle">
                                           <button
-                                            className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-100"
+                                            className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
                                             onClick={() =>
                                               setConfirmDelete({ scope: "size", productId: p.id, colorIdx: cIdx, sizeKey: size })
                                             }
@@ -841,7 +824,7 @@ export default function InventoryPage() {
             <p className="mt-1 text-sm text-slate-500">Try clearing filters or add a new product.</p>
             <button
               onClick={() => setShowAddProduct(true)}
-              className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
             >
               <FiPlus className="h-4 w-4" /> Add product
             </button>
@@ -859,7 +842,7 @@ export default function InventoryPage() {
                 <input
                   value={npName}
                   onChange={(e) => setNpName(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
                 />
               </label>
               <label className="block">
@@ -867,7 +850,7 @@ export default function InventoryPage() {
                 <input
                   value={npImage}
                   onChange={(e) => setNpImage(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
                 />
               </label>
               <label className="block">
@@ -876,7 +859,7 @@ export default function InventoryPage() {
                   type="number"
                   value={npPrice}
                   onChange={(e) => setNpPrice(e.target.value === "" ? "" : Number(e.target.value))}
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
                 />
               </label>
             </div>
@@ -884,7 +867,7 @@ export default function InventoryPage() {
               <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50" onClick={() => setShowAddProduct(false)}>
                 Cancel
               </button>
-              <button className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700" onClick={addProduct}>
+              <button className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800" onClick={addProduct}>
                 Save
               </button>
             </div>
@@ -900,7 +883,7 @@ export default function InventoryPage() {
                 <input
                   value={ncColor}
                   onChange={(e) => setNcColor(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
                 />
               </label>
 
@@ -915,7 +898,7 @@ export default function InventoryPage() {
                       onChange={(e) =>
                         setNcSizes((prev) => ({ ...prev, [s]: { ...prev[s], qty: e.target.value === "" ? "" : Number(e.target.value) } }))
                       }
-                      className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                      className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
                     />
                     <input
                       type="number"
@@ -924,7 +907,7 @@ export default function InventoryPage() {
                       onChange={(e) =>
                         setNcSizes((prev) => ({ ...prev, [s]: { ...prev[s], min: e.target.value === "" ? "" : Number(e.target.value) } }))
                       }
-                      className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                      className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
                     />
                   </div>
                 ))}
@@ -979,70 +962,25 @@ export default function InventoryPage() {
 function StatCard({
   label,
   value,
-  tone = "slate",
   icon,
 }: {
   label: string;
   value: string | number;
-  tone?: "slate" | "sky" | "emerald" | "amber" | "rose";
   icon?: React.ReactNode;
 }) {
-  const tones = {
-    slate: {
-      border: "border-slate-200",
-      bg: "from-slate-50 via-white to-white",
-      accent: "bg-slate-100 text-slate-700",
-      glow: "bg-slate-200/40",
-      value: "text-slate-900",
-    },
-    sky: {
-      border: "border-sky-100",
-      bg: "from-sky-50 via-white to-white",
-      accent: "bg-sky-100 text-sky-700",
-      glow: "bg-sky-200/40",
-      value: "text-slate-900",
-    },
-    emerald: {
-      border: "border-emerald-100",
-      bg: "from-emerald-50 via-white to-white",
-      accent: "bg-emerald-100 text-emerald-700",
-      glow: "bg-emerald-200/40",
-      value: "text-slate-900",
-    },
-    amber: {
-      border: "border-amber-100",
-      bg: "from-amber-50 via-white to-white",
-      accent: "bg-amber-100 text-amber-700",
-      glow: "bg-amber-200/40",
-      value: "text-slate-900",
-    },
-    rose: {
-      border: "border-rose-100",
-      bg: "from-rose-50 via-white to-white",
-      accent: "bg-rose-100 text-rose-700",
-      glow: "bg-rose-200/40",
-      value: "text-slate-900",
-    },
-  } as const;
-  const theme = tones[tone] ?? tones.slate;
-
   return (
-    <div className={`relative overflow-hidden rounded-2xl border ${theme.border} bg-gradient-to-br ${theme.bg} p-4 shadow-sm`}>
+    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
           {label}
         </div>
         {icon && (
-          <span className={`flex h-9 w-9 items-center justify-center rounded-full ${theme.accent}`}>
+          <span className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700">
             {icon}
           </span>
         )}
       </div>
-      <div className={`mt-3 text-2xl font-semibold ${theme.value}`}>{value}</div>
-      <div
-        aria-hidden
-        className={`pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full blur-2xl ${theme.glow}`}
-      />
+      <div className="mt-3 text-2xl font-semibold text-slate-900">{value}</div>
     </div>
   );
 }
@@ -1077,13 +1015,13 @@ function ConfirmDelete({ onCancel, onConfirm }: { onCancel: () => void; onConfir
         value={code}
         onChange={(e) => setCode(e.target.value)}
         placeholder={REQUIRED}
-        className="rounded-full border border-slate-200 px-3 py-2 text-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
+        className="rounded-full border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
       />
       <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50" onClick={onCancel}>
         Cancel
       </button>
       <button
-        className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:opacity-60"
+        className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-60"
         disabled={code !== REQUIRED}
         onClick={onConfirm}
       >
@@ -1120,13 +1058,13 @@ function BulkEditModal({
               type="number"
               value={local[s].qty}
               onChange={(e) => setLocal((pr) => ({ ...pr, [s]: { ...pr[s], qty: parseInt(e.target.value) || 0 } }))}
-              className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+              className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
             />
             <input
               type="number"
               value={local[s].min}
               onChange={(e) => setLocal((pr) => ({ ...pr, [s]: { ...pr[s], min: parseInt(e.target.value) || 0 } }))}
-              className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+              className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
             />
           </div>
         ))}
