@@ -1636,7 +1636,7 @@ export default function QuotationApprovalPage() {
   const secondaryButtonClass =
     "inline-flex items-center justify-center gap-2 rounded-full border border-[#dddddd] bg-white px-4 py-2.5 text-xs font-semibold text-[#484848] transition hover:border-[#c7c7c7] hover:bg-[#f7f7f7] hover:shadow-[0_4px_14px_rgba(0,0,0,0.06)] disabled:cursor-not-allowed disabled:border-[#ececec] disabled:bg-[#f7f7f7] disabled:text-[#b0b0b0]";
   const darkButtonClass =
-    "inline-flex items-center justify-center gap-2 rounded-full border border-transparent bg-[#222222] px-4 py-2.5 text-xs font-semibold text-white shadow-[0_10px_20px_rgba(34,34,34,0.16)] transition hover:bg-black hover:shadow-[0_14px_28px_rgba(34,34,34,0.18)] disabled:cursor-not-allowed disabled:border-[#ebebeb] disabled:bg-white disabled:text-[#b0b0b0] disabled:shadow-none";
+    "inline-flex items-center justify-center gap-2 rounded-full bg-[#222222] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-[#b0b0b0]";
   const primaryButtonClass =
     "inline-flex items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#ff385c,#e61e4d)] px-4 py-2.5 text-xs font-semibold text-white shadow-[0_10px_24px_rgba(255,56,92,0.24)] transition hover:shadow-[0_14px_28px_rgba(255,56,92,0.32)] disabled:cursor-not-allowed disabled:bg-[#f4b8c5] disabled:text-white disabled:shadow-none";
 
@@ -2604,34 +2604,23 @@ export default function QuotationApprovalPage() {
                         </div>
                     </div>
 
-                    <div className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.15fr)_minmax(0,0.9fr)] xl:items-start">
-                      <div className={`${surfaceClass} self-start p-5`}>
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className={labelClass}>Totals</p>
-                            <p className="mt-1 text-sm text-[#6a6a6a]">
-                              One clear price, fees included.
-                            </p>
-                          </div>
-                          <span className="rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1 text-[11px] font-semibold text-[#717171]">
-                            {draft.currency}
-                          </span>
-                        </div>
-
-                        <div className="mt-4 rounded-[26px] border border-[#ebebeb] bg-[#f7f7f7] p-2">
-                          <div className="flex items-center justify-between rounded-[20px] px-3 py-3 text-sm text-[#484848]">
+                    <div className="grid gap-5 xl:grid-cols-3">
+                      <div className={`${surfaceClass} p-5`}>
+                        <p className={labelClass}>Totals</p>
+                        <div className="mt-5 space-y-3 text-sm text-[#484848]">
+                          <div className="flex items-center justify-between">
                             <span>Subtotal</span>
                             <span className="font-semibold text-[#222222]">
                               {formatMoney(totals.subtotal, draft.currency)}
                             </span>
                           </div>
-                          <div className="flex items-center justify-between rounded-[20px] px-3 py-3 text-sm text-[#484848]">
+                          <div className="flex items-center justify-between">
                             <span>Delivery</span>
                             <span className="font-semibold text-[#222222]">
                               {formatMoney(draft.deliveryFee, draft.currency)}
                             </span>
                           </div>
-                          <div className="flex items-center justify-between rounded-[20px] px-3 py-3 text-sm text-[#484848]">
+                          <div className="flex items-center justify-between">
                             <span>Discount</span>
                             <span className="font-semibold text-[#222222]">
                               {draft.discount > 0
@@ -2639,7 +2628,7 @@ export default function QuotationApprovalPage() {
                                 : formatMoney(0, draft.currency)}
                             </span>
                           </div>
-                          <div className="rounded-[22px] border border-[#ffd2dc] bg-white px-4 py-4 shadow-[0_4px_14px_rgba(255,56,92,0.08)]">
+                          <div className="rounded-[24px] border border-[#ffd2dc] bg-[#fff5f7] px-4 py-4">
                             <div className="flex items-center justify-between text-base font-semibold text-[#222222]">
                               <span>Total</span>
                               <span>{formatMoney(totals.total, draft.currency)}</span>
@@ -2675,7 +2664,7 @@ export default function QuotationApprovalPage() {
                           </div>
                         ) : null}
 
-                        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                        <div className="mt-5 grid gap-2">
                           <button
                             type="button"
                             onClick={handleDownloadPdf}
@@ -2695,7 +2684,7 @@ export default function QuotationApprovalPage() {
                         </div>
                       </div>
 
-                      <div className={`${surfaceClass} self-start p-5`}>
+                      <div className={`${surfaceClass} p-5`}>
                         <div className="flex items-center justify-between gap-3">
                           <div>
                             <p className={labelClass}>Workflow</p>
@@ -2709,23 +2698,14 @@ export default function QuotationApprovalPage() {
                         </div>
 
                         <div className="mt-4 space-y-3">
-                          <div className="rounded-[28px] border border-[#ebebeb] bg-[#f7f7f7] p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex items-start gap-3">
-                                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[#ebebeb] bg-white text-sm font-semibold text-[#222222]">
-                                  1
-                                </span>
-                                <div>
-                                  <p className="text-base font-semibold text-[#222222]">Save changes</p>
-                                  <p className="mt-1 text-sm leading-6 text-[#6a6a6a]">
-                                    Confirm the pricing and document details first.
-                                  </p>
-                                </div>
-                              </div>
-                              <span className="rounded-full border border-[#ebebeb] bg-white px-3 py-1 text-[11px] font-semibold text-[#717171]">
-                                Prepare
-                              </span>
+                          <div className="rounded-[24px] border border-[#ebebeb] bg-[#f7f7f7] p-4">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-semibold text-[#222222]">1. Save changes</p>
+                              <span className="text-[11px] text-[#717171]">Prepare</span>
                             </div>
+                            <p className="mt-2 text-sm text-[#6a6a6a]">
+                              Confirm the pricing and document details first.
+                            </p>
                             <button
                               type="button"
                               onClick={() => saveDraft()}
@@ -2737,23 +2717,16 @@ export default function QuotationApprovalPage() {
                             </button>
                           </div>
 
-                          <div className="rounded-[28px] border border-[#ffd2dc] bg-[#fff5f7] p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex items-start gap-3">
-                                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[#ffd2dc] bg-white text-sm font-semibold text-[#d12f5f]">
-                                  2
-                                </span>
-                                <div>
-                                  <p className="text-base font-semibold text-[#222222]">Approve and send</p>
-                                  <p className="mt-1 text-sm leading-6 text-[#6a6a6a]">
-                                    Mark the quote approved, then send the finished document.
-                                  </p>
-                                </div>
-                              </div>
-                              <span className="rounded-full border border-[#ffd2dc] bg-white px-3 py-1 text-[11px] font-semibold text-[#d12f5f]">
+                          <div className="rounded-[24px] border border-[#ffd2dc] bg-[#fff5f7] p-4">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-semibold text-[#222222]">2. Approve and send</p>
+                              <span className="text-[11px] text-[#d12f5f]">
                                 {quoteIsMarkedApproved ? "Completed" : "Required"}
                               </span>
                             </div>
+                            <p className="mt-2 text-sm text-[#6a6a6a]">
+                              Mark the quote approved, then send the finished document.
+                            </p>
                             <div className="mt-4 grid gap-2">
                               <button
                                 type="button"
@@ -2793,23 +2766,16 @@ export default function QuotationApprovalPage() {
                             </div>
                           </div>
 
-                          <div className="rounded-[28px] border border-[#ebebeb] bg-[#f7f7f7] p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex items-start gap-3">
-                                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[#ebebeb] bg-white text-sm font-semibold text-[#222222]">
-                                  3
-                                </span>
-                                <div>
-                                  <p className="text-base font-semibold text-[#222222]">Move to orders</p>
-                                  <p className="mt-1 text-sm leading-6 text-[#6a6a6a]">
-                                    Create or sync the production order once the quote is approved.
-                                  </p>
-                                </div>
-                              </div>
-                              <span className="rounded-full border border-[#ebebeb] bg-white px-3 py-1 text-[11px] font-semibold text-[#717171]">
+                          <div className="rounded-[24px] border border-[#ebebeb] bg-[#f7f7f7] p-4">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-semibold text-[#222222]">3. Move to orders</p>
+                              <span className="text-[11px] text-[#717171]">
                                 {quoteInOrders ? "Synced" : "Final step"}
                               </span>
                             </div>
+                            <p className="mt-2 text-sm text-[#6a6a6a]">
+                              Create or sync the production order once the quote is approved.
+                            </p>
                             <button
                               type="button"
                               onClick={moveToOrders}
@@ -2829,7 +2795,7 @@ export default function QuotationApprovalPage() {
                                   : "Move to orders"}
                             </button>
                             {quoteInOrders ? (
-                              <p className="mt-3 rounded-2xl border border-[#d7f0e0] bg-[#f4fbf7] px-3 py-2 text-xs font-semibold text-[#1f7a4d]">
+                              <p className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
                                 Linked Order ID: {selected.orderTransactionId}
                               </p>
                             ) : null}
@@ -2837,37 +2803,26 @@ export default function QuotationApprovalPage() {
                         </div>
                       </div>
 
-                      <div className={`${surfaceClass} self-start p-5`}>
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className={labelClass}>Admin actions</p>
-                            <p className="mt-1 text-sm text-[#6a6a6a]">
-                              Quick internal controls for this quote.
-                            </p>
-                          </div>
-                          <span className="rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1 text-[11px] font-semibold text-[#717171]">
-                            Internal
-                          </span>
-                        </div>
-
-                        <div className="mt-4 space-y-2.5">
+                      <div className={`${surfaceClass} p-5`}>
+                        <p className={labelClass}>Admin actions</p>
+                        <div className="mt-4 grid gap-2">
                           <button
                             type="button"
                             onClick={() => updateSelectedStatus("review", "Marked as read.")}
                             disabled={statusSaving || (selected.status || "new") !== "new"}
-                            className={`w-full ${secondaryButtonClass}`}
+                            className={secondaryButtonClass}
                           >
                             <FiClock className="h-4 w-4" />
                             {statusSaving ? "Updating..." : "Mark as read"}
                           </button>
-                          <Link href="/admin/orders" className={`w-full ${secondaryButtonClass}`}>
+                          <Link href="/admin/orders" className={secondaryButtonClass}>
                             Open order management
                           </Link>
                           <button
                             type="button"
                             onClick={handleDeleteQuote}
                             disabled={deletingQuote}
-                            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#ffd2dc] bg-[#fff5f7] px-4 py-2.5 text-xs font-semibold text-[#d12f5f] transition hover:bg-[#ffe9ef] disabled:cursor-not-allowed disabled:opacity-50"
+                            className="inline-flex items-center justify-center gap-2 rounded-full border border-[#ffd2dc] bg-[#fff5f7] px-4 py-2.5 text-xs font-semibold text-[#d12f5f] transition hover:bg-[#ffe9ef] disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <FiTrash2 className="h-4 w-4" />
                             {deletingQuote ? "Deleting..." : "Delete quotation"}
@@ -2875,20 +2830,14 @@ export default function QuotationApprovalPage() {
                         </div>
 
                         {sendValidationError ? (
-                          <div className="mt-4 rounded-[24px] border border-[#f2dfb2] bg-[#fffaf1] px-4 py-3">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#a36a00]">
-                              Before sending
-                            </p>
-                            <p className="mt-1 text-sm text-[#8a5a00]">{sendValidationError}</p>
+                          <div className="mt-4 rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                            {sendValidationError}
                           </div>
                         ) : null}
 
                         {notice ? (
-                          <div className="mt-4 rounded-[24px] border border-[#ebebeb] bg-[#f7f7f7] px-4 py-3">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
-                              Latest update
-                            </p>
-                            <p className="mt-1 text-sm text-[#484848]">{notice}</p>
+                          <div className="mt-4 rounded-[24px] border border-[#ebebeb] bg-[#f7f7f7] px-4 py-3 text-sm text-[#484848]">
+                            {notice}
                           </div>
                         ) : null}
                       </div>
