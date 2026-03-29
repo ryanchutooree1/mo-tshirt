@@ -272,10 +272,10 @@ export default function OwnerDashboard() {
   const isDark = theme === "dark";
   const cardBase = isDark
     ? "rounded-3xl border border-white/10 bg-white/[0.06] backdrop-blur-xl shadow-[0_22px_60px_rgba(5,12,24,0.45)]"
-    : "rounded-3xl border border-slate-200 bg-white/90 backdrop-blur-xl shadow-[0_16px_40px_rgba(15,23,42,0.08)]";
+    : "rounded-[32px] border border-[#ebebeb] bg-white/92 backdrop-blur-xl shadow-[0_14px_34px_rgba(0,0,0,0.06)]";
   const heroPanelClass = isDark
     ? "rounded-2xl border border-white/20 bg-black/20 p-4"
-    : "rounded-2xl border border-slate-200 bg-white/80 p-4";
+    : "rounded-[26px] border border-[#ebebeb] bg-[#f7f7f7]/95 p-4";
 
   const [now, setNow] = useState(new Date());
   const [orders, setOrders] = useState<DashboardOrder[]>([]);
@@ -1008,14 +1008,14 @@ export default function OwnerDashboard() {
           className={`absolute -top-40 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full blur-3xl ${
             isDark
               ? "bg-[radial-gradient(circle,rgba(56,189,248,0.35),rgba(56,189,248,0)_70%)]"
-              : "bg-[radial-gradient(circle,rgba(56,189,248,0.28),rgba(56,189,248,0)_70%)]"
+              : "bg-[radial-gradient(circle,rgba(255,56,92,0.16),rgba(255,56,92,0)_70%)]"
           }`}
         />
         <div
           className={`absolute right-[-6rem] top-32 h-[420px] w-[420px] rounded-full blur-3xl ${
             isDark
               ? "bg-[radial-gradient(circle,rgba(14,165,233,0.28),rgba(14,165,233,0)_70%)]"
-              : "bg-[radial-gradient(circle,rgba(16,185,129,0.18),rgba(16,185,129,0)_70%)]"
+              : "bg-[radial-gradient(circle,rgba(229,231,235,0.85),rgba(229,231,235,0)_70%)]"
           }`}
         />
       </div>
@@ -1026,21 +1026,21 @@ export default function OwnerDashboard() {
             className={`absolute inset-0 ${
               isDark
                 ? "bg-[linear-gradient(120deg,rgba(15,23,42,0.95),rgba(10,36,62,0.88))]"
-                : "bg-[linear-gradient(125deg,rgba(255,255,255,0.94),rgba(224,242,254,0.82))]"
+                : "bg-[linear-gradient(125deg,rgba(255,255,255,0.96),rgba(250,250,250,0.94),rgba(255,243,246,0.9))]"
             }`}
           />
           <div
             className={`absolute inset-0 [background-size:20px_20px] ${
               isDark
                 ? "opacity-30 [background-image:radial-gradient(rgba(148,163,184,0.32)_1px,transparent_1px)]"
-                : "opacity-35 [background-image:radial-gradient(rgba(15,23,42,0.12)_1px,transparent_1px)]"
+                : "opacity-25 [background-image:radial-gradient(rgba(34,34,34,0.1)_1px,transparent_1px)]"
             }`}
           />
 
           <div className="relative grid gap-8 xl:grid-cols-[1.4fr_0.9fr]">
             <div>
-              <p className={`text-xs uppercase tracking-[0.28em] ${isDark ? "text-cyan-200/80" : "text-sky-700"}`}>
-                MO Executive Layer
+              <p className={`text-xs uppercase tracking-[0.28em] ${isDark ? "text-cyan-200/80" : "text-[#d12f5f]"}`}>
+                MO Admin HQ
               </p>
               <h1
                 className={`${displayFont.className} mt-3 text-4xl font-semibold tracking-tight sm:text-6xl ${
@@ -1659,11 +1659,11 @@ export default function OwnerDashboard() {
         }
 
         .ceo-theme-light {
-          --ceo-bg: #f3f8ff;
-          --ceo-text: #0f172a;
+          --ceo-bg: #fbfbfb;
+          --ceo-text: #222222;
           background:
-            radial-gradient(120% 90% at 50% -20%, rgba(56, 189, 248, 0.22), transparent 65%),
-            linear-gradient(145deg, #f7fbff 0%, #eef7ff 48%, #e6f2ff 100%);
+            radial-gradient(120% 90% at 50% -20%, rgba(255, 56, 92, 0.14), transparent 65%),
+            linear-gradient(145deg, #ffffff 0%, #fbfbfb 48%, #f7f7f7 100%);
           color: var(--ceo-text);
         }
 
@@ -1672,15 +1672,15 @@ export default function OwnerDashboard() {
         }
 
         .ceo-theme-light .text-slate-200 {
-          color: #334155 !important;
+          color: #4b5563 !important;
         }
 
         .ceo-theme-light .text-slate-300 {
-          color: #475569 !important;
+          color: #6a6a6a !important;
         }
 
         .ceo-theme-light :is(.text-cyan-100, .text-cyan-200) {
-          color: #0e7490 !important;
+          color: #d12f5f !important;
         }
 
         .ceo-theme-light :is(.text-emerald-100, .text-emerald-200) {
@@ -1692,15 +1692,23 @@ export default function OwnerDashboard() {
         }
 
         .ceo-theme-light :is(.border-white\/10, .border-white\/15, .border-white\/20, .border-white\/30) {
-          border-color: rgba(15, 23, 42, 0.15) !important;
+          border-color: rgba(34, 34, 34, 0.1) !important;
         }
 
         .ceo-theme-light :is(.bg-white\/\[0\.06\], .bg-white\/10, .bg-white\/5, .bg-black\/20, .bg-slate-950\/40, .bg-slate-950\/90) {
-          background-color: rgba(255, 255, 255, 0.86) !important;
+          background-color: rgba(255, 255, 255, 0.92) !important;
         }
 
         .ceo-theme-light :is(.bg-slate-900, .from-slate-900, .to-slate-800) {
-          background-color: #0f172a !important;
+          background-color: #222222 !important;
+        }
+
+        .ceo-theme-light :is(.border-cyan-300\/40, .border-cyan-300\/55, .border-cyan-300\/60, .border-cyan-400\/45) {
+          border-color: rgba(255, 56, 92, 0.28) !important;
+        }
+
+        .ceo-theme-light :is(.bg-cyan-400\/15, .bg-cyan-400\/18, .bg-cyan-300\/10, .bg-cyan-100) {
+          background-color: rgba(255, 56, 92, 0.1) !important;
         }
 
         .animate-rise {

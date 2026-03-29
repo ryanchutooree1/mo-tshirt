@@ -33,6 +33,124 @@ body {
 
 .admin-root.admin-light {
   color-scheme: light;
+  background:
+    radial-gradient(circle at top right, rgba(255, 56, 92, 0.08), transparent 22rem),
+    linear-gradient(180deg, #ffffff 0%, #fbfbfb 45%, #f7f7f7 100%);
+  color: #222222;
+}
+
+.admin-root.admin-light .admin-page-shell {
+  background: transparent;
+  color: #222222;
+}
+
+.admin-root.admin-light .admin-page-shell :is(
+    .bg-\[\#F5F5F7\],
+    .bg-\[\#f7f7fb\],
+    .bg-\[\#f6f7f9\],
+    .bg-\[\#f5f7fb\],
+    .bg-\[\#f8fafc\],
+    .bg-\[\#f5f5f5\],
+    .bg-slate-50,
+    .bg-slate-100,
+    .bg-gray-50,
+    .bg-gray-100
+  ) {
+  background-color: #f7f7f7 !important;
+}
+
+.admin-root.admin-light .admin-page-shell :is(
+    .bg-white,
+    .bg-white\/90,
+    .bg-white\/80,
+    .bg-white\/95,
+    .bg-white\/70,
+    .bg-\[\#ffffff\]
+  ) {
+  background-color: #ffffff !important;
+}
+
+.admin-root.admin-light .admin-page-shell :is(
+    .text-\[\#1a1a1a\],
+    .text-black,
+    .text-slate-950,
+    .text-slate-900,
+    .text-slate-800,
+    .text-slate-700,
+    .text-gray-700,
+    .text-gray-600
+  ) {
+  color: #222222 !important;
+}
+
+.admin-root.admin-light .admin-page-shell :is(
+    .text-slate-600,
+    .text-slate-500,
+    .text-slate-400,
+    .text-gray-500,
+    .text-gray-400
+  ) {
+  color: #6a6a6a !important;
+}
+
+.admin-root.admin-light .admin-page-shell :is(
+    .border-slate-200,
+    .border-slate-100,
+    .border-slate-300,
+    .border-slate-400,
+    .border-gray-200,
+    .border-gray-100,
+    .border-gray-300,
+    .border-\[\#e5e5e5\],
+    .border-\[\#bfa37a\]
+  ) {
+  border-color: #ebebeb !important;
+}
+
+.admin-root.admin-light .admin-page-shell .shadow-sm,
+.admin-root.admin-light .admin-page-shell .shadow,
+.admin-root.admin-light .admin-page-shell .shadow-md,
+.admin-root.admin-light .admin-page-shell .shadow-lg {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06) !important;
+}
+
+.admin-root.admin-light .admin-page-shell :is(input, textarea, select) {
+  background-color: #ffffff;
+  color: #222222;
+  border-color: #dddddd;
+}
+
+.admin-root.admin-light .admin-page-shell :is(input, textarea, select)::placeholder {
+  color: #b0b0b0;
+}
+
+.admin-root.admin-light .admin-page-shell :is(input, textarea, select):focus {
+  border-color: #ff385c;
+  box-shadow: 0 0 0 4px rgb(255 56 92 / 0.1);
+}
+
+.admin-root.admin-light .admin-page-shell :is(.bg-amber-50, .bg-orange-50) {
+  background-color: #fffaf1 !important;
+}
+
+.admin-root.admin-light .admin-page-shell :is(.bg-emerald-50, .bg-teal-50) {
+  background-color: #f4fbf7 !important;
+}
+
+.admin-root.admin-light .admin-page-shell :is(.bg-sky-50, .bg-blue-50, .bg-cyan-50) {
+  background-color: #f5f9ff !important;
+}
+
+.admin-root.admin-light .admin-page-shell :is(.bg-rose-50, .bg-pink-50) {
+  background-color: #fff5f7 !important;
+}
+
+.admin-root.admin-light .admin-page-shell :is(.border-rose-200, .border-pink-200) {
+  border-color: #ffd2dc !important;
+}
+
+.admin-root.admin-light .admin-page-shell :is(.text-rose-700, .text-pink-700) {
+  color: #d12f5f !important;
 }
 
 .admin-root.admin-dark .admin-page-shell {
