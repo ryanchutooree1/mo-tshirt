@@ -186,16 +186,16 @@ function QuoteAttachmentPreview({
   }
 
   return (
-    <div className="relative mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2">
+    <div className="relative mt-3 overflow-hidden rounded-[24px] border border-[#ebebeb] bg-white p-2.5 shadow-[0_4px_14px_rgba(0,0,0,0.04)]">
       {status !== "ready" && (
-        <div className="absolute inset-2 z-10 flex flex-col items-center justify-center gap-2 rounded-xl bg-white/85 text-slate-500 backdrop-blur-sm">
+        <div className="absolute inset-2 z-10 flex flex-col items-center justify-center gap-2 rounded-[18px] bg-white/92 text-[#717171] backdrop-blur-sm">
           {status === "loading" ? (
             <>
               <FiRefreshCw className="h-4 w-4 animate-spin" />
-              <p className="text-xs font-medium text-slate-600">Loading preview...</p>
+              <p className="text-xs font-medium text-[#717171]">Loading preview...</p>
             </>
           ) : (
-            <p className="text-xs font-medium text-slate-600">Preview unavailable</p>
+            <p className="text-xs font-medium text-[#717171]">Preview unavailable</p>
           )}
         </div>
       )}
@@ -308,10 +308,10 @@ const STATUS_LABELS: Record<QuoteStatus, string> = {
 };
 
 const STATUS_TONES: Record<QuoteStatus, string> = {
-  new: "border-amber-200 bg-amber-50 text-amber-700",
-  review: "border-blue-200 bg-blue-50 text-blue-700",
-  approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  sent: "border-cyan-200 bg-cyan-50 text-cyan-700",
+  new: "border-[#ffd2dc] bg-[#fff5f7] text-[#d12f5f]",
+  review: "border-[#ebebeb] bg-[#f7f7f7] text-[#484848]",
+  approved: "border-[#d7f0e0] bg-[#f4fbf7] text-[#1f7a4d]",
+  sent: "border-[#dce8ff] bg-[#f5f9ff] text-[#3566d6]",
 };
 
 const DOC_TYPE_LABELS: Record<DocumentType, string> = {
@@ -322,10 +322,10 @@ const DOC_TYPE_LABELS: Record<DocumentType, string> = {
 };
 
 const DOC_TYPE_TONES: Record<DocumentType, string> = {
-  quotation: "border-orange-200 bg-orange-50 text-orange-700",
-  invoice: "border-sky-200 bg-sky-50 text-sky-700",
-  partial_receipt: "border-amber-200 bg-amber-50 text-amber-700",
-  receipt: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  quotation: "border-[#ffd2dc] bg-[#fff5f7] text-[#d12f5f]",
+  invoice: "border-[#ebebeb] bg-[#f7f7f7] text-[#484848]",
+  partial_receipt: "border-[#ffe2b8] bg-[#fff8eb] text-[#b76a12]",
+  receipt: "border-[#d7f0e0] bg-[#f4fbf7] text-[#1f7a4d]",
 };
 
 const QUICK_PRODUCT_LINES = ["T-Shirt", "Poloshirt", "Hoodie", "Cap"];
@@ -1627,47 +1627,47 @@ export default function QuotationApprovalPage() {
   };
 
   const surfaceClass =
-    "rounded-[32px] border border-[#ebe4dc] bg-white shadow-[0_28px_56px_-38px_rgba(15,23,42,0.24)]";
-  const softSurfaceClass = "rounded-[28px] border border-[#efe7de] bg-[#fcfaf7]";
+    "rounded-[32px] border border-[#ebebeb] bg-white shadow-[0_8px_28px_rgba(0,0,0,0.08)]";
+  const softSurfaceClass = "rounded-[28px] border border-[#ebebeb] bg-[#f7f7f7]";
   const fieldClass =
-    "mt-2 w-full rounded-2xl border border-[#e7dfd6] bg-white px-4 py-3 text-sm text-[#222222] outline-none transition placeholder:text-[#a59a8f] focus:border-[#ff5a5f] focus:ring-4 focus:ring-[#ff5a5f]/10";
+    "mt-2 w-full rounded-2xl border border-[#dddddd] bg-white px-4 py-3 text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff385c] focus:ring-4 focus:ring-[#ff385c]/10";
   const textAreaClass = `${fieldClass} min-h-[120px] resize-y`;
-  const labelClass = "text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8d8377]";
+  const labelClass = "text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]";
   const secondaryButtonClass =
-    "inline-flex items-center justify-center gap-2 rounded-full border border-[#e8e0d7] bg-white px-4 py-2.5 text-xs font-semibold text-[#3e3934] transition hover:border-[#d8cec2] hover:bg-[#faf7f2] disabled:cursor-not-allowed disabled:border-[#efe7de] disabled:bg-[#f8f4ef] disabled:text-[#b0a59a]";
+    "inline-flex items-center justify-center gap-2 rounded-full border border-[#dddddd] bg-white px-4 py-2.5 text-xs font-semibold text-[#484848] transition hover:border-[#c7c7c7] hover:bg-[#f7f7f7] hover:shadow-[0_4px_14px_rgba(0,0,0,0.06)] disabled:cursor-not-allowed disabled:border-[#ececec] disabled:bg-[#f7f7f7] disabled:text-[#b0b0b0]";
   const darkButtonClass =
-    "inline-flex items-center justify-center gap-2 rounded-full bg-[#222222] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-[#111111] disabled:cursor-not-allowed disabled:bg-[#b7b0a7]";
+    "inline-flex items-center justify-center gap-2 rounded-full bg-[#222222] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-[#b0b0b0]";
   const primaryButtonClass =
-    "inline-flex items-center justify-center gap-2 rounded-full bg-[#ff5a5f] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-[#e24f54] disabled:cursor-not-allowed disabled:bg-[#f4c4c6] disabled:text-white";
+    "inline-flex items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#ff385c,#e61e4d)] px-4 py-2.5 text-xs font-semibold text-white shadow-[0_10px_24px_rgba(255,56,92,0.24)] transition hover:shadow-[0_14px_28px_rgba(255,56,92,0.32)] disabled:cursor-not-allowed disabled:bg-[#f4b8c5] disabled:text-white disabled:shadow-none";
 
   return (
-    <div className="quotation-approval-page min-h-screen bg-[#fbf8f4] text-[#222222]">
+    <div className="quotation-approval-page min-h-screen bg-white text-[#222222]">
       <div className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[linear-gradient(180deg,rgba(255,247,240,0.95),rgba(251,248,244,0))]" />
-        <div className="pointer-events-none absolute -left-24 top-8 h-64 w-64 rounded-full bg-[#ffe2d0]/60 blur-3xl" />
-        <div className="pointer-events-none absolute right-[-4rem] top-24 h-72 w-72 rounded-full bg-[#ffd7db]/50 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-[-5rem] left-1/2 h-56 w-56 -translate-x-1/2 rounded-full bg-[#f0e8de] blur-3xl" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(255,255,255,0.96),rgba(255,255,255,0))]" />
+        <div className="pointer-events-none absolute -left-16 top-10 h-56 w-56 rounded-full bg-[#f7f7f7] blur-3xl" />
+        <div className="pointer-events-none absolute right-[-3rem] top-16 h-64 w-64 rounded-full bg-[#ffe3ea]/80 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-[-4rem] left-1/2 h-52 w-52 -translate-x-1/2 rounded-full bg-[#f3f4f6] blur-3xl" />
 
         <div className="relative mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
           <header className={`${surfaceClass} relative overflow-hidden px-6 py-7 sm:px-8`}>
-            <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,rgba(255,90,95,0.12),transparent_68%)] lg:block" />
+            <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,rgba(255,56,92,0.08),transparent_68%)] lg:block" />
             <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-[#8d8377]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-[#717171]">
                   Quotation Workbench
                 </p>
                 <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em] text-[#222222] sm:text-4xl">
                   Client quotes, priced with less noise
                 </h1>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-[#6d655d]">
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-[#6a6a6a]">
                   A lighter admin flow for reviewing requests, building the PDF, and moving approved work straight into production.
                 </p>
                 <div className="mt-5 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-[#f4cdc0] bg-[#fff3ed] px-3 py-1.5 text-[11px] font-semibold text-[#9f4f34]">
-                    <span className="h-2 w-2 rounded-full bg-[#ff5a5f]" />
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[#ffd2dc] bg-[#fff5f7] px-3 py-1.5 text-[11px] font-semibold text-[#d12f5f]">
+                    <span className="h-2 w-2 rounded-full bg-[#ff385c]" />
                     Live inbox
                   </span>
-                  <span className="rounded-full border border-[#ebe4dc] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#6d655d]">
+                  <span className="rounded-full border border-[#ebebeb] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#6a6a6a]">
                     Save anytime
                   </span>
                 </div>
@@ -1681,15 +1681,15 @@ export default function QuotationApprovalPage() {
                 ].map((stat) => (
                   <div
                     key={stat.label}
-                    className="rounded-[24px] border border-[#efe7de] bg-[#fcfaf7] px-4 py-4"
+                    className="rounded-[24px] border border-[#ebebeb] bg-[#f7f7f7] px-4 py-4"
                   >
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9a8f84]">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#717171]">
                       {stat.label}
                     </div>
                     <div className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[#222222]">
                       {stat.value}
                     </div>
-                    <div className="text-xs text-[#7d7368]">{stat.note}</div>
+                    <div className="text-xs text-[#717171]">{stat.note}</div>
                   </div>
                 ))}
               </div>
@@ -1697,11 +1697,11 @@ export default function QuotationApprovalPage() {
 
             <div className="relative mt-6 grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
               <div className={`${softSurfaceClass} p-4 sm:p-5`}>
-                <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-[#7d7368]">
-                  <span className="rounded-full bg-white px-3 py-1">1. Review request</span>
-                  <span className="rounded-full bg-white px-3 py-1">2. Build document</span>
-                  <span className="rounded-full bg-white px-3 py-1">3. Approve and send</span>
-                  <span className="rounded-full bg-white px-3 py-1">4. Move to orders</span>
+                <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-[#6a6a6a]">
+                  <span className="rounded-full border border-[#ebebeb] bg-white px-3 py-1">1. Review request</span>
+                  <span className="rounded-full border border-[#ebebeb] bg-white px-3 py-1">2. Build document</span>
+                  <span className="rounded-full border border-[#ebebeb] bg-white px-3 py-1">3. Approve and send</span>
+                  <span className="rounded-full border border-[#ebebeb] bg-white px-3 py-1">4. Move to orders</span>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 lg:justify-end">
@@ -1728,12 +1728,12 @@ export default function QuotationApprovalPage() {
 
           <div className="mt-6 grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
             <aside className={`${surfaceClass} h-fit p-4 lg:sticky lg:top-24`}>
-              <div className="flex items-center gap-3 rounded-[24px] border border-[#ece4dc] bg-[#fcfaf7] px-4 py-3">
-                <FiSearch className="h-4 w-4 text-[#9a8f84]" />
+              <div className="flex items-center gap-3 rounded-[24px] border border-[#ebebeb] bg-white px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+                <FiSearch className="h-4 w-4 text-[#717171]" />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-transparent text-sm text-[#222222] outline-none placeholder:text-[#a59a8f]"
+                  className="w-full bg-transparent text-sm text-[#222222] outline-none placeholder:text-[#b0b0b0]"
                   placeholder="Search by name, email, phone..."
                 />
               </div>
@@ -1754,8 +1754,8 @@ export default function QuotationApprovalPage() {
                       onClick={() => setStatusFilter(filter.key)}
                       className={`rounded-2xl border px-3 py-2.5 text-left transition ${
                         active
-                          ? "border-[#ff5a5f] bg-[#fff1f2] text-[#cc484c]"
-                          : "border-[#ece4dc] bg-[#fcfaf7] text-[#6d655d] hover:border-[#d8cec2]"
+                          ? "border-[#ffd2dc] bg-[#fff5f7] text-[#d12f5f]"
+                          : "border-[#ebebeb] bg-[#f7f7f7] text-[#6a6a6a] hover:border-[#c7c7c7]"
                       }`}
                     >
                       <div>{filter.label}</div>
@@ -1767,14 +1767,14 @@ export default function QuotationApprovalPage() {
 
               <div className="mt-4 flex items-center justify-between">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8d8377]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
                     Inbox
                   </p>
-                  <p className="mt-1 text-sm text-[#6d655d]">
+                  <p className="mt-1 text-sm text-[#6a6a6a]">
                     {filtered.length} visible quotation{filtered.length === 1 ? "" : "s"}
                   </p>
                 </div>
-                {loading ? <span className="text-xs text-[#8d8377]">Loading...</span> : null}
+                {loading ? <span className="text-xs text-[#717171]">Loading...</span> : null}
               </div>
 
               {error ? (
@@ -1812,16 +1812,16 @@ export default function QuotationApprovalPage() {
                       onClick={() => setSelectedId(quote.id)}
                       className={`w-full rounded-[26px] border px-4 py-4 text-left transition ${
                         selectedTone
-                          ? "border-[#ffb2b5] bg-[#fff5f5] shadow-[0_18px_36px_-30px_rgba(255,90,95,0.7)]"
-                          : "border-[#ece4dc] bg-white hover:border-[#dacfc2] hover:bg-[#fefcf8]"
+                          ? "border-[#ffc7d3] bg-white shadow-[0_18px_36px_-30px_rgba(255,56,92,0.28)]"
+                          : "border-[#ebebeb] bg-white hover:border-[#cfcfcf] hover:shadow-[0_10px_24px_rgba(0,0,0,0.06)]"
                       }`}
                     >
                       <div className="flex items-start gap-3">
                         <div
                           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold ${
                             selectedTone
-                              ? "bg-[#ff5a5f] text-white"
-                              : "bg-[#f6f1ea] text-[#5c554e]"
+                              ? "bg-[#ff385c] text-white"
+                              : "bg-[#f7f7f7] text-[#484848]"
                           }`}
                         >
                           {initials || "Q"}
@@ -1832,7 +1832,7 @@ export default function QuotationApprovalPage() {
                               <p className="truncate text-sm font-semibold text-[#222222]">
                                 {quote.name || "Unnamed client"}
                               </p>
-                              <p className="truncate text-xs text-[#7b7268]">
+                              <p className="truncate text-xs text-[#717171]">
                                 {quote.email || "No email"}
                               </p>
                             </div>
@@ -1840,11 +1840,11 @@ export default function QuotationApprovalPage() {
                               {primaryStatus.label}
                             </span>
                           </div>
-                          <p className="mt-2 text-xs leading-5 text-[#6d655d]">
+                          <p className="mt-2 text-xs leading-5 text-[#6a6a6a]">
                             {garmentPreview || "No product line yet"}
                             {totalPieces > 0 ? ` • ${totalPieces} pc${totalPieces > 1 ? "s" : ""}` : ""}
                           </p>
-                          <div className="mt-3 flex items-center justify-between text-[11px] text-[#9a8f84]">
+                          <div className="mt-3 flex items-center justify-between text-[11px] text-[#717171]">
                             <span>{quote.source || "Website"}</span>
                             <span>
                               {quote.createdAt
@@ -1859,7 +1859,7 @@ export default function QuotationApprovalPage() {
                 })}
 
                 {!filtered.length && !loading ? (
-                  <div className="rounded-[26px] border border-dashed border-[#ddd4ca] bg-[#fcfaf7] px-5 py-10 text-center text-sm text-[#8d8377]">
+                  <div className="rounded-[26px] border border-dashed border-[#d9d9d9] bg-[#f7f7f7] px-5 py-10 text-center text-sm text-[#717171]">
                     No quotations match these filters.
                   </div>
                 ) : null}
@@ -1872,26 +1872,26 @@ export default function QuotationApprovalPage() {
                   <div className={`${surfaceClass} overflow-hidden`}>
                     <div className="grid gap-6 px-6 py-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_320px]">
                       <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8d8377]">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#717171]">
                           Client Overview
                         </p>
                         <h2 className="mt-3 text-3xl font-semibold tracking-[-0.03em] text-[#222222]">
                           {draft.contactName || selected.name || "Walk-in client"}
                         </h2>
                         <div className="mt-4 flex flex-wrap gap-2">
-                          <span className="inline-flex items-center gap-2 rounded-full border border-[#ece4dc] bg-[#fcfaf7] px-3 py-1.5 text-xs text-[#5d554d]">
-                            <FiMail className="h-3.5 w-3.5 text-[#ff5a5f]" />
+                          <span className="inline-flex items-center gap-2 rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1.5 text-xs text-[#484848]">
+                            <FiMail className="h-3.5 w-3.5 text-[#ff385c]" />
                             {draft.contactEmail || "No email yet"}
                           </span>
-                          <span className="inline-flex items-center gap-2 rounded-full border border-[#ece4dc] bg-[#fcfaf7] px-3 py-1.5 text-xs text-[#5d554d]">
-                            <FiPhone className="h-3.5 w-3.5 text-[#ff5a5f]" />
+                          <span className="inline-flex items-center gap-2 rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1.5 text-xs text-[#484848]">
+                            <FiPhone className="h-3.5 w-3.5 text-[#ff385c]" />
                             {draft.contactPhone || "No phone yet"}
                           </span>
-                          <span className="rounded-full border border-[#ece4dc] bg-[#fcfaf7] px-3 py-1.5 text-xs text-[#5d554d]">
+                          <span className="rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1.5 text-xs text-[#484848]">
                             Source: {selected.source || "Website"}
                           </span>
                           {selected.delivery ? (
-                            <span className="rounded-full border border-[#ece4dc] bg-[#fcfaf7] px-3 py-1.5 text-xs text-[#5d554d]">
+                            <span className="rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1.5 text-xs text-[#484848]">
                               Delivery: {selected.delivery}
                             </span>
                           ) : null}
@@ -1909,8 +1909,8 @@ export default function QuotationApprovalPage() {
                           <span
                             className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
                               selectedStatus === "new"
-                                ? "border-rose-200 bg-rose-50 text-rose-700"
-                                : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                ? "border-[#ffd2dc] bg-[#fff5f7] text-[#d12f5f]"
+                                : "border-[#d7f0e0] bg-[#f4fbf7] text-[#1f7a4d]"
                             }`}
                           >
                             {selectedStatus === "new" ? "Unread" : "Read"}
@@ -1918,16 +1918,16 @@ export default function QuotationApprovalPage() {
                         </div>
 
                         <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                          <div className="rounded-2xl border border-[#ece4dc] bg-white px-4 py-3">
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8d8377]">
+                          <div className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
                               Quote number
                             </div>
                             <div className="mt-1 text-sm font-semibold text-[#222222]">
                               {draft.documentNumber}
                             </div>
                           </div>
-                          <div className="rounded-2xl border border-[#ece4dc] bg-white px-4 py-3">
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8d8377]">
+                          <div className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
                               Order sync
                             </div>
                             <div className="mt-1 text-sm font-semibold text-[#222222]">
@@ -1942,7 +1942,7 @@ export default function QuotationApprovalPage() {
                   <div className="grid gap-4 xl:grid-cols-4">
                     <div className={`${surfaceClass} p-5 xl:col-span-1`}>
                       <p className={labelClass}>Request</p>
-                      <div className="mt-4 space-y-3 text-sm leading-6 text-[#5f5851]">
+                      <div className="mt-4 space-y-3 text-sm leading-6 text-[#484848]">
                         <p>
                           <span className="font-semibold text-[#222222]">Product</span>
                           <br />
@@ -1991,8 +1991,8 @@ export default function QuotationApprovalPage() {
                         <label
                           className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-semibold transition ${
                             uploadingAttachment
-                              ? "border border-[#efe7de] bg-[#f8f4ef] text-[#b0a59a]"
-                              : "border border-[#ece4dc] bg-[#fcfaf7] text-[#5d554d] hover:border-[#dacfc2]"
+                              ? "border border-[#ececec] bg-[#f4f4f4] text-[#b0b0b0]"
+                              : "border border-[#ebebeb] bg-white text-[#484848] hover:border-[#c7c7c7] hover:bg-[#f7f7f7]"
                           }`}
                         >
                           <FiUpload className="h-3.5 w-3.5" />
@@ -2025,23 +2025,23 @@ export default function QuotationApprovalPage() {
                             return (
                               <div
                                 key={`${attachment.url || attachment.filename || "attachment"}-${index}`}
-                                className="rounded-[22px] border border-[#ece4dc] bg-[#fcfaf7] p-3.5"
+                                className="rounded-[22px] border border-[#ebebeb] bg-[#f7f7f7] p-3.5"
                               >
                                 <div className="flex flex-wrap items-start justify-between gap-3">
                                   <div className="min-w-0">
-                                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9a8f84]">
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
                                       {attachment.label || `Design ${index + 1}`}
                                     </p>
                                     <p className="mt-1 truncate text-sm font-semibold text-[#222222]">
                                       {attachment.filename || "Attachment"}
                                     </p>
                                     {attachment.description ? (
-                                      <p className="mt-1 text-xs text-[#7b7268]">
+                                      <p className="mt-1 text-xs text-[#717171]">
                                         {attachment.description}
                                       </p>
                                     ) : null}
                                     {attachment.quantity ? (
-                                      <p className="mt-1 text-xs text-[#7b7268]">
+                                      <p className="mt-1 text-xs text-[#717171]">
                                         Qty: {attachment.quantity}
                                       </p>
                                     ) : null}
@@ -2059,7 +2059,7 @@ export default function QuotationApprovalPage() {
                                       </a>
                                       <a
                                         href={attachmentDownloadHref}
-                                        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#e8e0d7] bg-white text-[#3e3934] transition hover:border-[#d8cec2] hover:bg-[#faf7f2]"
+                                        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#dddddd] bg-white text-[#484848] transition hover:border-[#c7c7c7] hover:bg-[#f7f7f7]"
                                         aria-label={`Download ${attachment.filename || "attachment"}`}
                                         title="Download file"
                                       >
@@ -2074,7 +2074,7 @@ export default function QuotationApprovalPage() {
                                     alt={attachment.filename || "Attachment"}
                                   />
                                 ) : !attachment.url ? (
-                                  <div className="mt-3 rounded-2xl border border-dashed border-[#ddd4ca] bg-white px-3 py-3 text-xs text-[#8d8377]">
+                                  <div className="mt-3 rounded-2xl border border-dashed border-[#d9d9d9] bg-white px-3 py-3 text-xs text-[#717171]">
                                     Attachment received via email:{" "}
                                     {attachment.filename || `Attachment ${index + 1}`}
                                   </div>
@@ -2083,7 +2083,7 @@ export default function QuotationApprovalPage() {
                             );
                           })
                         ) : (
-                          <div className="rounded-[22px] border border-dashed border-[#ddd4ca] bg-[#fcfaf7] px-4 py-8 text-center text-sm text-[#8d8377]">
+                          <div className="rounded-[22px] border border-dashed border-[#d9d9d9] bg-[#f7f7f7] px-4 py-8 text-center text-sm text-[#717171]">
                             No attachment uploaded yet.
                           </div>
                         )}
@@ -2092,7 +2092,7 @@ export default function QuotationApprovalPage() {
 
                     <div className={`${surfaceClass} p-5 xl:col-span-1`}>
                       <p className={labelClass}>Delivery</p>
-                      <div className="mt-4 space-y-4 text-sm leading-6 text-[#5f5851]">
+                      <div className="mt-4 space-y-4 text-sm leading-6 text-[#484848]">
                         <div>
                           <p className="font-semibold text-[#222222]">Method</p>
                           <p>{selected.delivery || "n/a"}</p>
@@ -2121,16 +2121,16 @@ export default function QuotationApprovalPage() {
                     <div className={`${surfaceClass} p-5 xl:col-span-1`}>
                       <p className={labelClass}>Timeline</p>
                       <div className="mt-4 space-y-4">
-                        <div className="rounded-2xl border border-[#ece4dc] bg-[#fcfaf7] px-4 py-3">
-                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8d8377]">
+                        <div className="rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] px-4 py-3">
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
                             Created
                           </div>
                           <div className="mt-1 text-sm font-semibold text-[#222222]">
                             {selected.createdAt ? format(selected.createdAt, "dd MMM yyyy") : "—"}
                           </div>
                         </div>
-                        <div className="rounded-2xl border border-[#ece4dc] bg-[#fcfaf7] px-4 py-3">
-                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8d8377]">
+                        <div className="rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] px-4 py-3">
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
                             Updated
                           </div>
                           <div className="mt-1 text-sm font-semibold text-[#222222]">
@@ -2138,8 +2138,8 @@ export default function QuotationApprovalPage() {
                           </div>
                         </div>
                         {safeNumber(selectedDesignBrief?.estimatedTotal, 0) > 0 ? (
-                          <div className="rounded-2xl border border-[#f4cdc0] bg-[#fff4ee] px-4 py-3">
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9a5c43]">
+                          <div className="rounded-2xl border border-[#ffd2dc] bg-[#fff5f7] px-4 py-3">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#d12f5f]">
                               Estimated total
                             </div>
                             <div className="mt-1 text-sm font-semibold text-[#222222]">
@@ -2155,13 +2155,13 @@ export default function QuotationApprovalPage() {
                     <div className={`${surfaceClass} p-6 sm:p-7`}>
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8d8377]">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#717171]">
                               Document Builder
                             </p>
                             <h3 className="mt-2 text-2xl font-semibold tracking-[-0.02em] text-[#222222]">
                               Build the client-facing document
                             </h3>
-                            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6d655d]">
+                            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6a6a6a]">
                               Edit the header, client details, line items, and notes in one focused workspace.
                             </p>
                           </div>
@@ -2242,14 +2242,14 @@ export default function QuotationApprovalPage() {
 
                             <div className="mt-4">
                               <p className={labelClass}>Line items visibility</p>
-                              <div className="mt-2 grid grid-cols-2 gap-2 rounded-[22px] border border-[#e7dfd6] bg-white p-1.5">
+                              <div className="mt-2 grid grid-cols-2 gap-2 rounded-[22px] border border-[#dddddd] bg-white p-1.5">
                                 <button
                                   type="button"
                                   onClick={() => setDraft({ ...draft, showLineItems: true })}
                                   className={`rounded-2xl px-3 py-2.5 text-xs font-semibold transition ${
                                     draft.showLineItems
                                       ? "bg-[#222222] text-white"
-                                      : "text-[#6d655d] hover:bg-[#faf7f2]"
+                                      : "text-[#6a6a6a] hover:bg-[#f7f7f7]"
                                   }`}
                                 >
                                   Detailed
@@ -2260,13 +2260,13 @@ export default function QuotationApprovalPage() {
                                   className={`rounded-2xl px-3 py-2.5 text-xs font-semibold transition ${
                                     !draft.showLineItems
                                       ? "bg-[#222222] text-white"
-                                      : "text-[#6d655d] hover:bg-[#faf7f2]"
+                                      : "text-[#6a6a6a] hover:bg-[#f7f7f7]"
                                   }`}
                                 >
                                   Summary only
                                 </button>
                               </div>
-                              <p className="mt-2 text-xs text-[#8d8377]">
+                              <p className="mt-2 text-xs text-[#717171]">
                                 Detailed shows every line and price. Summary keeps only the totals on the PDF.
                               </p>
                             </div>
@@ -2365,7 +2365,7 @@ export default function QuotationApprovalPage() {
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
                               <p className={labelClass}>Line items</p>
-                              <p className="mt-2 text-sm text-[#6d655d]">
+                              <p className="mt-2 text-sm text-[#6a6a6a]">
                                 Keep this section simple and readable for both you and the client.
                               </p>
                             </div>
@@ -2383,7 +2383,7 @@ export default function QuotationApprovalPage() {
                                   key={item}
                                   type="button"
                                   onClick={() => addDraftLine(`${item} (M)`)}
-                                  className="inline-flex items-center gap-1 rounded-full border border-[#ece4dc] bg-white px-3 py-2 text-[11px] font-semibold text-[#5d554d] transition hover:border-[#dacfc2] hover:bg-[#faf7f2]"
+                                  className="inline-flex items-center gap-1 rounded-full border border-[#ebebeb] bg-white px-3 py-2 text-[11px] font-semibold text-[#484848] transition hover:border-[#c7c7c7] hover:bg-[#f7f7f7]"
                                 >
                                   <FiPlus className="h-3.5 w-3.5" />
                                   {item}
@@ -2396,7 +2396,7 @@ export default function QuotationApprovalPage() {
                             {draft.lines.map((line, index) => (
                               <div
                                 key={`line-${index}`}
-                                className="grid gap-3 rounded-[24px] border border-[#e8e0d7] bg-white p-4 md:grid-cols-[minmax(0,1.45fr)_92px_minmax(0,0.95fr)_112px_44px] md:items-center"
+                                className="grid gap-3 rounded-[24px] border border-[#ebebeb] bg-white p-4 md:grid-cols-[minmax(0,1.45fr)_92px_minmax(0,0.95fr)_112px_44px] md:items-center"
                               >
                                 <label className={`${labelClass} md:hidden`}>
                                   Description
@@ -2414,7 +2414,7 @@ export default function QuotationApprovalPage() {
                                   onChange={(e) =>
                                     updateDraftLine(index, { description: e.target.value })
                                   }
-                                  className="hidden min-w-0 rounded-2xl border border-[#e7dfd6] bg-[#fcfaf7] px-4 py-3 text-sm text-[#222222] outline-none transition placeholder:text-[#a59a8f] focus:border-[#ff5a5f] focus:ring-4 focus:ring-[#ff5a5f]/10 md:block"
+                                  className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff385c] focus:ring-4 focus:ring-[#ff385c]/10 md:block"
                                   placeholder="e.g. T-Shirt (M) with front logo"
                                   aria-label="Line item description"
                                 />
@@ -2447,7 +2447,7 @@ export default function QuotationApprovalPage() {
                                           : safeNumber(e.target.value, 0),
                                     })
                                   }
-                                  className="hidden min-w-0 rounded-2xl border border-[#e7dfd6] bg-[#fcfaf7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#a59a8f] focus:border-[#ff5a5f] focus:ring-4 focus:ring-[#ff5a5f]/10 md:block"
+                                  className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff385c] focus:ring-4 focus:ring-[#ff385c]/10 md:block"
                                   placeholder="Qty"
                                   aria-label="Quantity"
                                 />
@@ -2480,11 +2480,11 @@ export default function QuotationApprovalPage() {
                                           : safeNumber(e.target.value, 0),
                                     })
                                   }
-                                  className="hidden min-w-0 rounded-2xl border border-[#e7dfd6] bg-[#fcfaf7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#a59a8f] focus:border-[#ff5a5f] focus:ring-4 focus:ring-[#ff5a5f]/10 md:block"
+                                  className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff385c] focus:ring-4 focus:ring-[#ff385c]/10 md:block"
                                   placeholder="Unit price"
                                   aria-label="Unit price"
                                 />
-                                <div className="min-w-0 rounded-2xl border border-[#ece4dc] bg-[#fcfaf7] px-4 py-3 text-right text-sm font-semibold text-[#222222]">
+                                <div className="min-w-0 rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] px-4 py-3 text-right text-sm font-semibold text-[#222222]">
                                   {formatMoney(
                                     safeNumber(line.quantity, 0) *
                                       safeNumber(line.unitPrice, 0),
@@ -2494,7 +2494,7 @@ export default function QuotationApprovalPage() {
                                 <button
                                   type="button"
                                   onClick={() => removeDraftLine(index)}
-                                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#ece4dc] bg-white text-[#8d8377] transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 md:justify-self-end"
+                                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#ebebeb] bg-white text-[#717171] transition hover:border-[#ffd2dc] hover:bg-[#fff5f7] hover:text-[#d12f5f] md:justify-self-end"
                                   aria-label="Remove line item"
                                 >
                                   <FiXCircle className="h-4 w-4" />
@@ -2531,8 +2531,8 @@ export default function QuotationApprovalPage() {
                                   />
                                 </label>
                               ) : (
-                                <div className="rounded-[24px] border border-[#ece4dc] bg-white px-4 py-3">
-                                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8d8377]">
+                                <div className="rounded-[24px] border border-[#ebebeb] bg-white px-4 py-3">
+                                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
                                     Document mode
                                   </div>
                                   <div className="mt-1 text-sm font-semibold text-[#222222]">
@@ -2607,7 +2607,7 @@ export default function QuotationApprovalPage() {
                     <div className="grid gap-5 xl:grid-cols-3">
                       <div className={`${surfaceClass} p-5`}>
                         <p className={labelClass}>Totals</p>
-                        <div className="mt-5 space-y-3 text-sm text-[#5f5851]">
+                        <div className="mt-5 space-y-3 text-sm text-[#484848]">
                           <div className="flex items-center justify-between">
                             <span>Subtotal</span>
                             <span className="font-semibold text-[#222222]">
@@ -2628,7 +2628,7 @@ export default function QuotationApprovalPage() {
                                 : formatMoney(0, draft.currency)}
                             </span>
                           </div>
-                          <div className="rounded-[24px] bg-[#fff3f0] px-4 py-4">
+                          <div className="rounded-[24px] border border-[#ffd2dc] bg-[#fff5f7] px-4 py-4">
                             <div className="flex items-center justify-between text-base font-semibold text-[#222222]">
                               <span>Total</span>
                               <span>{formatMoney(totals.total, draft.currency)}</span>
@@ -2653,8 +2653,8 @@ export default function QuotationApprovalPage() {
                                 className={fieldClass}
                               />
                             </label>
-                            <div className="rounded-[24px] border border-[#ece4dc] bg-[#fcfaf7] px-4 py-3 text-sm">
-                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8d8377]">
+                            <div className="rounded-[24px] border border-[#ebebeb] bg-[#f7f7f7] px-4 py-3 text-sm">
+                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
                                 Balance due
                               </div>
                               <div className="mt-1 font-semibold text-[#222222]">
@@ -2688,22 +2688,22 @@ export default function QuotationApprovalPage() {
                         <div className="flex items-center justify-between gap-3">
                           <div>
                             <p className={labelClass}>Workflow</p>
-                            <p className="mt-1 text-sm text-[#6d655d]">
+                            <p className="mt-1 text-sm text-[#6a6a6a]">
                               Move through the three operational steps.
                             </p>
                           </div>
-                          <span className="rounded-full border border-[#ece4dc] bg-[#fcfaf7] px-3 py-1 text-[11px] font-semibold text-[#7d7368]">
+                          <span className="rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1 text-[11px] font-semibold text-[#717171]">
                             Step by step
                           </span>
                         </div>
 
                         <div className="mt-4 space-y-3">
-                          <div className="rounded-[24px] border border-[#ece4dc] bg-[#fcfaf7] p-4">
+                          <div className="rounded-[24px] border border-[#ebebeb] bg-[#f7f7f7] p-4">
                             <div className="flex items-center justify-between">
                               <p className="text-sm font-semibold text-[#222222]">1. Save changes</p>
-                              <span className="text-[11px] text-[#8d8377]">Prepare</span>
+                              <span className="text-[11px] text-[#717171]">Prepare</span>
                             </div>
-                            <p className="mt-2 text-sm text-[#6d655d]">
+                            <p className="mt-2 text-sm text-[#6a6a6a]">
                               Confirm the pricing and document details first.
                             </p>
                             <button
@@ -2717,14 +2717,14 @@ export default function QuotationApprovalPage() {
                             </button>
                           </div>
 
-                          <div className="rounded-[24px] border border-[#ffd8cf] bg-[#fff5f2] p-4">
+                          <div className="rounded-[24px] border border-[#ffd2dc] bg-[#fff5f7] p-4">
                             <div className="flex items-center justify-between">
                               <p className="text-sm font-semibold text-[#222222]">2. Approve and send</p>
-                              <span className="text-[11px] text-[#b65b47]">
+                              <span className="text-[11px] text-[#d12f5f]">
                                 {quoteIsMarkedApproved ? "Completed" : "Required"}
                               </span>
                             </div>
-                            <p className="mt-2 text-sm text-[#6d655d]">
+                            <p className="mt-2 text-sm text-[#6a6a6a]">
                               Mark the quote approved, then send the finished document.
                             </p>
                             <div className="mt-4 grid gap-2">
@@ -2766,14 +2766,14 @@ export default function QuotationApprovalPage() {
                             </div>
                           </div>
 
-                          <div className="rounded-[24px] border border-[#ece4dc] bg-[#fcfaf7] p-4">
+                          <div className="rounded-[24px] border border-[#ebebeb] bg-[#f7f7f7] p-4">
                             <div className="flex items-center justify-between">
                               <p className="text-sm font-semibold text-[#222222]">3. Move to orders</p>
-                              <span className="text-[11px] text-[#8d8377]">
+                              <span className="text-[11px] text-[#717171]">
                                 {quoteInOrders ? "Synced" : "Final step"}
                               </span>
                             </div>
-                            <p className="mt-2 text-sm text-[#6d655d]">
+                            <p className="mt-2 text-sm text-[#6a6a6a]">
                               Create or sync the production order once the quote is approved.
                             </p>
                             <button
@@ -2822,7 +2822,7 @@ export default function QuotationApprovalPage() {
                             type="button"
                             onClick={handleDeleteQuote}
                             disabled={deletingQuote}
-                            className="inline-flex items-center justify-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="inline-flex items-center justify-center gap-2 rounded-full border border-[#ffd2dc] bg-[#fff5f7] px-4 py-2.5 text-xs font-semibold text-[#d12f5f] transition hover:bg-[#ffe9ef] disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <FiTrash2 className="h-4 w-4" />
                             {deletingQuote ? "Deleting..." : "Delete quotation"}
@@ -2836,7 +2836,7 @@ export default function QuotationApprovalPage() {
                         ) : null}
 
                         {notice ? (
-                          <div className="mt-4 rounded-[24px] border border-[#ece4dc] bg-[#fcfaf7] px-4 py-3 text-sm text-[#5f5851]">
+                          <div className="mt-4 rounded-[24px] border border-[#ebebeb] bg-[#f7f7f7] px-4 py-3 text-sm text-[#484848]">
                             {notice}
                           </div>
                         ) : null}
@@ -2846,13 +2846,13 @@ export default function QuotationApprovalPage() {
                 </>
               ) : (
                 <div className={`${surfaceClass} px-6 py-16 text-center`}>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8d8377]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#717171]">
                     Nothing selected
                   </p>
                   <h2 className="mt-3 text-2xl font-semibold tracking-[-0.02em] text-[#222222]">
                     Select a quotation from the inbox
                   </h2>
-                  <p className="mt-3 text-sm text-[#6d655d]">
+                  <p className="mt-3 text-sm text-[#6a6a6a]">
                     The full request, pricing workspace, PDF tools, and approval actions will appear here.
                   </p>
                 </div>

@@ -200,8 +200,8 @@ body {
 
 /* Restore the quotation page's intended light palette inside the dark admin shell */
 .admin-root.admin-dark .quotation-approval-page {
-  background-color: #f7f7fb !important;
-  color: #0f172a !important;
+  background-color: #ffffff !important;
+  color: #222222 !important;
 }
 
 .admin-root.admin-dark .quotation-approval-page [class*="bg-slate-50"] {
@@ -213,7 +213,7 @@ body {
 }
 
 .admin-root.admin-dark .quotation-approval-page [class*="bg-white"] {
-  background-color: rgb(255 255 255 / 0.94) !important;
+  background-color: #ffffff !important;
 }
 
 .admin-root.admin-dark .quotation-approval-page :is(
