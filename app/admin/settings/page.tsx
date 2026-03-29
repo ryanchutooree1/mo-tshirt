@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   Database,
@@ -63,6 +64,27 @@ const EMPTY_USER_DRAFT = {
   allowedPages: ["/admin"] as AdminPagePath[],
   isActive: true,
 };
+
+function getAdminApiError(
+  status: number,
+  payload: unknown,
+  fallback: string
+) {
+  if (status === 401) {
+    return "This admin session cannot use Settings right now. Sign in again with the owner account.";
+  }
+
+  if (
+    payload &&
+    typeof payload === "object" &&
+    "error" in payload &&
+    typeof payload.error === "string"
+  ) {
+    return payload.error;
+  }
+
+  return fallback;
+}
 
 function parseRecipientInput(value: string) {
   const seen = new Set<string>();
@@ -169,6 +191,7 @@ async function sumStoragePrefix(path: string): Promise<number> {
 }
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [notificationRecipients, setNotificationRecipients] = useState<string[]>([]);
   const [savedNotificationRecipients, setSavedNotificationRecipients] = useState<string[]>([]);
   const [notificationInput, setNotificationInput] = useState("");
@@ -201,8 +224,19 @@ export default function SettingsPage() {
 
     (async () => {
       try {
-        const res = await fetch("/api/admin/session", { cache: "no-store" });
+        const res = await fetch("/api/admin/session", {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
         const data = await res.json().catch(() => ({}));
+
+        if (!ignore && res.status === 401) {
+          setUserError(
+            "This admin session cannot use Settings right now. Sign in again with the owner account."
+          );
+          router.replace("/login");
+          return;
+        }
 
         if (!ignore && res.ok && data?.session && typeof data.session.email === "string") {
           setCurrentAdminSession({
@@ -231,7 +265,7 @@ export default function SettingsPage() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     let ignore = false;
@@ -240,6 +274,7 @@ export default function SettingsPage() {
       try {
         const res = await fetch("/api/admin/firebase-auth", {
           cache: "no-store",
+          credentials: "same-origin",
         });
         const data = await res.json().catch(() => ({}));
 
@@ -262,8 +297,14 @@ export default function SettingsPage() {
     (async () => {
       try {
         const [notificationRes, usersRes] = await Promise.all([
-          fetch("/api/admin/settings/quotation-notifications", { cache: "no-store" }),
-          fetch("/api/admin/settings/users", { cache: "no-store" }),
+          fetch("/api/admin/settings/quotation-notifications", {
+            cache: "no-store",
+            credentials: "same-origin",
+          }),
+          fetch("/api/admin/settings/users", {
+            cache: "no-store",
+            credentials: "same-origin",
+          }),
         ]);
 
         const notificationData = await notificationRes.json().catch(() => ({}));
@@ -271,17 +312,17 @@ export default function SettingsPage() {
 
         if (!notificationRes.ok) {
           throw new Error(
-            typeof notificationData?.error === "string"
-              ? notificationData.error
-              : "Failed to load quotation notification emails."
+            getAdminApiError(
+              notificationRes.status,
+              notificationData,
+              "Failed to load quotation notification emails."
+            )
           );
         }
 
         if (!usersRes.ok) {
           throw new Error(
-            typeof usersData?.error === "string"
-              ? usersData.error
-              : "Failed to load admin users."
+            getAdminApiError(usersRes.status, usersData, "Failed to load admin users.")
           );
         }
 
@@ -388,6 +429,7 @@ export default function SettingsPage() {
       try {
         const res = await fetch("/api/admin/settings/storage", {
           cache: "no-store",
+          credentials: "same-origin",
         });
         const data = await res.json().catch(() => ({}));
 
@@ -544,6 +586,7 @@ export default function SettingsPage() {
     try {
       const res = await fetch("/api/admin/settings/quotation-notifications", {
         method: "PUT",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ recipients: notificationRecipients }),
       });
@@ -551,9 +594,11 @@ export default function SettingsPage() {
 
       if (!res.ok) {
         throw new Error(
-          typeof data?.error === "string"
-            ? data.error
-            : "Failed to save quotation notification emails."
+          getAdminApiError(
+            res.status,
+            data,
+            "Failed to save quotation notification emails."
+          )
         );
       }
 
@@ -654,6 +699,7 @@ export default function SettingsPage() {
       const isEditing = Boolean(editingUserEmail);
       const res = await fetch("/api/admin/settings/users", {
         method: isEditing ? "PATCH" : "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
@@ -667,11 +713,13 @@ export default function SettingsPage() {
 
       if (!res.ok) {
         throw new Error(
-          typeof data?.error === "string"
-            ? data.error
-            : isEditing
+          getAdminApiError(
+            res.status,
+            data,
+            isEditing
               ? "Failed to update admin user."
               : "Failed to create admin user."
+          )
         );
       }
 
@@ -705,6 +753,7 @@ export default function SettingsPage() {
     try {
       const res = await fetch("/api/admin/settings/users/reset-password", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: user.email }),
       });
@@ -712,9 +761,11 @@ export default function SettingsPage() {
 
       if (!res.ok) {
         throw new Error(
-          typeof data?.error === "string"
-            ? data.error
-            : "Failed to send password reset email."
+          getAdminApiError(
+            res.status,
+            data,
+            "Failed to send password reset email."
+          )
         );
       }
 
