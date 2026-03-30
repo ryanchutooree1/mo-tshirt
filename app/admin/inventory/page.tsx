@@ -1064,9 +1064,9 @@ function Modal({
   panelClassName?: string;
 }) {
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/40 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/40 px-4 pb-4 pt-20 backdrop-blur-sm sm:pt-24">
       <div
-        className={`mx-auto my-12 flex max-h-[calc(100vh-6rem)] w-full flex-col rounded-2xl border border-slate-200 bg-white shadow-xl ${
+        className={`flex max-h-[calc(100vh-6rem)] w-full flex-col rounded-2xl border border-slate-200 bg-white shadow-xl sm:max-h-[calc(100vh-7rem)] ${
           panelClassName || "max-w-2xl"
         }`}
       >
