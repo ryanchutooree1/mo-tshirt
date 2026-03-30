@@ -351,6 +351,15 @@ const safeNumber = (value: unknown, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const getPopulatedQuoteLineCount = (lines: QuoteLine[]) =>
+  lines.filter((line) => {
+    return (
+      String(line.description || "").trim().length > 0 ||
+      safeNumber(line.quantity, 0) > 0 ||
+      safeNumber(line.unitPrice, 0) > 0
+    );
+  }).length;
+
 const normalizeDesignText = (value: unknown) => {
   if (typeof value !== "string") return "";
   const text = value.trim();
@@ -610,6 +619,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   const amountReceived = safeNumber(draft.amountReceived, 0);
   const grandTotal = subtotal + deliveryFee - discount;
   const balanceDue = Math.max(0, grandTotal - amountReceived);
+  const showSubtotal = getPopulatedQuoteLineCount(draft.lines) > 1;
 
   const docTitle =
     draft.documentType === "invoice"
@@ -776,6 +786,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   const colQtyX = pageWidth - margin - 180;
   const colUnitX = pageWidth - margin - 95;
   const colTotalX = pageWidth - margin;
+  const totalsLabelX = pageWidth - margin - 175;
 
   if (showLineItems) {
     doc.setFont("helvetica", "bold");
@@ -810,25 +821,28 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   y += 18;
   doc.setFont("helvetica", "normal");
   doc.setTextColor(50);
-  doc.text("Subtotal", pageWidth - margin - 140, y, { align: "left" });
-  doc.text(formatMoney(subtotal, draft.currency), colTotalX, y, { align: "right" });
-  if (deliveryFee > 0) {
+  if (showSubtotal) {
+    doc.text("Subtotal", totalsLabelX, y, { align: "left" });
+    doc.text(formatMoney(subtotal, draft.currency), colTotalX, y, { align: "right" });
     y += 16;
-    doc.text("Delivery fee", pageWidth - margin - 140, y, { align: "left" });
+  }
+  if (deliveryFee > 0) {
+    doc.text("Delivery fee", totalsLabelX, y, { align: "left" });
     doc.text(formatMoney(deliveryFee, draft.currency), colTotalX, y, { align: "right" });
+    y += 16;
   }
   if (discount > 0) {
-    y += 16;
     doc.setTextColor(180, 0, 0);
-    doc.text("Discount", pageWidth - margin - 140, y, { align: "left" });
+    doc.text("Discount", totalsLabelX, y, { align: "left" });
     doc.text(formatMoney(-discount, draft.currency), colTotalX, y, { align: "right" });
     doc.setTextColor(50);
+    y += 16;
   }
   y += 22;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.setTextColor(20);
-  doc.text("Grand Total", pageWidth - margin - 140, y, { align: "left" });
+  doc.text("Grand Total", totalsLabelX, y, { align: "left" });
   doc.text(formatMoney(grandTotal, draft.currency), colTotalX, y, { align: "right" });
   doc.setFontSize(10);
 
@@ -836,12 +850,12 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
     y += 18;
     doc.setFont("helvetica", "normal");
     doc.setTextColor(50);
-    doc.text("Amount received", pageWidth - margin - 140, y, { align: "left" });
+    doc.text("Amount received", totalsLabelX, y, { align: "left" });
     doc.text(formatMoney(amountReceived, draft.currency), colTotalX, y, { align: "right" });
     y += 16;
     doc.setFont("helvetica", "bold");
     doc.setTextColor(20);
-    doc.text("Balance due", pageWidth - margin - 140, y, { align: "left" });
+    doc.text("Balance due", totalsLabelX, y, { align: "left" });
     doc.text(formatMoney(balanceDue, draft.currency), colTotalX, y, { align: "right" });
     doc.setFontSize(10);
   }
@@ -1145,7 +1159,7 @@ export default function QuotationApprovalPage() {
   }, [quotes]);
 
   const totals = useMemo(() => {
-    if (!draft) return { subtotal: 0, total: 0, amountReceived: 0, balanceDue: 0 };
+    if (!draft) return { subtotal: 0, total: 0, amountReceived: 0, balanceDue: 0, lineCount: 0 };
     const subtotal = draft.lines.reduce(
       (acc, line) => acc + safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0),
       0
@@ -1153,7 +1167,8 @@ export default function QuotationApprovalPage() {
     const total = subtotal + draft.deliveryFee - draft.discount;
     const amountReceived = safeNumber(draft.amountReceived, 0);
     const balanceDue = Math.max(0, total - amountReceived);
-    return { subtotal, total, amountReceived, balanceDue };
+    const lineCount = getPopulatedQuoteLineCount(draft.lines);
+    return { subtotal, total, amountReceived, balanceDue, lineCount };
   }, [draft]);
 
   const paymentStatusOptions = useMemo(() => {
@@ -2606,12 +2621,14 @@ export default function QuotationApprovalPage() {
                       <div className={`${surfaceClass} p-5`}>
                         <p className={labelClass}>Totals</p>
                         <div className="mt-5 space-y-3 text-sm text-[#484848]">
-                          <div className="flex items-center justify-between">
-                            <span>Subtotal</span>
-                            <span className="font-semibold text-[#222222]">
-                              {formatMoney(totals.subtotal, draft.currency)}
-                            </span>
-                          </div>
+                          {totals.lineCount > 1 && (
+                            <div className="flex items-center justify-between">
+                              <span>Subtotal</span>
+                              <span className="font-semibold text-[#222222]">
+                                {formatMoney(totals.subtotal, draft.currency)}
+                              </span>
+                            </div>
+                          )}
                           <div className="flex items-center justify-between">
                             <span>Delivery</span>
                             <span className="font-semibold text-[#222222]">
