@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { FileText, UploadCloud } from "lucide-react";
+import { Check, ChevronDown, FileText, UploadCloud } from "lucide-react";
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
@@ -79,6 +79,41 @@ const deliveryOptions = [
 ];
 const artworkAccept =
   ".png,.jpg,.jpeg,.webp,.svg,.heic,.heif,.pdf,image/png,image/jpeg,image/webp,image/svg+xml,image/heic,image/heif,application/pdf";
+const COLOR_SWATCH_RULES = [
+  { match: ["white"], value: "#f8fafc" },
+  { match: ["black"], value: "#171717" },
+  { match: ["navy"], value: "#243b6b" },
+  { match: ["royal blue"], value: "#1d4ed8" },
+  { match: ["aqua"], value: "#4cc9f0" },
+  { match: ["sky blue"], value: "#38bdf8" },
+  { match: ["blue"], value: "#2563eb" },
+  { match: ["purple"], value: "#7c3aed" },
+  { match: ["light pink"], value: "#f9a8d4" },
+  { match: ["vibrant pink"], value: "#ec4899" },
+  { match: ["pink"], value: "#db2777" },
+  { match: ["deep red"], value: "#991b1b" },
+  { match: ["red"], value: "#c0392b" },
+  { match: ["military green"], value: "#556b2f" },
+  { match: ["bottle green"], value: "#14532d" },
+  { match: ["vibrant apple green"], value: "#a3e635" },
+  { match: ["vibrant green"], value: "#22c55e" },
+  { match: ["tea green"], value: "#d9f99d" },
+  { match: ["pastel green"], value: "#d9f99d" },
+  { match: ["green"], value: "#2f855a" },
+  { match: ["deep grey", "deep gray"], value: "#4b5563" },
+  { match: ["charcoal"], value: "#374151" },
+  { match: ["grey", "gray"], value: "#9ca3af" },
+  { match: ["soft pastel yellow"], value: "#fde68a" },
+  { match: ["lemon yellow"], value: "#facc15" },
+  { match: ["serein yellow"], value: "#f4d35e" },
+  { match: ["moutard yellow", "mustard yellow"], value: "#d4a017" },
+  { match: ["yellow"], value: "#eab308" },
+  { match: ["orange"], value: "#ea580c" },
+  { match: ["gold"], value: "#c68a12" },
+  { match: ["beige"], value: "#d6c3a1" },
+  { match: ["cream"], value: "#f1e7d0" },
+  { match: ["brown"], value: "#7c4a2d" },
+] as const;
 const printMethodInfoByMethod: Partial<Record<string, PrintMethodInfo>> = {
   [SCREEN_PRINTING_METHOD]: {
     title: "Screen printing rule",
@@ -130,6 +165,136 @@ function formatColorOptionLabel(color: string) {
     return `${color} (Faster)`;
   }
   return color;
+}
+
+function getColorSwatch(color: string) {
+  const normalized = color.toLowerCase().trim();
+  const found = COLOR_SWATCH_RULES.find((rule) =>
+    rule.match.some((token) => normalized.includes(token))
+  );
+  return found?.value || "#d4d4d8";
+}
+
+function ColorSelect({
+  value,
+  options,
+  placeholder,
+  disabled,
+  onChange,
+}: {
+  value: string;
+  options: string[];
+  placeholder: string;
+  disabled?: boolean;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function handlePointerDown(event: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    window.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (disabled) {
+      setOpen(false);
+    }
+  }, [disabled]);
+
+  return (
+    <div ref={rootRef} className="relative mt-1">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((current) => !current)}
+        className="flex w-full items-center justify-between rounded-lg border border-neutral-200 bg-white px-3 py-2 text-left text-sm text-neutral-900 focus:border-black focus:outline-none disabled:bg-neutral-50 disabled:text-neutral-400"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          {value ? (
+            <span
+              className="h-3 w-3 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.16),0_1px_2px_rgba(0,0,0,0.08)]"
+              style={{ backgroundColor: getColorSwatch(value) }}
+              aria-hidden="true"
+            />
+          ) : null}
+          <span className={`truncate ${value ? "text-neutral-900" : "text-neutral-500"}`}>
+            {value ? formatColorOptionLabel(value) : placeholder}
+          </span>
+        </span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-neutral-500 transition ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && !disabled ? (
+        <div
+          className="absolute z-30 mt-2 max-h-72 w-full overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-[0_18px_40px_rgba(0,0,0,0.12)]"
+          role="listbox"
+        >
+          <button
+            type="button"
+            onClick={() => {
+              onChange("");
+              setOpen(false);
+            }}
+            className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm text-neutral-700 transition hover:bg-neutral-50"
+            role="option"
+            aria-selected={!value}
+          >
+            <span className="truncate">{placeholder}</span>
+            {!value ? <Check className="h-4 w-4 text-neutral-700" /> : null}
+          </button>
+          {options.map((option) => {
+            const active = option === value;
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={() => {
+                  onChange(option);
+                  setOpen(false);
+                }}
+                className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition ${
+                  active ? "bg-neutral-100 text-neutral-900" : "text-neutral-700 hover:bg-neutral-50"
+                }`}
+                role="option"
+                aria-selected={active}
+              >
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <span
+                    className="h-3 w-3 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.16),0_1px_2px_rgba(0,0,0,0.08)]"
+                    style={{ backgroundColor: getColorSwatch(option) }}
+                    aria-hidden="true"
+                  />
+                  <span className="truncate">{formatColorOptionLabel(option)}</span>
+                </span>
+                {active ? <Check className="h-4 w-4 shrink-0 text-neutral-900" /> : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function buildArtworkAttachmentMetadata(item: ArtworkItem, index: number) {
@@ -688,91 +853,88 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           {!loadingColors && !availableColors.length ? (
             <p className="text-xs text-amber-700">No live colours available right now. Add the preferred colour in notes if needed.</p>
           ) : null}
-          {garmentLines.map((line, index) => (
-            <div key={`${index}-${line.garment}`} className="grid grid-cols-1 gap-4 md:grid-cols-4">
-              <div>
-                <label className="block text-sm font-medium text-neutral-700">Garment</label>
-                <select
-                  value={line.garment}
-                  onChange={(e) => {
-                    const nextGarment = e.target.value;
-                    const nextColorOptions = getGarmentColorOptions(nextGarment);
-                    updateGarmentLine(index, {
-                      garment: nextGarment,
-                      color: nextColorOptions.includes(line.color) ? line.color : "",
-                    });
-                  }}
-                  className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                >
-                  {garmentOptions.map((opt) => (
-                    <option key={opt}>{opt}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700">Color</label>
-                <select
-                  value={line.color}
-                  onChange={(e) => updateGarmentLine(index, { color: e.target.value })}
-                  required={getGarmentColorOptions(line.garment).length > 0}
-                  disabled={loadingColors && getGarmentColorOptions(line.garment).length === 0}
-                  className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none disabled:bg-neutral-50 disabled:text-neutral-400"
-                >
-                  <option value="">
-                    {loadingColors && getGarmentColorOptions(line.garment).length === 0
-                      ? "Loading colors..."
-                      : getGarmentColorOptions(line.garment).length
-                        ? "Select color"
-                        : "No colors available"}
-                  </option>
-                  {getGarmentColorOptions(line.garment).map((color) => (
-                    <option key={color} value={color}>
-                      {formatColorOptionLabel(color)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700">Size</label>
-                <select
-                  value={line.size}
-                  onChange={(e) => updateGarmentLine(index, { size: e.target.value })}
-                  className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                >
-                  {sizeOptions.map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-700">Quantity *</label>
-                <div className="mt-1 flex items-center gap-3">
-                  <input
-                    required
-                    type="number"
-                    min={1}
-                    value={line.quantity}
-                    onChange={(e) => updateGarmentLine(index, { quantity: e.target.value })}
-                    className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                    placeholder="50"
+          {garmentLines.map((line, index) => {
+            const colorOptions = getGarmentColorOptions(line.garment);
+            const colorPlaceholder =
+              loadingColors && colorOptions.length === 0
+                ? "Loading colors..."
+                : colorOptions.length
+                  ? "Select color"
+                  : "No colors available";
+
+            return (
+              <div key={`${index}-${line.garment}`} className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700">Garment</label>
+                  <select
+                    value={line.garment}
+                    onChange={(e) => {
+                      const nextGarment = e.target.value;
+                      const nextColorOptions = getGarmentColorOptions(nextGarment);
+                      updateGarmentLine(index, {
+                        garment: nextGarment,
+                        color: nextColorOptions.includes(line.color) ? line.color : "",
+                      });
+                    }}
+                    className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                  >
+                    {garmentOptions.map((opt) => (
+                      <option key={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700">Color</label>
+                  <ColorSelect
+                    value={line.color}
+                    options={colorOptions}
+                    placeholder={colorPlaceholder}
+                    disabled={loadingColors && colorOptions.length === 0}
+                    onChange={(value) => updateGarmentLine(index, { color: value })}
                   />
-                  {garmentLines.length > 1 ? (
-                    <button
-                      type="button"
-                      onClick={() => removeGarmentLine(index)}
-                      className="inline-flex aspect-square h-[34px] w-[34px] items-center justify-center rounded-full border border-red-300 bg-gradient-to-br from-red-500 to-rose-500 text-base font-semibold text-white shadow-[0_10px_20px_-14px_rgba(239,68,68,0.95)] transition hover:from-red-600 hover:to-rose-600"
-                      aria-label="Remove garment"
-                      title="Remove garment"
-                    >
-                      ×
-                    </button>
-                  ) : null}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700">Size</label>
+                  <select
+                    value={line.size}
+                    onChange={(e) => updateGarmentLine(index, { size: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                  >
+                    {sizeOptions.map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700">Quantity *</label>
+                  <div className="mt-1 flex items-center gap-3">
+                    <input
+                      required
+                      type="number"
+                      min={1}
+                      value={line.quantity}
+                      onChange={(e) => updateGarmentLine(index, { quantity: e.target.value })}
+                      className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
+                      placeholder="50"
+                    />
+                    {garmentLines.length > 1 ? (
+                      <button
+                        type="button"
+                        onClick={() => removeGarmentLine(index)}
+                        className="inline-flex aspect-square h-[34px] w-[34px] items-center justify-center rounded-full border border-red-300 bg-gradient-to-br from-red-500 to-rose-500 text-base font-semibold text-white shadow-[0_10px_20px_-14px_rgba(239,68,68,0.95)] transition hover:from-red-600 hover:to-rose-600"
+                        aria-label="Remove garment"
+                        title="Remove garment"
+                      >
+                        ×
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {garmentLines.length > 1 ? (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
               <div className="md:col-start-4">
