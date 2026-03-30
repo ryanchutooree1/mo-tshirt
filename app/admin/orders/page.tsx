@@ -15,7 +15,6 @@ import {
   getDoc,
   runTransaction,
   updateDoc,
-  deleteDoc,
   Query,
   QueryDocumentSnapshot,
   DocumentData,
@@ -106,7 +105,6 @@ type Txn = {
 };
 
 const PAGE_SIZE = 20;
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "admin";
 const DEFAULT_PREPARED_BY = "Mo T-Shirt Team";
 const ORDER_WORKFLOW = ["Pending", "In Process", "Completed", "Delivered"] as const;
 const ORDER_WORKFLOW_VISUAL = ["Process", "Completed", "Delivered", "Done"] as const;
@@ -821,20 +819,47 @@ function OrdersPageInner() {
     return formatDisplayMoney(n);
   }
 
-  async function confirmPassword(): Promise<boolean> {
-    // quick inline prompt; replace with a fancy modal if you like
-    const pw = window.prompt("Enter admin password to confirm");
-    return (pw || "") === ADMIN_PASSWORD;
+  function requestDeletePassword(scope: string) {
+    const password = window.prompt(`Enter your admin login password to ${scope}.`);
+    if (password === null) return null;
+    const cleanPassword = password.trim();
+    if (!cleanPassword) {
+      showToast({ type: "err", text: "Password is required." });
+      return null;
+    }
+    return cleanPassword;
+  }
+
+  async function deleteOrderById(id: string, password: string) {
+    const res = await fetch(`/api/admin/orders/${id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(body?.error || "Delete failed");
+    }
   }
 
   // actions: delete (txn + account)
-  async function deleteTxn(id: string) {
-    const ok = await confirmPassword();
-    if (!ok) return;
+  async function deleteTxn(id: string, customerName: string) {
+    const password = requestDeletePassword("delete this order");
+    if (!password) return;
+    const confirmed = window.confirm(
+      `Delete order for ${customerName || "this client"}? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
     try {
-      await deleteDoc(doc(db, "transactions", id));
-      await deleteDoc(doc(db, "account", id));
+      await deleteOrderById(id, password);
       setRows((prev) => prev.filter((d) => d.id !== id));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      setExpandedId((current) => (current === id ? null : current));
       showToast({ type: "ok", text: "Transaction deleted" });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Delete failed";
@@ -1209,20 +1234,34 @@ function OrdersPageInner() {
 
   // bulk actions
   async function bulkDelete() {
-    const ok = await confirmPassword();
-    if (!ok) return;
+    const password = requestDeletePassword("delete the selected orders");
+    if (!password) return;
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    const confirmed = window.confirm(
+      `Delete ${ids.length} selected order${ids.length === 1 ? "" : "s"}? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    const failed: string[] = [];
     for (const id of Array.from(selectedIds)) {
       try {
-        await deleteDoc(doc(db, "transactions", id));
-        await deleteDoc(doc(db, "account", id));
+        await deleteOrderById(id, password);
       } catch {
-        /* continue */
+        failed.push(id);
       }
     }
-    setRows((prev) => prev.filter((d) => !selectedIds.has(d.id)));
-    setSelectedIds(new Set());
-    setSelectMode(false);
-    showToast({ type: "ok", text: "Bulk delete done" });
+    const failedSet = new Set(failed);
+    setRows((prev) => prev.filter((d) => !selectedIds.has(d.id) || failedSet.has(d.id)));
+    setSelectedIds(new Set(failed));
+    setSelectMode(failed.length > 0);
+    setExpandedId((current) => (current && failedSet.has(current) ? current : null));
+    showToast({
+      type: failed.length ? "err" : "ok",
+      text: failed.length
+        ? `${failed.length} order${failed.length === 1 ? "" : "s"} could not be deleted.`
+        : "Selected orders deleted",
+    });
   }
 
   async function bulkComplete() {
@@ -1722,7 +1761,7 @@ function OrdersPageInner() {
               </div>
             </div>
           ) : (
-            <ul className="space-y-4 p-4 sm:p-5">
+            <ul className="space-y-3.5 p-3.5 sm:p-4">
               {visibleRows.map((d) => {
                 const base = d.data() as Txn;
                 const m = { ...base, ...(overrides[d.id] || {}) } as Txn;
@@ -1798,7 +1837,7 @@ function OrdersPageInner() {
                 return (
                   <li
                     key={id}
-                    className={`relative overflow-hidden rounded-[32px] border p-5 shadow-[0_22px_50px_-40px_rgba(15,23,42,0.42)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_28px_65px_-40px_rgba(15,23,42,0.45)] ${
+                    className={`relative overflow-hidden rounded-[26px] border p-4 shadow-[0_14px_34px_-28px_rgba(15,23,42,0.28)] transition duration-200 hover:border-slate-300 hover:shadow-[0_18px_38px_-28px_rgba(15,23,42,0.34)] ${
                       selected
                         ? "border-slate-300 bg-white"
                         : "border-slate-200 bg-white"
@@ -1818,13 +1857,13 @@ function OrdersPageInner() {
                       date: when,
                     })}
                   >
-                    <div className="relative flex flex-col gap-5">
-                      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                        <div className="flex min-w-0 flex-1 items-start gap-4">
+                    <div className="relative flex flex-col gap-4">
+                      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                        <div className="flex min-w-0 flex-1 items-start gap-3.5">
                           {selectMode && (
                             <input
                               type="checkbox"
-                              className="mt-4 h-4 w-4 rounded border-slate-300 text-[#d6473f] focus:ring-[#f7d0ca]"
+                              className="mt-3.5 h-4 w-4 rounded border-slate-300 text-[#d6473f] focus:ring-[#f7d0ca]"
                               checked={selected}
                               onChange={(e) => {
                                 setSelectedIds((prev) => {
@@ -1836,11 +1875,11 @@ function OrdersPageInner() {
                               }}
                             />
                           )}
-                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] border border-slate-200 bg-white text-lg font-semibold text-slate-700 shadow-inner">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] border border-slate-200 bg-white text-base font-semibold text-slate-700 shadow-inner">
                             {customerInitial}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                            <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                               <span>{sourceLabel}</span>
                               <span className="h-1 w-1 rounded-full bg-slate-300" />
                               <span>Order {id.slice(-6).toUpperCase()}</span>
@@ -1851,34 +1890,34 @@ function OrdersPageInner() {
                                 </>
                               ) : null}
                             </div>
-                            <div className="mt-3 flex flex-wrap items-end gap-x-3 gap-y-2">
-                              <h3 className="text-[1.45rem] font-semibold tracking-[-0.03em] text-slate-900">
+                            <div className="mt-2 flex flex-wrap items-end gap-x-2.5 gap-y-1.5">
+                              <h3 className="text-[1.2rem] font-semibold tracking-[-0.03em] text-slate-900 sm:text-[1.35rem]">
                                 {customerLabel}
                               </h3>
-                              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                              <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">
                                 Invoice #{m.invoiceNumber || "Draft"}
                               </span>
                             </div>
-                            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500">
+                            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[13px] text-slate-500">
                               <span>{m.phoneNumber || "Phone not set"}</span>
                               <span>{m.email || "Email not set"}</span>
                             </div>
-                            <div className="mt-4 flex flex-wrap gap-2">
+                            <div className="mt-3 flex flex-wrap gap-1.5">
                               {StatusBadge(m.status || "")}
                               {PaymentBadge(m.paymentMethod || "")}
-                              <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
+                              <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">
                                 {totalQty} pcs
                               </span>
-                              <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
+                              <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">
                                 {products.length} lines
                               </span>
                               {m.quoteId && (
-                                <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
+                                <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">
                                   Converted quote
                                 </span>
                               )}
                               {docTypeLabel && (
-                                <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
+                                <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">
                                   Document {docTypeLabel}
                                 </span>
                               )}
@@ -1886,15 +1925,15 @@ function OrdersPageInner() {
                           </div>
                         </div>
 
-                        <div className="flex shrink-0 flex-col gap-3 xl:items-end">
-                          <span className="rounded-full bg-[#1f2937] px-4 py-2 text-base font-semibold text-white shadow-sm">
+                        <div className="flex shrink-0 flex-col gap-2.5 xl:items-end">
+                          <span className="rounded-full bg-[#1f2937] px-3.5 py-1.5 text-sm font-semibold text-white shadow-sm">
                             {currency(total)}
                           </span>
-                          <div className="flex flex-wrap gap-2 xl:justify-end">
+                          <div className="flex flex-wrap gap-1.5 xl:justify-end">
                             <button
                               title="Quick invoice preview"
                               onClick={() => quickPreviewInvoice(id, m)}
-                              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                             >
                               <FiPrinter className="h-4 w-4" />
                               Preview
@@ -1904,7 +1943,7 @@ function OrdersPageInner() {
                               onClick={() =>
                                 setExpandedId((current) => (current === id ? null : id))
                               }
-                              className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
+                              className={`rounded-full border px-3.5 py-2 text-xs font-semibold transition ${
                                 isExpanded
                                   ? "border-[#1f2937] bg-[#1f2937] text-white"
                                   : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
@@ -1915,15 +1954,15 @@ function OrdersPageInner() {
                             <button
                               title="Mark Completed & adjust stock"
                               onClick={() => markCompletedAndAdjust(id)}
-                              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                             >
                               <FiCheckCircle className="h-4 w-4" />
                               Complete
                             </button>
                             <button
                               title="Delete"
-                              onClick={() => deleteTxn(id)}
-                              className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50"
+                              onClick={() => deleteTxn(id, customerLabel)}
+                              className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-white px-3.5 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50"
                             >
                               <FiTrash2 className="h-4 w-4" />
                               Delete
@@ -1932,30 +1971,27 @@ function OrdersPageInner() {
                         </div>
                       </div>
 
-                      <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-[1.35fr_0.8fr_0.8fr_0.8fr]">
-                        <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 p-4">
+                      <div className="grid gap-2.5 xl:grid-cols-[1.45fr_0.85fr_0.85fr_0.85fr]">
+                        <div className="rounded-[20px] border border-slate-200 bg-slate-50/60 p-3.5">
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                                 Items
                               </p>
-                              <p className="mt-1 text-sm text-slate-600">
-                                Show the first products first, then open the full order only when needed.
-                              </p>
                             </div>
-                            <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">
                               {totalQty} pcs
                             </span>
                           </div>
 
-                          <div className="mt-4 flex flex-wrap gap-2">
+                          <div className="mt-3 flex flex-wrap gap-1.5">
                             {compactProducts.length ? (
                               compactProducts.map((product, index) => {
                                 const variant = [product.color, product.size ? formatSizeLabel(product.size) : ""].filter(Boolean).join(" / ");
                                 return (
                                   <span
                                     key={`${id}-compact-${index}`}
-                                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600"
+                                    className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600"
                                   >
                                     {product.product || "Item"}
                                     {variant ? ` • ${variant}` : ""}
@@ -1964,47 +2000,47 @@ function OrdersPageInner() {
                                 );
                               })
                             ) : (
-                              <span className="rounded-full border border-dashed border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500">
+                              <span className="rounded-full border border-dashed border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-500">
                                 No line items on this order yet
                               </span>
                             )}
                             {hiddenProductCount > 0 ? (
-                              <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500">
+                              <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-500">
                                 +{hiddenProductCount} more
                               </span>
                             ) : null}
                           </div>
                         </div>
 
-                        <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 p-4">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                        <div className="rounded-[20px] border border-slate-200 bg-slate-50/60 p-3.5">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                             Delivery
                           </p>
-                          <p className="mt-3 text-sm font-semibold text-slate-900">
+                          <p className="mt-2.5 text-sm font-semibold text-slate-900">
                             {m.phoneNumber || "Phone not set"}
                           </p>
-                          <p className="mt-1 line-clamp-2 text-sm text-slate-500">
+                          <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-slate-500">
                             {compactAddress}
                           </p>
-                          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                          <p className="mt-2.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                             {sourceLabel}
                           </p>
                         </div>
 
-                        <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 p-4">
+                        <div className="rounded-[20px] border border-slate-200 bg-slate-50/60 p-3.5">
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                                 Production
                               </p>
-                              <p className="mt-3 text-sm font-semibold text-slate-900">
+                              <p className="mt-2.5 text-sm font-semibold text-slate-900">
                                 {workflowDone ? "Done" : currentStatus}
                               </p>
-                              <p className="mt-1 text-sm text-slate-500">
+                              <p className="mt-1 text-[13px] text-slate-500">
                                 Next: {workflowDone ? "Closed" : workflowNextLabel}
                               </p>
                             </div>
-                            <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${
+                            <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
                               workflowDone
                                 ? "border-emerald-200 bg-white text-emerald-700"
                                 : "border-slate-200 bg-white text-slate-600"
@@ -2014,20 +2050,20 @@ function OrdersPageInner() {
                           </div>
                         </div>
 
-                        <div className="rounded-[24px] border border-slate-200 bg-slate-50/60 p-4">
+                        <div className="rounded-[20px] border border-slate-200 bg-slate-50/60 p-3.5">
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                                 Documents
                               </p>
-                              <p className="mt-3 text-sm font-semibold text-slate-900">
+                              <p className="mt-2.5 text-sm font-semibold text-slate-900">
                                 {compactDocCurrentLabel}
                               </p>
-                              <p className="mt-1 text-sm text-slate-500">
+                              <p className="mt-1 text-[13px] text-slate-500">
                                 Next: {compactDocNextLabel}
                               </p>
                             </div>
-                            <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${
+                            <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
                               isDocFlowDone
                                 ? "border-emerald-200 bg-white text-emerald-700"
                                 : "border-slate-200 bg-white text-slate-600"
