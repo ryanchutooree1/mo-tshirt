@@ -38,6 +38,7 @@ import {
 } from "firebase/firestore";
 import { format, formatDistanceToNow, subDays } from "date-fns";
 import { db } from "@/lib/firebase";
+import { normalizeInventoryColors } from "@/lib/inventory-stock";
 import { formatMoney as formatDisplayMoney } from "@/lib/money";
 import { useAdminMetrics } from "@/admin/AdminDataContext";
 import { useAdminTheme } from "@/admin/AdminThemeContext";
@@ -399,21 +400,10 @@ export default function OwnerDashboard() {
       (snap) => {
         const next: DashboardProduct[] = snap.docs.map((row) => {
           const data = row.data() as Record<string, unknown>;
-          const rawColors = Array.isArray(data.colors) ? data.colors : [];
-          const colors: ProductColor[] = rawColors
-            .filter((entry): entry is Record<string, unknown> => typeof entry === "object" && entry !== null)
-            .map((entry) => {
-              const rawSizes = typeof entry.sizes === "object" && entry.sizes !== null ? entry.sizes : {};
-              const sizePairs = Object.entries(rawSizes as Record<string, unknown>);
-              const sizes = sizePairs.reduce<Record<string, number>>((acc, [size, qty]) => {
-                acc[size] = Math.max(0, asNumber(qty));
-                return acc;
-              }, {});
-              return {
-                color: String(entry.color || "Color"),
-                sizes,
-              };
-            });
+          const colors = normalizeInventoryColors(data.colors).map((entry) => ({
+            color: entry.color,
+            sizes: entry.sizes,
+          })) as ProductColor[];
 
           return {
             id: row.id,

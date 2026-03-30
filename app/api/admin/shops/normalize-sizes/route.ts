@@ -42,11 +42,17 @@ export async function POST() {
       const data = docSnap.data();
       const rawSizePrices = Array.isArray(data.sizePrices) ? data.sizePrices : [];
       const rawSizes = Array.isArray(data.sizes) ? data.sizes : [];
-      const hasOld =
-        rawSizePrices.some((entry: any) => /\s+Old$/i.test(String(entry?.size || ""))) ||
-        rawSizes.some((size: string) => /\s+Old$/i.test(String(size || "")));
+      const hasLegacyLabels =
+        rawSizePrices.some((entry: any) => {
+          const raw = String(entry?.size || "").trim();
+          return raw !== normalizeSizeLabel(raw);
+        }) ||
+        rawSizes.some((size: string) => {
+          const raw = String(size || "").trim();
+          return raw !== normalizeSizeLabel(raw);
+        });
 
-      if (!hasOld) return;
+      if (!hasLegacyLabels) return;
 
       const normalizedSizePrices = normalizeSizePrices(rawSizePrices);
       const normalizedSizes = normalizedSizePrices.length

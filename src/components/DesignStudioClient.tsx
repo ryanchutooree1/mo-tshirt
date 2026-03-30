@@ -72,7 +72,7 @@ const FONTS: { id: FontId; label: string; value: string }[] = [
   { id: "script", label: "Signature", value: "'Brush Script MT','Segoe Script',cursive" },
 ];
 
-const SIZE_FIELDS = ["XS", "S", "M", "L", "XL", "2XL", "3XL"] as const;
+const SIZE_FIELDS = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
 type SizeField = (typeof SIZE_FIELDS)[number];
 
 const DELIVERY_OPTIONS = [
@@ -303,6 +303,7 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
     XL: "",
     "2XL": "",
     "3XL": "",
+    "4XL": "",
   });
   const [client, setClient] = useState<ClientState>({
     name: "",

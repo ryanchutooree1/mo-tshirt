@@ -41,7 +41,9 @@ import {
   FiPlus,
 } from "react-icons/fi";
 import jsPDF from "jspdf";
+import { normalizeInventorySizeMap } from "@/lib/inventory-stock";
 import { formatMoney as formatDisplayMoney } from "@/lib/money";
+import { formatSizeLabel, normalizeSizeLabel } from "@/lib/shops";
 
 type ProductLine = {
   product: string;
@@ -263,7 +265,7 @@ const normalizeDocumentLines = (
       quantity: Math.max(1, safeNumber(line.quantity, 1)),
       unitPrice: Math.max(0, safeNumber(line.unitPrice, 0)),
       color: line.color || "",
-      size: line.size || "",
+      size: line.size ? normalizeSizeLabel(line.size) : "",
     }));
   }
 
@@ -279,7 +281,7 @@ const normalizeDocumentLines = (
       quantity,
       unitPrice,
       color: product.color || "",
-      size: product.size || "",
+      size: product.size ? normalizeSizeLabel(product.size) : "",
     };
   });
 };
@@ -478,7 +480,7 @@ function buildOrderDocumentPdf(txnId: string, draft: OrderDocumentProfile) {
   docPdf.setTextColor(30);
   const rowPadding = 5;
   for (const line of lineTotals) {
-    const label = `${line.description}${line.color || line.size ? ` (${[line.color, line.size].filter(Boolean).join("/")})` : ""}`;
+    const label = `${line.description}${line.color || line.size ? ` (${[line.color, line.size ? formatSizeLabel(line.size) : ""].filter(Boolean).join("/")})` : ""}`;
     const wrapped = docPdf.splitTextToSize(label, descWidth);
     const rowHeight = Math.max(26, wrapped.length * 13 + rowPadding * 2);
     if (y + rowHeight > pageHeight - 170) {
@@ -1074,15 +1076,16 @@ function OrdersPageInner() {
             const idx = prod.colors.findIndex((c: { color: string }) => c.color === color);
             if (idx === -1)
               throw new Error(`Color ${color} not found for ${product}`);
-            const sizes = { ...(prod.colors[idx].sizes || {}) } as Record<string, number>;
-            if (!(size! in sizes))
-              throw new Error(`Size ${size} not found for ${product}`);
-            const current = Number(sizes[size!]) || 0;
+            const sizes = normalizeInventorySizeMap(prod.colors[idx].sizes);
+            const sizeKey = normalizeSizeLabel(size || "");
+            if (!(sizeKey in sizes))
+              throw new Error(`Size ${sizeKey} not found for ${product}`);
+            const current = Number(sizes[sizeKey]) || 0;
             if (current < quantity)
               throw new Error(
-                `Insufficient stock for ${product} ${color}/${size}`
+                `Insufficient stock for ${product} ${color}/${sizeKey}`
               );
-            sizes[size!] = current - quantity;
+            sizes[sizeKey] = current - quantity;
             prod.colors[idx] = { ...prod.colors[idx], sizes };
             t.update(prodRef, { colors: prod.colors });
           } else if (typeof prod.qty === "number") {
@@ -1113,6 +1116,7 @@ function OrdersPageInner() {
     setEditIndex(index);
     setEditValue({
       ...line,
+      size: line.size ? normalizeSizeLabel(line.size) : "",
       unitPrice:
         line.unitPrice ??
         (line.price && line.quantity ? line.price / line.quantity : 0),
@@ -1124,6 +1128,7 @@ function OrdersPageInner() {
     if (!editTxnId || editIndex < 0 || !editValue) return;
     const updated = {
       ...editValue,
+      size: editValue.size ? normalizeSizeLabel(editValue.size) : "",
       price: (editValue.unitPrice || 0) * (editValue.quantity || 0),
     };
     try {
@@ -1151,12 +1156,13 @@ function OrdersPageInner() {
                 (c: { color: string }) => c.color === updated.color
               );
               if (idx === -1) throw new Error("Color not found");
-              const sizes = { ...(prod.colors[idx].sizes || {}) } as Record<string, number>;
-              if (!(updated.size! in sizes)) throw new Error("Size not found");
-              const current = Number(sizes[updated.size!]) || 0;
+              const sizes = normalizeInventorySizeMap(prod.colors[idx].sizes);
+              const sizeKey = normalizeSizeLabel(updated.size || "");
+              if (!(sizeKey in sizes)) throw new Error("Size not found");
+              const current = Number(sizes[sizeKey]) || 0;
               const newStock = current - diff; // subtract positive diff, add back negative
               if (newStock < 0) throw new Error("Insufficient stock for edit");
-              sizes[updated.size!] = newStock;
+              sizes[sizeKey] = newStock;
               prod.colors[idx] = { ...prod.colors[idx], sizes };
               t.update(prodRef, { colors: prod.colors });
             } else if (typeof prod.qty === "number") {
@@ -1945,7 +1951,7 @@ function OrdersPageInner() {
                           <div className="mt-4 flex flex-wrap gap-2">
                             {compactProducts.length ? (
                               compactProducts.map((product, index) => {
-                                const variant = [product.color, product.size].filter(Boolean).join(" / ");
+                                const variant = [product.color, product.size ? formatSizeLabel(product.size) : ""].filter(Boolean).join(" / ");
                                 return (
                                   <span
                                     key={`${id}-compact-${index}`}
@@ -2066,7 +2072,7 @@ function OrdersPageInner() {
                           <div className="mt-4 flex flex-wrap gap-2">
                             {products.length > 0 ? (
                               products.slice(0, 6).map((product, index) => {
-                                const variant = [product.color, product.size].filter(Boolean).join(" / ");
+                                const variant = [product.color, product.size ? formatSizeLabel(product.size) : ""].filter(Boolean).join(" / ");
                                 return (
                                   <span
                                     key={`${id}-preview-${index}`}
@@ -2333,7 +2339,7 @@ function OrdersPageInner() {
                                       return (
                                         <tr key={idx} className="text-slate-700">
                                           <td className="px-4 py-3 font-medium">{p.product || "Item"}</td>
-                                          <td className="px-4 py-3">{[p.color, p.size].filter(Boolean).join(" / ") || "—"}</td>
+                                          <td className="px-4 py-3">{[p.color, p.size ? formatSizeLabel(p.size) : ""].filter(Boolean).join(" / ") || "—"}</td>
                                           <td className="px-4 py-3">{qty}</td>
                                           <td className="px-4 py-3">{formatDisplayMoney(unit)}</td>
                                           <td className="px-4 py-3">{formatDisplayMoney(tot)}</td>

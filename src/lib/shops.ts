@@ -2,6 +2,7 @@ import { formatMoney as formatDisplayMoney } from "@/lib/money";
 
 export const DEFAULT_PICKUP_POINT = "Nouvelle France";
 export const DEFAULT_COLLECTION_POINT = "Surinam";
+export const ADULT_SIZE_ORDER = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
 export const SIZE_ORDER = [
   "1 Yr",
   "2 Yrs",
@@ -11,14 +12,7 @@ export const SIZE_ORDER = [
   "10 Yrs",
   "12 Yrs",
   "14 Yrs",
-  "XS",
-  "S",
-  "M",
-  "L",
-  "XL",
-  "2XL",
-  "3XL",
-  "4XL",
+  ...ADULT_SIZE_ORDER,
 ] as const;
 
 export type ShopSizePrice = {
@@ -180,7 +174,15 @@ export function formatQuoteGarmentDescription(entry: QuoteGarmentLine) {
 }
 
 export function normalizeSizeLabel(size: string): string {
-  return String(size || "").replace(/\s+Old$/i, "").trim();
+  const trimmed = String(size || "").replace(/\s+Old$/i, "").trim();
+  if (!trimmed) return "";
+
+  const compact = trimmed.replace(/\s+/g, "").toUpperCase();
+  if (compact === "XXL" || compact === "2XL") return "2XL";
+  if (compact === "XXXL" || compact === "3XL") return "3XL";
+  if (compact === "XXXXL" || compact === "4XL") return "4XL";
+
+  return trimmed;
 }
 
 export function formatSizeLabel(size: string): string {

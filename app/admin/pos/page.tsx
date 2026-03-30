@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { db, storage } from '@/lib/firebase';
+import { normalizeInventoryColors, normalizeInventorySizeMap } from '@/lib/inventory-stock';
+import { formatSizeLabel, normalizeSizeLabel, sortSizes } from '@/lib/shops';
 import {
   addDoc,
   collection,
@@ -119,7 +121,14 @@ export default function POSPage() {
     // live products
     const q = query(collection(db, 'products'));
     const unsub = onSnapshot(q, snap => {
-      const list = snap.docs.map(d => ({ id: d.id, ...(d.data() as ProductDoc) }));
+      const list = snap.docs.map(d => {
+        const data = d.data() as ProductDoc;
+        return {
+          id: d.id,
+          ...data,
+          colors: normalizeInventoryColors(data.colors),
+        };
+      });
       setProducts(list);
     });
 
@@ -159,14 +168,14 @@ export default function POSPage() {
   const availableSizes = useMemo(() => {
     if (!currentProduct || !selectedColor) return [];
     const row = currentProduct.colors.find(c => c.color === selectedColor);
-    return row ? Object.keys(row.sizes) : [];
+    return row ? sortSizes(Object.keys(row.sizes)) : [];
   }, [currentProduct, selectedColor]);
 
   const availableQty = useMemo(() => {
     if (!currentProduct || !selectedColor || !selectedSize) return 0;
     const row = currentProduct.colors.find(c => c.color === selectedColor);
     if (!row) return 0;
-    return row.sizes[selectedSize] || 0;
+    return row.sizes[normalizeSizeLabel(selectedSize)] || 0;
   }, [currentProduct, selectedColor, selectedSize]);
 
   // ---------- Customer search (by name/phone/email) ----------
@@ -277,9 +286,14 @@ export default function POSPage() {
           const data = snap.data() as ProductDoc;
           const idx = data.colors.findIndex(c => c.color === it.color);
           if (idx < 0) return;
-          const cur = Number(data.colors[idx].sizes[it.size] || 0);
+          const sizeKey = normalizeSizeLabel(it.size);
+          const sizes = normalizeInventorySizeMap(data.colors[idx].sizes);
+          const cur = Number(sizes[sizeKey] || 0);
           const copy = JSON.parse(JSON.stringify(data)) as ProductDoc;
-          copy.colors[idx].sizes[it.size] = cur + Number(it.quantity||0);
+          copy.colors[idx].sizes = {
+            ...sizes,
+            [sizeKey]: cur + Number(it.quantity || 0),
+          };
           tx.update(ref, { colors: copy.colors });
         });
       }
@@ -316,6 +330,7 @@ export default function POSPage() {
     if (selectedQty <= 0) return alert('Quantity must be > 0');
 
     const productRef = doc(db, 'products', selectedProductId);
+    const sizeKey = normalizeSizeLabel(selectedSize);
 
     // Decrement stock transactionally (so qty can’t go negative)
     try {
@@ -327,13 +342,17 @@ export default function POSPage() {
         const colorIdx = data.colors.findIndex(c => c.color === selectedColor);
         if (colorIdx < 0) throw new Error('Color not found');
 
-        const current = data.colors[colorIdx].sizes[selectedSize!];
+        const sizes = normalizeInventorySizeMap(data.colors[colorIdx].sizes);
+        const current = sizes[sizeKey];
         if (!Number.isFinite(current) || current < (selectedQty!)) {
           throw new Error('Insufficient quantity available');
         }
 
         const copy = JSON.parse(JSON.stringify(data)) as ProductDoc;
-        copy.colors[colorIdx].sizes[selectedSize!] = current - (selectedQty!);
+        copy.colors[colorIdx].sizes = {
+          ...sizes,
+          [sizeKey]: current - selectedQty!,
+        };
 
         tx.update(productRef, { colors: copy.colors });
       });
@@ -346,7 +365,7 @@ export default function POSPage() {
       productId: selectedProductId,
       productName: currentProduct.productName,
       color: selectedColor!,
-      size: selectedSize!,
+      size: sizeKey,
       quantity: selectedQty!,
       unitPrice: price,
       lineTotal: price * selectedQty!,
@@ -372,9 +391,14 @@ export default function POSPage() {
         const data = snap.data() as ProductDoc;
         const colorIdx = data.colors.findIndex(c => c.color === item.color);
         if (colorIdx < 0) return;
-        const cur = Number(data.colors[colorIdx].sizes[item.size] || 0);
+        const sizeKey = normalizeSizeLabel(item.size);
+        const sizes = normalizeInventorySizeMap(data.colors[colorIdx].sizes);
+        const cur = Number(sizes[sizeKey] || 0);
         const copy = JSON.parse(JSON.stringify(data)) as ProductDoc;
-        copy.colors[colorIdx].sizes[item.size] = cur + item.quantity;
+        copy.colors[colorIdx].sizes = {
+          ...sizes,
+          [sizeKey]: cur + item.quantity,
+        };
         tx.update(ref, { colors: copy.colors });
       });
     } catch { /* ignore */ }
@@ -699,7 +723,7 @@ export default function POSPage() {
                     label="Size"
                     value={selectedSize || ''}
                     onChange={(v) => { setSelectedSize(v || null); setSelectedQty(null); }}
-                    options={[{ label: 'Select…', value: '' }, ...availableSizes.map(s => ({ label: s, value: s }))]}
+                    options={[{ label: 'Select…', value: '' }, ...availableSizes.map(s => ({ label: formatSizeLabel(s), value: s }))]}
                     disabled={!selectedColor}
                   />
                   <Select
@@ -734,7 +758,7 @@ export default function POSPage() {
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="text-sm">
                           <div className="font-semibold">{it.productName}</div>
-                          <div className="text-xs text-[var(--pos-muted)]">Color: {it.color} • Size: {it.size} • Qty: {it.quantity}</div>
+                          <div className="text-xs text-[var(--pos-muted)]">Color: {it.color} • Size: {formatSizeLabel(it.size)} • Qty: {it.quantity}</div>
                           <div className="mt-1 text-xs font-semibold text-[var(--pos-accent-2)]">
                             {money(it.lineTotal)} ({money(it.unitPrice)} x {it.quantity})
                           </div>
@@ -1474,7 +1498,7 @@ async function generateInvoicePDFBlob(input: {
 
   input.items.forEach(it => {
     const line =
-      (it.product + (it.color ? ` (${it.color}/${it.size})` : '')).padEnd(27).slice(0,27) +
+      (it.product + (it.color ? ` (${it.color}/${formatSizeLabel(it.size)})` : '')).padEnd(27).slice(0,27) +
       String(it.quantity).padStart(4) + '  ' +
       formatMoneyValue(it.unitPrice).padStart(12) + '  ' +
       formatMoneyValue(it.price).padStart(12);

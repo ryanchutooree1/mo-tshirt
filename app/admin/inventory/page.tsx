@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  INVENTORY_SIZE_ORDER,
+  normalizeInventoryColors,
+  normalizeInventoryMinMap,
+  normalizeInventorySizeMap,
+} from "@/lib/inventory-stock";
 import { db } from "@/lib/firebase";
+import { normalizeSizeLabel, sortSizes } from "@/lib/shops";
 import {
   collection,
   onSnapshot,
@@ -46,7 +53,7 @@ type BulkSizeValues = DraftSizeValues;
 const money = (v: number) => formatDisplayMoney(v);
 const sum = (obj: Record<string, number> = {}) =>
   Object.values(obj).reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
-const DEFAULT_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"];
+const DEFAULT_SIZES = [...INVENTORY_SIZE_ORDER];
 const LOW_FALLBACK = 5;
 const csvCell = (s: string) => `"${String(s).replace(/"/g, '""')}"`;
 
@@ -79,6 +86,10 @@ function parseEditableNumber(value: string): number | "" {
   if (value === "") return "";
   const parsed = Number.parseInt(value, 10);
   return Number.isNaN(parsed) ? "" : parsed;
+}
+
+function sortSizeMapEntries(map: Record<string, number>) {
+  return sortSizes(Object.keys(map)).map((size) => [size, map[size]] as const);
 }
 
 // ---------- Page ----------
@@ -120,7 +131,14 @@ export default function InventoryPage() {
   useEffect(() => {
     const qy = query(collection(db, "products"), orderBy("productName"));
     const unsub = onSnapshot(qy, (snap) => {
-      const list: Product[] = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Product, "id">) }));
+      const list: Product[] = snap.docs.map((d) => {
+        const data = d.data() as Omit<Product, "id">;
+        return {
+          id: d.id,
+          ...data,
+          colors: normalizeInventoryColors(data.colors),
+        };
+      });
       setProducts(list);
     });
     return () => unsub();
@@ -244,18 +262,26 @@ export default function InventoryPage() {
     const copy: Product = deepClone(product);
     const idx = copy.colors.findIndex((c) => c.color.toLowerCase() === ncColor.trim().toLowerCase());
 
-    const sizesObj: SizeMap = {};
-    const minObj: MinMap = {};
+    const rawSizesObj: Record<string, number> = {};
+    const rawMinObj: Record<string, number> = {};
     Object.entries(ncSizes).forEach(([k, v]) => {
       if (v.qty !== "" || v.min !== "") {
-        sizesObj[k] = Number(v.qty || 0);
-        if (v.min !== "") minObj[k] = Number(v.min);
+        rawSizesObj[k] = Number(v.qty || 0);
+        if (v.min !== "") rawMinObj[k] = Number(v.min);
       }
     });
+    const sizesObj = normalizeInventorySizeMap(rawSizesObj);
+    const minObj = normalizeInventoryMinMap(rawMinObj);
 
     if (idx >= 0) {
-      copy.colors[idx].sizes = { ...copy.colors[idx].sizes, ...sizesObj };
-      copy.colors[idx].minStock = { ...(copy.colors[idx].minStock || {}), ...minObj };
+      copy.colors[idx].sizes = normalizeInventorySizeMap({
+        ...copy.colors[idx].sizes,
+        ...sizesObj,
+      });
+      copy.colors[idx].minStock = normalizeInventoryMinMap({
+        ...(copy.colors[idx].minStock || {}),
+        ...minObj,
+      });
     } else {
       copy.colors.push({
         color: ncColor.trim(),
@@ -277,7 +303,11 @@ export default function InventoryPage() {
     const product = products.find((p) => p.id === productId);
     if (!product) return;
     const colors = deepClone(product.colors);
-    colors[colorIdx].sizes[sizeKey] = Math.max(0, Number.isFinite(qty) ? qty : 0);
+    const normalizedSize = normalizeSizeLabel(sizeKey);
+    colors[colorIdx].sizes = normalizeInventorySizeMap({
+      ...colors[colorIdx].sizes,
+      [normalizedSize]: Math.max(0, Number.isFinite(qty) ? qty : 0),
+    });
     await updateDoc(doc(db, "products", productId), { colors });
   };
 
@@ -285,8 +315,11 @@ export default function InventoryPage() {
     const product = products.find((p) => p.id === productId);
     if (!product) return;
     const colors = deepClone(product.colors);
-    colors[colorIdx].minStock = colors[colorIdx].minStock || {};
-    colors[colorIdx].minStock![sizeKey] = Math.max(0, Number.isFinite(min) ? min : 0);
+    const normalizedSize = normalizeSizeLabel(sizeKey);
+    colors[colorIdx].minStock = normalizeInventoryMinMap({
+      ...(colors[colorIdx].minStock || {}),
+      [normalizedSize]: Math.max(0, Number.isFinite(min) ? min : 0),
+    });
     await updateDoc(doc(db, "products", productId), { colors });
   };
 
@@ -306,8 +339,9 @@ export default function InventoryPage() {
         await updateDoc(ref, { colors });
       }
       if (scope === "size" && typeof colorIdx === "number" && sizeKey) {
-        delete colors[colorIdx].sizes[sizeKey];
-        if (colors[colorIdx].minStock) delete colors[colorIdx].minStock![sizeKey];
+        const normalizedSize = normalizeSizeLabel(sizeKey);
+        delete colors[colorIdx].sizes[normalizedSize];
+        if (colors[colorIdx].minStock) delete colors[colorIdx].minStock![normalizedSize];
         await updateDoc(ref, { colors });
       }
     }
@@ -320,8 +354,7 @@ export default function InventoryPage() {
     filtered.forEach((p) => {
       const price = p.price || 0;
       p.colors.forEach((c) => {
-        Object.entries(c.sizes)
-          .sort((a, b) => DEFAULT_SIZES.indexOf(a[0]) - DEFAULT_SIZES.indexOf(b[0]))
+        sortSizeMapEntries(c.sizes)
           .forEach(([size, qty]) => {
             const min = c.minStock?.[size] ?? "";
             rows.push(
@@ -350,7 +383,7 @@ export default function InventoryPage() {
       return {
         productName: cells[0] || "",
         color: cells[1] || "",
-        size: cells[2] || "",
+        size: normalizeSizeLabel(cells[2] || ""),
         qty: Number(cells[3] || 0),
         min: cells[4] === "" ? undefined : Number(cells[4]),
         price: cells[5] === "" ? undefined : Number(cells[5]),
@@ -367,6 +400,7 @@ export default function InventoryPage() {
       if (!byProduct.has(r.productName)) byProduct.set(r.productName, { colors: new Map() });
       const g = byProduct.get(r.productName)!;
       if (Number.isFinite(r.price!)) g.price = r.price!;
+      if (!r.size) continue;
       if (!g.colors.has(r.color)) g.colors.set(r.color, new Map());
       g.colors.get(r.color)!.set(r.size, { qty: Math.max(0, Math.floor(r.qty)), min: r.min });
     }
@@ -379,13 +413,15 @@ export default function InventoryPage() {
       if (!existing) {
         const colors: Color[] = [];
         for (const color of g.colors.keys()) {
-          const sizeMap: SizeMap = {};
-          const minMap: MinMap = {};
+          const rawSizeMap: Record<string, number> = {};
+          const rawMinMap: Record<string, number> = {};
           for (const size of g.colors.get(color)!.keys()) {
             const { qty, min } = g.colors.get(color)!.get(size)!;
-            sizeMap[size] = qty;
-            if (min !== undefined) minMap[size] = min;
+            rawSizeMap[size] = qty;
+            if (min !== undefined) rawMinMap[size] = min;
           }
+          const sizeMap = normalizeInventorySizeMap(rawSizeMap);
+          const minMap = normalizeInventoryMinMap(rawMinMap);
           colors.push({ color, sizes: sizeMap, minStock: Object.keys(minMap).length ? minMap : undefined });
         }
         await addDoc(collection(db, "products"), {
@@ -400,21 +436,26 @@ export default function InventoryPage() {
           const patch = g.colors.get(color)!;
           const idx = colors.findIndex((c) => c.color === color);
           if (idx === -1) {
-            const sizeMap: SizeMap = {};
-            const minMap: MinMap = {};
+            const rawSizeMap: Record<string, number> = {};
+            const rawMinMap: Record<string, number> = {};
             for (const size of patch.keys()) {
               const { qty, min } = patch.get(size)!;
-              sizeMap[size] = qty;
-              if (min !== undefined) minMap[size] = min;
+              rawSizeMap[size] = qty;
+              if (min !== undefined) rawMinMap[size] = min;
             }
+            const sizeMap = normalizeInventorySizeMap(rawSizeMap);
+            const minMap = normalizeInventoryMinMap(rawMinMap);
             colors.push({ color, sizes: sizeMap, minStock: Object.keys(minMap).length ? minMap : undefined });
           } else {
+            const nextSizes: Record<string, number> = { ...colors[idx].sizes };
+            const nextMinStock: Record<string, number> = { ...(colors[idx].minStock || {}) };
             for (const size of patch.keys()) {
               const { qty, min } = patch.get(size)!;
-              colors[idx].sizes[size] = qty;
-              colors[idx].minStock = colors[idx].minStock || {};
-              if (min !== undefined) colors[idx].minStock![size] = min;
+              nextSizes[size] = qty;
+              if (min !== undefined) nextMinStock[size] = min;
             }
+            colors[idx].sizes = normalizeInventorySizeMap(nextSizes);
+            colors[idx].minStock = normalizeInventoryMinMap(nextMinStock);
           }
         }
         const upd: { colors: Color[]; price?: number } = { colors };
@@ -771,8 +812,7 @@ export default function InventoryPage() {
                                 </tr>
                               </thead>
                               <tbody className="divide-y">
-                                {Object.entries(c.sizes)
-                                  .sort((a, b) => DEFAULT_SIZES.indexOf(a[0]) - DEFAULT_SIZES.indexOf(b[0]))
+                                {sortSizeMapEntries(c.sizes)
                                   .map(([size, qty]) => {
                                     const min = c.minStock?.[size] ?? LOW_FALLBACK;
                                     const tone = "border-slate-200 text-slate-700";
