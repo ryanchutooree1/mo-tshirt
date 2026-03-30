@@ -247,7 +247,7 @@ function ColorSelect({
 
       {open && !disabled ? (
         <div
-          className="absolute z-30 mt-2 max-h-72 w-full overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-[0_18px_40px_rgba(0,0,0,0.12)]"
+          className="absolute left-0 z-30 mt-2 max-h-72 w-max min-w-full max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-[0_18px_40px_rgba(0,0,0,0.12)] sm:max-w-[26rem]"
           role="listbox"
         >
           <button
@@ -260,7 +260,7 @@ function ColorSelect({
             role="option"
             aria-selected={!value}
           >
-            <span className="truncate">{placeholder}</span>
+            <span className="text-left leading-snug">{placeholder}</span>
             {!value ? <Check className="h-4 w-4 text-neutral-700" /> : null}
           </button>
           {options.map((option) => {
@@ -285,7 +285,7 @@ function ColorSelect({
                     style={{ backgroundColor: getColorSwatch(option) }}
                     aria-hidden="true"
                   />
-                  <span className="truncate">{formatColorOptionLabel(option)}</span>
+                  <span className="text-left leading-snug">{formatColorOptionLabel(option)}</span>
                 </span>
                 {active ? <Check className="h-4 w-4 shrink-0 text-neutral-900" /> : null}
               </button>
@@ -863,7 +863,10 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                   : "No colors available";
 
             return (
-              <div key={`${index}-${line.garment}`} className="grid grid-cols-1 gap-4 md:grid-cols-4">
+              <div
+                key={`${index}-${line.garment}`}
+                className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)_minmax(0,0.72fr)_minmax(0,0.9fr)]"
+              >
                 <div>
                   <label className="block text-sm font-medium text-neutral-700">Garment</label>
                   <select
