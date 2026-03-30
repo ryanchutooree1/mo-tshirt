@@ -1,6 +1,6 @@
-import { normalizeSizeLabel, sortSizes } from "@/lib/shops";
+import { normalizeSizeLabel, SIZE_ORDER, sortSizes } from "@/lib/shops";
 
-export const INVENTORY_SIZE_ORDER = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
+export const INVENTORY_SIZE_ORDER = SIZE_ORDER;
 
 function toNonNegativeInt(value: unknown, fallback = 0) {
   const parsed = Number(value);
