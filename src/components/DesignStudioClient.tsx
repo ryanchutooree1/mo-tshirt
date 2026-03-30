@@ -28,7 +28,10 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
-import { formatWholeMoney as formatDisplayWholeMoney } from "@/lib/money";
+import {
+  formatMoney as formatDisplayMoney,
+  formatWholeMoney as formatDisplayWholeMoney,
+} from "@/lib/money";
 
 type ProductId = "tshirt" | "polo" | "hoodie";
 type MethodId = "dtf" | "screen" | "vinyl";
