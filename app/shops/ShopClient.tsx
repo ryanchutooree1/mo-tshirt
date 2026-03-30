@@ -517,7 +517,6 @@ export default function ShopClient() {
                 size: sizes[0] || "M",
                 quantity: 1,
               };
-            const sizePrice = getSizePrice(item, selection.size);
             const displayColor = selection.color || item.colors[0] || "Color";
             return (
               <article key={item.id} className="group rounded-[28px] border border-neutral-200 bg-white/90 p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
@@ -569,7 +568,7 @@ export default function ShopClient() {
                               : "border-neutral-200 hover:border-neutral-400"
                           }`}
                         >
-                          {formatSizeLabel(entry.size)} {money(entry.price)}
+                          {formatSizeLabel(entry.size)}
                         </button>
                       ))
                     ) : (
@@ -598,11 +597,13 @@ export default function ShopClient() {
                         className="rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
                       >
                         {sizes.map((size) => (
-                          <option key={size} value={size}>{formatSizeLabel(size)}</option>
+                          <option key={size} value={size}>
+                            {`${formatSizeLabel(size)} (${money(getSizePrice(item, size))})`}
+                          </option>
                         ))}
                       </select>
                     </label>
-                    <label className="flex flex-col gap-2">
+                    <label className="flex flex-col gap-2 sm:col-span-2">
                       Qty
                       <input
                         type="number"
@@ -619,12 +620,6 @@ export default function ShopClient() {
                         className="rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
                       />
                     </label>
-                    <div className="flex flex-col gap-2">
-                      <span>Price (selected size)</span>
-                      <div className="flex items-center rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm font-semibold text-neutral-900">
-                        {money(sizePrice)}
-                      </div>
-                    </div>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
