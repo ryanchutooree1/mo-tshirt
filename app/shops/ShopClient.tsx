@@ -636,7 +636,7 @@ export default function ShopClient() {
                       >
                         {sizes.map((size) => (
                           <option key={size} value={size}>
-                            {`${formatSizeLabel(size)} (${money(getSizePrice(item, size))})`}
+                            {`${formatSizeLabel(size)} (${formatDisplayWholeMoney(getSizePrice(item, size))})`}
                           </option>
                         ))}
                       </select>
