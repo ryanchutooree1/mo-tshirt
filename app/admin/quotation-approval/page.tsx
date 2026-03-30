@@ -351,15 +351,6 @@ const safeNumber = (value: unknown, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const getPopulatedQuoteLineCount = (lines: QuoteLine[]) =>
-  lines.filter((line) => {
-    return (
-      String(line.description || "").trim().length > 0 ||
-      safeNumber(line.quantity, 0) > 0 ||
-      safeNumber(line.unitPrice, 0) > 0
-    );
-  }).length;
-
 const normalizeDesignText = (value: unknown) => {
   if (typeof value !== "string") return "";
   const text = value.trim();
@@ -619,7 +610,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   const amountReceived = safeNumber(draft.amountReceived, 0);
   const grandTotal = subtotal + deliveryFee - discount;
   const balanceDue = Math.max(0, grandTotal - amountReceived);
-  const showSubtotal = getPopulatedQuoteLineCount(draft.lines) > 1;
+  const showSubtotal = lineTotals.length > 1;
 
   const docTitle =
     draft.documentType === "invoice"
@@ -786,7 +777,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   const colQtyX = pageWidth - margin - 180;
   const colUnitX = pageWidth - margin - 95;
   const colTotalX = pageWidth - margin;
-  const totalsLabelX = pageWidth - margin - 175;
+  const totalsLabelRightX = pageWidth - margin - 120;
 
   if (showLineItems) {
     doc.setFont("helvetica", "bold");
@@ -822,18 +813,18 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   doc.setFont("helvetica", "normal");
   doc.setTextColor(50);
   if (showSubtotal) {
-    doc.text("Subtotal", totalsLabelX, y, { align: "left" });
+    doc.text("Subtotal", totalsLabelRightX, y, { align: "right" });
     doc.text(formatMoney(subtotal, draft.currency), colTotalX, y, { align: "right" });
     y += 16;
   }
   if (deliveryFee > 0) {
-    doc.text("Delivery fee", totalsLabelX, y, { align: "left" });
+    doc.text("Delivery fee", totalsLabelRightX, y, { align: "right" });
     doc.text(formatMoney(deliveryFee, draft.currency), colTotalX, y, { align: "right" });
     y += 16;
   }
   if (discount > 0) {
     doc.setTextColor(180, 0, 0);
-    doc.text("Discount", totalsLabelX, y, { align: "left" });
+    doc.text("Discount", totalsLabelRightX, y, { align: "right" });
     doc.text(formatMoney(-discount, draft.currency), colTotalX, y, { align: "right" });
     doc.setTextColor(50);
     y += 16;
@@ -842,7 +833,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.setTextColor(20);
-  doc.text("Grand Total", totalsLabelX, y, { align: "left" });
+  doc.text("Grand Total", totalsLabelRightX, y, { align: "right" });
   doc.text(formatMoney(grandTotal, draft.currency), colTotalX, y, { align: "right" });
   doc.setFontSize(10);
 
@@ -850,12 +841,12 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
     y += 18;
     doc.setFont("helvetica", "normal");
     doc.setTextColor(50);
-    doc.text("Amount received", totalsLabelX, y, { align: "left" });
+    doc.text("Amount received", totalsLabelRightX, y, { align: "right" });
     doc.text(formatMoney(amountReceived, draft.currency), colTotalX, y, { align: "right" });
     y += 16;
     doc.setFont("helvetica", "bold");
     doc.setTextColor(20);
-    doc.text("Balance due", totalsLabelX, y, { align: "left" });
+    doc.text("Balance due", totalsLabelRightX, y, { align: "right" });
     doc.text(formatMoney(balanceDue, draft.currency), colTotalX, y, { align: "right" });
     doc.setFontSize(10);
   }
@@ -1167,7 +1158,7 @@ export default function QuotationApprovalPage() {
     const total = subtotal + draft.deliveryFee - draft.discount;
     const amountReceived = safeNumber(draft.amountReceived, 0);
     const balanceDue = Math.max(0, total - amountReceived);
-    const lineCount = getPopulatedQuoteLineCount(draft.lines);
+    const lineCount = draft.lines.length;
     return { subtotal, total, amountReceived, balanceDue, lineCount };
   }, [draft]);
 
