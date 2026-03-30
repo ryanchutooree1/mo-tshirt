@@ -732,6 +732,15 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
 
   // Client section
   let y = 176;
+  const clientName = draft.clientCompany || quote.name || "Client";
+  const contactName = (draft.contactName || quote.name || "").trim();
+  const clientPhone = (draft.contactPhone || quote.phone || "").trim();
+  const clientEmail = (draft.contactEmail || quote.email || "").trim();
+  const clientContactLines = [
+    contactName && contactName !== clientName ? `Attn: ${contactName}` : "",
+    clientPhone ? `Phone: ${clientPhone}` : "",
+    clientEmail ? `Email: ${clientEmail}` : "",
+  ].filter(Boolean);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(accent.r, accent.g, accent.b);
@@ -740,10 +749,14 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   doc.setFont("helvetica", "bold");
   doc.setFontSize(15);
   doc.setTextColor(20);
-  doc.text(draft.clientCompany || quote.name || "Client", margin, y);
+  doc.text(clientName, margin, y);
   y += 18;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(11);
+  if (clientContactLines.length) {
+    doc.text(clientContactLines, margin, y);
+    y += clientContactLines.length * 14;
+  }
   const clientAddress = (draft.clientAddress || "").trim();
   if (clientAddress) {
     doc.setFont("helvetica", "bold");
