@@ -28,7 +28,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
-import { formatMoney as formatDisplayMoney } from "@/lib/money";
+import { formatWholeMoney as formatDisplayWholeMoney } from "@/lib/money";
 
 type ProductId = "tshirt" | "polo" | "hoodie";
 type MethodId = "dtf" | "screen" | "vinyl";
@@ -77,8 +77,8 @@ type SizeField = (typeof SIZE_FIELDS)[number];
 
 const DELIVERY_OPTIONS = [
   "Surinam Pickup (Free)",
-  `Post Office Postage Delivery (${formatDisplayMoney(100)})`,
-  `Post Office Express Delivery (${formatDisplayMoney(150)})`,
+  `Post Office Postage Delivery (${formatDisplayWholeMoney(100)})`,
+  `Post Office Express Delivery (${formatDisplayWholeMoney(150)})`,
   "Delivery (Need to arrange first)",
 ];
 const PICKUP_OPTION = DELIVERY_OPTIONS[0];

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "r
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
 import { trackQuoteSubmit } from "@/lib/analytics";
+import { formatWholeMoney as formatDisplayWholeMoney } from "@/lib/money";
 import {
   QUOTE_GARMENT_OPTIONS,
   SIZE_ORDER,
@@ -72,8 +73,8 @@ const printMethods = [
 ];
 const deliveryOptions = [
   "Surinam Pickup (Free)",
-  "Post Office Postage Delivery (Rs 100.00)",
-  "Post Office Express Delivery (Rs 150.00)",
+  `Post Office Postage Delivery (${formatDisplayWholeMoney(100)})`,
+  `Post Office Express Delivery (${formatDisplayWholeMoney(150)})`,
   "Delivery (Need to arrange first)",
 ];
 const artworkAccept =
