@@ -56,6 +56,7 @@ const sum = (obj: Record<string, number> = {}) =>
 const DEFAULT_SIZES = [...INVENTORY_SIZE_ORDER];
 const LOW_FALLBACK = 5;
 const csvCell = (s: string) => `"${String(s).replace(/"/g, '""')}"`;
+const BLOCKED_NUMBER_KEYS = new Set(["-", "+", "e", "E", ".", ","]);
 
 function deepClone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
@@ -84,12 +85,19 @@ function buildBulkSizeValues(color?: Color): BulkSizeValues {
 
 function parseEditableNumber(value: string): number | "" {
   if (value === "") return "";
+  if (!/^\d+$/.test(value.trim())) return 0;
   const parsed = Number.parseInt(value, 10);
-  return Number.isNaN(parsed) ? "" : parsed;
+  return Number.isNaN(parsed) ? "" : Math.max(0, parsed);
 }
 
 function sortSizeMapEntries(map: Record<string, number>) {
   return sortSizes(Object.keys(map)).map((size) => [size, map[size]] as const);
+}
+
+function blockInvalidNumberKey(event: React.KeyboardEvent<HTMLInputElement>) {
+  if (BLOCKED_NUMBER_KEYS.has(event.key)) {
+    event.preventDefault();
+  }
 }
 
 // ---------- Page ----------
@@ -823,6 +831,9 @@ export default function InventoryPage() {
                                           <input
                                             type="number"
                                             value={qty}
+                                            min={0}
+                                            step={1}
+                                            onKeyDown={blockInvalidNumberKey}
                                             onChange={(e) => updateQty(p.id, cIdx, size, parseInt(e.target.value) || 0)}
                                             className={`w-24 rounded-lg border px-2 py-1 text-right ${tone} focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200`}
                                           />
@@ -831,6 +842,9 @@ export default function InventoryPage() {
                                           <input
                                             type="number"
                                             value={min}
+                                            min={0}
+                                            step={1}
+                                            onKeyDown={blockInvalidNumberKey}
                                             onChange={(e) => updateMin(p.id, cIdx, size, parseInt(e.target.value) || 0)}
                                             className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-right focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
                                           />
@@ -939,19 +953,25 @@ export default function InventoryPage() {
                     <span className="w-10 text-sm text-slate-500">{s}</span>
                     <input
                       type="number"
+                      min={0}
+                      step={1}
+                      onKeyDown={blockInvalidNumberKey}
                       placeholder="Qty"
                       value={ncSizes[s].qty}
                       onChange={(e) =>
-                        setNcSizes((prev) => ({ ...prev, [s]: { ...prev[s], qty: e.target.value === "" ? "" : Number(e.target.value) } }))
+                        setNcSizes((prev) => ({ ...prev, [s]: { ...prev[s], qty: parseEditableNumber(e.target.value) } }))
                       }
                       className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
                     />
                     <input
                       type="number"
+                      min={0}
+                      step={1}
+                      onKeyDown={blockInvalidNumberKey}
                       placeholder="Min"
                       value={ncSizes[s].min}
                       onChange={(e) =>
-                        setNcSizes((prev) => ({ ...prev, [s]: { ...prev[s], min: e.target.value === "" ? "" : Number(e.target.value) } }))
+                        setNcSizes((prev) => ({ ...prev, [s]: { ...prev[s], min: parseEditableNumber(e.target.value) } }))
                       }
                       className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
                     />
@@ -1032,10 +1052,24 @@ function StatCard({
 }
 
 // ---------- Reusable Modal ----------
-function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+function Modal({
+  title,
+  children,
+  onClose,
+  panelClassName,
+}: {
+  title: string;
+  children: React.ReactNode;
+  onClose: () => void;
+  panelClassName?: string;
+}) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-xl">
+      <div
+        className={`w-full rounded-2xl border border-slate-200 bg-white shadow-xl ${
+          panelClassName || "max-w-2xl"
+        }`}
+      >
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{title}</h3>
           <button
@@ -1095,47 +1129,61 @@ function BulkEditModal({
   if (!p || !color) return null;
 
   return (
-    <Modal onClose={onClose} title={`Bulk edit • ${p.productName} • ${color.color}`}>
+    <Modal
+      onClose={onClose}
+      title={`Bulk edit • ${p.productName} • ${color.color}`}
+      panelClassName="max-w-5xl"
+    >
       <div className="mb-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
         <span><span className="font-semibold text-slate-700">Qty</span> = current stock</span>
         <span><span className="font-semibold text-slate-700">Min</span> = low-stock alert</span>
       </div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {DEFAULT_SIZES.map((s) => (
-          <div key={s} className="grid grid-cols-[3.25rem_minmax(0,1fr)_minmax(0,1fr)] items-end gap-2">
-            <span className="pb-2 text-sm text-slate-600">{s}</span>
-            <label className="flex flex-col gap-1">
-              <span className="pl-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Qty</span>
-              <input
-                type="number"
-                value={local[s].qty}
-                aria-label={`${s} quantity`}
-                placeholder="Qty"
-                onChange={(e) =>
-                  setLocal((pr) => ({
-                    ...pr,
-                    [s]: { ...pr[s], qty: parseEditableNumber(e.target.value) },
-                  }))
-                }
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="pl-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Min</span>
-              <input
-                type="number"
-                value={local[s].min}
-                aria-label={`${s} minimum stock`}
-                placeholder="Min"
-                onChange={(e) =>
-                  setLocal((pr) => ({
-                    ...pr,
-                    [s]: { ...pr[s], min: parseEditableNumber(e.target.value) },
-                  }))
-                }
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
-              />
-            </label>
+          <div key={s} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+            <div className="mb-3 text-sm font-semibold tracking-[0.06em] text-slate-800">{s}</div>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex flex-col gap-1">
+                <span className="pl-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Qty</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={local[s].qty}
+                  aria-label={`${s} quantity`}
+                  placeholder="Qty"
+                  inputMode="numeric"
+                  onKeyDown={blockInvalidNumberKey}
+                  onChange={(e) =>
+                    setLocal((pr) => ({
+                      ...pr,
+                      [s]: { ...pr[s], qty: parseEditableNumber(e.target.value) },
+                    }))
+                  }
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-base focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="pl-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Min</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={local[s].min}
+                  aria-label={`${s} minimum stock`}
+                  placeholder="Min"
+                  inputMode="numeric"
+                  onKeyDown={blockInvalidNumberKey}
+                  onChange={(e) =>
+                    setLocal((pr) => ({
+                      ...pr,
+                      [s]: { ...pr[s], min: parseEditableNumber(e.target.value) },
+                    }))
+                  }
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-base focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                />
+              </label>
+            </div>
           </div>
         ))}
       </div>
