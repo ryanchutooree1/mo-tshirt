@@ -376,6 +376,7 @@ function buildOrderDocumentPdf(txnId: string, draft: OrderDocumentProfile) {
   const amountReceived = safeNumber(draft.amountReceived, 0);
   const grandTotal = subtotal + deliveryFee - discount;
   const balanceDue = Math.max(0, grandTotal - amountReceived);
+  const showSubtotal = lineTotals.length > 1 || deliveryFee > 0 || discount > 0;
 
   docPdf.setFillColor(accent.r, accent.g, accent.b);
   docPdf.rect(margin, 24, contentWidth, 4, "F");
@@ -506,21 +507,23 @@ function buildOrderDocumentPdf(txnId: string, draft: OrderDocumentProfile) {
   y += 18;
   docPdf.setFont("helvetica", "normal");
   docPdf.setTextColor(50);
-  docPdf.text("Subtotal", pageWidth - margin - 150, y);
-  docPdf.text(formatMoney(subtotal, draft.currency), colTotalX, y, { align: "right" });
+  if (showSubtotal) {
+    docPdf.text("Subtotal", pageWidth - margin - 150, y);
+    docPdf.text(formatMoney(subtotal, draft.currency), colTotalX, y, { align: "right" });
+  }
   if (deliveryFee > 0) {
-    y += 16;
+    y += showSubtotal ? 16 : 0;
     docPdf.text("Delivery fee", pageWidth - margin - 150, y);
     docPdf.text(formatMoney(deliveryFee, draft.currency), colTotalX, y, { align: "right" });
   }
   if (discount > 0) {
-    y += 16;
+    y += showSubtotal || deliveryFee > 0 ? 16 : 0;
     docPdf.setTextColor(170, 25, 25);
     docPdf.text("Discount", pageWidth - margin - 150, y);
     docPdf.text(formatMoney(-discount, draft.currency), colTotalX, y, { align: "right" });
     docPdf.setTextColor(50);
   }
-  y += 20;
+  y += showSubtotal || deliveryFee > 0 || discount > 0 ? 20 : 0;
   docPdf.setFont("helvetica", "bold");
   docPdf.setFontSize(12);
   docPdf.setTextColor(20);
@@ -1029,14 +1032,17 @@ function OrdersPageInner() {
   }
 
   const docTotals = useMemo(() => {
-    if (!docDraft) return { subtotal: 0, total: 0, balanceDue: 0 };
+    if (!docDraft) return { subtotal: 0, total: 0, balanceDue: 0, showSubtotal: false };
     const subtotal = docDraft.lines.reduce(
       (sum, line) => sum + safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0),
       0
     );
-    const total = subtotal + safeNumber(docDraft.deliveryFee, 0) - safeNumber(docDraft.discount, 0);
+    const deliveryFee = safeNumber(docDraft.deliveryFee, 0);
+    const discount = safeNumber(docDraft.discount, 0);
+    const total = subtotal + deliveryFee - discount;
     const balanceDue = Math.max(0, total - safeNumber(docDraft.amountReceived, 0));
-    return { subtotal, total, balanceDue };
+    const showSubtotal = docDraft.lines.length > 1 || deliveryFee > 0 || discount > 0;
+    return { subtotal, total, balanceDue, showSubtotal };
   }, [docDraft]);
 
   function openDocumentPreview() {
@@ -2829,11 +2835,13 @@ function OrdersPageInner() {
                           />
                         </label>
                         <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                          <div className="flex items-center justify-between">
-                            <span>Subtotal</span>
-                            <strong>{formatMoney(docTotals.subtotal, docDraft.currency)}</strong>
-                          </div>
-                          <div className="mt-1 flex items-center justify-between">
+                          {docTotals.showSubtotal ? (
+                            <div className="flex items-center justify-between">
+                              <span>Subtotal</span>
+                              <strong>{formatMoney(docTotals.subtotal, docDraft.currency)}</strong>
+                            </div>
+                          ) : null}
+                          <div className={`${docTotals.showSubtotal ? "mt-1" : ""} flex items-center justify-between`}>
                             <span>Grand total</span>
                             <strong>{formatMoney(docTotals.total, docDraft.currency)}</strong>
                           </div>
