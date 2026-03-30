@@ -2546,8 +2546,8 @@ function OrdersPageInner() {
           </div>
         )}
         {docStudioOpen && docDraft && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 p-3 sm:p-4">
-            <div className="flex max-h-[94vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+          <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-slate-950/70 px-3 pb-3 pt-20 sm:px-4 sm:pb-4 sm:pt-24">
+            <div className="flex max-h-[calc(100vh-6rem)] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100vh-7rem)]">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-orange-600">
