@@ -40,7 +40,7 @@ type Product = {
   colors: Color[];
 };
 type DraftSizeValues = Record<string, { qty: number | ""; min: number | "" }>;
-type BulkSizeValues = Record<string, { qty: number; min: number }>;
+type BulkSizeValues = DraftSizeValues;
 
 // ---------- Small helpers ----------
 const money = (v: number) => formatDisplayMoney(v);
@@ -73,6 +73,12 @@ function buildBulkSizeValues(color?: Color): BulkSizeValues {
       },
     ])
   ) as BulkSizeValues;
+}
+
+function parseEditableNumber(value: string): number | "" {
+  if (value === "") return "";
+  const parsed = Number.parseInt(value, 10);
+  return Number.isNaN(parsed) ? "" : parsed;
 }
 
 // ---------- Page ----------
@@ -1057,13 +1063,23 @@ function BulkEditModal({
             <input
               type="number"
               value={local[s].qty}
-              onChange={(e) => setLocal((pr) => ({ ...pr, [s]: { ...pr[s], qty: parseInt(e.target.value) || 0 } }))}
+              onChange={(e) =>
+                setLocal((pr) => ({
+                  ...pr,
+                  [s]: { ...pr[s], qty: parseEditableNumber(e.target.value) },
+                }))
+              }
               className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
             />
             <input
               type="number"
               value={local[s].min}
-              onChange={(e) => setLocal((pr) => ({ ...pr, [s]: { ...pr[s], min: parseInt(e.target.value) || 0 } }))}
+              onChange={(e) =>
+                setLocal((pr) => ({
+                  ...pr,
+                  [s]: { ...pr[s], min: parseEditableNumber(e.target.value) },
+                }))
+              }
               className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
             />
           </div>
@@ -1079,9 +1095,11 @@ function BulkEditModal({
             const ref = doc(db, "products", p.id);
             const colors = deepClone(p.colors);
             DEFAULT_SIZES.forEach((s) => {
-              colors[showBulkModal.colorIdx].sizes[s] = local[s].qty;
+              colors[showBulkModal.colorIdx].sizes[s] =
+                typeof local[s].qty === "number" ? Math.max(0, local[s].qty) : 0;
               colors[showBulkModal.colorIdx].minStock = colors[showBulkModal.colorIdx].minStock || {};
-              colors[showBulkModal.colorIdx].minStock![s] = local[s].min;
+              colors[showBulkModal.colorIdx].minStock![s] =
+                typeof local[s].min === "number" ? Math.max(0, local[s].min) : 0;
             });
             await updateDoc(ref, { colors });
             onClose();
