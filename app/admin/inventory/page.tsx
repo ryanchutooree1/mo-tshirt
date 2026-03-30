@@ -23,8 +23,6 @@ import {
   FiAlertTriangle,
   FiArchive,
   FiBox,
-  FiChevronDown,
-  FiChevronUp,
   FiDollarSign,
   FiDownload,
   FiLayers,
@@ -96,43 +94,6 @@ function sortSizeMapEntries(map: Record<string, number>) {
   return sortSizes(Object.keys(map)).map((size) => [size, map[size]] as const);
 }
 
-function getStockTone(qty: number, min: number) {
-  if (qty <= 0) {
-    return {
-      label: "Out",
-      badgeClass: "border-rose-200 bg-rose-50 text-rose-700",
-      cardClass: "border-rose-200 bg-rose-50/50",
-    };
-  }
-  if (qty <= min) {
-    return {
-      label: "Low",
-      badgeClass: "border-amber-200 bg-amber-50 text-amber-700",
-      cardClass: "border-amber-200 bg-amber-50/60",
-    };
-  }
-  return {
-    label: "Healthy",
-    badgeClass: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    cardClass: "border-[#eadfd1] bg-white",
-  };
-}
-
-function getColorMetrics(color: Color) {
-  const entries = sortSizeMapEntries(color.sizes);
-  return entries.reduce(
-    (acc, [size, qty]) => {
-      const min = color.minStock?.[size] ?? LOW_FALLBACK;
-      acc.totalUnits += qty || 0;
-      acc.sizeCount += 1;
-      if ((qty || 0) <= 0) acc.outCount += 1;
-      else if (qty <= min) acc.lowCount += 1;
-      return acc;
-    },
-    { totalUnits: 0, sizeCount: 0, lowCount: 0, outCount: 0 }
-  );
-}
-
 function blockInvalidNumberKey(event: React.KeyboardEvent<HTMLInputElement>) {
   if (BLOCKED_NUMBER_KEYS.has(event.key)) {
     event.preventDefault();
@@ -160,6 +121,7 @@ export default function InventoryPage() {
     colorIdx?: number;
     sizeKey?: string;
   } | null>(null);
+  const [openColors, setOpenColors] = useState<Record<string, boolean>>({});
 
   // Add product form
   const [npName, setNpName] = useState("");
@@ -247,22 +209,9 @@ export default function InventoryPage() {
 
   const productStatus = (p: Product) => {
     const { lowCount, outCount } = totals(p);
-    if (outCount > 0) {
-      return {
-        label: "Out",
-        cls: "border border-rose-200 bg-rose-50 text-rose-700",
-      };
-    }
-    if (lowCount > 0) {
-      return {
-        label: "Low",
-        cls: "border border-amber-200 bg-amber-50 text-amber-700",
-      };
-    }
-    return {
-      label: "Healthy",
-      cls: "border border-emerald-200 bg-emerald-50 text-emerald-700",
-    };
+    if (outCount > 0) return { label: "Out", cls: "border border-slate-200 bg-white text-slate-700" };
+    if (lowCount > 0) return { label: "Low", cls: "border border-slate-200 bg-white text-slate-700" };
+    return { label: "OK", cls: "border border-slate-200 bg-white text-slate-700" };
   };
 
   // ---------- Mutations ----------
@@ -565,224 +514,152 @@ export default function InventoryPage() {
         ? activeClass
         : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
     }`;
-  const hasActiveFilters =
-    Boolean(search.trim()) || showLowOnly || showOutOnly || showArchived;
 
   return (
-    <main className="relative min-h-screen bg-[#f6f2ea]">
-      <div className="relative mx-auto max-w-[1400px] space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+    <main className="relative min-h-screen bg-white">
+      <div className="relative mx-auto max-w-7xl space-y-6 px-6 py-8">
         {/* Hero */}
         <section
-          className="relative overflow-hidden rounded-[36px] border border-[#eadfd1] bg-[linear-gradient(135deg,#ffffff_0%,#fff8f1_58%,#f3ebdf_100%)] p-6 shadow-[0_30px_120px_-60px_rgba(15,23,42,0.45)]"
+          className="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white p-6 shadow-sm"
           style={{ animation: "fadeUp 0.6s ease-out both" }}
         >
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_top_right,_rgba(255,56,92,0.12),_transparent_55%)]" />
-          <div className="relative grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_360px]">
-            <div className="space-y-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#6a5946]">
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-600">
                 Inventory
               </p>
-              <h1 className="max-w-3xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-5xl">
+              <h1 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">
                 Inventory Control
               </h1>
-              <p className="max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-                Designed for faster stock work: scan what needs attention, open one product, then edit each color in a clean size grid instead of chasing controls across the page.
+              <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
+                Monitor stock health, prevent shortages, and keep pricing accurate with live inventory safety checks.
               </p>
-              <div className="flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full border border-[#eadfd1] bg-white/95 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm">
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
                   <FiLayers className="h-4 w-4" /> Live stock levels
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-[#eadfd1] bg-white/95 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
                   <FiAlertTriangle className="h-4 w-4" /> Low stock alerts
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-[#eadfd1] bg-white/95 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm">
-                  Bulk edit workspace
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                  CSV import / export
                 </span>
               </div>
             </div>
-            <div className="rounded-[30px] border border-[#eadfd1] bg-white/90 p-5 shadow-[0_20px_70px_-50px_rgba(15,23,42,0.55)] backdrop-blur">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
-                Quick actions
-              </div>
-              <div className="mt-4 grid gap-2">
-                <button
-                  onClick={() => setShowAddProduct(true)}
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#1f2937] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#111827]"
-                >
-                  <FiPlus className="h-4 w-4" /> Add product
-                </button>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={exportCSV}
-                    className="inline-flex items-center justify-center gap-2 rounded-full border border-[#eadfd1] bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#d7c7b4] hover:bg-[#fffaf4]"
-                  >
-                    <FiDownload className="h-4 w-4" /> Export
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".csv"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const f = e.target.files?.[0];
-                      if (f) await importCSV(f);
-                      if (fileInputRef.current) fileInputRef.current.value = "";
-                    }}
-                  />
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center justify-center gap-2 rounded-full border border-[#eadfd1] bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#d7c7b4] hover:bg-[#fffaf4]"
-                  >
-                    <FiUpload className="h-4 w-4" /> Import
-                  </button>
-                </div>
-              </div>
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                <div className="rounded-2xl border border-[#efe3d6] bg-[#fcf8f2] p-3">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Visible now
-                  </div>
-                  <div className="mt-2 text-2xl font-semibold text-slate-900">{filtered.length}</div>
-                </div>
-                <div className="rounded-2xl border border-[#efe3d6] bg-[#fcf8f2] p-3">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Needs action
-                  </div>
-                  <div className="mt-2 text-2xl font-semibold text-slate-900">
-                    {overall.low + overall.out}
-                  </div>
-                </div>
-              </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={exportCSV}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+              >
+                <FiDownload className="h-4 w-4" /> Export CSV
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (f) await importCSV(f);
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+              >
+                <FiUpload className="h-4 w-4" /> Import CSV
+              </button>
+              <button
+                onClick={() => setShowAddProduct(true)}
+                className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+              >
+                <FiPlus className="h-4 w-4" /> Add product
+              </button>
             </div>
           </div>
         </section>
 
         {/* Stats */}
         <section
-          className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5"
+          className="grid grid-cols-2 gap-4 md:grid-cols-5"
           style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.08s" }}
         >
-          <StatCard
-            label="Products"
-            value={filtered.length}
-            hint="Visible in current view"
-            icon={<FiPackage className="h-4 w-4" />}
-            tone="bg-[#fff5ef] text-[#c2410c]"
-          />
-          <StatCard
-            label="Total Units"
-            value={overall.totalUnits}
-            hint="Across all visible products"
-            icon={<FiLayers className="h-4 w-4" />}
-            tone="bg-[#f5f7ff] text-[#4338ca]"
-          />
-          <StatCard
-            label="Stock Value"
-            value={money(overall.totalValue)}
-            hint="Live quantity × unit price"
-            icon={<FiDollarSign className="h-4 w-4" />}
-            tone="bg-[#effcf6] text-[#047857]"
-          />
-          <StatCard
-            label="Low Stock"
-            value={overall.low}
-            hint="Above zero but below min"
-            icon={<FiAlertTriangle className="h-4 w-4" />}
-            tone="bg-[#fff8eb] text-[#b45309]"
-          />
-          <StatCard
-            label="Out of Stock"
-            value={overall.out}
-            hint="Zero quantity sizes"
-            icon={<FiXCircle className="h-4 w-4" />}
-            tone="bg-[#fff1f2] text-[#be123c]"
-          />
+          <StatCard label="Products" value={filtered.length} icon={<FiPackage className="h-4 w-4" />} />
+          <StatCard label="Total Units" value={overall.totalUnits} icon={<FiLayers className="h-4 w-4" />} />
+          <StatCard label="Stock Value" value={money(overall.totalValue)} icon={<FiDollarSign className="h-4 w-4" />} />
+          <StatCard label="Low Stock" value={overall.low} icon={<FiAlertTriangle className="h-4 w-4" />} />
+          <StatCard label="Out of Stock" value={overall.out} icon={<FiXCircle className="h-4 w-4" />} />
         </section>
 
         {/* Filters */}
         <section
-          className="sticky top-20 z-10 rounded-[32px] border border-[#eadfd1] bg-white/95 p-4 shadow-[0_20px_80px_-60px_rgba(15,23,42,0.55)] backdrop-blur"
+          className="sticky top-20 z-10 rounded-3xl border border-slate-200/70 bg-white p-4 shadow-sm"
           style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.14s" }}
         >
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex flex-1 flex-wrap items-center gap-3">
-              <div className="relative min-w-[260px] flex-1">
-                <FiSearch className="absolute left-4 top-3.5 text-slate-400" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search product or scan to the next item"
-                  className="w-full rounded-full border border-[#eadfd1] bg-[#fcfaf7] py-3 pl-11 pr-4 text-sm shadow-sm focus:border-[#d7c7b4] focus:outline-none focus:ring-4 focus:ring-[#f7ebdc]"
-                />
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  aria-pressed={showLowOnly}
-                  onClick={() => setShowLowOnly((v) => !v)}
-                  className={togglePill(showLowOnly, "border-amber-200 bg-amber-50 text-amber-700")}
-                >
-                  <FiAlertTriangle className="h-4 w-4" /> Low stock
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={showOutOnly}
-                  onClick={() => setShowOutOnly((v) => !v)}
-                  className={togglePill(showOutOnly, "border-rose-200 bg-rose-50 text-rose-700")}
-                >
-                  <FiXCircle className="h-4 w-4" /> Out of stock
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={showArchived}
-                  onClick={() => setShowArchived((v) => !v)}
-                  className={togglePill(showArchived, "border-[#d8c6b4] bg-[#fcf6ef] text-[#6a5946]")}
-                >
-                  <FiArchive className="h-4 w-4" /> Archived
-                </button>
-              </div>
+          <div className="flex flex-wrap items-start gap-3">
+            <div className="relative">
+              <FiSearch className="absolute left-3 top-2.5 text-slate-400" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search product"
+                className="w-full rounded-full border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200 sm:w-72"
+              />
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="rounded-full border border-[#eadfd1] bg-[#fcfaf7] px-4 py-2 text-xs font-semibold text-slate-500">
-                Showing {filtered.length} of {products.length} products
-              </div>
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearch("");
-                    setShowLowOnly(false);
-                    setShowOutOnly(false);
-                    setShowArchived(false);
-                  }}
-                  className="rounded-full border border-[#eadfd1] bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:border-[#d7c7b4] hover:bg-[#fffaf4]"
-                >
-                  Clear filters
-                </button>
-              )}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                aria-pressed={showLowOnly}
+                onClick={() => setShowLowOnly((v) => !v)}
+                className={togglePill(showLowOnly, "border-slate-200 bg-white text-slate-700")}
+              >
+                <FiAlertTriangle className="h-4 w-4" /> Low stock
+              </button>
+              <button
+                type="button"
+                aria-pressed={showOutOnly}
+                onClick={() => setShowOutOnly((v) => !v)}
+                className={togglePill(showOutOnly, "border-slate-200 bg-white text-slate-700")}
+              >
+                <FiXCircle className="h-4 w-4" /> Out of stock
+              </button>
+              <button
+                type="button"
+                aria-pressed={showArchived}
+                onClick={() => setShowArchived((v) => !v)}
+                className={togglePill(showArchived, "border-slate-300 bg-slate-100 text-slate-700")}
+              >
+                <FiArchive className="h-4 w-4" /> Archived
+              </button>
+            </div>
+            <div className="ml-auto text-xs font-semibold text-slate-500">
+              Showing {filtered.length} of {products.length} products
             </div>
           </div>
         </section>
 
-        {/* Products */}
+        {/* Grid */}
         <section
-          className="space-y-5"
+          className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3"
           style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.2s" }}
         >
           {filtered.map((p) => {
-            const { totalUnits, totalValue, lowCount, outCount } = totals(p);
+            const { totalUnits, totalValue } = totals(p);
             const status = productStatus(p);
 
             return (
-              <article
+              <div
                 key={p.id}
-                className="overflow-hidden rounded-[32px] border border-[#eadfd1] bg-white shadow-[0_30px_90px_-70px_rgba(15,23,42,0.55)] transition hover:border-[#d8c6b4]"
+                className="group overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-sm transition hover:border-slate-300 hover:shadow-md"
               >
-                <div className="grid gap-5 border-b border-[#f1e5d8] p-5 lg:p-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[22px] border border-[#eadfd1] bg-[#fcfaf7]">
+                {/* Card header */}
+                <div className="border-b border-slate-100/80 p-4">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-wrap items-start gap-4">
+                      <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100/80">
                         {p.imageUrl ? (
+                           
                           <img src={p.imageUrl} alt={p.productName} className="h-full w-full object-cover" />
                         ) : (
                           <FiBox className="h-5 w-5 text-slate-400" />
@@ -790,291 +667,224 @@ export default function InventoryPage() {
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2.5">
+                        <div className="flex flex-wrap items-center gap-2">
                           <input
                             defaultValue={p.productName}
-                            className="w-full rounded-2xl bg-transparent px-1 text-xl font-semibold tracking-tight text-slate-900 outline-none transition focus:bg-[#fcfaf7] sm:w-auto"
+                            className="w-full bg-transparent text-base font-semibold text-slate-900 outline-none sm:w-auto"
                             onBlur={(e) => e.target.value !== p.productName && editProductName(p.id, e.target.value)}
                           />
-                          <span className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] ${status.cls}`}>
+                          <span className={`text-[10px] font-semibold uppercase tracking-[0.2em] px-2 py-0.5 rounded-full ${status.cls}`}>
                             {status.label}
                           </span>
                           {p.archived && (
-                            <span className="rounded-full border border-[#d8c6b4] bg-[#fcf6ef] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#6a5946]">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border border-slate-200 bg-slate-100 text-slate-600">
                               Archived
                             </span>
                           )}
                         </div>
-                        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                          {p.colors.length} color variants tracked. Edit names and price inline, then open the inventory section below to adjust each size card or launch bulk edit for one full color.
+                        <p className="mt-1 text-xs text-slate-500">
+                          Units: <strong>{totalUnits}</strong> · Value: <strong>{money(totalValue)}</strong>
                         </p>
                       </div>
+
+                      <div className="flex flex-col items-start gap-2 sm:items-end">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                          Unit price
+                        </div>
+                        <input
+                          type="number"
+                          defaultValue={p.price ?? ""}
+                          placeholder="0"
+                          className="w-28 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-right text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                          onBlur={(e) => editProductPrice(p.id, e.target.value === "" ? "" : Number(e.target.value))}
+                        />
+                      </div>
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                      <div className="rounded-[24px] border border-[#efe3d6] bg-[#fcfaf7] p-4">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Units
-                        </div>
-                        <div className="mt-2 text-2xl font-semibold text-slate-900">{totalUnits}</div>
-                      </div>
-                      <div className="rounded-[24px] border border-[#efe3d6] bg-[#fcfaf7] p-4">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Colors
-                        </div>
-                        <div className="mt-2 text-2xl font-semibold text-slate-900">{p.colors.length}</div>
-                      </div>
-                      <div className="rounded-[24px] border border-[#efe3d6] bg-[#fcfaf7] p-4">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Stock value
-                        </div>
-                        <div className="mt-2 text-2xl font-semibold text-slate-900">{money(totalValue)}</div>
-                      </div>
-                      <div className="rounded-[24px] border border-[#efe3d6] bg-[#fcfaf7] p-4">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Alerts
-                        </div>
-                        <div className="mt-2 text-2xl font-semibold text-slate-900">
-                          {lowCount + outCount}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-500">
-                          {lowCount} low · {outCount} out
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-[30px] border border-[#efe3d6] bg-[#fcfaf7] p-4 lg:p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-                        Product actions
-                      </div>
-                      <p className="mt-1 text-sm text-slate-500">
-                        Price saves when you leave the field.
-                      </p>
-                    </div>
-                  </div>
-                  <label className="mt-4 block">
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Unit price (Rs)
-                    </span>
-                    <input
-                      type="number"
-                      min={0}
-                      step={1}
-                      onKeyDown={blockInvalidNumberKey}
-                      defaultValue={p.price ?? ""}
-                      placeholder="0"
-                      className="mt-2 w-full rounded-2xl border border-[#eadfd1] bg-white px-4 py-3 text-base shadow-sm focus:border-[#d7c7b4] focus:outline-none focus:ring-4 focus:ring-[#f7ebdc]"
-                      onBlur={(e) => editProductPrice(p.id, e.target.value === "" ? "" : Number(e.target.value))}
-                    />
-                  </label>
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <button
-                      className="rounded-full border border-[#eadfd1] bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-[#d7c7b4] hover:bg-[#fffaf4]"
-                      onClick={() => duplicateProduct(p)}
-                      title="Duplicate"
-                    >
-                      Copy
-                    </button>
-                    <button
-                      className="rounded-full border border-[#eadfd1] bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-[#d7c7b4] hover:bg-[#fffaf4]"
-                      onClick={() => toggleArchive(p)}
-                      title={p.archived ? "Unarchive" : "Archive"}
-                    >
-                      {p.archived ? "Unarchive" : "Archive"}
-                    </button>
-                    <button
-                      className="rounded-full border border-[#eadfd1] bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-[#d7c7b4] hover:bg-[#fffaf4]"
-                      onClick={() => resetStock(p)}
-                      title="Reset stock"
-                    >
-                      Reset
-                    </button>
-                    <button
-                      className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
-                      onClick={() => setConfirmDelete({ scope: "product", productId: p.id })}
-                      title="Delete product"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-                <div className="p-5 lg:p-6">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-                        Inventory breakdown
-                      </div>
-                      <p className="mt-1 text-sm text-slate-500">
-                        Open a product once, then every color shows its full size inventory without another extra toggle.
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <button
                         onClick={() => setExpanded(expanded === p.id ? null : p.id)}
-                        className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
+                        className={`rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm transition ${
                           expanded === p.id
-                            ? "bg-[#1f2937] text-white"
-                            : "border border-[#eadfd1] bg-white text-slate-700 hover:border-[#d7c7b4] hover:bg-[#fffaf4]"
+                            ? "border-slate-900 bg-slate-900 text-white"
+                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
                         }`}
                         aria-label="Toggle details"
                       >
-                        {expanded === p.id ? (
-                          <FiChevronUp className="h-4 w-4" />
-                        ) : (
-                          <FiChevronDown className="h-4 w-4" />
-                        )}
-                        {expanded === p.id ? "Collapse inventory" : "Open inventory"}
+                        {expanded === p.id ? "Hide details" : "Show details"}
                       </button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                          onClick={() => duplicateProduct(p)}
+                          title="Duplicate"
+                        >
+                          Copy
+                        </button>
+                        <button
+                          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                          onClick={() => toggleArchive(p)}
+                          title={p.archived ? "Unarchive" : "Archive"}
+                        >
+                          {p.archived ? "Unarchive" : "Archive"}
+                        </button>
+                        <button
+                          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                          onClick={() => resetStock(p)}
+                          title="Reset stock"
+                        >
+                          Reset
+                        </button>
+                        <button
+                          className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                          onClick={() => setConfirmDelete({ scope: "product", productId: p.id })}
+                          title="Delete product"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Colors & Sizes */}
+                {expanded === p.id && (
+                  <div className="space-y-4 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                        Colors & sizes
+                      </div>
                       <button
-                        className="rounded-full border border-[#eadfd1] bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-[#d7c7b4] hover:bg-[#fffaf4]"
+                        className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
                         onClick={() => setShowColorModal({ productId: p.id })}
                       >
                         Add color
                       </button>
                     </div>
-                  </div>
 
-                  {expanded === p.id && (
-                    <div className="mt-5 space-y-4">
-                      {p.colors.length === 0 && (
-                        <div className="rounded-[28px] border border-dashed border-[#d8c6b4] bg-[#fcfaf7] p-8 text-sm text-slate-500">
-                          No colors yet. Add the first color to start tracking sizes with the new layout.
+                    {p.colors.length === 0 && (
+                      <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-sm text-slate-500">
+                        No colors yet. Add the first color to start tracking sizes.
+                      </div>
+                    )}
+
+                    {p.colors.map((c, cIdx) => (
+                      <div key={`${p.id}-${c.color}`} className="overflow-hidden rounded-2xl border border-slate-200">
+                        <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-50 px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <button
+                              className="text-xs font-semibold text-slate-600 hover:text-slate-900"
+                              onClick={() => setOpenColors((prev) => ({ ...prev, [`${p.id}-${cIdx}`]: !prev[`${p.id}-${cIdx}`] }))}
+                              aria-label="Toggle color"
+                            >
+                              {openColors[`${p.id}-${cIdx}`] ? "Hide" : "Show"}
+                            </button>
+                            <div className="font-semibold text-sm text-slate-800">{c.color}</div>
+                            <span className="text-xs text-slate-400">
+                              {Object.keys(c.sizes).length} sizes
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                              onClick={() => setShowBulkModal({ productId: p.id, colorIdx: cIdx })}
+                              title="Bulk edit"
+                            >
+                              Bulk edit
+                            </button>
+                            <button
+                              className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                              onClick={() => setConfirmDelete({ scope: "color", productId: p.id, colorIdx: cIdx })}
+                              title="Delete color"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </div>
-                      )}
 
-                      {p.colors.length > 0 && (
-                        <div className="grid gap-4 xl:grid-cols-2">
-                          {p.colors.map((c, cIdx) => {
-                            const colorMetrics = getColorMetrics(c);
-                            const colorTone =
-                              colorMetrics.outCount > 0
-                                ? "border-rose-200 bg-rose-50 text-rose-700"
-                                : colorMetrics.lowCount > 0
-                                  ? "border-amber-200 bg-amber-50 text-amber-700"
-                                  : "border-emerald-200 bg-emerald-50 text-emerald-700";
-
-                            return (
-                              <section
-                                key={`${p.id}-${c.color}`}
-                                className="rounded-[28px] border border-[#eadfd1] bg-[#fffdfa] p-4 shadow-[0_24px_70px_-60px_rgba(15,23,42,0.5)]"
-                              >
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                  <div className="space-y-2">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <span className="rounded-full bg-[#f5ede4] px-3 py-1 text-sm font-semibold text-slate-800">
-                                        {c.color}
-                                      </span>
-                                      <span className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] ${colorTone}`}>
-                                        {colorMetrics.outCount > 0
-                                          ? "Needs restock"
-                                          : colorMetrics.lowCount > 0
-                                            ? "Running low"
-                                            : "Healthy"}
-                                      </span>
-                                    </div>
-                                    <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-500">
-                                      <span className="rounded-full border border-[#eadfd1] bg-white px-3 py-1">
-                                        {colorMetrics.sizeCount} sizes
-                                      </span>
-                                      <span className="rounded-full border border-[#eadfd1] bg-white px-3 py-1">
-                                        {colorMetrics.totalUnits} units
-                                      </span>
-                                      <span className="rounded-full border border-[#eadfd1] bg-white px-3 py-1">
-                                        {colorMetrics.lowCount} low
-                                      </span>
-                                      <span className="rounded-full border border-[#eadfd1] bg-white px-3 py-1">
-                                        {colorMetrics.outCount} out
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-wrap gap-2">
-                                    <button
-                                      className="rounded-full border border-[#eadfd1] bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-[#d7c7b4] hover:bg-[#fffaf4]"
-                                      onClick={() => setShowBulkModal({ productId: p.id, colorIdx: cIdx })}
-                                      title="Bulk edit"
-                                    >
-                                      Bulk edit
-                                    </button>
-                                    <button
-                                      className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
-                                      onClick={() => setConfirmDelete({ scope: "color", productId: p.id, colorIdx: cIdx })}
-                                      title="Delete color"
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                </div>
-
-                                <div className="mt-4 grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-                                  {sortSizeMapEntries(c.sizes).map(([size, qty]) => {
+                        {openColors[`${p.id}-${cIdx}`] && (
+                          <div className="overflow-x-auto bg-white">
+                            <table className="w-full text-sm table-fixed">
+                              <colgroup>
+                                <col className="w-[40%]" />
+                                <col className="w-[20%]" />
+                                <col className="w-[20%]" />
+                                <col className="w-[20%]" />
+                              </colgroup>
+                              <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-500">
+                                <tr>
+                                  <th className="text-left px-3 py-2">Size</th>
+                                  <th className="text-right px-3 py-2">Qty</th>
+                                  <th className="text-right px-3 py-2">Min</th>
+                                  <th className="px-3 py-2 text-right">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y">
+                                {sortSizeMapEntries(c.sizes)
+                                  .map(([size, qty]) => {
                                     const min = c.minStock?.[size] ?? LOW_FALLBACK;
-                                    const tone = getStockTone(qty, min);
+                                    const tone = "border-slate-200 text-slate-700";
                                     return (
-                                      <div
-                                        key={`${p.id}-${c.color}-${size}`}
-                                        className={`rounded-[24px] border p-3 ${tone.cardClass}`}
-                                      >
-                                        <div className="flex items-center justify-between gap-2">
-                                          <div className="text-sm font-semibold text-slate-900">{size}</div>
-                                          <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${tone.badgeClass}`}>
-                                            {tone.label}
-                                          </span>
-                                        </div>
-                                        <div className="mt-3 grid grid-cols-2 gap-2">
-                                          <InventoryInlineNumberInput
-                                            label="Qty"
+                                      <tr key={`${p.id}-${c.color}-${size}`} className="text-slate-700">
+                                        <td className="px-3 py-2">{size}</td>
+                                        <td className="px-3 py-2 text-right align-middle">
+                                          <input
+                                            type="number"
                                             value={qty}
-                                            ariaLabel={`${p.productName} ${c.color} ${size} quantity`}
-                                            onCommit={(next) => updateQty(p.id, cIdx, size, next)}
+                                            min={0}
+                                            step={1}
+                                            onKeyDown={blockInvalidNumberKey}
+                                            onChange={(e) => updateQty(p.id, cIdx, size, parseInt(e.target.value) || 0)}
+                                            className={`w-24 rounded-lg border px-2 py-1 text-right ${tone} focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200`}
                                           />
-                                          <InventoryInlineNumberInput
-                                            label="Min"
+                                        </td>
+                                        <td className="px-3 py-2 text-right align-middle">
+                                          <input
+                                            type="number"
                                             value={min}
-                                            ariaLabel={`${p.productName} ${c.color} ${size} minimum stock`}
-                                            onCommit={(next) => updateMin(p.id, cIdx, size, next)}
+                                            min={0}
+                                            step={1}
+                                            onKeyDown={blockInvalidNumberKey}
+                                            onChange={(e) => updateMin(p.id, cIdx, size, parseInt(e.target.value) || 0)}
+                                            className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-right focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
                                           />
-                                        </div>
-                                        <div className="mt-3 flex justify-end">
+                                        </td>
+                                        <td className="px-3 py-2 text-right align-middle">
                                           <button
-                                            className="rounded-full border border-[#eadfd1] bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-[#d7c7b4] hover:bg-[#fffaf4]"
+                                            className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
                                             onClick={() =>
                                               setConfirmDelete({ scope: "size", productId: p.id, colorIdx: cIdx, sizeKey: size })
                                             }
                                           >
-                                            Remove size
+                                            Delete
                                           </button>
-                                        </div>
-                                      </div>
+                                        </td>
+                                      </tr>
                                     );
                                   })}
-                                </div>
-                              </section>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </article>
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             );
           })}
         </section>
 
         {filtered.length === 0 && (
-          <div className="rounded-[32px] border border-dashed border-[#d8c6b4] bg-white/90 p-10 text-center text-slate-500">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#fcfaf7] text-slate-500">
+          <div className="rounded-3xl border border-dashed border-slate-200 bg-white/80 p-10 text-center text-slate-500">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-500">
               <FiSearch className="h-5 w-5" />
             </div>
             <div className="mt-3 text-base font-semibold text-slate-700">No products match your filters.</div>
             <p className="mt-1 text-sm text-slate-500">Try clearing filters or add a new product.</p>
             <button
               onClick={() => setShowAddProduct(true)}
-              className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#1f2937] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#111827]"
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
             >
               <FiPlus className="h-4 w-4" /> Add product
             </button>
@@ -1092,7 +902,7 @@ export default function InventoryPage() {
                 <input
                   value={npName}
                   onChange={(e) => setNpName(e.target.value)}
-                  className="mt-1 w-full rounded-2xl border border-[#eadfd1] bg-[#fcfaf7] px-4 py-3 text-sm focus:border-[#d7c7b4] focus:outline-none focus:ring-4 focus:ring-[#f7ebdc]"
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
                 />
               </label>
               <label className="block">
@@ -1100,27 +910,24 @@ export default function InventoryPage() {
                 <input
                   value={npImage}
                   onChange={(e) => setNpImage(e.target.value)}
-                  className="mt-1 w-full rounded-2xl border border-[#eadfd1] bg-[#fcfaf7] px-4 py-3 text-sm focus:border-[#d7c7b4] focus:outline-none focus:ring-4 focus:ring-[#f7ebdc]"
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
                 />
               </label>
               <label className="block">
                 <span className="text-sm font-semibold text-slate-600">Unit price (Rs)</span>
                 <input
                   type="number"
-                  min={0}
-                  step={1}
-                  onKeyDown={blockInvalidNumberKey}
                   value={npPrice}
-                  onChange={(e) => setNpPrice(parseEditableNumber(e.target.value))}
-                  className="mt-1 w-full rounded-2xl border border-[#eadfd1] bg-[#fcfaf7] px-4 py-3 text-sm focus:border-[#d7c7b4] focus:outline-none focus:ring-4 focus:ring-[#f7ebdc]"
+                  onChange={(e) => setNpPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
                 />
               </label>
             </div>
             <div className="mt-5 flex justify-end gap-2">
-              <button className="rounded-full border border-[#eadfd1] px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-[#fffaf4]" onClick={() => setShowAddProduct(false)}>
+              <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50" onClick={() => setShowAddProduct(false)}>
                 Cancel
               </button>
-              <button className="rounded-full bg-[#1f2937] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#111827]" onClick={addProduct}>
+              <button className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800" onClick={addProduct}>
                 Save
               </button>
             </div>
@@ -1129,80 +936,54 @@ export default function InventoryPage() {
 
         {/* Add Color / Sizes */}
         {showColorModal && (
-          <Modal
-            onClose={() => setShowColorModal(null)}
-            title="Add color and sizes"
-            panelClassName="max-w-5xl"
-          >
-            <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)]">
-              <div className="rounded-[28px] border border-[#eadfd1] bg-[#fcfaf7] p-4">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-                  Color setup
-                </div>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Add a new color, then seed only the sizes you need. Leave others blank to skip them.
-                </p>
-                <label className="mt-4 block">
-                  <span className="text-sm font-semibold text-slate-600">Color</span>
-                  <input
-                    value={ncColor}
-                    onChange={(e) => setNcColor(e.target.value)}
-                    className="mt-2 w-full rounded-2xl border border-[#eadfd1] bg-white px-4 py-3 text-sm focus:border-[#d7c7b4] focus:outline-none focus:ring-4 focus:ring-[#f7ebdc]"
-                  />
-                </label>
-              </div>
+          <Modal onClose={() => setShowColorModal(null)} title="Add color and sizes">
+            <div className="space-y-3">
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-600">Color</span>
+                <input
+                  value={ncColor}
+                  onChange={(e) => setNcColor(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                />
+              </label>
 
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {DEFAULT_SIZES.map((s) => (
-                  <div key={s} className="rounded-[24px] border border-[#eadfd1] bg-white p-3">
-                    <div className="mb-3 text-sm font-semibold text-slate-900">{s}</div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <label className="flex flex-col gap-1">
-                        <span className="pl-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Qty
-                        </span>
-                        <input
-                          type="number"
-                          min={0}
-                          step={1}
-                          inputMode="numeric"
-                          onKeyDown={blockInvalidNumberKey}
-                          placeholder="0"
-                          value={ncSizes[s].qty}
-                          onChange={(e) =>
-                            setNcSizes((prev) => ({ ...prev, [s]: { ...prev[s], qty: parseEditableNumber(e.target.value) } }))
-                          }
-                          className="w-full rounded-2xl border border-[#eadfd1] bg-[#fcfaf7] px-3 py-2 text-sm focus:border-[#d7c7b4] focus:outline-none focus:ring-4 focus:ring-[#f7ebdc]"
-                        />
-                      </label>
-                      <label className="flex flex-col gap-1">
-                        <span className="pl-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Min
-                        </span>
-                        <input
-                          type="number"
-                          min={0}
-                          step={1}
-                          inputMode="numeric"
-                          onKeyDown={blockInvalidNumberKey}
-                          placeholder="0"
-                          value={ncSizes[s].min}
-                          onChange={(e) =>
-                            setNcSizes((prev) => ({ ...prev, [s]: { ...prev[s], min: parseEditableNumber(e.target.value) } }))
-                          }
-                          className="w-full rounded-2xl border border-[#eadfd1] bg-[#fcfaf7] px-3 py-2 text-sm focus:border-[#d7c7b4] focus:outline-none focus:ring-4 focus:ring-[#f7ebdc]"
-                        />
-                      </label>
-                    </div>
+                  <div key={s} className="flex gap-2 items-center">
+                    <span className="w-10 text-sm text-slate-500">{s}</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      onKeyDown={blockInvalidNumberKey}
+                      placeholder="Qty"
+                      value={ncSizes[s].qty}
+                      onChange={(e) =>
+                        setNcSizes((prev) => ({ ...prev, [s]: { ...prev[s], qty: parseEditableNumber(e.target.value) } }))
+                      }
+                      className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      onKeyDown={blockInvalidNumberKey}
+                      placeholder="Min"
+                      value={ncSizes[s].min}
+                      onChange={(e) =>
+                        setNcSizes((prev) => ({ ...prev, [s]: { ...prev[s], min: parseEditableNumber(e.target.value) } }))
+                      }
+                      className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                    />
                   </div>
                 ))}
               </div>
             </div>
             <div className="mt-5 flex justify-end gap-2">
-              <button className="rounded-full border border-[#eadfd1] px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-[#fffaf4]" onClick={() => setShowColorModal(null)}>
+              <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50" onClick={() => setShowColorModal(null)}>
                 Cancel
               </button>
-              <button className="rounded-full bg-[#1f2937] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#111827]" onClick={() => addColorOrSizes(showColorModal.productId)}>
+              <button className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800" onClick={() => addColorOrSizes(showColorModal.productId)}>
                 Save
               </button>
             </div>
@@ -1248,29 +1029,24 @@ function StatCard({
   label,
   value,
   icon,
-  hint,
-  tone,
 }: {
   label: string;
   value: string | number;
   icon?: React.ReactNode;
-  hint?: string;
-  tone?: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-[28px] border border-[#eadfd1] bg-white p-4 shadow-[0_24px_70px_-60px_rgba(15,23,42,0.5)]">
+    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
           {label}
         </div>
         {icon && (
-          <span className={`flex h-10 w-10 items-center justify-center rounded-full ${tone || "bg-[#fcfaf7] text-slate-700"}`}>
+          <span className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700">
             {icon}
           </span>
         )}
       </div>
       <div className="mt-3 text-2xl font-semibold text-slate-900">{value}</div>
-      {hint && <div className="mt-1 text-sm text-slate-500">{hint}</div>}
     </div>
   );
 }
@@ -1288,17 +1064,17 @@ function Modal({
   panelClassName?: string;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm">
       <div
-        className={`w-full rounded-[32px] border border-[#eadfd1] bg-[#fffdfa] shadow-[0_40px_120px_-50px_rgba(15,23,42,0.5)] ${
+        className={`w-full rounded-2xl border border-slate-200 bg-white shadow-xl ${
           panelClassName || "max-w-2xl"
         }`}
       >
-        <div className="flex items-center justify-between border-b border-[#f1e5d8] px-5 py-4">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{title}</h3>
           <button
             onClick={onClose}
-            className="rounded-full border border-[#eadfd1] px-2 py-1 text-slate-500 hover:bg-[#fffaf4]"
+            className="rounded-full border border-slate-200 px-2 py-1 text-slate-500 hover:bg-slate-50"
           >
             ✕
           </button>
@@ -1319,72 +1095,19 @@ function ConfirmDelete({ onCancel, onConfirm }: { onCancel: () => void; onConfir
         value={code}
         onChange={(e) => setCode(e.target.value)}
         placeholder={REQUIRED}
-        className="rounded-full border border-[#eadfd1] bg-white px-3 py-2 text-sm focus:border-[#d7c7b4] focus:outline-none focus:ring-4 focus:ring-[#f7ebdc]"
+        className="rounded-full border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
       />
-      <button className="rounded-full border border-[#eadfd1] px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-[#fffaf4]" onClick={onCancel}>
+      <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50" onClick={onCancel}>
         Cancel
       </button>
       <button
-        className="rounded-full bg-[#1f2937] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#111827] disabled:opacity-60"
+        className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-60"
         disabled={code !== REQUIRED}
         onClick={onConfirm}
       >
         Delete
       </button>
     </div>
-  );
-}
-
-function InventoryInlineNumberInput({
-  label,
-  value,
-  ariaLabel,
-  onCommit,
-}: {
-  label: string;
-  value: number;
-  ariaLabel: string;
-  onCommit: (value: number) => void;
-}) {
-  const [draft, setDraft] = useState(String(value));
-
-  useEffect(() => {
-    setDraft(String(value));
-  }, [value]);
-
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="pl-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-        {label}
-      </span>
-      <input
-        type="number"
-        min={0}
-        step={1}
-        inputMode="numeric"
-        value={draft}
-        aria-label={ariaLabel}
-        onKeyDown={(event) => {
-          blockInvalidNumberKey(event);
-          if (event.key === "Enter") event.currentTarget.blur();
-        }}
-        onChange={(event) => {
-          const next = event.target.value;
-          if (next === "") {
-            setDraft("");
-            return;
-          }
-          if (!/^\d+$/.test(next)) return;
-          setDraft(String(Math.max(0, Number.parseInt(next, 10))));
-        }}
-        onBlur={() => {
-          const next = draft === "" ? 0 : Math.max(0, Number.parseInt(draft, 10) || 0);
-          setDraft(String(next));
-          if (next !== value) onCommit(next);
-        }}
-        className="w-full rounded-2xl border border-[#eadfd1] bg-white px-3 py-2 text-base font-medium text-slate-800 shadow-sm focus:border-[#d7c7b4] focus:outline-none focus:ring-4 focus:ring-[#f7ebdc]"
-      />
-    </label>
   );
 }
 
@@ -1402,20 +1125,6 @@ function BulkEditModal({
   const color = p?.colors[showBulkModal.colorIdx];
 
   const [local, setLocal] = useState<BulkSizeValues>(() => buildBulkSizeValues(color));
-  const summary = useMemo(() => {
-    return DEFAULT_SIZES.reduce(
-      (acc, size) => {
-        const qty = typeof local[size].qty === "number" ? local[size].qty : 0;
-        const min = typeof local[size].min === "number" ? local[size].min : 0;
-        acc.totalUnits += qty;
-        acc.sizeCount += 1;
-        if (qty <= 0) acc.outCount += 1;
-        else if (qty <= min) acc.lowCount += 1;
-        return acc;
-      },
-      { totalUnits: 0, sizeCount: 0, lowCount: 0, outCount: 0 }
-    );
-  }, [local]);
 
   if (!p || !color) return null;
 
@@ -1423,140 +1132,67 @@ function BulkEditModal({
     <Modal
       onClose={onClose}
       title={`Bulk edit • ${p.productName} • ${color.color}`}
-      panelClassName="max-w-6xl"
+      panelClassName="max-w-5xl"
     >
-      <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="rounded-[28px] border border-[#eadfd1] bg-[#fcfaf7] p-5">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-            Bulk workspace
-          </div>
-          <h4 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
-            {p.productName}
-          </h4>
-          <div className="mt-1 inline-flex rounded-full bg-[#f5ede4] px-3 py-1 text-sm font-semibold text-slate-700">
-            {color.color}
-          </div>
-          <p className="mt-4 text-sm leading-6 text-slate-600">
-            Edit the whole color in one pass. Nothing saves until you click
-            <span className="font-semibold text-slate-800"> Save all</span>.
-          </p>
-          <div className="mt-5 grid gap-3">
-            <div className="rounded-2xl border border-[#eadfd1] bg-white p-3">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Total units
-              </div>
-              <div className="mt-2 text-2xl font-semibold text-slate-900">{summary.totalUnits}</div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-[#eadfd1] bg-white p-3">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Low
-                </div>
-                <div className="mt-2 text-2xl font-semibold text-slate-900">{summary.lowCount}</div>
-              </div>
-              <div className="rounded-2xl border border-[#eadfd1] bg-white p-3">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Out
-                </div>
-                <div className="mt-2 text-2xl font-semibold text-slate-900">{summary.outCount}</div>
-              </div>
-            </div>
-            <div className="rounded-2xl border border-[#eadfd1] bg-white p-3">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Sizes in edit
-              </div>
-              <div className="mt-2 text-2xl font-semibold text-slate-900">{summary.sizeCount}</div>
-            </div>
-          </div>
-          <div className="mt-5 space-y-2 text-sm text-slate-500">
-            <p><span className="font-semibold text-slate-700">Qty</span> is current stock.</p>
-            <p><span className="font-semibold text-slate-700">Min</span> controls low-stock alerts.</p>
-            <p>Negative values are blocked. Inventory stays between 0 and unlimited.</p>
-          </div>
-        </aside>
-
-        <div className="min-w-0">
-          <div className="mb-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-500">
-            <span className="rounded-full border border-[#eadfd1] bg-[#fcfaf7] px-3 py-1.5">
-              Set one color at a time
-            </span>
-            <span className="rounded-full border border-[#eadfd1] bg-[#fcfaf7] px-3 py-1.5">
-              Save only when ready
-            </span>
-          </div>
-          <div className="max-h-[62vh] overflow-y-auto pr-1">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {DEFAULT_SIZES.map((s) => {
-                const qty = typeof local[s].qty === "number" ? local[s].qty : 0;
-                const min = typeof local[s].min === "number" ? local[s].min : 0;
-                const tone = getStockTone(qty, min);
-                return (
-                  <div key={s} className={`rounded-[24px] border p-4 ${tone.cardClass}`}>
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-base font-semibold text-slate-900">{s}</div>
-                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${tone.badgeClass}`}>
-                        {tone.label}
-                      </span>
-                    </div>
-                    <div className="mt-4 grid grid-cols-2 gap-3">
-                      <label className="flex flex-col gap-1">
-                        <span className="pl-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Qty
-                        </span>
-                        <input
-                          type="number"
-                          min={0}
-                          step={1}
-                          value={local[s].qty}
-                          aria-label={`${s} quantity`}
-                          placeholder="Qty"
-                          inputMode="numeric"
-                          onKeyDown={blockInvalidNumberKey}
-                          onChange={(e) =>
-                            setLocal((pr) => ({
-                              ...pr,
-                              [s]: { ...pr[s], qty: parseEditableNumber(e.target.value) },
-                            }))
-                          }
-                          className="w-full rounded-2xl border border-[#eadfd1] bg-white px-3 py-3 text-base focus:border-[#d7c7b4] focus:outline-none focus:ring-4 focus:ring-[#f7ebdc]"
-                        />
-                      </label>
-                      <label className="flex flex-col gap-1">
-                        <span className="pl-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Min
-                        </span>
-                        <input
-                          type="number"
-                          min={0}
-                          step={1}
-                          value={local[s].min}
-                          aria-label={`${s} minimum stock`}
-                          placeholder="Min"
-                          inputMode="numeric"
-                          onKeyDown={blockInvalidNumberKey}
-                          onChange={(e) =>
-                            setLocal((pr) => ({
-                              ...pr,
-                              [s]: { ...pr[s], min: parseEditableNumber(e.target.value) },
-                            }))
-                          }
-                          className="w-full rounded-2xl border border-[#eadfd1] bg-white px-3 py-3 text-base focus:border-[#d7c7b4] focus:outline-none focus:ring-4 focus:ring-[#f7ebdc]"
-                        />
-                      </label>
-                    </div>
-                  </div>
-                );
-              })}
+      <div className="mb-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+        <span><span className="font-semibold text-slate-700">Qty</span> = current stock</span>
+        <span><span className="font-semibold text-slate-700">Min</span> = low-stock alert</span>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {DEFAULT_SIZES.map((s) => (
+          <div key={s} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+            <div className="mb-3 text-sm font-semibold tracking-[0.06em] text-slate-800">{s}</div>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex flex-col gap-1">
+                <span className="pl-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Qty</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={local[s].qty}
+                  aria-label={`${s} quantity`}
+                  placeholder="Qty"
+                  inputMode="numeric"
+                  onKeyDown={blockInvalidNumberKey}
+                  onChange={(e) =>
+                    setLocal((pr) => ({
+                      ...pr,
+                      [s]: { ...pr[s], qty: parseEditableNumber(e.target.value) },
+                    }))
+                  }
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-base focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="pl-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Min</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={local[s].min}
+                  aria-label={`${s} minimum stock`}
+                  placeholder="Min"
+                  inputMode="numeric"
+                  onKeyDown={blockInvalidNumberKey}
+                  onChange={(e) =>
+                    setLocal((pr) => ({
+                      ...pr,
+                      [s]: { ...pr[s], min: parseEditableNumber(e.target.value) },
+                    }))
+                  }
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-base focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                />
+              </label>
             </div>
           </div>
-        </div>
+        ))}
       </div>
       <div className="mt-5 flex justify-end gap-2">
-        <button className="rounded-full border border-[#eadfd1] px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-[#fffaf4]" onClick={onClose}>
+        <button className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50" onClick={onClose}>
           Cancel
         </button>
         <button
-          className="rounded-full bg-[#1f2937] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#111827]"
+          className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
           onClick={async () => {
             const ref = doc(db, "products", p.id);
             const colors = deepClone(p.colors);
