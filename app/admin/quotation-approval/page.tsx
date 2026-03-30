@@ -610,7 +610,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   const amountReceived = safeNumber(draft.amountReceived, 0);
   const grandTotal = subtotal + deliveryFee - discount;
   const balanceDue = Math.max(0, grandTotal - amountReceived);
-  const showSubtotal = lineTotals.length > 1;
+  const showSubtotal = lineTotals.length > 1 || deliveryFee > 0 || discount > 0;
 
   const docTitle =
     draft.documentType === "invoice"
@@ -828,21 +828,20 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   if (showSubtotal) {
     doc.text("Subtotal", totalsLabelRightX, y, { align: "right" });
     doc.text(formatMoney(subtotal, draft.currency), colTotalX, y, { align: "right" });
-    y += 16;
   }
   if (deliveryFee > 0) {
+    y += showSubtotal ? 16 : 0;
     doc.text("Delivery fee", totalsLabelRightX, y, { align: "right" });
     doc.text(formatMoney(deliveryFee, draft.currency), colTotalX, y, { align: "right" });
-    y += 16;
   }
   if (discount > 0) {
+    y += showSubtotal || deliveryFee > 0 ? 16 : 0;
     doc.setTextColor(180, 0, 0);
     doc.text("Discount", totalsLabelRightX, y, { align: "right" });
     doc.text(formatMoney(-discount, draft.currency), colTotalX, y, { align: "right" });
     doc.setTextColor(50);
-    y += 16;
   }
-  y += 22;
+  y += showSubtotal || deliveryFee > 0 || discount > 0 ? 22 : 0;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.setTextColor(20);
@@ -1163,16 +1162,28 @@ export default function QuotationApprovalPage() {
   }, [quotes]);
 
   const totals = useMemo(() => {
-    if (!draft) return { subtotal: 0, total: 0, amountReceived: 0, balanceDue: 0, lineCount: 0 };
+    if (!draft) {
+      return {
+        subtotal: 0,
+        total: 0,
+        amountReceived: 0,
+        balanceDue: 0,
+        lineCount: 0,
+        showSubtotal: false,
+      };
+    }
     const subtotal = draft.lines.reduce(
       (acc, line) => acc + safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0),
       0
     );
-    const total = subtotal + draft.deliveryFee - draft.discount;
+    const deliveryFee = safeNumber(draft.deliveryFee, 0);
+    const discount = safeNumber(draft.discount, 0);
+    const total = subtotal + deliveryFee - discount;
     const amountReceived = safeNumber(draft.amountReceived, 0);
     const balanceDue = Math.max(0, total - amountReceived);
     const lineCount = draft.lines.length;
-    return { subtotal, total, amountReceived, balanceDue, lineCount };
+    const showSubtotal = lineCount > 1 || deliveryFee > 0 || discount > 0;
+    return { subtotal, total, amountReceived, balanceDue, lineCount, showSubtotal };
   }, [draft]);
 
   const paymentStatusOptions = useMemo(() => {
@@ -2625,7 +2636,7 @@ export default function QuotationApprovalPage() {
                       <div className={`${surfaceClass} p-5`}>
                         <p className={labelClass}>Totals</p>
                         <div className="mt-5 space-y-3 text-sm text-[#484848]">
-                          {totals.lineCount > 1 && (
+                          {totals.showSubtotal && (
                             <div className="flex items-center justify-between">
                               <span>Subtotal</span>
                               <span className="font-semibold text-[#222222]">
