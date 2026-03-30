@@ -1056,32 +1056,46 @@ function BulkEditModal({
 
   return (
     <Modal onClose={onClose} title={`Bulk edit • ${p.productName} • ${color.color}`}>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div className="mb-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+        <span><span className="font-semibold text-slate-700">Qty</span> = current stock</span>
+        <span><span className="font-semibold text-slate-700">Min</span> = low-stock alert</span>
+      </div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {DEFAULT_SIZES.map((s) => (
-          <div key={s} className="flex gap-2 items-center">
-            <span className="w-10 text-sm text-slate-600">{s}</span>
-            <input
-              type="number"
-              value={local[s].qty}
-              onChange={(e) =>
-                setLocal((pr) => ({
-                  ...pr,
-                  [s]: { ...pr[s], qty: parseEditableNumber(e.target.value) },
-                }))
-              }
-              className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
-            />
-            <input
-              type="number"
-              value={local[s].min}
-              onChange={(e) =>
-                setLocal((pr) => ({
-                  ...pr,
-                  [s]: { ...pr[s], min: parseEditableNumber(e.target.value) },
-                }))
-              }
-              className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
-            />
+          <div key={s} className="grid grid-cols-[3.25rem_minmax(0,1fr)_minmax(0,1fr)] items-end gap-2">
+            <span className="pb-2 text-sm text-slate-600">{s}</span>
+            <label className="flex flex-col gap-1">
+              <span className="pl-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Qty</span>
+              <input
+                type="number"
+                value={local[s].qty}
+                aria-label={`${s} quantity`}
+                placeholder="Qty"
+                onChange={(e) =>
+                  setLocal((pr) => ({
+                    ...pr,
+                    [s]: { ...pr[s], qty: parseEditableNumber(e.target.value) },
+                  }))
+                }
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="pl-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Min</span>
+              <input
+                type="number"
+                value={local[s].min}
+                aria-label={`${s} minimum stock`}
+                placeholder="Min"
+                onChange={(e) =>
+                  setLocal((pr) => ({
+                    ...pr,
+                    [s]: { ...pr[s], min: parseEditableNumber(e.target.value) },
+                  }))
+                }
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-200"
+              />
+            </label>
           </div>
         ))}
       </div>
