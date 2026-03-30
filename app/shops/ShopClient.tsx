@@ -33,37 +33,48 @@ const money = (value: number) => formatDisplayMoney(value);
 const IMAGE_RETRY_LIMIT = 2;
 const IMAGE_RETRY_DELAY_MS = 900;
 
-const COLOR_SWATCHES: Record<string, string> = {
-  white: "#f5f5f4",
-  black: "#171717",
-  navyblue: "#1e3a5f",
-  deepgrey: "#4b5563",
-  grey: "#6b7280",
-  gray: "#6b7280",
-  charcoal: "#374151",
-  red: "#b91c1c",
-  maroon: "#7f1d1d",
-  burgundy: "#7c2d12",
-  orange: "#ea580c",
-  yellow: "#eab308",
-  gold: "#c68a12",
-  green: "#166534",
-  bottlegreen: "#14532d",
-  olive: "#556b2f",
-  teal: "#0f766e",
-  skyblue: "#38bdf8",
-  royalblue: "#1d4ed8",
-  blue: "#2563eb",
-  purple: "#7c3aed",
-  pink: "#db2777",
-  beige: "#d6c3a1",
-  cream: "#f1e7d0",
-  brown: "#7c4a2d",
-};
+const COLOR_SWATCH_RULES = [
+  { match: ["white"], value: "#f8fafc" },
+  { match: ["black"], value: "#171717" },
+  { match: ["navy"], value: "#243b6b" },
+  { match: ["royal blue"], value: "#1d4ed8" },
+  { match: ["aqua"], value: "#4cc9f0" },
+  { match: ["sky blue"], value: "#38bdf8" },
+  { match: ["blue"], value: "#2563eb" },
+  { match: ["purple"], value: "#7c3aed" },
+  { match: ["light pink"], value: "#f9a8d4" },
+  { match: ["vibrant pink"], value: "#ec4899" },
+  { match: ["pink"], value: "#db2777" },
+  { match: ["deep red"], value: "#991b1b" },
+  { match: ["red"], value: "#c0392b" },
+  { match: ["military green"], value: "#556b2f" },
+  { match: ["bottle green"], value: "#14532d" },
+  { match: ["vibrant apple green"], value: "#a3e635" },
+  { match: ["vibrant green"], value: "#22c55e" },
+  { match: ["tea green"], value: "#d9f99d" },
+  { match: ["pastel green"], value: "#d9f99d" },
+  { match: ["green"], value: "#2f855a" },
+  { match: ["deep grey", "deep gray"], value: "#4b5563" },
+  { match: ["charcoal"], value: "#374151" },
+  { match: ["grey", "gray"], value: "#9ca3af" },
+  { match: ["soft pastel yellow"], value: "#fde68a" },
+  { match: ["lemon yellow"], value: "#facc15" },
+  { match: ["serein yellow"], value: "#f4d35e" },
+  { match: ["moutard yellow", "mustard yellow"], value: "#d4a017" },
+  { match: ["yellow"], value: "#eab308" },
+  { match: ["orange"], value: "#ea580c" },
+  { match: ["gold"], value: "#c68a12" },
+  { match: ["beige"], value: "#d6c3a1" },
+  { match: ["cream"], value: "#f1e7d0" },
+  { match: ["brown"], value: "#7c4a2d" },
+] as const;
 
 function getColorSwatch(color: string) {
-  const normalized = color.toLowerCase().replace(/[^a-z0-9]/g, "");
-  return COLOR_SWATCHES[normalized] || "#d4d4d8";
+  const normalized = color.toLowerCase().trim();
+  const found = COLOR_SWATCH_RULES.find((rule) =>
+    rule.match.some((token) => normalized.includes(token))
+  );
+  return found?.value || "#d4d4d8";
 }
 
 type ItemSelection = {
@@ -583,7 +594,7 @@ export default function ShopClient() {
                     <h2 className="flex flex-wrap items-center gap-2 text-lg font-semibold text-black">
                       <span className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3.5 py-1.5 text-[11px] font-semibold text-neutral-700 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
                         <span
-                          className="h-2.5 w-2.5 rounded-full border border-black/10"
+                          className="h-3 w-3 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.16),0_1px_2px_rgba(0,0,0,0.08)]"
                           style={{ backgroundColor: getColorSwatch(displayColor) }}
                           aria-hidden="true"
                         />
