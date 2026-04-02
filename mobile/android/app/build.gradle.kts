@@ -8,7 +8,6 @@ plugins {
 android {
     namespace = "mu.motshirt.mo_tshirt_mobile"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
