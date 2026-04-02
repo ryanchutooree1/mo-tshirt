@@ -46,13 +46,17 @@ class HomeScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 72,
-                height: 72,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFF6600),
-                  borderRadius: BorderRadius.circular(20),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: const Color(0xFFFFD7BF)),
                 ),
-                child: const Icon(Icons.checkroom_rounded, color: Colors.white, size: 36),
+                child: Image.asset(
+                  'assets/logo.png',
+                  width: 180,
+                  fit: BoxFit.contain,
+                ),
               ),
               const SizedBox(height: 24),
               Text(
