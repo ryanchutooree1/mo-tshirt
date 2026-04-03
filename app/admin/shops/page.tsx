@@ -1225,11 +1225,11 @@ export default function AdminShopsPage() {
                   placeholder="Or paste an image URL"
                 />
                 {(previewUrl || form.photoUrl) && (
-                  <div className="relative h-32 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                  <div className="relative flex min-h-[18rem] w-full items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 sm:min-h-[22rem]">
                     <AsyncCatalogImage
                       src={previewUrl || form.photoUrl}
                       alt="Preview"
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-contain"
                     />
                   </div>
                 )}
