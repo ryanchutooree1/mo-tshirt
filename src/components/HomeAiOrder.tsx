@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
 import {
   Bot,
   CheckCircle2,
@@ -81,6 +81,7 @@ export default function HomeAiOrder() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   const canUploadLogo =
     !session.missingFields.includes("sizeBreakdown") &&
@@ -232,6 +233,12 @@ export default function HomeAiOrder() {
     setError(null);
     setNotice(null);
     setMessage(nextMessage);
+  }
+
+  function handleMessageKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    formRef.current?.requestSubmit();
   }
 
   return (
@@ -456,7 +463,7 @@ export default function HomeAiOrder() {
             </div>
           ) : null}
 
-          <form onSubmit={handleSubmit} className="mt-4">
+          <form ref={formRef} onSubmit={handleSubmit} className="mt-4">
             <div className="rounded-[26px] border border-[#ece4fb] bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(252,248,255,0.95))] p-4 shadow-[0_24px_48px_-38px_rgba(124,58,237,0.25)]">
               <label className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8a7db8]" htmlFor="mo-ai-order-message">
                 Message
@@ -465,6 +472,7 @@ export default function HomeAiOrder() {
                 id="mo-ai-order-message"
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
+                onKeyDown={handleMessageKeyDown}
                 placeholder="Tell MO AI what you need: garment, quantity, color, sizes, print, deadline..."
                 rows={3}
                 className="mt-3 min-h-[4.8rem] w-full rounded-[20px] border border-[#e8def9] bg-[#fcfbff] px-4 py-3 text-sm text-[#211c33] outline-none transition placeholder:text-[#9b96b3] focus:border-[#bca3ff] focus:ring-4 focus:ring-[#efe7ff]"
