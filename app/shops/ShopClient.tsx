@@ -14,6 +14,7 @@ import {
   getSizePrice,
   getSizePrices,
   getSizes,
+  isOneSizeLabel,
   sortSizes,
   type DeliveryInfo,
   type ShopItem,
@@ -228,7 +229,7 @@ export default function ShopClient() {
         if (!next[item.id]) {
           next[item.id] = {
             color: item.colors[0] || "Default",
-            size: sizes[0] || "M",
+            size: sizes[0] || "",
             quantity: 1,
           };
         }
@@ -267,9 +268,21 @@ export default function ShopClient() {
 
   const availableSizes = useMemo(() => {
     const set = new Set<string>();
-    items.forEach((item) => getSizes(item).forEach((size) => set.add(size)));
+    items.forEach((item) =>
+      getSizes(item).forEach((size) => {
+        if (!isOneSizeLabel(size)) {
+          set.add(size);
+        }
+      })
+    );
     return sortSizes(Array.from(set));
   }, [items]);
+
+  useEffect(() => {
+    if (selectedSize !== "all" && !availableSizes.includes(selectedSize)) {
+      setSelectedSize("all");
+    }
+  }, [availableSizes, selectedSize]);
 
   const filtered = useMemo(() => {
     let next = items.slice();
@@ -501,7 +514,11 @@ export default function ShopClient() {
                 <p className="text-sm font-medium text-neutral-800">Filters</p>
                 <p className="text-xs text-neutral-500">Refine by product, color, or size.</p>
               </div>
-              <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-3">
+              <div
+                className={`grid w-full gap-3 sm:w-auto ${
+                  availableSizes.length ? "sm:grid-cols-3" : "sm:grid-cols-2"
+                }`}
+              >
                 <label className="text-xs font-medium text-neutral-600">
                   Product
                   <select
@@ -528,19 +545,21 @@ export default function ShopClient() {
                     ))}
                   </select>
                 </label>
-                <label className="text-xs font-medium text-neutral-600">
-                  Size
-                  <select
-                    value={selectedSize}
-                    onChange={(e) => setSelectedSize(e.target.value)}
-                    className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
-                  >
-                    <option value="all">All sizes</option>
-                    {availableSizes.map((size) => (
-                      <option key={size} value={size}>{formatSizeLabel(size)}</option>
-                    ))}
-                  </select>
-                </label>
+                {availableSizes.length > 0 && (
+                  <label className="text-xs font-medium text-neutral-600">
+                    Size
+                    <select
+                      value={selectedSize}
+                      onChange={(e) => setSelectedSize(e.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+                    >
+                      <option value="all">All sizes</option>
+                      {availableSizes.map((size) => (
+                        <option key={size} value={size}>{formatSizeLabel(size)}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
               </div>
             </section>
 
@@ -555,10 +574,16 @@ export default function ShopClient() {
           {filtered.map((item) => {
             const sizes = getSizes(item);
             const sizePrices = getSizePrices(item);
+            const isOneSizeItem =
+              sizePrices.length === 1 && isOneSizeLabel(sizePrices[0]?.size || "");
+            const priceValues = sizePrices
+              .map((entry) => entry.price)
+              .filter((price) => Number.isFinite(price)) as number[];
+            const minPrice = priceValues.length ? Math.min(...priceValues) : 0;
             const selection =
               selections[item.id] || {
                 color: item.colors[0] || "Default",
-                size: sizes[0] || "M",
+                size: sizes[0] || "",
                 quantity: 1,
               };
             const displayColor = selection.color || item.colors[0] || "Color";
@@ -602,10 +627,26 @@ export default function ShopClient() {
                       </span>
                       <span>{item.title}</span>
                     </h2>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                      <span className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 font-semibold text-neutral-700">
+                        {isOneSizeItem
+                          ? formatDisplayWholeMoney(minPrice)
+                          : `From ${formatDisplayWholeMoney(minPrice)}`}
+                      </span>
+                      {isOneSizeItem && (
+                        <span className="rounded-full border border-neutral-200 bg-white px-3 py-1 font-semibold text-neutral-600">
+                          One size
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap gap-2 text-xs text-neutral-600">
-                    {sizePrices.length ? (
+                    {isOneSizeItem ? (
+                      <span className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 font-semibold text-neutral-600">
+                        One size
+                      </span>
+                    ) : sizePrices.length ? (
                       sizePrices.map((entry) => (
                         <button
                           key={entry.size}
@@ -638,20 +679,29 @@ export default function ShopClient() {
                         ))}
                       </select>
                     </label>
-                    <label className="flex flex-col gap-2">
-                      Size
-                      <select
-                        value={selection.size}
-                        onChange={(e) => updateSelection(item.id, { size: e.target.value })}
-                        className="rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
-                      >
-                        {sizes.map((size) => (
-                          <option key={size} value={size}>
-                            {`${formatSizeLabel(size)} (${formatDisplayWholeMoney(getSizePrice(item, size))})`}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    {isOneSizeItem ? (
+                      <div className="flex flex-col gap-2">
+                        <span>Size</span>
+                        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm font-medium text-neutral-700">
+                          One size
+                        </div>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col gap-2">
+                        Size
+                        <select
+                          value={selection.size}
+                          onChange={(e) => updateSelection(item.id, { size: e.target.value })}
+                          className="rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+                        >
+                          {sizes.map((size) => (
+                            <option key={size} value={size}>
+                              {`${formatSizeLabel(size)} (${formatDisplayWholeMoney(getSizePrice(item, size))})`}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
                     <label className="flex flex-col gap-2 sm:col-span-2">
                       Qty
                       <input
@@ -752,7 +802,7 @@ export default function ShopClient() {
                     {group.lines.map((line) => (
                       <div key={`${group.key}-${line.size}`} className="flex items-center justify-between gap-2">
                         <span className="text-[11px] text-neutral-600">
-                          Size {formatSizeLabel(line.size)}
+                          {isOneSizeLabel(line.size) ? "One size" : `Size ${formatSizeLabel(line.size)}`}
                         </span>
                         <div className="flex items-center gap-2">
                           <input

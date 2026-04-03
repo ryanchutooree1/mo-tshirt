@@ -4,8 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DEFAULT_COLLECTION_POINT,
   DEFAULT_PICKUP_POINT,
+  ONE_SIZE_LABEL,
   formatSizeLabel,
   getSizePrices,
+  isOneSizeLabel,
   normalizeList,
   SIZE_ORDER,
   sortQuoteColors,
@@ -35,6 +37,8 @@ type SizePriceRow = {
   profit: number | "";
   profitAuto: boolean;
 };
+
+type PriceMode = "sized" | "single";
 
 const SIZE_ORDER_SET = new Set<string>(SIZE_ORDER);
 
@@ -77,9 +81,42 @@ function buildSizeRows(
   });
 }
 
+function buildSinglePriceRow(
+  existing: { size: string; price: number; buyingPrice?: number | null; profit?: number | null }[] = []
+): SizePriceRow {
+  const fallback =
+    existing.find((entry) => isOneSizeLabel(entry.size)) ||
+    (existing.length === 1 ? existing[0] : null);
+
+  const row: SizePriceRow = {
+    size: ONE_SIZE_LABEL,
+    price: fallback?.price ?? "",
+    buyingPrice:
+      fallback && Number.isFinite(fallback.buyingPrice) ? (fallback.buyingPrice as number) : "",
+    profit: fallback && Number.isFinite(fallback.profit) ? (fallback.profit as number) : "",
+    profitAuto: !fallback || !Number.isFinite(fallback.profit),
+  };
+
+  if (row.profitAuto && row.price !== "" && row.buyingPrice !== "") {
+    row.profit = Number(row.price) - Number(row.buyingPrice);
+  }
+
+  return row;
+}
+
+function getFirstPricedRow(rows: SizePriceRow[]): SizePriceRow | null {
+  return (
+    rows.find((row) => row.price !== "" && Number.isFinite(row.price)) ||
+    rows.find((row) => row.buyingPrice !== "" && Number.isFinite(row.buyingPrice)) ||
+    null
+  );
+}
+
 type FormState = {
   title: string;
   colors: string;
+  pricingMode: PriceMode;
+  singlePrice: SizePriceRow;
   sizePrices: SizePriceRow[];
   pickupPoint: string;
   collectionPoint: string;
@@ -95,6 +132,8 @@ const DEFAULT_SIZE_ROWS: SizePriceRow[] = [
 const emptyForm: FormState = {
   title: "",
   colors: "",
+  pricingMode: "sized",
+  singlePrice: buildSinglePriceRow(),
   sizePrices: DEFAULT_SIZE_ROWS,
   pickupPoint: DEFAULT_PICKUP_POINT,
   collectionPoint: DEFAULT_COLLECTION_POINT,
@@ -293,20 +332,30 @@ export default function AdminShopsPage() {
 
   function resetForm() {
     setEditingId(null);
-    setForm({ ...emptyForm, sizePrices: buildSizeRows() });
+    setForm({
+      ...emptyForm,
+      pricingMode: "sized",
+      singlePrice: buildSinglePriceRow(),
+      sizePrices: buildSizeRows(),
+    });
     setFile(null);
     setNotice(null);
   }
 
   function startEdit(item: ShopItem) {
     const sizePrices = getSizePrices(item);
+    const singlePriceMode =
+      sizePrices.length === 1 && isOneSizeLabel(sizePrices[0]?.size || "");
     setEditingId(item.id);
     setForm({
       title: item.title,
       colors: item.colors.join(", "),
-      sizePrices: sizePrices.length
-        ? buildSizeRows(sizePrices)
-        : buildSizeRows(),
+      pricingMode: singlePriceMode ? "single" : "sized",
+      singlePrice: buildSinglePriceRow(sizePrices),
+      sizePrices:
+        !singlePriceMode && sizePrices.length
+          ? buildSizeRows(sizePrices)
+          : buildSizeRows(),
       pickupPoint: item.pickupPoint || DEFAULT_PICKUP_POINT,
       collectionPoint: item.collectionPoint || DEFAULT_COLLECTION_POINT,
       photoUrl: item.photoUrl || "",
@@ -336,6 +385,49 @@ export default function AdminShopsPage() {
       }
       next[index] = merged;
       return { ...prev, sizePrices: next };
+    });
+  }
+
+  function updateSinglePrice(patch: Partial<SizePriceRow>) {
+    setForm((prev) => {
+      const merged = { ...prev.singlePrice, ...patch, size: ONE_SIZE_LABEL };
+      if (Object.prototype.hasOwnProperty.call(patch, "profit")) {
+        merged.profitAuto = patch.profit === "";
+      }
+      if (merged.profitAuto) {
+        merged.profit = computeProfitValue(merged.price, merged.buyingPrice);
+      }
+      return { ...prev, singlePrice: merged };
+    });
+  }
+
+  function setPricingMode(mode: PriceMode) {
+    setForm((prev) => {
+      if (prev.pricingMode === mode) return prev;
+      if (mode === "single") {
+        const fallback = getFirstPricedRow(prev.sizePrices);
+        return {
+          ...prev,
+          pricingMode: mode,
+          singlePrice:
+            prev.singlePrice.price !== "" || prev.singlePrice.buyingPrice !== ""
+              ? prev.singlePrice
+              : fallback
+                ? {
+                    ...prev.singlePrice,
+                    price: fallback.price,
+                    buyingPrice: fallback.buyingPrice,
+                    profit:
+                      fallback.profitAuto
+                        ? computeProfitValue(fallback.price, fallback.buyingPrice)
+                        : fallback.profit,
+                    profitAuto: fallback.profitAuto,
+                  }
+                : prev.singlePrice,
+        };
+      }
+
+      return { ...prev, pricingMode: mode };
     });
   }
 
@@ -416,30 +508,61 @@ export default function AdminShopsPage() {
 
     try {
       const photoUrl = await uploadFileAndGetUrl();
-      const sizePrices = form.sizePrices
-        .filter((row) => row.size && row.price !== "" && Number.isFinite(row.price))
-        .map((row) => {
-          const buyingPrice =
-            row.buyingPrice === "" || !Number.isFinite(row.buyingPrice)
-              ? null
-              : Number(row.buyingPrice);
-          const profit =
-            row.profit === "" || !Number.isFinite(row.profit)
-              ? row.profitAuto && buyingPrice !== null && row.price !== ""
-                ? Number(row.price) - Number(buyingPrice)
-                : null
-              : Number(row.profit);
-          return {
-            size: row.size,
-            price: Number(row.price),
-            buyingPrice,
-            profit,
-          };
-        });
+      const sizePrices =
+        form.pricingMode === "single"
+          ? (() => {
+              if (form.singlePrice.price === "" || !Number.isFinite(form.singlePrice.price)) {
+                throw new Error("Add a single price for one-size items.");
+              }
+              const buyingPrice =
+                form.singlePrice.buyingPrice === "" || !Number.isFinite(form.singlePrice.buyingPrice)
+                  ? null
+                  : Number(form.singlePrice.buyingPrice);
+              const profit =
+                form.singlePrice.profit === "" || !Number.isFinite(form.singlePrice.profit)
+                  ? form.singlePrice.profitAuto && buyingPrice !== null
+                    ? Number(form.singlePrice.price) - Number(buyingPrice)
+                    : null
+                  : Number(form.singlePrice.profit);
+              return [
+                {
+                  size: ONE_SIZE_LABEL,
+                  price: Number(form.singlePrice.price),
+                  buyingPrice,
+                  profit,
+                },
+              ];
+            })()
+          : form.sizePrices
+              .filter((row) => row.size && row.price !== "" && Number.isFinite(row.price))
+              .map((row) => {
+                const buyingPrice =
+                  row.buyingPrice === "" || !Number.isFinite(row.buyingPrice)
+                    ? null
+                    : Number(row.buyingPrice);
+                const profit =
+                  row.profit === "" || !Number.isFinite(row.profit)
+                    ? row.profitAuto && buyingPrice !== null && row.price !== ""
+                      ? Number(row.price) - Number(buyingPrice)
+                      : null
+                    : Number(row.profit);
+                return {
+                  size: row.size,
+                  price: Number(row.price),
+                  buyingPrice,
+                  profit,
+                };
+              });
+
+      if (!sizePrices.length) {
+        throw new Error("Add at least one size with a price.");
+      }
 
       const payload = {
         title: form.title,
         colors: form.colors,
+        sizeMode: form.pricingMode,
+        singlePrice: form.pricingMode === "single" ? form.singlePrice.price : null,
         sizePrices,
         pickupPoint: form.pickupPoint,
         collectionPoint: form.collectionPoint,
@@ -669,6 +792,8 @@ export default function AdminShopsPage() {
               <ul className="mt-6 space-y-4">
                 {filteredItems.map((item) => {
                   const sizePrices = getSizePrices(item);
+                  const isSinglePriceItem =
+                    sizePrices.length === 1 && isOneSizeLabel(sizePrices[0]?.size || "");
                   const priceValues = sizePrices
                     .map((entry) => entry.price)
                     .filter((price) => Number.isFinite(price)) as number[];
@@ -705,7 +830,7 @@ export default function AdminShopsPage() {
                               </span>
                               {minPrice !== null && (
                                 <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700">
-                                  From {money(minPrice)}
+                                  {isSinglePriceItem ? money(minPrice) : `From ${money(minPrice)}`}
                                 </span>
                               )}
                             </div>
@@ -713,7 +838,14 @@ export default function AdminShopsPage() {
                               Colors: {sortQuoteColors(item.colors).join(", ") || "-"}
                             </p>
                             <div className="mt-3 grid gap-2 text-[11px] text-slate-700 sm:grid-cols-[repeat(auto-fit,minmax(96px,1fr))]">
-                              {sizePrices.length ? (
+                              {isSinglePriceItem ? (
+                                <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-center">
+                                  <div className="text-xs font-semibold text-slate-900">One size</div>
+                                  <div className="text-[11px] font-medium text-slate-500">
+                                    {money(sizePrices[0].price)}
+                                  </div>
+                                </div>
+                              ) : sizePrices.length ? (
                                 sizePrices.map((entry) => (
                                   <div
                                     key={entry.size}
@@ -824,94 +956,184 @@ export default function AdminShopsPage() {
               </div>
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-semibold text-slate-700">Size prices *</label>
+                <label className="text-sm font-semibold text-slate-700">Pricing *</label>
+                <div className="grid gap-3 sm:grid-cols-2">
                   <button
                     type="button"
-                    onClick={addSizeRow}
-                    className="rounded-full border border-slate-900 px-3 py-1 text-xs font-semibold text-slate-900 transition hover:bg-slate-900 hover:text-white"
+                    onClick={() => setPricingMode("sized")}
+                    className={`rounded-2xl border px-4 py-3 text-left transition ${
+                      form.pricingMode === "sized"
+                        ? "border-slate-900 bg-slate-900 text-white"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
                   >
-                    Add size
+                    <div className="text-sm font-semibold">Price by size</div>
+                    <div className={`mt-1 text-xs ${form.pricingMode === "sized" ? "text-slate-200" : "text-slate-500"}`}>
+                      Best for T-shirts, polos, hoodies, and any item with multiple sizes.
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPricingMode("single")}
+                    className={`rounded-2xl border px-4 py-3 text-left transition ${
+                      form.pricingMode === "single"
+                        ? "border-slate-900 bg-slate-900 text-white"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className="text-sm font-semibold">Single price / no size</div>
+                    <div className={`mt-1 text-xs ${form.pricingMode === "single" ? "text-slate-200" : "text-slate-500"}`}>
+                      Best for caps and accessories. The client shop will show this as one size.
+                    </div>
                   </button>
                 </div>
-                <div className="hidden sm:grid grid-cols-[1.1fr_0.85fr_0.85fr_0.85fr_auto] gap-3 text-[10px] uppercase tracking-[0.2em] text-slate-400">
-                  <span>Size</span>
-                  <span>Selling price</span>
-                  <span>Buying price</span>
-                  <span>Profit</span>
-                  <span className="sr-only">Remove</span>
-                </div>
-                <div className="space-y-3">
-                  {form.sizePrices.map((row, index) => (
-                    <div
-                      key={`${row.size}-${index}`}
-                      className="grid grid-cols-2 gap-3 sm:grid-cols-[1.1fr_0.85fr_0.85fr_0.85fr_auto] sm:items-center"
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-semibold text-slate-700">
+                    {form.pricingMode === "single" ? "Single price *" : "Size prices *"}
+                  </label>
+                  {form.pricingMode === "sized" && (
+                    <button
+                      type="button"
+                      onClick={addSizeRow}
+                      className="rounded-full border border-slate-900 px-3 py-1 text-xs font-semibold text-slate-900 transition hover:bg-slate-900 hover:text-white"
                     >
-                      <select
-                        value={row.size}
-                        onChange={(e) => updateSizeRow(index, { size: e.target.value })}
-                        className="col-span-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200 sm:col-span-1"
-                        required
-                      >
-                        <option value="" disabled>
-                          Select size
-                        </option>
-                        {SIZE_ORDER.map((size) => (
-                          <option key={size} value={size}>
-                            {formatSizeLabel(size)}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={row.price}
-                        onChange={(e) =>
-                          updateSizeRow(index, {
-                            price: e.target.value === "" ? "" : Number(e.target.value),
-                          })
-                        }
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                        placeholder="Selling price"
-                      />
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={row.buyingPrice}
-                        onChange={(e) =>
-                          updateSizeRow(index, {
-                            buyingPrice: e.target.value === "" ? "" : Number(e.target.value),
-                          })
-                        }
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                        placeholder="Buying price"
-                      />
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={row.profit}
-                        onChange={(e) =>
-                          updateSizeRow(index, {
-                            profit: e.target.value === "" ? "" : Number(e.target.value),
-                          })
-                        }
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                        placeholder="Profit"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeSizeRow(index)}
-                        className="col-span-2 rounded-full border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 sm:col-span-1"
-                        aria-label="Remove size"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
+                      Add size
+                    </button>
+                  )}
                 </div>
-                <p className="text-xs text-slate-500">Leave selling price blank if that size is not available.</p>
+                {form.pricingMode === "single" ? (
+                  <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-4">
+                    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700">
+                      One size
+                    </div>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={form.singlePrice.price}
+                      onChange={(e) =>
+                        updateSinglePrice({
+                          price: e.target.value === "" ? "" : Number(e.target.value),
+                        })
+                      }
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      placeholder="Selling price"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={form.singlePrice.buyingPrice}
+                      onChange={(e) =>
+                        updateSinglePrice({
+                          buyingPrice: e.target.value === "" ? "" : Number(e.target.value),
+                        })
+                      }
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      placeholder="Buying price"
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={form.singlePrice.profit}
+                      onChange={(e) =>
+                        updateSinglePrice({
+                          profit: e.target.value === "" ? "" : Number(e.target.value),
+                        })
+                      }
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      placeholder="Profit"
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div className="hidden sm:grid grid-cols-[1.1fr_0.85fr_0.85fr_0.85fr_auto] gap-3 text-[10px] uppercase tracking-[0.2em] text-slate-400">
+                      <span>Size</span>
+                      <span>Selling price</span>
+                      <span>Buying price</span>
+                      <span>Profit</span>
+                      <span className="sr-only">Remove</span>
+                    </div>
+                    <div className="space-y-3">
+                      {form.sizePrices.map((row, index) => (
+                        <div
+                          key={`${row.size}-${index}`}
+                          className="grid grid-cols-2 gap-3 sm:grid-cols-[1.1fr_0.85fr_0.85fr_0.85fr_auto] sm:items-center"
+                        >
+                          <select
+                            value={row.size}
+                            onChange={(e) => updateSizeRow(index, { size: e.target.value })}
+                            className="col-span-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200 sm:col-span-1"
+                            required
+                          >
+                            <option value="" disabled>
+                              Select size
+                            </option>
+                            {SIZE_ORDER.map((size) => (
+                              <option key={size} value={size}>
+                                {formatSizeLabel(size)}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={row.price}
+                            onChange={(e) =>
+                              updateSizeRow(index, {
+                                price: e.target.value === "" ? "" : Number(e.target.value),
+                              })
+                            }
+                            className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                            placeholder="Selling price"
+                          />
+                          <input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={row.buyingPrice}
+                            onChange={(e) =>
+                              updateSizeRow(index, {
+                                buyingPrice: e.target.value === "" ? "" : Number(e.target.value),
+                              })
+                            }
+                            className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                            placeholder="Buying price"
+                          />
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={row.profit}
+                            onChange={(e) =>
+                              updateSizeRow(index, {
+                                profit: e.target.value === "" ? "" : Number(e.target.value),
+                              })
+                            }
+                            className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                            placeholder="Profit"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeSizeRow(index)}
+                            className="col-span-2 rounded-full border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 sm:col-span-1"
+                            aria-label="Remove size"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <p className="text-xs text-slate-500">
+                  {form.pricingMode === "single"
+                    ? "Use this for caps and other products that do not need size selection. The client shop will show One size automatically."
+                    : "Leave selling price blank if that size is not available."}
+                </p>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">

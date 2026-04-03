@@ -2,6 +2,7 @@ import { formatMoney as formatDisplayMoney } from "@/lib/money";
 
 export const DEFAULT_PICKUP_POINT = "Nouvelle France";
 export const DEFAULT_COLLECTION_POINT = "Surinam";
+export const ONE_SIZE_LABEL = "One size";
 export const ADULT_SIZE_ORDER = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL"] as const;
 export const SIZE_ORDER = [
   "1 Yr",
@@ -14,6 +15,20 @@ export const SIZE_ORDER = [
   "14 Yrs",
   ...ADULT_SIZE_ORDER,
 ] as const;
+
+const ONE_SIZE_ALIASES = new Set([
+  "one size",
+  "one-size",
+  "onesize",
+  "free size",
+  "free-size",
+  "freesize",
+  "default",
+  "standard",
+  "no size",
+  "no-size",
+  "nosize",
+]);
 
 export type ShopSizePrice = {
   size: string;
@@ -168,7 +183,7 @@ export function formatQuoteGarmentDescription(entry: QuoteGarmentLine) {
   const garment = String(entry.garment || "").trim() || "Custom item";
   const color = String(entry.color || "").trim();
   const size = normalizeSizeLabel(String(entry.size || "").trim());
-  const details = [color, size].filter(Boolean);
+  const details = [color, size && !isOneSizeLabel(size) ? size : ""].filter(Boolean);
 
   return details.length ? `${garment} (${details.join(" / ")})` : garment;
 }
@@ -176,6 +191,9 @@ export function formatQuoteGarmentDescription(entry: QuoteGarmentLine) {
 export function normalizeSizeLabel(size: string): string {
   const trimmed = String(size || "").replace(/\s+Old$/i, "").trim();
   if (!trimmed) return "";
+
+  const normalized = trimmed.replace(/\s+/g, " ").toLowerCase();
+  if (ONE_SIZE_ALIASES.has(normalized)) return ONE_SIZE_LABEL;
 
   const compact = trimmed.replace(/\s+/g, "").toUpperCase();
   if (compact === "XXL" || compact === "2XL") return "2XL";
@@ -187,6 +205,10 @@ export function normalizeSizeLabel(size: string): string {
 
 export function formatSizeLabel(size: string): string {
   return normalizeSizeLabel(size);
+}
+
+export function isOneSizeLabel(size: string): boolean {
+  return normalizeSizeLabel(size) === ONE_SIZE_LABEL;
 }
 
 export type ShopOrderLineWithPrice = ShopOrderLine & {
@@ -249,7 +271,7 @@ function uniqueSizePrices(list: ShopSizePrice[]): ShopSizePrice[] {
 }
 
 const sizeOrderMap = new Map<string, number>(
-  SIZE_ORDER.map((label, index) => [normalizeSizeLabel(label), index])
+  [ONE_SIZE_LABEL, ...SIZE_ORDER].map((label, index) => [normalizeSizeLabel(label), index])
 );
 
 export function sortSizePrices(list: ShopSizePrice[]): ShopSizePrice[] {
@@ -304,7 +326,7 @@ export function getSizePrices(item: ShopItem): ShopSizePrice[] {
   }
 
   if (Number.isFinite(fallbackPrice)) {
-    return [{ size: "Default", price: fallbackPrice }];
+    return [{ size: ONE_SIZE_LABEL, price: fallbackPrice }];
   }
 
   return [];
@@ -338,10 +360,12 @@ export function buildShopWhatsAppMessage(item: ShopItem, selection: ShopSelectio
     `Hi! I'd like to order:`,
     `Product: ${item.title}`,
     `Color: ${selection.color}`,
-    `Size: ${selection.size}`,
+    !isOneSizeLabel(selection.size) ? `Size: ${selection.size}` : "",
     `Quantity: ${selection.quantity}`,
     `Delivery: ${selection.deliveryMethod}`,
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 export function buildShopWhatsAppMessageForLines(
@@ -365,7 +389,7 @@ export function buildShopWhatsAppMessageForLines(
       const parts = [
         `- ${line.title}`,
         `Color: ${line.color}`,
-        `Size: ${formatSizeLabel(line.size)}`,
+        !isOneSizeLabel(line.size) ? `Size: ${formatSizeLabel(line.size)}` : "",
         `Qty: ${line.quantity}`,
       ];
       if (Number.isFinite(line.unitPrice)) {
@@ -374,7 +398,7 @@ export function buildShopWhatsAppMessageForLines(
       if (Number.isFinite(line.lineTotal)) {
         parts.push(`Line total: ${formatDisplayMoney(line.lineTotal)}`);
       }
-      message.push(parts.join(" | "));
+      message.push(parts.filter(Boolean).join(" | "));
     });
   }
   message.push(`Delivery: ${deliveryMethod}`);

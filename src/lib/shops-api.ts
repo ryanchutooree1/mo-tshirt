@@ -1,6 +1,7 @@
 import {
   DEFAULT_COLLECTION_POINT,
   DEFAULT_PICKUP_POINT,
+  ONE_SIZE_LABEL,
   normalizeSizeLabel,
   normalizeList,
   sortSizes,
@@ -71,19 +72,36 @@ export function parseShopPayload(body: unknown): ParseResult {
   const colors = normalizeList(payload.colors);
   if (!colors.length) return { ok: false, error: "Add at least one color." };
 
+  const sizeMode = cleanString(payload.sizeMode).toLowerCase();
   let sizePrices = normalizeSizePrices(payload.sizePrices);
   if (!sizePrices.length) {
-    const sizes = sortSizes(
-      normalizeList(payload.sizes).map((size) => normalizeSizeLabel(size))
-    );
-    const fallbackPrice = toNumber(payload.basePrice) ?? toNumber(payload.pickupPrice);
-    if (sizes.length && fallbackPrice !== null && fallbackPrice >= 0) {
-      sizePrices = sizes.map((size) => ({ size, price: fallbackPrice }));
+    const fallbackPrice =
+      toNumber(payload.singlePrice) ??
+      toNumber(payload.basePrice) ??
+      toNumber(payload.pickupPrice);
+
+    if (sizeMode === "single" && fallbackPrice !== null && fallbackPrice >= 0) {
+      sizePrices = [{ size: ONE_SIZE_LABEL, price: fallbackPrice }];
+    }
+
+    if (!sizePrices.length) {
+      const sizes = sortSizes(
+        normalizeList(payload.sizes).map((size) => normalizeSizeLabel(size))
+      );
+      if (sizes.length && fallbackPrice !== null && fallbackPrice >= 0) {
+        sizePrices = sizes.map((size) => ({ size, price: fallbackPrice }));
+      }
     }
   }
 
   if (!sizePrices.length) {
-    return { ok: false, error: "Add at least one size with a price." };
+    return {
+      ok: false,
+      error:
+        sizeMode === "single"
+          ? "Add a single price for one-size items."
+          : "Add at least one size with a price.",
+    };
   }
 
   sizePrices = sortSizePrices(sizePrices);
