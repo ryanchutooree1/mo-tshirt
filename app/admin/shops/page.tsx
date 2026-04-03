@@ -1419,7 +1419,7 @@ export default function AdminShopsPage() {
                             />
 
                             {(previewUrl || form.photoUrl) && (
-                              <div className="relative flex min-h-[18rem] w-full items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 sm:min-h-[22rem]">
+                              <div className="relative flex h-[18rem] w-full items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 sm:h-[22rem]">
                                 <AsyncCatalogImage
                                   src={previewUrl || form.photoUrl}
                                   alt="Preview"
@@ -1450,7 +1450,7 @@ export default function AdminShopsPage() {
                     </form>
                   </div>
 
-                  <aside className="border-t border-slate-200 bg-slate-50/80 px-6 py-6 xl:border-l xl:border-t-0">
+                  <aside className="min-h-0 overflow-y-auto border-t border-slate-200 bg-slate-50/80 px-6 py-6 xl:border-l xl:border-t-0">
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Live preview</p>
                     <div className="mt-4 rounded-[1.6rem] border border-slate-200 bg-white p-4 shadow-sm">
                       <div className="relative aspect-square overflow-hidden rounded-[1.35rem] border border-slate-200 bg-slate-50 p-4">
