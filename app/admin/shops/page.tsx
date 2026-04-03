@@ -895,7 +895,7 @@ export default function AdminShopsPage() {
                       className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-slate-200/40 blur-3xl transition group-hover:bg-sky-200/30"
                     />
                     <div className="relative flex h-full flex-col gap-5 sm:flex-row">
-                      <div className="relative aspect-square w-28 shrink-0 overflow-hidden rounded-[1.4rem] border border-slate-200 bg-white p-3 shadow-sm">
+                      <div className="relative aspect-square w-28 shrink-0 self-start overflow-hidden rounded-[1.4rem] border border-slate-200 bg-white p-3 shadow-sm">
                         {item.photoUrl ? (
                           <AsyncCatalogImage
                             src={item.photoUrl}
