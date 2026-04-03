@@ -803,7 +803,7 @@ export default function AdminShopsPage() {
                     <li key={item.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-sky-200 hover:shadow-md">
                       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                         <div className="flex min-w-0 items-start gap-5">
-                          <div className="relative h-24 w-24 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2 shadow-sm">
+                          <div className="relative aspect-square w-24 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2 shadow-sm">
                             {item.photoUrl ? (
                               <AsyncCatalogImage
                                 src={item.photoUrl}
