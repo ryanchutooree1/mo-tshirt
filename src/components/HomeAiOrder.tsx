@@ -346,73 +346,73 @@ export default function HomeAiOrder() {
                 })}
 
                 {canUploadLogo && !session.lead.logoAttachment && !hasAssistantLogoPrompt ? (
-                  <>
-                    <div data-thread-item className="flex justify-start">
-                      <div className="max-w-[85%] rounded-[22px] border border-[#ede6fb] bg-white/95 px-4 py-3 text-[#231f38] shadow-[0_20px_38px_-32px_rgba(74,39,150,0.22)]">
-                        <p className="mb-2 bg-[linear-gradient(90deg,#06b6d4_0%,#8b5cf6_48%,#ec4899_100%)] bg-clip-text text-[10px] font-semibold uppercase tracking-[0.24em] text-transparent">
-                          MO AI
-                        </p>
-                        <p className="whitespace-pre-wrap text-sm leading-6">
-                          {LOGO_UPLOAD_PROMPT}
-                        </p>
-                      </div>
+                  <div data-thread-item className="flex justify-start">
+                    <div className="max-w-[85%] rounded-[22px] border border-[#ede6fb] bg-white/95 px-4 py-3 text-[#231f38] shadow-[0_20px_38px_-32px_rgba(74,39,150,0.22)]">
+                      <p className="mb-2 bg-[linear-gradient(90deg,#06b6d4_0%,#8b5cf6_48%,#ec4899_100%)] bg-clip-text text-[10px] font-semibold uppercase tracking-[0.24em] text-transparent">
+                        MO AI
+                      </p>
+                      <p className="whitespace-pre-wrap text-sm leading-6">
+                        {LOGO_UPLOAD_PROMPT}
+                      </p>
                     </div>
+                  </div>
+                ) : null}
 
-                    <div data-thread-item className="flex justify-end">
-                      <div className="max-w-[85%] rounded-[22px] border border-[#eadbff] bg-[linear-gradient(135deg,#fff8fe_0%,#eefaff_52%,#fff6eb_100%)] px-4 py-3 text-[#1d1831] shadow-[0_20px_38px_-32px_rgba(74,39,150,0.22)]">
-                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#7a5de1]">
-                          You
+                {canUploadLogo && !session.lead.logoAttachment ? (
+                  <div data-thread-item className="flex justify-end">
+                    <div className="max-w-[85%] rounded-[22px] border border-[#eadbff] bg-[linear-gradient(135deg,#fff8fe_0%,#eefaff_52%,#fff6eb_100%)] px-4 py-3 text-[#1d1831] shadow-[0_20px_38px_-32px_rgba(74,39,150,0.22)]">
+                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#7a5de1]">
+                        You
+                      </p>
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        {pendingLogoFile ? (
+                          <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-[#e6dbfb] bg-white px-3 py-2 text-xs font-semibold text-[#6552bf]">
+                            <Paperclip className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{pendingLogoFile.name}</span>
+                            {pendingLogoSize ? <span className="text-[#8c80c7]">{pendingLogoSize}</span> : null}
+                          </span>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploadingLogo || sending}
+                          className="inline-flex items-center gap-2 rounded-full border border-[#e3d6fb] bg-white px-4 py-2 text-sm font-semibold text-[#5d4bb6] transition hover:border-[#cdb9ff] hover:bg-[#faf7ff] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                          Upload logo
+                        </button>
+                      </div>
+                      {pendingLogoFile ? (
+                        <p className="mt-3 text-sm text-[#656178]">
+                          Logo selected. Press Submit logo to attach it to this AI order.
                         </p>
-                        <div className="flex flex-wrap items-center justify-end gap-2">
-                          {pendingLogoFile ? (
-                            <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-[#e6dbfb] bg-white px-3 py-2 text-xs font-semibold text-[#6552bf]">
-                              <Paperclip className="h-3.5 w-3.5 shrink-0" />
-                              <span className="truncate">{pendingLogoFile.name}</span>
-                              {pendingLogoSize ? <span className="text-[#8c80c7]">{pendingLogoSize}</span> : null}
-                            </span>
-                          ) : null}
+                      ) : null}
+                      {pendingLogoPreviewUrl && pendingLogoFile ? (
+                        <div className="mt-3 overflow-hidden rounded-[20px] border border-[#ebe2fa] bg-white p-2">
+                          { }
+                          <img
+                            src={pendingLogoPreviewUrl}
+                            alt={pendingLogoFile.name}
+                            className="max-h-64 w-full rounded-[16px] object-contain"
+                            loading="lazy"
+                          />
+                        </div>
+                      ) : null}
+                      {pendingLogoFile ? (
+                        <div className="mt-3 flex justify-end">
                           <button
                             type="button"
-                            onClick={() => fileInputRef.current?.click()}
+                            onClick={() => void handleSubmitLogo()}
                             disabled={uploadingLogo || sending}
-                            className="inline-flex items-center gap-2 rounded-full border border-[#e3d6fb] bg-white px-4 py-2 text-sm font-semibold text-[#5d4bb6] transition hover:border-[#cdb9ff] hover:bg-[#faf7ff] disabled:cursor-not-allowed disabled:opacity-60"
+                            className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#22d3ee_0%,#8b5cf6_48%,#ec4899_100%)] px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_36px_-24px_rgba(124,58,237,0.55)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                           >
-                            {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-                            Upload logo
+                            {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                            Submit logo
                           </button>
                         </div>
-                        {pendingLogoFile ? (
-                          <p className="mt-3 text-sm text-[#656178]">
-                            Logo selected. Press Submit logo to attach it to this AI order.
-                          </p>
-                        ) : null}
-                        {pendingLogoPreviewUrl && pendingLogoFile ? (
-                          <div className="mt-3 overflow-hidden rounded-[20px] border border-[#ebe2fa] bg-white p-2">
-                            { }
-                            <img
-                              src={pendingLogoPreviewUrl}
-                              alt={pendingLogoFile.name}
-                              className="max-h-64 w-full rounded-[16px] object-contain"
-                              loading="lazy"
-                            />
-                          </div>
-                        ) : null}
-                        {pendingLogoFile ? (
-                          <div className="mt-3 flex justify-end">
-                            <button
-                              type="button"
-                              onClick={() => void handleSubmitLogo()}
-                              disabled={uploadingLogo || sending}
-                              className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#22d3ee_0%,#8b5cf6_48%,#ec4899_100%)] px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_36px_-24px_rgba(124,58,237,0.55)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              {uploadingLogo ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                              Submit logo
-                            </button>
-                          </div>
-                        ) : null}
-                      </div>
+                      ) : null}
                     </div>
-                  </>
+                  </div>
                 ) : null}
               </>
             ) : (
