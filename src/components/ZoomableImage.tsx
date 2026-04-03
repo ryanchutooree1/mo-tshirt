@@ -46,6 +46,30 @@ export default function ZoomableImage({
         className={`group relative w-full overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 ${wrapperClassName || ""}`}
         aria-label={`Zoom ${alt}`}
       >
+        <span className="pointer-events-none absolute right-4 top-4 z-10 inline-flex items-center gap-2 rounded-full bg-white/92 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-neutral-700 shadow-[0_10px_24px_rgba(0,0,0,0.12)] ring-1 ring-black/5 backdrop-blur transition group-hover:scale-105">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 20 20"
+            fill="none"
+            className="h-4 w-4"
+          >
+            <path
+              d="M8.333 3.333a5 5 0 1 0 0 10a5 5 0 0 0 0-10Z"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M11.875 11.875L16.667 16.667M8.333 6.25v4.167M6.25 8.333h4.167"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          Zoom
+        </span>
         <Image
           src={src}
           alt={alt}
