@@ -18,6 +18,12 @@ import type { AssistantChatPayload, AssistantSessionDetail } from "@/lib/ai-assi
 
 const LOGO_UPLOAD_ACCEPT = ".png,.jpg,.jpeg,.webp,.svg,.pdf,.ai,.eps";
 const MAX_LOGO_UPLOAD_BYTES = 10 * 1024 * 1024;
+const LOGO_UPLOAD_PROMPT =
+  "If the design or logo is ready, use the upload button here to attach it now.";
+const STARTER_MESSAGES = [
+  "Product: T-Shirt Colour: Black Size: M Quantity: 2",
+  "I need 10 white polo shirts with front-left logo and my WhatsApp number is 59883880.",
+] as const;
 
 function generateSessionId() {
   return `web-order-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -82,6 +88,9 @@ export default function HomeAiOrder() {
     !session.lead.logoPending;
   const pendingLogoSize = pendingLogoFile ? formatAttachmentSize(pendingLogoFile.size) : null;
   const hasMessages = session.messages.length > 0;
+  const hasAssistantLogoPrompt = session.messages.some(
+    (entry) => entry.role === "assistant" && entry.content.trim() === LOGO_UPLOAD_PROMPT
+  );
 
   useEffect(() => {
     if (!pendingLogoFile) {
@@ -219,6 +228,12 @@ export default function HomeAiOrder() {
     }
   }
 
+  function applyStarterMessage(nextMessage: string) {
+    setError(null);
+    setNotice(null);
+    setMessage(nextMessage);
+  }
+
   return (
     <section className="mx-auto max-w-[50rem]">
       <div className="relative overflow-hidden rounded-[36px] border border-[#f0e5fb] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,248,252,0.98)_46%,rgba(248,252,255,0.98)_100%)] p-4 shadow-[0_36px_90px_-58px_rgba(142,82,255,0.42)] sm:p-5">
@@ -323,7 +338,7 @@ export default function HomeAiOrder() {
                   );
                 })}
 
-                {canUploadLogo && !session.lead.logoAttachment ? (
+                {canUploadLogo && !session.lead.logoAttachment && !hasAssistantLogoPrompt ? (
                   <>
                     <div data-thread-item className="flex justify-start">
                       <div className="max-w-[85%] rounded-[22px] border border-[#ede6fb] bg-white/95 px-4 py-3 text-[#231f38] shadow-[0_20px_38px_-32px_rgba(74,39,150,0.22)]">
@@ -331,7 +346,7 @@ export default function HomeAiOrder() {
                           MO AI
                         </p>
                         <p className="whitespace-pre-wrap text-sm leading-6">
-                          If the design or logo is ready, use the upload button here to attach it now.
+                          {LOGO_UPLOAD_PROMPT}
                         </p>
                       </div>
                     </div>
@@ -394,13 +409,29 @@ export default function HomeAiOrder() {
                 ) : null}
               </>
             ) : (
-              <div className="flex min-h-[13rem] items-center justify-center rounded-[22px] border border-dashed border-[#e8defa] bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(246,250,255,0.92),rgba(255,248,252,0.95))] px-5 py-6">
+              <div className="flex min-h-[13rem] flex-col items-center justify-center rounded-[22px] border border-dashed border-[#e8defa] bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(246,250,255,0.92),rgba(255,248,252,0.95))] px-5 py-6 text-center">
                 <div className="relative flex h-16 w-16 items-center justify-center rounded-full border border-[#eadcff] bg-[linear-gradient(135deg,rgba(34,211,238,0.14),rgba(168,85,247,0.16),rgba(244,114,182,0.14))] shadow-[0_18px_44px_-30px_rgba(124,58,237,0.45)]">
                   <div
                     aria-hidden
                     className="absolute inset-2 rounded-full bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(252,246,255,0.92))]"
                   />
                   <Bot className="relative h-7 w-7 text-[#7a5de1]" />
+                </div>
+                <p className="mt-4 text-sm font-semibold text-[#211c33]">Start with a real client-style message</p>
+                <p className="mt-2 max-w-lg text-sm leading-6 text-[#78738f]">
+                  Try one of these examples, then edit the text if needed before you send it.
+                </p>
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  {STARTER_MESSAGES.map((starter) => (
+                    <button
+                      key={starter}
+                      type="button"
+                      onClick={() => applyStarterMessage(starter)}
+                      className="rounded-full border border-[#e3d6fb] bg-white px-3 py-2 text-xs font-semibold text-[#5d4bb6] transition hover:border-[#cdb9ff] hover:bg-[#faf7ff]"
+                    >
+                      {starter}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
