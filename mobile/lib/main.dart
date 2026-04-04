@@ -363,7 +363,7 @@ class ShopItem {
           : sizePrices,
       pickupPoint: json['pickupPoint']?.toString() ?? 'Nouvelle France',
       collectionPoint: json['collectionPoint']?.toString() ?? 'Surinam',
-      photoUrl: json['photoUrl']?.toString(),
+      photoUrl: _normalizeRemoteUrl(json['photoUrl']?.toString()),
       inStock: json['inStock'] != false,
     );
   }
@@ -3427,6 +3427,25 @@ String _normalizeSizeLabel(String value) {
 }
 
 bool _isOneSizeLabel(String value) => _normalizeSizeLabel(value) == 'One size';
+
+String? _normalizeRemoteUrl(String? rawUrl) {
+  final String trimmed = (rawUrl ?? '').trim();
+  if (trimmed.isEmpty) {
+    return null;
+  }
+
+  final Uri? parsed = Uri.tryParse(trimmed);
+  if (parsed == null) {
+    return null;
+  }
+
+  if (parsed.hasScheme) {
+    return parsed.toString();
+  }
+
+  final Uri base = Uri.parse(_siteBaseUrl);
+  return base.resolveUri(parsed).toString();
+}
 
 Color getColorSwatch(String color) {
   final String normalized = color.toLowerCase().trim();
