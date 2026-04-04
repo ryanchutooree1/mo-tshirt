@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
-import IotControlCenterPage from "@/components/admin/IotControlCenterPage";
+import IotMobileSetupPage from "@/components/iot/IotMobileSetupPage";
 
 export const metadata: Metadata = {
+  title: "MO Smart Breaker",
+  description: "Pair, link, and control a Tuya Wi-Fi breaker from the MO T-SHIRT app.",
   robots: {
     index: false,
     follow: false,
@@ -9,9 +11,5 @@ export const metadata: Metadata = {
 };
 
 export default function IotPage() {
-  return (
-    <main className="min-h-screen bg-[#F5F5F7] px-4 py-8 sm:px-6 lg:px-8">
-      <IotControlCenterPage />
-    </main>
-  );
+  return <IotMobileSetupPage />;
 }
