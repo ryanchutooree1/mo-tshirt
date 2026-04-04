@@ -474,9 +474,9 @@ export default function ShopClient() {
         <div className="pointer-events-none absolute right-[-6rem] top-12 h-80 w-80 rounded-full bg-zinc-200/60 blur-3xl" />
         <div className="pointer-events-none absolute bottom-[-8rem] left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-slate-100/70 blur-3xl" />
 
-        <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="MO T-SHIRT Home">
+        <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
+          <Link href="/" className="flex shrink-0 items-center justify-center gap-2 sm:justify-start" aria-label="MO T-SHIRT Home">
             <Image
               src="/logo_transparent.png"
               alt="MO T-SHIRT logo"
@@ -486,24 +486,26 @@ export default function ShopClient() {
               className="h-10 w-auto sm:h-12"
             />
           </Link>
-          <nav className="flex items-center gap-4 text-xs font-semibold text-neutral-600 sm:text-sm">
-            <Link href="/" className="transition hover:text-black">Home</Link>
-            <Link href="/shops" className="rounded-full bg-[#FF6600] px-3 py-1 text-white shadow-sm hover:bg-orange-600">
-              Plain Shops
-            </Link>
-            <Link href="/#our-work" className="transition hover:text-black">Our Work</Link>
-            <Link href="/#contact" className="transition hover:text-black">Contact</Link>
-            <TrackedWhatsAppLink
-              href={getWhatsAppUrl()}
-              trackingLocation="shops_header"
-              trackingSource="shops_page"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition hover:text-black"
-            >
-              WhatsApp
-            </TrackedWhatsAppLink>
-          </nav>
+          <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+            <nav className="flex w-max min-w-full items-center justify-start gap-2 pb-1 text-xs font-semibold text-neutral-600 sm:w-auto sm:min-w-0 sm:justify-end sm:gap-4 sm:pb-0 sm:text-sm" aria-label="Shops navigation">
+              <Link href="/" className="whitespace-nowrap rounded-full border border-neutral-200 bg-white px-3 py-2 transition hover:border-black hover:text-black sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">Home</Link>
+              <Link href="/shops" className="whitespace-nowrap rounded-full border border-transparent bg-[#FF6600] px-3 py-2 text-white shadow-sm hover:bg-orange-600 sm:px-3 sm:py-1">
+                Plain Shops
+              </Link>
+              <Link href="/#our-work" className="whitespace-nowrap rounded-full border border-neutral-200 bg-white px-3 py-2 transition hover:border-black hover:text-black sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">Our Work</Link>
+              <Link href="/#contact" className="whitespace-nowrap rounded-full border border-neutral-200 bg-white px-3 py-2 transition hover:border-black hover:text-black sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">Contact</Link>
+              <TrackedWhatsAppLink
+                href={getWhatsAppUrl()}
+                trackingLocation="shops_header"
+                trackingSource="shops_page"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="whitespace-nowrap rounded-full border border-neutral-200 bg-white px-3 py-2 transition hover:border-black hover:text-black sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
+              >
+                WhatsApp
+              </TrackedWhatsAppLink>
+            </nav>
+          </div>
         </div>
         </header>
 
