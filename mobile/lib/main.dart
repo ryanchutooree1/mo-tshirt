@@ -1278,21 +1278,40 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: _inStockOnly,
-                activeThumbColor: _brandOrange,
-                title: const Text(
-                  'Show only in-stock items',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+              const SizedBox(height: 10),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
                 ),
-                subtitle: const Text('Hide catalogue items marked out of stock'),
-                onChanged: (bool value) {
-                  setState(() {
-                    _inStockOnly = value;
-                  });
-                },
+                child: Row(
+                  children: <Widget>[
+                    const Expanded(
+                      child: Text(
+                        'In stock only',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    Transform.scale(
+                      scale: 0.88,
+                      child: Switch.adaptive(
+                        value: _inStockOnly,
+                        activeThumbColor: _brandOrange,
+                        onChanged: (bool value) {
+                          setState(() {
+                            _inStockOnly = value;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
               if (widget.errorMessage != null)
                 _InlineError(message: widget.errorMessage!),
@@ -2170,14 +2189,14 @@ class ContactScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(
-                'Support, pickup, and business info',
+                'Support and pickup',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w900,
                     ),
               ),
               const SizedBox(height: 8),
               const Text(
-                'Use this tab for the direct business actions that matter: WhatsApp, call, email, and website access.',
+                'Quick contact, pickup info, and useful links.',
                 style: TextStyle(color: Colors.black54, height: 1.45),
               ),
             ],
@@ -2187,8 +2206,8 @@ class ContactScreen extends StatelessWidget {
         _ContactActionCard(
           icon: Icons.chat_rounded,
           title: 'WhatsApp',
-          subtitle: 'Fastest route for urgent orders and follow-up',
-          cta: 'Open WhatsApp',
+          subtitle: 'Fastest for urgent orders',
+          cta: 'Open',
           onTap: onWhatsApp,
         ),
         const SizedBox(height: 12),
@@ -2196,7 +2215,7 @@ class ContactScreen extends StatelessWidget {
           icon: Icons.call_rounded,
           title: 'Phone',
           subtitle: '+230 5988 3880',
-          cta: 'Call now',
+          cta: 'Call',
           onTap: onCall,
         ),
         const SizedBox(height: 12),
@@ -2204,15 +2223,15 @@ class ContactScreen extends StatelessWidget {
           icon: Icons.email_rounded,
           title: 'Email',
           subtitle: 'motshirtmauritius@gmail.com',
-          cta: 'Send email',
+          cta: 'Email',
           onTap: onEmail,
         ),
         const SizedBox(height: 12),
         _ContactActionCard(
           icon: Icons.language_rounded,
           title: 'Website',
-          subtitle: 'Open the full public site when you need it',
-          cta: 'Open website',
+          subtitle: 'Full public site',
+          cta: 'Open',
           onTap: onOpenWebsite,
         ),
         const SizedBox(height: 22),
@@ -2779,31 +2798,63 @@ class _ContactActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
-      child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-        leading: CircleAvatar(
-          radius: 24,
-          backgroundColor: const Color(0xFFFFF1E5),
-          child: Icon(icon, color: _brandOrange),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.w900),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Text(subtitle),
-        ),
-        trailing: FilledButton(
-          onPressed: onTap,
-          child: Text(cta),
-        ),
+      child: Row(
+        children: <Widget>[
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: const Color(0xFFFFF1E5),
+            child: Icon(icon, color: _brandOrange, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 17,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 13,
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          FilledButton(
+            onPressed: onTap,
+            style: FilledButton.styleFrom(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              minimumSize: const Size(84, 40),
+              textStyle: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            child: Text(cta),
+          ),
+        ],
       ),
     );
   }
