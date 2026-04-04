@@ -124,44 +124,46 @@ export default function HomePage() {
     <div id="top" className="min-h-screen bg-white text-black">
       <LocationJump />
       <header className="sticky top-0 z-40 border-b border-[#EAEAEA] bg-white/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-6 py-3 sm:h-20 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-0">
-          <Link href="#top" className="flex items-center" aria-label="MO T-SHIRT Home">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-3 sm:h-20 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-0">
+          <Link href="#top" className="flex items-center justify-center sm:justify-start" aria-label="MO T-SHIRT Home">
             <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={150} height={60} priority className="h-9 w-auto sm:h-12" />
           </Link>
-          <nav
-            aria-label="Primary"
-            className="flex w-full flex-wrap items-center justify-center gap-4 text-xs font-semibold text-black/70 sm:w-auto sm:justify-end sm:gap-6 sm:text-sm sm:font-medium"
-          >
-            {navLinks.map((link) => (
-              link.label === "WhatsApp" ? (
-                <TrackedWhatsAppLink
-                  key={link.label}
-                  href={link.href}
-                  trackingLocation="home_header"
-                  trackingSource="homepage"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="whitespace-nowrap text-black/70 transition hover:text-black"
-                >
-                  {link.label}
-                </TrackedWhatsAppLink>
-              ) : (
-                <a
+          <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+            <nav
+              aria-label="Primary"
+              className="flex w-max min-w-full items-center justify-start gap-2 pb-1 text-xs font-semibold text-black/70 sm:w-auto sm:min-w-0 sm:flex-wrap sm:justify-end sm:gap-6 sm:pb-0 sm:text-sm sm:font-medium"
+            >
+              {navLinks.map((link) => (
+                link.label === "WhatsApp" ? (
+                  <TrackedWhatsAppLink
                     key={link.label}
                     href={link.href}
-                    className={`whitespace-nowrap transition ${
-                    link.buttonTone === "orange"
-                      ? "rounded-full bg-[#FF6600] px-3 py-1 text-white shadow-sm hover:bg-orange-600"
-                      : link.buttonTone === "rainbow"
-                        ? "rounded-full bg-[linear-gradient(135deg,#22d3ee_0%,#8b5cf6_52%,#ec4899_100%)] px-3 py-1 font-semibold text-white shadow-[0_14px_28px_-16px_rgba(124,58,237,0.75)] hover:brightness-110"
-                        : "text-black/70 hover:text-black"
-                  }`}
-                >
-                  {link.label}
-                </a>
-              )
-            ))}
-          </nav>
+                    trackingLocation="home_header"
+                    trackingSource="homepage"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full border border-[#EAEAEA] bg-white px-3 py-2 whitespace-nowrap transition hover:border-black hover:text-black sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
+                  >
+                    {link.label}
+                  </TrackedWhatsAppLink>
+                ) : (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    className={`whitespace-nowrap rounded-full border px-3 py-2 transition sm:border-0 sm:px-0 sm:py-0 ${
+                      link.buttonTone === "orange"
+                        ? "border-transparent bg-[#FF6600] text-white shadow-sm hover:bg-orange-600"
+                        : link.buttonTone === "rainbow"
+                          ? "border-transparent bg-[linear-gradient(135deg,#22d3ee_0%,#8b5cf6_52%,#ec4899_100%)] font-semibold text-white shadow-[0_14px_28px_-16px_rgba(124,58,237,0.75)] hover:brightness-110"
+                          : "border-[#EAEAEA] bg-white text-black/70 hover:border-black hover:text-black sm:bg-transparent"
+                    }`}
+                  >
+                    {link.label}
+                  </a>
+                )
+              ))}
+            </nav>
+          </div>
         </div>
       </header>
 
@@ -361,7 +363,9 @@ export default function HomePage() {
 
             <div id="location" className="mx-auto mt-12 max-w-5xl scroll-mt-24 sm:scroll-mt-28">
               <div className="space-y-6 sm:space-y-7">
-                <h2 className="text-center text-3xl font-semibold text-black sm:text-4xl">Our Location📍</h2>
+                <h2 id="location-title" className="scroll-mt-28 text-center text-3xl font-semibold text-black sm:scroll-mt-32 sm:text-4xl">
+                  Our Location 📍
+                </h2>
                 <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
                   <MapCard />
                 </div>
