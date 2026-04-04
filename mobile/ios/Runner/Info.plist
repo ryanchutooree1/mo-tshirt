@@ -26,6 +26,16 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>MO T-SHIRT uses Bluetooth during Tuya device pairing.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>MO T-SHIRT needs local network access to discover and pair Tuya Wi-Fi devices.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>MO T-SHIRT uses location access while reading the current Wi-Fi network for Tuya device pairing.</string>
+	<key>TuyaAppKey</key>
+	<string></string>
+	<key>TuyaAppSecret</key>
+	<string></string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

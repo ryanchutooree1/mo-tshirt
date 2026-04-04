@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
+import 'iot/tuya_iot_page.dart';
+
 const Color _brandOrange = Color(0xFFFF6600);
 const Color _brandCream = Color(0xFFFFFBF8);
 const Color _brandInk = Color(0xFF171717);
@@ -17,8 +19,9 @@ const String _quoteOptionsApiUrl = '$_siteBaseUrl/api/quote-options';
 const String _contactApiUrl = '$_siteBaseUrl/api/contact';
 
 final Uri _websiteUri = Uri.parse(_siteBaseUrl);
-final Uri _whatsAppUri =
-    Uri.parse('https://wa.me/23059883880?text=Hi%2C%20I%20need%20printing.');
+final Uri _whatsAppUri = Uri.parse(
+  'https://wa.me/23059883880?text=Hi%2C%20I%20need%20printing.',
+);
 final Uri _phoneUri = Uri.parse('tel:+23059883880');
 final Uri _emailUri = Uri.parse('mailto:motshirtmauritius@gmail.com');
 
@@ -69,18 +72,30 @@ const List<ColorSwatchRule> _colorSwatchRules = <ColorSwatchRule>[
   ColorSwatchRule(match: <String>['red'], value: Color(0xFFC0392B)),
   ColorSwatchRule(match: <String>['military green'], value: Color(0xFF556B2F)),
   ColorSwatchRule(match: <String>['bottle green'], value: Color(0xFF14532D)),
-  ColorSwatchRule(match: <String>['vibrant apple green'], value: Color(0xFFA3E635)),
+  ColorSwatchRule(
+    match: <String>['vibrant apple green'],
+    value: Color(0xFFA3E635),
+  ),
   ColorSwatchRule(match: <String>['vibrant green'], value: Color(0xFF22C55E)),
   ColorSwatchRule(match: <String>['tea green'], value: Color(0xFFD9F99D)),
   ColorSwatchRule(match: <String>['pastel green'], value: Color(0xFFD9F99D)),
   ColorSwatchRule(match: <String>['green'], value: Color(0xFF2F855A)),
-  ColorSwatchRule(match: <String>['deep grey', 'deep gray'], value: Color(0xFF4B5563)),
+  ColorSwatchRule(
+    match: <String>['deep grey', 'deep gray'],
+    value: Color(0xFF4B5563),
+  ),
   ColorSwatchRule(match: <String>['charcoal'], value: Color(0xFF374151)),
   ColorSwatchRule(match: <String>['grey', 'gray'], value: Color(0xFF9CA3AF)),
-  ColorSwatchRule(match: <String>['soft pastel yellow'], value: Color(0xFFFDE68A)),
+  ColorSwatchRule(
+    match: <String>['soft pastel yellow'],
+    value: Color(0xFFFDE68A),
+  ),
   ColorSwatchRule(match: <String>['lemon yellow'], value: Color(0xFFFACC15)),
   ColorSwatchRule(match: <String>['serein yellow'], value: Color(0xFFF4D35E)),
-  ColorSwatchRule(match: <String>['moutard yellow', 'mustard yellow'], value: Color(0xFFD4A017)),
+  ColorSwatchRule(
+    match: <String>['moutard yellow', 'mustard yellow'],
+    value: Color(0xFFD4A017),
+  ),
   ColorSwatchRule(match: <String>['yellow'], value: Color(0xFFEAB308)),
   ColorSwatchRule(match: <String>['orange'], value: Color(0xFFEA580C)),
   ColorSwatchRule(match: <String>['gold'], value: Color(0xFFC68A12)),
@@ -95,7 +110,7 @@ void main() {
 
 class MoTshirtApp extends StatelessWidget {
   const MoTshirtApp({super.key, MoRepository? repository})
-      : repository = repository ?? const NetworkMoRepository();
+    : repository = repository ?? const NetworkMoRepository();
 
   final MoRepository repository;
 
@@ -114,9 +129,9 @@ class MoTshirtApp extends StatelessWidget {
           surface: Colors.white,
         ),
         textTheme: ThemeData.light().textTheme.apply(
-              bodyColor: _brandInk,
-              displayColor: _brandInk,
-            ),
+          bodyColor: _brandInk,
+          displayColor: _brandInk,
+        ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.white,
@@ -157,9 +172,8 @@ class NetworkMoRepository implements MoRepository {
 
     final List<dynamic> itemsJson =
         (responses[0] as Map<String, dynamic>)['items'] as List<dynamic>? ??
-            <dynamic>[];
-    final Map<String, dynamic> quoteJson =
-        responses[1] as Map<String, dynamic>;
+        <dynamic>[];
+    final Map<String, dynamic> quoteJson = responses[1] as Map<String, dynamic>;
 
     return AppBootstrapData(
       shopItems: itemsJson
@@ -215,8 +229,8 @@ class NetworkMoRepository implements MoRepository {
     }
 
     return QuoteSubmissionResult(
-      message:
-          (body['message'] ?? 'Thanks! We received your message.').toString(),
+      message: (body['message'] ?? 'Thanks! We received your message.')
+          .toString(),
       quoteId: body['quoteId']?.toString(),
     );
   }
@@ -224,8 +238,10 @@ class NetworkMoRepository implements MoRepository {
   Future<QuoteSubmissionResult> _submitMultipartQuote(
     QuoteSubmissionPayload payload,
   ) async {
-    final http.MultipartRequest request =
-        http.MultipartRequest('POST', Uri.parse(_contactApiUrl));
+    final http.MultipartRequest request = http.MultipartRequest(
+      'POST',
+      Uri.parse(_contactApiUrl),
+    );
     request.headers['Accept'] = 'application/json';
     request.fields.addAll(payload.toFormFields());
 
@@ -239,8 +255,9 @@ class NetworkMoRepository implements MoRepository {
     );
 
     final http.StreamedResponse streamedResponse = await request.send();
-    final http.Response response =
-        await http.Response.fromStream(streamedResponse);
+    final http.Response response = await http.Response.fromStream(
+      streamedResponse,
+    );
     final Map<String, dynamic> body = _decodeJsonMap(response.body);
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -251,8 +268,8 @@ class NetworkMoRepository implements MoRepository {
     }
 
     return QuoteSubmissionResult(
-      message:
-          (body['message'] ?? 'Thanks! We received your message.').toString(),
+      message: (body['message'] ?? 'Thanks! We received your message.')
+          .toString(),
       quoteId: body['quoteId']?.toString(),
     );
   }
@@ -267,20 +284,14 @@ Map<String, dynamic> _decodeJsonMap(String body) {
 }
 
 class AppBootstrapData {
-  const AppBootstrapData({
-    required this.shopItems,
-    required this.quoteOptions,
-  });
+  const AppBootstrapData({required this.shopItems, required this.quoteOptions});
 
   final List<ShopItem> shopItems;
   final QuoteOptions quoteOptions;
 }
 
 class QuoteSubmissionResult {
-  const QuoteSubmissionResult({
-    required this.message,
-    required this.quoteId,
-  });
+  const QuoteSubmissionResult({required this.message, required this.quoteId});
 
   final String message;
   final String? quoteId;
@@ -332,11 +343,11 @@ class QuoteSubmissionPayload {
       'deliveryPostCode': deliveryPostCode.trim(),
       'deliveryPhone': deliveryPhone.trim(),
       'source': 'MO T-SHIRT Mobile App',
-      'garments': garments.map((QuoteGarmentDraft line) => line.toJson()).toList(),
+      'garments': garments
+          .map((QuoteGarmentDraft line) => line.toJson())
+          .toList(),
       if (logoFile != null)
-        'attachments': <Map<String, dynamic>>[
-          logoFile!.toAttachmentJson(),
-        ],
+        'attachments': <Map<String, dynamic>>[logoFile!.toAttachmentJson()],
     };
   }
 
@@ -355,8 +366,9 @@ class QuoteSubmissionPayload {
       'deliveryPostCode': deliveryPostCode.trim(),
       'deliveryPhone': deliveryPhone.trim(),
       'source': 'MO T-SHIRT Mobile App',
-      'garments':
-          jsonEncode(garments.map((QuoteGarmentDraft line) => line.toJson()).toList()),
+      'garments': jsonEncode(
+        garments.map((QuoteGarmentDraft line) => line.toJson()).toList(),
+      ),
       if (logoFile != null)
         'attachments': jsonEncode(<Map<String, dynamic>>[
           logoFile!.toAttachmentJson(),
@@ -419,10 +431,7 @@ class QuoteAttachmentFile {
 }
 
 class ShopSizePrice {
-  const ShopSizePrice({
-    required this.size,
-    required this.price,
-  });
+  const ShopSizePrice({required this.size, required this.price});
 
   factory ShopSizePrice.fromJson(Map<String, dynamic> json) {
     return ShopSizePrice(
@@ -448,10 +457,11 @@ class ShopItem {
   });
 
   factory ShopItem.fromJson(Map<String, dynamic> json) {
-    final List<String> colors = (json['colors'] as List<dynamic>? ?? <dynamic>[])
-        .map((dynamic item) => item.toString().trim())
-        .where((String item) => item.isNotEmpty)
-        .toList(growable: false);
+    final List<String> colors =
+        (json['colors'] as List<dynamic>? ?? <dynamic>[])
+            .map((dynamic item) => item.toString().trim())
+            .where((String item) => item.isNotEmpty)
+            .toList(growable: false);
     final List<ShopSizePrice> sizePrices =
         (json['sizePrices'] as List<dynamic>? ?? <dynamic>[])
             .whereType<Map<String, dynamic>>()
@@ -508,10 +518,7 @@ class ShopItem {
 }
 
 class QuoteOptions {
-  const QuoteOptions({
-    required this.colors,
-    required this.colorsByGarment,
-  });
+  const QuoteOptions({required this.colors, required this.colorsByGarment});
 
   factory QuoteOptions.empty() {
     return const QuoteOptions(
@@ -522,8 +529,7 @@ class QuoteOptions {
 
   factory QuoteOptions.fromJson(Map<String, dynamic> json) {
     final Map<String, dynamic> rawColorsByGarment =
-        json['colorsByGarment'] as Map<String, dynamic>? ??
-            <String, dynamic>{};
+        json['colorsByGarment'] as Map<String, dynamic>? ?? <String, dynamic>{};
     final Map<String, List<String>> colorsByGarment = <String, List<String>>{};
 
     rawColorsByGarment.forEach((String key, dynamic value) {
@@ -686,21 +692,13 @@ class DeliveryMethod {
 }
 
 class ColorSwatchRule {
-  const ColorSwatchRule({
-    required this.match,
-    required this.value,
-  });
+  const ColorSwatchRule({required this.match, required this.value});
 
   final List<String> match;
   final Color value;
 }
 
-enum RootTab {
-  home,
-  catalog,
-  quote,
-  contact,
-}
+enum RootTab { home, catalog, quote, iot, contact }
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key, required this.repository});
@@ -756,7 +754,9 @@ class _HomeShellState extends State<HomeShell> {
         return;
       }
       setState(() {
-        _loadError = error is Exception ? error.toString().replaceFirst('Exception: ', '') : 'Failed to load app.';
+        _loadError = error is Exception
+            ? error.toString().replaceFirst('Exception: ', '')
+            : 'Failed to load app.';
         _loading = false;
         _refreshing = false;
       });
@@ -764,20 +764,18 @@ class _HomeShellState extends State<HomeShell> {
   }
 
   int get _cartItemCount => _cartLines.fold<int>(
-        0,
-        (int total, CartLine line) => total + line.quantity,
-      );
+    0,
+    (int total, CartLine line) => total + line.quantity,
+  );
 
   double get _cartSubtotal => _cartLines.fold<double>(
-        0,
-        (double total, CartLine line) => total + line.lineTotal,
-      );
+    0,
+    (double total, CartLine line) => total + line.lineTotal,
+  );
 
-  bool get _deliveryInfoRequired =>
-      _deliveryMethod.value != 'Surinam pickup';
+  bool get _deliveryInfoRequired => _deliveryMethod.value != 'Surinam pickup';
 
-  double get _deliveryFee =>
-      _deliveryInfoRequired ? _deliveryMethod.fee : 0;
+  double get _deliveryFee => _deliveryInfoRequired ? _deliveryMethod.fee : 0;
 
   double get _cartTotal => _cartSubtotal + _deliveryFee;
 
@@ -789,6 +787,8 @@ class _HomeShellState extends State<HomeShell> {
         return 'Catalogue';
       case RootTab.quote:
         return 'Quote';
+      case RootTab.iot:
+        return 'Smart Breaker';
       case RootTab.contact:
         return 'Contact';
     }
@@ -804,9 +804,7 @@ class _HomeShellState extends State<HomeShell> {
     setState(() {
       final int existingIndex = _cartLines.indexWhere(
         (CartLine line) =>
-            line.itemId == item.id &&
-            line.color == color &&
-            line.size == size,
+            line.itemId == item.id && line.color == color && line.size == size,
       );
 
       if (existingIndex >= 0) {
@@ -872,10 +870,8 @@ class _HomeShellState extends State<HomeShell> {
   Future<void> _openProductDetails(ShopItem item) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (BuildContext context) => ProductDetailPage(
-          item: item,
-          onAddToCart: _addToCart,
-        ),
+        builder: (BuildContext context) =>
+            ProductDetailPage(item: item, onAddToCart: _addToCart),
       ),
     );
   }
@@ -932,9 +928,9 @@ class _HomeShellState extends State<HomeShell> {
           children: <Widget>[
             Text(
               _tabTitle,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             if (_refreshing)
               const Text(
@@ -975,10 +971,7 @@ class _HomeShellState extends State<HomeShell> {
         selectedIndex: RootTab.values.indexOf(_currentTab),
         onDestinationSelected: (int index) => _selectTab(RootTab.values[index]),
         destinations: const <NavigationDestination>[
-          NavigationDestination(
-            icon: Icon(Icons.home_rounded),
-            label: 'Home',
-          ),
+          NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
           NavigationDestination(
             icon: Icon(Icons.shopping_bag_rounded),
             label: 'Catalogue',
@@ -986,6 +979,10 @@ class _HomeShellState extends State<HomeShell> {
           NavigationDestination(
             icon: Icon(Icons.request_quote_rounded),
             label: 'Quote',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.power_settings_new_rounded),
+            label: 'IoT',
           ),
           NavigationDestination(
             icon: Icon(Icons.support_agent_rounded),
@@ -1004,10 +1001,7 @@ class _HomeShellState extends State<HomeShell> {
     }
 
     if (_loadError != null && _shopItems.isEmpty) {
-      return _FailureState(
-        message: _loadError!,
-        onRetry: _loadBootstrapData,
-      );
+      return _FailureState(message: _loadError!, onRetry: _loadBootstrapData);
     }
 
     return IndexedStack(
@@ -1036,6 +1030,7 @@ class _HomeShellState extends State<HomeShell> {
           selectedDeliveryMethod: _deliveryMethod.value,
           selectedDeliveryInfo: _deliveryInfo,
         ),
+        TuyaIotPage(),
         ContactScreen(
           onOpenWebsite: () => launchExternalUri(_websiteUri),
           onWhatsApp: () => launchExternalUri(_whatsAppUri),
@@ -1100,8 +1095,10 @@ class HomeScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(999),
@@ -1119,17 +1116,17 @@ class HomeScreen extends StatelessWidget {
                 Text(
                   'Mauritius printing, without the website detour.',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        height: 1.05,
-                      ),
+                    fontWeight: FontWeight.w900,
+                    height: 1.05,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   'Browse live catalogue items, build an order, and send a proper quote request from the app.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.black54,
-                        height: 1.45,
-                      ),
+                    color: Colors.black54,
+                    height: 1.45,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 Wrap(
@@ -1212,7 +1209,8 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: 12),
           if (featured.isEmpty)
             const _EmptyCard(
-              text: 'No products are live yet. Pull to refresh after you publish items.',
+              text:
+                  'No products are live yet. Pull to refresh after you publish items.',
             )
           else
             SizedBox(
@@ -1237,7 +1235,8 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: 28),
           _SectionHeading(
             title: 'Best next step',
-            subtitle: 'Use the catalogue for plain garments and the quote tab for custom work.',
+            subtitle:
+                'Use the catalogue for plain garments and the quote tab for custom work.',
           ),
           const SizedBox(height: 12),
           _ActionPanel(
@@ -1294,23 +1293,30 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final List<String> colors = widget.items
-        .expand((ShopItem item) => item.colors)
-        .map((String color) => color.trim())
-        .where((String color) => color.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort((String a, String b) => a.compareTo(b));
+    final List<String> colors =
+        widget.items
+            .expand((ShopItem item) => item.colors)
+            .map((String color) => color.trim())
+            .where((String color) => color.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort((String a, String b) => a.compareTo(b));
 
-    final List<ShopItem> filtered = widget.items.where((ShopItem item) {
-      final String query = _search.trim().toLowerCase();
-      final bool matchesSearch = query.isEmpty ||
-          item.title.toLowerCase().contains(query) ||
-          item.colors.any((String color) => color.toLowerCase().contains(query));
-      final bool matchesColor = _selectedColor == 'all' ||
-          item.colors.any((String color) => color == _selectedColor);
-      return matchesSearch && matchesColor;
-    }).toList(growable: false);
+    final List<ShopItem> filtered = widget.items
+        .where((ShopItem item) {
+          final String query = _search.trim().toLowerCase();
+          final bool matchesSearch =
+              query.isEmpty ||
+              item.title.toLowerCase().contains(query) ||
+              item.colors.any(
+                (String color) => color.toLowerCase().contains(query),
+              );
+          final bool matchesColor =
+              _selectedColor == 'all' ||
+              item.colors.any((String color) => color == _selectedColor);
+          return matchesSearch && matchesColor;
+        })
+        .toList(growable: false);
 
     return Column(
       children: <Widget>[
@@ -1333,8 +1339,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   hintText: 'Search products or colours',
                   hintStyle: const TextStyle(fontSize: 14),
                   isDense: true,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                   prefixIcon: const Icon(Icons.search_rounded, size: 20),
                   suffixIcon: _search.isEmpty
                       ? null
@@ -1365,11 +1373,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        labelPadding:
-                            const EdgeInsets.symmetric(horizontal: 2),
+                        labelPadding: const EdgeInsets.symmetric(horizontal: 2),
                         visualDensity: VisualDensity.compact,
-                        materialTapTargetSize:
-                            MaterialTapTargetSize.shrinkWrap,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         selected: _selectedColor == 'all',
                         onSelected: (_) {
                           setState(() {
@@ -1386,16 +1392,18 @@ class _CatalogScreenState extends State<CatalogScreen> {
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
                           ),
-                          labelPadding:
-                              const EdgeInsets.symmetric(horizontal: 2),
+                          labelPadding: const EdgeInsets.symmetric(
+                            horizontal: 2,
+                          ),
                           visualDensity: VisualDensity.compact,
                           materialTapTargetSize:
                               MaterialTapTargetSize.shrinkWrap,
                           selected: _selectedColor == color,
                           onSelected: (_) {
                             setState(() {
-                              _selectedColor =
-                                  _selectedColor == color ? 'all' : color;
+                              _selectedColor = _selectedColor == color
+                                  ? 'all'
+                                  : color;
                             });
                           },
                           avatar: CircleAvatar(
@@ -1430,35 +1438,36 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     ],
                   )
                 : LayoutBuilder(
-                    builder: (
-                      BuildContext context,
-                      BoxConstraints constraints,
-                    ) {
-                      final double width = constraints.maxWidth;
-                      final int crossAxisCount = width > 980
-                          ? 3
-                          : width > 620
+                    builder:
+                        (BuildContext context, BoxConstraints constraints) {
+                          final double width = constraints.maxWidth;
+                          final int crossAxisCount = width > 980
+                              ? 3
+                              : width > 620
                               ? 2
                               : 1;
-                      return GridView.builder(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
-                        gridDelegate:
-                            SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: crossAxisCount,
-                          mainAxisSpacing: 16,
-                          crossAxisSpacing: 16,
-                          childAspectRatio: crossAxisCount == 1 ? 0.92 : 0.8,
-                        ),
-                        itemCount: filtered.length,
-                        itemBuilder: (BuildContext context, int index) {
-                          return ProductCard(
-                            item: filtered[index],
-                            onTap: () => widget.onOpenProduct(filtered[index]),
+                          return GridView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: crossAxisCount,
+                                  mainAxisSpacing: 16,
+                                  crossAxisSpacing: 16,
+                                  childAspectRatio: crossAxisCount == 1
+                                      ? 0.92
+                                      : 0.8,
+                                ),
+                            itemCount: filtered.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              return ProductCard(
+                                item: filtered[index],
+                                onTap: () =>
+                                    widget.onOpenProduct(filtered[index]),
+                              );
+                            },
                           );
                         },
-                      );
-                    },
                   ),
           ),
         ),
@@ -1476,7 +1485,7 @@ class ProductDetailPage extends StatefulWidget {
 
   final ShopItem item;
   final void Function(ShopItem item, String color, String size, int quantity)
-      onAddToCart;
+  onAddToCart;
 
   @override
   State<ProductDetailPage> createState() => _ProductDetailPageState();
@@ -1511,10 +1520,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
             borderRadius: BorderRadius.circular(28),
             child: AspectRatio(
               aspectRatio: 1,
-              child: _ProductImage(
-                imageUrl: item.photoUrl,
-                title: item.title,
-              ),
+              child: _ProductImage(imageUrl: item.photoUrl, title: item.title),
             ),
           ),
           const SizedBox(height: 20),
@@ -1524,14 +1530,16 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 child: Text(
                   item.title,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
               if (!item.inStock)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: _brandInk,
                     borderRadius: BorderRadius.circular(999),
@@ -1553,9 +1561,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                 ? formatMoney(item.minPrice, whole: true)
                 : 'From ${formatMoney(item.minPrice, whole: true)}',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: _brandOrange,
-                  fontWeight: FontWeight.w900,
-                ),
+              color: _brandOrange,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           const SizedBox(height: 16),
           _InfoStrip(
@@ -1572,66 +1580,71 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           const SizedBox(height: 22),
           Text(
             'Colour',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w800),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 10),
           Wrap(
             spacing: 10,
             runSpacing: 10,
-            children: item.colors.map((String color) {
-              return ChoiceChip(
-                selected: _selectedColor == color,
-                onSelected: (_) {
-                  setState(() {
-                    _selectedColor = color;
-                  });
-                },
-                avatar: CircleAvatar(
-                  radius: 10,
-                  backgroundColor: getColorSwatch(color),
-                ),
-                label: Text(color),
-              );
-            }).toList(growable: false),
+            children: item.colors
+                .map((String color) {
+                  return ChoiceChip(
+                    selected: _selectedColor == color,
+                    onSelected: (_) {
+                      setState(() {
+                        _selectedColor = color;
+                      });
+                    },
+                    avatar: CircleAvatar(
+                      radius: 10,
+                      backgroundColor: getColorSwatch(color),
+                    ),
+                    label: Text(color),
+                  );
+                })
+                .toList(growable: false),
           ),
           const SizedBox(height: 22),
           Text(
             'Size',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.w800),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 10),
           Wrap(
             spacing: 10,
             runSpacing: 10,
-            children: item.sizes.map((String size) {
-              final double price = item.priceForSize(size);
-              return ChoiceChip(
-                selected: _selectedSize == size,
-                onSelected: (_) {
-                  setState(() {
-                    _selectedSize = size;
-                  });
-                },
-                label: Text(
-                  _isOneSizeLabel(size)
-                      ? 'One size • ${formatMoney(price, whole: true)}'
-                      : '${_normalizeSizeLabel(size)} • ${formatMoney(price, whole: true)}',
-                ),
-              );
-            }).toList(growable: false),
+            children: item.sizes
+                .map((String size) {
+                  final double price = item.priceForSize(size);
+                  return ChoiceChip(
+                    selected: _selectedSize == size,
+                    onSelected: (_) {
+                      setState(() {
+                        _selectedSize = size;
+                      });
+                    },
+                    label: Text(
+                      _isOneSizeLabel(size)
+                          ? 'One size • ${formatMoney(price, whole: true)}'
+                          : '${_normalizeSizeLabel(size)} • ${formatMoney(price, whole: true)}',
+                    ),
+                  );
+                })
+                .toList(growable: false),
           ),
           const SizedBox(height: 22),
           Row(
             children: <Widget>[
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(22),
                     border: Border.all(color: const Color(0xFFE5E7EB)),
@@ -1653,9 +1666,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         child: Text(
                           _quantity.toString(),
                           textAlign: TextAlign.center,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
+                          style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w900),
                         ),
                       ),
@@ -1694,9 +1705,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
           const SizedBox(height: 16),
           Text(
             'Selected total: ${formatMoney(item.priceForSize(_selectedSize) * _quantity, whole: true)}',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
         ],
       ),
@@ -1756,12 +1767,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
     _deliveryPostCodeController.text = widget.selectedDeliveryInfo.postCode;
     _deliveryPhoneController.text = widget.selectedDeliveryInfo.phone;
     _garments = const <QuoteGarmentDraft>[
-      QuoteGarmentDraft(
-        garment: 'T-Shirt',
-        color: '',
-        size: '',
-        quantity: '1',
-      ),
+      QuoteGarmentDraft(garment: 'T-Shirt', color: '', size: '', quantity: '1'),
     ];
   }
 
@@ -1808,7 +1814,8 @@ class _QuoteScreenState extends State<QuoteScreen> {
       if (file.bytes == null || file.bytes!.isEmpty) {
         setState(() {
           _submissionSucceeded = false;
-          _submissionMessage = 'Could not read that logo file. Try another one.';
+          _submissionMessage =
+              'Could not read that logo file. Try another one.';
         });
         return;
       }
@@ -1946,9 +1953,9 @@ class _QuoteScreenState extends State<QuoteScreen> {
               children: <Widget>[
                 Text(
                   'Send a proper quote request',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: 8),
                 const Text(
@@ -1988,9 +1995,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
                         children: <Widget>[
                           Text(
                             'Logo / artwork',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
+                            style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(fontWeight: FontWeight.w900),
                           ),
                           const SizedBox(height: 4),
@@ -2082,8 +2087,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
               if (trimmed.isEmpty) {
                 return null;
               }
-              final RegExp emailRegExp =
-                  RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+              final RegExp emailRegExp = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
               if (!emailRegExp.hasMatch(trimmed)) {
                 return 'Enter a valid email.';
               }
@@ -2146,7 +2150,8 @@ class _QuoteScreenState extends State<QuoteScreen> {
             maxLines: 7,
             decoration: const InputDecoration(
               labelText: 'Notes',
-              hintText: 'Logo placement, quantity split, urgent timing, special instructions...',
+              hintText:
+                  'Logo placement, quantity split, urgent timing, special instructions...',
             ),
           ),
           const SizedBox(height: 20),
@@ -2244,19 +2249,20 @@ class _QuoteScreenState extends State<QuoteScreen> {
   List<Widget> _buildGarmentCards(BuildContext context) {
     if (_garments.isEmpty) {
       return const <Widget>[
-        _EmptyCard(
-          text: 'Add at least one garment line before submitting.',
-        ),
+        _EmptyCard(text: 'Add at least one garment line before submitting.'),
       ];
     }
 
     return List<Widget>.generate(_garments.length, (int index) {
       final QuoteGarmentDraft garment = _garments[index];
-      final List<String> colors =
-          widget.quoteOptions.colorsForGarment(garment.garment);
+      final List<String> colors = widget.quoteOptions.colorsForGarment(
+        garment.garment,
+      );
 
       return Padding(
-        padding: EdgeInsets.only(bottom: index == _garments.length - 1 ? 0 : 12),
+        padding: EdgeInsets.only(
+          bottom: index == _garments.length - 1 ? 0 : 12,
+        ),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -2272,10 +2278,9 @@ class _QuoteScreenState extends State<QuoteScreen> {
                   Expanded(
                     child: Text(
                       'Line ${index + 1}',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w900),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
                   if (_garments.length > 1)
@@ -2420,9 +2425,9 @@ class ContactScreen extends StatelessWidget {
             children: <Widget>[
               Text(
                 'Support and pickup',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 8),
               const Text(
@@ -2476,10 +2481,7 @@ class ContactScreen extends StatelessWidget {
         const SizedBox(height: 12),
         const _BusinessInfoCard(
           title: 'Business hours',
-          lines: <String>[
-            'Monday to Friday',
-            '09:00 to 17:00',
-          ],
+          lines: <String>['Monday to Friday', '09:00 to 17:00'],
         ),
         const SizedBox(height: 12),
         const _BusinessInfoCard(
@@ -2496,11 +2498,7 @@ class ContactScreen extends StatelessWidget {
 }
 
 class ProductCard extends StatelessWidget {
-  const ProductCard({
-    super.key,
-    required this.item,
-    required this.onTap,
-  });
+  const ProductCard({super.key, required this.item, required this.onTap});
 
   final ShopItem item;
   final VoidCallback onTap;
@@ -2536,10 +2534,7 @@ class ProductCard extends StatelessWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: <Widget>[
-                    _ProductImage(
-                      imageUrl: item.photoUrl,
-                      title: item.title,
-                    ),
+                    _ProductImage(imageUrl: item.photoUrl, title: item.title),
                     if (!item.inStock)
                       Positioned(
                         right: 14,
@@ -2579,8 +2574,8 @@ class ProductCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(
@@ -2588,9 +2583,9 @@ class ProductCard extends StatelessWidget {
                         ? formatMoney(item.minPrice, whole: true)
                         : 'From ${formatMoney(item.minPrice, whole: true)}',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: _brandOrange,
-                          fontWeight: FontWeight.w900,
-                        ),
+                      color: _brandOrange,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Wrap(
@@ -2599,9 +2594,8 @@ class ProductCard extends StatelessWidget {
                     children: item.sizes
                         .take(4)
                         .map(
-                          (String size) => _SmallTag(
-                            text: _normalizeSizeLabel(size),
-                          ),
+                          (String size) =>
+                              _SmallTag(text: _normalizeSizeLabel(size)),
                         )
                         .toList(growable: false),
                   ),
@@ -2696,14 +2690,11 @@ class OrderCartSheet extends StatelessWidget {
                       child: Text(
                         'Order list',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w900,
-                            ),
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ),
-                    TextButton(
-                      onPressed: onClose,
-                      child: const Text('Close'),
-                    ),
+                    TextButton(onPressed: onClose, child: const Text('Close')),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -2723,8 +2714,9 @@ class OrderCartSheet extends StatelessWidget {
                   ...List<Widget>.generate(lines.length, (int index) {
                     final CartLine line = lines[index];
                     return Padding(
-                      padding:
-                          EdgeInsets.only(bottom: index == lines.length - 1 ? 0 : 12),
+                      padding: EdgeInsets.only(
+                        bottom: index == lines.length - 1 ? 0 : 12,
+                      ),
                       child: Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
@@ -2763,7 +2755,8 @@ class OrderCartSheet extends StatelessWidget {
                                 _SmallTag(text: line.color),
                                 _SmallTag(text: _normalizeSizeLabel(line.size)),
                                 _SmallTag(
-                                  text: '${formatMoney(line.unitPrice, whole: true)} each',
+                                  text:
+                                      '${formatMoney(line.unitPrice, whole: true)} each',
                                 ),
                               ],
                             ),
@@ -2784,11 +2777,13 @@ class OrderCartSheet extends StatelessWidget {
                                         IconButton(
                                           onPressed: line.quantity > 1
                                               ? () => onUpdateQuantity(
-                                                    index,
-                                                    line.quantity - 1,
-                                                  )
+                                                  index,
+                                                  line.quantity - 1,
+                                                )
                                               : null,
-                                          icon: const Icon(Icons.remove_rounded),
+                                          icon: const Icon(
+                                            Icons.remove_rounded,
+                                          ),
                                         ),
                                         Expanded(
                                           child: Text(
@@ -2849,11 +2844,11 @@ class OrderCartSheet extends StatelessWidget {
                   const SizedBox(height: 12),
                   TextFormField(
                     initialValue: deliveryInfo.name,
-                    decoration: const InputDecoration(labelText: 'Delivery name'),
+                    decoration: const InputDecoration(
+                      labelText: 'Delivery name',
+                    ),
                     onChanged: (String value) {
-                      onDeliveryInfoChanged(
-                        deliveryInfo.copyWith(name: value),
-                      );
+                      onDeliveryInfoChanged(deliveryInfo.copyWith(name: value));
                     },
                   ),
                   const SizedBox(height: 12),
@@ -2861,8 +2856,9 @@ class OrderCartSheet extends StatelessWidget {
                     initialValue: deliveryInfo.address,
                     minLines: 2,
                     maxLines: 4,
-                    decoration:
-                        const InputDecoration(labelText: 'Delivery address'),
+                    decoration: const InputDecoration(
+                      labelText: 'Delivery address',
+                    ),
                     onChanged: (String value) {
                       onDeliveryInfoChanged(
                         deliveryInfo.copyWith(address: value),
@@ -2913,10 +2909,10 @@ class OrderCartSheet extends StatelessWidget {
                 FilledButton.icon(
                   onPressed: _canSend
                       ? () => launchExternalUri(
-                            Uri.parse(
-                              'https://wa.me/23059883880?text=${Uri.encodeComponent(buildWhatsAppMessageForLines(lines, deliveryMethod.value, subtotal, deliveryFee, total, deliveryInfo))}',
-                            ),
-                          )
+                          Uri.parse(
+                            'https://wa.me/23059883880?text=${Uri.encodeComponent(buildWhatsAppMessageForLines(lines, deliveryMethod.value, subtotal, deliveryFee, total, deliveryInfo))}',
+                          ),
+                        )
                       : null,
                   icon: const Icon(Icons.chat_rounded),
                   label: const Text('Send order on WhatsApp'),
@@ -2944,10 +2940,7 @@ class OrderCartSheet extends StatelessWidget {
 }
 
 class _FeaturedProductCard extends StatelessWidget {
-  const _FeaturedProductCard({
-    required this.item,
-    required this.onTap,
-  });
+  const _FeaturedProductCard({required this.item, required this.onTap});
 
   final ShopItem item;
   final VoidCallback onTap;
@@ -2968,9 +2961,13 @@ class _FeaturedProductCard extends StatelessWidget {
           children: <Widget>[
             Expanded(
               child: ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(26)),
-                child: _ProductImage(imageUrl: item.photoUrl, title: item.title),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(26),
+                ),
+                child: _ProductImage(
+                  imageUrl: item.photoUrl,
+                  title: item.title,
+                ),
               ),
             ),
             Padding(
@@ -3071,8 +3068,7 @@ class _ContactActionCard extends StatelessWidget {
           FilledButton(
             onPressed: onTap,
             style: FilledButton.styleFrom(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               minimumSize: const Size(84, 40),
               textStyle: const TextStyle(
                 fontSize: 13,
@@ -3088,10 +3084,7 @@ class _ContactActionCard extends StatelessWidget {
 }
 
 class _BusinessInfoCard extends StatelessWidget {
-  const _BusinessInfoCard({
-    required this.title,
-    required this.lines,
-  });
+  const _BusinessInfoCard({required this.title, required this.lines});
 
   final String title;
   final List<String> lines;
@@ -3218,9 +3211,9 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 6),
           Text(
@@ -3307,9 +3300,9 @@ class _SectionHeading extends StatelessWidget {
             children: <Widget>[
               Text(
                 title,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 4),
               Text(
@@ -3388,10 +3381,7 @@ class _ColorPill extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             color,
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 12,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
           ),
         ],
       ),
@@ -3421,10 +3411,7 @@ class _SmallTag extends StatelessWidget {
 }
 
 class _ProductImage extends StatelessWidget {
-  const _ProductImage({
-    required this.imageUrl,
-    required this.title,
-  });
+  const _ProductImage({required this.imageUrl, required this.title});
 
   final String? imageUrl;
   final String title;
@@ -3450,44 +3437,39 @@ class _ProductImage extends StatelessWidget {
       child: Image.network(
         imageUrl!,
         fit: BoxFit.contain,
-        errorBuilder: (
-          BuildContext context,
-          Object error,
-          StackTrace? stackTrace,
-        ) {
-          return Center(
-            child: Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.black45,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          );
-        },
-        loadingBuilder: (
-          BuildContext context,
-          Widget child,
-          ImageChunkEvent? loadingProgress,
-        ) {
-          if (loadingProgress == null) {
-            return child;
-          }
-          return const Center(
-            child: CircularProgressIndicator(color: _brandOrange),
-          );
-        },
+        errorBuilder:
+            (BuildContext context, Object error, StackTrace? stackTrace) {
+              return Center(
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.black45,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              );
+            },
+        loadingBuilder:
+            (
+              BuildContext context,
+              Widget child,
+              ImageChunkEvent? loadingProgress,
+            ) {
+              if (loadingProgress == null) {
+                return child;
+              }
+              return const Center(
+                child: CircularProgressIndicator(color: _brandOrange),
+              );
+            },
       ),
     );
   }
 }
 
 class _FailureState extends StatelessWidget {
-  const _FailureState({
-    required this.message,
-    required this.onRetry,
-  });
+  const _FailureState({required this.message, required this.onRetry});
 
   final String message;
   final Future<void> Function() onRetry;
@@ -3500,20 +3482,21 @@ class _FailureState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            const Icon(Icons.cloud_off_rounded, size: 44, color: Colors.black26),
+            const Icon(
+              Icons.cloud_off_rounded,
+              size: 44,
+              color: Colors.black26,
+            ),
             const SizedBox(height: 12),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 16),
-            FilledButton(
-              onPressed: onRetry,
-              child: const Text('Retry'),
-            ),
+            FilledButton(onPressed: onRetry, child: const Text('Retry')),
           ],
         ),
       ),
@@ -3613,7 +3596,9 @@ String buildWhatsAppMessageForLines(
 
   buffer.writeln('Subtotal: ${formatMoney(subtotal, whole: true)}');
   if (deliveryFee > 0) {
-    buffer.writeln('Delivery fee ($deliveryMethod): ${formatMoney(deliveryFee, whole: true)}');
+    buffer.writeln(
+      'Delivery fee ($deliveryMethod): ${formatMoney(deliveryFee, whole: true)}',
+    );
   }
   buffer.writeln('Total: ${formatMoney(total, whole: true)}');
   return buffer.toString().trim();
@@ -3666,12 +3651,16 @@ double _toDouble(dynamic value) {
 }
 
 String _normalizeSizeLabel(String value) {
-  final String trimmed =
-      value.replaceAll(RegExp(r'\s+Old$', caseSensitive: false), '').trim();
+  final String trimmed = value
+      .replaceAll(RegExp(r'\s+Old$', caseSensitive: false), '')
+      .trim();
   if (trimmed.isEmpty) {
     return '';
   }
-  final String normalized = trimmed.toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  final String normalized = trimmed.toLowerCase().replaceAll(
+    RegExp(r'\s+'),
+    ' ',
+  );
   const Set<String> aliases = <String>{
     'one size',
     'one-size',
