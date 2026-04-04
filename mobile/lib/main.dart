@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
@@ -172,6 +174,29 @@ class NetworkMoRepository implements MoRepository {
   Future<QuoteSubmissionResult> submitQuote(
     QuoteSubmissionPayload payload,
   ) async {
+    if (payload.logoFile != null) {
+      return _submitMultipartQuote(payload);
+    }
+    return _submitJsonQuote(payload);
+  }
+
+  Future<Map<String, dynamic>> _getJson(String url) async {
+    final http.Response response = await http.get(
+      Uri.parse(url),
+      headers: const <String, String>{'Accept': 'application/json'},
+    );
+    final Map<String, dynamic> body = _decodeJsonMap(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        (body['error'] ?? body['message'] ?? 'Request failed.').toString(),
+      );
+    }
+    return body;
+  }
+
+  Future<QuoteSubmissionResult> _submitJsonQuote(
+    QuoteSubmissionPayload payload,
+  ) async {
     final http.Response response = await http.post(
       Uri.parse(_contactApiUrl),
       headers: <String, String>{
@@ -196,18 +221,40 @@ class NetworkMoRepository implements MoRepository {
     );
   }
 
-  Future<Map<String, dynamic>> _getJson(String url) async {
-    final http.Response response = await http.get(
-      Uri.parse(url),
-      headers: const <String, String>{'Accept': 'application/json'},
+  Future<QuoteSubmissionResult> _submitMultipartQuote(
+    QuoteSubmissionPayload payload,
+  ) async {
+    final http.MultipartRequest request =
+        http.MultipartRequest('POST', Uri.parse(_contactApiUrl));
+    request.headers['Accept'] = 'application/json';
+    request.fields.addAll(payload.toFormFields());
+
+    final QuoteAttachmentFile file = payload.logoFile!;
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'files',
+        file.bytes,
+        filename: file.fileName,
+      ),
     );
+
+    final http.StreamedResponse streamedResponse = await request.send();
+    final http.Response response =
+        await http.Response.fromStream(streamedResponse);
     final Map<String, dynamic> body = _decodeJsonMap(response.body);
+
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
-        (body['error'] ?? body['message'] ?? 'Request failed.').toString(),
+        (body['error'] ?? body['message'] ?? 'Failed to send request.')
+            .toString(),
       );
     }
-    return body;
+
+    return QuoteSubmissionResult(
+      message:
+          (body['message'] ?? 'Thanks! We received your message.').toString(),
+      quoteId: body['quoteId']?.toString(),
+    );
   }
 }
 
@@ -253,6 +300,7 @@ class QuoteSubmissionPayload {
     required this.deliveryPostCode,
     required this.deliveryPhone,
     required this.garments,
+    required this.logoFile,
   });
 
   final String name;
@@ -267,6 +315,7 @@ class QuoteSubmissionPayload {
   final String deliveryPostCode;
   final String deliveryPhone;
   final List<QuoteGarmentDraft> garments;
+  final QuoteAttachmentFile? logoFile;
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
@@ -284,6 +333,38 @@ class QuoteSubmissionPayload {
       'deliveryPhone': deliveryPhone.trim(),
       'source': 'MO T-SHIRT Mobile App',
       'garments': garments.map((QuoteGarmentDraft line) => line.toJson()).toList(),
+      if (logoFile != null)
+        'attachments': <Map<String, dynamic>>[
+          logoFile!.toAttachmentJson(),
+        ],
+    };
+  }
+
+  Map<String, String> toFormFields() {
+    return <String, String>{
+      'name': name.trim(),
+      'email': email.trim(),
+      'phone': phone.trim(),
+      'message': _buildMessage(),
+      'notes': notes.trim(),
+      'printMethod': printMethod.trim(),
+      'deadline': deadline.trim(),
+      'delivery': deliveryMethod,
+      'deliveryName': deliveryName.trim(),
+      'deliveryAddress': deliveryAddress.trim(),
+      'deliveryPostCode': deliveryPostCode.trim(),
+      'deliveryPhone': deliveryPhone.trim(),
+      'source': 'MO T-SHIRT Mobile App',
+      'garments':
+          jsonEncode(garments.map((QuoteGarmentDraft line) => line.toJson()).toList()),
+      if (logoFile != null)
+        'attachments': jsonEncode(<Map<String, dynamic>>[
+          logoFile!.toAttachmentJson(),
+        ]),
+      if (logoFile != null) 'attachmentName': logoFile!.fileName,
+      if (logoFile != null && logoFile!.contentType != null)
+        'attachmentType': logoFile!.contentType!,
+      if (logoFile != null) 'attachmentSize': logoFile!.bytes.length.toString(),
     };
   }
 
@@ -309,7 +390,31 @@ class QuoteSubmissionPayload {
     if (notes.trim().isNotEmpty) {
       buffer.writeln('Notes: ${notes.trim()}');
     }
+    if (logoFile != null) {
+      buffer.writeln('Artwork: ${logoFile!.fileName}');
+    }
     return buffer.toString().trim();
+  }
+}
+
+class QuoteAttachmentFile {
+  const QuoteAttachmentFile({
+    required this.fileName,
+    required this.bytes,
+    required this.contentType,
+  });
+
+  final String fileName;
+  final Uint8List bytes;
+  final String? contentType;
+
+  Map<String, dynamic> toAttachmentJson() {
+    return <String, dynamic>{
+      'label': 'Logo / artwork',
+      'filename': fileName,
+      if (contentType != null) 'contentType': contentType,
+      'size': bytes.length,
+    };
   }
 }
 
@@ -1646,6 +1751,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
 
   late String _deliveryMethod;
   late List<QuoteGarmentDraft> _garments;
+  QuoteAttachmentFile? _logoFile;
   bool _submitting = false;
   String? _submissionMessage;
   bool _submissionSucceeded = false;
@@ -1684,6 +1790,53 @@ class _QuoteScreenState extends State<QuoteScreen> {
   }
 
   bool get _deliveryInfoRequired => _deliveryMethod != 'Surinam pickup';
+
+  Future<void> _pickLogoFile() async {
+    try {
+      final FilePickerResult? result = await FilePicker.platform.pickFiles(
+        allowMultiple: false,
+        withData: true,
+        type: FileType.custom,
+        allowedExtensions: <String>[
+          'png',
+          'jpg',
+          'jpeg',
+          'webp',
+          'svg',
+          'pdf',
+          'heic',
+          'heif',
+        ],
+      );
+
+      if (result == null || result.files.isEmpty) {
+        return;
+      }
+
+      final PlatformFile file = result.files.single;
+      if (file.bytes == null || file.bytes!.isEmpty) {
+        setState(() {
+          _submissionSucceeded = false;
+          _submissionMessage = 'Could not read that logo file. Try another one.';
+        });
+        return;
+      }
+
+      setState(() {
+        _logoFile = QuoteAttachmentFile(
+          fileName: file.name,
+          bytes: file.bytes!,
+          contentType: _contentTypeForFileName(file.name),
+        );
+        _submissionMessage = null;
+      });
+    } catch (_) {
+      setState(() {
+        _submissionSucceeded = false;
+        _submissionMessage = 'File picker failed. Try again.';
+      });
+    }
+  }
 
   Future<void> _submit() async {
     final FormState? formState = _formKey.currentState;
@@ -1729,6 +1882,7 @@ class _QuoteScreenState extends State<QuoteScreen> {
           deliveryPostCode: _deliveryPostCodeController.text,
           deliveryPhone: _deliveryPhoneController.text,
           garments: _garments,
+          logoFile: _logoFile,
         ),
       );
 
@@ -1818,6 +1972,91 @@ class _QuoteScreenState extends State<QuoteScreen> {
                     label: Text(
                       'Import ${widget.cartLines.length} item'
                       '${widget.cartLines.length == 1 ? '' : 's'} from order list',
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            'Logo / artwork',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w900),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Optional. Upload the client logo with the quote.',
+                            style: TextStyle(
+                              color: Colors.black54,
+                              fontSize: 13,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _pickLogoFile,
+                      icon: const Icon(Icons.upload_file_rounded),
+                      label: Text(_logoFile == null ? 'Upload' : 'Change'),
+                    ),
+                  ],
+                ),
+                if (_logoFile != null) ...<Widget>[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      children: <Widget>[
+                        const Icon(
+                          Icons.verified_rounded,
+                          color: _brandOrange,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _logoFile!.fileName,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _logoFile = null;
+                            });
+                          },
+                          child: const Text('Remove'),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -2310,11 +2549,6 @@ class ProductCard extends StatelessWidget {
                       imageUrl: item.photoUrl,
                       title: item.title,
                     ),
-                    Positioned(
-                      left: 14,
-                      top: 14,
-                      child: _ColorPill(color: heroColor),
-                    ),
                     if (!item.inStock)
                       Positioned(
                         right: 14,
@@ -2347,6 +2581,8 @@ class ProductCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
+                  _ColorPill(color: heroColor),
+                  const SizedBox(height: 10),
                   Text(
                     item.title,
                     maxLines: 2,
@@ -3494,6 +3730,18 @@ String? _normalizeRemoteUrl(String? rawUrl) {
 
   final Uri base = Uri.parse(_siteBaseUrl);
   return base.resolveUri(parsed).toString();
+}
+
+String? _contentTypeForFileName(String fileName) {
+  final String lower = fileName.toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.svg')) return 'image/svg+xml';
+  if (lower.endsWith('.pdf')) return 'application/pdf';
+  if (lower.endsWith('.heic')) return 'image/heic';
+  if (lower.endsWith('.heif')) return 'image/heif';
+  return null;
 }
 
 Color getColorSwatch(String color) {
