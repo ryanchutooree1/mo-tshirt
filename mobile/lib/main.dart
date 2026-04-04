@@ -1285,7 +1285,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _search = '';
   String _selectedColor = 'all';
-  bool _inStockOnly = false;
 
   @override
   void dispose() {
@@ -1310,8 +1309,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
           item.colors.any((String color) => color.toLowerCase().contains(query));
       final bool matchesColor = _selectedColor == 'all' ||
           item.colors.any((String color) => color == _selectedColor);
-      final bool matchesStock = !_inStockOnly || item.inStock;
-      return matchesSearch && matchesColor && matchesStock;
+      return matchesSearch && matchesColor;
     }).toList(growable: false);
 
     return Column(
@@ -1327,9 +1325,17 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     _search = value;
                   });
                 },
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Search products or colours',
-                  prefixIcon: const Icon(Icons.search_rounded),
+                  hintStyle: const TextStyle(fontSize: 14),
+                  isDense: true,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
                   suffixIcon: _search.isEmpty
                       ? null
                       : IconButton(
@@ -1343,16 +1349,27 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               SizedBox(
-                height: 44,
+                height: 36,
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   children: <Widget>[
                     Padding(
-                      padding: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.only(right: 6),
                       child: ChoiceChip(
-                        label: const Text('All colours'),
+                        label: const Text(
+                          'All colours',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        labelPadding:
+                            const EdgeInsets.symmetric(horizontal: 2),
+                        visualDensity: VisualDensity.compact,
+                        materialTapTargetSize:
+                            MaterialTapTargetSize.shrinkWrap,
                         selected: _selectedColor == 'all',
                         onSelected: (_) {
                           setState(() {
@@ -1363,8 +1380,17 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     ),
                     ...colors.map(
                       (String color) => Padding(
-                        padding: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.only(right: 6),
                         child: FilterChip(
+                          labelStyle: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          labelPadding:
+                              const EdgeInsets.symmetric(horizontal: 2),
+                          visualDensity: VisualDensity.compact,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
                           selected: _selectedColor == color,
                           onSelected: (_) {
                             setState(() {
@@ -1373,46 +1399,11 @@ class _CatalogScreenState extends State<CatalogScreen> {
                             });
                           },
                           avatar: CircleAvatar(
-                            radius: 9,
+                            radius: 7,
                             backgroundColor: getColorSwatch(color),
                           ),
                           label: Text(color),
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
-                ),
-                child: Row(
-                  children: <Widget>[
-                    const Expanded(
-                      child: Text(
-                        'In stock only',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    Transform.scale(
-                      scale: 0.88,
-                      child: Switch.adaptive(
-                        value: _inStockOnly,
-                        activeThumbColor: _brandOrange,
-                        onChanged: (bool value) {
-                          setState(() {
-                            _inStockOnly = value;
-                          });
-                        },
                       ),
                     ),
                   ],
