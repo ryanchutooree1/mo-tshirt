@@ -320,7 +320,7 @@ export default function HomePage() {
         </section>
 
         {/* Contact */}
-        <section id="contact" className="px-6 py-16 sm:py-20">
+        <section id="contact" className="px-4 py-16 sm:px-6 sm:py-20">
           <div className="mx-auto max-w-6xl">
             <div className="mb-10 text-center">
               <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Let’s start your order.</h2>
