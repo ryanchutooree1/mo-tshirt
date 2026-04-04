@@ -3166,17 +3166,18 @@ class _ProductImage extends StatelessWidget {
       );
     }
 
-    return Image.network(
-      imageUrl!,
-      fit: BoxFit.cover,
-      errorBuilder: (
-        BuildContext context,
-        Object error,
-        StackTrace? stackTrace,
-      ) {
-        return Container(
-          color: const Color(0xFFF8FAFC),
-          child: Center(
+    return Container(
+      color: const Color(0xFFF8FAFC),
+      padding: const EdgeInsets.all(18),
+      child: Image.network(
+        imageUrl!,
+        fit: BoxFit.contain,
+        errorBuilder: (
+          BuildContext context,
+          Object error,
+          StackTrace? stackTrace,
+        ) {
+          return Center(
             child: Text(
               title,
               textAlign: TextAlign.center,
@@ -3185,24 +3186,21 @@ class _ProductImage extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
-          ),
-        );
-      },
-      loadingBuilder: (
-        BuildContext context,
-        Widget child,
-        ImageChunkEvent? loadingProgress,
-      ) {
-        if (loadingProgress == null) {
-          return child;
-        }
-        return Container(
-          color: const Color(0xFFF8FAFC),
-          child: const Center(
+          );
+        },
+        loadingBuilder: (
+          BuildContext context,
+          Widget child,
+          ImageChunkEvent? loadingProgress,
+        ) {
+          if (loadingProgress == null) {
+            return child;
+          }
+          return const Center(
             child: CircularProgressIndicator(color: _brandOrange),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
