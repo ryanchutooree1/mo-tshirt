@@ -3155,7 +3155,7 @@ class _ProductImage extends StatelessWidget {
   Widget build(BuildContext context) {
     if (imageUrl == null || imageUrl!.trim().isEmpty) {
       return Container(
-        color: const Color(0xFFF8FAFC),
+        color: Colors.white,
         child: const Center(
           child: Icon(
             Icons.image_not_supported_rounded,
@@ -3167,7 +3167,7 @@ class _ProductImage extends StatelessWidget {
     }
 
     return Container(
-      color: const Color(0xFFF8FAFC),
+      color: Colors.white,
       padding: const EdgeInsets.all(18),
       child: Image.network(
         imageUrl!,
