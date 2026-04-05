@@ -221,7 +221,7 @@ function AsyncCatalogImage({
         key={`${src}-${retryNonce}`}
         src={src}
         alt={alt}
-        className={`${className} transition-opacity duration-300 ${
+        className={`block ${className} transition-opacity duration-300 ${
           status === "loaded" ? "opacity-100" : "opacity-0"
         }`}
         loading="lazy"
@@ -255,6 +255,7 @@ export default function AdminShopsPage() {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!file) {
@@ -378,12 +379,14 @@ export default function AdminShopsPage() {
     setEditingId(null);
     setForm(buildEmptyFormState());
     setFile(null);
+    if (photoInputRef.current) photoInputRef.current.value = "";
   }
 
   function openNewComposer() {
     setEditingId(null);
     setForm(buildEmptyFormState());
     setFile(null);
+    if (photoInputRef.current) photoInputRef.current.value = "";
     setError(null);
     setNotice(null);
     setIsComposerOpen(true);
@@ -410,6 +413,7 @@ export default function AdminShopsPage() {
       inStock: item.inStock,
     });
     setFile(null);
+    if (photoInputRef.current) photoInputRef.current.value = "";
     setError(null);
     setNotice(null);
     setIsComposerOpen(true);
@@ -538,6 +542,7 @@ export default function AdminShopsPage() {
       const url = data.url;
       setForm((prev) => ({ ...prev, photoUrl: url }));
       setFile(null);
+      if (photoInputRef.current) photoInputRef.current.value = "";
       return url;
     } catch (err) {
       console.error("upload error", err);
@@ -1373,6 +1378,7 @@ export default function AdminShopsPage() {
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                               <div className="flex items-center gap-3">
                                 <input
+                                  ref={photoInputRef}
                                   id="shop-photo-upload"
                                   type="file"
                                   accept="image/*"
@@ -1381,6 +1387,7 @@ export default function AdminShopsPage() {
                                     if (nextFile && nextFile.size > MAX_UPLOAD_BYTES) {
                                       setError("Image must be 6 MB or smaller.");
                                       setFile(null);
+                                      if (photoInputRef.current) photoInputRef.current.value = "";
                                       e.currentTarget.value = "";
                                       return;
                                     }
@@ -1419,12 +1426,14 @@ export default function AdminShopsPage() {
                             />
 
                             {(previewUrl || form.photoUrl) && (
-                              <div className="relative flex h-[18rem] w-full items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 sm:h-[22rem]">
-                                <AsyncCatalogImage
-                                  src={previewUrl || form.photoUrl}
-                                  alt="Preview"
-                                  className="h-full w-full object-contain"
-                                />
+                              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                                <div className="relative mx-auto aspect-square w-full max-w-[22rem] overflow-hidden rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4">
+                                  <AsyncCatalogImage
+                                    src={previewUrl || form.photoUrl}
+                                    alt="Preview"
+                                    className="h-full w-full object-contain"
+                                  />
+                                </div>
                               </div>
                             )}
                           </div>
