@@ -71,8 +71,33 @@ const COLOR_SWATCH_RULES = [
   { match: ["brown"], value: "#7c4a2d" },
 ] as const;
 
-function getColorSwatch(color: string) {
-  const normalized = color.toLowerCase().trim();
+const PRODUCT_SWATCH_OVERRIDES = [
+  { titleMatch: ["baseball cap"], colorMatch: ["off white", "off-white"], value: "#f4ead7" },
+  { titleMatch: ["baseball cap"], colorMatch: ["beige"], value: "#d9c39b" },
+  { titleMatch: ["baseball cap"], colorMatch: ["military green"], value: "#667638" },
+  { titleMatch: ["baseball cap"], colorMatch: ["green fluo"], value: "#9ef01a" },
+  { titleMatch: ["baseball cap"], colorMatch: ["yellow"], value: "#ffd428" },
+  { titleMatch: ["trucker cap"], colorMatch: ["pink"], value: "#f5a9cd" },
+] as const;
+
+function normalizeSwatchKey(value: string) {
+  return value.toLowerCase().trim().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
+}
+
+function getColorSwatch(color: string, itemTitle?: string) {
+  const normalized = normalizeSwatchKey(color);
+  const normalizedTitle = normalizeSwatchKey(itemTitle || "");
+
+  const override = PRODUCT_SWATCH_OVERRIDES.find((rule) => {
+    const matchesTitle = rule.titleMatch.some((token) => normalizedTitle.includes(token));
+    if (!matchesTitle) return false;
+    return rule.colorMatch.some((token) => normalized.includes(token));
+  });
+
+  if (override) {
+    return override.value;
+  }
+
   const found = COLOR_SWATCH_RULES.find((rule) =>
     rule.match.some((token) => normalized.includes(token))
   );
@@ -622,7 +647,7 @@ export default function ShopClient() {
                       <span className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3.5 py-1.5 text-[11px] font-semibold text-neutral-700 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
                         <span
                           className="h-3 w-3 rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.16),0_1px_2px_rgba(0,0,0,0.08)]"
-                          style={{ backgroundColor: getColorSwatch(displayColor) }}
+                          style={{ backgroundColor: getColorSwatch(displayColor, item.title) }}
                           aria-hidden="true"
                         />
                         {displayColor}
