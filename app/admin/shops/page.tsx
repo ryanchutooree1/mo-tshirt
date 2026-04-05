@@ -221,7 +221,7 @@ function AsyncCatalogImage({
         key={`${src}-${retryNonce}`}
         src={src}
         alt={alt}
-        className={`block ${className} transition-opacity duration-300 ${
+        className={`absolute inset-0 block ${className} transition-opacity duration-300 ${
           status === "loaded" ? "opacity-100" : "opacity-0"
         }`}
         loading="lazy"
@@ -905,7 +905,7 @@ export default function AdminShopsPage() {
                           <AsyncCatalogImage
                             src={item.photoUrl}
                             alt={item.title}
-                            className="h-full w-full object-contain"
+                            className="h-full w-full object-cover object-center"
                             fallback={<span className="px-3 leading-tight">Image unavailable</span>}
                           />
                         ) : (
@@ -1431,7 +1431,7 @@ export default function AdminShopsPage() {
                                   <AsyncCatalogImage
                                     src={previewUrl || form.photoUrl}
                                     alt="Preview"
-                                    className="h-full w-full object-contain"
+                                    className="h-full w-full object-cover object-center"
                                   />
                                 </div>
                               </div>
@@ -1467,7 +1467,7 @@ export default function AdminShopsPage() {
                           <AsyncCatalogImage
                             src={previewUrl || form.photoUrl}
                             alt={form.title || "Preview item"}
-                            className="h-full w-full object-contain"
+                            className="h-full w-full object-cover object-center"
                           />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center text-slate-300">
