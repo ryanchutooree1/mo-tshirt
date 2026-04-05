@@ -1382,6 +1382,7 @@ export default function AdminShopsPage() {
                                   id="shop-photo-upload"
                                   type="file"
                                   accept="image/*"
+                                  tabIndex={-1}
                                   onChange={(e) => {
                                     const nextFile = e.target.files?.[0] || null;
                                     if (nextFile && nextFile.size > MAX_UPLOAD_BYTES) {
@@ -1393,16 +1394,18 @@ export default function AdminShopsPage() {
                                     }
                                     setError(null);
                                     setFile(nextFile);
+                                    photoInputRef.current?.blur();
                                   }}
-                                  className="sr-only"
+                                  className="hidden"
                                 />
-                                <label
-                                  htmlFor="shop-photo-upload"
+                                <button
+                                  type="button"
+                                  onClick={() => photoInputRef.current?.click()}
                                   className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50"
                                 >
                                   <FiImage className="h-4 w-4" />
                                   Choose file
-                                </label>
+                                </button>
                                 <span className="text-xs text-slate-500">
                                   {file ? file.name : "No file chosen"}
                                 </span>
