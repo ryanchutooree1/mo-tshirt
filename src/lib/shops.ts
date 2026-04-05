@@ -92,6 +92,14 @@ export type QuoteGarmentLine = {
   quantity?: string | number;
 };
 
+const SHOP_DISPLAY_PRIORITY = new Map<QuoteGarmentOption | "Other", number>([
+  ["Poloshirt", 0],
+  ["T-Shirt", 1],
+  ["Cap", 2],
+  ["Other", 3],
+  ["Hoodie", 4],
+]);
+
 const QUOTE_COLOR_PRIORITY = new Map<string, number>([
   ["white", 0],
   ["black", 1],
@@ -120,6 +128,25 @@ function getQuoteGarmentFromShopTitle(title: string): QuoteGarmentOption {
     return "T-Shirt";
   }
   return "Other";
+}
+
+export function getShopDisplayPriority(title: string) {
+  const garment = getQuoteGarmentFromShopTitle(title);
+  return SHOP_DISPLAY_PRIORITY.get(garment) ?? SHOP_DISPLAY_PRIORITY.get("Other")!;
+}
+
+export function compareShopItems(left: Pick<ShopItem, "title" | "position">, right: Pick<ShopItem, "title" | "position">) {
+  const priorityDelta = getShopDisplayPriority(left.title) - getShopDisplayPriority(right.title);
+  if (priorityDelta !== 0) return priorityDelta;
+
+  const positionDelta = (Number(right.position) || 0) - (Number(left.position) || 0);
+  if (positionDelta !== 0) return positionDelta;
+
+  return left.title.localeCompare(right.title, undefined, { sensitivity: "base" });
+}
+
+export function sortShopItems<T extends Pick<ShopItem, "title" | "position">>(items: T[]) {
+  return items.slice().sort(compareShopItems);
 }
 
 export function createQuoteColorOptionsByGarment(): Record<QuoteGarmentOption, string[]> {

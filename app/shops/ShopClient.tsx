@@ -15,6 +15,7 @@ import {
   getSizePrices,
   getSizes,
   isOneSizeLabel,
+  sortShopItems,
   sortSizes,
   type DeliveryInfo,
   type ShopItem,
@@ -254,10 +255,10 @@ export default function ShopClient() {
 
   const availableProducts = useMemo(() => {
     const set = new Set<string>();
-    items.forEach((item) => {
+    sortShopItems(items).forEach((item) => {
       if (item.title) set.add(item.title);
     });
-    return Array.from(set).sort();
+    return Array.from(set);
   }, [items]);
 
   const availableColors = useMemo(() => {
@@ -285,8 +286,7 @@ export default function ShopClient() {
   }, [availableSizes, selectedSize]);
 
   const filtered = useMemo(() => {
-    let next = items.slice();
-    next.sort((a, b) => (b.position || 0) - (a.position || 0));
+    let next = sortShopItems(items);
     if (selectedProduct !== "all") {
       next = next.filter((item) => item.title === selectedProduct);
     }

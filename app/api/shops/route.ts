@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { normalizeSizeLabel, sortSizes, sortSizePrices, toNumber, type ShopItem } from "@/lib/shops";
+import { normalizeSizeLabel, sortShopItems, sortSizes, sortSizePrices, toNumber, type ShopItem } from "@/lib/shops";
 
 function getPositionValue(data: Record<string, any>) {
   if (Number.isFinite(data.position)) return Number(data.position);
@@ -65,8 +65,7 @@ export async function GET() {
     const snap = await getDocs(
       query(collection(db, "shops"), where("isActive", "==", true))
     );
-    const items = snap.docs.map((doc) => mapDoc(doc.id, doc.data()));
-    items.sort((a, b) => (b.position || 0) - (a.position || 0));
+    const items = sortShopItems(snap.docs.map((doc) => mapDoc(doc.id, doc.data())));
     return NextResponse.json({ items });
   } catch (error) {
     console.error("shops:get", error);
