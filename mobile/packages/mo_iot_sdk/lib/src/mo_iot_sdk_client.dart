@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
-import 'tuya_iot_models.dart';
+import 'mo_iot_models.dart';
 
-class TuyaIotService {
-  TuyaIotService({
+class MoIotSdk {
+  MoIotSdk({
     MethodChannel? channel,
     http.Client? httpClient,
     String? siteBaseUrl,
@@ -18,23 +18,23 @@ class TuyaIotService {
   final http.Client _httpClient;
   final String _siteBaseUrl;
 
-  Future<TuyaSdkStatus> getSdkStatus() async {
+  Future<MoIotSdkStatus> getStatus() async {
     final Map<Object?, Object?> map =
         await _channel.invokeMapMethod<Object?, Object?>('getSdkStatus') ??
         <Object?, Object?>{};
-    return TuyaSdkStatus.fromMap(map);
+    return MoIotSdkStatus.fromMap(map);
   }
 
-  Future<String> startPairing(TuyaPairingRequest request) async {
+  Future<String> pairBreaker(MoPairingRequest request) async {
     final String? result = await _channel.invokeMethod<String>(
       'startPairing',
       request.toMap(),
     );
 
-    return result ?? 'Pairing was started on the native Tuya bridge.';
+    return result ?? 'Pairing was started on the native device bridge.';
   }
 
-  Future<List<TuyaDevice>> loadCloudDevices() async {
+  Future<List<MoIotDevice>> listDevices() async {
     final Uri uri = Uri.parse('$_siteBaseUrl/api/tuya/devices');
     final http.Response response = await _httpClient.get(
       uri,
@@ -44,24 +44,25 @@ class TuyaIotService {
     final Map<String, dynamic> body = _decodeMap(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
-        (body['error'] ?? body['message'] ?? 'Failed to load Tuya devices.')
+        (body['error'] ?? body['message'] ?? 'Failed to load IoT devices.')
             .toString(),
       );
     }
 
     if (body['hasKeys'] == false) {
       throw Exception(
-        (body['message'] ?? 'Tuya keys are missing on the server.').toString(),
+        (body['message'] ?? 'IoT cloud keys are missing on the server.')
+            .toString(),
       );
     }
 
-    final List<TuyaDevice> devices =
+    final List<MoIotDevice> devices =
         (body['devices'] as List<dynamic>? ?? <dynamic>[])
             .whereType<Map<String, dynamic>>()
-            .map(TuyaDevice.fromApiJson)
+            .map(MoIotDevice.fromApiJson)
             .toList(growable: false);
 
-    devices.sort((TuyaDevice left, TuyaDevice right) {
+    devices.sort((MoIotDevice left, MoIotDevice right) {
       final int powerDelta =
           (right.primaryPowerDatapoint != null ? 1 : 0) -
           (left.primaryPowerDatapoint != null ? 1 : 0);
@@ -81,7 +82,7 @@ class TuyaIotService {
     return devices;
   }
 
-  Future<TuyaDevice> refreshCloudDevice(String deviceId) async {
+  Future<MoIotDevice> refreshDevice(String deviceId) async {
     final Uri uri = Uri.parse(
       '$_siteBaseUrl/api/tuya/device/${Uri.encodeComponent(deviceId)}/status',
     );
@@ -98,9 +99,9 @@ class TuyaIotService {
       );
     }
 
-    return TuyaDevice.fromApiJson(<String, dynamic>{
+    return MoIotDevice.fromApiJson(<String, dynamic>{
       'id': deviceId,
-      'name': body['name'] ?? 'Tuya device',
+      'name': body['name'] ?? 'MO IoT device',
       'online': body['online'],
       'status': body['status'],
       'lastFetchedAt': body['lastFetchedAt'],
@@ -108,7 +109,7 @@ class TuyaIotService {
     });
   }
 
-  Future<void> sendCloudCommand({
+  Future<void> setDevicePower({
     required String deviceId,
     required String code,
     required bool value,
@@ -129,7 +130,7 @@ class TuyaIotService {
     final Map<String, dynamic> body = _decodeMap(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(
-        (body['error'] ?? body['message'] ?? 'Failed to send Tuya command.')
+        (body['error'] ?? body['message'] ?? 'Failed to send IoT command.')
             .toString(),
       );
     }

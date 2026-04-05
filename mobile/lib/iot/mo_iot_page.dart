@@ -1,24 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
-import 'tuya_iot_models.dart';
-import 'tuya_iot_service.dart';
+import 'package:mo_iot_sdk/mo_iot_sdk.dart';
 
 const Color _iotOrange = Color(0xFFFF6600);
 const Color _iotCream = Color(0xFFFFFBF8);
 const Color _iotInk = Color(0xFF171717);
 
-class TuyaIotPage extends StatefulWidget {
-  TuyaIotPage({super.key, TuyaIotService? service})
-    : service = service ?? TuyaIotService();
+class MoIotPage extends StatefulWidget {
+  MoIotPage({super.key, MoIotSdk? service}) : service = service ?? MoIotSdk();
 
-  final TuyaIotService service;
+  final MoIotSdk service;
 
   @override
-  State<TuyaIotPage> createState() => _TuyaIotPageState();
+  State<MoIotPage> createState() => _MoIotPageState();
 }
 
-class _TuyaIotPageState extends State<TuyaIotPage> {
+class _MoIotPageState extends State<MoIotPage> {
   final TextEditingController _ssidController = TextEditingController(
     text: 'mo-tshirt.mu',
   );
@@ -27,15 +24,15 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
     text: 'MO T-SHIRT Home',
   );
 
-  TuyaPairingMode _pairingMode = TuyaPairingMode.ez;
-  TuyaSdkStatus? _sdkStatus;
+  MoPairingMode _pairingMode = MoPairingMode.ez;
+  MoIotSdkStatus? _sdkStatus;
   bool _checkingSdk = true;
   bool _startingPair = false;
   bool _loadingDevices = false;
   final Map<String, bool> _commandBusy = <String, bool>{};
   final Map<String, bool> _refreshBusy = <String, bool>{};
   final Map<String, String> _deviceFeedback = <String, String>{};
-  List<TuyaDevice> _devices = <TuyaDevice>[];
+  List<MoIotDevice> _devices = <MoIotDevice>[];
   String? _pairingFeedback;
   String? _cloudFeedback;
 
@@ -63,7 +60,7 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
     });
 
     try {
-      final TuyaSdkStatus status = await widget.service.getSdkStatus();
+      final MoIotSdkStatus status = await widget.service.getStatus();
       if (!mounted) {
         return;
       }
@@ -75,7 +72,7 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
         return;
       }
       setState(() {
-        _sdkStatus = TuyaSdkStatus(
+        _sdkStatus = MoIotSdkStatus(
           platform: 'flutter',
           configured: false,
           appKeyPresent: false,
@@ -101,15 +98,15 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
     });
 
     try {
-      final List<TuyaDevice> devices = await widget.service.loadCloudDevices();
+      final List<MoIotDevice> devices = await widget.service.listDevices();
       if (!mounted) {
         return;
       }
       setState(() {
         _devices = devices;
         _cloudFeedback = devices.isEmpty
-            ? 'No Tuya devices were returned from the server yet.'
-            : 'Loaded ${devices.length} Tuya device${devices.length == 1 ? '' : 's'} from the cloud.';
+            ? 'No MO IoT devices were returned from the server yet.'
+            : 'Loaded ${devices.length} MO IoT device${devices.length == 1 ? '' : 's'} from the cloud.';
       });
     } catch (error) {
       if (!mounted) {
@@ -117,7 +114,7 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
       }
       setState(() {
         _cloudFeedback = error.toString().replaceFirst('Exception: ', '');
-        _devices = <TuyaDevice>[];
+        _devices = <MoIotDevice>[];
       });
     } finally {
       if (mounted) {
@@ -136,7 +133,7 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
     if (ssid.isEmpty || password.isEmpty || homeName.isEmpty) {
       setState(() {
         _pairingFeedback =
-            'Enter the Wi-Fi name, password, and a Tuya home name first.';
+            'Enter the Wi-Fi name, password, and a home name first.';
       });
       return;
     }
@@ -147,8 +144,8 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
     });
 
     try {
-      final String message = await widget.service.startPairing(
-        TuyaPairingRequest(
+      final String message = await widget.service.pairBreaker(
+        MoPairingRequest(
           ssid: ssid,
           password: password,
           homeName: homeName,
@@ -186,14 +183,14 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
     }
   }
 
-  Future<void> _refreshDevice(TuyaDevice device) async {
+  Future<void> _refreshDevice(MoIotDevice device) async {
     setState(() {
       _refreshBusy[device.id] = true;
       _deviceFeedback[device.id] = '';
     });
 
     try {
-      final TuyaDevice refreshed = await widget.service.refreshCloudDevice(
+      final MoIotDevice refreshed = await widget.service.refreshDevice(
         device.id,
       );
       if (!mounted) {
@@ -202,7 +199,7 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
       setState(() {
         _replaceDevice(
           device.id,
-          TuyaDevice(
+          MoIotDevice(
             id: device.id,
             name: device.name,
             online: refreshed.online,
@@ -232,12 +229,12 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
     }
   }
 
-  Future<void> _toggleDevice(TuyaDevice device) async {
-    final TuyaPowerDatapoint? datapoint = device.primaryPowerDatapoint;
+  Future<void> _toggleDevice(MoIotDevice device) async {
+    final MoDevicePowerDatapoint? datapoint = device.primaryPowerDatapoint;
     if (datapoint == null || datapoint.code.isEmpty) {
       setState(() {
         _deviceFeedback[device.id] =
-            'This Tuya device has no boolean switch datapoint available.';
+            'This device has no boolean switch datapoint available.';
       });
       return;
     }
@@ -249,7 +246,7 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
     });
 
     try {
-      await widget.service.sendCloudCommand(
+      await widget.service.setDevicePower(
         deviceId: device.id,
         code: datapoint.code,
         value: nextValue,
@@ -282,9 +279,9 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
     }
   }
 
-  void _replaceDevice(String deviceId, TuyaDevice replacement) {
+  void _replaceDevice(String deviceId, MoIotDevice replacement) {
     _devices = _devices
-        .map((TuyaDevice device) {
+        .map((MoIotDevice device) {
           if (device.id == deviceId) {
             return replacement;
           }
@@ -296,7 +293,7 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final TuyaSdkStatus? status = _sdkStatus;
+    final MoIotSdkStatus? status = _sdkStatus;
 
     return RefreshIndicator(
       color: _iotOrange,
@@ -318,7 +315,7 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'This Flutter tab is the correct place for Tuya-style onboarding. It can collect the 2.4 GHz Wi-Fi details, launch native pairing, then control the breaker from the same mobile app.',
+                  'This Flutter tab now uses the MO IoT SDK layer. It can collect the 2.4 GHz Wi-Fi details, launch native pairing, and control the breaker from the same mobile app.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: Colors.black54,
                     height: 1.45,
@@ -336,7 +333,7 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
                     ),
                     _StatusChip(
                       icon: Icons.wifi_rounded,
-                      label: _pairingMode == TuyaPairingMode.ez
+                      label: _pairingMode == MoPairingMode.ez
                           ? 'Blink slowly'
                           : 'Blink quickly',
                       tone: _StatusChipTone.neutral,
@@ -361,7 +358,7 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
                   children: <Widget>[
                     Expanded(
                       child: Text(
-                        'Native Tuya SDK status',
+                        'MO IoT SDK status',
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
@@ -492,7 +489,7 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
                   controller: _homeNameController,
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
-                    labelText: 'Tuya home name',
+                    labelText: 'Home name',
                     hintText: 'Example: MO T-SHIRT Home',
                     prefixIcon: Icon(Icons.home_work_rounded),
                   ),
@@ -518,21 +515,21 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
                   ),
                 ),
                 const SizedBox(height: 18),
-                SegmentedButton<TuyaPairingMode>(
-                  segments: const <ButtonSegment<TuyaPairingMode>>[
-                    ButtonSegment<TuyaPairingMode>(
-                      value: TuyaPairingMode.ez,
+                SegmentedButton<MoPairingMode>(
+                  segments: const <ButtonSegment<MoPairingMode>>[
+                    ButtonSegment<MoPairingMode>(
+                      value: MoPairingMode.ez,
                       icon: Icon(Icons.lightbulb_outline_rounded),
                       label: Text('Blink slowly'),
                     ),
-                    ButtonSegment<TuyaPairingMode>(
-                      value: TuyaPairingMode.ap,
+                    ButtonSegment<MoPairingMode>(
+                      value: MoPairingMode.ap,
                       icon: Icon(Icons.flash_on_rounded),
                       label: Text('Blink quickly'),
                     ),
                   ],
-                  selected: <TuyaPairingMode>{_pairingMode},
-                  onSelectionChanged: (Set<TuyaPairingMode> selection) {
+                  selected: <MoPairingMode>{_pairingMode},
+                  onSelectionChanged: (Set<MoPairingMode> selection) {
                     setState(() {
                       _pairingMode = selection.first;
                     });
@@ -558,7 +555,7 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
                             ),
                           )
                         : const Icon(Icons.router_rounded),
-                    label: const Text('Start Tuya pairing'),
+                    label: const Text('Start breaker pairing'),
                   ),
                 ),
                 if (_pairingFeedback != null) ...<Widget>[
@@ -601,7 +598,7 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'After a device is paired in Tuya, this mobile tab can fetch it from your existing cloud API and switch it on or off.',
+                  'After a device is paired, this mobile tab can fetch it from your cloud API and switch it on or off.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: Colors.black54,
                   ),
@@ -617,8 +614,8 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
                 if (_devices.isEmpty && !_loadingDevices)
                   const _EmptyDeviceState()
                 else
-                  ..._devices.map((TuyaDevice device) {
-                    final TuyaPowerDatapoint? power =
+                  ..._devices.map((MoIotDevice device) {
+                    final MoDevicePowerDatapoint? power =
                         device.primaryPowerDatapoint;
                     final bool isBusy = _commandBusy[device.id] == true;
                     final bool isRefreshing = _refreshBusy[device.id] == true;
@@ -689,7 +686,7 @@ class _TuyaIotPageState extends State<TuyaIotPage> {
                                   icon: Icons.memory_rounded,
                                   label: device.looksLikeBreaker
                                       ? 'Breaker-like'
-                                      : 'Tuya device',
+                                      : 'MO IoT device',
                                   tone: _StatusChipTone.neutral,
                                 ),
                               ],
@@ -892,14 +889,14 @@ class _EmptyDeviceState extends StatelessWidget {
           const Icon(Icons.device_hub_rounded, size: 32, color: _iotOrange),
           const SizedBox(height: 10),
           Text(
-            'No Tuya devices available yet.',
+            'No MO IoT devices available yet.',
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 6),
           Text(
-            'Pair the breaker in Tuya first or complete the native SDK setup so this app can start onboarding directly.',
+            'Pair the breaker first or complete the native SDK setup so this app can start onboarding directly.',
             textAlign: TextAlign.center,
             style: Theme.of(
               context,

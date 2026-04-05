@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
-import 'iot/tuya_iot_page.dart';
+import 'iot/mo_iot_page.dart';
 
 const Color _brandOrange = Color(0xFFFF6600);
 const Color _brandCream = Color(0xFFFFFBF8);
@@ -1030,7 +1030,7 @@ class _HomeShellState extends State<HomeShell> {
           selectedDeliveryMethod: _deliveryMethod.value,
           selectedDeliveryInfo: _deliveryInfo,
         ),
-        TuyaIotPage(),
+        MoIotPage(),
         ContactScreen(
           onOpenWebsite: () => launchExternalUri(_websiteUri),
           onWhatsApp: () => launchExternalUri(_whatsAppUri),

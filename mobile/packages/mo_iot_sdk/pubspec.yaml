@@ -1,0 +1,13 @@
+name: mo_iot_sdk
+description: First-party MO IoT SDK for pairing and controlling smart devices from Flutter.
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.11.4
+  flutter: ">=3.35.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.5.0

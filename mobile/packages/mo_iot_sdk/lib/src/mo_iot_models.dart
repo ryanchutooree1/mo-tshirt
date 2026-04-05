@@ -1,5 +1,5 @@
-class TuyaSdkStatus {
-  const TuyaSdkStatus({
+class MoIotSdkStatus {
+  const MoIotSdkStatus({
     required this.platform,
     required this.configured,
     required this.appKeyPresent,
@@ -9,8 +9,8 @@ class TuyaSdkStatus {
     required this.message,
   });
 
-  factory TuyaSdkStatus.fromMap(Map<Object?, Object?> map) {
-    return TuyaSdkStatus(
+  factory MoIotSdkStatus.fromMap(Map<Object?, Object?> map) {
+    return MoIotSdkStatus(
       platform: (map['platform'] ?? 'unknown').toString(),
       configured: map['configured'] == true,
       appKeyPresent: map['appKeyPresent'] == true,
@@ -32,18 +32,18 @@ class TuyaSdkStatus {
   final String message;
 }
 
-enum TuyaPairingMode {
+enum MoPairingMode {
   ez('ez', 'Blink slowly'),
   ap('ap', 'Blink quickly');
 
-  const TuyaPairingMode(this.value, this.label);
+  const MoPairingMode(this.value, this.label);
 
   final String value;
   final String label;
 }
 
-class TuyaPairingRequest {
-  const TuyaPairingRequest({
+class MoPairingRequest {
+  const MoPairingRequest({
     required this.ssid,
     required this.password,
     required this.homeName,
@@ -53,7 +53,7 @@ class TuyaPairingRequest {
   final String ssid;
   final String password;
   final String homeName;
-  final TuyaPairingMode mode;
+  final MoPairingMode mode;
 
   Map<String, Object?> toMap() {
     return <String, Object?>{
@@ -65,15 +65,15 @@ class TuyaPairingRequest {
   }
 }
 
-class TuyaPowerDatapoint {
-  const TuyaPowerDatapoint({required this.code, required this.value});
+class MoDevicePowerDatapoint {
+  const MoDevicePowerDatapoint({required this.code, required this.value});
 
   final String code;
   final bool value;
 }
 
-class TuyaDevice {
-  const TuyaDevice({
+class MoIotDevice {
+  const MoIotDevice({
     required this.id,
     required this.name,
     required this.online,
@@ -82,7 +82,7 @@ class TuyaDevice {
     required this.status,
   });
 
-  factory TuyaDevice.fromApiJson(Map<String, dynamic> json) {
+  factory MoIotDevice.fromApiJson(Map<String, dynamic> json) {
     final List<Map<String, dynamic>> normalizedStatus =
         (json['status'] as List<dynamic>? ?? <dynamic>[])
             .whereType<Map<String, dynamic>>()
@@ -94,9 +94,9 @@ class TuyaDevice {
             )
             .toList(growable: false);
 
-    return TuyaDevice(
+    return MoIotDevice(
       id: json['id']?.toString() ?? '',
-      name: json['name']?.toString() ?? 'Tuya device',
+      name: json['name']?.toString() ?? 'MO IoT device',
       online: json['online'] == null ? null : json['online'] == true,
       lastFetchedAt: json['lastFetchedAt']?.toString() ?? '',
       error: json['error']?.toString(),
@@ -111,7 +111,7 @@ class TuyaDevice {
   final String? error;
   final List<Map<String, dynamic>> status;
 
-  TuyaPowerDatapoint? get primaryPowerDatapoint {
+  MoDevicePowerDatapoint? get primaryPowerDatapoint {
     final Iterable<Map<String, dynamic>> candidates = <Map<String, dynamic>>[
       ...status.where(
         (Map<String, dynamic> item) => item['code'] == 'switch_1',
@@ -127,7 +127,7 @@ class TuyaDevice {
     for (final Map<String, dynamic> item in candidates) {
       final Object? value = item['value'];
       if (value is bool) {
-        return TuyaPowerDatapoint(
+        return MoDevicePowerDatapoint(
           code: item['code']?.toString() ?? '',
           value: value,
         );
