@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mo_iot_sdk/mo_iot_sdk.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 const Color _iotOrange = Color(0xFFFF6600);
 const Color _iotCream = Color(0xFFFFFBF8);
@@ -23,18 +24,28 @@ class _MoIotPageState extends State<MoIotPage> {
   final TextEditingController _homeNameController = TextEditingController(
     text: 'MO T-SHIRT Home',
   );
+  final TextEditingController _shortcutOnController = TextEditingController(
+    text: 'GGT Light On',
+  );
+  final TextEditingController _shortcutOffController = TextEditingController(
+    text: 'GGT Light Off',
+  );
+  final TextEditingController _shortcutCommandController =
+      TextEditingController();
 
   MoPairingMode _pairingMode = MoPairingMode.ez;
   MoIotSdkStatus? _sdkStatus;
   bool _checkingSdk = true;
   bool _startingPair = false;
   bool _loadingDevices = false;
+  bool _runningShortcut = false;
   final Map<String, bool> _commandBusy = <String, bool>{};
   final Map<String, bool> _refreshBusy = <String, bool>{};
   final Map<String, String> _deviceFeedback = <String, String>{};
   List<MoIotDevice> _devices = <MoIotDevice>[];
   String? _pairingFeedback;
   String? _cloudFeedback;
+  String? _shortcutFeedback;
 
   @override
   void initState() {
@@ -47,6 +58,9 @@ class _MoIotPageState extends State<MoIotPage> {
     _ssidController.dispose();
     _passwordController.dispose();
     _homeNameController.dispose();
+    _shortcutOnController.dispose();
+    _shortcutOffController.dispose();
+    _shortcutCommandController.dispose();
     super.dispose();
   }
 
@@ -290,6 +304,107 @@ class _MoIotPageState extends State<MoIotPage> {
         .toList(growable: false);
   }
 
+  bool get _supportsShortcutBridge =>
+      Theme.of(context).platform == TargetPlatform.iOS;
+
+  String? _resolveShortcutAction(String input) {
+    final String normalized = input.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return null;
+    }
+
+    if (normalized.contains('turn on') ||
+        normalized.contains('switch on') ||
+        normalized.contains('power on') ||
+        normalized == 'on') {
+      return 'on';
+    }
+
+    if (normalized.contains('turn off') ||
+        normalized.contains('switch off') ||
+        normalized.contains('power off') ||
+        normalized == 'off') {
+      return 'off';
+    }
+
+    return null;
+  }
+
+  Future<void> _runShortcut(String name) async {
+    final String trimmed = name.trim();
+    if (trimmed.isEmpty) {
+      setState(() {
+        _shortcutFeedback = 'Enter a shortcut name first.';
+      });
+      return;
+    }
+
+    if (!_supportsShortcutBridge) {
+      setState(() {
+        _shortcutFeedback =
+            'The Shortcut bridge only works on iPhone because it launches the iOS Shortcuts app.';
+      });
+      return;
+    }
+
+    final Uri shortcutUri = Uri(
+      scheme: 'shortcuts',
+      host: 'run-shortcut',
+      queryParameters: <String, String>{'name': trimmed},
+    );
+
+    setState(() {
+      _runningShortcut = true;
+      _shortcutFeedback = null;
+    });
+
+    try {
+      final bool launched = await launchUrl(
+        shortcutUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _shortcutFeedback = launched
+            ? 'Requested "$trimmed" from iPhone Shortcuts.'
+            : 'iPhone Shortcuts did not open. Check that the Shortcuts app is available.';
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _shortcutFeedback = error.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _runningShortcut = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _runShortcutCommand() async {
+    final String action =
+        _resolveShortcutAction(_shortcutCommandController.text) ?? '';
+
+    if (action.isEmpty) {
+      setState(() {
+        _shortcutFeedback =
+            'Use a command like "turn on ggt light" or "turn off ggt light".';
+      });
+      return;
+    }
+
+    final String shortcutName = action == 'on'
+        ? _shortcutOnController.text
+        : _shortcutOffController.text;
+    await _runShortcut(shortcutName);
+  }
+
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
@@ -346,6 +461,145 @@ class _MoIotPageState extends State<MoIotPage> {
                     ),
                   ],
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _SectionCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Official Tuya app bridge (iPhone)',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Use this when you cannot use the Tuya cloud API. Create two iPhone Shortcuts from the official Tuya app using Tap-to-Run or Add to Siri, then let this Flutter app launch those shortcuts for on and off.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.black54,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: <Widget>[
+                    _StatusChip(
+                      icon: Icons.phone_iphone_rounded,
+                      label: _supportsShortcutBridge
+                          ? 'iPhone shortcut launch available'
+                          : 'Requires iPhone',
+                      tone: _supportsShortcutBridge
+                          ? _StatusChipTone.success
+                          : _StatusChipTone.warn,
+                    ),
+                    const _StatusChip(
+                      icon: Icons.shortcut_rounded,
+                      label: 'Runs local iPhone shortcuts',
+                      tone: _StatusChipTone.neutral,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                TextField(
+                  controller: _shortcutOnController,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'On shortcut name',
+                    hintText: 'Example: GGT Light On',
+                    prefixIcon: Icon(Icons.light_mode_rounded),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _shortcutOffController,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    labelText: 'Off shortcut name',
+                    hintText: 'Example: GGT Light Off',
+                    prefixIcon: Icon(Icons.dark_mode_rounded),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _shortcutCommandController,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _runShortcutCommand(),
+                  decoration: const InputDecoration(
+                    labelText: 'OpenClaw-style command',
+                    hintText: 'Example: turn on ggt light',
+                    prefixIcon: Icon(Icons.chat_bubble_outline_rounded),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: _runningShortcut
+                            ? null
+                            : () => _runShortcut(_shortcutOnController.text),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF109868),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        icon: _runningShortcut
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.lightbulb_rounded),
+                        label: const Text('Run on'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: _runningShortcut
+                            ? null
+                            : () => _runShortcut(_shortcutOffController.text),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: _iotInk,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        icon: const Icon(Icons.power_settings_new_rounded),
+                        label: const Text('Run off'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _runningShortcut ? null : _runShortcutCommand,
+                    icon: const Icon(Icons.send_rounded),
+                    label: const Text('Run command'),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _InlineNotice(
+                  icon: Icons.info_outline_rounded,
+                  text:
+                      'Setup on iPhone first: in the official Tuya app create a Tap-to-Run scene for light on and another for light off, add each one to Siri/Shortcuts, then enter the exact shortcut names here.',
+                ),
+                if (_shortcutFeedback != null) ...<Widget>[
+                  const SizedBox(height: 12),
+                  _InlineNotice(
+                    icon: Icons.bolt_rounded,
+                    text: _shortcutFeedback!,
+                  ),
+                ],
               ],
             ),
           ),
