@@ -73,6 +73,35 @@ NEXT_PUBLIC_FIREBASE_ADMIN_EMAIL=admin@example.com
 
 Deploy the Storage rules in [`storage.rules`](/Users/ryanchutooree/mo-t-shirt/storage.rules) after that setup. See [`docs/firebase-storage-security.md`](/Users/ryanchutooree/mo-t-shirt/docs/firebase-storage-security.md) for the exact flow.
 
+### OpenClaw Tuya Control
+
+This repo now includes a server endpoint for OpenClaw to control Tuya devices directly:
+
+`POST /api/openclaw/tuya`
+
+Important:
+
+- This does not automate the Tuya mobile app UI.
+- It sends the power command straight to Tuya Cloud, which is more reliable than trying to open the Tuya app and tap buttons.
+- Protect it with `OPENCLAW_TUYA_SECRET`.
+
+Example request:
+
+```bash
+curl -X POST http://localhost:3000/api/openclaw/tuya \
+  -H "Authorization: Bearer $OPENCLAW_TUYA_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"turn on office light"}'
+```
+
+Supported request fields:
+
+- `message`: free text such as `turn on office light`
+- `device` or `deviceName`: device name to match
+- `deviceId`: exact Tuya device id
+- `action` or `power`: `on`, `off`, or `toggle`
+- `code`: optional datapoint override if you want to force a specific Tuya switch code
+
 ### Data + images
 
 - Shop items are stored in Firestore (collection: `shops`).
