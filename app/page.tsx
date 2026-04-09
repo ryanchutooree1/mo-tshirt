@@ -131,7 +131,7 @@ export default function HomePage() {
           <div className="sm:mx-0 sm:px-0">
             <nav
               aria-label="Primary"
-              className="flex flex-wrap items-center justify-center gap-2 text-[13px] font-semibold text-black/70 sm:justify-end sm:gap-x-6 sm:gap-y-3 sm:text-sm sm:font-medium"
+              className="flex flex-wrap items-center justify-center gap-3 text-base font-semibold text-black/70 sm:justify-end sm:gap-x-6 sm:gap-y-3 sm:text-sm sm:font-medium"
             >
               {navLinks.map((link) => (
                 link.label === "WhatsApp" ? (
@@ -142,7 +142,7 @@ export default function HomePage() {
                     trackingSource="homepage"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex min-h-10 items-center justify-center whitespace-nowrap rounded-full border border-[#EAEAEA] bg-white px-4 py-2 leading-none transition hover:border-black hover:text-black sm:min-h-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
+                    className="inline-flex min-h-12 items-center justify-center whitespace-nowrap rounded-full border border-[#EAEAEA] bg-white px-5 py-3 leading-none transition hover:border-black hover:text-black sm:min-h-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
                   >
                     {link.label}
                   </TrackedWhatsAppLink>
@@ -150,7 +150,7 @@ export default function HomePage() {
                   <a
                     key={link.label}
                     href={link.href}
-                    className={`inline-flex min-h-10 items-center justify-center whitespace-nowrap rounded-full border px-4 py-2 leading-none transition sm:min-h-0 sm:border-0 sm:px-0 sm:py-0 ${
+                    className={`inline-flex min-h-12 items-center justify-center whitespace-nowrap rounded-full border px-5 py-3 leading-none transition sm:min-h-0 sm:border-0 sm:px-0 sm:py-0 ${
                       link.buttonTone === "orange"
                         ? "border-transparent bg-[#FF6600] text-white shadow-sm hover:bg-orange-600"
                         : link.buttonTone === "rainbow"
