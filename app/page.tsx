@@ -128,10 +128,10 @@ export default function HomePage() {
           <Link href="#top" className="flex items-center justify-center sm:justify-start" aria-label="MO T-SHIRT Home">
             <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={150} height={60} priority className="h-9 w-auto sm:h-12" />
           </Link>
-          <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+          <div className="sm:mx-0 sm:px-0">
             <nav
               aria-label="Primary"
-              className="flex w-max min-w-full items-center justify-start gap-2 pb-1 text-xs font-semibold text-black/70 sm:w-auto sm:min-w-0 sm:flex-wrap sm:justify-end sm:gap-6 sm:pb-0 sm:text-sm sm:font-medium"
+              className="flex flex-wrap items-center justify-center gap-2 text-[13px] font-semibold text-black/70 sm:justify-end sm:gap-x-6 sm:gap-y-3 sm:text-sm sm:font-medium"
             >
               {navLinks.map((link) => (
                 link.label === "WhatsApp" ? (
@@ -142,7 +142,7 @@ export default function HomePage() {
                     trackingSource="homepage"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-full border border-[#EAEAEA] bg-white px-3 py-2 whitespace-nowrap transition hover:border-black hover:text-black sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
+                    className="inline-flex min-h-10 items-center justify-center whitespace-nowrap rounded-full border border-[#EAEAEA] bg-white px-4 py-2 leading-none transition hover:border-black hover:text-black sm:min-h-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
                   >
                     {link.label}
                   </TrackedWhatsAppLink>
@@ -150,7 +150,7 @@ export default function HomePage() {
                   <a
                     key={link.label}
                     href={link.href}
-                    className={`whitespace-nowrap rounded-full border px-3 py-2 transition sm:border-0 sm:px-0 sm:py-0 ${
+                    className={`inline-flex min-h-10 items-center justify-center whitespace-nowrap rounded-full border px-4 py-2 leading-none transition sm:min-h-0 sm:border-0 sm:px-0 sm:py-0 ${
                       link.buttonTone === "orange"
                         ? "border-transparent bg-[#FF6600] text-white shadow-sm hover:bg-orange-600"
                         : link.buttonTone === "rainbow"
