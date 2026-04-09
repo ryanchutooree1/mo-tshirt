@@ -100,10 +100,17 @@ One-command wrapper for the `GGT Light` device:
 npm run ggt:on
 ```
 
+Behavior:
+
+- First tries the `/api/openclaw/tuya` endpoint
+- If that fails, it falls back to a direct click on the desktop `GGT Light` widget on this Mac
+
 Optional environment variables:
 
 - `OPENCLAW_BASE_URL` to target a deployed site instead of `http://localhost:3000`
 - `OPENCLAW_TUYA_SECRET` or `OPENCLAW_SECRET` for authenticated requests
+- `GGT_LIGHT_WIDGET_X` and `GGT_LIGHT_WIDGET_Y` to override the widget click coordinates
+- `GGT_LIGHT_ALLOW_WIDGET_FALLBACK=0` to disable the desktop-click fallback
 
 Supported request fields:
 
