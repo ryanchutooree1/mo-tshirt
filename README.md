@@ -94,6 +94,17 @@ curl -X POST http://localhost:3000/api/openclaw/tuya \
   -d '{"message":"turn on office light"}'
 ```
 
+One-command wrapper for the `GGT Light` device:
+
+```bash
+npm run ggt:on
+```
+
+Optional environment variables:
+
+- `OPENCLAW_BASE_URL` to target a deployed site instead of `http://localhost:3000`
+- `OPENCLAW_TUYA_SECRET` or `OPENCLAW_SECRET` for authenticated requests
+
 Supported request fields:
 
 - `message`: free text such as `turn on office light`

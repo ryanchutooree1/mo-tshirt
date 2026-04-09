@@ -13,6 +13,7 @@
     "start": "next start",
     "clean": "rm -rf .next",
     "lint": "eslint",
+    "ggt:on": "zsh ./scripts/ggt-light-on.sh",
     "ai:train": "node --no-warnings scripts/ai-train.mjs",
     "ai:reindex": "node --no-warnings scripts/ai-reindex.mjs",
     "ai:evaluate": "node --no-warnings scripts/ai-evaluate.mjs",
