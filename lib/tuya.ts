@@ -262,6 +262,10 @@ export function getTuyaBaseUrl() {
   return getBaseUrl();
 }
 
+export function getTuyaProjectCode() {
+  return String(process.env.TUYA_PROJECT_CODE || "").trim();
+}
+
 export function getConfiguredDeviceIds() {
   const raw = String(process.env.TUYA_DEVICE_IDS || "");
   return raw

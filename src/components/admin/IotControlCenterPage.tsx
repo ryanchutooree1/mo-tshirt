@@ -66,6 +66,8 @@ type CommandState = {
 type PingResponse = {
   hasKeys?: boolean;
   baseUrl?: string;
+  projectCode?: string;
+  configuredDeviceIdsCount?: number;
   missingEnv?: string[];
 };
 
@@ -216,6 +218,8 @@ export default function IotControlCenterPage() {
   const [hasKeys, setHasKeys] = useState<boolean>(false);
   const [missingEnv, setMissingEnv] = useState<string[]>([]);
   const [baseUrl, setBaseUrl] = useState<string>("");
+  const [projectCode, setProjectCode] = useState<string>("");
+  const [configuredDeviceIdsCount, setConfiguredDeviceIdsCount] = useState<number>(0);
   const [devices, setDevices] = useState<DeviceItem[]>([]);
   const [automations, setAutomations] = useState<IotAutomation[]>([]);
 
@@ -258,11 +262,19 @@ export default function IotControlCenterPage() {
       const data = (await response.json()) as PingResponse;
       setHasKeys(Boolean(data.hasKeys));
       setBaseUrl(typeof data.baseUrl === "string" ? data.baseUrl : "");
+      setProjectCode(typeof data.projectCode === "string" ? data.projectCode : "");
+      setConfiguredDeviceIdsCount(
+        typeof data.configuredDeviceIdsCount === "number" && Number.isFinite(data.configuredDeviceIdsCount)
+          ? data.configuredDeviceIdsCount
+          : 0
+      );
       setMissingEnv(Array.isArray(data.missingEnv) ? data.missingEnv : []);
       return Boolean(data.hasKeys);
     } catch {
       setHasKeys(false);
       setBaseUrl("");
+      setProjectCode("");
+      setConfiguredDeviceIdsCount(0);
       setMissingEnv([]);
       return false;
     }
@@ -682,6 +694,10 @@ export default function IotControlCenterPage() {
                 Base: {baseUrl || "-"}
               </span>
               <span className="iot-chip">
+                <Cpu className="h-3.5 w-3.5" />
+                Project: {projectCode || "Not set"}
+              </span>
+              <span className="iot-chip">
                 <CalendarClock className="h-3.5 w-3.5" />
                 {automationSummary.enabled} active automations
               </span>
@@ -745,7 +761,11 @@ export default function IotControlCenterPage() {
       {!hasKeys ? (
         <section className="iot-panel iot-missing animate-rise">
           <h2>Tuya keys missing</h2>
-          <p>Add `TUYA_CLIENT_ID` and `TUYA_CLIENT_SECRET` to server environment variables.</p>
+          <p>Add your new Tuya project settings to the website server environment before using IoT Control.</p>
+          <div className="iot-alert-inline">
+            Required server values: `TUYA_BASE_URL=https://openapi.tuyaeu.com`, `TUYA_CLIENT_ID`, `TUYA_CLIENT_SECRET`,
+            `TUYA_PROJECT_CODE`, and `TUYA_DEVICE_IDS`.
+          </div>
           {missingEnv.length > 0 ? (
             <div className="iot-alert-inline">Missing on server: {missingEnv.join(", ")}</div>
           ) : null}
@@ -754,6 +774,33 @@ export default function IotControlCenterPage() {
 
       {hasKeys ? (
         <>
+          <section className="iot-panel animate-rise">
+            <header className="iot-automation-head">
+              <div>
+                <p className="iot-kicker">Cloud Setup</p>
+                <h2 className="iot-automation-title">Website Tuya Project</h2>
+                <p className="iot-automation-note">
+                  This admin deck is connected through your website server environment, not hard-coded secrets.
+                </p>
+              </div>
+            </header>
+
+            <div className="iot-chip-row">
+              <span className="iot-chip">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Base URL: {baseUrl || "https://openapi.tuyaeu.com"}
+              </span>
+              <span className="iot-chip">
+                <Cpu className="h-3.5 w-3.5" />
+                Project code: {projectCode || "Not set"}
+              </span>
+              <span className="iot-chip">
+                <Zap className="h-3.5 w-3.5" />
+                Configured device IDs: {configuredDeviceIdsCount}
+              </span>
+            </div>
+          </section>
+
           <section className="iot-panel iot-automation animate-rise">
             <header className="iot-automation-head">
               <div>

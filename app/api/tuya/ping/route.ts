@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getMissingTuyaEnvVars, getTuyaBaseUrl, hasTuyaKeys } from "../../../../lib/tuya";
+import { getConfiguredDeviceIds, getMissingTuyaEnvVars, getTuyaBaseUrl, getTuyaProjectCode, hasTuyaKeys } from "../../../../lib/tuya";
 
 export const runtime = "nodejs";
 
@@ -8,6 +8,8 @@ export async function GET() {
     ok: true,
     hasKeys: hasTuyaKeys(),
     baseUrl: getTuyaBaseUrl(),
+    projectCode: getTuyaProjectCode(),
+    configuredDeviceIdsCount: getConfiguredDeviceIds().length,
     missingEnv: getMissingTuyaEnvVars(),
   });
 }
