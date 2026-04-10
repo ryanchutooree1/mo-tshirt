@@ -152,9 +152,9 @@ export default function HomePage() {
                     href={link.href}
                     className={`inline-flex min-h-12 items-center justify-center whitespace-nowrap rounded-full border px-5 py-3 leading-none transition ${
                       link.buttonTone === "orange"
-                        ? "border-transparent bg-[#FF6600] text-white shadow-sm hover:bg-orange-600 sm:min-h-11 sm:px-6 sm:py-2.5 sm:text-[15px]"
+                        ? "border-transparent bg-[#FF6600] text-white shadow-sm hover:bg-orange-600 sm:min-h-10 sm:px-5 sm:py-2 sm:text-sm"
                         : link.buttonTone === "rainbow"
-                          ? "border-transparent bg-[linear-gradient(135deg,#22d3ee_0%,#8b5cf6_52%,#ec4899_100%)] font-semibold text-white shadow-[0_14px_28px_-16px_rgba(124,58,237,0.75)] hover:brightness-110 sm:min-h-11 sm:px-6 sm:py-2.5 sm:text-[15px]"
+                          ? "border-transparent bg-[linear-gradient(135deg,#22d3ee_0%,#8b5cf6_52%,#ec4899_100%)] font-semibold text-white shadow-[0_14px_28px_-16px_rgba(124,58,237,0.75)] hover:brightness-110 sm:min-h-10 sm:px-5 sm:py-2 sm:text-sm"
                           : "border-[#EAEAEA] bg-white text-black/70 hover:border-black hover:text-black sm:min-h-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
                     }`}
                   >
