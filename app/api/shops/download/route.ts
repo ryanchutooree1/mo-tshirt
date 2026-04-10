@@ -21,9 +21,10 @@ const EXT_BY_TYPE: Record<string, string> = {
 
 function sanitizeFilenamePart(input: string) {
   const cleaned = input
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
+    .replace(/[^\w\s-]+/g, "")
+    .replace(/[\s-]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
   return cleaned;
 }
 

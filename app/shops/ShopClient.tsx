@@ -104,6 +104,19 @@ function getColorSwatch(color: string, itemTitle?: string) {
   return found?.value || "#d4d4d8";
 }
 
+function formatDownloadName(color: string, title: string) {
+  const joined = [color, title]
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join("_");
+
+  return joined
+    .replace(/[^\w\s-]+/g, "")
+    .replace(/[\s-]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
 type ItemSelection = {
   color: string;
   size: string;
@@ -626,7 +639,9 @@ export default function ShopClient() {
                   )}
                   {item.photoUrl && (
                     <a
-                      href={`/api/shops/download?url=${encodeURIComponent(item.photoUrl)}&name=${encodeURIComponent(item.title)}`}
+                      href={`/api/shops/download?url=${encodeURIComponent(item.photoUrl)}&name=${encodeURIComponent(
+                        formatDownloadName(displayColor, item.title)
+                      )}`}
                       className="absolute right-3 top-3 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-neutral-700 shadow-sm ring-1 ring-neutral-200 backdrop-blur transition hover:scale-105 hover:bg-white"
                       aria-label={`Download ${item.title} photo`}
                       title="Download image"
