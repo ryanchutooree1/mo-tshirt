@@ -616,6 +616,8 @@ export default function ShopClient() {
             const sizePrices = getSizePrices(item);
             const isOneSizeItem =
               sizePrices.length === 1 && isOneSizeLabel(sizePrices[0]?.size || "");
+            const hasMultipleColors = item.colors.length > 1;
+            const hasMultipleSizes = sizePrices.length > 1;
             const priceValues = sizePrices
               .map((entry) => entry.price)
               .filter((price) => Number.isFinite(price)) as number[];
@@ -675,20 +677,12 @@ export default function ShopClient() {
                           ? formatDisplayWholeMoney(minPrice)
                           : `From ${formatDisplayWholeMoney(minPrice)}`}
                       </span>
-                      {isOneSizeItem && (
-                        <span className="rounded-full border border-neutral-200 bg-white px-3 py-1 font-semibold text-neutral-600">
-                          One size
-                        </span>
-                      )}
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 text-xs text-neutral-600">
-                    {isOneSizeItem ? (
-                      <span className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 font-semibold text-neutral-600">
-                        One size
-                      </span>
-                    ) : sizePrices.length ? (
+                  {!isOneSizeItem && (
+                    <div className="flex flex-wrap gap-2 text-xs text-neutral-600">
+                      {sizePrices.length ? (
                       sizePrices.map((entry) => (
                         <button
                           key={entry.size}
@@ -703,32 +697,28 @@ export default function ShopClient() {
                           {formatSizeLabel(entry.size)}
                         </button>
                       ))
-                    ) : (
-                      <span className="text-neutral-400">Sizes not set</span>
-                    )}
-                  </div>
+                      ) : (
+                        <span className="text-neutral-400">Sizes not set</span>
+                      )}
+                    </div>
+                  )}
 
                   <div className="grid gap-3 text-xs text-neutral-600 sm:grid-cols-2">
-                    <label className="flex flex-col gap-2">
-                      Color
-                      <select
-                        value={selection.color}
-                        onChange={(e) => updateSelection(item.id, { color: e.target.value })}
-                        className="rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
-                      >
-                        {item.colors.map((color) => (
-                          <option key={color} value={color}>{color}</option>
-                        ))}
-                      </select>
-                    </label>
-                    {isOneSizeItem ? (
-                      <div className="flex flex-col gap-2">
-                        <span>Size</span>
-                        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm font-medium text-neutral-700">
-                          One size
-                        </div>
-                      </div>
-                    ) : (
+                    {hasMultipleColors && (
+                      <label className="flex flex-col gap-2">
+                        Color
+                        <select
+                          value={selection.color}
+                          onChange={(e) => updateSelection(item.id, { color: e.target.value })}
+                          className="rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+                        >
+                          {item.colors.map((color) => (
+                            <option key={color} value={color}>{color}</option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+                    {hasMultipleSizes && !isOneSizeItem && (
                       <label className="flex flex-col gap-2">
                         Size
                         <select
