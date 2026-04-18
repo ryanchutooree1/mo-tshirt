@@ -120,6 +120,36 @@ Supported request fields:
 - `action` or `power`: `on`, `off`, or `toggle`
 - `code`: optional datapoint override if you want to force a specific Tuya switch code
 
+### OpenClaw WhatsApp Demo Flow
+
+This repo now includes a simple demo webhook for inbound WhatsApp commands:
+
+`POST /api/openclaw/whatsapp`
+
+Behavior:
+
+- Parses inbound text from direct JSON, Twilio webhooks, or Meta-style webhook payloads
+- Checks for the exact trigger `Hi, analyse all client requests.`
+- Waits 2 to 3 seconds to simulate OpenClaw "thinking"
+- Sends the demo reply `Done.` / `8 client emails drafted.` / `15 tasks assigned to your team.` / `3 clients need your approval.`
+- Logs incoming message, command match, thinking delay start, and reply sent
+
+If no WhatsApp provider credentials are configured, the route stays in mock mode and logs the reply instead of sending it.
+
+Quick local test:
+
+```bash
+curl -X POST http://localhost:3000/api/openclaw/whatsapp \
+  -H "Content-Type: application/json" \
+  -d '{"from":"whatsapp:+23059883880","message":"Hi, analyse all client requests."}'
+```
+
+Optional provider support:
+
+- `OPENCLAW_WHATSAPP_PROVIDER=twilio` with `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_WHATSAPP_FROM`
+- `OPENCLAW_WHATSAPP_PROVIDER=meta` with `WHATSAPP_CLOUD_API_TOKEN` and `WHATSAPP_CLOUD_PHONE_NUMBER_ID`
+- `OPENCLAW_WHATSAPP_TYPING_INDICATOR=1` enables Twilio's WhatsApp typing indicator before the delayed reply
+
 ### Data + images
 
 - Shop items are stored in Firestore (collection: `shops`).
