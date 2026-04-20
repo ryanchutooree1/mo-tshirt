@@ -55,6 +55,115 @@ const benefits = [
   },
 ];
 
+const readyMadeUniforms = [
+  {
+    code: "SEC-01",
+    title: "Security Poloshirts",
+    audience: "For guards, supervisors, and patrol teams",
+    description:
+      "A sharp polo layout with chest logo placement, strong contrast zones, and a serious corporate look that works across sites.",
+    features: ["Add company logo", "Black, navy, or grey base", "Built for repeat orders"],
+    imageSrc: "/mockups/polo-front.png",
+    accentClass: "from-slate-950 via-slate-800 to-slate-700",
+    badgeClass: "border-slate-200 bg-slate-100 text-slate-700",
+    message:
+      "Hi! I want the ready-made uniform SEC-01 Security Poloshirt. Can you customize it with my logo?",
+  },
+  {
+    code: "STAFF-02",
+    title: "Staff Poloshirts",
+    audience: "For office teams, sales staff, and shop crews",
+    description:
+      "A clean business polo that makes staff look coordinated without needing a custom design process for every new order.",
+    features: ["Simple logo setup", "Works across departments", "Easy to restock later"],
+    imageSrc: "/mockups/polo-back.png",
+    accentClass: "from-orange-500 via-amber-500 to-yellow-400",
+    badgeClass: "border-orange-200 bg-orange-50 text-orange-700",
+    message:
+      "Hi! I want the ready-made uniform STAFF-02 Staff Poloshirt. Can you customize it with my logo?",
+  },
+  {
+    code: "REST-03",
+    title: "Restaurant Uniforms",
+    audience: "For waiters, kitchen staff, and delivery teams",
+    description:
+      "Designed to feel tidy and branded in front-of-house settings while staying practical for fast-moving restaurant teams.",
+    features: ["Front and back branding", "Good for team roles", "Professional hospitality look"],
+    imageSrc: "/mockups/tshirt-front.png",
+    accentClass: "from-red-600 via-orange-500 to-amber-300",
+    badgeClass: "border-red-200 bg-red-50 text-red-700",
+    message:
+      "Hi! I want the ready-made uniform REST-03 Restaurant Uniform. Can you customize it with my logo?",
+  },
+  {
+    code: "SPORT-04",
+    title: "Organisation & Sport Teams",
+    audience: "For clubs, event crews, and company teams",
+    description:
+      "A proven teamwear format for events, sports days, associations, and branded community groups that need fast coordination.",
+    features: ["Strong team identity", "Names and numbers possible", "Best for bulk quantities"],
+    imageSrc: "/mockups/tshirt-back.png",
+    accentClass: "from-blue-600 via-cyan-500 to-sky-300",
+    badgeClass: "border-sky-200 bg-sky-50 text-sky-700",
+    message:
+      "Hi! I want the ready-made uniform SPORT-04 Organisation & Sport Team design. Can you customize it with my logo?",
+  },
+  {
+    code: "NGO-05",
+    title: "Donation & NGO Shirts",
+    audience: "For charity drives, fundraisers, and outreach teams",
+    description:
+      "A ready layout for campaign visibility with space for sponsor logos, event names, and messaging that still looks organized.",
+    features: ["Great for campaigns", "Sponsor-friendly placement", "Fast to launch"],
+    imageSrc: "/mockups/hoodie-front.png",
+    accentClass: "from-emerald-600 via-green-500 to-lime-300",
+    badgeClass: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    message:
+      "Hi! I want the ready-made uniform NGO-05 Donation & NGO Shirt. Can you customize it with my logo?",
+  },
+  {
+    code: "SYN-06",
+    title: "Syndic & Corporate Teams",
+    audience: "For syndics, maintenance teams, and formal organisations",
+    description:
+      "A stable branded uniform offer for property teams and organised groups that want a serious, repeatable, long-term identity.",
+    features: ["Corporate-ready look", "Ideal for recurring orders", "Suitable for mixed teams"],
+    imageSrc: "/mockups/hoodie-back.png",
+    accentClass: "from-violet-700 via-fuchsia-600 to-pink-400",
+    badgeClass: "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700",
+    message:
+      "Hi! I want the ready-made uniform SYN-06 Syndic & Corporate Team design. Can you customize it with my logo?",
+  },
+] as const;
+
+const readyMadeSteps = [
+  {
+    title: "Choose a style code",
+    copy: "Pick a ready-made design like SEC-01 or REST-03 instead of starting from zero.",
+  },
+  {
+    title: "Send your logo",
+    copy: "We apply your brand, color direction, and role text to the chosen layout.",
+  },
+  {
+    title: "Approve the mockup",
+    copy: "You confirm the final look quickly because the structure is already proven.",
+  },
+  {
+    title: "Reorder anytime",
+    copy: "Use the same design again later for new staff, new branches, or a bigger team.",
+  },
+] as const;
+
+const readyMadeHighlights = [
+  "Security",
+  "Restaurants",
+  "Staff teams",
+  "Sport clubs",
+  "NGOs",
+  "Syndics",
+] as const;
+
 const faqItems = [
   {
     question: "What is the turnaround time for custom T-shirt printing?",
@@ -99,6 +208,12 @@ const faqLd = {
 function ActionButtons() {
   return (
     <div className="mt-8 mx-auto flex w-full max-w-2xl flex-wrap items-center justify-center gap-3">
+      <a
+        href="#ready-made-uniforms"
+        className="inline-flex items-center justify-center rounded-full border border-black bg-white px-6 py-3 text-sm font-medium text-black transition hover:bg-black hover:text-white"
+      >
+        Ready-Made Uniform Designs
+      </a>
       <TrackedWhatsAppLink
         href={getWhatsAppUrl()}
         trackingLocation="home_hero"
@@ -172,6 +287,13 @@ export default function HomePage() {
         {/* Hero */}
         <section id="hero" className="flex min-h-[80vh] items-center justify-center px-6 pt-14 pb-12 sm:pt-20 sm:pb-20">
           <div className="mx-auto flex w-full max-w-5xl flex-col items-center text-center">
+            <a
+              href="#ready-made-uniforms"
+              className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-neutral-700 transition hover:border-black hover:bg-white hover:text-black"
+            >
+              Ready-Made Uniform Designs
+              <span aria-hidden="true">↓</span>
+            </a>
             <h1 className="text-4xl font-semibold tracking-tight text-black sm:text-5xl">
               Trying to be #1 in Mauritius.
             </h1>
@@ -225,6 +347,146 @@ export default function HomePage() {
                 height={628}
                 className="h-auto w-full rounded-[32px] border border-[#EAEAEA] object-cover shadow-sm"
               />
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="ready-made-uniforms"
+          className="scroll-mt-24 bg-[linear-gradient(180deg,#fff8f1_0%,#ffffff_22%,#f8fafc_100%)] px-6 py-16 sm:py-20"
+        >
+          <div className="mx-auto max-w-6xl">
+            <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
+              <div className="lg:sticky lg:top-28">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-orange-500">
+                  New offer
+                </p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight text-black sm:text-4xl">
+                  Ready-made uniform designs you can sell forever
+                </h2>
+                <p className="mt-4 max-w-xl text-base leading-7 text-neutral-600">
+                  Build one strong offer for corporates, restaurants, organisations, sports teams,
+                  donation campaigns, security companies, and syndic teams. Clients choose a proven
+                  design, send their logo, and order faster.
+                </p>
+
+                <div className="mt-6 flex flex-wrap gap-2">
+                  {readyMadeHighlights.map((item) => (
+                    <span
+                      key={item}
+                      className="rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-semibold text-neutral-700 shadow-sm"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="mt-8 grid gap-3 sm:grid-cols-2">
+                  {readyMadeSteps.map((step, index) => (
+                    <div
+                      key={step.title}
+                      className="rounded-[24px] border border-white/70 bg-white/90 p-5 shadow-[0_18px_40px_-30px_rgba(0,0,0,0.35)]"
+                    >
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">
+                        Step {index + 1}
+                      </p>
+                      <h3 className="mt-2 text-lg font-semibold text-black">{step.title}</h3>
+                      <p className="mt-2 text-sm leading-6 text-neutral-600">{step.copy}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <a
+                    href="#contact"
+                    className="inline-flex items-center justify-center rounded-full bg-[#FF6600] px-6 py-3 text-sm font-semibold text-white transition hover:bg-orange-600"
+                  >
+                    Request a Uniform Quote
+                  </a>
+                  <TrackedWhatsAppLink
+                    href={getWhatsAppUrl(
+                      "Hi! I want to see your ready-made uniform designs for my company."
+                    )}
+                    trackingLocation="home_ready_made_uniforms"
+                    trackingSource="homepage"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center rounded-full border border-black bg-white px-6 py-3 text-sm font-semibold text-black transition hover:bg-black hover:text-white"
+                  >
+                    WhatsApp for designs
+                  </TrackedWhatsAppLink>
+                </div>
+              </div>
+
+              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {readyMadeUniforms.map((uniform) => (
+                  <article
+                    key={uniform.code}
+                    className="overflow-hidden rounded-[28px] border border-[#EAEAEA] bg-white shadow-[0_30px_60px_-40px_rgba(0,0,0,0.32)]"
+                  >
+                    <div className={`relative overflow-hidden bg-gradient-to-br ${uniform.accentClass} px-5 pt-5`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <span
+                          className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${uniform.badgeClass}`}
+                        >
+                          {uniform.code}
+                        </span>
+                        <span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
+                          Ready-made
+                        </span>
+                      </div>
+                      <div className="relative mt-5 flex justify-center">
+                        <div className="absolute inset-x-10 bottom-2 h-10 rounded-full bg-black/20 blur-2xl" aria-hidden="true" />
+                        <Image
+                          src={uniform.imageSrc}
+                          alt={`${uniform.title} sample`}
+                          width={900}
+                          height={900}
+                          className="relative h-56 w-auto object-contain drop-shadow-[0_24px_40px_rgba(0,0,0,0.22)]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="p-5">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">
+                        {uniform.audience}
+                      </p>
+                      <h3 className="mt-2 text-xl font-semibold text-black">{uniform.title}</h3>
+                      <p className="mt-3 text-sm leading-6 text-neutral-600">{uniform.description}</p>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {uniform.features.map((feature) => (
+                          <span
+                            key={feature}
+                            className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-700"
+                          >
+                            {feature}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="mt-5 flex flex-col gap-2">
+                        <a
+                          href="#contact"
+                          className="inline-flex items-center justify-center rounded-full bg-black px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-neutral-800"
+                        >
+                          Request This Design
+                        </a>
+                        <TrackedWhatsAppLink
+                          href={getWhatsAppUrl(uniform.message)}
+                          trackingLocation={`uniform_card_${uniform.code.toLowerCase()}`}
+                          trackingSource="homepage"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center rounded-full border border-neutral-300 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-800 transition hover:border-black hover:text-black"
+                        >
+                          WhatsApp {uniform.code}
+                        </TrackedWhatsAppLink>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
             </div>
           </div>
         </section>

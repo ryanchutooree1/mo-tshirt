@@ -1,8 +1,8 @@
 import { setTimeout as delay } from "node:timers/promises";
 
-export const OPENCLAW_WHATSAPP_TRIGGER_MESSAGE = "Hi, analyse all client requests.";
+export const OPENCLAW_WHATSAPP_TRIGGER_MESSAGE = "Hi analyse all client requests";
 export const OPENCLAW_WHATSAPP_REPLY_TEXT =
-  "Done.\n8 client emails drafted.\n15 tasks assigned to your team.\n3 clients need your approval.";
+  "Done.\n2 client emails drafted.\n8 tasks assigned to your team.\n3 clients need your approval.";
 export const OPENCLAW_WHATSAPP_THINKING_MIN_MS = 2_000;
 export const OPENCLAW_WHATSAPP_THINKING_MAX_MS = 3_000;
 
