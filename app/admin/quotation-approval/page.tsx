@@ -1670,6 +1670,35 @@ export default function QuotationApprovalPage() {
         source: "quotation_approval",
         quoteId: selected.id,
         quoteDocumentType: payload.documentType,
+        documentProfile: {
+          documentType: payload.documentType,
+          documentNumber: payload.documentNumber,
+          documentDate: payload.documentDate,
+          validUntil: payload.validUntil,
+          paymentStatus: payload.paymentStatus,
+          preparedBy: payload.preparedBy,
+          currency: payload.currency,
+          clientName: draft.contactName.trim() || selected.name || "Walk-in client",
+          clientEmail: draft.contactEmail.trim() || selected.email || "",
+          clientPhone: draft.contactPhone.trim() || selected.phone || "",
+          clientCompany: payload.clientCompany || draft.clientCompany.trim() || selected.name || "Walk-in client",
+          clientAddress: payload.clientAddress || draft.clientAddress.trim() || selected.deliveryAddress || "",
+          clientBrn: payload.clientBrn || "",
+          clientVat: payload.clientVat || "",
+          deliveryFee: payload.deliveryFee,
+          discount: payload.discount,
+          amountReceived: payload.amountReceived,
+          notes: payload.notes,
+          terms: payload.terms,
+          showLineItems: payload.showLineItems,
+          lines: lineItems.map((line) => ({
+            description: line.product,
+            quantity: line.quantity,
+            unitPrice: line.unitPrice,
+            color: line.color,
+            size: line.size,
+          })),
+        },
         updatedAt: serverTimestamp(),
       };
 
@@ -2371,7 +2400,7 @@ export default function QuotationApprovalPage() {
                                       : "text-[#6a6a6a] hover:bg-[#f7f7f7]"
                                   }`}
                                 >
-                                  Show totals
+                                  Show subtotal + grand total
                                 </button>
                                 <button
                                   type="button"
@@ -2382,11 +2411,11 @@ export default function QuotationApprovalPage() {
                                       : "text-[#6a6a6a] hover:bg-[#f7f7f7]"
                                   }`}
                                 >
-                                  Hide totals
+                                  Hide subtotal + grand total
                                 </button>
                               </div>
                               <p className="mt-2 text-xs text-[#717171]">
-                                Hide subtotal and grand total when the quotation only shows different client options.
+                                Use the hide option when the quotation is only showing different client choices and no option is confirmed yet.
                               </p>
                             </div>
                           </div>
