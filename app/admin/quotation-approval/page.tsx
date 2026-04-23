@@ -50,6 +50,7 @@ type QuoteLine = {
   description: string;
   quantity: number | "";
   unitPrice: number | "";
+  includeInTotals: boolean;
 };
 
 type DocumentType = "quotation" | "invoice" | "receipt" | "partial_receipt";
@@ -68,6 +69,7 @@ type QuoteDraft = {
   paymentStatus: string;
   preparedBy: string;
   showLineItems: boolean;
+  showTotals: boolean;
   currency: string;
   lines: QuoteLine[];
   deliveryFee: number;
@@ -124,6 +126,7 @@ type QuoteRecord = {
     paymentStatus?: string;
     preparedBy?: string;
     showLineItems?: boolean;
+    showTotals?: boolean;
     currency?: string;
     lines?: QuoteLine[];
     deliveryFee?: number;
@@ -244,6 +247,11 @@ type LogoAsset = {
 type FirestoreTimestampLike = {
   toDate?: () => Date;
   seconds?: number;
+};
+
+type QuoteLineWithTotal = QuoteLine & {
+  lineTotal: number;
+  includedInTotals: boolean;
 };
 
 const BUSINESS_INFO = {
@@ -441,6 +449,36 @@ const extractClientNotes = (quote: QuoteRecord, designBrief: DesignBrief | null)
   return raw;
 };
 
+const isLineIncludedInTotals = (line: Pick<QuoteLine, "includeInTotals">) => line.includeInTotals !== false;
+
+const getDraftPricingSummary = (draft: Pick<QuoteDraft, "lines" | "deliveryFee" | "discount" | "amountReceived" | "showTotals">) => {
+  const lineTotals: QuoteLineWithTotal[] = draft.lines.map((line) => ({
+    ...line,
+    includedInTotals: isLineIncludedInTotals(line),
+    lineTotal: safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0),
+  }));
+  const includedLines = lineTotals.filter((line) => line.includedInTotals);
+  const subtotal = includedLines.reduce((acc, line) => acc + line.lineTotal, 0);
+  const deliveryFee = safeNumber(draft.deliveryFee, 0);
+  const discount = safeNumber(draft.discount, 0);
+  const amountReceived = safeNumber(draft.amountReceived, 0);
+  const total = subtotal + deliveryFee - discount;
+  const balanceDue = Math.max(0, total - amountReceived);
+  const showSubtotal = draft.showTotals && (includedLines.length > 1 || deliveryFee > 0 || discount > 0);
+
+  return {
+    lineTotals,
+    includedLineCount: includedLines.length,
+    subtotal,
+    deliveryFee,
+    discount,
+    amountReceived,
+    total,
+    balanceDue,
+    showSubtotal,
+  };
+};
+
 const lineLabelList = (indexes: number[]) => indexes.map((value) => value + 1).join(", ");
 
 const validateDraftBeforeSend = (value: QuoteDraft) => {
@@ -464,6 +502,9 @@ const validateDraftBeforeSend = (value: QuoteDraft) => {
   }
   if (missingUnitPrice.length) {
     return `Unit price is mandatory for line(s): ${lineLabelList(missingUnitPrice)}.`;
+  }
+  if (value.showTotals && !value.lines.some((line) => isLineIncludedInTotals(line))) {
+    return "Select at least one line to include in subtotal and grand total, or hide totals for option-only quotations.";
   }
   return null;
 };
@@ -501,6 +542,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
         const amount = safeNumber(line.unitPrice, 0);
         return amount > 0 ? amount : "";
       })(),
+      includeInTotals: line.includeInTotals !== false,
     }));
     const fallbackLines: QuoteLine[] =
       quote.garments?.map((entry) => {
@@ -508,6 +550,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
           description: formatQuoteGarmentDescription(entry),
           quantity: safeNumber(entry.quantity, 0),
           unitPrice: "",
+          includeInTotals: true,
         };
       }) || [];
     const documentType = quote.quote.documentType || "quotation";
@@ -535,6 +578,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
       paymentStatus: quote.quote.paymentStatus || defaultPaymentStatus,
       preparedBy: quote.quote.preparedBy || DEFAULT_PREPARED_BY,
       showLineItems: quote.quote.showLineItems ?? true,
+      showTotals: quote.quote.showTotals ?? true,
       currency: quote.quote.currency || "Rs",
       lines: storedLines.length ? storedLines : fallbackLines,
       deliveryFee: safeNumber(quote.quote.deliveryFee, 0),
@@ -553,6 +597,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
         description: formatQuoteGarmentDescription(entry),
         quantity: safeNumber(entry.quantity, 0),
         unitPrice: "",
+        includeInTotals: true,
       };
     }) || [];
 
@@ -563,6 +608,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
         description: "Custom item",
         quantity: safeNumber(quote.quantity, 1),
         unitPrice: "",
+        includeInTotals: true,
       },
     ];
 
@@ -580,6 +626,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
     paymentStatus: "Quotation only",
     preparedBy: DEFAULT_PREPARED_BY,
     showLineItems: true,
+    showTotals: true,
     currency: "Rs",
     lines,
     deliveryFee: quote.delivery?.includes("Post Office") ? 100 : 0,
@@ -599,18 +646,8 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   const contentWidth = pageWidth - margin * 2;
   const accent = { r: 250, g: 115, b: 35 };
   const showLineItems = draft.showLineItems;
-
-  const lineTotals = draft.lines.map((line) => ({
-    ...line,
-    lineTotal: safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0),
-  }));
-  const subtotal = lineTotals.reduce((acc, line) => acc + line.lineTotal, 0);
-  const deliveryFee = safeNumber(draft.deliveryFee, 0);
-  const discount = safeNumber(draft.discount, 0);
-  const amountReceived = safeNumber(draft.amountReceived, 0);
-  const grandTotal = subtotal + deliveryFee - discount;
-  const balanceDue = Math.max(0, grandTotal - amountReceived);
-  const showSubtotal = lineTotals.length > 1 || deliveryFee > 0 || discount > 0;
+  const pricing = getDraftPricingSummary(draft);
+  const { lineTotals, subtotal, deliveryFee, discount, amountReceived, total: grandTotal, balanceDue, showSubtotal } = pricing;
 
   const docTitle =
     draft.documentType === "invoice"
@@ -806,7 +843,8 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   doc.setTextColor(30);
   let rowY = y;
   lineTotals.forEach((line) => {
-    const descriptionLines = doc.splitTextToSize(line.description || "Item", descWidth);
+    const descriptionLabel = line.includedInTotals ? line.description || "Item" : `${line.description || "Item"} (Option)`;
+    const descriptionLines = doc.splitTextToSize(descriptionLabel, descWidth);
     const rowHeight = Math.max(30, descriptionLines.length * 14 + 12);
     doc.setFillColor(245, 245, 245);
     doc.rect(margin, rowY - 12, contentWidth, rowHeight, "F");
@@ -823,31 +861,39 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   doc.setDrawColor(120);
   doc.line(margin, y, margin + contentWidth, y);
   y += 18;
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(50);
-  if (showSubtotal) {
-    doc.text("Subtotal", totalsLabelRightX, y, { align: "right" });
-    doc.text(formatMoney(subtotal, draft.currency), colTotalX, y, { align: "right" });
-  }
-  if (deliveryFee > 0) {
-    y += showSubtotal ? 16 : 0;
-    doc.text("Delivery fee", totalsLabelRightX, y, { align: "right" });
-    doc.text(formatMoney(deliveryFee, draft.currency), colTotalX, y, { align: "right" });
-  }
-  if (discount > 0) {
-    y += showSubtotal || deliveryFee > 0 ? 16 : 0;
-    doc.setTextColor(180, 0, 0);
-    doc.text("Discount", totalsLabelRightX, y, { align: "right" });
-    doc.text(formatMoney(-discount, draft.currency), colTotalX, y, { align: "right" });
+  if (draft.showTotals) {
+    doc.setFont("helvetica", "normal");
     doc.setTextColor(50);
+    if (showSubtotal) {
+      doc.text("Subtotal", totalsLabelRightX, y, { align: "right" });
+      doc.text(formatMoney(subtotal, draft.currency), colTotalX, y, { align: "right" });
+    }
+    if (deliveryFee > 0) {
+      y += showSubtotal ? 16 : 0;
+      doc.text("Delivery fee", totalsLabelRightX, y, { align: "right" });
+      doc.text(formatMoney(deliveryFee, draft.currency), colTotalX, y, { align: "right" });
+    }
+    if (discount > 0) {
+      y += showSubtotal || deliveryFee > 0 ? 16 : 0;
+      doc.setTextColor(180, 0, 0);
+      doc.text("Discount", totalsLabelRightX, y, { align: "right" });
+      doc.text(formatMoney(-discount, draft.currency), colTotalX, y, { align: "right" });
+      doc.setTextColor(50);
+    }
+    y += showSubtotal || deliveryFee > 0 || discount > 0 ? 22 : 0;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(20);
+    doc.text("Grand Total", totalsLabelRightX, y, { align: "right" });
+    doc.text(formatMoney(grandTotal, draft.currency), colTotalX, y, { align: "right" });
+    doc.setFontSize(10);
+  } else {
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(90);
+    doc.text("Subtotal and grand total hidden until the client confirms the option.", pageWidth - margin, y, {
+      align: "right",
+    });
   }
-  y += showSubtotal || deliveryFee > 0 || discount > 0 ? 22 : 0;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
-  doc.setTextColor(20);
-  doc.text("Grand Total", totalsLabelRightX, y, { align: "right" });
-  doc.text(formatMoney(grandTotal, draft.currency), colTotalX, y, { align: "right" });
-  doc.setFontSize(10);
 
   if (draft.documentType === "partial_receipt") {
     y += 18;
@@ -1169,21 +1215,20 @@ export default function QuotationApprovalPage() {
         amountReceived: 0,
         balanceDue: 0,
         lineCount: 0,
+        includedLineCount: 0,
+        deliveryFee: 0,
+        discount: 0,
         showSubtotal: false,
+        showTotals: true,
       };
     }
-    const subtotal = draft.lines.reduce(
-      (acc, line) => acc + safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0),
-      0
-    );
-    const deliveryFee = safeNumber(draft.deliveryFee, 0);
-    const discount = safeNumber(draft.discount, 0);
-    const total = subtotal + deliveryFee - discount;
-    const amountReceived = safeNumber(draft.amountReceived, 0);
-    const balanceDue = Math.max(0, total - amountReceived);
+    const pricing = getDraftPricingSummary(draft);
     const lineCount = draft.lines.length;
-    const showSubtotal = lineCount > 1 || deliveryFee > 0 || discount > 0;
-    return { subtotal, total, amountReceived, balanceDue, lineCount, showSubtotal };
+    return {
+      ...pricing,
+      lineCount,
+      showTotals: draft.showTotals,
+    };
   }, [draft]);
 
   const paymentStatusOptions = useMemo(() => {
@@ -1217,38 +1262,46 @@ export default function QuotationApprovalPage() {
   const quoteIsMarkedApproved = selectedStatus === "approved" || selectedStatus === "sent";
   const quoteHasBeenSent = selectedStatus === "sent";
   const quoteInOrders = Boolean(selected?.orderTransactionId);
-  const moveToOrdersTitle = sendValidationError
-    ? sendValidationError
+  const moveToOrdersError =
+    sendValidationError ||
+    (totals.includedLineCount <= 0 ? "Select at least one confirmed line before moving this quotation to orders." : null);
+  const moveToOrdersTitle = moveToOrdersError
+    ? moveToOrdersError
     : quoteIsMarkedApproved
       ? "Create or sync this quotation into Order Management."
       : "Complete Step 2 first (Mark approved or Send to client).";
 
-  const buildStoredQuotePayload = (baseDraft: QuoteDraft) => ({
-    documentType: baseDraft.documentType,
-    documentNumber: baseDraft.documentNumber,
-    documentDate: baseDraft.documentDate,
-    clientCompany: baseDraft.clientCompany,
-    clientAddress: baseDraft.clientAddress,
-    clientBrn: baseDraft.clientBrn,
-    clientVat: baseDraft.clientVat,
-    paymentStatus: baseDraft.paymentStatus,
-    preparedBy: baseDraft.preparedBy,
-    showLineItems: baseDraft.showLineItems,
-    currency: baseDraft.currency,
-    lines: baseDraft.lines.map((line) => ({
-      description: line.description,
-      quantity: safeNumber(line.quantity, 0),
-      unitPrice: safeNumber(line.unitPrice, 0),
-    })),
-    deliveryFee: baseDraft.deliveryFee,
-    discount: baseDraft.discount,
-    amountReceived: baseDraft.amountReceived,
-    notes: baseDraft.notes,
-    validUntil: baseDraft.validUntil,
-    terms: baseDraft.terms,
-    subtotal: totals.subtotal,
-    total: totals.total,
-  });
+  const buildStoredQuotePayload = (baseDraft: QuoteDraft) => {
+    const pricing = getDraftPricingSummary(baseDraft);
+    return {
+      documentType: baseDraft.documentType,
+      documentNumber: baseDraft.documentNumber,
+      documentDate: baseDraft.documentDate,
+      clientCompany: baseDraft.clientCompany,
+      clientAddress: baseDraft.clientAddress,
+      clientBrn: baseDraft.clientBrn,
+      clientVat: baseDraft.clientVat,
+      paymentStatus: baseDraft.paymentStatus,
+      preparedBy: baseDraft.preparedBy,
+      showLineItems: baseDraft.showLineItems,
+      showTotals: baseDraft.showTotals,
+      currency: baseDraft.currency,
+      lines: baseDraft.lines.map((line) => ({
+        description: line.description,
+        quantity: safeNumber(line.quantity, 0),
+        unitPrice: safeNumber(line.unitPrice, 0),
+        includeInTotals: isLineIncludedInTotals(line),
+      })),
+      deliveryFee: baseDraft.deliveryFee,
+      discount: baseDraft.discount,
+      amountReceived: baseDraft.amountReceived,
+      notes: baseDraft.notes,
+      validUntil: baseDraft.validUntil,
+      terms: baseDraft.terms,
+      subtotal: pricing.subtotal,
+      total: pricing.total,
+    };
+  };
 
   useEffect(() => {
     if (!draft || !paymentStatusOptions.length) return;
@@ -1291,7 +1344,7 @@ export default function QuotationApprovalPage() {
       prev
         ? {
             ...prev,
-            lines: [...prev.lines, { description, quantity: 1, unitPrice: "" }],
+            lines: [...prev.lines, { description, quantity: 1, unitPrice: "", includeInTotals: true }],
           }
         : prev
     );
@@ -1405,8 +1458,9 @@ export default function QuotationApprovalPage() {
         paymentStatus: "Quotation only",
         preparedBy: DEFAULT_PREPARED_BY,
         showLineItems: true,
+        showTotals: true,
         currency: "Rs",
-        lines: [{ description: "Product / Size", quantity: 1, unitPrice: "" }],
+        lines: [{ description: "Product / Size", quantity: 1, unitPrice: "", includeInTotals: true }],
         deliveryFee: 0,
         discount: 0,
         amountReceived: 0,
@@ -1434,6 +1488,7 @@ export default function QuotationApprovalPage() {
           paymentStatus: initialDraft.paymentStatus,
           preparedBy: initialDraft.preparedBy,
           showLineItems: initialDraft.showLineItems,
+          showTotals: initialDraft.showTotals,
           currency: initialDraft.currency,
           lines: initialDraft.lines,
           deliveryFee: initialDraft.deliveryFee,
@@ -1576,12 +1631,17 @@ export default function QuotationApprovalPage() {
       setNotice(draftValidation);
       return;
     }
+    if (totals.includedLineCount <= 0) {
+      setNotice("Select at least one confirmed line before moving this quotation to orders.");
+      return;
+    }
 
     setMovingToOrders(true);
     setNotice(null);
     try {
       const payload = buildStoredQuotePayload(draft);
       const lineItems = payload.lines
+        .filter((line) => line.includeInTotals !== false)
         .map((line) => {
           const quantity = safeNumber(line.quantity, 0);
           const unitPrice = safeNumber(line.unitPrice, 0);
@@ -2298,6 +2358,37 @@ export default function QuotationApprovalPage() {
                                 Detailed shows every line and price. Summary keeps only the totals on the PDF.
                               </p>
                             </div>
+
+                            <div className="mt-4">
+                              <p className={labelClass}>Totals on PDF</p>
+                              <div className="mt-2 grid grid-cols-2 gap-2 rounded-[22px] border border-[#dddddd] bg-white p-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setDraft({ ...draft, showTotals: true })}
+                                  className={`rounded-2xl px-3 py-2.5 text-xs font-semibold transition ${
+                                    draft.showTotals
+                                      ? "bg-[#222222] text-white"
+                                      : "text-[#6a6a6a] hover:bg-[#f7f7f7]"
+                                  }`}
+                                >
+                                  Show totals
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setDraft({ ...draft, showTotals: false })}
+                                  className={`rounded-2xl px-3 py-2.5 text-xs font-semibold transition ${
+                                    !draft.showTotals
+                                      ? "bg-[#222222] text-white"
+                                      : "text-[#6a6a6a] hover:bg-[#f7f7f7]"
+                                  }`}
+                                >
+                                  Hide totals
+                                </button>
+                              </div>
+                              <p className="mt-2 text-xs text-[#717171]">
+                                Hide subtotal and grand total when the quotation only shows different client options.
+                              </p>
+                            </div>
                           </div>
 
                           <div className={`${softSurfaceClass} p-5`}>
@@ -2424,30 +2515,46 @@ export default function QuotationApprovalPage() {
                             {draft.lines.map((line, index) => (
                               <div
                                 key={`line-${index}`}
-                                className="grid gap-3 rounded-[24px] border border-[#ebebeb] bg-white p-4 md:grid-cols-[minmax(0,1.45fr)_92px_minmax(0,0.95fr)_112px_44px] md:items-center"
+                                className="rounded-[24px] border border-[#ebebeb] bg-white p-4"
                               >
-                                <label className={`${labelClass} md:hidden`}>
-                                  Description
+                                <div className="grid gap-3 md:grid-cols-[minmax(0,1.45fr)_92px_minmax(0,0.95fr)_112px_44px] md:items-center">
+                                  <label className={`${labelClass} md:hidden`}>
+                                    Description
+                                    <input
+                                      value={line.description}
+                                      onChange={(e) =>
+                                        updateDraftLine(index, { description: e.target.value })
+                                      }
+                                      className={fieldClass}
+                                      placeholder="e.g. T-Shirt (M) with front logo"
+                                    />
+                                  </label>
                                   <input
                                     value={line.description}
                                     onChange={(e) =>
                                       updateDraftLine(index, { description: e.target.value })
                                     }
-                                    className={fieldClass}
+                                    className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff385c] focus:ring-4 focus:ring-[#ff385c]/10 md:block"
                                     placeholder="e.g. T-Shirt (M) with front logo"
+                                    aria-label="Line item description"
                                   />
-                                </label>
-                                <input
-                                  value={line.description}
-                                  onChange={(e) =>
-                                    updateDraftLine(index, { description: e.target.value })
-                                  }
-                                  className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff385c] focus:ring-4 focus:ring-[#ff385c]/10 md:block"
-                                  placeholder="e.g. T-Shirt (M) with front logo"
-                                  aria-label="Line item description"
-                                />
-                                <label className={`${labelClass} md:hidden`}>
-                                  Qty
+                                  <label className={`${labelClass} md:hidden`}>
+                                    Qty
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      value={line.quantity}
+                                      onChange={(e) =>
+                                        updateDraftLine(index, {
+                                          quantity:
+                                            e.target.value === ""
+                                              ? ""
+                                              : safeNumber(e.target.value, 0),
+                                        })
+                                      }
+                                      className={fieldClass}
+                                    />
+                                  </label>
                                   <input
                                     type="number"
                                     min={0}
@@ -2460,27 +2567,27 @@ export default function QuotationApprovalPage() {
                                             : safeNumber(e.target.value, 0),
                                       })
                                     }
-                                    className={fieldClass}
+                                    className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff385c] focus:ring-4 focus:ring-[#ff385c]/10 md:block"
+                                    placeholder="Qty"
+                                    aria-label="Quantity"
                                   />
-                                </label>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  value={line.quantity}
-                                  onChange={(e) =>
-                                    updateDraftLine(index, {
-                                      quantity:
-                                        e.target.value === ""
-                                          ? ""
-                                          : safeNumber(e.target.value, 0),
-                                    })
-                                  }
-                                  className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff385c] focus:ring-4 focus:ring-[#ff385c]/10 md:block"
-                                  placeholder="Qty"
-                                  aria-label="Quantity"
-                                />
-                                <label className={`${labelClass} md:hidden`}>
-                                  Unit price
+                                  <label className={`${labelClass} md:hidden`}>
+                                    Unit price
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      value={line.unitPrice}
+                                      onChange={(e) =>
+                                        updateDraftLine(index, {
+                                          unitPrice:
+                                            e.target.value === ""
+                                              ? ""
+                                              : safeNumber(e.target.value, 0),
+                                        })
+                                      }
+                                      className={fieldClass}
+                                    />
+                                  </label>
                                   <input
                                     type="number"
                                     min={0}
@@ -2493,40 +2600,42 @@ export default function QuotationApprovalPage() {
                                             : safeNumber(e.target.value, 0),
                                       })
                                     }
-                                    className={fieldClass}
+                                    className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff385c] focus:ring-4 focus:ring-[#ff385c]/10 md:block"
+                                    placeholder="Unit price"
+                                    aria-label="Unit price"
                                   />
-                                </label>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  value={line.unitPrice}
-                                  onChange={(e) =>
-                                    updateDraftLine(index, {
-                                      unitPrice:
-                                        e.target.value === ""
-                                          ? ""
-                                          : safeNumber(e.target.value, 0),
-                                    })
-                                  }
-                                  className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff385c] focus:ring-4 focus:ring-[#ff385c]/10 md:block"
-                                  placeholder="Unit price"
-                                  aria-label="Unit price"
-                                />
-                                <div className="min-w-0 rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] px-4 py-3 text-right text-sm font-semibold text-[#222222]">
-                                  {formatMoney(
-                                    safeNumber(line.quantity, 0) *
-                                      safeNumber(line.unitPrice, 0),
-                                    draft.currency
-                                  )}
+                                  <div className="min-w-0 rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] px-4 py-3 text-right text-sm font-semibold text-[#222222]">
+                                    {formatMoney(
+                                      safeNumber(line.quantity, 0) *
+                                        safeNumber(line.unitPrice, 0),
+                                      draft.currency
+                                    )}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeDraftLine(index)}
+                                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#ebebeb] bg-white text-[#717171] transition hover:border-[#ffd2dc] hover:bg-[#fff5f7] hover:text-[#d12f5f] md:justify-self-end"
+                                    aria-label="Remove line item"
+                                  >
+                                    <FiXCircle className="h-4 w-4" />
+                                  </button>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => removeDraftLine(index)}
-                                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#ebebeb] bg-white text-[#717171] transition hover:border-[#ffd2dc] hover:bg-[#fff5f7] hover:text-[#d12f5f] md:justify-self-end"
-                                  aria-label="Remove line item"
-                                >
-                                  <FiXCircle className="h-4 w-4" />
-                                </button>
+                                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] px-4 py-3">
+                                  <label className="inline-flex items-center gap-3 text-xs font-semibold text-[#484848]">
+                                    <input
+                                      type="checkbox"
+                                      checked={line.includeInTotals !== false}
+                                      onChange={(e) =>
+                                        updateDraftLine(index, { includeInTotals: e.target.checked })
+                                      }
+                                      className="h-4 w-4 rounded border border-[#cfcfcf] text-[#222222] focus:ring-[#ff385c]"
+                                    />
+                                    Include this line in subtotal and grand total
+                                  </label>
+                                  <span className="text-xs text-[#717171]">
+                                    {line.includeInTotals !== false ? "Counted in totals" : "Option only"}
+                                  </span>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -2635,7 +2744,18 @@ export default function QuotationApprovalPage() {
                     <div className="grid gap-5 xl:grid-cols-3">
                       <div className={`${surfaceClass} p-5`}>
                         <p className={labelClass}>Totals</p>
+                        {!draft.showTotals ? (
+                          <div className="mt-5 rounded-[24px] border border-[#ebebeb] bg-[#f7f7f7] px-4 py-4 text-sm text-[#6a6a6a]">
+                            Subtotal and grand total are hidden on the PDF. Use this when you are showing alternative options and the client has not confirmed a choice yet.
+                          </div>
+                        ) : null}
                         <div className="mt-5 space-y-3 text-sm text-[#484848]">
+                          <div className="flex items-center justify-between">
+                            <span>Lines counted</span>
+                            <span className="font-semibold text-[#222222]">
+                              {totals.includedLineCount} / {totals.lineCount}
+                            </span>
+                          </div>
                           {totals.showSubtotal && (
                             <div className="flex items-center justify-between">
                               <span>Subtotal</span>
@@ -2647,20 +2767,20 @@ export default function QuotationApprovalPage() {
                           <div className="flex items-center justify-between">
                             <span>Delivery</span>
                             <span className="font-semibold text-[#222222]">
-                              {formatMoney(draft.deliveryFee, draft.currency)}
+                              {formatMoney(totals.deliveryFee, draft.currency)}
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
                             <span>Discount</span>
                             <span className="font-semibold text-[#222222]">
-                              {draft.discount > 0
-                                ? formatMoney(-draft.discount, draft.currency)
+                              {totals.discount > 0
+                                ? formatMoney(-totals.discount, draft.currency)
                                 : formatMoney(0, draft.currency)}
                             </span>
                           </div>
                           <div className="rounded-[24px] border border-[#ffd2dc] bg-[#fff5f7] px-4 py-4">
                             <div className="flex items-center justify-between text-base font-semibold text-[#222222]">
-                              <span>Total</span>
+                              <span>{draft.showTotals ? "Grand total" : "Current total"}</span>
                               <span>{formatMoney(totals.total, draft.currency)}</span>
                             </div>
                           </div>
@@ -2811,7 +2931,7 @@ export default function QuotationApprovalPage() {
                               onClick={moveToOrders}
                               disabled={
                                 movingToOrders ||
-                                Boolean(sendValidationError) ||
+                                Boolean(moveToOrdersError) ||
                                 !quoteIsMarkedApproved
                               }
                               title={moveToOrdersTitle}
