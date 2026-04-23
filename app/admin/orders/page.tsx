@@ -84,6 +84,7 @@ type OrderDocumentProfile = {
   notes: string;
   terms: string;
   showLineItems: boolean;
+  showTotals: boolean;
   lines: OrderDocumentLine[];
 };
 
@@ -349,6 +350,8 @@ const buildOrderDocumentDraft = (txnId: string, txn: Txn): OrderDocumentProfile 
         : ORDER_DOC_TERMS[documentType],
     showLineItems:
       typeof profile.showLineItems === "boolean" ? profile.showLineItems : true,
+    showTotals:
+      typeof profile.showTotals === "boolean" ? profile.showTotals : true,
     lines,
   };
 };
@@ -376,7 +379,7 @@ function buildOrderDocumentPdf(txnId: string, draft: OrderDocumentProfile) {
   const amountReceived = safeNumber(draft.amountReceived, 0);
   const grandTotal = subtotal + deliveryFee - discount;
   const balanceDue = Math.max(0, grandTotal - amountReceived);
-  const showSubtotal = lineTotals.length > 1 || deliveryFee > 0 || discount > 0;
+  const showSubtotal = draft.showTotals && (lineTotals.length > 1 || deliveryFee > 0 || discount > 0);
 
   docPdf.setFillColor(accent.r, accent.g, accent.b);
   docPdf.rect(margin, 24, contentWidth, 4, "F");
@@ -505,30 +508,39 @@ function buildOrderDocumentPdf(txnId: string, draft: OrderDocumentProfile) {
   docPdf.setDrawColor(150);
   docPdf.line(margin, y, pageWidth - margin, y);
   y += 18;
-  docPdf.setFont("helvetica", "normal");
-  docPdf.setTextColor(50);
-  if (showSubtotal) {
-    docPdf.text("Subtotal", pageWidth - margin - 150, y);
-    docPdf.text(formatMoney(subtotal, draft.currency), colTotalX, y, { align: "right" });
-  }
-  if (deliveryFee > 0) {
-    y += showSubtotal ? 16 : 0;
-    docPdf.text("Delivery fee", pageWidth - margin - 150, y);
-    docPdf.text(formatMoney(deliveryFee, draft.currency), colTotalX, y, { align: "right" });
-  }
-  if (discount > 0) {
-    y += showSubtotal || deliveryFee > 0 ? 16 : 0;
-    docPdf.setTextColor(170, 25, 25);
-    docPdf.text("Discount", pageWidth - margin - 150, y);
-    docPdf.text(formatMoney(-discount, draft.currency), colTotalX, y, { align: "right" });
+  if (draft.showTotals) {
+    docPdf.setFont("helvetica", "normal");
     docPdf.setTextColor(50);
+    if (showSubtotal) {
+      docPdf.text("Subtotal", pageWidth - margin - 150, y);
+      docPdf.text(formatMoney(subtotal, draft.currency), colTotalX, y, { align: "right" });
+    }
+    if (deliveryFee > 0) {
+      y += showSubtotal ? 16 : 0;
+      docPdf.text("Delivery fee", pageWidth - margin - 150, y);
+      docPdf.text(formatMoney(deliveryFee, draft.currency), colTotalX, y, { align: "right" });
+    }
+    if (discount > 0) {
+      y += showSubtotal || deliveryFee > 0 ? 16 : 0;
+      docPdf.setTextColor(170, 25, 25);
+      docPdf.text("Discount", pageWidth - margin - 150, y);
+      docPdf.text(formatMoney(-discount, draft.currency), colTotalX, y, { align: "right" });
+      docPdf.setTextColor(50);
+    }
+    y += showSubtotal || deliveryFee > 0 || discount > 0 ? 20 : 0;
+    docPdf.setFont("helvetica", "bold");
+    docPdf.setFontSize(12);
+    docPdf.setTextColor(20);
+    docPdf.text("Grand Total", pageWidth - margin - 150, y);
+    docPdf.text(formatMoney(grandTotal, draft.currency), colTotalX, y, { align: "right" });
+  } else {
+    docPdf.setFont("helvetica", "italic");
+    docPdf.setFontSize(10);
+    docPdf.setTextColor(90);
+    docPdf.text("Subtotal and grand total hidden until the client confirms the option.", pageWidth - margin, y, {
+      align: "right",
+    });
   }
-  y += showSubtotal || deliveryFee > 0 || discount > 0 ? 20 : 0;
-  docPdf.setFont("helvetica", "bold");
-  docPdf.setFontSize(12);
-  docPdf.setTextColor(20);
-  docPdf.text("Grand Total", pageWidth - margin - 150, y);
-  docPdf.text(formatMoney(grandTotal, draft.currency), colTotalX, y, { align: "right" });
 
   if (draft.documentType === "partial_receipt") {
     y += 18;
@@ -1032,7 +1044,7 @@ function OrdersPageInner() {
   }
 
   const docTotals = useMemo(() => {
-    if (!docDraft) return { subtotal: 0, total: 0, balanceDue: 0, showSubtotal: false };
+    if (!docDraft) return { subtotal: 0, total: 0, balanceDue: 0, showSubtotal: false, showTotals: true };
     const subtotal = docDraft.lines.reduce(
       (sum, line) => sum + safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0),
       0
@@ -1041,8 +1053,8 @@ function OrdersPageInner() {
     const discount = safeNumber(docDraft.discount, 0);
     const total = subtotal + deliveryFee - discount;
     const balanceDue = Math.max(0, total - safeNumber(docDraft.amountReceived, 0));
-    const showSubtotal = docDraft.lines.length > 1 || deliveryFee > 0 || discount > 0;
-    return { subtotal, total, balanceDue, showSubtotal };
+    const showSubtotal = docDraft.showTotals && (docDraft.lines.length > 1 || deliveryFee > 0 || discount > 0);
+    return { subtotal, total, balanceDue, showSubtotal, showTotals: docDraft.showTotals };
   }, [docDraft]);
 
   function openDocumentPreview() {
@@ -2663,6 +2675,37 @@ function OrdersPageInner() {
                           />
                           Show quantity + unit price columns
                         </label>
+                        <div className="sm:col-span-2">
+                          <p className="text-xs font-semibold text-slate-600">Totals on PDF</p>
+                          <div className="mt-1 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white p-1">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDocDraft((prev) => (prev ? { ...prev, showTotals: true } : prev))
+                              }
+                              className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                                docDraft.showTotals
+                                  ? "bg-slate-900 text-white"
+                                  : "text-slate-600 hover:bg-slate-50"
+                              }`}
+                            >
+                              Show subtotal + grand total
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDocDraft((prev) => (prev ? { ...prev, showTotals: false } : prev))
+                              }
+                              className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                                !docDraft.showTotals
+                                  ? "bg-slate-900 text-white"
+                                  : "text-slate-600 hover:bg-slate-50"
+                              }`}
+                            >
+                              Hide subtotal + grand total
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
@@ -2797,6 +2840,11 @@ function OrdersPageInner() {
 
                     <div className="rounded-2xl border border-slate-200 bg-white p-4">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Totals</p>
+                      {!docDraft.showTotals ? (
+                        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                          Subtotal and grand total are hidden on the PDF until the client confirms the option.
+                        </div>
+                      ) : null}
                       <div className="mt-3 grid gap-3 sm:grid-cols-2">
                         <label className="text-xs font-semibold text-slate-600">
                           Delivery fee
@@ -2842,7 +2890,7 @@ function OrdersPageInner() {
                             </div>
                           ) : null}
                           <div className={`${docTotals.showSubtotal ? "mt-1" : ""} flex items-center justify-between`}>
-                            <span>Grand total</span>
+                            <span>{docDraft.showTotals ? "Grand total" : "Current total"}</span>
                             <strong>{formatMoney(docTotals.total, docDraft.currency)}</strong>
                           </div>
                           <div className="mt-1 flex items-center justify-between">

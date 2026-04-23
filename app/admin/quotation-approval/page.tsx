@@ -251,7 +251,6 @@ type FirestoreTimestampLike = {
 
 type QuoteLineWithTotal = QuoteLine & {
   lineTotal: number;
-  includedInTotals: boolean;
 };
 
 const BUSINESS_INFO = {
@@ -449,26 +448,22 @@ const extractClientNotes = (quote: QuoteRecord, designBrief: DesignBrief | null)
   return raw;
 };
 
-const isLineIncludedInTotals = (line: Pick<QuoteLine, "includeInTotals">) => line.includeInTotals !== false;
-
 const getDraftPricingSummary = (draft: Pick<QuoteDraft, "lines" | "deliveryFee" | "discount" | "amountReceived" | "showTotals">) => {
   const lineTotals: QuoteLineWithTotal[] = draft.lines.map((line) => ({
     ...line,
-    includedInTotals: isLineIncludedInTotals(line),
     lineTotal: safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0),
   }));
-  const includedLines = lineTotals.filter((line) => line.includedInTotals);
-  const subtotal = includedLines.reduce((acc, line) => acc + line.lineTotal, 0);
+  const subtotal = lineTotals.reduce((acc, line) => acc + line.lineTotal, 0);
   const deliveryFee = safeNumber(draft.deliveryFee, 0);
   const discount = safeNumber(draft.discount, 0);
   const amountReceived = safeNumber(draft.amountReceived, 0);
   const total = subtotal + deliveryFee - discount;
   const balanceDue = Math.max(0, total - amountReceived);
-  const showSubtotal = draft.showTotals && (includedLines.length > 1 || deliveryFee > 0 || discount > 0);
+  const showSubtotal = draft.showTotals && (lineTotals.length > 1 || deliveryFee > 0 || discount > 0);
 
   return {
     lineTotals,
-    includedLineCount: includedLines.length,
+    includedLineCount: lineTotals.length,
     subtotal,
     deliveryFee,
     discount,
@@ -502,9 +497,6 @@ const validateDraftBeforeSend = (value: QuoteDraft) => {
   }
   if (missingUnitPrice.length) {
     return `Unit price is mandatory for line(s): ${lineLabelList(missingUnitPrice)}.`;
-  }
-  if (value.showTotals && !value.lines.some((line) => isLineIncludedInTotals(line))) {
-    return "Select at least one line to include in subtotal and grand total, or hide totals for option-only quotations.";
   }
   return null;
 };
@@ -542,7 +534,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
         const amount = safeNumber(line.unitPrice, 0);
         return amount > 0 ? amount : "";
       })(),
-      includeInTotals: line.includeInTotals !== false,
+      includeInTotals: true,
     }));
     const fallbackLines: QuoteLine[] =
       quote.garments?.map((entry) => {
@@ -843,8 +835,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   doc.setTextColor(30);
   let rowY = y;
   lineTotals.forEach((line) => {
-    const descriptionLabel = line.includedInTotals ? line.description || "Item" : `${line.description || "Item"} (Option)`;
-    const descriptionLines = doc.splitTextToSize(descriptionLabel, descWidth);
+    const descriptionLines = doc.splitTextToSize(line.description || "Item", descWidth);
     const rowHeight = Math.max(30, descriptionLines.length * 14 + 12);
     doc.setFillColor(245, 245, 245);
     doc.rect(margin, rowY - 12, contentWidth, rowHeight, "F");
@@ -1262,9 +1253,7 @@ export default function QuotationApprovalPage() {
   const quoteIsMarkedApproved = selectedStatus === "approved" || selectedStatus === "sent";
   const quoteHasBeenSent = selectedStatus === "sent";
   const quoteInOrders = Boolean(selected?.orderTransactionId);
-  const moveToOrdersError =
-    sendValidationError ||
-    (totals.includedLineCount <= 0 ? "Select at least one confirmed line before moving this quotation to orders." : null);
+  const moveToOrdersError = sendValidationError;
   const moveToOrdersTitle = moveToOrdersError
     ? moveToOrdersError
     : quoteIsMarkedApproved
@@ -1290,7 +1279,7 @@ export default function QuotationApprovalPage() {
         description: line.description,
         quantity: safeNumber(line.quantity, 0),
         unitPrice: safeNumber(line.unitPrice, 0),
-        includeInTotals: isLineIncludedInTotals(line),
+        includeInTotals: true,
       })),
       deliveryFee: baseDraft.deliveryFee,
       discount: baseDraft.discount,
@@ -1631,17 +1620,11 @@ export default function QuotationApprovalPage() {
       setNotice(draftValidation);
       return;
     }
-    if (totals.includedLineCount <= 0) {
-      setNotice("Select at least one confirmed line before moving this quotation to orders.");
-      return;
-    }
-
     setMovingToOrders(true);
     setNotice(null);
     try {
       const payload = buildStoredQuotePayload(draft);
       const lineItems = payload.lines
-        .filter((line) => line.includeInTotals !== false)
         .map((line) => {
           const quantity = safeNumber(line.quantity, 0);
           const unitPrice = safeNumber(line.unitPrice, 0);
@@ -1691,6 +1674,7 @@ export default function QuotationApprovalPage() {
           notes: payload.notes,
           terms: payload.terms,
           showLineItems: payload.showLineItems,
+          showTotals: payload.showTotals,
           lines: lineItems.map((line) => ({
             description: line.product,
             quantity: line.quantity,
@@ -2649,22 +2633,6 @@ export default function QuotationApprovalPage() {
                                     <FiXCircle className="h-4 w-4" />
                                   </button>
                                 </div>
-                                <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] px-4 py-3">
-                                  <label className="inline-flex items-center gap-3 text-xs font-semibold text-[#484848]">
-                                    <input
-                                      type="checkbox"
-                                      checked={line.includeInTotals !== false}
-                                      onChange={(e) =>
-                                        updateDraftLine(index, { includeInTotals: e.target.checked })
-                                      }
-                                      className="h-4 w-4 rounded border border-[#cfcfcf] text-[#222222] focus:ring-[#ff385c]"
-                                    />
-                                    Include this line in subtotal and grand total
-                                  </label>
-                                  <span className="text-xs text-[#717171]">
-                                    {line.includeInTotals !== false ? "Counted in totals" : "Option only"}
-                                  </span>
-                                </div>
                               </div>
                             ))}
                           </div>
@@ -2779,12 +2747,6 @@ export default function QuotationApprovalPage() {
                           </div>
                         ) : null}
                         <div className="mt-5 space-y-3 text-sm text-[#484848]">
-                          <div className="flex items-center justify-between">
-                            <span>Lines counted</span>
-                            <span className="font-semibold text-[#222222]">
-                              {totals.includedLineCount} / {totals.lineCount}
-                            </span>
-                          </div>
                           {totals.showSubtotal && (
                             <div className="flex items-center justify-between">
                               <span>Subtotal</span>
