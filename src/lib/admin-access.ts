@@ -14,6 +14,7 @@ export type AdminPagePath =
   | "/admin/accounting"
   | "/admin/finance-freedom"
   | "/admin/business-value"
+  | "/admin/business-os"
   | "/admin/automation"
   | "/admin/dms"
   | "/admin/iot"
@@ -143,6 +144,12 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
     group: "Insights",
   },
   {
+    path: "/admin/business-os",
+    label: "Business OS",
+    description: "Operating system for offers, SOPs, roles, numbers, and bottlenecks.",
+    group: "Planning",
+  },
+  {
     path: "/admin/automation",
     label: "Automation",
     description: "Automation logs and scheduled actions.",
@@ -217,6 +224,7 @@ export const DEFAULT_TOP_NAV_PATHS: AdminPagePath[] = [
   "/admin/accounting",
   "/admin/finance-freedom",
   "/admin/business-value",
+  "/admin/business-os",
   "/admin/dms",
   "/admin/iot",
   "/admin/business-notes",
