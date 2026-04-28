@@ -4,12 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import {
   BadgeCheck,
   Banknote,
+  BarChart3,
   Boxes,
+  Calculator,
   ClipboardCheck,
   ClipboardList,
   Copy,
   Factory,
   Gauge,
+  LineChart,
   PackageCheck,
   PenLine,
   Plus,
@@ -60,12 +63,41 @@ type GrowthIdea = {
   impact: string;
 };
 
-type DtfOption = {
+type PrintMethodId = "dtf" | "serie" | "vinyl";
+
+type PricingOption = {
   id: string;
+  methodId: PrintMethodId;
   group: string;
   type: string;
   price: number;
   cost: number;
+  estimated?: boolean;
+};
+
+type MethodProfile = {
+  id: PrintMethodId;
+  title: string;
+  emoji: string;
+  rule: string;
+  focus: string;
+  defaultVolume: string;
+  tone: string;
+  accent: string;
+};
+
+type ForecastVolumes = Record<PrintMethodId, string>;
+
+type ForecastRow = {
+  method: MethodProfile;
+  monthlyUnits: number;
+  averagePrice: number;
+  averageCost: number;
+  averageProfit: number;
+  averageMargin: number;
+  monthlyRevenue: number;
+  monthlyCost: number;
+  monthlyProfit: number;
 };
 
 const STORAGE_KEYS = {
@@ -74,6 +106,7 @@ const STORAGE_KEYS = {
   bottlenecks: "mo-business-os-bottlenecks-v1",
   ideas: "mo-business-os-growth-ideas-v1",
   targets: "mo-business-os-targets-v1",
+  forecastVolumes: "mo-business-os-forecast-volumes-v1",
 };
 
 const defaultMetrics: MetricsState = {
@@ -99,13 +132,60 @@ const metricFields: Array<{
   { key: "deliveryTime", label: "Delivery time", target: "Same week target", icon: "🚚" },
 ];
 
-const dtfPricing: DtfOption[] = [
-  { id: "normal-front-small", group: "XS-XL", type: "Front small", price: 350, cost: 300 },
-  { id: "normal-front-large", group: "XS-XL", type: "Front large", price: 400, cost: 300 },
-  { id: "normal-small-back", group: "XS-XL", type: "Small + Back", price: 450, cost: 350 },
-  { id: "normal-large-back", group: "XS-XL", type: "Large + Back", price: 500, cost: 350 },
-  { id: "large-front", group: "2XL-3XL", type: "Front only", price: 500, cost: 450 },
-  { id: "large-front-back", group: "2XL-3XL", type: "Front + Back", price: 650, cost: 575 },
+const methodProfiles: MethodProfile[] = [
+  {
+    id: "dtf",
+    title: "DTF",
+    emoji: "🎨",
+    rule: "Many colors, gradient, photo, or unsure artwork. Default option when Tanvi is not sure.",
+    focus: "Use as the safe conversion method, but do not rely on it as the main profit engine.",
+    defaultVolume: "18",
+    tone: "border-cyan-200 bg-cyan-50 text-cyan-900",
+    accent: "bg-cyan-500",
+  },
+  {
+    id: "serie",
+    title: "Serie",
+    emoji: "🧾",
+    rule: "1-2 colors, large quantity, 10+ pieces, repeated business uniforms.",
+    focus: "Build repeat business accounts here. This is the scale engine.",
+    defaultVolume: "30",
+    tone: "border-emerald-200 bg-emerald-50 text-emerald-900",
+    accent: "bg-emerald-500",
+  },
+  {
+    id: "vinyl",
+    title: "Vinyl",
+    emoji: "✂️",
+    rule: "Simple logo or text, 1 color, clean premium design.",
+    focus: "Push this when artwork fits. This is the highest-margin cash engine.",
+    defaultVolume: "22",
+    tone: "border-amber-200 bg-amber-50 text-amber-900",
+    accent: "bg-amber-500",
+  },
+];
+
+const defaultForecastVolumes = methodProfiles.reduce((acc, method) => {
+  acc[method.id] = method.defaultVolume;
+  return acc;
+}, {} as ForecastVolumes);
+
+const pricingOptions: PricingOption[] = [
+  { id: "dtf-normal-front-small", methodId: "dtf", group: "Normal XS-XL", type: "Front small", price: 350, cost: 300 },
+  { id: "dtf-normal-front-large", methodId: "dtf", group: "Normal XS-XL", type: "Front large", price: 400, cost: 300 },
+  { id: "dtf-normal-small-large-back", methodId: "dtf", group: "Normal XS-XL", type: "Small Front + Large Back", price: 450, cost: 350 },
+  { id: "dtf-normal-large-large-back", methodId: "dtf", group: "Normal XS-XL", type: "Large Front + Large Back", price: 500, cost: 350 },
+  { id: "dtf-large-front-only", methodId: "dtf", group: "Large 2XL-3XL", type: "Front only", price: 500, cost: 450 },
+  { id: "dtf-large-front-back", methodId: "dtf", group: "Large 2XL-3XL", type: "Front + Back", price: 650, cost: 575 },
+  { id: "serie-normal-front-only", methodId: "serie", group: "Normal XS-XL", type: "Front only", price: 300, cost: 100 },
+  { id: "serie-normal-front-back", methodId: "serie", group: "Normal XS-XL", type: "Front + Back", price: 380, cost: 200 },
+  { id: "serie-large-front-only", methodId: "serie", group: "Large 2XL-3XL", type: "Front only", price: 420, cost: 325 },
+  { id: "serie-large-front-back", methodId: "serie", group: "Large 2XL-3XL", type: "Front + Back", price: 550, cost: 425 },
+  { id: "vinyl-normal-small", methodId: "vinyl", group: "Normal XS-XL", type: "Small", price: 300, cost: 45, estimated: true },
+  { id: "vinyl-normal-medium", methodId: "vinyl", group: "Normal XS-XL", type: "Medium", price: 350, cost: 90, estimated: true },
+  { id: "vinyl-normal-large", methodId: "vinyl", group: "Normal XS-XL", type: "Large", price: 380, cost: 140, estimated: true },
+  { id: "vinyl-large-small", methodId: "vinyl", group: "Large 2XL-3XL", type: "Small", price: 380, cost: 60, estimated: true },
+  { id: "vinyl-large-large", methodId: "vinyl", group: "Large 2XL-3XL", type: "Large", price: 450, cost: 160, estimated: true },
 ];
 
 const printRules = [
@@ -163,8 +243,8 @@ const sops = [
     title: "Sending quotations",
     icon: Banknote,
     items: [
-      "Use fixed DTF table for individual orders.",
-      "Use serie for 10+ simple pieces and add blank garment cost.",
+      "Use the fixed pricing calculator for DTF, Serie, and Vinyl before asking Ryan.",
+      "Use Serie for 10+ simple pieces and Vinyl when the design is simple enough for high margin.",
       "Every quote must show total price, payment rule, pickup or delivery option, and approval step.",
       "No production starts without approval and payment status.",
     ],
@@ -217,7 +297,7 @@ const roles = [
     badge: "Communication System 👩",
     does: "Handles WhatsApp, collects details, sends price, follows payment, closes orders.",
     never: "Never asks Ryan for price or print type when the system gives the answer.",
-    decisions: "Can quote DTF table, ask for missing details, send payment request, and confirm pickup address.",
+    decisions: "Can quote DTF, Serie, and Vinyl tables, ask for missing details, send payment request, and confirm pickup address.",
   },
   {
     name: "Yan",
@@ -269,7 +349,7 @@ const seedBottlenecks: Bottleneck[] = [
     id: "pricing-dependency",
     happened: "Tanvi waits for Ryan to give prices.",
     why: "Pricing was inside Ryan head instead of inside the system.",
-    fix: "Tanvi uses DTF table first. Ryan only updates the table weekly.",
+    fix: "Tanvi uses the pricing calculator first. Ryan only updates the tables weekly.",
     owner: "Tanvi",
     status: "Fixing",
   },
@@ -394,16 +474,30 @@ function marginPercent(price: number, cost: number) {
   return Math.round(((price - cost) / price) * 100);
 }
 
+function getMethodProfile(methodId: PrintMethodId) {
+  return methodProfiles.find((method) => method.id === methodId) || methodProfiles[0];
+}
+
+function formatMaybeEstimated(value: number, estimated?: boolean) {
+  return `${estimated ? "~" : ""}${formatRs(value)}`;
+}
+
+function average(values: number[]) {
+  if (!values.length) return 0;
+  return values.reduce((total, value) => total + value, 0) / values.length;
+}
+
 export default function BusinessOsPage() {
   const [hydrated, setHydrated] = useState(false);
   const [metrics, setMetrics] = useState<MetricsState>(defaultMetrics);
   const [dailyTasks, setDailyTasks] = useState<DailyTask[]>(defaultTasks);
   const [bottlenecks, setBottlenecks] = useState<Bottleneck[]>(seedBottlenecks);
   const [ideas, setIdeas] = useState<GrowthIdea[]>(seedIdeas);
-  const [selectedDtfId, setSelectedDtfId] = useState(dtfPricing[0].id);
+  const [selectedPricingId, setSelectedPricingId] = useState(pricingOptions[0].id);
   const [quantity, setQuantity] = useState("1");
   const [copied, setCopied] = useState("");
   const [target, setTarget] = useState({ salary: "", profitPerOrder: "1000" });
+  const [forecastVolumes, setForecastVolumes] = useState<ForecastVolumes>(defaultForecastVolumes);
   const [bottleneckDraft, setBottleneckDraft] = useState({
     happened: "",
     why: "",
@@ -425,6 +519,7 @@ export default function BusinessOsPage() {
     setBottlenecks(readJson(STORAGE_KEYS.bottlenecks, seedBottlenecks));
     setIdeas(readJson(STORAGE_KEYS.ideas, seedIdeas));
     setTarget(readJson(STORAGE_KEYS.targets, { salary: "", profitPerOrder: "1000" }));
+    setForecastVolumes(readJson(STORAGE_KEYS.forecastVolumes, defaultForecastVolumes));
     setHydrated(true);
   }, []);
 
@@ -453,14 +548,20 @@ export default function BusinessOsPage() {
     window.localStorage.setItem(STORAGE_KEYS.targets, JSON.stringify(target));
   }, [hydrated, target]);
 
-  const selectedDtf = useMemo(
-    () => dtfPricing.find((item) => item.id === selectedDtfId) || dtfPricing[0],
-    [selectedDtfId]
+  useEffect(() => {
+    if (!hydrated) return;
+    window.localStorage.setItem(STORAGE_KEYS.forecastVolumes, JSON.stringify(forecastVolumes));
+  }, [forecastVolumes, hydrated]);
+
+  const selectedPricing = useMemo(
+    () => pricingOptions.find((item) => item.id === selectedPricingId) || pricingOptions[0],
+    [selectedPricingId]
   );
+  const selectedMethod = getMethodProfile(selectedPricing.methodId);
   const qty = Math.max(1, Math.floor(toNumber(quantity) || 1));
-  const unitProfit = selectedDtf.price - selectedDtf.cost;
-  const totalRevenue = selectedDtf.price * qty;
-  const totalCost = selectedDtf.cost * qty;
+  const unitProfit = selectedPricing.price - selectedPricing.cost;
+  const totalRevenue = selectedPricing.price * qty;
+  const totalCost = selectedPricing.cost * qty;
   const totalProfit = unitProfit * qty;
   const salary = toNumber(target.salary);
   const profitPerOrder = Math.max(1, toNumber(target.profitPerOrder) || 1);
@@ -470,6 +571,45 @@ export default function BusinessOsPage() {
   const x3Orders = salary ? Math.ceil(x3Target / profitPerOrder) : 0;
   const completedTasks = dailyTasks.filter((task) => task.done).length;
   const executionScore = Math.round((completedTasks / dailyTasks.length) * 100);
+  const forecastRows = useMemo<ForecastRow[]>(
+    () =>
+      methodProfiles.map((method) => {
+        const options = pricingOptions.filter((option) => option.methodId === method.id);
+        const averagePrice = average(options.map((option) => option.price));
+        const averageCost = average(options.map((option) => option.cost));
+        const averageProfit = averagePrice - averageCost;
+        const averageMargin = marginPercent(averagePrice, averageCost);
+        const monthlyUnits = Math.max(0, Math.floor(toNumber(forecastVolumes[method.id]) || 0));
+
+        return {
+          method,
+          monthlyUnits,
+          averagePrice,
+          averageCost,
+          averageProfit,
+          averageMargin,
+          monthlyRevenue: averagePrice * monthlyUnits,
+          monthlyCost: averageCost * monthlyUnits,
+          monthlyProfit: averageProfit * monthlyUnits,
+        };
+      }),
+    [forecastVolumes]
+  );
+  const rankedForecast = [...forecastRows].sort(
+    (left, right) =>
+      right.monthlyProfit - left.monthlyProfit || right.averageMargin - left.averageMargin
+  );
+  const focusLeader = rankedForecast[0] || forecastRows[0];
+  const totalForecastRevenue = forecastRows.reduce((total, row) => total + row.monthlyRevenue, 0);
+  const totalForecastProfit = forecastRows.reduce((total, row) => total + row.monthlyProfit, 0);
+  const totalForecastCost = forecastRows.reduce((total, row) => total + row.monthlyCost, 0);
+  const maxForecastProfit = Math.max(...forecastRows.map((row) => row.monthlyProfit), 1);
+  const blendedForecastMargin = marginPercent(totalForecastRevenue, totalForecastCost);
+  const ninetyDayProfit = totalForecastProfit * (1 + 1.2 + 1.44);
+  const focusMix = forecastRows.map((row) => ({
+    ...row,
+    share: totalForecastProfit ? Math.round((row.monthlyProfit / totalForecastProfit) * 100) : 0,
+  }));
 
   async function copyTemplate(label: string, body: string) {
     try {
@@ -608,25 +748,28 @@ export default function BusinessOsPage() {
         <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
           <div className="rounded-lg border border-slate-200 bg-white p-5">
             <div className="flex items-center gap-2">
-              <Banknote className="h-5 w-5 text-emerald-600" />
-              <h2 className="text-lg font-bold text-slate-950">DTF Pricing Calculator</h2>
+              <Calculator className="h-5 w-5 text-emerald-600" />
+              <h2 className="text-lg font-bold text-slate-950">Pricing Calculator</h2>
             </div>
             <p className="mt-1 text-sm text-slate-600">
-              Tanvi uses this table first. Ryan handles only exceptions and weekly updates.
+              Tanvi uses this first for DTF, Serie, and Vinyl. Ryan handles exceptions, not normal pricing.
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_120px]">
               <label className="grid min-w-0 gap-1 text-sm font-semibold text-slate-700">
-                DTF option
+                Print option
                 <select
-                  value={selectedDtfId}
-                  onChange={(event) => setSelectedDtfId(event.target.value)}
+                  value={selectedPricingId}
+                  onChange={(event) => setSelectedPricingId(event.target.value)}
                   className="w-full min-w-0 rounded-md border border-slate-300 px-3 py-2 text-sm outline-none"
                 >
-                  {dtfPricing.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.group} - {item.type} - Rs {item.price}
-                    </option>
-                  ))}
+                  {pricingOptions.map((item) => {
+                    const method = getMethodProfile(item.methodId);
+                    return (
+                      <option key={item.id} value={item.id}>
+                        {method.title} - {item.group} - {item.type} - Rs {item.price}
+                      </option>
+                    );
+                  })}
                 </select>
               </label>
               <label className="grid min-w-0 gap-1 text-sm font-semibold text-slate-700">
@@ -639,27 +782,38 @@ export default function BusinessOsPage() {
                 />
               </label>
             </div>
+            <div className={`mt-4 rounded-lg border p-3 text-sm leading-5 ${selectedMethod.tone}`}>
+              <div className="font-bold">
+                {selectedMethod.emoji} {selectedMethod.title} rule
+              </div>
+              <div className="mt-1">{selectedMethod.rule}</div>
+            </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-4">
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                 <div className="text-xs font-semibold text-slate-500">Unit price</div>
-                <div className="mt-1 text-xl font-bold">{formatRs(selectedDtf.price)}</div>
+                <div className="mt-1 text-xl font-bold">{formatRs(selectedPricing.price)}</div>
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                 <div className="text-xs font-semibold text-slate-500">Unit cost</div>
-                <div className="mt-1 text-xl font-bold">{formatRs(selectedDtf.cost)}</div>
+                <div className="mt-1 text-xl font-bold">
+                  {formatMaybeEstimated(selectedPricing.cost, selectedPricing.estimated)}
+                </div>
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                 <div className="text-xs font-semibold text-slate-500">Profit</div>
-                <div className="mt-1 text-xl font-bold text-emerald-700">{formatRs(totalProfit)}</div>
+                <div className="mt-1 text-xl font-bold text-emerald-700">
+                  {formatMaybeEstimated(totalProfit, selectedPricing.estimated)}
+                </div>
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                 <div className="text-xs font-semibold text-slate-500">Margin</div>
-                <div className="mt-1 text-xl font-bold">{marginPercent(selectedDtf.price, selectedDtf.cost)}%</div>
+                <div className="mt-1 text-xl font-bold">{marginPercent(selectedPricing.price, selectedPricing.cost)}%</div>
               </div>
             </div>
             <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
               Quote total: <strong>{formatRs(totalRevenue)}</strong> | Cost:{" "}
-              <strong>{formatRs(totalCost)}</strong> | Profit: <strong>{formatRs(totalProfit)}</strong>
+              <strong>{formatMaybeEstimated(totalCost, selectedPricing.estimated)}</strong> | Profit:{" "}
+              <strong>{formatMaybeEstimated(totalProfit, selectedPricing.estimated)}</strong>
             </div>
           </div>
 
@@ -683,10 +837,179 @@ export default function BusinessOsPage() {
             </div>
             <div className="mt-4 grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
               <div>
-                <strong>Serie:</strong> cost is Rs 100 per print plus blank garment. Use for scale.
+                <strong>Serie:</strong> Shabnaaz print cost starts at Rs 100 per side. Use the table total cost for large sizes.
               </div>
               <div>
-                <strong>Vinyl:</strong> use for simple one-color premium jobs. Protect highest margin.
+                <strong>Vinyl:</strong> use for simple one-color premium jobs. Costs are estimated, so keep checking material usage.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-slate-200 bg-white p-5">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <Banknote className="h-5 w-5 text-emerald-700" />
+                <h2 className="text-lg font-bold text-slate-950">Full Pricing Matrix</h2>
+              </div>
+              <p className="mt-1 text-sm text-slate-600">
+                This is the price source of truth. Update this table when suppliers or material cost changes.
+              </p>
+            </div>
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
+              Profit = selling price - production cost
+            </div>
+          </div>
+          <div className="mt-4 grid gap-4 xl:grid-cols-3">
+            {methodProfiles.map((method) => {
+              const options = pricingOptions.filter((option) => option.methodId === method.id);
+              const bestMargin = Math.max(...options.map((option) => marginPercent(option.price, option.cost)));
+
+              return (
+                <div key={method.id} className={`rounded-lg border p-4 ${method.tone}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-base font-bold">
+                        {method.emoji} {method.title} Printing
+                      </h3>
+                      <p className="mt-1 text-sm leading-5">{method.rule}</p>
+                    </div>
+                    <div className="rounded-md bg-white px-2 py-1 text-xs font-bold text-slate-900">
+                      Best {bestMargin}%
+                    </div>
+                  </div>
+                  <div className="mt-4 overflow-x-auto rounded-lg border border-white/70 bg-white">
+                    <table className="min-w-full text-left text-sm text-slate-800">
+                      <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                        <tr>
+                          <th className="px-3 py-2 font-bold">Size</th>
+                          <th className="px-3 py-2 font-bold">Type</th>
+                          <th className="px-3 py-2 font-bold">Price</th>
+                          <th className="px-3 py-2 font-bold">Cost</th>
+                          <th className="px-3 py-2 font-bold">Profit</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {options.map((option) => (
+                          <tr key={option.id} className="border-t border-slate-100">
+                            <td className="whitespace-nowrap px-3 py-2 font-semibold">{option.group}</td>
+                            <td className="min-w-[150px] px-3 py-2">{option.type}</td>
+                            <td className="whitespace-nowrap px-3 py-2 font-semibold">{formatRs(option.price)}</td>
+                            <td className="whitespace-nowrap px-3 py-2">
+                              {formatMaybeEstimated(option.cost, option.estimated)}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2 font-bold text-emerald-700">
+                              {formatMaybeEstimated(option.price - option.cost, option.estimated)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="mt-3 text-sm font-semibold leading-5">{method.focus}</p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+          <div className="rounded-lg border border-slate-200 bg-white p-5">
+            <div className="flex items-center gap-2">
+              <LineChart className="h-5 w-5 text-rose-600" />
+              <h2 className="text-lg font-bold text-slate-950">Future Focus Forecast</h2>
+            </div>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              Enter the number of pieces you believe each method can sell per month. The system predicts
+              revenue, profit, and which method deserves more focus.
+            </p>
+            <div className="mt-4 grid gap-3">
+              {methodProfiles.map((method) => (
+                <label key={method.id} className={`grid gap-2 rounded-lg border p-3 ${method.tone}`}>
+                  <span className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-bold">
+                      {method.emoji} {method.title} monthly pieces
+                    </span>
+                    <span className="text-xs font-semibold">Focus input</span>
+                  </span>
+                  <input
+                    inputMode="numeric"
+                    value={forecastVolumes[method.id]}
+                    onChange={(event) =>
+                      setForecastVolumes((current) => ({
+                        ...current,
+                        [method.id]: event.target.value,
+                      }))
+                    }
+                    className="w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none"
+                  />
+                </label>
+              ))}
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div className="text-xs font-semibold text-slate-500">30-day profit</div>
+                <div className="mt-1 text-xl font-bold text-slate-950">{formatRs(totalForecastProfit)}</div>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div className="text-xs font-semibold text-slate-500">90-day growth case</div>
+                <div className="mt-1 text-xl font-bold text-emerald-700">{formatRs(ninetyDayProfit)}</div>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div className="text-xs font-semibold text-slate-500">Blended margin</div>
+                <div className="mt-1 text-xl font-bold text-slate-950">{blendedForecastMargin}%</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-200 bg-white p-5">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-emerald-700" />
+              <h2 className="text-lg font-bold text-slate-950">Where To Focus More</h2>
+            </div>
+            <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+              <div className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-800">
+                Current recommendation
+              </div>
+              <div className="mt-2 text-2xl font-bold text-slate-950">
+                Focus more on {focusLeader.method.emoji} {focusLeader.method.title}
+              </div>
+              <p className="mt-2 text-sm leading-5 text-slate-700">
+                Predicted monthly profit: <strong>{formatRs(focusLeader.monthlyProfit)}</strong>.
+                Keep DTF as the safe default, but shift marketing toward the highest profit and repeatable methods.
+              </p>
+            </div>
+            <div className="mt-4 grid gap-3">
+              {focusMix.map((row) => (
+                <div key={row.method.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <span className="font-bold text-slate-900">
+                      {row.method.emoji} {row.method.title}
+                    </span>
+                    <span className="font-semibold text-slate-600">
+                      {formatRs(row.monthlyProfit)} profit | {row.share}% profit share
+                    </span>
+                  </div>
+                  <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-200">
+                    <div
+                      className={`h-full rounded-full ${row.method.accent}`}
+                      style={{ width: `${Math.max(4, Math.round((row.monthlyProfit / maxForecastProfit) * 100))}%` }}
+                    />
+                  </div>
+                  <div className="mt-2 grid gap-2 text-xs font-semibold text-slate-500 sm:grid-cols-3">
+                    <span>Avg profit: {formatRs(row.averageProfit)}</span>
+                    <span>Avg margin: {row.averageMargin}%</span>
+                    <span>Revenue: {formatRs(row.monthlyRevenue)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 grid gap-2 rounded-lg border border-slate-200 bg-slate-950 p-3 text-sm text-white">
+              <div className="font-bold">90-day focus rule</div>
+              <div className="text-slate-200">
+                Market Vinyl for simple logos, sell Serie to business teams, and keep DTF for complex jobs.
+                Forecast assumes a 20% monthly improvement when Ryan removes bottlenecks and pushes proof.
               </div>
             </div>
           </div>
