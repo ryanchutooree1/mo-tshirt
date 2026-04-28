@@ -614,13 +614,13 @@ export default function BusinessOsPage() {
             <p className="mt-1 text-sm text-slate-600">
               Tanvi uses this table first. Ryan handles only exceptions and weekly updates.
             </p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_120px]">
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">
+            <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_120px]">
+              <label className="grid min-w-0 gap-1 text-sm font-semibold text-slate-700">
                 DTF option
                 <select
                   value={selectedDtfId}
                   onChange={(event) => setSelectedDtfId(event.target.value)}
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none"
+                  className="w-full min-w-0 rounded-md border border-slate-300 px-3 py-2 text-sm outline-none"
                 >
                   {dtfPricing.map((item) => (
                     <option key={item.id} value={item.id}>
@@ -629,13 +629,13 @@ export default function BusinessOsPage() {
                   ))}
                 </select>
               </label>
-              <label className="grid gap-1 text-sm font-semibold text-slate-700">
+              <label className="grid min-w-0 gap-1 text-sm font-semibold text-slate-700">
                 Qty
                 <input
                   inputMode="numeric"
                   value={quantity}
                   onChange={(event) => setQuantity(event.target.value)}
-                  className="rounded-md border border-slate-300 px-3 py-2 text-sm outline-none"
+                  className="w-full min-w-0 rounded-md border border-slate-300 px-3 py-2 text-sm outline-none"
                 />
               </label>
             </div>
@@ -881,31 +881,31 @@ export default function BusinessOsPage() {
                 value={bottleneckDraft.happened}
                 onChange={(event) => setBottleneckDraft((current) => ({ ...current, happened: event.target.value }))}
                 placeholder="What happened"
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none"
+                className="w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none"
               />
               <input
                 value={bottleneckDraft.why}
                 onChange={(event) => setBottleneckDraft((current) => ({ ...current, why: event.target.value }))}
                 placeholder="Why"
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none"
+                className="w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none"
               />
-              <input
-                value={bottleneckDraft.fix}
-                onChange={(event) => setBottleneckDraft((current) => ({ ...current, fix: event.target.value }))}
-                placeholder="Fix the system"
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none"
-              />
-              <div className="grid gap-3 sm:grid-cols-[1fr_130px_auto]">
+              <div className="grid min-w-0 gap-3 md:col-span-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(160px,0.35fr)_150px_auto]">
+                <input
+                  value={bottleneckDraft.fix}
+                  onChange={(event) => setBottleneckDraft((current) => ({ ...current, fix: event.target.value }))}
+                  placeholder="Fix the system"
+                  className="w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none"
+                />
                 <input
                   value={bottleneckDraft.owner}
                   onChange={(event) => setBottleneckDraft((current) => ({ ...current, owner: event.target.value }))}
                   placeholder="Owner"
-                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none"
+                  className="w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none"
                 />
                 <select
                   value={bottleneckDraft.status}
                   onChange={(event) => setBottleneckDraft((current) => ({ ...current, status: event.target.value }))}
-                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none"
+                  className="w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none"
                 >
                   <option>Open</option>
                   <option>Fixing</option>
@@ -914,7 +914,7 @@ export default function BusinessOsPage() {
                 <button
                   type="button"
                   onClick={addBottleneck}
-                  className="inline-flex items-center justify-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
                 >
                   <Plus className="h-4 w-4" />
                   Add
