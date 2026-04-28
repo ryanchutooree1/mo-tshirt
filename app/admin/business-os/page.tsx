@@ -100,6 +100,8 @@ type ForecastRow = {
   monthlyProfit: number;
 };
 
+type ActiveView = "command" | "pricing" | "systems" | "growth";
+
 const STORAGE_KEYS = {
   metrics: "mo-business-os-metrics-v1",
   tasks: "mo-business-os-daily-tasks-v1",
@@ -108,6 +110,43 @@ const STORAGE_KEYS = {
   targets: "mo-business-os-targets-v1",
   forecastVolumes: "mo-business-os-forecast-volumes-v1",
 };
+
+const workspaceViews: Array<{
+  id: ActiveView;
+  label: string;
+  emoji: string;
+  headline: string;
+  description: string;
+}> = [
+  {
+    id: "command",
+    label: "Command",
+    emoji: "🎯",
+    headline: "What matters today",
+    description: "Focus, forecast, daily actions, and the numbers that tell you if the business is moving.",
+  },
+  {
+    id: "pricing",
+    label: "Pricing",
+    emoji: "💰",
+    headline: "Quote without asking Ryan",
+    description: "Calculator, price matrix, and the print decision rules for Tanvi.",
+  },
+  {
+    id: "systems",
+    label: "Systems",
+    emoji: "⚙️",
+    headline: "Make the business run smoother",
+    description: "Order flow, team roles, SOPs, templates, and home stock rules.",
+  },
+  {
+    id: "growth",
+    label: "Growth",
+    emoji: "🚀",
+    headline: "Remove bottlenecks and create scale",
+    description: "Bottleneck fixes, growth ideas, weekly review, and money rules.",
+  },
+];
 
 const defaultMetrics: MetricsState = {
   leads: "",
@@ -487,8 +526,14 @@ function average(values: number[]) {
   return values.reduce((total, value) => total + value, 0) / values.length;
 }
 
+function progressPercent(value: number, targetValue: number) {
+  if (!targetValue) return 0;
+  return Math.max(0, Math.min(100, Math.round((value / targetValue) * 100)));
+}
+
 export default function BusinessOsPage() {
   const [hydrated, setHydrated] = useState(false);
+  const [activeView, setActiveView] = useState<ActiveView>("command");
   const [metrics, setMetrics] = useState<MetricsState>(defaultMetrics);
   const [dailyTasks, setDailyTasks] = useState<DailyTask[]>(defaultTasks);
   const [bottlenecks, setBottlenecks] = useState<Bottleneck[]>(seedBottlenecks);
@@ -610,6 +655,16 @@ export default function BusinessOsPage() {
     ...row,
     share: totalForecastProfit ? Math.round((row.monthlyProfit / totalForecastProfit) * 100) : 0,
   }));
+  const currentView = workspaceViews.find((view) => view.id === activeView) || workspaceViews[0];
+  const openBottlenecks = bottlenecks.filter((item) => item.status !== "Fixed").length;
+  const x2Progress = progressPercent(totalForecastProfit, x2Target);
+  const x3Progress = progressPercent(totalForecastProfit, x3Target);
+  const nextAction =
+    focusLeader.method.id === "vinyl"
+      ? "Push simple one-color logo orders today."
+      : focusLeader.method.id === "serie"
+        ? "Message business teams for 10+ uniform orders."
+        : "Use DTF to close complex or unsure artwork fast.";
 
   async function copyTemplate(label: string, body: string) {
     try {
@@ -659,36 +714,52 @@ export default function BusinessOsPage() {
   return (
     <main className="min-h-screen bg-[#f6f7f9] text-slate-950">
       <div className="mx-auto flex w-full max-w-[1540px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-        <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-lg border border-slate-200 bg-white p-5">
+        <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+          <div className="rounded-lg border border-slate-900 bg-slate-950 p-5 text-white">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div>
-                <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-rose-700">
+                <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-emerald-300">
                   <Sparkles className="h-4 w-4" />
-                  🧠 MO T-SHIRT Master Business System
+                  🧠 MO T-SHIRT Business OS
                 </div>
-                <h1 className="mt-2 max-w-3xl text-3xl font-bold leading-tight text-slate-950 sm:text-4xl">
-                  We do not print T-shirts. We make businesses ready.
+                <h1 className="mt-2 max-w-3xl text-3xl font-bold leading-tight sm:text-4xl">
+                  One screen. Clear focus. Less headache.
                 </h1>
-                <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-                  Fast branded uniforms for Mauritius businesses, with clear mockups,
-                  fixed pricing, controlled production, and repeatable delivery.
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
+                  We make businesses ready with branded uniforms. Today the system says:
+                  focus on <strong className="text-white">{focusLeader.method.title}</strong>, protect profit,
+                  and remove the biggest bottleneck before adding more work.
                 </p>
               </div>
-              <div className="grid min-w-[260px] gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <div className="grid min-w-[260px] gap-2 rounded-lg border border-white/10 bg-white/10 p-3">
+                <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-300">Next action</div>
+                <div className="text-lg font-bold">{nextAction}</div>
+                <div className="text-sm text-slate-300">
+                  {openBottlenecks} open bottlenecks | {completedTasks}/{dailyTasks.length} daily actions done
+                </div>
+              </div>
+            </div>
+            <div className="mt-5 grid gap-3 md:grid-cols-3">
+              <div className="rounded-lg border border-white/10 bg-white/10 p-4">
+                <div className="text-xs font-semibold text-slate-300">Best focus</div>
+                <div className="mt-1 text-2xl font-bold">
+                  {focusLeader.method.emoji} {focusLeader.method.title}
+                </div>
+                <div className="mt-1 text-sm text-slate-300">{formatRs(focusLeader.monthlyProfit)} predicted profit</div>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/10 p-4">
+                <div className="text-xs font-semibold text-slate-300">30-day profit</div>
+                <div className="mt-1 text-2xl font-bold text-emerald-300">{formatRs(totalForecastProfit)}</div>
+                <div className="mt-1 text-sm text-slate-300">{blendedForecastMargin}% blended margin</div>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/10 p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-semibold text-slate-700">Daily execution</span>
-                  <span className="text-2xl font-bold text-slate-950">{executionScore}%</span>
+                  <div className="text-xs font-semibold text-slate-300">Daily execution</div>
+                  <div className="text-xl font-bold">{executionScore}%</div>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-                  <div
-                    className="h-full bg-emerald-500 transition-all"
-                    style={{ width: `${executionScore}%` }}
-                  />
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/15">
+                  <div className="h-full rounded-full bg-emerald-400" style={{ width: `${executionScore}%` }} />
                 </div>
-                <span className="text-xs text-slate-500">
-                  {completedTasks} of {dailyTasks.length} actions done today
-                </span>
               </div>
             </div>
           </div>
@@ -696,11 +767,11 @@ export default function BusinessOsPage() {
           <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-5">
             <div className="flex items-center gap-2">
               <Target className="h-5 w-5 text-rose-600" />
-              <h2 className="text-lg font-bold text-slate-950">Salary Target Engine</h2>
+              <h2 className="text-lg font-bold text-slate-950">Salary Target</h2>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="grid gap-1 text-sm font-semibold text-slate-700">
-                Full-time monthly salary
+                Monthly salary
                 <input
                   inputMode="numeric"
                   value={target.salary}
@@ -710,7 +781,7 @@ export default function BusinessOsPage() {
                 />
               </label>
               <label className="grid gap-1 text-sm font-semibold text-slate-700">
-                Average profit per order
+                Profit / order
                 <input
                   inputMode="numeric"
                   value={target.profitPerOrder}
@@ -722,22 +793,38 @@ export default function BusinessOsPage() {
                 />
               </label>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-3">
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                <div className="text-xs font-semibold text-emerald-800">x2 salary target</div>
-                <div className="mt-1 text-2xl font-bold text-slate-950">
-                  {salary ? formatRs(x2Target) : "Set salary"}
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs font-semibold text-emerald-800">x2 salary progress</div>
+                    <div className="mt-1 text-xl font-bold text-slate-950">
+                      {salary ? formatRs(x2Target) : "Set salary"}
+                    </div>
+                  </div>
+                  <div className="text-lg font-bold text-emerald-700">{x2Progress}%</div>
                 </div>
-                <div className="text-xs text-slate-600">
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-emerald-100">
+                  <div className="h-full rounded-full bg-emerald-500" style={{ width: `${x2Progress}%` }} />
+                </div>
+                <div className="mt-1 text-xs text-slate-600">
                   {salary ? `${x2Orders} orders/month at ${formatRs(profitPerOrder)} profit` : "Target unlocks after salary"}
                 </div>
               </div>
               <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-                <div className="text-xs font-semibold text-amber-800">x3 salary target</div>
-                <div className="mt-1 text-2xl font-bold text-slate-950">
-                  {salary ? formatRs(x3Target) : "Set salary"}
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs font-semibold text-amber-800">x3 salary progress</div>
+                    <div className="mt-1 text-xl font-bold text-slate-950">
+                      {salary ? formatRs(x3Target) : "Set salary"}
+                    </div>
+                  </div>
+                  <div className="text-lg font-bold text-amber-700">{x3Progress}%</div>
                 </div>
-                <div className="text-xs text-slate-600">
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-amber-100">
+                  <div className="h-full rounded-full bg-amber-500" style={{ width: `${x3Progress}%` }} />
+                </div>
+                <div className="mt-1 text-xs text-slate-600">
                   {salary ? `${x3Orders} orders/month at ${formatRs(profitPerOrder)} profit` : "Target unlocks after salary"}
                 </div>
               </div>
@@ -745,6 +832,35 @@ export default function BusinessOsPage() {
           </div>
         </section>
 
+        <section className="rounded-lg border border-slate-200 bg-white p-2">
+          <div className="grid gap-2 md:grid-cols-4">
+            {workspaceViews.map((view) => (
+              <button
+                key={view.id}
+                type="button"
+                onClick={() => setActiveView(view.id)}
+                className={`rounded-md border px-3 py-3 text-left transition ${
+                  activeView === view.id
+                    ? "border-slate-950 bg-slate-950 text-white"
+                    : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white"
+                }`}
+              >
+                <div className="text-sm font-bold">
+                  {view.emoji} {view.label}
+                </div>
+                <div className={`mt-1 text-xs ${activeView === view.id ? "text-slate-300" : "text-slate-500"}`}>
+                  {view.headline}
+                </div>
+              </button>
+            ))}
+          </div>
+          <div className="mt-2 rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            <strong className="text-slate-900">{currentView.headline}:</strong> {currentView.description}
+          </div>
+        </section>
+
+        {activeView === "pricing" ? (
+          <>
         <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
           <div className="rounded-lg border border-slate-200 bg-white p-5">
             <div className="flex items-center gap-2">
@@ -914,6 +1030,11 @@ export default function BusinessOsPage() {
           </div>
         </section>
 
+          </>
+        ) : null}
+
+        {activeView === "command" ? (
+          <>
         <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
           <div className="rounded-lg border border-slate-200 bg-white p-5">
             <div className="flex items-center gap-2">
@@ -1074,6 +1195,11 @@ export default function BusinessOsPage() {
           </div>
         </section>
 
+          </>
+        ) : null}
+
+        {activeView === "systems" ? (
+          <>
         <section className="rounded-lg border border-slate-200 bg-white p-5">
           <div className="flex items-center gap-2">
             <Route className="h-5 w-5 text-cyan-700" />
@@ -1193,6 +1319,11 @@ export default function BusinessOsPage() {
           </div>
         </section>
 
+          </>
+        ) : null}
+
+        {activeView === "growth" ? (
+          <>
         <section className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
           <div className="rounded-lg border border-slate-200 bg-white p-5">
             <div className="flex items-center gap-2">
@@ -1397,6 +1528,8 @@ export default function BusinessOsPage() {
             uniform business that can run without Ryan checking every normal decision.
           </p>
         </section>
+          </>
+        ) : null}
       </div>
     </main>
   );
