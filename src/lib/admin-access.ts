@@ -8,6 +8,7 @@ export type AdminPagePath =
   | "/admin/inventory"
   | "/admin/quotation-approval"
   | "/admin/design-studio"
+  | "/admin/background-remover"
   | "/admin/ai-assistant"
   | "/admin/prescription-ocr"
   | "/admin/analytics"
@@ -88,6 +89,12 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
     path: "/admin/design-studio",
     label: "Design Studio",
     description: "Garment design tools and quotation intake.",
+    group: "Sales",
+  },
+  {
+    path: "/admin/background-remover",
+    label: "Background Remover",
+    description: "Remove image backgrounds and export transparent PNG files.",
     group: "Sales",
   },
   {
@@ -226,6 +233,7 @@ export const DEFAULT_TOP_NAV_PATHS: AdminPagePath[] = [
   "/admin/shops",
   "/admin/quotation-approval",
   "/admin/design-studio",
+  "/admin/background-remover",
   "/admin/analytics",
   "/admin/tracking",
   "/admin/accounting",
