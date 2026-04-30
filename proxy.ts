@@ -81,9 +81,7 @@ export async function proxy(req: NextRequest) {
     const url = req.nextUrl.clone();
     url.pathname = "/";
     url.hash = "contact";
-    const response = NextResponse.redirect(url, 308);
-    response.headers.set("X-Robots-Tag", "noindex, nofollow");
-    return applySecurityHeaders(response);
+    return applySecurityHeaders(NextResponse.redirect(url, 308));
   }
 
   // Protect all /admin routes and the standalone IoT command deck.
