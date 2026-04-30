@@ -37,6 +37,15 @@ export type ShopSizePrice = {
   profit?: number | null;
 };
 
+export const SHOP_IMAGE_VIEWS = [
+  { key: "front", label: "Front", field: "photoUrl" },
+  { key: "back", label: "Back", field: "backPhotoUrl" },
+  { key: "side", label: "Side", field: "sidePhotoUrl" },
+] as const;
+
+export type ShopImageViewKey = (typeof SHOP_IMAGE_VIEWS)[number]["key"];
+export type ShopImageViewField = (typeof SHOP_IMAGE_VIEWS)[number]["field"];
+
 export type ShopItem = {
   id: string;
   title: string;
@@ -49,6 +58,8 @@ export type ShopItem = {
   pickupPoint?: string | null;
   collectionPoint?: string | null;
   photoUrl?: string | null;
+  backPhotoUrl?: string | null;
+  sidePhotoUrl?: string | null;
   position?: number;
   isActive: boolean;
   inStock: boolean;
@@ -147,6 +158,16 @@ export function compareShopItems(left: Pick<ShopItem, "title" | "position">, rig
 
 export function sortShopItems<T extends Pick<ShopItem, "title" | "position">>(items: T[]) {
   return items.slice().sort(compareShopItems);
+}
+
+export function getShopImageViews(
+  item: Pick<ShopItem, "photoUrl" | "backPhotoUrl" | "sidePhotoUrl">
+) {
+  return SHOP_IMAGE_VIEWS.map((view) => ({
+    key: view.key,
+    label: view.label,
+    url: item[view.field],
+  })).filter((view) => Boolean(view.url));
 }
 
 export function createQuoteColorOptionsByGarment(): Record<QuoteGarmentOption, string[]> {

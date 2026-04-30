@@ -117,6 +117,12 @@ export function parseShopPayload(body: unknown): ParseResult {
   const collectionPoint =
     cleanString(payload.collectionPoint) || DEFAULT_COLLECTION_POINT;
   const photoUrl = cleanString(payload.photoUrl) || null;
+  const backPhotoUrl = cleanString(payload.backPhotoUrl) || null;
+  const sidePhotoUrl = cleanString(payload.sidePhotoUrl) || null;
+
+  if (!photoUrl && (backPhotoUrl || sidePhotoUrl)) {
+    return { ok: false, error: "Add the front view before adding back or side photos." };
+  }
 
   const isActive = parseBoolean(payload.isActive, true);
   const inStock = parseBoolean(payload.inStock, true);
@@ -131,6 +137,8 @@ export function parseShopPayload(body: unknown): ParseResult {
     pickupPoint,
     collectionPoint,
     photoUrl,
+    backPhotoUrl,
+    sidePhotoUrl,
     isActive,
     inStock,
   };

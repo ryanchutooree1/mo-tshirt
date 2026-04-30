@@ -5,12 +5,15 @@ import {
   DEFAULT_COLLECTION_POINT,
   DEFAULT_PICKUP_POINT,
   ONE_SIZE_LABEL,
+  SHOP_IMAGE_VIEWS,
   formatSizeLabel,
+  getShopImageViews,
   getSizePrices,
   isOneSizeLabel,
   normalizeList,
   SIZE_ORDER,
   sortQuoteColors,
+  type ShopImageViewKey,
   type ShopItem,
 } from "@/lib/shops";
 import { formatMoney as formatDisplayMoney } from "@/lib/money";
@@ -122,9 +125,13 @@ type FormState = {
   pickupPoint: string;
   collectionPoint: string;
   photoUrl: string;
+  backPhotoUrl: string;
+  sidePhotoUrl: string;
   isActive: boolean;
   inStock: boolean;
 };
+
+type ImageFileState = Record<ShopImageViewKey, File | null>;
 
 function buildEmptyFormState(): FormState {
   return {
@@ -136,8 +143,18 @@ function buildEmptyFormState(): FormState {
     pickupPoint: DEFAULT_PICKUP_POINT,
     collectionPoint: DEFAULT_COLLECTION_POINT,
     photoUrl: "",
+    backPhotoUrl: "",
+    sidePhotoUrl: "",
     isActive: true,
     inStock: true,
+  };
+}
+
+function buildEmptyImageFiles(): ImageFileState {
+  return {
+    front: null,
+    back: null,
+    side: null,
   };
 }
 
@@ -252,20 +269,30 @@ export default function AdminShopsPage() {
   const [showActiveOnly, setShowActiveOnly] = useState(false);
   const [showInStockOnly, setShowInStockOnly] = useState(false);
 
-  const [file, setFile] = useState<File | null>(null);
+  const [imageFiles, setImageFiles] = useState<ImageFileState>(() => buildEmptyImageFiles());
+  const [previewUrls, setPreviewUrls] = useState<Record<ShopImageViewKey, string>>({
+    front: "",
+    back: "",
+    side: "",
+  });
+  const [selectedImageView, setSelectedImageView] = useState<ShopImageViewKey>("front");
   const [uploading, setUploading] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    if (!file) {
-      setPreviewUrl(null);
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+    const nextUrls = {
+      front: imageFiles.front ? URL.createObjectURL(imageFiles.front) : "",
+      back: imageFiles.back ? URL.createObjectURL(imageFiles.back) : "",
+      side: imageFiles.side ? URL.createObjectURL(imageFiles.side) : "",
+    };
+    setPreviewUrls(nextUrls);
+
+    return () => {
+      Object.values(nextUrls).forEach((url) => {
+        if (url) URL.revokeObjectURL(url);
+      });
+    };
+  }, [imageFiles]);
 
   useEffect(() => {
     if (!isComposerOpen) return;
@@ -275,7 +302,8 @@ export default function AdminShopsPage() {
         setIsComposerOpen(false);
         setEditingId(null);
         setForm(buildEmptyFormState());
-        setFile(null);
+        setImageFiles(buildEmptyImageFiles());
+        setSelectedImageView("front");
       }
     };
 
@@ -378,14 +406,16 @@ export default function AdminShopsPage() {
     setIsComposerOpen(false);
     setEditingId(null);
     setForm(buildEmptyFormState());
-    setFile(null);
+    setImageFiles(buildEmptyImageFiles());
+    setSelectedImageView("front");
     if (photoInputRef.current) photoInputRef.current.value = "";
   }
 
   function openNewComposer() {
     setEditingId(null);
     setForm(buildEmptyFormState());
-    setFile(null);
+    setImageFiles(buildEmptyImageFiles());
+    setSelectedImageView("front");
     if (photoInputRef.current) photoInputRef.current.value = "";
     setError(null);
     setNotice(null);
@@ -409,10 +439,13 @@ export default function AdminShopsPage() {
       pickupPoint: item.pickupPoint || DEFAULT_PICKUP_POINT,
       collectionPoint: item.collectionPoint || DEFAULT_COLLECTION_POINT,
       photoUrl: item.photoUrl || "",
+      backPhotoUrl: item.backPhotoUrl || "",
+      sidePhotoUrl: item.sidePhotoUrl || "",
       isActive: item.isActive,
       inStock: item.inStock,
     });
-    setFile(null);
+    setImageFiles(buildEmptyImageFiles());
+    setSelectedImageView("front");
     if (photoInputRef.current) photoInputRef.current.value = "";
     setError(null);
     setNotice(null);
@@ -506,7 +539,31 @@ export default function AdminShopsPage() {
     });
   }
 
+  function getFormImageUrl(view: ShopImageViewKey) {
+    const config = SHOP_IMAGE_VIEWS.find((entry) => entry.key === view);
+    return config ? form[config.field] : "";
+  }
+
+  function getPreviewImageUrl(view: ShopImageViewKey) {
+    return previewUrls[view] || getFormImageUrl(view);
+  }
+
+  function updateFormImageUrl(view: ShopImageViewKey, url: string) {
+    const config = SHOP_IMAGE_VIEWS.find((entry) => entry.key === view);
+    if (!config) return;
+    setForm((prev) => ({ ...prev, [config.field]: url }));
+  }
+
+  function getFormImageViews() {
+    return SHOP_IMAGE_VIEWS.map((view) => ({
+      key: view.key,
+      label: view.label,
+      url: getPreviewImageUrl(view.key),
+    })).filter((view) => Boolean(view.url));
+  }
+
   async function uploadPhoto() {
+    const file = imageFiles[selectedImageView];
     if (!file) {
       setNotice("Choose a file first.");
       return;
@@ -514,17 +571,17 @@ export default function AdminShopsPage() {
     setNotice(null);
     setError(null);
     try {
-      const url = await uploadFileAndGetUrl();
+      const url = await uploadFileAndGetUrl(selectedImageView);
       if (url) {
-        setNotice("Photo uploaded. Save the item to apply it.");
+        const viewLabel = SHOP_IMAGE_VIEWS.find((view) => view.key === selectedImageView)?.label || "Photo";
+        setNotice(`${viewLabel} photo uploaded. Save the item to apply it.`);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Upload failed. Use an image URL instead.");
     }
   }
 
-  async function uploadFileAndGetUrl() {
-    if (!file) return form.photoUrl;
+  async function uploadImageFile(file: File) {
     setUploading(true);
     try {
       const body = new FormData();
@@ -539,11 +596,7 @@ export default function AdminShopsPage() {
         throw new Error(data?.error || "Photo upload failed. Paste an image URL instead.");
       }
 
-      const url = data.url;
-      setForm((prev) => ({ ...prev, photoUrl: url }));
-      setFile(null);
-      if (photoInputRef.current) photoInputRef.current.value = "";
-      return url;
+      return data.url;
     } catch (err) {
       console.error("upload error", err);
       if (err instanceof Error) throw err;
@@ -551,6 +604,32 @@ export default function AdminShopsPage() {
     } finally {
       setUploading(false);
     }
+  }
+
+  async function uploadFileAndGetUrl(view: ShopImageViewKey) {
+    const file = imageFiles[view];
+    if (!file) return getFormImageUrl(view);
+
+    const url = await uploadImageFile(file);
+    updateFormImageUrl(view, url);
+    setImageFiles((prev) => ({ ...prev, [view]: null }));
+    if (photoInputRef.current) photoInputRef.current.value = "";
+    return url;
+  }
+
+  async function uploadPendingImageFiles() {
+    const uploaded = {
+      front: form.photoUrl,
+      back: form.backPhotoUrl,
+      side: form.sidePhotoUrl,
+    };
+
+    for (const view of SHOP_IMAGE_VIEWS) {
+      if (!imageFiles[view.key]) continue;
+      uploaded[view.key] = await uploadFileAndGetUrl(view.key);
+    }
+
+    return uploaded;
   }
 
   async function saveItem(e: React.FormEvent) {
@@ -562,7 +641,7 @@ export default function AdminShopsPage() {
 
     try {
       const wasEditing = Boolean(editingId);
-      const photoUrl = await uploadFileAndGetUrl();
+      const imageUrls = await uploadPendingImageFiles();
       const sizePrices =
         form.pricingMode === "single"
           ? (() => {
@@ -621,7 +700,9 @@ export default function AdminShopsPage() {
         sizePrices,
         pickupPoint: form.pickupPoint,
         collectionPoint: form.collectionPoint,
-        photoUrl,
+        photoUrl: imageUrls.front,
+        backPhotoUrl: imageUrls.back,
+        sidePhotoUrl: imageUrls.side,
         isActive: form.isActive,
         inStock: form.inStock,
       };
@@ -885,6 +966,8 @@ export default function AdminShopsPage() {
                 const visibleSizes = isSinglePriceItem ? sizePrices.slice(0, 1) : sizePrices.slice(0, 4);
                 const extraSizes = Math.max(0, sizePrices.length - visibleSizes.length);
                 const colorLabels = sortQuoteColors(item.colors);
+                const imageViews = getShopImageViews(item);
+                const coverImageUrl = imageViews[0]?.url || item.photoUrl;
 
                 return (
                   <li
@@ -900,17 +983,36 @@ export default function AdminShopsPage() {
                       className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-slate-200/40 blur-3xl transition group-hover:bg-sky-200/30"
                     />
                     <div className="relative flex h-full flex-col gap-5 sm:flex-row">
-                      <div className="relative aspect-square w-28 shrink-0 self-start overflow-hidden rounded-[1.4rem] border border-slate-200 bg-white p-3 shadow-sm">
-                        {item.photoUrl ? (
-                          <AsyncCatalogImage
-                            src={item.photoUrl}
-                            alt={item.title}
-                            className="h-full w-full object-cover object-center"
-                            fallback={<span className="px-3 leading-tight">Image unavailable</span>}
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-400">
-                            <FiImage className="h-5 w-5" />
+                      <div className="w-28 shrink-0 self-start">
+                        <div className="relative aspect-square overflow-hidden rounded-[1.4rem] border border-slate-200 bg-white p-3 shadow-sm">
+                          {coverImageUrl ? (
+                            <AsyncCatalogImage
+                              src={coverImageUrl}
+                              alt={item.title}
+                              className="h-full w-full object-cover object-center"
+                              fallback={<span className="px-3 leading-tight">Image unavailable</span>}
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-400">
+                              <FiImage className="h-5 w-5" />
+                            </div>
+                          )}
+                        </div>
+                        {imageViews.length > 0 && (
+                          <div className="mt-2 grid grid-cols-3 gap-1.5">
+                            {imageViews.map((view) => (
+                              <div
+                                key={`${item.id}-${view.key}`}
+                                className="relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-white"
+                                title={`${view.label} view`}
+                              >
+                                <AsyncCatalogImage
+                                  src={view.url || ""}
+                                  alt={`${item.title} ${view.label.toLowerCase()} view`}
+                                  className="h-full w-full object-cover object-center"
+                                />
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>
@@ -988,6 +1090,23 @@ export default function AdminShopsPage() {
                             <span className="text-sm text-slate-400">No sizes priced yet</span>
                           )}
                         </div>
+                        {imageViews.length > 0 && (
+                          <div className="mt-2 grid grid-cols-3 gap-1.5">
+                            {imageViews.map((view) => (
+                              <div
+                                key={`${item.id}-${view.key}`}
+                                className="relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-white"
+                                title={`${view.label} view`}
+                              >
+                                <AsyncCatalogImage
+                                  src={view.url || ""}
+                                  alt={`${item.title} ${view.label.toLowerCase()} view`}
+                                  className="h-full w-full object-cover object-center"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex flex-wrap gap-2 sm:w-[8.5rem] sm:flex-col">
@@ -1370,75 +1489,112 @@ export default function AdminShopsPage() {
 
                         <section className="rounded-[1.6rem] border border-slate-200 bg-slate-50/70 p-5">
                           <div className="mb-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Photo</p>
-                            <h3 className="mt-2 text-lg font-semibold text-slate-900">Image and preview</h3>
+                            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Photos</p>
+                            <h3 className="mt-2 text-lg font-semibold text-slate-900">Front, back, and side views</h3>
                           </div>
 
-                          <div className="space-y-3">
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                              <div className="flex items-center gap-3">
-                                <input
-                                  ref={photoInputRef}
-                                  id="shop-photo-upload"
-                                  type="file"
-                                  accept="image/*"
-                                  tabIndex={-1}
-                                  onChange={(e) => {
-                                    const nextFile = e.target.files?.[0] || null;
-                                    if (nextFile && nextFile.size > MAX_UPLOAD_BYTES) {
-                                      setError("Image must be 6 MB or smaller.");
-                                      setFile(null);
-                                      if (photoInputRef.current) photoInputRef.current.value = "";
-                                      e.currentTarget.value = "";
-                                      return;
-                                    }
-                                    setError(null);
-                                    setFile(nextFile);
-                                    photoInputRef.current?.blur();
-                                  }}
-                                  className="hidden"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => photoInputRef.current?.click()}
-                                  className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50"
-                                >
-                                  <FiImage className="h-4 w-4" />
-                                  Choose file
-                                </button>
-                                <span className="text-xs text-slate-500">
-                                  {file ? file.name : "No file chosen"}
-                                </span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={uploadPhoto}
-                                disabled={!file || uploading}
-                                className="inline-flex items-center gap-2 rounded-full border border-slate-900 px-4 py-2 text-xs font-semibold text-slate-900 transition hover:bg-slate-900 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
-                              >
-                                <FiImage className="h-4 w-4" />
-                                {uploading ? "Uploading..." : "Upload"}
-                              </button>
+                          <div className="space-y-4">
+                            <div className="grid gap-2 sm:grid-cols-3">
+                              {SHOP_IMAGE_VIEWS.map((view) => {
+                                const imageUrl = getPreviewImageUrl(view.key);
+                                return (
+                                  <button
+                                    key={view.key}
+                                    type="button"
+                                    onClick={() => setSelectedImageView(view.key)}
+                                    className={`rounded-2xl border p-2 text-left transition ${
+                                      selectedImageView === view.key
+                                        ? "border-slate-900 bg-white shadow-sm"
+                                        : "border-slate-200 bg-white/70 hover:border-slate-300"
+                                    }`}
+                                  >
+                                    <div className="relative aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                                      {imageUrl ? (
+                                        <AsyncCatalogImage
+                                          src={imageUrl}
+                                          alt={`${view.label} view`}
+                                          className="h-full w-full object-cover object-center"
+                                        />
+                                      ) : (
+                                        <div className="flex h-full w-full items-center justify-center text-slate-300">
+                                          <FiImage className="h-5 w-5" />
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="mt-2 text-xs font-semibold text-slate-800">{view.label}</div>
+                                  </button>
+                                );
+                              })}
                             </div>
 
-                            <input
-                              value={form.photoUrl}
-                              onChange={(e) => setForm((prev) => ({ ...prev, photoUrl: e.target.value }))}
-                              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                              placeholder="Or paste an image URL"
-                            />
-
-                            {(previewUrl || form.photoUrl) && (
-                              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                                <div className="relative mx-auto aspect-square w-full max-w-[22rem] overflow-hidden rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4">
-                                  <AsyncCatalogImage
-                                    src={previewUrl || form.photoUrl}
-                                    alt="Preview"
-                                    className="h-full w-full object-cover object-center"
+                            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                  <div className="text-sm font-semibold text-slate-900">
+                                    {SHOP_IMAGE_VIEWS.find((view) => view.key === selectedImageView)?.label} view
+                                  </div>
+                                  <div className="mt-1 text-xs text-slate-500">
+                                    Front is required for a one-photo product. Back and side are optional.
+                                  </div>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <input
+                                    ref={photoInputRef}
+                                    id="shop-photo-upload"
+                                    type="file"
+                                    accept="image/*"
+                                    tabIndex={-1}
+                                    onChange={(e) => {
+                                      const nextFile = e.target.files?.[0] || null;
+                                      if (nextFile && nextFile.size > MAX_UPLOAD_BYTES) {
+                                        setError("Image must be 6 MB or smaller.");
+                                        setImageFiles((prev) => ({ ...prev, [selectedImageView]: null }));
+                                        if (photoInputRef.current) photoInputRef.current.value = "";
+                                        e.currentTarget.value = "";
+                                        return;
+                                      }
+                                      setError(null);
+                                      setImageFiles((prev) => ({
+                                        ...prev,
+                                        [selectedImageView]: nextFile,
+                                      }));
+                                      photoInputRef.current?.blur();
+                                    }}
+                                    className="hidden"
                                   />
+                                  <button
+                                    type="button"
+                                    onClick={() => photoInputRef.current?.click()}
+                                    className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50"
+                                  >
+                                    <FiImage className="h-4 w-4" />
+                                    Choose file
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={uploadPhoto}
+                                    disabled={!imageFiles[selectedImageView] || uploading}
+                                    className="inline-flex items-center gap-2 rounded-full border border-slate-900 px-4 py-2 text-xs font-semibold text-slate-900 transition hover:bg-slate-900 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    <FiImage className="h-4 w-4" />
+                                    {uploading ? "Uploading..." : "Upload"}
+                                  </button>
                                 </div>
                               </div>
-                            )}
+
+                              <div className="mt-3 text-xs text-slate-500">
+                                {imageFiles[selectedImageView]
+                                  ? imageFiles[selectedImageView]?.name
+                                  : "No new file chosen"}
+                              </div>
+
+                              <input
+                                value={getFormImageUrl(selectedImageView)}
+                                onChange={(e) => updateFormImageUrl(selectedImageView, e.target.value)}
+                                className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                                placeholder={`Paste ${SHOP_IMAGE_VIEWS.find((view) => view.key === selectedImageView)?.label.toLowerCase()} image URL`}
+                              />
+                            </div>
                           </div>
                         </section>
                       </div>
@@ -1466,9 +1622,9 @@ export default function AdminShopsPage() {
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Live preview</p>
                     <div className="mt-4 rounded-[1.6rem] border border-slate-200 bg-white p-4 shadow-sm">
                       <div className="relative aspect-square overflow-hidden rounded-[1.35rem] border border-slate-200 bg-slate-50 p-4">
-                        {previewUrl || form.photoUrl ? (
+                        {getPreviewImageUrl(selectedImageView) || form.photoUrl ? (
                           <AsyncCatalogImage
-                            src={previewUrl || form.photoUrl}
+                            src={getPreviewImageUrl(selectedImageView) || form.photoUrl}
                             alt={form.title || "Preview item"}
                             className="h-full w-full object-cover object-center"
                           />
@@ -1478,6 +1634,29 @@ export default function AdminShopsPage() {
                           </div>
                         )}
                       </div>
+                      {getFormImageViews().length > 0 && (
+                        <div className="mt-3 flex gap-2">
+                          {getFormImageViews().map((view) => (
+                            <button
+                              key={`preview-${view.key}`}
+                              type="button"
+                              onClick={() => setSelectedImageView(view.key)}
+                              className={`relative h-14 w-14 overflow-hidden rounded-xl border bg-slate-50 transition ${
+                                selectedImageView === view.key
+                                  ? "border-slate-900 ring-2 ring-slate-900/10"
+                                  : "border-slate-200"
+                              }`}
+                              title={`${view.label} view`}
+                            >
+                              <AsyncCatalogImage
+                                src={view.url || ""}
+                                alt={`${view.label} preview`}
+                                className="h-full w-full object-cover object-center"
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      )}
 
                       <div className="mt-4">
                         <div className="flex flex-wrap items-center gap-2">

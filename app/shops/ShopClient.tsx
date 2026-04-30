@@ -12,6 +12,7 @@ import {
   buildShopWhatsAppMessageForLines,
   formatSizeLabel,
   getSizePrice,
+  getShopImageViews,
   getSizePrices,
   getSizes,
   isOneSizeLabel,
@@ -220,23 +221,37 @@ function ShopProductImage({ src, alt }: ShopProductImageProps) {
 }
 
 function getProductThumbnailUrls(item: ShopItem) {
-  return [item.photoUrl, item.photoUrl, item.photoUrl];
+  return getShopImageViews(item);
 }
 
-function ProductThumbnailRail({ item }: ProductThumbnailRailProps) {
+function ProductThumbnailRail({
+  item,
+  activeUrl,
+  onSelect,
+}: ProductThumbnailRailProps & {
+  activeUrl: string | null;
+  onSelect: (url: string) => void;
+}) {
   const thumbnails = getProductThumbnailUrls(item);
+  if (!thumbnails.length) return null;
 
   return (
     <div className="inline-flex shrink-0 items-center gap-1.5" aria-label={`${item.title} thumbnails`}>
-      {thumbnails.map((src, index) => (
-        <div
-          key={`${item.id}-thumb-${index}`}
-          className="relative h-10 w-10 overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+      {thumbnails.map((view) => (
+        <button
+          key={`${item.id}-thumb-${view.key}`}
+          type="button"
+          onClick={() => view.url && onSelect(view.url)}
+          className={`relative h-10 w-10 overflow-hidden rounded-lg border bg-neutral-100 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition hover:-translate-y-0.5 ${
+            activeUrl === view.url ? "border-black ring-2 ring-black/10" : "border-neutral-200"
+          }`}
+          aria-label={`Show ${view.label.toLowerCase()} view`}
+          title={`${view.label} view`}
         >
-          {src ? (
+          {view.url ? (
             <Image
-              src={src}
-              alt={`${item.title} thumbnail ${index + 1}`}
+              src={view.url}
+              alt={`${item.title} ${view.label.toLowerCase()} view`}
               fill
               className="object-cover"
               sizes="40px"
@@ -244,7 +259,7 @@ function ProductThumbnailRail({ item }: ProductThumbnailRailProps) {
           ) : (
             <span className="absolute inset-0 bg-[linear-gradient(135deg,#f5f5f5,#e5e5e5)]" />
           )}
-        </div>
+        </button>
       ))}
     </div>
   );
@@ -269,6 +284,7 @@ export default function ShopClient() {
     phone: "",
   });
   const [isOrderOpen, setIsOrderOpen] = useState(false);
+  const [selectedImageUrls, setSelectedImageUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let active = true;
@@ -664,19 +680,21 @@ export default function ShopClient() {
                 quantity: 1,
               };
             const displayColor = selection.color || item.colors[0] || "Color";
+            const imageViews = getShopImageViews(item);
+            const displayPhotoUrl = selectedImageUrls[item.id] || imageViews[0]?.url || item.photoUrl;
             return (
               <article key={item.id} className="group rounded-[28px] border border-neutral-200 bg-white/90 p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
                 <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-neutral-100">
-                  {item.photoUrl ? (
-                    <ShopProductImage src={item.photoUrl} alt={item.title} />
+                  {displayPhotoUrl ? (
+                    <ShopProductImage src={displayPhotoUrl} alt={item.title} />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-xs text-neutral-400">
                       No photo
                     </div>
                   )}
-                  {item.photoUrl && (
+                  {displayPhotoUrl && (
                     <a
-                      href={`/api/shops/download?url=${encodeURIComponent(item.photoUrl)}&name=${encodeURIComponent(
+                      href={`/api/shops/download?url=${encodeURIComponent(displayPhotoUrl)}&name=${encodeURIComponent(
                         formatDownloadName(displayColor, item.title)
                       )}`}
                       className="absolute right-3 top-3 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-neutral-700 shadow-sm ring-1 ring-neutral-200 backdrop-blur transition hover:scale-105 hover:bg-white"
@@ -712,7 +730,13 @@ export default function ShopClient() {
                           ? formatDisplayWholeMoney(minPrice)
                           : `From ${formatDisplayWholeMoney(minPrice)}`}
                       </span>
-                      <ProductThumbnailRail item={item} />
+                      <ProductThumbnailRail
+                        item={item}
+                        activeUrl={displayPhotoUrl || null}
+                        onSelect={(url) =>
+                          setSelectedImageUrls((current) => ({ ...current, [item.id]: url }))
+                        }
+                      />
                     </div>
                   </div>
 
