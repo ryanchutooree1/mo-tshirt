@@ -9,6 +9,7 @@ export type AdminPagePath =
   | "/admin/quotation-approval"
   | "/admin/design-studio"
   | "/admin/ai-assistant"
+  | "/admin/prescription-ocr"
   | "/admin/analytics"
   | "/admin/tracking"
   | "/admin/accounting"
@@ -94,6 +95,12 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
     label: "Sales AI",
     description: "AI assistant review, training, and leads.",
     group: "Sales",
+  },
+  {
+    path: "/admin/prescription-ocr",
+    label: "Prescription OCR",
+    description: "Private OCR test page for prescription photo extraction.",
+    group: "Operations",
   },
   {
     path: "/admin/inventory",
@@ -225,6 +232,7 @@ export const DEFAULT_TOP_NAV_PATHS: AdminPagePath[] = [
   "/admin/finance-freedom",
   "/admin/business-value",
   "/admin/business-os",
+  "/admin/prescription-ocr",
   "/admin/dms",
   "/admin/iot",
   "/admin/business-notes",
