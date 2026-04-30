@@ -84,6 +84,10 @@ export async function proxy(req: NextRequest) {
     return applySecurityHeaders(NextResponse.redirect(url, 308));
   }
 
+  if (pathname === "/admin/prescription-ocr") {
+    return applySecurityHeaders(NextResponse.next());
+  }
+
   // Protect all /admin routes and the standalone IoT command deck.
   const isProtectedRoute = pathname.startsWith("/admin") || pathname === "/iot";
   if (!isProtectedRoute) return applySecurityHeaders(NextResponse.next());
