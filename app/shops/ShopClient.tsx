@@ -128,6 +128,10 @@ type ShopProductImageProps = {
   alt: string;
 };
 
+type ProductThumbnailRailProps = {
+  item: ShopItem;
+};
+
 function ShopsLoading() {
   return (
     <main className="grid min-h-screen place-items-center bg-[#f7f7fb] text-neutral-900">
@@ -212,6 +216,37 @@ function ShopProductImage({ src, alt }: ShopProductImageProps) {
         onError={handleLoadError}
       />
     </>
+  );
+}
+
+function getProductThumbnailUrls(item: ShopItem) {
+  return [item.photoUrl, item.photoUrl, item.photoUrl];
+}
+
+function ProductThumbnailRail({ item }: ProductThumbnailRailProps) {
+  const thumbnails = getProductThumbnailUrls(item);
+
+  return (
+    <div className="inline-flex shrink-0 items-center gap-1.5" aria-label={`${item.title} thumbnails`}>
+      {thumbnails.map((src, index) => (
+        <div
+          key={`${item.id}-thumb-${index}`}
+          className="relative h-10 w-10 overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+        >
+          {src ? (
+            <Image
+              src={src}
+              alt={`${item.title} thumbnail ${index + 1}`}
+              fill
+              className="object-cover"
+              sizes="40px"
+            />
+          ) : (
+            <span className="absolute inset-0 bg-[linear-gradient(135deg,#f5f5f5,#e5e5e5)]" />
+          )}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -677,6 +712,7 @@ export default function ShopClient() {
                           ? formatDisplayWholeMoney(minPrice)
                           : `From ${formatDisplayWholeMoney(minPrice)}`}
                       </span>
+                      <ProductThumbnailRail item={item} />
                     </div>
                   </div>
 
