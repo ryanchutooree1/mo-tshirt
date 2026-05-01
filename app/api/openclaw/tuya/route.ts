@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { executeOpenClawTuyaPowerCommand, OpenClawTuyaError } from "../../../../lib/tuya-openclaw";
+import { isOpenClawEnabled } from "@/lib/openclaw-availability";
 import {
   API_RATE_LIMIT,
   evaluateRequestRateLimit,
@@ -31,6 +32,13 @@ function isAuthorized(req: Request) {
 }
 
 export async function POST(req: Request) {
+  if (!isOpenClawEnabled()) {
+    return NextResponse.json(
+      { ok: false, error: "OpenClaw is currently disabled." },
+      { status: 503 }
+    );
+  }
+
   if (!isContentLengthWithinLimit(req.headers, MAX_OPENCLAW_REQUEST_BYTES)) {
     return NextResponse.json(
       { ok: false, error: "Payload too large." },

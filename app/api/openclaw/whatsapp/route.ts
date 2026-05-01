@@ -9,6 +9,7 @@ import {
   readOpenClawWhatsAppConfig,
   runDemoThinkingDelay,
 } from "@/lib/openclaw-whatsapp";
+import { isOpenClawEnabled } from "@/lib/openclaw-availability";
 import {
   API_RATE_LIMIT,
   evaluateRequestRateLimit,
@@ -25,6 +26,13 @@ function readVerifyToken() {
 }
 
 export async function GET(req: Request) {
+  if (!isOpenClawEnabled()) {
+    return NextResponse.json(
+      { ok: false, error: "OpenClaw is currently disabled." },
+      { status: 503 }
+    );
+  }
+
   const url = new URL(req.url);
   const mode = url.searchParams.get("hub.mode");
   const challenge = url.searchParams.get("hub.challenge");
@@ -39,6 +47,13 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  if (!isOpenClawEnabled()) {
+    return NextResponse.json(
+      { ok: false, error: "OpenClaw is currently disabled." },
+      { status: 503 }
+    );
+  }
+
   if (!isContentLengthWithinLimit(req.headers, MAX_OPENCLAW_WHATSAPP_REQUEST_BYTES)) {
     return NextResponse.json(
       { ok: false, error: "Payload too large." },
