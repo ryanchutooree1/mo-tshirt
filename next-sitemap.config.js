@@ -29,6 +29,7 @@ module.exports = {
   changefreq: "weekly",
   priority: 0.7,
   sitemapSize: 5000,
+  additionalPaths: async (config) => [await config.transform(config, "/ready-made-uniforms")],
   transform: async (config, path) => {
     const normalized = path !== "/" && path.endsWith("/") ? path.slice(0, -1) : path;
     let priority = 0.7;

@@ -5,6 +5,7 @@ export type AdminPagePath =
   | "/admin/clients"
   | "/admin/contracts"
   | "/admin/shops"
+  | "/admin/ready-made-uniforms"
   | "/admin/inventory"
   | "/admin/quotation-approval"
   | "/admin/design-studio"
@@ -77,6 +78,12 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
     path: "/admin/shops",
     label: "Shops",
     description: "Catalog items and shop content management.",
+    group: "Sales",
+  },
+  {
+    path: "/admin/ready-made-uniforms",
+    label: "Ready-Made Uniforms",
+    description: "Uniform style codes, images, and public page content.",
     group: "Sales",
   },
   {
@@ -231,6 +238,7 @@ export const DEFAULT_TOP_NAV_PATHS: AdminPagePath[] = [
   "/admin/ai-assistant",
   "/admin/contracts",
   "/admin/shops",
+  "/admin/ready-made-uniforms",
   "/admin/quotation-approval",
   "/admin/design-studio",
   "/admin/background-remover",
@@ -298,6 +306,7 @@ export function resolveAdminApiPermission(pathname: string) {
   if (pathname.startsWith("/api/admin/settings")) return "/admin/settings" as AdminPagePath;
   if (pathname.startsWith("/api/admin/ai-assistant")) return "/admin/ai-assistant" as AdminPagePath;
   if (pathname.startsWith("/api/admin/quotes")) return "/admin/quotation-approval" as AdminPagePath;
+  if (pathname.startsWith("/api/admin/ready-made-uniforms")) return "/admin/ready-made-uniforms" as AdminPagePath;
   if (pathname.startsWith("/api/admin/shops")) return "/admin/shops" as AdminPagePath;
   if (pathname.startsWith("/api/tuya/")) return "/admin/iot" as AdminPagePath;
   return null;

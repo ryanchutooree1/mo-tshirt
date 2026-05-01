@@ -11,6 +11,7 @@ import {
 } from "@/data/ready-made-uniforms";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { buildPageMetadata } from "@/lib/seo";
+import { getReadyMadeUniformItems } from "@/lib/ready-made-uniforms-store";
 
 const pageTitle = "Ready-Made Uniform Designs Mauritius | Corporate & Team Uniforms";
 const pageDescription =
@@ -22,6 +23,8 @@ export const metadata: Metadata = buildPageMetadata({
   path: READY_MADE_UNIFORMS_PATH,
   image: "/mockups/polo-front.png",
 });
+
+export const dynamic = "force-dynamic";
 
 const pageNav = [
   { label: "Home", href: "/" },
@@ -46,7 +49,18 @@ const offerReasons = [
   },
 ];
 
-export default function ReadyMadeUniformsPage() {
+async function loadUniforms() {
+  try {
+    return await getReadyMadeUniformItems();
+  } catch (error) {
+    console.error("ready-made-uniforms:page", error);
+    return readyMadeUniforms;
+  }
+}
+
+export default async function ReadyMadeUniformsPage() {
+  const uniforms = await loadUniforms();
+
   return (
     <div className="min-h-screen bg-[#fcfcfb] text-black">
       <header className="sticky top-0 z-40 border-b border-[#EAEAEA] bg-white/92 backdrop-blur">
@@ -160,7 +174,7 @@ export default function ReadyMadeUniformsPage() {
               <div className="absolute -bottom-8 left-10 h-40 w-40 rounded-full bg-sky-200/45 blur-3xl" aria-hidden="true" />
               <div className="relative overflow-hidden rounded-[32px] border border-[#EAEAEA] bg-[linear-gradient(145deg,#101010_0%,#1e293b_42%,#fb923c_100%)] p-6 shadow-[0_35px_90px_-45px_rgba(0,0,0,0.45)]">
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {readyMadeUniforms.slice(0, 4).map((uniform) => (
+                  {uniforms.slice(0, 4).map((uniform) => (
                     <div key={uniform.code} className="rounded-[24px] border border-white/10 bg-white/10 p-4 text-white backdrop-blur-sm">
                       <div className="flex items-center justify-between gap-3">
                         <span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
@@ -171,12 +185,12 @@ export default function ReadyMadeUniformsPage() {
                         </span>
                       </div>
                       <div className="mt-4 flex justify-center">
-                        <Image
+                        <img
                           src={uniform.imageSrc}
                           alt={`${uniform.title} mockup`}
-                          width={700}
-                          height={700}
                           className="h-32 w-auto object-contain drop-shadow-[0_18px_32px_rgba(0,0,0,0.28)]"
+                          loading="lazy"
+                          decoding="async"
                         />
                       </div>
                       <h2 className="mt-4 text-base font-semibold">{uniform.title}</h2>
@@ -266,7 +280,7 @@ export default function ReadyMadeUniformsPage() {
             </div>
 
             <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {readyMadeUniforms.map((uniform) => (
+              {uniforms.map((uniform) => (
                 <article
                   key={uniform.code}
                   className="overflow-hidden rounded-[30px] border border-[#EAEAEA] bg-white shadow-[0_32px_80px_-52px_rgba(0,0,0,0.35)]"
@@ -284,12 +298,12 @@ export default function ReadyMadeUniformsPage() {
                     </div>
                     <div className="relative mt-5 flex justify-center">
                       <div className="absolute inset-x-10 bottom-2 h-10 rounded-full bg-black/20 blur-2xl" aria-hidden="true" />
-                      <Image
+                      <img
                         src={uniform.imageSrc}
                         alt={`${uniform.title} sample`}
-                        width={900}
-                        height={900}
                         className="relative h-56 w-auto object-contain drop-shadow-[0_24px_40px_rgba(0,0,0,0.22)]"
+                        loading="lazy"
+                        decoding="async"
                       />
                     </div>
                   </div>
