@@ -139,6 +139,9 @@ export function mapReadyMadeUniformDoc(
       ? cleanStringList(data.features)
       : fallback?.features || [],
     imageSrc: cleanString(data.imageSrc) || fallback?.imageSrc || "/mockups/polo-front.png",
+    imageGallery: cleanStringList(data.imageGallery).length
+      ? cleanStringList(data.imageGallery)
+      : fallback?.imageGallery || [],
     accentClass,
     badgeClass: cleanString(data.badgeClass) || fallback?.badgeClass || fallbackAccent.badgeClass,
     message:
@@ -226,6 +229,7 @@ export function parseReadyMadeUniformPayload(body: unknown):
     description,
     features,
     imageSrc,
+    imageGallery: cleanStringList(payload.imageGallery),
     accentClass,
     badgeClass,
     message:

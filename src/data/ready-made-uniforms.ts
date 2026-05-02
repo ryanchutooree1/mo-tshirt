@@ -7,6 +7,7 @@ export type ReadyMadeUniform = {
   description: string;
   features: string[];
   imageSrc: string;
+  imageGallery?: string[];
   accentClass: string;
   badgeClass: string;
   message: string;

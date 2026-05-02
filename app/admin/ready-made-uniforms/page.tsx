@@ -26,6 +26,7 @@ type FormState = {
   description: string;
   features: string;
   imageSrc: string;
+  imageGallery: string;
   accentClass: string;
   badgeClass: string;
   message: string;
@@ -46,6 +47,7 @@ function buildEmptyFormState(): FormState {
     description: "",
     features: "",
     imageSrc: "",
+    imageGallery: "",
     accentClass: accent.value,
     badgeClass: accent.badgeClass,
     message: "",
@@ -62,6 +64,7 @@ function buildFormState(item: ReadyMadeUniformItem): FormState {
     description: item.description,
     features: item.features.join("\n"),
     imageSrc: item.imageSrc,
+    imageGallery: (item.imageGallery || []).join("\n"),
     accentClass: item.accentClass,
     badgeClass: item.badgeClass,
     message: item.message,
@@ -265,6 +268,10 @@ export default function AdminReadyMadeUniformsPage() {
         ...form,
         code,
         imageSrc,
+        imageGallery: form.imageGallery
+          .split(/\r?\n|,/)
+          .map((entry) => entry.trim())
+          .filter(Boolean),
         features: form.features
           .split(/\r?\n|,/)
           .map((entry) => entry.trim())
@@ -685,6 +692,21 @@ export default function AdminReadyMadeUniformsPage() {
                           className={INPUT_CLASS}
                           placeholder="/mockups/polo-front.png"
                         />
+                      </Field>
+
+                      <Field label="Extra image URLs">
+                        <textarea
+                          rows={3}
+                          value={form.imageGallery}
+                          onChange={(event) =>
+                            setForm((prev) => ({ ...prev, imageGallery: event.target.value }))
+                          }
+                          className={`${INPUT_CLASS} resize-y`}
+                          placeholder={"/front-uniform.png\n/back-uniform.png"}
+                        />
+                        <p className="mt-2 text-xs leading-5 text-slate-500">
+                          Optional. Add front and back images on separate lines for thumbnail switching.
+                        </p>
                       </Field>
 
                       <div className="rounded-2xl border border-slate-200 bg-white p-4">
