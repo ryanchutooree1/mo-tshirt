@@ -330,6 +330,27 @@ export default function AdminReadyMadeUniformsPage() {
     return url;
   }
 
+  async function uploadPhoto() {
+    const file = imageFiles[selectedImageView];
+    if (!file) {
+      setNotice("Choose a file first.");
+      return;
+    }
+    setNotice(null);
+    setError(null);
+    try {
+      const url = await uploadFileAndGetUrl(selectedImageView);
+      if (url) {
+        const viewLabel =
+          UNIFORM_IMAGE_VIEWS.find((view) => view.key === selectedImageView)?.label ||
+          "Photo";
+        setNotice(`${viewLabel} photo uploaded. Save the uniform to apply it.`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Upload failed. Use an image URL instead.");
+    }
+  }
+
   async function uploadPendingImageFiles() {
     const uploaded = {
       front: form.imageSrc,
@@ -799,26 +820,45 @@ export default function AdminReadyMadeUniformsPage() {
                               id="uniform-photo-upload"
                               type="file"
                               accept="image/*"
-                              className="sr-only"
+                              tabIndex={-1}
+                              className="hidden"
                               onChange={(event) => {
                                 const nextFile = event.target.files?.[0] || null;
                                 if (nextFile && nextFile.size > MAX_UPLOAD_BYTES) {
                                   setError("Image must be 6 MB or smaller.");
                                   setImageFiles((prev) => ({ ...prev, [selectedImageView]: null }));
+                                  if (fileInputRef.current) fileInputRef.current.value = "";
                                   event.currentTarget.value = "";
                                   return;
                                 }
                                 setError(null);
                                 setImageFiles((prev) => ({ ...prev, [selectedImageView]: nextFile }));
+                                fileInputRef.current?.blur();
                               }}
                             />
-                            <label
-                              htmlFor="uniform-photo-upload"
-                              className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                            <button
+                              type="button"
+                              onClick={() => fileInputRef.current?.click()}
+                              className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50"
                             >
                               <FiUpload className="h-4 w-4" /> Choose file
-                            </label>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={uploadPhoto}
+                              disabled={!imageFiles[selectedImageView] || uploading}
+                              className="inline-flex items-center gap-2 rounded-full border border-slate-900 px-4 py-2 text-xs font-semibold text-slate-900 transition hover:bg-slate-900 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              <FiImage className="h-4 w-4" />
+                              {uploading ? "Uploading..." : "Upload"}
+                            </button>
                           </div>
+                        </div>
+
+                        <div className="mt-3 text-xs text-slate-500">
+                          {imageFiles[selectedImageView]
+                            ? imageFiles[selectedImageView]?.name
+                            : "No new file chosen"}
                         </div>
 
                         <input
