@@ -636,7 +636,7 @@ export default function AdminReadyMadeUniformsPage() {
             className="absolute inset-0 bg-slate-950/35 backdrop-blur-[4px]"
           />
           <div className="relative z-10 flex min-h-[100dvh] items-start justify-center overflow-y-auto p-4 lg:p-8">
-            <section className="relative my-4 flex max-h-[calc(100dvh-2rem)] w-full max-w-6xl flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_36px_80px_rgba(15,23,42,0.24)] lg:my-8 lg:max-h-[calc(100dvh-4rem)]">
+            <section className="relative my-4 w-full max-w-6xl overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_36px_80px_rgba(15,23,42,0.24)] lg:my-8">
               <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">
@@ -655,8 +655,8 @@ export default function AdminReadyMadeUniformsPage() {
                 </button>
               </div>
 
-              <form className="grid min-h-0 flex-1 xl:grid-cols-[minmax(0,1fr)_340px]" onSubmit={saveItem}>
-                <div className="min-h-0 overflow-y-auto px-6 py-6">
+              <form className="grid xl:grid-cols-[minmax(0,1fr)_340px]" onSubmit={saveItem}>
+                <div className="px-6 py-6">
                   <div className="space-y-6">
                     {(error || notice) && (
                       <div
