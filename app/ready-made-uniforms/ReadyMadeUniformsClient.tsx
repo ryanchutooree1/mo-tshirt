@@ -142,7 +142,6 @@ function UniformCard({ uniform }: { uniform: ReadyMadeUniformItem }) {
         />
         <div className="absolute left-4 top-4 flex flex-wrap gap-2">
           <span className="rounded-full bg-black px-3 py-1.5 text-xs font-bold text-white shadow-sm">{uniform.code}</span>
-          <span className="rounded-full bg-white/92 px-3 py-1.5 text-xs font-bold text-black shadow-sm backdrop-blur">Ready-made</span>
         </div>
       </div>
 
