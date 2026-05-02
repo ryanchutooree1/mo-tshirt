@@ -635,8 +635,8 @@ export default function AdminReadyMadeUniformsPage() {
             onClick={closeComposer}
             className="absolute inset-0 bg-slate-950/35 backdrop-blur-[4px]"
           />
-          <div className="relative z-10 flex min-h-[100dvh] items-start justify-center overflow-y-auto p-4 lg:p-8">
-            <section className="relative my-4 w-full max-w-6xl overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_36px_80px_rgba(15,23,42,0.24)] lg:my-8">
+          <div className="relative z-10 h-[100dvh] overflow-y-auto p-4 lg:p-8">
+            <section className="relative mx-auto my-4 w-full max-w-6xl overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_36px_80px_rgba(15,23,42,0.24)] lg:my-8">
               <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 px-6 py-5">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">
