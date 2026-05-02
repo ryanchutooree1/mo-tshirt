@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { FiCheck, FiSearch } from "react-icons/fi";
+import { FiSearch } from "react-icons/fi";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
 import type { ReadyMadeUniformItem } from "@/lib/ready-made-uniforms-store";
@@ -131,12 +131,12 @@ function UniformCard({ uniform }: { uniform: ReadyMadeUniformItem }) {
   const [selectedImage, setSelectedImage] = useState(images[0] || uniform.imageSrc);
 
   return (
-    <article className="overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-[0_28px_80px_-56px_rgba(0,0,0,0.55)]">
-      <div className="relative aspect-[4/5] overflow-hidden bg-white">
+    <article className="overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-sm">
+      <div className="relative aspect-square overflow-hidden bg-white">
         <img
           src={selectedImage}
           alt={`${uniform.title} ${uniform.code}`}
-          className="h-full w-full object-contain"
+          className="h-full w-full object-cover object-top"
           loading="lazy"
           decoding="async"
         />
@@ -147,8 +147,9 @@ function UniformCard({ uniform }: { uniform: ReadyMadeUniformItem }) {
       </div>
 
       <div className="p-5">
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-400">{uniform.audience}</p>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-neutral-400">{uniform.code}</p>
         <h2 className="mt-2 text-2xl font-semibold tracking-tight text-black">{uniform.title}</h2>
+        <p className="mt-1 text-sm text-neutral-500">{uniform.audience}</p>
 
         {images.length > 1 && (
           <div className="mt-4 flex gap-2">
@@ -161,23 +162,11 @@ function UniformCard({ uniform }: { uniform: ReadyMadeUniformItem }) {
                   selectedImage === image ? "border-black" : "border-neutral-200"
                 }`}
               >
-                <img src={image} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                <img src={image} alt="" className="h-full w-full object-cover object-top" loading="lazy" decoding="async" />
               </button>
             ))}
           </div>
         )}
-
-        <p className="mt-4 text-sm leading-6 text-neutral-600">{uniform.description}</p>
-        <div className="mt-4 grid gap-2">
-          {uniform.features.slice(0, 3).map((feature) => (
-            <div key={feature} className="flex items-center gap-2 text-sm font-semibold text-neutral-700">
-              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-orange-50 text-orange-600">
-                <FiCheck className="h-3.5 w-3.5" />
-              </span>
-              {feature}
-            </div>
-          ))}
-        </div>
 
         <div className="mt-5 grid gap-2 sm:grid-cols-2">
           <TrackedWhatsAppLink

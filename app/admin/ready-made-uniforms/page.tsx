@@ -91,7 +91,7 @@ function getAccentForValue(value: string) {
 function UniformImage({
   src,
   alt,
-  className = "h-full w-full object-contain",
+  className = "h-full w-full object-cover object-top",
 }: {
   src?: string | null;
   alt: string;
@@ -459,38 +459,22 @@ export default function AdminReadyMadeUniformsPage() {
                     key={item.id}
                     className="overflow-hidden rounded-[1.8rem] border border-slate-200 bg-white shadow-sm"
                   >
-                    <div className={`bg-gradient-to-br ${item.accentClass} p-4`}>
-                      <div className="flex items-start justify-between gap-3">
+                    <div className="relative aspect-square overflow-hidden bg-white">
+                      <UniformImage src={item.imageSrc} alt={item.title} />
+                      <div className="absolute left-4 top-4 flex items-start gap-2">
                         <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${item.badgeClass}`}>
                           {item.code}
                         </span>
-                        <span className="rounded-full bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
+                        <span className="rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-sm backdrop-blur-sm">
                           {item.isActive ? "Live" : "Hidden"}
                         </span>
-                      </div>
-                      <div className="mt-4 flex h-44 justify-center">
-                        <UniformImage src={item.imageSrc} alt={item.title} />
                       </div>
                     </div>
 
                     <div className="p-5">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                        {item.audience}
-                      </p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{item.code}</p>
                       <h3 className="mt-2 text-xl font-semibold text-slate-900">{item.title}</h3>
-                      <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-600">
-                        {item.description}
-                      </p>
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {item.features.map((feature) => (
-                          <span
-                            key={feature}
-                            className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700"
-                          >
-                            {feature}
-                          </span>
-                        ))}
-                      </div>
+                      <p className="mt-1 text-sm text-slate-500">{item.audience}</p>
                       <div className="mt-5 flex flex-wrap gap-2">
                         <button
                           type="button"
@@ -645,7 +629,7 @@ export default function AdminReadyMadeUniformsPage() {
                       </Field>
                     </EditorSection>
 
-                    <EditorSection eyebrow="Visuals" title="Card image and color">
+                    <EditorSection eyebrow="Visuals" title="Card image">
                       <div className="grid gap-4 sm:grid-cols-2">
                         <Field label="Color style">
                           <select
@@ -766,13 +750,11 @@ export default function AdminReadyMadeUniformsPage() {
                 <aside className="border-t border-slate-200 bg-slate-50 p-6 xl:border-l xl:border-t-0">
                   <div className="sticky top-6 space-y-4">
                     <div className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-sm">
-                      <div className={`bg-gradient-to-br ${form.accentClass} p-4`}>
-                        <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${form.badgeClass}`}>
+                      <div className="relative aspect-square bg-white">
+                        <span className={`absolute left-4 top-4 z-10 inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${form.badgeClass}`}>
                           {form.code || "CODE"}
                         </span>
-                        <div className="mt-4 flex h-44 justify-center">
-                          <UniformImage src={previewImage} alt={form.title || "Uniform preview"} />
-                        </div>
+                        <UniformImage src={previewImage} alt={form.title || "Uniform preview"} />
                       </div>
                       <div className="p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
