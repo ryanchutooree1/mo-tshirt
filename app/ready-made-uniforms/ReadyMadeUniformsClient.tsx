@@ -136,7 +136,7 @@ function UniformCard({ uniform }: { uniform: ReadyMadeUniformItem }) {
         <img
           src={selectedImage}
           alt={`${uniform.title} ${uniform.code}`}
-          className="h-full w-full object-cover object-top"
+          className="h-full w-full object-contain"
           loading="lazy"
           decoding="async"
         />
@@ -162,26 +162,26 @@ function UniformCard({ uniform }: { uniform: ReadyMadeUniformItem }) {
                   selectedImage === image ? "border-black" : "border-neutral-200"
                 }`}
               >
-                <img src={image} alt="" className="h-full w-full object-cover object-top" loading="lazy" decoding="async" />
+                <img src={image} alt="" className="h-full w-full object-contain" loading="lazy" decoding="async" />
               </button>
             ))}
           </div>
         )}
 
-        <div className="mt-5 grid gap-2 sm:grid-cols-2">
+        <div className="mt-5 grid gap-2">
           <TrackedWhatsAppLink
             href={getWhatsAppUrl(uniform.message)}
             trackingLocation={`uniform_page_card_${uniform.code.toLowerCase()}`}
             trackingSource="ready_made_uniforms"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center rounded-full bg-black px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-black px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-800"
           >
             WhatsApp {uniform.code}
           </TrackedWhatsAppLink>
           <Link
             href="/#contact"
-            className="inline-flex items-center justify-center rounded-full border border-neutral-300 bg-white px-4 py-3 text-sm font-semibold text-neutral-800 transition hover:border-black hover:text-black"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-neutral-300 bg-white px-4 py-3 text-sm font-semibold text-neutral-800 transition hover:border-black hover:text-black"
           >
             Request quote
           </Link>

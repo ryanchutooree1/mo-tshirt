@@ -19,6 +19,15 @@ import {
   FiX,
 } from "react-icons/fi";
 
+const UNIFORM_IMAGE_VIEWS = [
+  { key: "front", label: "Front" },
+  { key: "back", label: "Back" },
+  { key: "side", label: "Side" },
+] as const;
+
+type UniformImageViewKey = (typeof UNIFORM_IMAGE_VIEWS)[number]["key"];
+type ImageFileState = Record<UniformImageViewKey, File | null>;
+
 type FormState = {
   code: string;
   title: string;
@@ -88,10 +97,29 @@ function getAccentForValue(value: string) {
   );
 }
 
+function buildEmptyImageFiles(): ImageFileState {
+  return {
+    front: null,
+    back: null,
+    side: null,
+  };
+}
+
+function parseGalleryInput(value: string) {
+  return value
+    .split(/\r?\n|,/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+function formatGalleryInput(list: string[]) {
+  return list.filter(Boolean).join("\n");
+}
+
 function UniformImage({
   src,
   alt,
-  className = "h-full w-full object-cover object-top",
+  className = "h-full w-full object-contain",
 }: {
   src?: string | null;
   alt: string;
@@ -135,20 +163,29 @@ export default function AdminReadyMadeUniformsPage() {
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(() => buildEmptyFormState());
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState("");
+  const [imageFiles, setImageFiles] = useState<ImageFileState>(() => buildEmptyImageFiles());
+  const [previewUrls, setPreviewUrls] = useState<Record<UniformImageViewKey, string>>({
+    front: "",
+    back: "",
+    side: "",
+  });
+  const [selectedImageView, setSelectedImageView] = useState<UniformImageViewKey>("front");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    if (!imageFile) {
-      setPreviewUrl("");
-      return;
-    }
+    const nextUrls = {
+      front: imageFiles.front ? URL.createObjectURL(imageFiles.front) : "",
+      back: imageFiles.back ? URL.createObjectURL(imageFiles.back) : "",
+      side: imageFiles.side ? URL.createObjectURL(imageFiles.side) : "",
+    };
+    setPreviewUrls(nextUrls);
 
-    const nextUrl = URL.createObjectURL(imageFile);
-    setPreviewUrl(nextUrl);
-    return () => URL.revokeObjectURL(nextUrl);
-  }, [imageFile]);
+    return () => {
+      Object.values(nextUrls).forEach((url) => {
+        if (url) URL.revokeObjectURL(url);
+      });
+    };
+  }, [imageFiles]);
 
   useEffect(() => {
     if (!isComposerOpen) return;
@@ -209,7 +246,8 @@ export default function AdminReadyMadeUniformsPage() {
     setIsComposerOpen(false);
     setEditingId(null);
     setForm(buildEmptyFormState());
-    setImageFile(null);
+    setImageFiles(buildEmptyImageFiles());
+    setSelectedImageView("front");
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -218,7 +256,8 @@ export default function AdminReadyMadeUniformsPage() {
     setNotice(null);
     setEditingId(null);
     setForm(buildEmptyFormState());
-    setImageFile(null);
+    setImageFiles(buildEmptyImageFiles());
+    setSelectedImageView("front");
     if (fileInputRef.current) fileInputRef.current.value = "";
     setIsComposerOpen(true);
   }
@@ -228,7 +267,8 @@ export default function AdminReadyMadeUniformsPage() {
     setNotice(null);
     setEditingId(item.id);
     setForm(buildFormState(item));
-    setImageFile(null);
+    setImageFiles(buildEmptyImageFiles());
+    setSelectedImageView("front");
     if (fileInputRef.current) fileInputRef.current.value = "";
     setIsComposerOpen(true);
   }
@@ -254,6 +294,57 @@ export default function AdminReadyMadeUniformsPage() {
     }
   }
 
+  function getFormImageUrl(view: UniformImageViewKey) {
+    const gallery = parseGalleryInput(form.imageGallery);
+    if (view === "front") return form.imageSrc;
+    if (view === "back") return gallery[0] || "";
+    return gallery[1] || "";
+  }
+
+  function getPreviewImageUrl(view: UniformImageViewKey) {
+    return previewUrls[view] || getFormImageUrl(view);
+  }
+
+  function updateFormImageUrl(view: UniformImageViewKey, url: string) {
+    if (view === "front") {
+      setForm((prev) => ({ ...prev, imageSrc: url }));
+      return;
+    }
+
+    setForm((prev) => {
+      const gallery = parseGalleryInput(prev.imageGallery);
+      const index = view === "back" ? 0 : 1;
+      gallery[index] = url;
+      return { ...prev, imageGallery: formatGalleryInput(gallery) };
+    });
+  }
+
+  async function uploadFileAndGetUrl(view: UniformImageViewKey) {
+    const file = imageFiles[view];
+    if (!file) return getFormImageUrl(view);
+
+    const url = await uploadImageFile(file);
+    updateFormImageUrl(view, url);
+    setImageFiles((prev) => ({ ...prev, [view]: null }));
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    return url;
+  }
+
+  async function uploadPendingImageFiles() {
+    const uploaded = {
+      front: form.imageSrc,
+      back: parseGalleryInput(form.imageGallery)[0] || "",
+      side: parseGalleryInput(form.imageGallery)[1] || "",
+    };
+
+    for (const view of UNIFORM_IMAGE_VIEWS) {
+      if (!imageFiles[view.key]) continue;
+      uploaded[view.key] = await uploadFileAndGetUrl(view.key);
+    }
+
+    return uploaded;
+  }
+
   async function saveItem(event: React.FormEvent) {
     event.preventDefault();
     if (saving) return;
@@ -262,16 +353,13 @@ export default function AdminReadyMadeUniformsPage() {
     setNotice(null);
 
     try {
-      const imageSrc = imageFile ? await uploadImageFile(imageFile) : form.imageSrc;
+      const imageUrls = await uploadPendingImageFiles();
       const code = normalizeCode(form.code);
       const payload = {
         ...form,
         code,
-        imageSrc,
-        imageGallery: form.imageGallery
-          .split(/\r?\n|,/)
-          .map((entry) => entry.trim())
-          .filter(Boolean),
+        imageSrc: imageUrls.front,
+        imageGallery: [imageUrls.back, imageUrls.side].filter(Boolean),
         features: form.features
           .split(/\r?\n|,/)
           .map((entry) => entry.trim())
@@ -342,7 +430,7 @@ export default function AdminReadyMadeUniformsPage() {
     }
   }
 
-  const previewImage = previewUrl || form.imageSrc;
+  const previewImage = getPreviewImageUrl(selectedImageView);
 
   return (
     <main className="min-h-screen">
@@ -666,39 +754,43 @@ export default function AdminReadyMadeUniformsPage() {
                         </Field>
                       </div>
 
-                      <Field label="Image URL *">
-                        <input
-                          required
-                          value={form.imageSrc}
-                          onChange={(event) =>
-                            setForm((prev) => ({ ...prev, imageSrc: event.target.value }))
-                          }
-                          className={INPUT_CLASS}
-                          placeholder="/mockups/polo-front.png"
-                        />
-                      </Field>
-
-                      <Field label="Extra image URLs">
-                        <textarea
-                          rows={3}
-                          value={form.imageGallery}
-                          onChange={(event) =>
-                            setForm((prev) => ({ ...prev, imageGallery: event.target.value }))
-                          }
-                          className={`${INPUT_CLASS} resize-y`}
-                          placeholder={"/front-uniform.png\n/back-uniform.png"}
-                        />
-                        <p className="mt-2 text-xs leading-5 text-slate-500">
-                          Optional. Add front and back images on separate lines for thumbnail switching.
-                        </p>
-                      </Field>
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        {UNIFORM_IMAGE_VIEWS.map((view) => {
+                          const imageUrl = getPreviewImageUrl(view.key);
+                          return (
+                            <button
+                              key={view.key}
+                              type="button"
+                              onClick={() => setSelectedImageView(view.key)}
+                              className={`rounded-2xl border p-2 text-left transition ${
+                                selectedImageView === view.key
+                                  ? "border-slate-900 bg-white shadow-sm"
+                                  : "border-slate-200 bg-white/70 hover:border-slate-300"
+                              }`}
+                            >
+                              <div className="relative aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                                {imageUrl ? (
+                                  <UniformImage src={imageUrl} alt={`${view.label} view`} />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center text-slate-300">
+                                    <FiImage className="h-5 w-5" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="mt-2 text-xs font-semibold text-slate-800">{view.label}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
 
                       <div className="rounded-2xl border border-slate-200 bg-white p-4">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
-                            <div className="text-sm font-semibold text-slate-900">Upload image</div>
+                            <div className="text-sm font-semibold text-slate-900">
+                              {UNIFORM_IMAGE_VIEWS.find((view) => view.key === selectedImageView)?.label} view
+                            </div>
                             <div className="mt-1 text-xs text-slate-500">
-                              JPG, PNG, WEBP, GIF, AVIF, or SVG up to 6 MB.
+                              Front is the main card image. Back and side become thumbnails.
                             </div>
                           </div>
                           <div className="flex flex-wrap items-center gap-2">
@@ -712,12 +804,12 @@ export default function AdminReadyMadeUniformsPage() {
                                 const nextFile = event.target.files?.[0] || null;
                                 if (nextFile && nextFile.size > MAX_UPLOAD_BYTES) {
                                   setError("Image must be 6 MB or smaller.");
-                                  setImageFile(null);
+                                  setImageFiles((prev) => ({ ...prev, [selectedImageView]: null }));
                                   event.currentTarget.value = "";
                                   return;
                                 }
                                 setError(null);
-                                setImageFile(nextFile);
+                                setImageFiles((prev) => ({ ...prev, [selectedImageView]: nextFile }));
                               }}
                             />
                             <label
@@ -728,6 +820,14 @@ export default function AdminReadyMadeUniformsPage() {
                             </label>
                           </div>
                         </div>
+
+                        <input
+                          value={getFormImageUrl(selectedImageView)}
+                          onChange={(event) => updateFormImageUrl(selectedImageView, event.target.value)}
+                          className="mt-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-orange-300 focus:outline-none focus:ring-2 focus:ring-orange-100"
+                          placeholder={selectedImageView === "front" ? "/mockups/polo-front.png" : "Optional image URL"}
+                          required={selectedImageView === "front"}
+                        />
                       </div>
                     </EditorSection>
 
