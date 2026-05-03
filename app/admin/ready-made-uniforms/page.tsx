@@ -20,13 +20,12 @@ import {
 } from "react-icons/fi";
 
 const UNIFORM_IMAGE_VIEWS = [
-  { key: "front", label: "Front" },
-  { key: "back", label: "Back" },
-  { key: "side", label: "Side" },
+  { key: "front", label: "Main photo" },
 ] as const;
 
 type UniformImageViewKey = (typeof UNIFORM_IMAGE_VIEWS)[number]["key"];
-type ImageFileState = Record<UniformImageViewKey, File | null>;
+type ImageViewKey = UniformImageViewKey | `gallery-${number}`;
+type ImageFileState = Record<string, File | null>;
 
 type FormState = {
   code: string;
@@ -35,7 +34,7 @@ type FormState = {
   description: string;
   features: string;
   imageSrc: string;
-  imageGallery: string;
+  imageGallery: string[];
   accentClass: string;
   badgeClass: string;
   message: string;
@@ -56,7 +55,7 @@ function buildEmptyFormState(): FormState {
     description: "",
     features: "",
     imageSrc: "",
-    imageGallery: "",
+    imageGallery: [],
     accentClass: accent.value,
     badgeClass: accent.badgeClass,
     message: "",
@@ -73,7 +72,7 @@ function buildFormState(item: ReadyMadeUniformItem): FormState {
     description: item.description,
     features: item.features.join("\n"),
     imageSrc: item.imageSrc,
-    imageGallery: (item.imageGallery || []).join("\n"),
+    imageGallery: item.imageGallery || [],
     accentClass: item.accentClass,
     badgeClass: item.badgeClass,
     message: item.message,
@@ -98,22 +97,29 @@ function getAccentForValue(value: string) {
 }
 
 function buildEmptyImageFiles(): ImageFileState {
-  return {
-    front: null,
-    back: null,
-    side: null,
-  };
+  return {};
 }
 
-function parseGalleryInput(value: string) {
-  return value
-    .split(/\r?\n|,/)
-    .map((entry) => entry.trim())
-    .filter(Boolean);
+function getImageViewLabel(view: ImageViewKey) {
+  if (view === "front") return "Main photo";
+  const galleryIndex = Number(view.replace("gallery-", ""));
+  return Number.isFinite(galleryIndex) ? `Thumbnail ${galleryIndex + 1}` : "Thumbnail";
 }
 
-function formatGalleryInput(list: string[]) {
-  return list.filter(Boolean).join("\n");
+function getGalleryIndex(view: ImageViewKey) {
+  if (view === "front") return -1;
+  const index = Number(view.replace("gallery-", ""));
+  return Number.isFinite(index) ? index : -1;
+}
+
+function buildImageViews(form: FormState) {
+  return [
+    ...UNIFORM_IMAGE_VIEWS,
+    ...form.imageGallery.map((_, index) => ({
+      key: `gallery-${index}` as const,
+      label: `Thumbnail ${index + 1}`,
+    })),
+  ];
 }
 
 function UniformImage({
@@ -164,20 +170,16 @@ export default function AdminReadyMadeUniformsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(() => buildEmptyFormState());
   const [imageFiles, setImageFiles] = useState<ImageFileState>(() => buildEmptyImageFiles());
-  const [previewUrls, setPreviewUrls] = useState<Record<UniformImageViewKey, string>>({
-    front: "",
-    back: "",
-    side: "",
-  });
-  const [selectedImageView, setSelectedImageView] = useState<UniformImageViewKey>("front");
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
+  const [selectedImageView, setSelectedImageView] = useState<ImageViewKey>("front");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    const nextUrls = {
-      front: imageFiles.front ? URL.createObjectURL(imageFiles.front) : "",
-      back: imageFiles.back ? URL.createObjectURL(imageFiles.back) : "",
-      side: imageFiles.side ? URL.createObjectURL(imageFiles.side) : "",
-    };
+    const nextUrls = Object.fromEntries(
+      Object.entries(imageFiles)
+        .filter(([, file]) => Boolean(file))
+        .map(([view, file]) => [view, URL.createObjectURL(file as File)])
+    );
     setPreviewUrls(nextUrls);
 
     return () => {
@@ -294,32 +296,60 @@ export default function AdminReadyMadeUniformsPage() {
     }
   }
 
-  function getFormImageUrl(view: UniformImageViewKey) {
-    const gallery = parseGalleryInput(form.imageGallery);
+  function getFormImageUrl(view: ImageViewKey) {
     if (view === "front") return form.imageSrc;
-    if (view === "back") return gallery[0] || "";
-    return gallery[1] || "";
+    const galleryIndex = getGalleryIndex(view);
+    return galleryIndex >= 0 ? form.imageGallery[galleryIndex] || "" : "";
   }
 
-  function getPreviewImageUrl(view: UniformImageViewKey) {
+  function getPreviewImageUrl(view: ImageViewKey) {
     return previewUrls[view] || getFormImageUrl(view);
   }
 
-  function updateFormImageUrl(view: UniformImageViewKey, url: string) {
+  function updateFormImageUrl(view: ImageViewKey, url: string) {
     if (view === "front") {
       setForm((prev) => ({ ...prev, imageSrc: url }));
       return;
     }
 
     setForm((prev) => {
-      const gallery = parseGalleryInput(prev.imageGallery);
-      const index = view === "back" ? 0 : 1;
+      const gallery = [...prev.imageGallery];
+      const index = getGalleryIndex(view);
+      if (index < 0) return prev;
       gallery[index] = url;
-      return { ...prev, imageGallery: formatGalleryInput(gallery) };
+      return { ...prev, imageGallery: gallery };
     });
   }
 
-  async function uploadFileAndGetUrl(view: UniformImageViewKey) {
+  function addGalleryImage() {
+    const nextIndex = form.imageGallery.length;
+    setForm((prev) => ({ ...prev, imageGallery: [...prev.imageGallery, ""] }));
+    setSelectedImageView(`gallery-${nextIndex}`);
+  }
+
+  function removeGalleryImage(index: number) {
+    setForm((prev) => ({
+      ...prev,
+      imageGallery: prev.imageGallery.filter((_, galleryIndex) => galleryIndex !== index),
+    }));
+    setImageFiles((prev) => {
+      const next: ImageFileState = {};
+      Object.entries(prev).forEach(([key, file]) => {
+        const galleryIndex = getGalleryIndex(key as ImageViewKey);
+        if (key === "front") {
+          next[key] = file;
+        } else if (galleryIndex >= 0 && galleryIndex < index) {
+          next[key] = file;
+        } else if (galleryIndex > index) {
+          next[`gallery-${galleryIndex - 1}`] = file;
+        }
+      });
+      return next;
+    });
+    setSelectedImageView("front");
+  }
+
+  async function uploadFileAndGetUrl(view: ImageViewKey) {
     const file = imageFiles[view];
     if (!file) return getFormImageUrl(view);
 
@@ -341,10 +371,7 @@ export default function AdminReadyMadeUniformsPage() {
     try {
       const url = await uploadFileAndGetUrl(selectedImageView);
       if (url) {
-        const viewLabel =
-          UNIFORM_IMAGE_VIEWS.find((view) => view.key === selectedImageView)?.label ||
-          "Photo";
-        setNotice(`${viewLabel} photo uploaded. Save the uniform to apply it.`);
+        setNotice(`${getImageViewLabel(selectedImageView)} uploaded. Save the uniform to apply it.`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed. Use an image URL instead.");
@@ -354,13 +381,18 @@ export default function AdminReadyMadeUniformsPage() {
   async function uploadPendingImageFiles() {
     const uploaded = {
       front: form.imageSrc,
-      back: parseGalleryInput(form.imageGallery)[0] || "",
-      side: parseGalleryInput(form.imageGallery)[1] || "",
+      gallery: [...form.imageGallery],
     };
 
-    for (const view of UNIFORM_IMAGE_VIEWS) {
+    for (const view of buildImageViews(form)) {
       if (!imageFiles[view.key]) continue;
-      uploaded[view.key] = await uploadFileAndGetUrl(view.key);
+      const url = await uploadFileAndGetUrl(view.key);
+      if (view.key === "front") {
+        uploaded.front = url;
+      } else {
+        const galleryIndex = getGalleryIndex(view.key);
+        if (galleryIndex >= 0) uploaded.gallery[galleryIndex] = url;
+      }
     }
 
     return uploaded;
@@ -380,7 +412,7 @@ export default function AdminReadyMadeUniformsPage() {
         ...form,
         code,
         imageSrc: imageUrls.front,
-        imageGallery: [imageUrls.back, imageUrls.side].filter(Boolean),
+        imageGallery: imageUrls.gallery.map((url) => url.trim()).filter(Boolean),
         features: form.features
           .split(/\r?\n|,/)
           .map((entry) => entry.trim())
@@ -776,42 +808,62 @@ export default function AdminReadyMadeUniformsPage() {
                       </div>
 
                       <div className="grid gap-2 sm:grid-cols-3">
-                        {UNIFORM_IMAGE_VIEWS.map((view) => {
+                        {buildImageViews(form).map((view) => {
                           const imageUrl = getPreviewImageUrl(view.key);
+                          const galleryIndex = getGalleryIndex(view.key);
                           return (
-                            <button
-                              key={view.key}
-                              type="button"
-                              onClick={() => setSelectedImageView(view.key)}
-                              className={`rounded-2xl border p-2 text-left transition ${
-                                selectedImageView === view.key
-                                  ? "border-slate-900 bg-white shadow-sm"
-                                  : "border-slate-200 bg-white/70 hover:border-slate-300"
-                              }`}
-                            >
-                              <div className="relative aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
-                                {imageUrl ? (
-                                  <UniformImage src={imageUrl} alt={`${view.label} view`} />
-                                ) : (
-                                  <div className="flex h-full w-full items-center justify-center text-slate-300">
-                                    <FiImage className="h-5 w-5" />
-                                  </div>
-                                )}
-                              </div>
-                              <div className="mt-2 text-xs font-semibold text-slate-800">{view.label}</div>
-                            </button>
+                            <div key={view.key} className="relative">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedImageView(view.key)}
+                                className={`w-full rounded-2xl border p-2 text-left transition ${
+                                  selectedImageView === view.key
+                                    ? "border-slate-900 bg-white shadow-sm"
+                                    : "border-slate-200 bg-white/70 hover:border-slate-300"
+                                }`}
+                              >
+                                <div className="relative aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                                  {imageUrl ? (
+                                    <UniformImage src={imageUrl} alt={`${view.label} view`} />
+                                  ) : (
+                                    <div className="flex h-full w-full items-center justify-center text-slate-300">
+                                      <FiImage className="h-5 w-5" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="mt-2 text-xs font-semibold text-slate-800">{view.label}</div>
+                              </button>
+                              {galleryIndex >= 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeGalleryImage(galleryIndex)}
+                                  className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm transition hover:text-rose-600"
+                                  aria-label={`Remove ${view.label}`}
+                                >
+                                  <FiX className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
                           );
                         })}
+                        <button
+                          type="button"
+                          onClick={addGalleryImage}
+                          className="flex min-h-32 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white/70 p-4 text-center text-xs font-semibold text-slate-500 transition hover:border-slate-400 hover:text-slate-900"
+                        >
+                          <FiPlus className="mb-2 h-5 w-5" />
+                          Add another image
+                        </button>
                       </div>
 
                       <div className="rounded-2xl border border-slate-200 bg-white p-4">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                             <div className="text-sm font-semibold text-slate-900">
-                              {UNIFORM_IMAGE_VIEWS.find((view) => view.key === selectedImageView)?.label} view
+                              {getImageViewLabel(selectedImageView)}
                             </div>
                             <div className="mt-1 text-xs text-slate-500">
-                              Front is the main card image. Back and side become thumbnails.
+                              Main photo appears first. Extra images become thumbnails for black, white, front, or back views.
                             </div>
                           </div>
                           <div className="flex flex-wrap items-center gap-2">
@@ -865,7 +917,7 @@ export default function AdminReadyMadeUniformsPage() {
                           value={getFormImageUrl(selectedImageView)}
                           onChange={(event) => updateFormImageUrl(selectedImageView, event.target.value)}
                           className="mt-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-orange-300 focus:outline-none focus:ring-2 focus:ring-orange-100"
-                          placeholder={selectedImageView === "front" ? "/mockups/polo-front.png" : "Optional image URL"}
+                          placeholder={selectedImageView === "front" ? "/mockups/polo-front.png" : "Optional thumbnail image URL"}
                           required={selectedImageView === "front"}
                         />
                       </div>

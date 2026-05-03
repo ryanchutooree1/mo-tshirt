@@ -151,15 +151,16 @@ function UniformCard({ uniform }: { uniform: ReadyMadeUniformItem }) {
         <p className="mt-1 text-sm text-neutral-500">{uniform.audience}</p>
 
         {images.length > 1 && (
-          <div className="mt-4 flex gap-2">
-            {images.slice(0, 4).map((image) => (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {images.map((image, index) => (
               <button
-                key={image}
+                key={`${image}-${index}`}
                 type="button"
                 onClick={() => setSelectedImage(image)}
                 className={`h-14 w-14 overflow-hidden rounded-xl border bg-neutral-100 ${
                   selectedImage === image ? "border-black" : "border-neutral-200"
                 }`}
+                aria-label={`Show ${uniform.title} image ${index + 1}`}
               >
                 <img src={image} alt="" className="h-full w-full object-contain" loading="lazy" decoding="async" />
               </button>
