@@ -18,6 +18,20 @@ export type AdminPagePath =
   | "/admin/finance-freedom"
   | "/admin/business-value"
   | "/admin/business-os"
+  | "/admin/management"
+  | "/admin/sales"
+  | "/admin/marketing"
+  | "/admin/customer-service"
+  | "/admin/design"
+  | "/admin/production"
+  | "/admin/purchasing"
+  | "/admin/inventory-department"
+  | "/admin/logistics"
+  | "/admin/quality"
+  | "/admin/finance"
+  | "/admin/hr"
+  | "/admin/technology"
+  | "/admin/legal-compliance"
   | "/admin/automation"
   | "/admin/dms"
   | "/admin/iot"
@@ -30,6 +44,7 @@ export type AdminPagePath =
 
 export type AdminPermissionGroup =
   | "Overview"
+  | "Departments"
   | "Sales"
   | "Operations"
   | "Insights"
@@ -171,6 +186,90 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
     group: "Planning",
   },
   {
+    path: "/admin/management",
+    label: "Management Department",
+    description: "CEO decisions, roles, blockers, and leadership rhythm.",
+    group: "Departments",
+  },
+  {
+    path: "/admin/sales",
+    label: "Sales Department",
+    description: "Lead intake, quotes, account management, and paid-order handoff.",
+    group: "Departments",
+  },
+  {
+    path: "/admin/marketing",
+    label: "Marketing Department",
+    description: "Campaigns, content, lead sources, and proof library.",
+    group: "Departments",
+  },
+  {
+    path: "/admin/customer-service",
+    label: "Customer Service Department",
+    description: "Client updates, issues, reviews, and retention.",
+    group: "Departments",
+  },
+  {
+    path: "/admin/design",
+    label: "Design Department",
+    description: "Artwork intake, approvals, revisions, and production files.",
+    group: "Departments",
+  },
+  {
+    path: "/admin/production",
+    label: "Production Department",
+    description: "Production seats, daily queue, blockers, and finishing handoff.",
+    group: "Departments",
+  },
+  {
+    path: "/admin/purchasing",
+    label: "Purchasing Department",
+    description: "Suppliers, purchases, receiving, and reorder control.",
+    group: "Departments",
+  },
+  {
+    path: "/admin/inventory-department",
+    label: "Inventory Department",
+    description: "Stock ownership, reservations, cycle counts, and catalog accuracy.",
+    group: "Departments",
+  },
+  {
+    path: "/admin/logistics",
+    label: "Logistics Department",
+    description: "Pickup, delivery, routing, and proof of delivery.",
+    group: "Departments",
+  },
+  {
+    path: "/admin/quality",
+    label: "Quality Department",
+    description: "Quality gates, defects, root causes, and reprint prevention.",
+    group: "Departments",
+  },
+  {
+    path: "/admin/finance",
+    label: "Finance Department",
+    description: "Cash, margin, bookkeeping, credit control, and approvals.",
+    group: "Departments",
+  },
+  {
+    path: "/admin/hr",
+    label: "HR Department",
+    description: "Seats, hiring, onboarding, training, and performance rhythm.",
+    group: "Departments",
+  },
+  {
+    path: "/admin/technology",
+    label: "Technology Department",
+    description: "Systems, data quality, automations, devices, and access control.",
+    group: "Departments",
+  },
+  {
+    path: "/admin/legal-compliance",
+    label: "Legal & Compliance Department",
+    description: "Contracts, policies, records, privacy, and risk control.",
+    group: "Departments",
+  },
+  {
     path: "/admin/automation",
     label: "Automation",
     description: "Automation logs and scheduled actions.",
@@ -216,6 +315,7 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
 
 export const ADMIN_PAGE_GROUPS: AdminPermissionGroup[] = [
   "Overview",
+  "Departments",
   "Sales",
   "Operations",
   "Insights",
@@ -248,6 +348,20 @@ export const DEFAULT_TOP_NAV_PATHS: AdminPagePath[] = [
   "/admin/finance-freedom",
   "/admin/business-value",
   "/admin/business-os",
+  "/admin/management",
+  "/admin/sales",
+  "/admin/marketing",
+  "/admin/customer-service",
+  "/admin/design",
+  "/admin/production",
+  "/admin/purchasing",
+  "/admin/inventory-department",
+  "/admin/logistics",
+  "/admin/quality",
+  "/admin/finance",
+  "/admin/hr",
+  "/admin/technology",
+  "/admin/legal-compliance",
   "/admin/prescription-ocr",
   "/admin/dms",
   "/admin/iot",
