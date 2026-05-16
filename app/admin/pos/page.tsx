@@ -567,7 +567,7 @@ export default function POSPage() {
 
   // ---------- UI ----------
   return (
-    <main className="pos-performance relative min-h-screen overflow-x-hidden pb-10">
+    <main className="pos-performance ceo-theme relative min-h-screen overflow-x-hidden pb-10">
       <div aria-hidden className="posperf-grid" />
       <div aria-hidden className="posperf-glow posperf-glow-left" />
       <div aria-hidden className="posperf-glow posperf-glow-right" />
@@ -576,10 +576,10 @@ export default function POSPage() {
         <section className="posperf-panel posperf-hero" style={{ animation: 'fadeUp 0.6s ease-out both' }}>
           <div className="posperf-hero-main">
             <div>
-              <p className="posperf-kicker">Retail Engine</p>
-              <h1 className="posperf-title">POS Command Deck</h1>
+              <p className="posperf-kicker">MO Admin HQ</p>
+              <h1 className="posperf-title">The POS Control Panel</h1>
               <p className="posperf-copy">
-                High-speed checkout lane with live stock guardrails, hold/resume workflow, and instant invoice handoff.
+                One command view for checkout flow, stock guardrails, held orders, payments, and invoice handoff.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className="posperf-chip posperf-chip-sky"><FiShoppingCart className="h-4 w-4" /> Live stock link</span>
@@ -887,21 +887,24 @@ export default function POSPage() {
         }
 
         .admin-root.admin-dark .pos-performance {
-          --pos-bg-main: #ffffff;
-          --pos-bg-panel: #ffffff;
-          --pos-bg-panel-strong: #ffffff;
-          --pos-border: rgba(15, 23, 42, 0.12);
-          --pos-border-strong: rgba(15, 23, 42, 0.12);
-          --pos-text: #0f172a;
-          --pos-muted: #536176;
-          --pos-soft: #7b8aa1;
-          --pos-accent: #475569;
-          --pos-accent-2: #475569;
-          --pos-accent-3: #475569;
-          --pos-danger: #e11d48;
-          --pos-chip-bg: #ffffff;
-          --pos-input-bg: #ffffff;
-          background: #ffffff;
+          --pos-bg-main: #020617;
+          --pos-bg-panel: rgba(255, 255, 255, 0.06);
+          --pos-bg-panel-strong: rgba(255, 255, 255, 0.06);
+          --pos-border: rgba(255, 255, 255, 0.1);
+          --pos-border-strong: rgba(255, 255, 255, 0.2);
+          --pos-text: #f8fafc;
+          --pos-muted: rgba(226, 232, 240, 0.9);
+          --pos-soft: rgba(165, 243, 252, 0.75);
+          --pos-accent: #67e8f9;
+          --pos-accent-2: #5eead4;
+          --pos-accent-3: #93c5fd;
+          --pos-danger: #fb7185;
+          --pos-chip-bg: rgba(255, 255, 255, 0.1);
+          --pos-input-bg: rgba(15, 23, 42, 0.72);
+          background:
+            radial-gradient(circle at 50% -12rem, rgba(56, 189, 248, 0.24), rgba(56, 189, 248, 0) 30rem),
+            radial-gradient(circle at calc(100% + 8rem) 8rem, rgba(14, 165, 233, 0.18), rgba(14, 165, 233, 0) 26rem),
+            #020617;
         }
 
         .posperf-grid {
@@ -953,12 +956,27 @@ export default function POSPage() {
 
         .admin-root.admin-dark .posperf-panel {
           box-shadow: 0 20px 45px rgba(2, 6, 23, 0.5);
+          backdrop-filter: blur(18px);
         }
 
         .posperf-hero {
           position: relative;
           overflow: hidden;
           border-color: var(--pos-border-strong);
+        }
+
+        .admin-root.admin-dark .posperf-hero {
+          background: linear-gradient(120deg, rgba(15, 23, 42, 0.95), rgba(10, 36, 62, 0.88));
+        }
+
+        .admin-root.admin-dark .posperf-hero::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background-image: radial-gradient(rgba(148, 163, 184, 0.32) 1px, transparent 1px);
+          background-size: 20px 20px;
+          opacity: 0.3;
+          pointer-events: none;
         }
 
         .posperf-hero::after {
@@ -995,9 +1013,9 @@ export default function POSPage() {
 
         .posperf-title {
           margin-top: 0.55rem;
-          font-size: clamp(2rem, 4vw, 3.45rem);
+          font-size: clamp(2.45rem, 5.5vw, 5rem);
           line-height: 1.05;
-          font-weight: 700;
+          font-weight: 600;
           letter-spacing: -0.02em;
         }
 
@@ -1091,7 +1109,7 @@ export default function POSPage() {
         .posperf-subcard {
           border-radius: 18px;
           border: 1px solid var(--pos-border);
-          background: #ffffff;
+          background: var(--pos-chip-bg);
           padding: 0.85rem;
         }
 
@@ -1106,23 +1124,23 @@ export default function POSPage() {
         }
 
         .posperf-metric-icon-slate {
-          color: #475569;
-          background: #ffffff;
+          color: var(--pos-accent);
+          background: var(--pos-chip-bg);
         }
 
         .posperf-metric-icon-sky {
-          color: #475569;
-          background: #ffffff;
+          color: var(--pos-accent);
+          background: var(--pos-chip-bg);
         }
 
         .posperf-metric-icon-emerald {
-          color: #475569;
-          background: #ffffff;
+          color: var(--pos-accent-2);
+          background: var(--pos-chip-bg);
         }
 
         .posperf-metric-icon-amber {
-          color: #475569;
-          background: #ffffff;
+          color: var(--pos-accent-3);
+          background: var(--pos-chip-bg);
         }
 
         .posperf-metric-glow-slate {
@@ -1171,8 +1189,9 @@ export default function POSPage() {
         }
 
         .admin-root.admin-dark .posperf-btn-solid {
-          background: #0f172a;
-          border-color: rgba(15, 23, 42, 0.9);
+          background: #f8fafc;
+          color: #0f172a;
+          border-color: rgba(248, 250, 252, 0.88);
         }
 
         .posperf-btn-ghost {
@@ -1295,7 +1314,7 @@ export default function POSPage() {
         .posperf-flow {
           border-radius: 18px;
           border: 1px solid var(--pos-border);
-          background: #ffffff;
+          background: var(--pos-chip-bg);
           padding: 0.95rem;
           display: flex;
           flex-direction: column;
@@ -1342,7 +1361,7 @@ export default function POSPage() {
 
         .posperf-success {
           border-color: var(--pos-border);
-          background: #ffffff;
+          background: var(--pos-bg-panel-strong);
         }
       `}</style>
     </main>

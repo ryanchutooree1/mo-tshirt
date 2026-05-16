@@ -65,6 +65,7 @@ import {
   type PartnerVisibleField,
   type PrintPartnerId,
 } from "@/lib/partners";
+import { useAdminTheme } from "@/admin/AdminThemeContext";
 
 type QuoteStatus = "new" | "review" | "approved" | "sent";
 type EditableNumber = number | "";
@@ -1114,6 +1115,8 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
 }
 
 export default function QuotationApprovalPage() {
+  const { theme } = useAdminTheme();
+  const isDark = theme === "dark";
   const [quotes, setQuotes] = useState<QuoteRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1947,49 +1950,123 @@ export default function QuotationApprovalPage() {
     }
   };
 
-  const surfaceClass =
-    "rounded-[32px] border border-[#ebebeb] bg-white shadow-[0_8px_28px_rgba(0,0,0,0.08)]";
-  const softSurfaceClass = "rounded-[28px] border border-[#ebebeb] bg-[#f7f7f7]";
+  const surfaceClass = isDark
+    ? "rounded-3xl border border-white/10 bg-white/[0.06] shadow-[0_22px_60px_rgba(5,12,24,0.45)] backdrop-blur-xl"
+    : "rounded-[32px] border border-[#ebebeb] bg-white shadow-[0_8px_28px_rgba(0,0,0,0.08)]";
+  const softSurfaceClass = isDark
+    ? "rounded-2xl border border-white/20 bg-black/20"
+    : "rounded-[28px] border border-[#ebebeb] bg-[#f7f7f7]";
   const fieldClass =
-    "mt-2 w-full rounded-2xl border border-[#dddddd] bg-white px-4 py-3 text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff6600] focus:ring-4 focus:ring-[#ff6600]/10";
+    `mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none transition ${
+      isDark
+        ? "border-white/15 bg-slate-950/70 text-slate-100 placeholder:text-slate-500 focus:border-cyan-300/60 focus:ring-4 focus:ring-cyan-300/10"
+        : "border-[#dddddd] bg-white text-[#222222] placeholder:text-[#b0b0b0] focus:border-[#ff6600] focus:ring-4 focus:ring-[#ff6600]/10"
+    }`;
   const textAreaClass = `${fieldClass} min-h-[120px] resize-y`;
-  const labelClass = "text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]";
-  const secondaryButtonClass =
-    "inline-flex items-center justify-center gap-2 rounded-full border border-[#dddddd] bg-white px-4 py-2.5 text-xs font-semibold text-[#484848] transition hover:border-[#c7c7c7] hover:bg-[#f7f7f7] hover:shadow-[0_4px_14px_rgba(0,0,0,0.06)] disabled:cursor-not-allowed disabled:border-[#ececec] disabled:bg-[#f7f7f7] disabled:text-[#b0b0b0]";
-  const darkButtonClass =
-    "inline-flex items-center justify-center gap-2 rounded-full bg-[#222222] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-[#b0b0b0]";
-  const primaryButtonClass =
-    "inline-flex items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#ff6600,#ea580c)] px-4 py-2.5 text-xs font-semibold text-white shadow-[0_10px_24px_rgba(255,102,0,0.24)] transition hover:shadow-[0_14px_28px_rgba(255,102,0,0.32)] disabled:cursor-not-allowed disabled:bg-[#ffd3b3] disabled:text-white disabled:shadow-none";
+  const labelClass = `text-[11px] font-semibold uppercase tracking-[0.18em] ${
+    isDark ? "text-cyan-200/75" : "text-[#717171]"
+  }`;
+  const secondaryButtonClass = `inline-flex items-center justify-center gap-2 rounded-full border px-4 py-2.5 text-xs font-semibold transition disabled:cursor-not-allowed ${
+    isDark
+      ? "border-white/20 bg-white/10 text-slate-100 hover:bg-white/20 disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
+      : "border-[#dddddd] bg-white text-[#484848] hover:border-[#c7c7c7] hover:bg-[#f7f7f7] hover:shadow-[0_4px_14px_rgba(0,0,0,0.06)] disabled:border-[#ececec] disabled:bg-[#f7f7f7] disabled:text-[#b0b0b0]"
+  }`;
+  const darkButtonClass = `inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-xs font-semibold transition disabled:cursor-not-allowed ${
+    isDark
+      ? "border border-white/10 bg-white text-slate-950 hover:bg-cyan-100 disabled:bg-slate-600 disabled:text-slate-300"
+      : "bg-[#222222] text-white hover:bg-black disabled:bg-[#b0b0b0]"
+  }`;
+  const primaryButtonClass = `inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:text-white disabled:shadow-none ${
+    isDark
+      ? "border border-cyan-300/30 bg-cyan-300/15 text-cyan-100 shadow-[0_14px_34px_rgba(34,211,238,0.12)] hover:bg-cyan-300/25 disabled:bg-slate-700"
+      : "bg-[linear-gradient(135deg,#ff6600,#ea580c)] text-white shadow-[0_10px_24px_rgba(255,102,0,0.24)] hover:shadow-[0_14px_28px_rgba(255,102,0,0.32)] disabled:bg-[#ffd3b3]"
+  }`;
 
   return (
-    <div className="quotation-approval-page min-h-screen bg-white text-[#222222]">
+    <div
+      className={`quotation-approval-page relative min-h-screen overflow-hidden ${
+        isDark ? "ceo-theme bg-slate-950 text-white" : "bg-white text-[#222222]"
+      }`}
+    >
       <div className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(255,255,255,0.96),rgba(255,255,255,0))]" />
-        <div className="pointer-events-none absolute -left-16 top-10 h-56 w-56 rounded-full bg-[#f7f7f7] blur-3xl" />
-        <div className="pointer-events-none absolute right-[-3rem] top-16 h-64 w-64 rounded-full bg-[#fff0e3]/80 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-[-4rem] left-1/2 h-52 w-52 -translate-x-1/2 rounded-full bg-[#f3f4f6] blur-3xl" />
+        {isDark ? (
+          <>
+            <div className="pointer-events-none absolute -top-40 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.32),rgba(56,189,248,0)_70%)] blur-3xl" />
+            <div className="pointer-events-none absolute right-[-6rem] top-32 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,rgba(14,165,233,0.24),rgba(14,165,233,0)_70%)] blur-3xl" />
+          </>
+        ) : (
+          <>
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(255,255,255,0.96),rgba(255,255,255,0))]" />
+            <div className="pointer-events-none absolute -left-16 top-10 h-56 w-56 rounded-full bg-[#f7f7f7] blur-3xl" />
+            <div className="pointer-events-none absolute right-[-3rem] top-16 h-64 w-64 rounded-full bg-[#fff0e3]/80 blur-3xl" />
+            <div className="pointer-events-none absolute bottom-[-4rem] left-1/2 h-52 w-52 -translate-x-1/2 rounded-full bg-[#f3f4f6] blur-3xl" />
+          </>
+        )}
 
         <div className="relative mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
           <header className={`${surfaceClass} relative overflow-hidden px-6 py-7 sm:px-8`}>
-            <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,rgba(255,102,0,0.09),transparent_68%)] lg:block" />
+            <div
+              className={`absolute inset-0 ${
+                isDark
+                  ? "bg-[linear-gradient(120deg,rgba(15,23,42,0.95),rgba(10,36,62,0.88))]"
+                  : "bg-transparent"
+              }`}
+            />
+            <div
+              className={`absolute inset-0 [background-size:20px_20px] ${
+                isDark
+                  ? "opacity-30 [background-image:radial-gradient(rgba(148,163,184,0.32)_1px,transparent_1px)]"
+                  : "opacity-0"
+              }`}
+            />
+            <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.13),transparent_68%)] lg:block" />
             <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-[#717171]">
-                  Quotation Workbench
+                <p
+                  className={`text-xs font-semibold uppercase tracking-[0.28em] ${
+                    isDark ? "text-cyan-200/80" : "text-[#717171]"
+                  }`}
+                >
+                  MO Admin HQ
                 </p>
-                <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em] text-[#222222] sm:text-4xl">
-                  Client quotes, priced with less noise
+                <h1
+                  className={`mt-3 text-4xl font-semibold tracking-tight sm:text-6xl ${
+                    isDark ? "text-white" : "text-slate-900"
+                  }`}
+                >
+                  The Quotation Control Panel
                 </h1>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-[#6a6a6a]">
-                  A lighter admin flow for reviewing requests, building the PDF, and moving approved work straight into production.
+                <p className={`mt-4 max-w-2xl text-base sm:text-lg ${isDark ? "text-slate-200/90" : "text-slate-700"}`}>
+                  One command view for quote requests, pricing, approval, document delivery, and production handoff.
                 </p>
                 <div className="mt-5 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-[#ffd9c2] bg-[#fff4ed] px-3 py-1.5 text-[11px] font-semibold text-[#c2410c]">
-                    <span className="h-2 w-2 rounded-full bg-[#ff6600]" />
-                    Live inbox
+                  <span
+                    className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${
+                      isDark
+                        ? "border-cyan-300/35 bg-cyan-300/15 text-cyan-100"
+                        : "border-[#ffd9c2] bg-[#fff4ed] text-[#c2410c]"
+                    }`}
+                  >
+                    <span className="h-2 w-2 rounded-full bg-emerald-300" />
+                    {stats.total} active quotes
                   </span>
-                  <span className="rounded-full border border-[#ebebeb] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#6a6a6a]">
-                    Save anytime
+                  <span
+                    className={`rounded-full border px-4 py-2 text-sm font-semibold ${
+                      isDark
+                        ? "border-blue-300/35 bg-blue-300/15 text-blue-100"
+                        : "border-[#ebebeb] bg-white text-[#484848]"
+                    }`}
+                  >
+                    {stats.new + stats.review} need action
+                  </span>
+                  <span
+                    className={`rounded-full border px-4 py-2 text-sm font-semibold ${
+                      isDark
+                        ? "border-teal-300/35 bg-teal-300/15 text-teal-100"
+                        : "border-[#ebebeb] bg-white text-[#484848]"
+                    }`}
+                  >
+                    {stats.sent} sent
                   </span>
                 </div>
               </div>
@@ -2002,15 +2079,17 @@ export default function QuotationApprovalPage() {
                 ].map((stat) => (
                   <div
                     key={stat.label}
-                    className="rounded-[24px] border border-[#ebebeb] bg-[#f7f7f7] px-4 py-4"
+                    className={`rounded-2xl border px-4 py-4 ${
+                      isDark ? "border-white/20 bg-black/20" : "border-[#ebebeb] bg-[#f7f7f7]"
+                    }`}
                   >
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#717171]">
+                    <div className={`text-[11px] font-semibold uppercase tracking-[0.2em] ${isDark ? "text-cyan-200/70" : "text-[#717171]"}`}>
                       {stat.label}
                     </div>
-                    <div className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[#222222]">
+                    <div className={`mt-2 text-2xl font-semibold tracking-[-0.03em] ${isDark ? "text-white" : "text-[#222222]"}`}>
                       {stat.value}
                     </div>
-                    <div className="text-xs text-[#717171]">{stat.note}</div>
+                    <div className={`text-xs ${isDark ? "text-slate-300" : "text-[#717171]"}`}>{stat.note}</div>
                   </div>
                 ))}
               </div>
@@ -2018,11 +2097,17 @@ export default function QuotationApprovalPage() {
 
             <div className="relative mt-6 grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
               <div className={`${softSurfaceClass} p-4 sm:p-5`}>
-                <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-[#6a6a6a]">
-                  <span className="rounded-full border border-[#ebebeb] bg-white px-3 py-1">1. Review request</span>
-                  <span className="rounded-full border border-[#ebebeb] bg-white px-3 py-1">2. Build document</span>
-                  <span className="rounded-full border border-[#ebebeb] bg-white px-3 py-1">3. Approve and send</span>
-                  <span className="rounded-full border border-[#ebebeb] bg-white px-3 py-1">4. Move to orders</span>
+                <div className={`flex flex-wrap items-center gap-2 text-[11px] font-semibold ${isDark ? "text-slate-200" : "text-[#6a6a6a]"}`}>
+                  {["Review request", "Build document", "Approve and send", "Move to orders"].map((step, index) => (
+                    <span
+                      key={step}
+                      className={`rounded-full border px-3 py-1 ${
+                        isDark ? "border-white/20 bg-white/10" : "border-[#ebebeb] bg-white"
+                      }`}
+                    >
+                      {index + 1}. {step}
+                    </span>
+                  ))}
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 lg:justify-end">
