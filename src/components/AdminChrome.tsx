@@ -92,6 +92,8 @@ export default function AdminChrome({
   const router = useRouter();
   const { theme, toggleTheme } = useAdminTheme();
   const isDark = theme === "dark";
+  const isPartnerDesk =
+    pathname === "/admin/yan_list" || pathname === "/admin/shab_list";
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [hasLoadedNav, setHasLoadedNav] = useState(false);
@@ -100,6 +102,11 @@ export default function AdminChrome({
   const [session, setSession] = useState<AdminSessionSummary | null>(null);
 
   useEffect(() => {
+    if (isPartnerDesk) {
+      setHasLoadedNav(true);
+      return;
+    }
+
     try {
       const raw = localStorage.getItem(NAV_STORAGE);
       if (raw) {
@@ -119,9 +126,10 @@ export default function AdminChrome({
     } finally {
       setHasLoadedNav(true);
     }
-  }, []);
+  }, [isPartnerDesk]);
 
   useEffect(() => {
+    if (isPartnerDesk) return;
     if (!hasLoadedNav) return;
     try {
       localStorage.setItem(
@@ -129,12 +137,14 @@ export default function AdminChrome({
         JSON.stringify({ top: topNav, more: moreNav })
       );
     } catch {}
-  }, [hasLoadedNav, moreNav, topNav]);
+  }, [hasLoadedNav, isPartnerDesk, moreNav, topNav]);
 
   useEffect(() => {
     let ignore = false;
 
     (async () => {
+      if (isPartnerDesk) return;
+
       try {
         const res = await fetch("/api/admin/session", { cache: "no-store" });
         const data = await res.json().catch(() => ({}));
@@ -163,7 +173,7 @@ export default function AdminChrome({
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [isPartnerDesk]);
 
   useEffect(() => {
     if (session && !session.isOwner) {
@@ -304,6 +314,10 @@ export default function AdminChrome({
     ? "border-rose-500/45 bg-rose-500/15 text-rose-200 hover:border-rose-400/60 hover:bg-rose-500/25"
     : "border-rose-200 bg-white text-rose-700 hover:border-rose-300 hover:bg-rose-50";
 
+  if (isPartnerDesk) {
+    return <div className="min-h-screen bg-[#f6f8fb] text-slate-950">{children}</div>;
+  }
+
   return (
     <div className={`min-h-screen transition-colors ${rootClass}`}>
       {!isDark ? (
@@ -357,7 +371,7 @@ export default function AdminChrome({
               </svg>
             </button>
             <div className={rolePillClass}>
-              <span className={`h-2 w-2 rounded-full ${isDark ? "bg-emerald-400" : "bg-[#ff385c]"}`} />
+              <span className={`h-2 w-2 rounded-full ${isDark ? "bg-emerald-400" : "bg-[#ff6600]"}`} />
               {session?.isOwner ? "Owner" : "Live"}
             </div>
           </div>
@@ -509,7 +523,7 @@ export default function AdminChrome({
                             active
                               ? isDark
                                 ? "bg-emerald-400"
-                                : "bg-[#ff385c]"
+                                : "bg-[#ff6600]"
                               : isDark
                                 ? "bg-slate-300 group-hover:bg-slate-400"
                                 : "bg-[#d0d0d0] group-hover:bg-[#999999]"
@@ -580,7 +594,7 @@ export default function AdminChrome({
                             active
                               ? isDark
                                 ? "bg-emerald-400"
-                                : "bg-[#ff385c]"
+                                : "bg-[#ff6600]"
                               : isDark
                                 ? "bg-slate-300 group-hover:bg-slate-400"
                                 : "bg-[#d0d0d0] group-hover:bg-[#999999]"

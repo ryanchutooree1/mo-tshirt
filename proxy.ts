@@ -30,6 +30,10 @@ function resolveApiRateLimit(pathname: string) {
   return API_RATE_LIMIT;
 }
 
+function isPartnerDeskRoute(pathname: string) {
+  return pathname === "/admin/yan_list" || pathname === "/admin/shab_list";
+}
+
 export async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
@@ -86,6 +90,12 @@ export async function proxy(req: NextRequest) {
 
   if (pathname === "/admin/prescription-ocr") {
     return applySecurityHeaders(NextResponse.next());
+  }
+
+  if (isPartnerDeskRoute(pathname)) {
+    const response = NextResponse.next();
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return applySecurityHeaders(response);
   }
 
   // Protect all /admin routes and the standalone IoT command deck.

@@ -999,7 +999,7 @@ export default function OwnerDashboard() {
           className={`absolute -top-40 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full blur-3xl ${
             isDark
               ? "bg-[radial-gradient(circle,rgba(56,189,248,0.35),rgba(56,189,248,0)_70%)]"
-              : "bg-[radial-gradient(circle,rgba(255,56,92,0.16),rgba(255,56,92,0)_70%)]"
+              : "bg-[radial-gradient(circle,rgba(255,102,0,0.16),rgba(255,102,0,0)_70%)]"
           }`}
         />
         <div

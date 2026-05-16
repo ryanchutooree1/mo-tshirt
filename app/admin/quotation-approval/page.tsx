@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type InputHTMLAttributes,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { storage } from "@/lib/firebase";
@@ -36,6 +43,7 @@ import {
   FiTrash2,
   FiXCircle,
   FiUpload,
+  FiUsers,
 } from "react-icons/fi";
 import { CONTACT_PHONE_DISPLAY } from "@/data/work";
 import {
@@ -43,13 +51,28 @@ import {
   sortQuoteColors,
   type QuoteGarmentLine as QuoteGarmentRequestLine,
 } from "@/lib/shops";
+import {
+  DEFAULT_PARTNER_VISIBLE_FIELDS,
+  getPrintPartner,
+  normalizePartnerVisibleFields,
+  PARTNER_DECISION_LABELS,
+  PARTNER_DECISION_TONES,
+  PARTNER_PRODUCTION_STATUS_LABELS,
+  PARTNER_VISIBLE_FIELD_OPTIONS,
+  PRINT_PARTNERS,
+  type PartnerDecision,
+  type PartnerProductionStatus,
+  type PartnerVisibleField,
+  type PrintPartnerId,
+} from "@/lib/partners";
 
 type QuoteStatus = "new" | "review" | "approved" | "sent";
+type EditableNumber = number | "";
 
 type QuoteLine = {
   description: string;
-  quantity: number | "";
-  unitPrice: number | "";
+  quantity: EditableNumber;
+  unitPrice: EditableNumber;
   includeInTotals: boolean;
 };
 
@@ -72,9 +95,9 @@ type QuoteDraft = {
   showTotals: boolean;
   currency: string;
   lines: QuoteLine[];
-  deliveryFee: number;
-  discount: number;
-  amountReceived: number;
+  deliveryFee: EditableNumber;
+  discount: EditableNumber;
+  amountReceived: EditableNumber;
   notes: string;
   validUntil: string;
   terms: string;
@@ -89,6 +112,96 @@ type QuoteAttachment = {
   size?: number | null;
   url?: string;
 };
+
+type QuotePartnerAssignment = {
+  id?: PrintPartnerId;
+  name?: string;
+  visibleFields?: PartnerVisibleField[];
+  requestStatus?: PartnerDecision;
+  productionStatus?: PartnerProductionStatus;
+  completionDays?: number | null;
+  price?: number | null;
+  comments?: string;
+  missingInformation?: string;
+  assignedAt?: Date | null;
+  respondedAt?: Date | null;
+  updatedAt?: Date | null;
+};
+
+type AutoFitInputProps = InputHTMLAttributes<HTMLInputElement> & {
+  minFontSize?: number;
+  maxFontSize?: number;
+};
+
+function AutoFitInput({
+  value,
+  style,
+  minFontSize = 11,
+  maxFontSize = 14,
+  ...props
+}: AutoFitInputProps) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [fontSize, setFontSize] = useState(maxFontSize);
+
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    const updateFontSize = () => {
+      const text = Array.isArray(value) ? value.join(" ") : String(value ?? "");
+      if (!text) {
+        setFontSize(maxFontSize);
+        return;
+      }
+
+      const styles = window.getComputedStyle(input);
+      const availableWidth =
+        input.clientWidth -
+        Number.parseFloat(styles.paddingLeft || "0") -
+        Number.parseFloat(styles.paddingRight || "0") -
+        8;
+
+      if (availableWidth <= 0) {
+        setFontSize(maxFontSize);
+        return;
+      }
+
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      if (!context) return;
+
+      let nextFontSize = minFontSize;
+      for (let size = maxFontSize; size >= minFontSize; size -= 0.5) {
+        context.font = `${styles.fontStyle} ${styles.fontWeight} ${size}px ${styles.fontFamily}`;
+        if (context.measureText(text).width <= availableWidth) {
+          nextFontSize = size;
+          break;
+        }
+      }
+
+      setFontSize(Math.round(nextFontSize * 10) / 10);
+    };
+
+    updateFontSize();
+
+    const resizeObserver = new ResizeObserver(updateFontSize);
+    resizeObserver.observe(input);
+    window.addEventListener("resize", updateFontSize);
+    void document.fonts?.ready.then(updateFontSize);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateFontSize);
+    };
+  }, [maxFontSize, minFontSize, value]);
+
+  const mergedStyle: CSSProperties = {
+    ...style,
+    fontSize: `${fontSize}px`,
+  };
+
+  return <input {...props} ref={inputRef} value={value} style={mergedStyle} />;
+}
 
 type QuoteRecord = {
   id: string;
@@ -113,6 +226,7 @@ type QuoteRecord = {
   status?: QuoteStatus;
   orderTransactionId?: string;
   movedToOrdersAt?: Date | null;
+  partner?: QuotePartnerAssignment | null;
   createdAt?: Date | null;
   updatedAt?: Date | null;
   quote?: {
@@ -316,7 +430,7 @@ const STATUS_LABELS: Record<QuoteStatus, string> = {
 };
 
 const STATUS_TONES: Record<QuoteStatus, string> = {
-  new: "border-[#ffd2dc] bg-[#fff5f7] text-[#d12f5f]",
+  new: "border-[#ffd9c2] bg-[#fff4ed] text-[#c2410c]",
   review: "border-[#ebebeb] bg-[#f7f7f7] text-[#484848]",
   approved: "border-[#d7f0e0] bg-[#f4fbf7] text-[#1f7a4d]",
   sent: "border-[#dce8ff] bg-[#f5f9ff] text-[#3566d6]",
@@ -330,7 +444,7 @@ const DOC_TYPE_LABELS: Record<DocumentType, string> = {
 };
 
 const DOC_TYPE_TONES: Record<DocumentType, string> = {
-  quotation: "border-[#ffd2dc] bg-[#fff5f7] text-[#d12f5f]",
+  quotation: "border-[#ffd9c2] bg-[#fff4ed] text-[#c2410c]",
   invoice: "border-[#ebebeb] bg-[#f7f7f7] text-[#484848]",
   partial_receipt: "border-[#ffe2b8] bg-[#fff8eb] text-[#b76a12]",
   receipt: "border-[#d7f0e0] bg-[#f4fbf7] text-[#1f7a4d]",
@@ -357,6 +471,9 @@ const safeNumber = (value: unknown, fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 };
+
+const parseEditableNumber = (value: string, fallback = 0): EditableNumber =>
+  value === "" ? "" : safeNumber(value, fallback);
 
 const normalizeDesignText = (value: unknown) => {
   if (typeof value !== "string") return "";
@@ -517,6 +634,40 @@ const parseTimestamp = (value: unknown) => {
   }
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const parseQuotePartnerAssignment = (value: unknown): QuotePartnerAssignment | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  const partnerId =
+    raw.id === "yan" || raw.id === "shabanaz" ? (raw.id as PrintPartnerId) : undefined;
+  const requestStatus =
+    raw.requestStatus === "accepted" ||
+    raw.requestStatus === "rejected" ||
+    raw.requestStatus === "needs_info" ||
+    raw.requestStatus === "pending"
+      ? (raw.requestStatus as PartnerDecision)
+      : "pending";
+  const productionStatus =
+    typeof raw.productionStatus === "string" &&
+    raw.productionStatus in PARTNER_PRODUCTION_STATUS_LABELS
+      ? (raw.productionStatus as PartnerProductionStatus)
+      : "not_started";
+
+  return {
+    id: partnerId,
+    name: typeof raw.name === "string" ? raw.name : partnerId ? getPrintPartner(partnerId).name : "",
+    visibleFields: normalizePartnerVisibleFields(raw.visibleFields),
+    requestStatus,
+    productionStatus,
+    completionDays: safeNumber(raw.completionDays, 0) > 0 ? safeNumber(raw.completionDays, 0) : null,
+    price: safeNumber(raw.price, 0) > 0 ? safeNumber(raw.price, 0) : null,
+    comments: typeof raw.comments === "string" ? raw.comments : "",
+    missingInformation: typeof raw.missingInformation === "string" ? raw.missingInformation : "",
+    assignedAt: parseTimestamp(raw.assignedAt),
+    respondedAt: parseTimestamp(raw.respondedAt),
+    updatedAt: parseTimestamp(raw.updatedAt),
+  };
 };
 
 const formatMoney = (value: number, currency = "Rs") => {
@@ -978,6 +1129,9 @@ export default function QuotationApprovalPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [movingToOrders, setMovingToOrders] = useState(false);
+  const [assigningPartner, setAssigningPartner] = useState<PrintPartnerId | null>(null);
+  const [partnerVisibleFields, setPartnerVisibleFields] =
+    useState<PartnerVisibleField[]>(DEFAULT_PARTNER_VISIBLE_FIELDS);
   const [logo, setLogo] = useState<LogoAsset | null>(null);
   const prevDocumentTypeRef = useRef<DocumentType | null>(null);
 
@@ -1080,6 +1234,7 @@ export default function QuotationApprovalPage() {
             id: docSnap.id,
             ...data,
             movedToOrdersAt: parseTimestamp(data.movedToOrdersAt),
+            partner: parseQuotePartnerAssignment(data.partner),
             createdAt: parseTimestamp(data.createdAt),
             updatedAt: parseTimestamp(data.updatedAt),
           } as QuoteRecord;
@@ -1110,6 +1265,9 @@ export default function QuotationApprovalPage() {
     () => quotes.find((quote) => quote.id === selectedId) || null,
     [quotes, selectedId]
   );
+  const selectedPartner = selected?.partner?.id
+    ? getPrintPartner(selected.partner.id)
+    : null;
 
   const selectedDesignBrief = useMemo(
     () => parseDesignBrief(selected?.designBrief),
@@ -1164,6 +1322,14 @@ export default function QuotationApprovalPage() {
       return;
     }
     setDraft(buildDraftFromQuote(selected));
+  }, [selected]);
+
+  useEffect(() => {
+    if (!selected) {
+      setPartnerVisibleFields(DEFAULT_PARTNER_VISIBLE_FIELDS);
+      return;
+    }
+    setPartnerVisibleFields(normalizePartnerVisibleFields(selected.partner?.visibleFields));
   }, [selected]);
 
   useEffect(() => {
@@ -1281,9 +1447,9 @@ export default function QuotationApprovalPage() {
         unitPrice: safeNumber(line.unitPrice, 0),
         includeInTotals: true,
       })),
-      deliveryFee: baseDraft.deliveryFee,
-      discount: baseDraft.discount,
-      amountReceived: baseDraft.amountReceived,
+      deliveryFee: safeNumber(baseDraft.deliveryFee, 0),
+      discount: safeNumber(baseDraft.discount, 0),
+      amountReceived: safeNumber(baseDraft.amountReceived, 0),
       notes: baseDraft.notes,
       validUntil: baseDraft.validUntil,
       terms: baseDraft.terms,
@@ -1387,6 +1553,60 @@ export default function QuotationApprovalPage() {
       setNotice("Failed to update status.");
     } finally {
       setStatusSaving(false);
+    }
+  };
+
+  const togglePartnerVisibleField = (field: PartnerVisibleField) => {
+    setPartnerVisibleFields((current) => {
+      if (current.includes(field)) {
+        const next = current.filter((entry) => entry !== field);
+        return next.length ? next : current;
+      }
+      return [...current, field];
+    });
+  };
+
+  const moveToPartner = async (partnerId: PrintPartnerId) => {
+    if (!selected) return;
+    const partner = getPrintPartner(partnerId);
+    const visibleFields = normalizePartnerVisibleFields(partnerVisibleFields);
+    const samePartner = selected.partner?.id === partnerId;
+    const resetPartnerResponse = !samePartner;
+    const updatePayload: Record<string, unknown> = {
+      "partner.id": partner.id,
+      "partner.name": partner.name,
+      "partner.visibleFields": visibleFields,
+      "partner.updatedAt": serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+
+    if (!samePartner) {
+      updatePayload["partner.assignedAt"] = serverTimestamp();
+    }
+
+    if (resetPartnerResponse) {
+      updatePayload["partner.requestStatus"] = "pending";
+      updatePayload["partner.productionStatus"] = "not_started";
+      updatePayload["partner.completionDays"] = null;
+      updatePayload["partner.price"] = null;
+      updatePayload["partner.comments"] = "";
+      updatePayload["partner.missingInformation"] = "";
+      updatePayload["partner.respondedAt"] = null;
+    }
+
+    setAssigningPartner(partnerId);
+    setNotice(null);
+    try {
+      await updateDoc(doc(db, "quotes", selected.id), updatePayload);
+      setNotice(
+        samePartner
+          ? `${partner.name}'s visible fields were updated.`
+          : `Moved order to ${partner.name}'s production desk.`
+      );
+    } catch {
+      setNotice(`Failed to move order to ${partner.name}.`);
+    } finally {
+      setAssigningPartner(null);
     }
   };
 
@@ -1731,7 +1951,7 @@ export default function QuotationApprovalPage() {
     "rounded-[32px] border border-[#ebebeb] bg-white shadow-[0_8px_28px_rgba(0,0,0,0.08)]";
   const softSurfaceClass = "rounded-[28px] border border-[#ebebeb] bg-[#f7f7f7]";
   const fieldClass =
-    "mt-2 w-full rounded-2xl border border-[#dddddd] bg-white px-4 py-3 text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff385c] focus:ring-4 focus:ring-[#ff385c]/10";
+    "mt-2 w-full rounded-2xl border border-[#dddddd] bg-white px-4 py-3 text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff6600] focus:ring-4 focus:ring-[#ff6600]/10";
   const textAreaClass = `${fieldClass} min-h-[120px] resize-y`;
   const labelClass = "text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]";
   const secondaryButtonClass =
@@ -1739,19 +1959,19 @@ export default function QuotationApprovalPage() {
   const darkButtonClass =
     "inline-flex items-center justify-center gap-2 rounded-full bg-[#222222] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:bg-[#b0b0b0]";
   const primaryButtonClass =
-    "inline-flex items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#ff385c,#e61e4d)] px-4 py-2.5 text-xs font-semibold text-white shadow-[0_10px_24px_rgba(255,56,92,0.24)] transition hover:shadow-[0_14px_28px_rgba(255,56,92,0.32)] disabled:cursor-not-allowed disabled:bg-[#f4b8c5] disabled:text-white disabled:shadow-none";
+    "inline-flex items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#ff6600,#ea580c)] px-4 py-2.5 text-xs font-semibold text-white shadow-[0_10px_24px_rgba(255,102,0,0.24)] transition hover:shadow-[0_14px_28px_rgba(255,102,0,0.32)] disabled:cursor-not-allowed disabled:bg-[#ffd3b3] disabled:text-white disabled:shadow-none";
 
   return (
     <div className="quotation-approval-page min-h-screen bg-white text-[#222222]">
       <div className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(255,255,255,0.96),rgba(255,255,255,0))]" />
         <div className="pointer-events-none absolute -left-16 top-10 h-56 w-56 rounded-full bg-[#f7f7f7] blur-3xl" />
-        <div className="pointer-events-none absolute right-[-3rem] top-16 h-64 w-64 rounded-full bg-[#ffe3ea]/80 blur-3xl" />
+        <div className="pointer-events-none absolute right-[-3rem] top-16 h-64 w-64 rounded-full bg-[#fff0e3]/80 blur-3xl" />
         <div className="pointer-events-none absolute bottom-[-4rem] left-1/2 h-52 w-52 -translate-x-1/2 rounded-full bg-[#f3f4f6] blur-3xl" />
 
         <div className="relative mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
           <header className={`${surfaceClass} relative overflow-hidden px-6 py-7 sm:px-8`}>
-            <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,rgba(255,56,92,0.08),transparent_68%)] lg:block" />
+            <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-[radial-gradient(circle_at_top_right,rgba(255,102,0,0.09),transparent_68%)] lg:block" />
             <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-[#717171]">
@@ -1764,8 +1984,8 @@ export default function QuotationApprovalPage() {
                   A lighter admin flow for reviewing requests, building the PDF, and moving approved work straight into production.
                 </p>
                 <div className="mt-5 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-[#ffd2dc] bg-[#fff5f7] px-3 py-1.5 text-[11px] font-semibold text-[#d12f5f]">
-                    <span className="h-2 w-2 rounded-full bg-[#ff385c]" />
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[#ffd9c2] bg-[#fff4ed] px-3 py-1.5 text-[11px] font-semibold text-[#c2410c]">
+                    <span className="h-2 w-2 rounded-full bg-[#ff6600]" />
                     Live inbox
                   </span>
                   <span className="rounded-full border border-[#ebebeb] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#6a6a6a]">
@@ -1855,7 +2075,7 @@ export default function QuotationApprovalPage() {
                       onClick={() => setStatusFilter(filter.key)}
                       className={`rounded-2xl border px-3 py-2.5 text-left transition ${
                         active
-                          ? "border-[#ffd2dc] bg-[#fff5f7] text-[#d12f5f]"
+                          ? "border-[#ffd9c2] bg-[#fff4ed] text-[#c2410c]"
                           : "border-[#ebebeb] bg-[#f7f7f7] text-[#6a6a6a] hover:border-[#c7c7c7]"
                       }`}
                     >
@@ -1879,7 +2099,7 @@ export default function QuotationApprovalPage() {
               </div>
 
               {error ? (
-                <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                   {error}
                 </div>
               ) : null}
@@ -1913,7 +2133,7 @@ export default function QuotationApprovalPage() {
                       onClick={() => setSelectedId(quote.id)}
                       className={`w-full rounded-[26px] border px-4 py-4 text-left transition ${
                         selectedTone
-                          ? "border-[#ffc7d3] bg-white shadow-[0_18px_36px_-30px_rgba(255,56,92,0.28)]"
+                          ? "border-[#ffb37a] bg-white shadow-[0_18px_36px_-30px_rgba(255,102,0,0.28)]"
                           : "border-[#ebebeb] bg-white hover:border-[#cfcfcf] hover:shadow-[0_10px_24px_rgba(0,0,0,0.06)]"
                       }`}
                     >
@@ -1921,7 +2141,7 @@ export default function QuotationApprovalPage() {
                         <div
                           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold ${
                             selectedTone
-                              ? "bg-[#ff385c] text-white"
+                              ? "bg-[#ff6600] text-white"
                               : "bg-[#f7f7f7] text-[#484848]"
                           }`}
                         >
@@ -1981,11 +2201,11 @@ export default function QuotationApprovalPage() {
                         </h2>
                         <div className="mt-4 flex flex-wrap gap-2">
                           <span className="inline-flex items-center gap-2 rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1.5 text-xs text-[#484848]">
-                            <FiMail className="h-3.5 w-3.5 text-[#ff385c]" />
+                            <FiMail className="h-3.5 w-3.5 text-[#ff6600]" />
                             {draft.contactEmail || "No email yet"}
                           </span>
                           <span className="inline-flex items-center gap-2 rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1.5 text-xs text-[#484848]">
-                            <FiPhone className="h-3.5 w-3.5 text-[#ff385c]" />
+                            <FiPhone className="h-3.5 w-3.5 text-[#ff6600]" />
                             {draft.contactPhone || "No phone yet"}
                           </span>
                           <span className="rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1.5 text-xs text-[#484848]">
@@ -2010,7 +2230,7 @@ export default function QuotationApprovalPage() {
                           <span
                             className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
                               selectedStatus === "new"
-                                ? "border-[#ffd2dc] bg-[#fff5f7] text-[#d12f5f]"
+                                ? "border-[#ffd9c2] bg-[#fff4ed] text-[#c2410c]"
                                 : "border-[#d7f0e0] bg-[#f4fbf7] text-[#1f7a4d]"
                             }`}
                           >
@@ -2239,8 +2459,8 @@ export default function QuotationApprovalPage() {
                           </div>
                         </div>
                         {safeNumber(selectedDesignBrief?.estimatedTotal, 0) > 0 ? (
-                          <div className="rounded-2xl border border-[#ffd2dc] bg-[#fff5f7] px-4 py-3">
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#d12f5f]">
+                          <div className="rounded-2xl border border-[#ffd9c2] bg-[#fff4ed] px-4 py-3">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#c2410c]">
                               Estimated total
                             </div>
                             <div className="mt-1 text-sm font-semibold text-[#222222]">
@@ -2248,6 +2468,188 @@ export default function QuotationApprovalPage() {
                             </div>
                           </div>
                         ) : null}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={`${surfaceClass} p-5 sm:p-6`}>
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div>
+                        <p className={labelClass}>Partner routing</p>
+                        <h3 className="mt-2 text-2xl font-semibold tracking-[-0.02em] text-[#222222]">
+                          Send only the production details they need
+                        </h3>
+                        <p className="mt-2 max-w-3xl text-sm leading-6 text-[#6a6a6a]">
+                          Customer name, phone, email, billing address, and delivery address stay hidden from the partner desk.
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {PRINT_PARTNERS.map((partner) => (
+                          <Link
+                            key={partner.id}
+                            href={partner.path}
+                            className={secondaryButtonClass}
+                          >
+                            Open {partner.name} page
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
+                      <div className={`${softSurfaceClass} p-4 sm:p-5`}>
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className={labelClass}>Visible fields</p>
+                            <p className="mt-1 text-sm text-[#6a6a6a]">
+                              Select exactly what Yan or Shabanaz can view for this order.
+                            </p>
+                          </div>
+                          <span className="rounded-full border border-[#ebebeb] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#717171]">
+                            {partnerVisibleFields.length} selected
+                          </span>
+                        </div>
+                        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                          {PARTNER_VISIBLE_FIELD_OPTIONS.map((field) => {
+                            const checked = partnerVisibleFields.includes(field.key);
+                            return (
+                              <button
+                                key={field.key}
+                                type="button"
+                                onClick={() => togglePartnerVisibleField(field.key)}
+                                className={`rounded-2xl border px-4 py-3 text-left transition ${
+                                  checked
+                                    ? "border-[#222222] bg-white text-[#222222] shadow-[0_8px_20px_rgba(0,0,0,0.08)]"
+                                    : "border-[#ebebeb] bg-white text-[#6a6a6a] hover:border-[#c7c7c7]"
+                                }`}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <span
+                                    className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
+                                      checked
+                                        ? "border-[#222222] bg-[#222222] text-white"
+                                        : "border-[#d7d7d7] bg-[#f7f7f7] text-transparent"
+                                    }`}
+                                  >
+                                    <FiCheckCircle className="h-3.5 w-3.5" />
+                                  </span>
+                                  <span>
+                                    <span className="block text-sm font-semibold">
+                                      {field.label}
+                                    </span>
+                                    <span className="mt-1 block text-xs leading-5 text-[#717171]">
+                                      {field.description}
+                                    </span>
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {PRINT_PARTNERS.map((partner) => (
+                            <button
+                              key={partner.id}
+                              type="button"
+                              onClick={() => moveToPartner(partner.id)}
+                              disabled={assigningPartner !== null}
+                              className={partner.id === "yan" ? primaryButtonClass : darkButtonClass}
+                            >
+                              <FiUsers className="h-4 w-4" />
+                              {assigningPartner === partner.id
+                                ? `Moving to ${partner.name}...`
+                                : selected.partner?.id === partner.id
+                                  ? `Update ${partner.name} view`
+                                  : `Move order to ${partner.name}`}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className={`${softSurfaceClass} p-4 sm:p-5`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className={labelClass}>Partner response</p>
+                            <h4 className="mt-2 text-lg font-semibold text-[#222222]">
+                              {selectedPartner ? selectedPartner.name : "Not assigned yet"}
+                            </h4>
+                          </div>
+                          {selected.partner?.requestStatus ? (
+                            <span
+                              className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                                PARTNER_DECISION_TONES[selected.partner.requestStatus]
+                              }`}
+                            >
+                              {PARTNER_DECISION_LABELS[selected.partner.requestStatus]}
+                            </span>
+                          ) : (
+                            <span className="rounded-full border border-[#ebebeb] bg-white px-3 py-1.5 text-xs font-semibold text-[#717171]">
+                              Waiting
+                            </span>
+                          )}
+                        </div>
+
+                        {selected.partner?.id ? (
+                          <div className="mt-4 space-y-3 text-sm">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3">
+                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
+                                  Completion
+                                </div>
+                                <div className="mt-1 font-semibold text-[#222222]">
+                                  {selected.partner.completionDays
+                                    ? `${selected.partner.completionDays} day${selected.partner.completionDays === 1 ? "" : "s"}`
+                                    : "Not given"}
+                                </div>
+                              </div>
+                              <div className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3">
+                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
+                                  Partner price
+                                </div>
+                                <div className="mt-1 font-semibold text-[#222222]">
+                                  {selected.partner.price
+                                    ? formatMoney(selected.partner.price, "Rs")
+                                    : "Not given"}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3">
+                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
+                                Production status
+                              </div>
+                              <div className="mt-1 font-semibold text-[#222222]">
+                                {selected.partner.productionStatus
+                                  ? PARTNER_PRODUCTION_STATUS_LABELS[selected.partner.productionStatus]
+                                  : "Not started"}
+                              </div>
+                            </div>
+                            {selected.partner.comments ? (
+                              <div className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3">
+                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
+                                  Comments
+                                </div>
+                                <p className="mt-1 whitespace-pre-wrap text-[#484848]">
+                                  {selected.partner.comments}
+                                </p>
+                              </div>
+                            ) : null}
+                            {selected.partner.missingInformation ? (
+                              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
+                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em]">
+                                  Missing information
+                                </div>
+                                <p className="mt-1 whitespace-pre-wrap">
+                                  {selected.partner.missingInformation}
+                                </p>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div className="mt-4 rounded-2xl border border-dashed border-[#d9d9d9] bg-white px-4 py-8 text-center text-sm text-[#717171]">
+                            Select visible fields, then move this order to Yan or Shabanaz.
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2409,7 +2811,7 @@ export default function QuotationApprovalPage() {
                             <div className="mt-4 grid gap-4">
                               <label className={labelClass}>
                                 Client contact name
-                                <input
+                                <AutoFitInput
                                   value={draft.contactName}
                                   onChange={(e) =>
                                     setDraft({ ...draft, contactName: e.target.value })
@@ -2421,7 +2823,7 @@ export default function QuotationApprovalPage() {
                               <div className="grid gap-4 sm:grid-cols-2">
                                 <label className={labelClass}>
                                   Client email
-                                  <input
+                                  <AutoFitInput
                                     type="email"
                                     value={draft.contactEmail}
                                     onChange={(e) =>
@@ -2433,7 +2835,7 @@ export default function QuotationApprovalPage() {
                                 </label>
                                 <label className={labelClass}>
                                   Phone / WhatsApp
-                                  <input
+                                  <AutoFitInput
                                     value={draft.contactPhone}
                                     onChange={(e) =>
                                       setDraft({ ...draft, contactPhone: e.target.value })
@@ -2445,7 +2847,7 @@ export default function QuotationApprovalPage() {
                               </div>
                               <label className={labelClass}>
                                 Client / Company name
-                                <input
+                                <AutoFitInput
                                   value={draft.clientCompany}
                                   onChange={(e) =>
                                     setDraft({ ...draft, clientCompany: e.target.value })
@@ -2456,7 +2858,7 @@ export default function QuotationApprovalPage() {
                               </label>
                               <label className={labelClass}>
                                 Billing address
-                                <input
+                                <AutoFitInput
                                   value={draft.clientAddress}
                                   onChange={(e) =>
                                     setDraft({ ...draft, clientAddress: e.target.value })
@@ -2468,7 +2870,7 @@ export default function QuotationApprovalPage() {
                               <div className="grid gap-4 sm:grid-cols-2">
                                 <label className={labelClass}>
                                   BRN
-                                  <input
+                                  <AutoFitInput
                                     value={draft.clientBrn}
                                     onChange={(e) =>
                                       setDraft({ ...draft, clientBrn: e.target.value })
@@ -2479,7 +2881,7 @@ export default function QuotationApprovalPage() {
                                 </label>
                                 <label className={labelClass}>
                                   VAT
-                                  <input
+                                  <AutoFitInput
                                     value={draft.clientVat}
                                     onChange={(e) =>
                                       setDraft({ ...draft, clientVat: e.target.value })
@@ -2547,7 +2949,7 @@ export default function QuotationApprovalPage() {
                                     onChange={(e) =>
                                       updateDraftLine(index, { description: e.target.value })
                                     }
-                                    className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff385c] focus:ring-4 focus:ring-[#ff385c]/10 md:block"
+                                    className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff6600] focus:ring-4 focus:ring-[#ff6600]/10 md:block"
                                     placeholder="e.g. T-Shirt (M) with front logo"
                                     aria-label="Line item description"
                                   />
@@ -2559,10 +2961,7 @@ export default function QuotationApprovalPage() {
                                       value={line.quantity}
                                       onChange={(e) =>
                                         updateDraftLine(index, {
-                                          quantity:
-                                            e.target.value === ""
-                                              ? ""
-                                              : safeNumber(e.target.value, 0),
+                                          quantity: parseEditableNumber(e.target.value),
                                         })
                                       }
                                       className={fieldClass}
@@ -2574,13 +2973,10 @@ export default function QuotationApprovalPage() {
                                     value={line.quantity}
                                     onChange={(e) =>
                                       updateDraftLine(index, {
-                                        quantity:
-                                          e.target.value === ""
-                                            ? ""
-                                            : safeNumber(e.target.value, 0),
+                                        quantity: parseEditableNumber(e.target.value),
                                       })
                                     }
-                                    className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff385c] focus:ring-4 focus:ring-[#ff385c]/10 md:block"
+                                    className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff6600] focus:ring-4 focus:ring-[#ff6600]/10 md:block"
                                     placeholder="Qty"
                                     aria-label="Quantity"
                                   />
@@ -2592,10 +2988,7 @@ export default function QuotationApprovalPage() {
                                       value={line.unitPrice}
                                       onChange={(e) =>
                                         updateDraftLine(index, {
-                                          unitPrice:
-                                            e.target.value === ""
-                                              ? ""
-                                              : safeNumber(e.target.value, 0),
+                                          unitPrice: parseEditableNumber(e.target.value),
                                         })
                                       }
                                       className={fieldClass}
@@ -2607,13 +3000,10 @@ export default function QuotationApprovalPage() {
                                     value={line.unitPrice}
                                     onChange={(e) =>
                                       updateDraftLine(index, {
-                                        unitPrice:
-                                          e.target.value === ""
-                                            ? ""
-                                            : safeNumber(e.target.value, 0),
+                                        unitPrice: parseEditableNumber(e.target.value),
                                       })
                                     }
-                                    className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff385c] focus:ring-4 focus:ring-[#ff385c]/10 md:block"
+                                    className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff6600] focus:ring-4 focus:ring-[#ff6600]/10 md:block"
                                     placeholder="Unit price"
                                     aria-label="Unit price"
                                   />
@@ -2627,7 +3017,7 @@ export default function QuotationApprovalPage() {
                                   <button
                                     type="button"
                                     onClick={() => removeDraftLine(index)}
-                                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#ebebeb] bg-white text-[#717171] transition hover:border-[#ffd2dc] hover:bg-[#fff5f7] hover:text-[#d12f5f] md:justify-self-end"
+                                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#ebebeb] bg-white text-[#717171] transition hover:border-[#ffd9c2] hover:bg-[#fff4ed] hover:text-[#c2410c] md:justify-self-end"
                                     aria-label="Remove line item"
                                   >
                                     <FiXCircle className="h-4 w-4" />
@@ -2683,7 +3073,7 @@ export default function QuotationApprovalPage() {
                                   onChange={(e) =>
                                     setDraft({
                                       ...draft,
-                                      deliveryFee: safeNumber(e.target.value, 0),
+                                      deliveryFee: parseEditableNumber(e.target.value),
                                     })
                                   }
                                   className={fieldClass}
@@ -2698,7 +3088,7 @@ export default function QuotationApprovalPage() {
                                   onChange={(e) =>
                                     setDraft({
                                       ...draft,
-                                      discount: safeNumber(e.target.value, 0),
+                                      discount: parseEditableNumber(e.target.value),
                                     })
                                   }
                                   className={fieldClass}
@@ -2769,7 +3159,7 @@ export default function QuotationApprovalPage() {
                                 : formatMoney(0, draft.currency)}
                             </span>
                           </div>
-                          <div className="rounded-[24px] border border-[#ffd2dc] bg-[#fff5f7] px-4 py-4">
+                          <div className="rounded-[24px] border border-[#ffd9c2] bg-[#fff4ed] px-4 py-4">
                             <div className="flex items-center justify-between text-base font-semibold text-[#222222]">
                               <span>{draft.showTotals ? "Grand total" : "Current total"}</span>
                               <span>{formatMoney(totals.total, draft.currency)}</span>
@@ -2788,7 +3178,7 @@ export default function QuotationApprovalPage() {
                                 onChange={(e) =>
                                   setDraft({
                                     ...draft,
-                                    amountReceived: safeNumber(e.target.value, 0),
+                                    amountReceived: parseEditableNumber(e.target.value),
                                   })
                                 }
                                 className={fieldClass}
@@ -2858,10 +3248,10 @@ export default function QuotationApprovalPage() {
                             </button>
                           </div>
 
-                          <div className="rounded-[24px] border border-[#ffd2dc] bg-[#fff5f7] p-4">
+                          <div className="rounded-[24px] border border-[#ffd9c2] bg-[#fff4ed] p-4">
                             <div className="flex items-center justify-between">
                               <p className="text-sm font-semibold text-[#222222]">2. Approve and send</p>
-                              <span className="text-[11px] text-[#d12f5f]">
+                              <span className="text-[11px] text-[#c2410c]">
                                 {quoteIsMarkedApproved ? "Completed" : "Required"}
                               </span>
                             </div>
@@ -2963,7 +3353,7 @@ export default function QuotationApprovalPage() {
                             type="button"
                             onClick={handleDeleteQuote}
                             disabled={deletingQuote}
-                            className="inline-flex items-center justify-center gap-2 rounded-full border border-[#ffd2dc] bg-[#fff5f7] px-4 py-2.5 text-xs font-semibold text-[#d12f5f] transition hover:bg-[#ffe9ef] disabled:cursor-not-allowed disabled:opacity-50"
+                            className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <FiTrash2 className="h-4 w-4" />
                             {deletingQuote ? "Deleting..." : "Delete quotation"}

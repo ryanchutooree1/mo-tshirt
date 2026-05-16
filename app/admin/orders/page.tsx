@@ -54,11 +54,16 @@ type ProductLine = {
 };
 
 type OrderDocumentType = "quotation" | "invoice" | "partial_receipt" | "receipt";
+type EditableNumber = number | "";
+type EditableProductLine = Omit<ProductLine, "quantity" | "unitPrice"> & {
+  quantity: EditableNumber;
+  unitPrice?: EditableNumber;
+};
 
 type OrderDocumentLine = {
   description: string;
-  quantity: number;
-  unitPrice: number;
+  quantity: EditableNumber;
+  unitPrice: EditableNumber;
   color?: string;
   size?: string;
 };
@@ -78,15 +83,90 @@ type OrderDocumentProfile = {
   clientAddress: string;
   clientBrn: string;
   clientVat: string;
-  deliveryFee: number;
-  discount: number;
-  amountReceived: number;
+  deliveryFee: EditableNumber;
+  discount: EditableNumber;
+  amountReceived: EditableNumber;
   notes: string;
   terms: string;
   showLineItems: boolean;
   showTotals: boolean;
   lines: OrderDocumentLine[];
 };
+
+type AutoFitInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
+  minFontSize?: number;
+  maxFontSize?: number;
+};
+
+function AutoFitInput({
+  value,
+  style,
+  minFontSize = 11,
+  maxFontSize = 14,
+  ...props
+}: AutoFitInputProps) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [fontSize, setFontSize] = useState(maxFontSize);
+
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    const updateFontSize = () => {
+      const text = Array.isArray(value) ? value.join(" ") : String(value ?? "");
+      if (!text) {
+        setFontSize(maxFontSize);
+        return;
+      }
+
+      const styles = window.getComputedStyle(input);
+      const availableWidth =
+        input.clientWidth -
+        Number.parseFloat(styles.paddingLeft || "0") -
+        Number.parseFloat(styles.paddingRight || "0") -
+        8;
+
+      if (availableWidth <= 0) {
+        setFontSize(maxFontSize);
+        return;
+      }
+
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      if (!context) return;
+
+      let nextFontSize = minFontSize;
+      for (let size = maxFontSize; size >= minFontSize; size -= 0.5) {
+        context.font = `${styles.fontStyle} ${styles.fontWeight} ${size}px ${styles.fontFamily}`;
+        if (context.measureText(text).width <= availableWidth) {
+          nextFontSize = size;
+          break;
+        }
+      }
+
+      setFontSize(Math.round(nextFontSize * 10) / 10);
+    };
+
+    updateFontSize();
+
+    const resizeObserver = new ResizeObserver(updateFontSize);
+    resizeObserver.observe(input);
+    window.addEventListener("resize", updateFontSize);
+    void document.fonts?.ready.then(updateFontSize);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateFontSize);
+    };
+  }, [maxFontSize, minFontSize, value]);
+
+  const mergedStyle: React.CSSProperties = {
+    ...style,
+    fontSize: `${fontSize}px`,
+  };
+
+  return <input {...props} ref={inputRef} value={value} style={mergedStyle} />;
+}
 
 type Txn = {
   invoiceNumber?: string;
@@ -177,6 +257,9 @@ const safeNumber = (value: unknown, fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
 };
+
+const parseEditableNonNegativeNumber = (value: string, fallback = 0): EditableNumber =>
+  value === "" ? "" : Math.max(0, safeNumber(value, fallback));
 
 const toIsoDate = (date: Date) => {
   const d = new Date(date);
@@ -356,6 +439,18 @@ const buildOrderDocumentDraft = (txnId: string, txn: Txn): OrderDocumentProfile 
   };
 };
 
+const normalizeOrderDocumentProfile = (draft: OrderDocumentProfile): OrderDocumentProfile => ({
+  ...draft,
+  deliveryFee: safeNumber(draft.deliveryFee, 0),
+  discount: safeNumber(draft.discount, 0),
+  amountReceived: safeNumber(draft.amountReceived, 0),
+  lines: draft.lines.map((line) => ({
+    ...line,
+    quantity: safeNumber(line.quantity, 0),
+    unitPrice: safeNumber(line.unitPrice, 0),
+  })),
+});
+
 function buildOrderDocumentPdf(txnId: string, draft: OrderDocumentProfile) {
   const docPdf = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = docPdf.internal.pageSize.getWidth();
@@ -493,8 +588,8 @@ function buildOrderDocumentPdf(txnId: string, draft: OrderDocumentProfile) {
     docPdf.rect(margin, y - rowPadding - 3, contentWidth, rowHeight, "F");
     docPdf.text(wrapped, margin + 6, y + 6);
     if (draft.showLineItems) {
-      docPdf.text(String(line.quantity), colQtyX, y + 6, { align: "right" });
-      docPdf.text(formatMoney(line.unitPrice, draft.currency), colUnitX, y + 6, { align: "right" });
+      docPdf.text(String(safeNumber(line.quantity, 0)), colQtyX, y + 6, { align: "right" });
+      docPdf.text(formatMoney(safeNumber(line.unitPrice, 0), draft.currency), colUnitX, y + 6, { align: "right" });
     }
     docPdf.text(formatMoney(line.lineTotal, draft.currency), colTotalX, y + 6, { align: "right" });
     y += rowHeight + 6;
@@ -630,7 +725,7 @@ function OrdersPageInner() {
   const [editOpen, setEditOpen] = useState(false);
   const [editTxnId, setEditTxnId] = useState<string | null>(null);
   const [editIndex, setEditIndex] = useState<number>(-1);
-  const [editValue, setEditValue] = useState<ProductLine | null>(null);
+  const [editValue, setEditValue] = useState<EditableProductLine | null>(null);
 
   // document studio
   const [docStudioOpen, setDocStudioOpen] = useState(false);
@@ -1074,9 +1169,10 @@ function OrdersPageInner() {
     if (!docDraft || !docTxnId) return;
     setDocSaving(true);
     try {
+      const normalizedDraft = normalizeOrderDocumentProfile(docDraft);
       await updateDoc(doc(db, "transactions", docTxnId), {
         documentProfile: {
-          ...docDraft,
+          ...normalizedDraft,
           updatedAt: serverTimestamp(),
         },
         updatedAt: serverTimestamp(),
@@ -1085,7 +1181,7 @@ function OrdersPageInner() {
         ...prev,
         [docTxnId]: {
           ...(prev[docTxnId] || {}),
-          documentProfile: docDraft,
+          documentProfile: normalizedDraft,
         },
       }));
       showToast({ type: "ok", text: "Document profile saved to order." });
@@ -1169,10 +1265,14 @@ function OrdersPageInner() {
 
   async function saveEditLine() {
     if (!editTxnId || editIndex < 0 || !editValue) return;
-    const updated = {
+    const quantity = Math.max(1, safeNumber(editValue.quantity, 1));
+    const unitPrice = Math.max(0, safeNumber(editValue.unitPrice, 0));
+    const updated: ProductLine = {
       ...editValue,
       size: editValue.size ? normalizeSizeLabel(editValue.size) : "",
-      price: (editValue.unitPrice || 0) * (editValue.quantity || 0),
+      quantity,
+      unitPrice,
+      price: unitPrice * quantity,
     };
     try {
       await runTransaction(db, async (t) => {
@@ -1881,7 +1981,7 @@ function OrdersPageInner() {
                           {selectMode && (
                             <input
                               type="checkbox"
-                              className="mt-3.5 h-4 w-4 rounded border-slate-300 text-[#d6473f] focus:ring-[#f7d0ca]"
+                              className="mt-3.5 h-4 w-4 rounded border-slate-300 text-[#ff6600] focus:ring-[#ffd9c2]"
                               checked={selected}
                               onChange={(e) => {
                                 setSelectedIds((prev) => {
@@ -2518,7 +2618,10 @@ function OrdersPageInner() {
                     onChange={(e) =>
                       setEditValue((v) => ({
                         ...v!,
-                        quantity: Math.max(1, parseInt(e.target.value || "1")),
+                        quantity:
+                          e.target.value === ""
+                            ? ""
+                            : Math.max(1, safeNumber(e.target.value, 1)),
                       }))
                     }
                   />
@@ -2533,7 +2636,7 @@ function OrdersPageInner() {
                     onChange={(e) =>
                       setEditValue((v) => ({
                         ...v!,
-                        unitPrice: parseFloat(e.target.value || "0"),
+                        unitPrice: parseEditableNonNegativeNumber(e.target.value),
                       }))
                     }
                   />
@@ -2714,7 +2817,7 @@ function OrdersPageInner() {
                       <div className="mt-3 grid gap-3 sm:grid-cols-2">
                         <label className="text-xs font-semibold text-slate-600">
                           Contact Name
-                          <input
+                          <AutoFitInput
                             value={docDraft.clientName}
                             onChange={(e) =>
                               setDocDraft((prev) => (prev ? { ...prev, clientName: e.target.value } : prev))
@@ -2724,7 +2827,7 @@ function OrdersPageInner() {
                         </label>
                         <label className="text-xs font-semibold text-slate-600">
                           Company Name
-                          <input
+                          <AutoFitInput
                             value={docDraft.clientCompany}
                             onChange={(e) =>
                               setDocDraft((prev) => (prev ? { ...prev, clientCompany: e.target.value } : prev))
@@ -2734,7 +2837,7 @@ function OrdersPageInner() {
                         </label>
                         <label className="text-xs font-semibold text-slate-600">
                           Email
-                          <input
+                          <AutoFitInput
                             value={docDraft.clientEmail}
                             onChange={(e) =>
                               setDocDraft((prev) => (prev ? { ...prev, clientEmail: e.target.value } : prev))
@@ -2744,7 +2847,7 @@ function OrdersPageInner() {
                         </label>
                         <label className="text-xs font-semibold text-slate-600">
                           Phone
-                          <input
+                          <AutoFitInput
                             value={docDraft.clientPhone}
                             onChange={(e) =>
                               setDocDraft((prev) => (prev ? { ...prev, clientPhone: e.target.value } : prev))
@@ -2754,7 +2857,7 @@ function OrdersPageInner() {
                         </label>
                         <label className="text-xs font-semibold text-slate-600 sm:col-span-2">
                           Address
-                          <input
+                          <AutoFitInput
                             value={docDraft.clientAddress}
                             onChange={(e) =>
                               setDocDraft((prev) => (prev ? { ...prev, clientAddress: e.target.value } : prev))
@@ -2764,7 +2867,7 @@ function OrdersPageInner() {
                         </label>
                         <label className="text-xs font-semibold text-slate-600">
                           BRN (optional)
-                          <input
+                          <AutoFitInput
                             value={docDraft.clientBrn}
                             onChange={(e) =>
                               setDocDraft((prev) => (prev ? { ...prev, clientBrn: e.target.value } : prev))
@@ -2774,7 +2877,7 @@ function OrdersPageInner() {
                         </label>
                         <label className="text-xs font-semibold text-slate-600">
                           VAT (optional)
-                          <input
+                          <AutoFitInput
                             value={docDraft.clientVat}
                             onChange={(e) =>
                               setDocDraft((prev) => (prev ? { ...prev, clientVat: e.target.value } : prev))
@@ -2812,7 +2915,12 @@ function OrdersPageInner() {
                               min={1}
                               value={line.quantity}
                               onChange={(e) =>
-                                updateDocLine(index, { quantity: Math.max(1, safeNumber(e.target.value, 1)) })
+                                updateDocLine(index, {
+                                  quantity:
+                                    e.target.value === ""
+                                      ? ""
+                                      : Math.max(1, safeNumber(e.target.value, 1)),
+                                })
                               }
                               className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                               placeholder="Qty"
@@ -2822,7 +2930,9 @@ function OrdersPageInner() {
                               min={0}
                               step="0.01"
                               value={line.unitPrice}
-                              onChange={(e) => updateDocLine(index, { unitPrice: Math.max(0, safeNumber(e.target.value, 0)) })}
+                              onChange={(e) =>
+                                updateDocLine(index, { unitPrice: parseEditableNonNegativeNumber(e.target.value) })
+                              }
                               className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                               placeholder="Unit Price"
                             />
@@ -2853,7 +2963,9 @@ function OrdersPageInner() {
                             min={0}
                             value={docDraft.deliveryFee}
                             onChange={(e) =>
-                              setDocDraft((prev) => (prev ? { ...prev, deliveryFee: Math.max(0, safeNumber(e.target.value, 0)) } : prev))
+                              setDocDraft((prev) =>
+                                prev ? { ...prev, deliveryFee: parseEditableNonNegativeNumber(e.target.value) } : prev
+                              )
                             }
                             className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                           />
@@ -2865,7 +2977,9 @@ function OrdersPageInner() {
                             min={0}
                             value={docDraft.discount}
                             onChange={(e) =>
-                              setDocDraft((prev) => (prev ? { ...prev, discount: Math.max(0, safeNumber(e.target.value, 0)) } : prev))
+                              setDocDraft((prev) =>
+                                prev ? { ...prev, discount: parseEditableNonNegativeNumber(e.target.value) } : prev
+                              )
                             }
                             className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                           />
@@ -2877,7 +2991,9 @@ function OrdersPageInner() {
                             min={0}
                             value={docDraft.amountReceived}
                             onChange={(e) =>
-                              setDocDraft((prev) => (prev ? { ...prev, amountReceived: Math.max(0, safeNumber(e.target.value, 0)) } : prev))
+                              setDocDraft((prev) =>
+                                prev ? { ...prev, amountReceived: parseEditableNonNegativeNumber(e.target.value) } : prev
+                              )
                             }
                             className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
                           />
