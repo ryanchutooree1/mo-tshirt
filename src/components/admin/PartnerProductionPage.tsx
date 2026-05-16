@@ -8,6 +8,7 @@ import {
   FiCalendar,
   FiCheckCircle,
   FiClock,
+  FiDownload,
   FiFileText,
   FiImage,
   FiLock,
@@ -25,6 +26,7 @@ import {
   PARTNER_PRODUCTION_STATUS_LABELS,
   PARTNER_PRODUCTION_STATUSES,
   type PartnerDecision,
+  type PartnerOrderAttachment,
   type PartnerOrderDetails,
   type PartnerOrderView,
   type PartnerProductionStatus,
@@ -90,6 +92,17 @@ function detailHasContent(value: unknown) {
 
 function getDetailCount(details: PartnerOrderDetails) {
   return Object.values(details).filter(detailHasContent).length;
+}
+
+function getArtworkDownloadHref(attachment: PartnerOrderAttachment, index: number) {
+  if (!attachment.url) return "";
+
+  const params = new URLSearchParams({
+    url: attachment.url,
+    name: attachment.filename || attachment.label || `artwork-${index + 1}`,
+  });
+
+  return `/api/shops/download?${params.toString()}`;
 }
 
 export default function PartnerProductionPage({
@@ -755,6 +768,7 @@ function OrderDetails({ details }: { details: PartnerOrderDetails }) {
                 const isImage = Boolean(
                   attachment.url && attachment.contentType.startsWith("image/")
                 );
+                const downloadHref = getArtworkDownloadHref(attachment, index);
                 return (
                   <div
                     key={`${attachment.url || attachment.filename}-${index}`}
@@ -771,14 +785,24 @@ function OrderDetails({ details }: { details: PartnerOrderDetails }) {
                         </p>
                       </div>
                       {attachment.url ? (
-                        <a
-                          href={attachment.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
-                        >
-                          Open
-                        </a>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <a
+                            href={attachment.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                          >
+                            Open
+                          </a>
+                          <a
+                            href={downloadHref}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100"
+                            aria-label={`Download ${attachment.filename || "artwork"}`}
+                            title="Download artwork"
+                          >
+                            <FiDownload className="h-4 w-4" />
+                          </a>
+                        </div>
                       ) : null}
                     </div>
                     {isImage ? (

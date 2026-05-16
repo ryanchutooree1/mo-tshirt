@@ -69,7 +69,10 @@ export async function GET(req: Request) {
 
   let target: URL;
   if (urlParam.startsWith("/")) {
-    if (!urlParam.startsWith("/api/shops/uploads/")) {
+    if (
+      !urlParam.startsWith("/api/shops/uploads/") &&
+      !urlParam.startsWith("/api/ai-assistant/uploads/")
+    ) {
       return NextResponse.json({ error: "URL not allowed." }, { status: 400 });
     }
     target = new URL(urlParam, req.url);
