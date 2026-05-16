@@ -1573,6 +1573,9 @@ export default function QuotationApprovalPage() {
     if (!selected) return;
     const partner = getPrintPartner(partnerId);
     const visibleFields = normalizePartnerVisibleFields(partnerVisibleFields);
+    const hasEmailOnlyArtwork =
+      visibleFields.includes("artwork") &&
+      selectedAttachments.some((attachment) => !attachment.url);
     const samePartner = selected.partner?.id === partnerId;
     const resetPartnerResponse = !samePartner;
     const updatePayload: Record<string, unknown> = {
@@ -1602,9 +1605,11 @@ export default function QuotationApprovalPage() {
     try {
       await updateDoc(doc(db, "quotes", selected.id), updatePayload);
       setNotice(
-        samePartner
-          ? `${partner.name}'s visible fields were updated.`
-          : `Moved order to ${partner.name}'s production desk.`
+        hasEmailOnlyArtwork
+          ? `${partner.name}'s view was updated, but at least one artwork file is email-only. Re-upload it under Artwork so ${partner.name} can open the file.`
+          : samePartner
+            ? `${partner.name}'s visible fields were updated.`
+            : `Moved order to ${partner.name}'s production desk.`
       );
     } catch {
       setNotice(`Failed to move order to ${partner.name}.`);
@@ -2480,9 +2485,11 @@ export default function QuotationApprovalPage() {
                                     alt={attachment.filename || "Attachment"}
                                   />
                                 ) : !attachment.url ? (
-                                  <div className="mt-3 rounded-2xl border border-dashed border-[#d9d9d9] bg-white px-3 py-3 text-xs text-[#717171]">
-                                    Attachment received via email:{" "}
-                                    {attachment.filename || `Attachment ${index + 1}`}
+                                  <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 text-xs font-semibold text-amber-800">
+                                    Email-only artwork:{" "}
+                                    {attachment.filename || `Attachment ${index + 1}`}.
+                                    Re-upload this file here before sharing it with a
+                                    partner, so they can open the artwork.
                                   </div>
                                 ) : null}
                               </div>

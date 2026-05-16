@@ -38,7 +38,7 @@ export type PartnerOrderAttachment = {
   label: string;
   filename: string;
   contentType: string;
-  url: string;
+  url?: string;
   quantity?: string;
 };
 

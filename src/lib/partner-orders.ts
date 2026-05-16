@@ -218,13 +218,19 @@ function normalizeProductionStatus(value: unknown): PartnerProductionStatus {
 
 function sanitizeAttachments(attachments: QuoteAttachment[]) {
   return attachments
-    .filter((attachment) => attachment.url)
+    .filter(
+      (attachment) =>
+        attachment.url ||
+        attachment.filename ||
+        attachment.label ||
+        attachment.description
+    )
     .map((attachment, index) => {
       return {
         label: attachment.label || attachment.description || `Artwork ${index + 1}`,
         filename: attachment.filename || `artwork-${index + 1}`,
         contentType: attachment.contentType || "",
-        url: attachment.url || "",
+        ...(attachment.url ? { url: attachment.url } : {}),
         quantity:
           attachment.quantity === undefined || attachment.quantity === null
             ? undefined

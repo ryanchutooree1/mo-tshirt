@@ -13,6 +13,7 @@ import {
   isRequestOriginAllowed,
 } from "@/lib/request-safety";
 import { getQuotationNotificationRecipients } from "@/lib/quotation-notification-settings";
+import { storePublicUploadBuffer } from "@/lib/public-upload-store";
 
 type ParsedPayload = {
   name: string;
@@ -342,6 +343,7 @@ export async function POST(req: Request) {
     }
 
     const emailAttachments: { filename: string; content: Buffer; contentType?: string }[] = [];
+    const acceptedFiles: { file: File; buffer: Buffer }[] = [];
 
     for (const currentFile of requestFiles) {
       const typeOk = allowedTypes.includes(currentFile.type || "");
@@ -353,6 +355,7 @@ export async function POST(req: Request) {
         return json({ error: "File too large. Max 5MB per file." }, 400);
       }
       const buffer = Buffer.from(await currentFile.arrayBuffer());
+      acceptedFiles.push({ file: currentFile, buffer });
       emailAttachments.push({
         filename: currentFile.name || "attachment",
         content: buffer,
@@ -403,36 +406,79 @@ export async function POST(req: Request) {
     if (parsedAttachments.length > MAX_EMAIL_ATTACHMENT_COUNT) {
       return json({ error: "Too many artwork attachments." }, 400);
     }
+    const uploadSessionId = `quote-${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}`;
+    const uploadedRequestAttachments = await Promise.all(
+      acceptedFiles.map(async ({ file: currentFile, buffer }, index) => {
+        const upload = await storePublicUploadBuffer({
+          buffer,
+          filename: currentFile.name || `attachment-${index + 1}`,
+          contentType: currentFile.type || "application/octet-stream",
+          size: currentFile.size || buffer.byteLength,
+          sessionId: uploadSessionId,
+          sessionPrefix: "quote",
+          source: "quote-form-upload",
+          maxUploadBytes: maxSize,
+        });
+
+        return {
+          url: upload.url,
+          filename: upload.filename,
+          contentType: upload.contentType,
+          size: upload.size,
+        } satisfies QuoteAttachment;
+      })
+    );
     const storedAttachments: QuoteAttachment[] = (() => {
-      const normalizedAttachments = parsedAttachments.map((entry, index) => ({
-        ...entry,
-        filename: entry.filename || requestFiles[index]?.name || "attachment",
-        contentType: entry.contentType || requestFiles[index]?.type || "application/octet-stream",
-        size:
-          typeof entry.size === "number"
-            ? entry.size
-            : typeof requestFiles[index]?.size === "number"
-              ? requestFiles[index].size
-              : null,
-      }));
+      const normalizedAttachments = parsedAttachments.map((entry, index) => {
+        const uploadedAttachment = uploadedRequestAttachments[index];
+
+        return {
+          ...entry,
+          url: entry.url || uploadedAttachment?.url,
+          filename:
+            entry.filename ||
+            uploadedAttachment?.filename ||
+            requestFiles[index]?.name ||
+            "attachment",
+          contentType:
+            entry.contentType ||
+            uploadedAttachment?.contentType ||
+            requestFiles[index]?.type ||
+            "application/octet-stream",
+          size:
+            typeof entry.size === "number"
+              ? entry.size
+              : uploadedAttachment?.size ??
+                (typeof requestFiles[index]?.size === "number"
+                  ? requestFiles[index].size
+                  : null),
+        };
+      });
       if (normalizedAttachments.length) return normalizedAttachments;
 
       if (attachmentUrl || attachmentName || attachmentType || attachmentSize || requestFiles.length) {
         const fallbackFile = requestFiles[0] || null;
+        const fallbackUpload = uploadedRequestAttachments[0];
         const fallbackSize =
           typeof attachmentSize === "string" && attachmentSize.trim()
             ? Number(attachmentSize)
             : typeof attachmentSize === "number"
               ? attachmentSize
+              : typeof fallbackUpload?.size === "number"
+                ? fallbackUpload.size
               : typeof fallbackFile?.size === "number"
                 ? fallbackFile.size
                 : null;
 
         return [
           {
-            url: attachmentUrl || undefined,
-            filename: attachmentName || fallbackFile?.name || "attachment",
-            contentType: attachmentType || fallbackFile?.type || "application/octet-stream",
+            url: attachmentUrl || fallbackUpload?.url,
+            filename: attachmentName || fallbackUpload?.filename || fallbackFile?.name || "attachment",
+            contentType:
+              attachmentType ||
+              fallbackUpload?.contentType ||
+              fallbackFile?.type ||
+              "application/octet-stream",
             size: Number.isFinite(fallbackSize) ? Number(fallbackSize) : null,
           },
         ];
