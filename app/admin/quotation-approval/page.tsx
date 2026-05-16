@@ -3438,7 +3438,11 @@ export default function QuotationApprovalPage() {
                             type="button"
                             onClick={handleDeleteQuote}
                             disabled={deletingQuote}
-                            className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            className={`inline-flex items-center justify-center gap-2 rounded-full border px-4 py-2.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                              isDark
+                                ? "border-rose-300/45 bg-rose-500/15 !text-rose-100 hover:bg-rose-500/25"
+                                : "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                            }`}
                           >
                             <FiTrash2 className="h-4 w-4" />
                             {deletingQuote ? "Deleting..." : "Delete quotation"}
