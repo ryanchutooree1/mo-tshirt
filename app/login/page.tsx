@@ -19,6 +19,23 @@ type AdminSessionPayload = {
   isOwner: boolean;
 };
 
+type PartnerLoginPayload = {
+  partnerId: string;
+  displayName: string;
+  path: string;
+};
+
+function isPartnerLoginPayload(value: unknown): value is PartnerLoginPayload {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<PartnerLoginPayload>;
+
+  return (
+    typeof candidate.partnerId === "string" &&
+    typeof candidate.displayName === "string" &&
+    (candidate.path === "/admin/yan_list" || candidate.path === "/admin/shab_list")
+  );
+}
+
 function LoginInner() {
   const router = useRouter();
   const params = useSearchParams();
@@ -39,10 +56,16 @@ function LoginInner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         setError(data?.error || "Login failed. Try again.");
         setSubmitting(false);
+        return;
+      }
+
+      if (isPartnerLoginPayload(data?.partner)) {
+        await signOutAdminFromFirebase().catch(() => null);
+        router.push(data.partner.path);
         return;
       }
 
@@ -111,7 +134,9 @@ function LoginInner() {
             <div className="flex flex-col items-center text-center">
               <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={120} height={48} className="h-12 w-auto" />
               <h1 className="mt-6 text-2xl font-semibold tracking-tight">Admin Access</h1>
-              <p className="mt-2 text-sm text-neutral-600">Use the owner password or a team account email and password.</p>
+              <p className="mt-2 text-sm text-neutral-600">
+                Use the owner password, a team account, or a partner password.
+              </p>
             </div>
 
             <form onSubmit={onSubmit} className="mt-8 space-y-6" aria-describedby={error ? "login-error" : undefined}>
@@ -129,7 +154,7 @@ function LoginInner() {
                   autoComplete="username"
                 />
                 <p className="mt-2 text-xs text-neutral-500">
-                  Optional for the owner login. Required for employee accounts.
+                  Optional for owner and partner login. Required for employee accounts.
                 </p>
               </div>
               <div>
