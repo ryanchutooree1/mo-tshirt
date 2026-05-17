@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import Image from "next/image";
 import {
   FiAlertTriangle,
   FiCalendar,
+  FiChevronLeft,
+  FiChevronRight,
   FiCheckCircle,
   FiClock,
   FiDownload,
@@ -14,11 +16,15 @@ import {
   FiLock,
   FiLogOut,
   FiMessageCircle,
+  FiMoon,
   FiPackage,
   FiRefreshCw,
+  FiSearch,
+  FiSun,
   FiTruck,
   FiXCircle,
 } from "react-icons/fi";
+import { useAdminTheme } from "@/admin/AdminThemeContext";
 import {
   getPrintPartner,
   PARTNER_DECISION_LABELS,
@@ -35,6 +41,7 @@ import {
 
 type SessionState = "checking" | "signed_out" | "signed_in";
 type FilterKey = "all" | "pending" | "accepted" | "active" | "completed" | "rejected";
+type SortKey = "assigned" | "deadline" | "status";
 
 type ResponseDraft = {
   decision: PartnerDecision;
@@ -105,11 +112,73 @@ function getArtworkDownloadHref(attachment: PartnerOrderAttachment, index: numbe
   return `/api/shops/download?${params.toString()}`;
 }
 
+function timestampValue(value: string | null) {
+  if (!value) return 0;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function deadlineValue(order: PartnerOrderView) {
+  const value = order.summary.deadline || order.details.deadline || "";
+  if (!value.trim()) return Number.POSITIVE_INFINITY;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? Number.POSITIVE_INFINITY : date.getTime();
+}
+
+function searchableOrderText(order: PartnerOrderView) {
+  return [
+    order.code,
+    order.summary.product,
+    order.summary.print,
+    order.summary.deadline,
+    order.partnerName,
+    order.decision,
+    order.productionStatus,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function sortOrders(orders: PartnerOrderView[], sort: SortKey) {
+  const statusRank: Record<PartnerDecision, number> = {
+    needs_info: 0,
+    pending: 1,
+    accepted: 2,
+    rejected: 3,
+  };
+
+  return orders.slice().sort((left, right) => {
+    if (sort === "deadline") {
+      return (
+        deadlineValue(left) - deadlineValue(right) ||
+        timestampValue(right.assignedAt || right.updatedAt || right.createdAt) -
+          timestampValue(left.assignedAt || left.updatedAt || left.createdAt)
+      );
+    }
+
+    if (sort === "status") {
+      return (
+        statusRank[left.decision] - statusRank[right.decision] ||
+        timestampValue(right.assignedAt || right.updatedAt || right.createdAt) -
+          timestampValue(left.assignedAt || left.updatedAt || left.createdAt)
+      );
+    }
+
+    return (
+      timestampValue(right.assignedAt || right.updatedAt || right.createdAt) -
+      timestampValue(left.assignedAt || left.updatedAt || left.createdAt)
+    );
+  });
+}
+
 export default function PartnerProductionPage({
   partnerId,
 }: {
   partnerId: PrintPartnerId;
 }) {
+  const { theme, toggleTheme } = useAdminTheme();
+  const isDark = theme === "dark";
   const partner = getPrintPartner(partnerId);
   const [sessionState, setSessionState] = useState<SessionState>("checking");
   const [password, setPassword] = useState("");
@@ -119,19 +188,65 @@ export default function PartnerProductionPage({
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterKey>("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("assigned");
   const [draft, setDraft] = useState<ResponseDraft>(() => buildDraft(null));
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
+  const filteredOrders = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    const matching = orders.filter((order) => {
+      if (!orderMatchesFilter(order, filter)) return false;
+      if (!query) return true;
+      return searchableOrderText(order).includes(query);
+    });
+
+    return sortOrders(matching, sortKey);
+  }, [filter, orders, searchTerm, sortKey]);
+
   const selected = useMemo(
-    () => orders.find((order) => order.id === selectedId) || orders[0] || null,
-    [orders, selectedId]
+    () =>
+      filteredOrders.find((order) => order.id === selectedId) ||
+      filteredOrders[0] ||
+      null,
+    [filteredOrders, selectedId]
   );
 
-  const filteredOrders = useMemo(
-    () => orders.filter((order) => orderMatchesFilter(order, filter)),
-    [orders, filter]
+  const selectedIndex = useMemo(
+    () => (selected ? filteredOrders.findIndex((order) => order.id === selected.id) : -1),
+    [filteredOrders, selected]
   );
+
+  const themeVars = useMemo(
+    () =>
+      ({
+        "--partner-bg": isDark ? "#020617" : "#f6f8fb",
+        "--partner-card": isDark ? "#0f172a" : "#ffffff",
+        "--partner-soft": isDark ? "#111c2f" : "#f8fafc",
+        "--partner-hover": isDark ? "#18243a" : "#f1f5f9",
+        "--partner-border": isDark ? "#243249" : "#e2e8f0",
+        "--partner-text": isDark ? "#e5e7eb" : "#0f172a",
+        "--partner-muted": isDark ? "#94a3b8" : "#64748b",
+        "--partner-faint": isDark ? "#64748b" : "#94a3b8",
+        "--partner-accent": isDark ? "#0e7490" : "#0f172a",
+        "--partner-accent-soft": isDark ? "#164e63" : "#e0f2fe",
+        "--partner-accent-text": "#ffffff",
+        colorScheme: theme,
+      }) as CSSProperties,
+    [isDark, theme]
+  );
+
+  const shellClass =
+    "min-h-screen bg-[var(--partner-bg)] text-[color:var(--partner-text)] transition-colors";
+  const surfaceClass =
+    "rounded-2xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] shadow-sm";
+  const softSurfaceClass =
+    "border-[color:var(--partner-border)] bg-[var(--partner-soft)]";
+  const secondaryButtonClass =
+    "inline-flex items-center gap-2 rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] px-4 py-2.5 text-sm font-semibold text-[color:var(--partner-text)] transition hover:bg-[var(--partner-hover)] disabled:opacity-60";
+  const inputClass =
+    "w-full rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] px-4 py-3 text-sm text-[color:var(--partner-text)] outline-none transition placeholder:text-[color:var(--partner-faint)] focus:border-[color:var(--partner-accent)] focus:ring-4 focus:ring-cyan-500/10";
 
   const counts = useMemo(() => {
     return orders.reduce(
@@ -149,6 +264,17 @@ export default function PartnerProductionPage({
       { all: 0, pending: 0, accepted: 0, active: 0, completed: 0, rejected: 0 }
     );
   }, [orders]);
+
+  const selectQueueOffset = useCallback(
+    (offset: number) => {
+      if (!filteredOrders.length) return;
+      const currentIndex = selectedIndex >= 0 ? selectedIndex : 0;
+      const nextIndex =
+        (currentIndex + offset + filteredOrders.length) % filteredOrders.length;
+      setSelectedId(filteredOrders[nextIndex].id);
+    },
+    [filteredOrders, selectedIndex]
+  );
 
   const loadOrders = useCallback(async () => {
     setLoadingOrders(true);
@@ -269,7 +395,10 @@ export default function PartnerProductionPage({
 
   if (sessionState === "checking") {
     return (
-      <main className="grid min-h-screen place-items-center bg-slate-950 px-6 text-white">
+      <main
+        style={themeVars}
+        className={`grid place-items-center px-6 ${shellClass}`}
+      >
         <div className="flex items-center gap-3 text-sm font-semibold">
           <FiRefreshCw className="h-5 w-5 animate-spin" />
           Opening partner desk
@@ -280,18 +409,29 @@ export default function PartnerProductionPage({
 
   if (sessionState === "signed_out") {
     return (
-      <main className="min-h-screen bg-slate-950 px-5 py-8 text-white sm:px-8">
+      <main style={themeVars} className={`px-5 py-8 sm:px-8 ${shellClass}`}>
+        <div className="mx-auto flex max-w-6xl justify-end">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className={secondaryButtonClass}
+            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {isDark ? <FiSun className="h-4 w-4" /> : <FiMoon className="h-4 w-4" />}
+            {isDark ? "Light" : "Dark"}
+          </button>
+        </div>
         <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl items-center">
           <div className="grid w-full gap-6 lg:grid-cols-[1fr_420px] lg:items-center">
             <section className="py-8">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-300">
+              <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold text-[color:var(--partner-muted)] ${softSurfaceClass}`}>
                 <span className="h-2 w-2 rounded-full bg-emerald-400" />
                 MO T-SHIRT partner production
               </div>
-              <h1 className="mt-6 max-w-3xl text-4xl font-semibold tracking-tight text-white sm:text-6xl">
+              <h1 className="mt-6 max-w-3xl text-4xl font-semibold tracking-tight text-[color:var(--partner-text)] sm:text-6xl">
                 {partner.name} production desk
               </h1>
-              <p className="mt-5 max-w-2xl text-base leading-7 text-slate-300">
+              <p className="mt-5 max-w-2xl text-base leading-7 text-[color:var(--partner-muted)]">
                 Orders assigned by Ryan appear here with only the production details he chooses to share.
               </p>
               <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
@@ -300,15 +440,15 @@ export default function PartnerProductionPage({
                   ["Price your work", "Send cost and timing."],
                   ["Update status", "Keep Ryan in sync."],
                 ].map(([title, copy]) => (
-                  <div key={title} className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
-                    <p className="text-sm font-semibold text-white">{title}</p>
-                    <p className="mt-1 text-xs leading-5 text-slate-400">{copy}</p>
+                  <div key={title} className={`rounded-xl border p-4 ${softSurfaceClass}`}>
+                    <p className="text-sm font-semibold text-[color:var(--partner-text)]">{title}</p>
+                    <p className="mt-1 text-xs leading-5 text-[color:var(--partner-muted)]">{copy}</p>
                   </div>
                 ))}
               </div>
             </section>
 
-            <section className="rounded-2xl border border-white/10 bg-white p-6 text-slate-950 shadow-2xl sm:p-8">
+            <section className={`${surfaceClass} p-6 sm:p-8`}>
               <div className="flex items-center justify-between gap-4">
                 <Image
                   src="/logo_transparent.png"
@@ -317,13 +457,13 @@ export default function PartnerProductionPage({
                   height={52}
                   className="h-12 w-auto"
                 />
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-slate-950 text-white">
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--partner-accent)] text-[color:var(--partner-accent-text)]">
                   <FiLock className="h-5 w-5" />
                 </span>
               </div>
               <h2 className="mt-8 text-2xl font-semibold tracking-tight">Enter password</h2>
               <form onSubmit={login} className="mt-6 space-y-4">
-                <label className="block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                <label className="block text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--partner-muted)]">
                   Partner password
                   <input
                     value={password}
@@ -332,7 +472,7 @@ export default function PartnerProductionPage({
                     autoComplete="current-password"
                     autoFocus
                     required
-                    className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm normal-case tracking-normal text-slate-950 outline-none transition focus:border-slate-950 focus:ring-4 focus:ring-slate-100"
+                    className={`mt-2 normal-case tracking-normal ${inputClass}`}
                     placeholder="Password"
                   />
                 </label>
@@ -343,7 +483,7 @@ export default function PartnerProductionPage({
                 ) : null}
                 <button
                   type="submit"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-black"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--partner-accent)] px-5 py-3 text-sm font-semibold text-[color:var(--partner-accent-text)] transition hover:opacity-90"
                 >
                   <FiLock className="h-4 w-4" />
                   Open desk
@@ -357,17 +497,20 @@ export default function PartnerProductionPage({
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f8fb] text-slate-950">
-      <header className="border-b border-slate-200 bg-white">
+    <main style={themeVars} className={shellClass}>
+      <header className="border-b border-[color:var(--partner-border)] bg-[var(--partner-card)]">
         <div className="mx-auto flex max-w-[1500px] flex-col gap-5 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div>
             <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700">
+              <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold text-[color:var(--partner-text)] ${softSurfaceClass}`}>
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
                 {partner.name}
               </span>
-              <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-500">
+              <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold text-[color:var(--partner-muted)] ${softSurfaceClass}`}>
                 Private production queue
+              </span>
+              <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold text-[color:var(--partner-muted)] ${softSurfaceClass}`}>
+                {filteredOrders.length} of {orders.length} orders
               </span>
             </div>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -377,9 +520,18 @@ export default function PartnerProductionPage({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
+              onClick={toggleTheme}
+              className={secondaryButtonClass}
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {isDark ? <FiSun className="h-4 w-4" /> : <FiMoon className="h-4 w-4" />}
+              {isDark ? "Light" : "Dark"}
+            </button>
+            <button
+              type="button"
               onClick={loadOrders}
               disabled={loadingOrders}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+              className={secondaryButtonClass}
             >
               <FiRefreshCw className={`h-4 w-4 ${loadingOrders ? "animate-spin" : ""}`} />
               Refresh
@@ -387,7 +539,7 @@ export default function PartnerProductionPage({
             <button
               type="button"
               onClick={logout}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              className={secondaryButtonClass}
             >
               <FiLogOut className="h-4 w-4" />
               Logout
@@ -398,7 +550,34 @@ export default function PartnerProductionPage({
 
       <div className="mx-auto grid max-w-[1500px] gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:px-8">
         <aside className="space-y-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className={`${surfaceClass} p-4`}>
+            <div className="grid gap-3">
+              <label className="relative block">
+                <span className="sr-only">Search orders</span>
+                <FiSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--partner-muted)]" />
+                <input
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  className={`${inputClass} pl-10`}
+                  placeholder="Search order, product, print"
+                />
+              </label>
+              <label className="block text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--partner-muted)]">
+                Sort queue
+                <select
+                  value={sortKey}
+                  onChange={(event) => setSortKey(event.target.value as SortKey)}
+                  className={`mt-2 ${inputClass}`}
+                >
+                  <option value="assigned">Newest assigned</option>
+                  <option value="deadline">Deadline first</option>
+                  <option value="status">Response status</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div className={`${surfaceClass} p-4`}>
             <div className="grid grid-cols-2 gap-2">
               {(
                 [
@@ -418,8 +597,8 @@ export default function PartnerProductionPage({
                     onClick={() => setFilter(key)}
                     className={`rounded-xl border px-3 py-2.5 text-left text-xs font-semibold transition ${
                       active
-                        ? "border-slate-950 bg-slate-950 text-white"
-                        : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white"
+                        ? "border-[color:var(--partner-accent)] bg-[var(--partner-accent)] text-[color:var(--partner-accent-text)]"
+                        : "border-[color:var(--partner-border)] bg-[var(--partner-soft)] text-[color:var(--partner-text)] hover:bg-[var(--partner-hover)]"
                     }`}
                   >
                     <span className="block">{label}</span>
@@ -430,7 +609,7 @@ export default function PartnerProductionPage({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div className={`${surfaceClass} p-3`}>
             {ordersError ? (
               <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
                 {ordersError}
@@ -446,14 +625,14 @@ export default function PartnerProductionPage({
                     onClick={() => setSelectedId(order.id)}
                     className={`w-full rounded-xl border p-4 text-left transition ${
                       active
-                        ? "border-slate-950 bg-slate-950 text-white"
-                        : "border-slate-200 bg-white text-slate-950 hover:bg-slate-50"
+                        ? "border-[color:var(--partner-accent)] bg-[var(--partner-accent)] text-[color:var(--partner-accent-text)]"
+                        : "border-[color:var(--partner-border)] bg-[var(--partner-card)] text-[color:var(--partner-text)] hover:bg-[var(--partner-hover)]"
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold">{order.code}</p>
-                        <p className={`mt-1 text-xs ${active ? "text-slate-300" : "text-slate-500"}`}>
+                        <p className={`mt-1 text-xs ${active ? "text-white/75" : "text-[color:var(--partner-muted)]"}`}>
                           {order.summary.product || "Production order"}
                         </p>
                       </div>
@@ -467,7 +646,7 @@ export default function PartnerProductionPage({
                         {PARTNER_DECISION_LABELS[order.decision]}
                       </span>
                     </div>
-                    <div className={`mt-3 grid grid-cols-3 gap-2 text-[11px] ${active ? "text-slate-300" : "text-slate-500"}`}>
+                    <div className={`mt-3 grid grid-cols-3 gap-2 text-[11px] ${active ? "text-white/75" : "text-[color:var(--partner-muted)]"}`}>
                       <span>{order.summary.pieces ? `${order.summary.pieces} pcs` : "Qty hidden"}</span>
                       <span>{order.summary.deadline || "No deadline"}</span>
                       <span>{getDetailCount(order.details)} fields</span>
@@ -476,7 +655,7 @@ export default function PartnerProductionPage({
                 );
               })}
               {!filteredOrders.length ? (
-                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+                <div className={`rounded-xl border border-dashed px-4 py-10 text-center text-sm text-[color:var(--partner-muted)] ${softSurfaceClass}`}>
                   No orders in this view.
                 </div>
               ) : null}
@@ -487,12 +666,17 @@ export default function PartnerProductionPage({
         <section className="min-w-0">
           {selected ? (
             <div className="space-y-5">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+              <div className={`${surfaceClass} p-5 sm:p-6`}>
                 <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                      Order {selected.code}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--partner-muted)]">
+                        Order {selected.code}
+                      </p>
+                      <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold text-[color:var(--partner-muted)] ${softSurfaceClass}`}>
+                        {selectedIndex + 1} of {filteredOrders.length}
+                      </span>
+                    </div>
                     <h2 className="mt-2 text-3xl font-semibold tracking-tight">
                       {selected.summary.product || "Production details"}
                     </h2>
@@ -500,12 +684,32 @@ export default function PartnerProductionPage({
                       <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${PARTNER_DECISION_TONES[selected.decision]}`}>
                         {PARTNER_DECISION_LABELS[selected.decision]}
                       </span>
-                      <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700">
+                      <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold text-[color:var(--partner-text)] ${softSurfaceClass}`}>
                         {PARTNER_PRODUCTION_STATUS_LABELS[selected.productionStatus]}
                       </span>
-                      <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-500">
+                      <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold text-[color:var(--partner-muted)] ${softSurfaceClass}`}>
                         Assigned {formatDate(selected.assignedAt)}
                       </span>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => selectQueueOffset(-1)}
+                        disabled={filteredOrders.length < 2}
+                        className={secondaryButtonClass}
+                      >
+                        <FiChevronLeft className="h-4 w-4" />
+                        Previous
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => selectQueueOffset(1)}
+                        disabled={filteredOrders.length < 2}
+                        className={secondaryButtonClass}
+                      >
+                        Next
+                        <FiChevronRight className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
 
@@ -534,8 +738,8 @@ export default function PartnerProductionPage({
                   <OrderDetails details={selected.details} />
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                <div className={`${surfaceClass} p-5`}>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--partner-muted)]">
                     Your response
                   </p>
                   <div className="mt-4 grid grid-cols-3 gap-2">
@@ -560,7 +764,7 @@ export default function PartnerProductionPage({
                   </div>
 
                   <div className="mt-5 grid gap-4">
-                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--partner-muted)]">
                       Completion days
                       <input
                         type="number"
@@ -572,11 +776,11 @@ export default function PartnerProductionPage({
                             completionDays: event.target.value,
                           }))
                         }
-                        className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm normal-case tracking-normal text-slate-950 outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-100"
+                        className={`mt-2 normal-case tracking-normal ${inputClass}`}
                         placeholder="e.g. 3"
                       />
                     </label>
-                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--partner-muted)]">
                       Your price
                       <input
                         type="number"
@@ -588,11 +792,11 @@ export default function PartnerProductionPage({
                             price: event.target.value,
                           }))
                         }
-                        className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm normal-case tracking-normal text-slate-950 outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-100"
+                        className={`mt-2 normal-case tracking-normal ${inputClass}`}
                         placeholder="Rs"
                       />
                     </label>
-                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--partner-muted)]">
                       Production status
                       <select
                         value={draft.productionStatus}
@@ -602,7 +806,7 @@ export default function PartnerProductionPage({
                             productionStatus: event.target.value as PartnerProductionStatus,
                           }))
                         }
-                        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm normal-case tracking-normal text-slate-950 outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-100"
+                        className={`mt-2 normal-case tracking-normal ${inputClass}`}
                       >
                         {PARTNER_PRODUCTION_STATUSES.map((status) => (
                           <option key={status} value={status}>
@@ -611,7 +815,7 @@ export default function PartnerProductionPage({
                         ))}
                       </select>
                     </label>
-                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--partner-muted)]">
                       Comments for Ryan
                       <textarea
                         value={draft.comments}
@@ -622,11 +826,11 @@ export default function PartnerProductionPage({
                           }))
                         }
                         rows={4}
-                        className="mt-2 w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm normal-case tracking-normal text-slate-950 outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-100"
+                        className={`mt-2 resize-y normal-case tracking-normal ${inputClass}`}
                         placeholder="Production notes, price explanation, or delivery plan."
                       />
                     </label>
-                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--partner-muted)]">
                       Missing information
                       <textarea
                         value={draft.missingInformation}
@@ -637,7 +841,7 @@ export default function PartnerProductionPage({
                           }))
                         }
                         rows={3}
-                        className="mt-2 w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm normal-case tracking-normal text-slate-950 outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-100"
+                        className={`mt-2 resize-y normal-case tracking-normal ${inputClass}`}
                         placeholder="Tell Ryan what is missing before you can print."
                       />
                     </label>
@@ -648,7 +852,7 @@ export default function PartnerProductionPage({
                       type="button"
                       onClick={() => saveResponse()}
                       disabled={saving}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-black disabled:opacity-60"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--partner-accent)] px-5 py-3 text-sm font-semibold text-[color:var(--partner-accent-text)] transition hover:opacity-90 disabled:opacity-60"
                     >
                       <FiCheckCircle className="h-4 w-4" />
                       {saving ? "Saving..." : "Save response"}
@@ -674,23 +878,24 @@ export default function PartnerProductionPage({
                   </div>
 
                   {notice ? (
-                    <p className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                    <p className={`mt-4 rounded-xl border px-4 py-3 text-sm text-[color:var(--partner-text)] ${softSurfaceClass}`}>
                       {notice}
                     </p>
                   ) : null}
 
-                  <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-500">
+                  <div className={`mt-5 rounded-xl border p-4 text-xs leading-5 text-[color:var(--partner-muted)] ${softSurfaceClass}`}>
                     Customer name, phone, email, and address are hidden on this desk.
                   </div>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center shadow-sm">
-              <FiPackage className="mx-auto h-8 w-8 text-slate-400" />
-              <h2 className="mt-4 text-xl font-semibold">No assigned orders yet</h2>
-              <p className="mt-2 text-sm text-slate-500">
-                New jobs will appear here when Ryan moves an order to {partner.name}.
+            <div className={`rounded-2xl border border-dashed px-6 py-16 text-center shadow-sm ${softSurfaceClass}`}>
+              <FiPackage className="mx-auto h-8 w-8 text-[color:var(--partner-muted)]" />
+              <h2 className="mt-4 text-xl font-semibold">No assigned orders in this view</h2>
+              <p className="mt-2 text-sm text-[color:var(--partner-muted)]">
+                Try another filter or search. New jobs will appear here when Ryan moves an
+                order to {partner.name}.
               </p>
             </div>
           )}
@@ -710,12 +915,12 @@ function Metric({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-        <span className="text-slate-700">{icon}</span>
+    <div className="rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-soft)] p-4">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--partner-muted)]">
+        <span className="text-[color:var(--partner-text)]">{icon}</span>
         {label}
       </div>
-      <div className="mt-2 line-clamp-2 text-sm font-semibold text-slate-950">{value}</div>
+      <div className="mt-2 line-clamp-2 text-sm font-semibold text-[color:var(--partner-text)]">{value}</div>
     </div>
   );
 }
@@ -737,8 +942,8 @@ function DecisionButton({
       onClick={onClick}
       className={`flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl border px-2 text-xs font-semibold transition ${
         active
-          ? "border-slate-950 bg-slate-950 text-white"
-          : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white"
+          ? "border-[color:var(--partner-accent)] bg-[var(--partner-accent)] text-[color:var(--partner-accent-text)]"
+          : "border-[color:var(--partner-border)] bg-[var(--partner-soft)] text-[color:var(--partner-text)] hover:bg-[var(--partner-hover)]"
       }`}
     >
       <span className="text-base">{icon}</span>
@@ -752,7 +957,7 @@ function OrderDetails({ details }: { details: PartnerOrderDetails }) {
 
   if (!hasDetails) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center text-sm text-slate-500 shadow-sm">
+      <div className="rounded-2xl border border-dashed border-[color:var(--partner-border)] bg-[var(--partner-card)] px-6 py-12 text-center text-sm text-[color:var(--partner-muted)] shadow-sm">
         Ryan has not shared production fields for this order yet.
       </div>
     );
@@ -772,14 +977,14 @@ function OrderDetails({ details }: { details: PartnerOrderDetails }) {
                 return (
                   <div
                     key={`${attachment.url || attachment.filename}-${index}`}
-                    className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+                    className="rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-soft)] p-3"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-950">
+                        <p className="truncate text-sm font-semibold text-[color:var(--partner-text)]">
                           {attachment.filename}
                         </p>
-                        <p className="mt-1 text-xs text-slate-500">
+                        <p className="mt-1 text-xs text-[color:var(--partner-muted)]">
                           {attachment.label}
                           {attachment.quantity ? ` - Qty ${attachment.quantity}` : ""}
                         </p>
@@ -790,13 +995,13 @@ function OrderDetails({ details }: { details: PartnerOrderDetails }) {
                             href={attachment.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                            className="rounded-lg border border-[color:var(--partner-border)] bg-[var(--partner-card)] px-3 py-2 text-xs font-semibold text-[color:var(--partner-text)] transition hover:bg-[var(--partner-hover)]"
                           >
                             Open
                           </a>
                           <a
                             href={downloadHref}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-100"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[color:var(--partner-border)] bg-[var(--partner-card)] text-[color:var(--partner-text)] transition hover:bg-[var(--partner-hover)]"
                             aria-label={`Download ${attachment.filename || "artwork"}`}
                             title="Download artwork"
                           >
@@ -809,7 +1014,7 @@ function OrderDetails({ details }: { details: PartnerOrderDetails }) {
                       <img
                         src={attachment.url}
                         alt={attachment.filename}
-                        className="mt-3 max-h-72 w-full rounded-lg border border-slate-200 bg-white object-contain"
+                        className="mt-3 max-h-72 w-full rounded-lg border border-[color:var(--partner-border)] bg-white object-contain"
                         loading="lazy"
                       />
                     ) : !attachment.url ? (
@@ -847,7 +1052,7 @@ function OrderDetails({ details }: { details: PartnerOrderDetails }) {
               details.colors.map((color) => (
                 <span
                   key={color}
-                  className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700"
+                  className="rounded-full border border-[color:var(--partner-border)] bg-[var(--partner-soft)] px-3 py-1.5 text-xs font-semibold text-[color:var(--partner-text)]"
                 >
                   {color}
                 </span>
@@ -902,9 +1107,9 @@ function DetailPanel({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-        <span className="text-slate-800">{icon}</span>
+    <section className="rounded-2xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] p-5 shadow-sm">
+      <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--partner-muted)]">
+        <span className="text-[color:var(--partner-text)]">{icon}</span>
         {title}
       </div>
       {children}
@@ -914,7 +1119,7 @@ function DetailPanel({
 
 function EmptyDetail({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">
+    <div className="rounded-xl border border-dashed border-[color:var(--partner-border)] bg-[var(--partner-soft)] px-4 py-5 text-sm text-[color:var(--partner-muted)]">
       {children}
     </div>
   );
@@ -922,7 +1127,7 @@ function EmptyDetail({ children }: { children: ReactNode }) {
 
 function TextDetail({ value, empty }: { value: string; empty: string }) {
   if (!value.trim()) return <EmptyDetail>{empty}</EmptyDetail>;
-  return <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">{value}</p>;
+  return <p className="whitespace-pre-wrap text-sm leading-6 text-[color:var(--partner-muted)]">{value}</p>;
 }
 
 function ListDetail({ items, empty }: { items: string[]; empty: string }) {
@@ -932,7 +1137,7 @@ function ListDetail({ items, empty }: { items: string[]; empty: string }) {
       {items.map((item, index) => (
         <li
           key={`${item}-${index}`}
-          className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700"
+          className="rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-soft)] px-4 py-3 text-sm font-medium text-[color:var(--partner-text)]"
         >
           {item}
         </li>
