@@ -248,7 +248,11 @@ export default function PartnerProductionPage({
   const secondaryButtonClass =
     "inline-flex items-center justify-center gap-2 rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] px-4 py-2.5 text-sm font-semibold text-[color:var(--partner-text)] transition hover:bg-[var(--partner-hover)] disabled:opacity-60";
   const inputClass =
-    "w-full rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] px-4 py-3 text-sm text-[color:var(--partner-text)] outline-none transition placeholder:text-[color:var(--partner-faint)] focus:border-[color:var(--partner-accent)] focus:ring-4 focus:ring-cyan-500/10";
+    "w-full rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] px-4 py-3 text-base text-[color:var(--partner-text)] outline-none transition placeholder:text-[color:var(--partner-faint)] focus:border-[color:var(--partner-accent)] focus:ring-4 focus:ring-cyan-500/10 sm:text-sm";
+  const fieldLabelClass =
+    "text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--partner-muted)] sm:text-xs sm:tracking-[0.18em]";
+  const sectionLabelClass =
+    "text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--partner-muted)] sm:text-xs sm:tracking-[0.2em]";
   const mobilePanelButtonClass = (active: boolean) =>
     `rounded-xl px-3 py-2.5 text-xs font-semibold transition ${
       active
@@ -476,7 +480,7 @@ export default function PartnerProductionPage({
               </div>
               <h2 className="mt-8 text-2xl font-semibold tracking-tight">Enter password</h2>
               <form onSubmit={login} className="mt-6 space-y-4">
-                <label className="block text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--partner-muted)]">
+                <label className={`block ${fieldLabelClass}`}>
                   Partner password
                   <input
                     value={password}
@@ -594,7 +598,7 @@ export default function PartnerProductionPage({
                   placeholder="Search order, product, print"
                 />
               </label>
-              <label className="block text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--partner-muted)]">
+              <label className={`block ${fieldLabelClass}`}>
                 Sort queue
                 <select
                   value={sortKey}
@@ -713,7 +717,7 @@ export default function PartnerProductionPage({
                       Back to queue
                     </button>
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--partner-muted)]">
+                      <p className={sectionLabelClass}>
                         Order {selected.code}
                       </p>
                       <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold text-[color:var(--partner-muted)] ${softSurfaceClass}`}>
@@ -782,7 +786,7 @@ export default function PartnerProductionPage({
                 </div>
 
                 <div className={`${surfaceClass} p-4 sm:p-5`}>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--partner-muted)]">
+                  <p className={sectionLabelClass}>
                     Your response
                   </p>
                   <div className="mt-4 grid grid-cols-3 gap-2">
@@ -807,7 +811,7 @@ export default function PartnerProductionPage({
                   </div>
 
                   <div className="mt-5 grid gap-4">
-                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--partner-muted)]">
+                    <label className={fieldLabelClass}>
                       Completion days
                       <input
                         type="number"
@@ -823,7 +827,7 @@ export default function PartnerProductionPage({
                         placeholder="e.g. 3"
                       />
                     </label>
-                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--partner-muted)]">
+                    <label className={fieldLabelClass}>
                       Your price
                       <input
                         type="number"
@@ -839,7 +843,7 @@ export default function PartnerProductionPage({
                         placeholder="Rs"
                       />
                     </label>
-                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--partner-muted)]">
+                    <label className={fieldLabelClass}>
                       Production status
                       <select
                         value={draft.productionStatus}
@@ -858,7 +862,7 @@ export default function PartnerProductionPage({
                         ))}
                       </select>
                     </label>
-                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--partner-muted)]">
+                    <label className={fieldLabelClass}>
                       Comments for Ryan
                       <textarea
                         value={draft.comments}
@@ -873,7 +877,7 @@ export default function PartnerProductionPage({
                         placeholder="Production notes, price explanation, or delivery plan."
                       />
                     </label>
-                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--partner-muted)]">
+                    <label className={fieldLabelClass}>
                       Missing information
                       <textarea
                         value={draft.missingInformation}
@@ -1151,7 +1155,7 @@ function DetailPanel({
 }) {
   return (
     <section className="rounded-2xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] p-4 shadow-sm sm:p-5">
-      <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--partner-muted)]">
+      <div className="mb-4 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--partner-muted)] sm:text-xs sm:tracking-[0.18em]">
         <span className="text-[color:var(--partner-text)]">{icon}</span>
         {title}
       </div>
