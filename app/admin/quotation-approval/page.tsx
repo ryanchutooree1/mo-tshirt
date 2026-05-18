@@ -3505,6 +3505,183 @@ export default function QuotationApprovalPage() {
                         </div>
 
                         <div className="mt-4 space-y-3">
+                          <div className="rounded-[24px] border border-[#ebebeb] bg-white p-4">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <p className={labelClass}>Document Studio</p>
+                                <p className="mt-2 text-sm text-[#6a6a6a]">
+                                  Quick edit the document without leaving the workflow.
+                                </p>
+                              </div>
+                              <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${DOC_TYPE_TONES[draft.documentType]}`}>
+                                {documentTypeLabel}
+                              </span>
+                            </div>
+
+                            {sendValidationError ? (
+                              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+                                {sendValidationError}
+                              </div>
+                            ) : null}
+
+                            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                              <label className={labelClass}>
+                                Type
+                                <select
+                                  value={draft.documentType}
+                                  onChange={(e) =>
+                                    setDraft({ ...draft, documentType: e.target.value as DocumentType })
+                                  }
+                                  className={fieldClass}
+                                >
+                                  <option value="quotation">Quotation</option>
+                                  <option value="invoice">Invoice</option>
+                                  <option value="partial_receipt">Partial receipt</option>
+                                  <option value="receipt">Receipt</option>
+                                </select>
+                              </label>
+                              <label className={labelClass}>
+                                Number
+                                <input
+                                  value={draft.documentNumber}
+                                  onChange={(e) =>
+                                    setDraft({ ...draft, documentNumber: e.target.value })
+                                  }
+                                  className={fieldClass}
+                                  placeholder="Q-2026-001"
+                                />
+                              </label>
+                            </div>
+
+                            <div className="mt-4 space-y-3">
+                              {draft.lines.map((line, index) => (
+                                <div
+                                  key={`workflow-line-${index}`}
+                                  className="rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] p-3"
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <label className={`${labelClass} flex-1`}>
+                                      Line {index + 1}
+                                      <input
+                                        value={line.description}
+                                        onChange={(e) =>
+                                          updateDraftLine(index, { description: e.target.value })
+                                        }
+                                        className={fieldClass}
+                                        placeholder="Product / size / print"
+                                      />
+                                    </label>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeDraftLine(index)}
+                                      className="mt-7 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#ebebeb] bg-white text-[#717171] transition hover:border-[#ffd9c2] hover:bg-[#fff4ed] hover:text-[#c2410c]"
+                                      aria-label="Remove line item"
+                                    >
+                                      <FiXCircle className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                  <div className="mt-3 grid grid-cols-3 gap-2">
+                                    <label className={labelClass}>
+                                      Qty
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={line.quantity}
+                                        onChange={(e) =>
+                                          updateDraftLine(index, {
+                                            quantity: parseEditableNumber(e.target.value),
+                                          })
+                                        }
+                                        className={fieldClass}
+                                      />
+                                    </label>
+                                    <label className={labelClass}>
+                                      Unit price
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={line.unitPrice}
+                                        onChange={(e) =>
+                                          updateDraftLine(index, {
+                                            unitPrice: parseEditableNumber(e.target.value),
+                                          })
+                                        }
+                                        className={fieldClass}
+                                      />
+                                    </label>
+                                    <div className="rounded-2xl border border-[#ebebeb] bg-white px-3 py-3">
+                                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
+                                        Total
+                                      </div>
+                                      <div className="mt-2 text-sm font-semibold text-[#222222]">
+                                        {formatMoney(
+                                          safeNumber(line.quantity, 0) *
+                                            safeNumber(line.unitPrice, 0),
+                                          draft.currency
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => addDraftLine("Product / Size")}
+                              className={`mt-3 w-full ${secondaryButtonClass}`}
+                            >
+                              <FiPlus className="h-4 w-4" />
+                              Add line item
+                            </button>
+
+                            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                              <label className={labelClass}>
+                                Delivery fee
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={draft.deliveryFee}
+                                  onChange={(e) =>
+                                    setDraft({
+                                      ...draft,
+                                      deliveryFee: parseEditableNumber(e.target.value),
+                                    })
+                                  }
+                                  className={fieldClass}
+                                />
+                              </label>
+                              <label className={labelClass}>
+                                Discount
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={draft.discount}
+                                  onChange={(e) =>
+                                    setDraft({
+                                      ...draft,
+                                      discount: parseEditableNumber(e.target.value),
+                                    })
+                                  }
+                                  className={fieldClass}
+                                />
+                              </label>
+                            </div>
+
+                            <label className={`mt-4 block ${labelClass}`}>
+                              Notes to client
+                              <textarea
+                                value={draft.notes}
+                                onChange={(e) =>
+                                  setDraft({ ...draft, notes: e.target.value })
+                                }
+                                rows={3}
+                                className={`${fieldClass} resize-y`}
+                                placeholder="Add any extra details or delivery notes..."
+                              />
+                            </label>
+                          </div>
+
                           <div className="rounded-[24px] border border-[#ebebeb] bg-[#f7f7f7] p-4">
                             <div className="flex items-center justify-between">
                               <p className="text-sm font-semibold text-[#222222]">1. Save changes</p>
