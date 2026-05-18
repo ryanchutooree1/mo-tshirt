@@ -946,9 +946,6 @@ export default function PartnerProductionPage({
                     </p>
                   ) : null}
 
-                  <div className={`mt-5 rounded-xl border p-4 text-xs leading-5 text-[color:var(--partner-muted)] ${softSurfaceClass}`}>
-                    Customer name, phone, email, and address are hidden on this desk.
-                  </div>
                 </div>
               </div>
             </div>
