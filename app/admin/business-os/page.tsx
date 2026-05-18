@@ -261,7 +261,7 @@ const orderFlow = [
   "Ryan generates or checks mockup when needed",
   "Client approves mockup and total price",
   "Payment collected before production unless trusted business account",
-  "Production assigned to Yan, Shabnaaz, or internal vinyl route",
+  "Production assigned to Yan, Shabbanaz, or internal vinyl route",
   "Quality check: logo position, size, color, garment count, packaging",
   "Delivery or pickup confirmed with proof",
   "Follow-up sent and repeat order reminder created",
@@ -293,7 +293,7 @@ const sops = [
     icon: Factory,
     items: [
       "DTF goes to Yan only when complex or individual order.",
-      "Serie goes to Shabnaaz for bulk simple logos.",
+      "Serie goes to Shabbanaz for bulk simple logos.",
       "Vinyl is reserved for simple premium jobs with stronger margin.",
       "Mockup QA: logo position, scale, side, alignment, and approval screenshot.",
     ],
@@ -346,7 +346,7 @@ const roles = [
     decisions: "Can accept or reject DTF capacity and confirm production timing.",
   },
   {
-    name: "Shabnaaz",
+    name: "Shabbanaz",
     badge: "Serie Printing 🧵",
     does: "Prints bulk T-shirts and polos at Rs 100 per print when blanks are supplied.",
     never: "Never decides client price or changes placement without approval.",
@@ -953,7 +953,7 @@ export default function BusinessOsPage() {
             </div>
             <div className="mt-4 grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
               <div>
-                <strong>Serie:</strong> Shabnaaz print cost starts at Rs 100 per side. Use the table total cost for large sizes.
+                <strong>Serie:</strong> Shabbanaz print cost starts at Rs 100 per side. Use the table total cost for large sizes.
               </div>
               <div>
                 <strong>Vinyl:</strong> use for simple one-color premium jobs. Costs are estimated, so keep checking material usage.

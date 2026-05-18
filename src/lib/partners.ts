@@ -6,7 +6,7 @@ export const PRINT_PARTNERS = [
   },
   {
     id: "shabanaz",
-    name: "Shabanaz",
+    name: "Shabbanaz",
     path: "/admin/shab_list",
   },
 ] as const;

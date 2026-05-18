@@ -2698,7 +2698,7 @@ export default function QuotationApprovalPage() {
                           <div>
                             <p className={labelClass}>Visible fields</p>
                             <p className="mt-1 text-sm text-[#6a6a6a]">
-                              Select exactly what Yan and Shabanaz can view for this order.
+                              Select exactly what Yan and Shabbanaz can view for this order.
                             </p>
                           </div>
                           <span className="rounded-full border border-[#ebebeb] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#717171]">
@@ -2771,7 +2771,7 @@ export default function QuotationApprovalPage() {
                               ? "Sending to both..."
                               : selectedPartnerIds.length > 1 && !lockedPartner
                                 ? "Update both partner views"
-                                : "Send to Yan + Shabanaz"}
+                                : "Send to Yan + Shabbanaz"}
                           </button>
                         </div>
                       </div>
@@ -2923,7 +2923,7 @@ export default function QuotationApprovalPage() {
                           </div>
                         ) : (
                           <div className="mt-4 rounded-2xl border border-dashed border-[#d9d9d9] bg-white px-4 py-8 text-center text-sm text-[#717171]">
-                            Select visible fields, then move this order to Yan, Shabanaz, or both.
+                            Select visible fields, then move this order to Yan, Shabbanaz, or both.
                           </div>
                         )}
                       </div>
