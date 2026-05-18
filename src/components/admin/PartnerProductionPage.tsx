@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import Image from "next/image";
+import BackgroundRemoverPage from "@/components/admin/BackgroundRemoverPage";
 import {
   FiAlertTriangle,
   FiCalendar,
@@ -564,6 +565,30 @@ export default function PartnerProductionPage({
           </div>
         </div>
       </header>
+
+      <div className="mx-auto max-w-[1500px] px-3 pt-3 sm:px-6 sm:pt-5 lg:px-8">
+        <details className={`${surfaceClass} group overflow-hidden`}>
+          <summary className="flex cursor-pointer list-none flex-col gap-3 p-4 marker:hidden sm:flex-row sm:items-center sm:justify-between sm:p-5 [&::-webkit-details-marker]:hidden">
+            <div>
+              <p className={sectionLabelClass}>Tools for today</p>
+              <h2 className="mt-2 flex items-center gap-2 text-xl font-semibold tracking-tight sm:text-2xl">
+                <FiImage className="h-5 w-5 text-[color:var(--partner-muted)]" />
+                Background Remover
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-[color:var(--partner-muted)]">
+                Remove backgrounds from logo and artwork files, then download a transparent PNG.
+              </p>
+            </div>
+            <span className={`${secondaryButtonClass} pointer-events-none text-xs sm:text-sm`}>
+              <span className="group-open:hidden">Open tool</span>
+              <span className="hidden group-open:inline">Hide tool</span>
+            </span>
+          </summary>
+          <div className="border-t border-[color:var(--partner-border)] p-3 sm:p-5">
+            <BackgroundRemoverPage />
+          </div>
+        </details>
+      </div>
 
       <div className="mx-auto px-3 pt-3 sm:px-6 lg:hidden">
         <div className={`${surfaceClass} grid grid-cols-2 gap-1 p-1`}>
