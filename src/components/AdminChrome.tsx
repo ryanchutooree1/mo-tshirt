@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -389,13 +390,20 @@ export default function AdminChrome({
               </div>
             </div>
             <div
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+              className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full ${
                 isDark
-                  ? "border border-slate-700 bg-slate-900 text-slate-100"
-                  : "bg-[#222222] text-white shadow-[0_12px_28px_rgba(0,0,0,0.14)]"
+                  ? "border border-slate-700 bg-white"
+                  : "bg-white shadow-[0_12px_28px_rgba(0,0,0,0.14)]"
               }`}
             >
-              MO
+              <Image
+                src="/logo_transparent.png"
+                alt="MO T-SHIRT"
+                width={96}
+                height={96}
+                className="h-10 w-10 object-contain"
+                priority={false}
+              />
             </div>
           </div>
         </div>
