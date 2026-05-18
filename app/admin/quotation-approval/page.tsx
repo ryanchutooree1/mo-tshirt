@@ -746,6 +746,19 @@ const parseQuotePartnerAssignment = (value: unknown): QuotePartnerAssignment | n
   };
 };
 
+const partnerResponseHasContent = (response: QuotePartnerResponse) => {
+  return (
+    response.requestStatus !== "pending" ||
+    response.productionStatus !== "not_started" ||
+    Boolean(
+      response.completionDays ||
+        response.price ||
+        response.comments ||
+        response.missingInformation
+    )
+  );
+};
+
 const formatMoney = (value: number, currency = "Rs") => {
   return formatDisplayMoney(value, currency);
 };
@@ -1355,6 +1368,28 @@ export default function QuotationApprovalPage() {
   const lockedPartner = selected?.partner?.lockedBy
     ? getPrintPartner(selected.partner.lockedBy)
     : null;
+  const isSharedPartnerOffer = selectedPartnerIds.length > 1 && !lockedPartner;
+  const selectedPartnerResponses = selectedPartnerIds.map((partnerId) => {
+    const response = selected?.partner?.responses?.find(
+      (entry) => entry.partnerId === partnerId
+    );
+    if (response) return response;
+    return {
+      partnerId,
+      partnerName: getPrintPartner(partnerId).name,
+      requestStatus: "pending",
+      productionStatus: "not_started",
+      completionDays: null,
+      price: null,
+      comments: "",
+      missingInformation: "",
+      respondedAt: null,
+      updatedAt: null,
+    } satisfies QuotePartnerResponse;
+  });
+  const selectedPartnerResponseCount = selectedPartnerResponses.filter(
+    partnerResponseHasContent
+  ).length;
 
   const selectedDesignBrief = useMemo(
     () => parseDesignBrief(selected?.designBrief),
@@ -2785,13 +2820,17 @@ export default function QuotationApprovalPage() {
                                 ? `${lockedPartner.name} owns this job`
                                 : selectedPartnerLabel}
                             </h4>
-                            {selectedPartnerIds.length > 1 && !lockedPartner ? (
+                            {isSharedPartnerOffer ? (
                               <p className="mt-1 text-xs font-semibold text-[#717171]">
-                                Shared offer: the first accepted response removes it from the other partner&apos;s desk.
+                                Compare both partner responses here. The first accepted response removes it from the other partner&apos;s desk.
                               </p>
                             ) : null}
                           </div>
-                          {selected.partner?.requestStatus ? (
+                          {isSharedPartnerOffer ? (
+                            <span className="rounded-full border border-[#ebebeb] bg-white px-3 py-1.5 text-xs font-semibold text-[#717171]">
+                              {selectedPartnerResponseCount}/{selectedPartnerIds.length} responded
+                            </span>
+                          ) : selected.partner?.requestStatus ? (
                             <span
                               className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
                                 PARTNER_DECISION_TONES[selected.partner.requestStatus]
@@ -2809,26 +2848,34 @@ export default function QuotationApprovalPage() {
                         {selectedPartnerIds.length ? (
                           <div className="mt-4 space-y-3 text-sm">
                             <div className="flex flex-wrap gap-2">
-                              {selectedPartnerIds.map((partnerId) => (
+                              {selectedPartnerResponses.map((response) => (
                                 <span
-                                  key={partnerId}
+                                  key={response.partnerId}
                                   className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
-                                    selected.partner?.lockedBy === partnerId
+                                    selected.partner?.lockedBy === response.partnerId
                                       ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                      : partnerResponseHasContent(response)
+                                        ? PARTNER_DECISION_TONES[response.requestStatus]
                                       : "border-[#ebebeb] bg-white text-[#717171]"
                                   }`}
                                 >
-                                  {getPrintPartner(partnerId).name}
-                                  {selected.partner?.lockedBy === partnerId ? " accepted" : ""}
+                                  {response.partnerName}
+                                  {selected.partner?.lockedBy === response.partnerId ? " accepted" : ""}
                                 </span>
                               ))}
                             </div>
-                            {selectedPartnerIds.length > 1 && selected.partner?.responses?.length ? (
-                              <div className="space-y-2">
-                                {selected.partner.responses.map((response) => (
+                            {isSharedPartnerOffer ? (
+                              <div className="space-y-3">
+                                {selectedPartnerResponses.map((response) => {
+                                  const hasResponse = partnerResponseHasContent(response);
+                                  return (
                                   <div
                                     key={response.partnerId}
-                                    className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3"
+                                    className={`rounded-2xl border px-4 py-3 ${
+                                      hasResponse
+                                        ? "border-[#ebebeb] bg-white"
+                                        : "border-dashed border-[#d9d9d9] bg-white/70"
+                                    }`}
                                   >
                                     <div className="flex flex-wrap items-center justify-between gap-2">
                                       <div className="font-semibold text-[#222222]">
@@ -2842,17 +2889,35 @@ export default function QuotationApprovalPage() {
                                         {PARTNER_DECISION_LABELS[response.requestStatus]}
                                       </span>
                                     </div>
-                                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[#717171]">
-                                      <span>
-                                        {response.completionDays
-                                          ? `${response.completionDays} day${response.completionDays === 1 ? "" : "s"}`
-                                          : "No days given"}
-                                      </span>
-                                      <span>
-                                        {response.price
-                                          ? formatMoney(response.price, "Rs")
-                                          : "No price given"}
-                                      </span>
+                                    <div className="mt-3 grid grid-cols-3 gap-2">
+                                      <div className="rounded-xl border border-[#ebebeb] bg-[#f7f7f7] px-3 py-2">
+                                        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#717171]">
+                                          Days
+                                        </div>
+                                        <div className="mt-1 font-semibold text-[#222222]">
+                                          {response.completionDays
+                                            ? `${response.completionDays}`
+                                            : "-"}
+                                        </div>
+                                      </div>
+                                      <div className="rounded-xl border border-[#ebebeb] bg-[#f7f7f7] px-3 py-2">
+                                        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#717171]">
+                                          Price
+                                        </div>
+                                        <div className="mt-1 font-semibold text-[#222222]">
+                                          {response.price
+                                            ? formatMoney(response.price, "Rs")
+                                            : "-"}
+                                        </div>
+                                      </div>
+                                      <div className="rounded-xl border border-[#ebebeb] bg-[#f7f7f7] px-3 py-2">
+                                        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#717171]">
+                                          Status
+                                        </div>
+                                        <div className="mt-1 line-clamp-2 font-semibold text-[#222222]">
+                                          {PARTNER_PRODUCTION_STATUS_LABELS[response.productionStatus]}
+                                        </div>
+                                      </div>
                                     </div>
                                     {response.comments ? (
                                       <p className="mt-2 whitespace-pre-wrap text-sm text-[#484848]">
@@ -2864,62 +2929,71 @@ export default function QuotationApprovalPage() {
                                         {response.missingInformation}
                                       </p>
                                     ) : null}
+                                    {!hasResponse ? (
+                                      <p className="mt-3 rounded-xl border border-dashed border-[#d9d9d9] bg-[#f7f7f7] px-3 py-2 text-xs font-semibold text-[#717171]">
+                                        Waiting for {response.partnerName} to give days, price, or a decision.
+                                      </p>
+                                    ) : null}
                                   </div>
-                                ))}
+                                  );
+                                })}
                               </div>
-                            ) : null}
-                            <div className="grid grid-cols-2 gap-3">
-                              <div className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3">
-                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
-                                  Completion
+                            ) : (
+                              <>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3">
+                                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
+                                      Completion
+                                    </div>
+                                    <div className="mt-1 font-semibold text-[#222222]">
+                                      {selected.partner?.completionDays
+                                        ? `${selected.partner.completionDays} day${selected.partner.completionDays === 1 ? "" : "s"}`
+                                        : "Not given"}
+                                    </div>
+                                  </div>
+                                  <div className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3">
+                                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
+                                      Partner price
+                                    </div>
+                                    <div className="mt-1 font-semibold text-[#222222]">
+                                      {selected.partner?.price
+                                        ? formatMoney(selected.partner.price, "Rs")
+                                        : "Not given"}
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="mt-1 font-semibold text-[#222222]">
-                                  {selected.partner?.completionDays
-                                    ? `${selected.partner.completionDays} day${selected.partner.completionDays === 1 ? "" : "s"}`
-                                    : "Not given"}
+                                <div className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3">
+                                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
+                                    Production status
+                                  </div>
+                                  <div className="mt-1 font-semibold text-[#222222]">
+                                    {selected.partner?.productionStatus
+                                      ? PARTNER_PRODUCTION_STATUS_LABELS[selected.partner.productionStatus]
+                                      : "Not started"}
+                                  </div>
                                 </div>
-                              </div>
-                              <div className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3">
-                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
-                                  Partner price
-                                </div>
-                                <div className="mt-1 font-semibold text-[#222222]">
-                                  {selected.partner?.price
-                                    ? formatMoney(selected.partner.price, "Rs")
-                                    : "Not given"}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3">
-                              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
-                                Production status
-                              </div>
-                              <div className="mt-1 font-semibold text-[#222222]">
-                                {selected.partner?.productionStatus
-                                  ? PARTNER_PRODUCTION_STATUS_LABELS[selected.partner.productionStatus]
-                                  : "Not started"}
-                              </div>
-                            </div>
-                            {selected.partner?.comments ? (
-                              <div className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3">
-                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
-                                  Comments
-                                </div>
-                                <p className="mt-1 whitespace-pre-wrap text-[#484848]">
-                                  {selected.partner.comments}
-                                </p>
-                              </div>
-                            ) : null}
-                            {selected.partner?.missingInformation ? (
-                              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
-                                <div className="text-[11px] font-semibold uppercase tracking-[0.18em]">
-                                  Missing information
-                                </div>
-                                <p className="mt-1 whitespace-pre-wrap">
-                                  {selected.partner.missingInformation}
-                                </p>
-                              </div>
-                            ) : null}
+                                {selected.partner?.comments ? (
+                                  <div className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3">
+                                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
+                                      Comments
+                                    </div>
+                                    <p className="mt-1 whitespace-pre-wrap text-[#484848]">
+                                      {selected.partner.comments}
+                                    </p>
+                                  </div>
+                                ) : null}
+                                {selected.partner?.missingInformation ? (
+                                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
+                                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em]">
+                                      Missing information
+                                    </div>
+                                    <p className="mt-1 whitespace-pre-wrap">
+                                      {selected.partner.missingInformation}
+                                    </p>
+                                  </div>
+                                ) : null}
+                              </>
+                            )}
                           </div>
                         ) : (
                           <div className="mt-4 rounded-2xl border border-dashed border-[#d9d9d9] bg-white px-4 py-8 text-center text-sm text-[#717171]">
