@@ -132,14 +132,60 @@ export default function HomePage() {
     <div id="top" className="min-h-screen bg-white text-black">
       <LocationJump />
       <header className="sticky top-0 z-40 border-b border-[#EAEAEA] bg-white/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-3 sm:h-20 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-0">
-          <Link href="#top" className="flex items-center justify-center sm:justify-start" aria-label="MO T-SHIRT Home">
-            <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={150} height={60} priority className="h-9 w-auto sm:h-12" />
+        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:h-20 sm:gap-4 sm:px-6">
+          <Link href="#top" className="flex shrink-0 items-center" aria-label="MO T-SHIRT Home">
+            <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={150} height={60} priority className="h-8 w-auto sm:h-12" />
           </Link>
-          <div className="sm:mx-0 sm:px-0">
+
+          <details className="group relative sm:hidden">
+            <summary className="flex list-none items-center gap-2 rounded-full border border-[#EAEAEA] bg-white px-4 py-2 text-sm font-semibold text-black/75 shadow-sm marker:hidden">
+              Menu
+              <span className="flex h-4 w-4 flex-col justify-center gap-1" aria-hidden="true">
+                <span className="h-0.5 w-4 rounded-full bg-current transition group-open:translate-y-1.5 group-open:rotate-45" />
+                <span className="h-0.5 w-4 rounded-full bg-current transition group-open:opacity-0" />
+                <span className="h-0.5 w-4 rounded-full bg-current transition group-open:-translate-y-1.5 group-open:-rotate-45" />
+              </span>
+            </summary>
+            <nav
+              aria-label="Mobile primary"
+              className="absolute right-0 top-[calc(100%+0.75rem)] grid w-[min(86vw,320px)] gap-2 rounded-[24px] border border-[#EAEAEA] bg-white p-3 text-sm font-semibold text-black/75 shadow-[0_20px_55px_rgba(0,0,0,0.14)]"
+            >
+              {navLinks.map((link) =>
+                link.label === "WhatsApp" ? (
+                  <TrackedWhatsAppLink
+                    key={link.label}
+                    href={link.href}
+                    trackingLocation="home_header_mobile"
+                    trackingSource="homepage"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-2xl px-4 py-3 transition hover:bg-neutral-50 hover:text-black"
+                  >
+                    {link.label}
+                  </TrackedWhatsAppLink>
+                ) : (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    className={`rounded-2xl px-4 py-3 transition ${
+                      link.buttonTone === "orange"
+                        ? "bg-[#FF6600] text-white shadow-sm hover:bg-orange-600"
+                        : link.buttonTone === "rainbow"
+                          ? "bg-[linear-gradient(135deg,#22d3ee_0%,#8b5cf6_52%,#ec4899_100%)] text-white shadow-[0_14px_28px_-16px_rgba(124,58,237,0.75)] hover:brightness-110"
+                          : "hover:bg-neutral-50 hover:text-black"
+                    }`}
+                  >
+                    {link.label}
+                  </a>
+                )
+              )}
+            </nav>
+          </details>
+
+          <div className="hidden sm:mx-0 sm:block sm:px-0">
             <nav
               aria-label="Primary"
-              className="flex flex-wrap items-center justify-center gap-3 text-base font-semibold text-black/70 sm:justify-end sm:gap-x-6 sm:gap-y-3 sm:text-sm sm:font-medium"
+              className="flex flex-wrap items-center justify-end gap-x-6 gap-y-3 text-sm font-medium text-black/70"
             >
               {navLinks.map((link) => (
                 link.label === "WhatsApp" ? (
@@ -150,7 +196,7 @@ export default function HomePage() {
                     trackingSource="homepage"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex min-h-12 items-center justify-center whitespace-nowrap rounded-full border border-[#EAEAEA] bg-white px-5 py-3 leading-none transition hover:border-black hover:text-black sm:min-h-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-full leading-none transition hover:border-black hover:text-black"
                   >
                     {link.label}
                   </TrackedWhatsAppLink>
@@ -158,12 +204,12 @@ export default function HomePage() {
                   <a
                     key={link.label}
                     href={link.href}
-                    className={`inline-flex min-h-12 items-center justify-center whitespace-nowrap rounded-full border px-5 py-3 leading-none transition ${
+                    className={`inline-flex items-center justify-center whitespace-nowrap rounded-full leading-none transition ${
                       link.buttonTone === "orange"
-                        ? "border-transparent bg-[#FF6600] text-white shadow-sm hover:bg-orange-600 sm:min-h-10 sm:px-5 sm:py-2 sm:text-sm"
+                        ? "min-h-10 border-transparent bg-[#FF6600] px-5 py-2 text-sm text-white shadow-sm hover:bg-orange-600"
                         : link.buttonTone === "rainbow"
-                          ? "border-transparent bg-[linear-gradient(135deg,#22d3ee_0%,#8b5cf6_52%,#ec4899_100%)] font-semibold text-white shadow-[0_14px_28px_-16px_rgba(124,58,237,0.75)] hover:brightness-110 sm:min-h-10 sm:px-5 sm:py-2 sm:text-sm"
-                          : "border-[#EAEAEA] bg-white text-black/70 hover:border-black hover:text-black sm:min-h-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
+                          ? "min-h-10 border-transparent bg-[linear-gradient(135deg,#22d3ee_0%,#8b5cf6_52%,#ec4899_100%)] px-5 py-2 text-sm font-semibold text-white shadow-[0_14px_28px_-16px_rgba(124,58,237,0.75)] hover:brightness-110"
+                          : "text-black/70 hover:text-black"
                     }`}
                   >
                     {link.label}
