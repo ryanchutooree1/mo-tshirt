@@ -42,6 +42,7 @@ import {
 type SessionState = "checking" | "signed_out" | "signed_in";
 type FilterKey = "all" | "pending" | "accepted" | "active" | "completed" | "rejected";
 type SortKey = "assigned" | "deadline" | "status";
+type MobilePanel = "queue" | "order";
 
 type ResponseDraft = {
   decision: PartnerDecision;
@@ -190,6 +191,7 @@ export default function PartnerProductionPage({
   const [filter, setFilter] = useState<FilterKey>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("assigned");
+  const [mobilePanel, setMobilePanel] = useState<MobilePanel>("queue");
   const [draft, setDraft] = useState<ResponseDraft>(() => buildDraft(null));
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -244,9 +246,15 @@ export default function PartnerProductionPage({
   const softSurfaceClass =
     "border-[color:var(--partner-border)] bg-[var(--partner-soft)]";
   const secondaryButtonClass =
-    "inline-flex items-center gap-2 rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] px-4 py-2.5 text-sm font-semibold text-[color:var(--partner-text)] transition hover:bg-[var(--partner-hover)] disabled:opacity-60";
+    "inline-flex items-center justify-center gap-2 rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] px-4 py-2.5 text-sm font-semibold text-[color:var(--partner-text)] transition hover:bg-[var(--partner-hover)] disabled:opacity-60";
   const inputClass =
     "w-full rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] px-4 py-3 text-sm text-[color:var(--partner-text)] outline-none transition placeholder:text-[color:var(--partner-faint)] focus:border-[color:var(--partner-accent)] focus:ring-4 focus:ring-cyan-500/10";
+  const mobilePanelButtonClass = (active: boolean) =>
+    `rounded-xl px-3 py-2.5 text-xs font-semibold transition ${
+      active
+        ? "bg-[var(--partner-accent)] text-[color:var(--partner-accent-text)]"
+        : "text-[color:var(--partner-muted)] hover:bg-[var(--partner-hover)]"
+    }`;
 
   const counts = useMemo(() => {
     return orders.reduce(
@@ -289,6 +297,7 @@ export default function PartnerProductionPage({
         ? (data.orders as PartnerOrderView[])
         : [];
       setOrders(nextOrders);
+      if (nextOrders.length === 1) setMobilePanel("order");
       setSelectedId((current) => {
         if (current && nextOrders.some((order) => order.id === current)) return current;
         return nextOrders[0]?.id || null;
@@ -384,6 +393,7 @@ export default function PartnerProductionPage({
           current.map((order) => (order.id === updated.id ? updated : order))
         );
         setDraft(buildDraft(updated));
+        setSelectedId(updated.id);
       }
       setNotice("Saved.");
     } catch (error) {
@@ -409,7 +419,10 @@ export default function PartnerProductionPage({
 
   if (sessionState === "signed_out") {
     return (
-      <main style={themeVars} className={`px-5 py-8 sm:px-8 ${shellClass}`}>
+      <main
+        style={themeVars}
+        className={`px-4 py-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-8 sm:py-8 ${shellClass}`}
+      >
         <div className="mx-auto flex max-w-6xl justify-end">
           <button
             type="button"
@@ -423,18 +436,18 @@ export default function PartnerProductionPage({
         </div>
         <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl items-center">
           <div className="grid w-full gap-6 lg:grid-cols-[1fr_420px] lg:items-center">
-            <section className="py-8">
+            <section className="py-6 sm:py-8">
               <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold text-[color:var(--partner-muted)] ${softSurfaceClass}`}>
                 <span className="h-2 w-2 rounded-full bg-emerald-400" />
                 MO T-SHIRT partner production
               </div>
-              <h1 className="mt-6 max-w-3xl text-4xl font-semibold tracking-tight text-[color:var(--partner-text)] sm:text-6xl">
+              <h1 className="mt-5 max-w-3xl text-3xl font-semibold tracking-tight text-[color:var(--partner-text)] sm:mt-6 sm:text-6xl">
                 {partner.name} production desk
               </h1>
-              <p className="mt-5 max-w-2xl text-base leading-7 text-[color:var(--partner-muted)]">
+              <p className="mt-4 max-w-2xl text-sm leading-6 text-[color:var(--partner-muted)] sm:mt-5 sm:text-base sm:leading-7">
                 Orders assigned by Ryan appear here with only the production details he chooses to share.
               </p>
-              <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
+              <div className="mt-6 grid max-w-2xl gap-3 sm:mt-8 sm:grid-cols-3">
                 {[
                   ["Accept or reject", "Confirm capacity fast."],
                   ["Price your work", "Send cost and timing."],
@@ -448,7 +461,7 @@ export default function PartnerProductionPage({
               </div>
             </section>
 
-            <section className={`${surfaceClass} p-6 sm:p-8`}>
+            <section className={`${surfaceClass} p-5 sm:p-8`}>
               <div className="flex items-center justify-between gap-4">
                 <Image
                   src="/logo_transparent.png"
@@ -499,9 +512,9 @@ export default function PartnerProductionPage({
   return (
     <main style={themeVars} className={shellClass}>
       <header className="border-b border-[color:var(--partner-border)] bg-[var(--partner-card)]">
-        <div className="mx-auto flex max-w-[1500px] flex-col gap-5 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+        <div className="mx-auto flex max-w-[1500px] flex-col gap-4 px-3 py-4 sm:gap-5 sm:px-6 sm:py-5 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div>
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold text-[color:var(--partner-text)] ${softSurfaceClass}`}>
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
                 {partner.name}
@@ -513,15 +526,15 @@ export default function PartnerProductionPage({
                 {filteredOrders.length} of {orders.length} orders
               </span>
             </div>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+            <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-4xl">
               Assigned orders
             </h1>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
             <button
               type="button"
               onClick={toggleTheme}
-              className={secondaryButtonClass}
+              className={`${secondaryButtonClass} px-2 text-xs sm:px-4 sm:text-sm`}
               aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
             >
               {isDark ? <FiSun className="h-4 w-4" /> : <FiMoon className="h-4 w-4" />}
@@ -531,7 +544,7 @@ export default function PartnerProductionPage({
               type="button"
               onClick={loadOrders}
               disabled={loadingOrders}
-              className={secondaryButtonClass}
+              className={`${secondaryButtonClass} px-2 text-xs sm:px-4 sm:text-sm`}
             >
               <FiRefreshCw className={`h-4 w-4 ${loadingOrders ? "animate-spin" : ""}`} />
               Refresh
@@ -539,7 +552,7 @@ export default function PartnerProductionPage({
             <button
               type="button"
               onClick={logout}
-              className={secondaryButtonClass}
+              className={`${secondaryButtonClass} px-2 text-xs sm:px-4 sm:text-sm`}
             >
               <FiLogOut className="h-4 w-4" />
               Logout
@@ -548,9 +561,28 @@ export default function PartnerProductionPage({
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-[1500px] gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:px-8">
-        <aside className="space-y-4">
-          <div className={`${surfaceClass} p-4`}>
+      <div className="mx-auto px-3 pt-3 sm:px-6 lg:hidden">
+        <div className={`${surfaceClass} grid grid-cols-2 gap-1 p-1`}>
+          <button
+            type="button"
+            onClick={() => setMobilePanel("queue")}
+            className={mobilePanelButtonClass(mobilePanel === "queue")}
+          >
+            Queue ({filteredOrders.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobilePanel("order")}
+            className={mobilePanelButtonClass(mobilePanel === "order")}
+          >
+            {selected ? selected.code : "Order"}
+          </button>
+        </div>
+      </div>
+
+      <div className="mx-auto grid max-w-[1500px] gap-4 px-3 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:gap-6 sm:px-6 sm:py-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:px-8">
+        <aside className={`${mobilePanel === "queue" ? "block" : "hidden"} space-y-4 lg:block`}>
+          <div className={`${surfaceClass} p-3 sm:p-4`}>
             <div className="grid gap-3">
               <label className="relative block">
                 <span className="sr-only">Search orders</span>
@@ -577,8 +609,8 @@ export default function PartnerProductionPage({
             </div>
           </div>
 
-          <div className={`${surfaceClass} p-4`}>
-            <div className="grid grid-cols-2 gap-2">
+          <div className={`${surfaceClass} p-3 sm:p-4`}>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-2">
               {(
                 [
                   ["all", "All", counts.all],
@@ -595,7 +627,7 @@ export default function PartnerProductionPage({
                     key={key}
                     type="button"
                     onClick={() => setFilter(key)}
-                    className={`rounded-xl border px-3 py-2.5 text-left text-xs font-semibold transition ${
+                    className={`rounded-xl border px-2 py-2.5 text-left text-xs font-semibold transition sm:px-3 ${
                       active
                         ? "border-[color:var(--partner-accent)] bg-[var(--partner-accent)] text-[color:var(--partner-accent-text)]"
                         : "border-[color:var(--partner-border)] bg-[var(--partner-soft)] text-[color:var(--partner-text)] hover:bg-[var(--partner-hover)]"
@@ -609,20 +641,23 @@ export default function PartnerProductionPage({
             </div>
           </div>
 
-          <div className={`${surfaceClass} p-3`}>
+          <div className={`${surfaceClass} p-2 sm:p-3`}>
             {ordersError ? (
               <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
                 {ordersError}
               </div>
             ) : null}
-            <div className="space-y-2">
+            <div className="max-h-[58vh] space-y-2 overflow-y-auto pr-1 lg:max-h-none lg:overflow-visible lg:pr-0">
               {filteredOrders.map((order) => {
                 const active = selected?.id === order.id;
                 return (
                   <button
                     key={order.id}
                     type="button"
-                    onClick={() => setSelectedId(order.id)}
+                    onClick={() => {
+                      setSelectedId(order.id);
+                      setMobilePanel("order");
+                    }}
                     className={`w-full rounded-xl border p-4 text-left transition ${
                       active
                         ? "border-[color:var(--partner-accent)] bg-[var(--partner-accent)] text-[color:var(--partner-accent-text)]"
@@ -647,9 +682,9 @@ export default function PartnerProductionPage({
                       </span>
                     </div>
                     <div className={`mt-3 grid grid-cols-3 gap-2 text-[11px] ${active ? "text-white/75" : "text-[color:var(--partner-muted)]"}`}>
-                      <span>{order.summary.pieces ? `${order.summary.pieces} pcs` : "Qty hidden"}</span>
-                      <span>{order.summary.deadline || "No deadline"}</span>
-                      <span>{getDetailCount(order.details)} fields</span>
+                      <span className="truncate">{order.summary.pieces ? `${order.summary.pieces} pcs` : "Qty hidden"}</span>
+                      <span className="truncate">{order.summary.deadline || "No deadline"}</span>
+                      <span className="truncate">{getDetailCount(order.details)} fields</span>
                     </div>
                   </button>
                 );
@@ -663,12 +698,20 @@ export default function PartnerProductionPage({
           </div>
         </aside>
 
-        <section className="min-w-0">
+        <section className={`${mobilePanel === "order" ? "block" : "hidden"} min-w-0 lg:block`}>
           {selected ? (
-            <div className="space-y-5">
-              <div className={`${surfaceClass} p-5 sm:p-6`}>
+            <div className="space-y-4 sm:space-y-5">
+              <div className={`${surfaceClass} p-4 sm:p-6`}>
                 <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                   <div>
+                    <button
+                      type="button"
+                      onClick={() => setMobilePanel("queue")}
+                      className={`${secondaryButtonClass} mb-4 text-xs lg:hidden`}
+                    >
+                      <FiChevronLeft className="h-4 w-4" />
+                      Back to queue
+                    </button>
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--partner-muted)]">
                         Order {selected.code}
@@ -677,7 +720,7 @@ export default function PartnerProductionPage({
                         {selectedIndex + 1} of {filteredOrders.length}
                       </span>
                     </div>
-                    <h2 className="mt-2 text-3xl font-semibold tracking-tight">
+                    <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
                       {selected.summary.product || "Production details"}
                     </h2>
                     <div className="mt-4 flex flex-wrap gap-2">
@@ -691,12 +734,12 @@ export default function PartnerProductionPage({
                         Assigned {formatDate(selected.assignedAt)}
                       </span>
                     </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                       <button
                         type="button"
                         onClick={() => selectQueueOffset(-1)}
                         disabled={filteredOrders.length < 2}
-                        className={secondaryButtonClass}
+                        className={`${secondaryButtonClass} text-xs sm:text-sm`}
                       >
                         <FiChevronLeft className="h-4 w-4" />
                         Previous
@@ -705,7 +748,7 @@ export default function PartnerProductionPage({
                         type="button"
                         onClick={() => selectQueueOffset(1)}
                         disabled={filteredOrders.length < 2}
-                        className={secondaryButtonClass}
+                        className={`${secondaryButtonClass} text-xs sm:text-sm`}
                       >
                         Next
                         <FiChevronRight className="h-4 w-4" />
@@ -713,7 +756,7 @@ export default function PartnerProductionPage({
                     </div>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[520px]">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 xl:min-w-[520px]">
                     <Metric
                       icon={<FiPackage />}
                       label="Quantity"
@@ -733,12 +776,12 @@ export default function PartnerProductionPage({
                 </div>
               </div>
 
-              <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
+              <div className="grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
                 <div className="space-y-5">
                   <OrderDetails details={selected.details} />
                 </div>
 
-                <div className={`${surfaceClass} p-5`}>
+                <div className={`${surfaceClass} p-4 sm:p-5`}>
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--partner-muted)]">
                     Your response
                   </p>
@@ -915,12 +958,12 @@ function Metric({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-soft)] p-4">
-      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--partner-muted)]">
+    <div className="rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-soft)] p-3 sm:p-4">
+      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[color:var(--partner-muted)] sm:gap-2 sm:text-xs sm:tracking-[0.16em]">
         <span className="text-[color:var(--partner-text)]">{icon}</span>
         {label}
       </div>
-      <div className="mt-2 line-clamp-2 text-sm font-semibold text-[color:var(--partner-text)]">{value}</div>
+      <div className="mt-2 line-clamp-2 text-xs font-semibold text-[color:var(--partner-text)] sm:text-sm">{value}</div>
     </div>
   );
 }
@@ -940,7 +983,7 @@ function DecisionButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl border px-2 text-xs font-semibold transition ${
+      className={`flex min-h-16 flex-col items-center justify-center gap-2 rounded-xl border px-2 text-xs font-semibold transition sm:min-h-20 ${
         active
           ? "border-[color:var(--partner-accent)] bg-[var(--partner-accent)] text-[color:var(--partner-accent-text)]"
           : "border-[color:var(--partner-border)] bg-[var(--partner-soft)] text-[color:var(--partner-text)] hover:bg-[var(--partner-hover)]"
@@ -979,7 +1022,7 @@ function OrderDetails({ details }: { details: PartnerOrderDetails }) {
                     key={`${attachment.url || attachment.filename}-${index}`}
                     className="rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-soft)] p-3"
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-[color:var(--partner-text)]">
                           {attachment.filename}
@@ -990,7 +1033,7 @@ function OrderDetails({ details }: { details: PartnerOrderDetails }) {
                         </p>
                       </div>
                       {attachment.url ? (
-                        <div className="flex shrink-0 items-center gap-2">
+                        <div className="flex shrink-0 items-center gap-2 self-start">
                           <a
                             href={attachment.url}
                             target="_blank"
@@ -1014,7 +1057,7 @@ function OrderDetails({ details }: { details: PartnerOrderDetails }) {
                       <img
                         src={attachment.url}
                         alt={attachment.filename}
-                        className="mt-3 max-h-72 w-full rounded-lg border border-[color:var(--partner-border)] bg-white object-contain"
+                        className="mt-3 max-h-56 w-full rounded-lg border border-[color:var(--partner-border)] bg-white object-contain sm:max-h-72"
                         loading="lazy"
                       />
                     ) : !attachment.url ? (
@@ -1107,7 +1150,7 @@ function DetailPanel({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] p-5 shadow-sm">
+    <section className="rounded-2xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] p-4 shadow-sm sm:p-5">
       <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--partner-muted)]">
         <span className="text-[color:var(--partner-text)]">{icon}</span>
         {title}
@@ -1119,7 +1162,7 @@ function DetailPanel({
 
 function EmptyDetail({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-xl border border-dashed border-[color:var(--partner-border)] bg-[var(--partner-soft)] px-4 py-5 text-sm text-[color:var(--partner-muted)]">
+    <div className="rounded-xl border border-dashed border-[color:var(--partner-border)] bg-[var(--partner-soft)] px-4 py-4 text-sm text-[color:var(--partner-muted)] sm:py-5">
       {children}
     </div>
   );
@@ -1137,7 +1180,7 @@ function ListDetail({ items, empty }: { items: string[]; empty: string }) {
       {items.map((item, index) => (
         <li
           key={`${item}-${index}`}
-          className="rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-soft)] px-4 py-3 text-sm font-medium text-[color:var(--partner-text)]"
+          className="rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-soft)] px-3 py-2.5 text-sm font-medium text-[color:var(--partner-text)] sm:px-4 sm:py-3"
         >
           {item}
         </li>
