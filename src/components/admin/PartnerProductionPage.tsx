@@ -684,6 +684,17 @@ export default function PartnerProductionPage({
                       >
                         {PARTNER_DECISION_LABELS[order.decision]}
                       </span>
+                      {order.isShared ? (
+                        <span
+                          className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+                            active
+                              ? "border-white/20 bg-white/10 text-white"
+                              : "border-cyan-200 bg-cyan-50 text-cyan-800"
+                          }`}
+                        >
+                          Shared
+                        </span>
+                      ) : null}
                     </div>
                     <div className={`mt-3 grid grid-cols-3 gap-2 text-[11px] ${active ? "text-white/75" : "text-[color:var(--partner-muted)]"}`}>
                       <span className="truncate">{order.summary.pieces ? `${order.summary.pieces} pcs` : "Qty hidden"}</span>
@@ -737,6 +748,11 @@ export default function PartnerProductionPage({
                       <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold text-[color:var(--partner-muted)] ${softSurfaceClass}`}>
                         Assigned {formatDate(selected.assignedAt)}
                       </span>
+                      {selected.isShared ? (
+                        <span className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-semibold text-cyan-800">
+                          Shared offer - first acceptance owns it
+                        </span>
+                      ) : null}
                     </div>
                     <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                       <button

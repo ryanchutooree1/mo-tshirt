@@ -54,6 +54,8 @@ import {
 import {
   DEFAULT_PARTNER_VISIBLE_FIELDS,
   getPrintPartner,
+  getPrintPartnerRouteLabel,
+  normalizePrintPartnerIds,
   normalizePartnerVisibleFields,
   PARTNER_DECISION_LABELS,
   PARTNER_DECISION_TONES,
@@ -117,6 +119,8 @@ type QuoteAttachment = {
 type QuotePartnerAssignment = {
   id?: PrintPartnerId;
   name?: string;
+  visibleTo?: PrintPartnerId[];
+  lockedBy?: PrintPartnerId | null;
   visibleFields?: PartnerVisibleField[];
   requestStatus?: PartnerDecision;
   productionStatus?: PartnerProductionStatus;
@@ -125,6 +129,20 @@ type QuotePartnerAssignment = {
   comments?: string;
   missingInformation?: string;
   assignedAt?: Date | null;
+  respondedAt?: Date | null;
+  updatedAt?: Date | null;
+  responses?: QuotePartnerResponse[];
+};
+
+type QuotePartnerResponse = {
+  partnerId: PrintPartnerId;
+  partnerName: string;
+  requestStatus: PartnerDecision;
+  productionStatus: PartnerProductionStatus;
+  completionDays: number | null;
+  price: number | null;
+  comments: string;
+  missingInformation: string;
   respondedAt?: Date | null;
   updatedAt?: Date | null;
 };
@@ -637,37 +655,94 @@ const parseTimestamp = (value: unknown) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
-const parseQuotePartnerAssignment = (value: unknown): QuotePartnerAssignment | null => {
+const parsePartnerDecision = (value: unknown): PartnerDecision => {
+  return value === "accepted" ||
+    value === "rejected" ||
+    value === "needs_info" ||
+    value === "pending"
+    ? value
+    : "pending";
+};
+
+const parsePartnerProductionStatus = (value: unknown): PartnerProductionStatus => {
+  return typeof value === "string" && value in PARTNER_PRODUCTION_STATUS_LABELS
+    ? (value as PartnerProductionStatus)
+    : "not_started";
+};
+
+const parseQuotePartnerResponse = (
+  partnerId: PrintPartnerId,
+  value: unknown
+): QuotePartnerResponse | null => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
-  const partnerId =
-    raw.id === "yan" || raw.id === "shabanaz" ? (raw.id as PrintPartnerId) : undefined;
-  const requestStatus =
-    raw.requestStatus === "accepted" ||
-    raw.requestStatus === "rejected" ||
-    raw.requestStatus === "needs_info" ||
-    raw.requestStatus === "pending"
-      ? (raw.requestStatus as PartnerDecision)
-      : "pending";
-  const productionStatus =
-    typeof raw.productionStatus === "string" &&
-    raw.productionStatus in PARTNER_PRODUCTION_STATUS_LABELS
-      ? (raw.productionStatus as PartnerProductionStatus)
-      : "not_started";
-
   return {
-    id: partnerId,
-    name: typeof raw.name === "string" ? raw.name : partnerId ? getPrintPartner(partnerId).name : "",
-    visibleFields: normalizePartnerVisibleFields(raw.visibleFields),
-    requestStatus,
-    productionStatus,
+    partnerId,
+    partnerName: getPrintPartner(partnerId).name,
+    requestStatus: parsePartnerDecision(raw.requestStatus),
+    productionStatus: parsePartnerProductionStatus(raw.productionStatus),
     completionDays: safeNumber(raw.completionDays, 0) > 0 ? safeNumber(raw.completionDays, 0) : null,
     price: safeNumber(raw.price, 0) > 0 ? safeNumber(raw.price, 0) : null,
     comments: typeof raw.comments === "string" ? raw.comments : "",
     missingInformation: typeof raw.missingInformation === "string" ? raw.missingInformation : "",
-    assignedAt: parseTimestamp(raw.assignedAt),
     respondedAt: parseTimestamp(raw.respondedAt),
     updatedAt: parseTimestamp(raw.updatedAt),
+  };
+};
+
+const parseQuotePartnerAssignment = (value: unknown): QuotePartnerAssignment | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  const partnerId = normalizePrintPartnerIds([raw.id])[0];
+  const visibleTo = normalizePrintPartnerIds(raw.visibleTo);
+  const assignedPartnerIds = visibleTo.length
+    ? visibleTo
+    : partnerId
+      ? [partnerId]
+      : [];
+  const lockedBy = normalizePrintPartnerIds([raw.lockedBy])[0] || null;
+  const rawResponses =
+    raw.responses && typeof raw.responses === "object" && !Array.isArray(raw.responses)
+      ? (raw.responses as Record<string, unknown>)
+      : {};
+  const responses = Object.entries(rawResponses)
+    .map(([rawPartnerId, response]) => {
+      const responsePartnerId = normalizePrintPartnerIds([rawPartnerId])[0];
+      return responsePartnerId ? parseQuotePartnerResponse(responsePartnerId, response) : null;
+    })
+    .filter((response): response is QuotePartnerResponse => Boolean(response));
+  const activePartnerId = lockedBy || partnerId;
+  const activeResponse =
+    (activePartnerId &&
+      responses.find((response) => response.partnerId === activePartnerId)) ||
+    null;
+  const activeName = activePartnerId
+    ? getPrintPartner(activePartnerId).name
+    : getPrintPartnerRouteLabel(assignedPartnerIds);
+
+  return {
+    id: activePartnerId || partnerId,
+    name: typeof raw.name === "string" ? raw.name : activeName,
+    visibleTo: assignedPartnerIds,
+    lockedBy,
+    visibleFields: normalizePartnerVisibleFields(raw.visibleFields),
+    requestStatus: activeResponse?.requestStatus || parsePartnerDecision(raw.requestStatus),
+    productionStatus:
+      activeResponse?.productionStatus || parsePartnerProductionStatus(raw.productionStatus),
+    completionDays:
+      activeResponse?.completionDays ||
+      (safeNumber(raw.completionDays, 0) > 0 ? safeNumber(raw.completionDays, 0) : null),
+    price:
+      activeResponse?.price ||
+      (safeNumber(raw.price, 0) > 0 ? safeNumber(raw.price, 0) : null),
+    comments: activeResponse?.comments || (typeof raw.comments === "string" ? raw.comments : ""),
+    missingInformation:
+      activeResponse?.missingInformation ||
+      (typeof raw.missingInformation === "string" ? raw.missingInformation : ""),
+    assignedAt: parseTimestamp(raw.assignedAt),
+    respondedAt: activeResponse?.respondedAt || parseTimestamp(raw.respondedAt),
+    updatedAt: activeResponse?.updatedAt || parseTimestamp(raw.updatedAt),
+    responses,
   };
 };
 
@@ -1132,7 +1207,7 @@ export default function QuotationApprovalPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [movingToOrders, setMovingToOrders] = useState(false);
-  const [assigningPartner, setAssigningPartner] = useState<PrintPartnerId | null>(null);
+  const [assigningPartner, setAssigningPartner] = useState<PrintPartnerId | "both" | null>(null);
   const [partnerVisibleFields, setPartnerVisibleFields] =
     useState<PartnerVisibleField[]>(DEFAULT_PARTNER_VISIBLE_FIELDS);
   const [logo, setLogo] = useState<LogoAsset | null>(null);
@@ -1268,8 +1343,17 @@ export default function QuotationApprovalPage() {
     () => quotes.find((quote) => quote.id === selectedId) || null,
     [quotes, selectedId]
   );
-  const selectedPartner = selected?.partner?.id
-    ? getPrintPartner(selected.partner.id)
+  const selectedPartnerIds =
+    selected?.partner?.visibleTo?.length
+      ? selected.partner.visibleTo
+      : selected?.partner?.id
+        ? [selected.partner.id]
+        : [];
+  const selectedPartnerLabel = selectedPartnerIds.length
+    ? getPrintPartnerRouteLabel(selectedPartnerIds)
+    : "Not assigned yet";
+  const lockedPartner = selected?.partner?.lockedBy
+    ? getPrintPartner(selected.partner.lockedBy)
     : null;
 
   const selectedDesignBrief = useMemo(
@@ -1569,24 +1653,41 @@ export default function QuotationApprovalPage() {
     });
   };
 
-  const moveToPartner = async (partnerId: PrintPartnerId) => {
+  const arePartnerRoutesSame = (left: PrintPartnerId[], right: PrintPartnerId[]) => {
+    return left.length === right.length && left.every((partnerId) => right.includes(partnerId));
+  };
+
+  const assignToPartners = async (partnerIds: PrintPartnerId[]) => {
     if (!selected) return;
-    const partner = getPrintPartner(partnerId);
+    const routePartnerIds = normalizePrintPartnerIds(partnerIds);
+    if (!routePartnerIds.length) return;
+    const routeKey: PrintPartnerId | "both" =
+      routePartnerIds.length > 1 ? "both" : routePartnerIds[0];
+    const routeLabel = getPrintPartnerRouteLabel(routePartnerIds);
     const visibleFields = normalizePartnerVisibleFields(partnerVisibleFields);
     const hasEmailOnlyArtwork =
       visibleFields.includes("artwork") &&
       selectedAttachments.some((attachment) => !attachment.url);
-    const samePartner = selected.partner?.id === partnerId;
-    const resetPartnerResponse = !samePartner;
+    const currentPartnerIds = selected.partner?.visibleTo?.length
+      ? selected.partner.visibleTo
+      : selected.partner?.id
+        ? [selected.partner.id]
+        : [];
+    const sameRoute = arePartnerRoutesSame(currentPartnerIds, routePartnerIds);
+    const resetPartnerResponse = !sameRoute;
+    const singlePartner =
+      routePartnerIds.length === 1 ? getPrintPartner(routePartnerIds[0]) : null;
     const updatePayload: Record<string, unknown> = {
-      "partner.id": partner.id,
-      "partner.name": partner.name,
+      "partner.id": singlePartner?.id || null,
+      "partner.name": singlePartner?.name || routeLabel,
+      "partner.visibleTo": routePartnerIds,
+      "partner.lockedBy": null,
       "partner.visibleFields": visibleFields,
       "partner.updatedAt": serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
 
-    if (!samePartner) {
+    if (!sameRoute) {
       updatePayload["partner.assignedAt"] = serverTimestamp();
     }
 
@@ -1598,21 +1699,24 @@ export default function QuotationApprovalPage() {
       updatePayload["partner.comments"] = "";
       updatePayload["partner.missingInformation"] = "";
       updatePayload["partner.respondedAt"] = null;
+      updatePayload["partner.responses"] = {};
     }
 
-    setAssigningPartner(partnerId);
+    setAssigningPartner(routeKey);
     setNotice(null);
     try {
       await updateDoc(doc(db, "quotes", selected.id), updatePayload);
       setNotice(
         hasEmailOnlyArtwork
-          ? `${partner.name}'s view was updated, but at least one artwork file is email-only. Re-upload it under Artwork so ${partner.name} can open the file.`
-          : samePartner
-            ? `${partner.name}'s visible fields were updated.`
-            : `Moved order to ${partner.name}'s production desk.`
+          ? `${routeLabel}'s view was updated, but at least one artwork file is email-only. Re-upload it under Artwork so the partner can open the file.`
+          : sameRoute
+            ? `Visible fields updated for ${routeLabel}.`
+            : routePartnerIds.length > 1
+              ? `Sent to ${routeLabel}. The first partner to accept will own this job.`
+              : `Moved order to ${routeLabel}'s production desk.`
       );
     } catch {
-      setNotice(`Failed to move order to ${partner.name}.`);
+      setNotice(`Failed to assign order to ${routeLabel}.`);
     } finally {
       setAssigningPartner(null);
     }
@@ -2572,7 +2676,7 @@ export default function QuotationApprovalPage() {
                           Send only the production details they need
                         </h3>
                         <p className="mt-2 max-w-3xl text-sm leading-6 text-[#6a6a6a]">
-                          Customer name, phone, email, billing address, and delivery address stay hidden from the partner desk.
+                          Customer name, phone, email, billing address, and delivery address stay hidden from the partner desk. If you send it to both partners, the first acceptance locks the order to that partner.
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -2594,7 +2698,7 @@ export default function QuotationApprovalPage() {
                           <div>
                             <p className={labelClass}>Visible fields</p>
                             <p className="mt-1 text-sm text-[#6a6a6a]">
-                              Select exactly what Yan or Shabanaz can view for this order.
+                              Select exactly what Yan and Shabanaz can view for this order.
                             </p>
                           </div>
                           <span className="rounded-full border border-[#ebebeb] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#717171]">
@@ -2644,18 +2748,31 @@ export default function QuotationApprovalPage() {
                             <button
                               key={partner.id}
                               type="button"
-                              onClick={() => moveToPartner(partner.id)}
+                              onClick={() => assignToPartners([partner.id])}
                               disabled={assigningPartner !== null}
                               className={partner.id === "yan" ? primaryButtonClass : darkButtonClass}
                             >
                               <FiUsers className="h-4 w-4" />
                               {assigningPartner === partner.id
                                 ? `Moving to ${partner.name}...`
-                                : selected.partner?.id === partner.id
+                                : selectedPartnerIds.length === 1 && selectedPartnerIds[0] === partner.id
                                   ? `Update ${partner.name} view`
                                   : `Move order to ${partner.name}`}
                             </button>
                           ))}
+                          <button
+                            type="button"
+                            onClick={() => assignToPartners(PRINT_PARTNERS.map((partner) => partner.id))}
+                            disabled={assigningPartner !== null}
+                            className={secondaryButtonClass}
+                          >
+                            <FiUsers className="h-4 w-4" />
+                            {assigningPartner === "both"
+                              ? "Sending to both..."
+                              : selectedPartnerIds.length > 1 && !lockedPartner
+                                ? "Update both partner views"
+                                : "Send to Yan + Shabanaz"}
+                          </button>
                         </div>
                       </div>
 
@@ -2664,8 +2781,15 @@ export default function QuotationApprovalPage() {
                           <div>
                             <p className={labelClass}>Partner response</p>
                             <h4 className="mt-2 text-lg font-semibold text-[#222222]">
-                              {selectedPartner ? selectedPartner.name : "Not assigned yet"}
+                              {lockedPartner
+                                ? `${lockedPartner.name} owns this job`
+                                : selectedPartnerLabel}
                             </h4>
+                            {selectedPartnerIds.length > 1 && !lockedPartner ? (
+                              <p className="mt-1 text-xs font-semibold text-[#717171]">
+                                Shared offer: the first accepted response removes it from the other partner&apos;s desk.
+                              </p>
+                            ) : null}
                           </div>
                           {selected.partner?.requestStatus ? (
                             <span
@@ -2682,15 +2806,75 @@ export default function QuotationApprovalPage() {
                           )}
                         </div>
 
-                        {selected.partner?.id ? (
+                        {selectedPartnerIds.length ? (
                           <div className="mt-4 space-y-3 text-sm">
+                            <div className="flex flex-wrap gap-2">
+                              {selectedPartnerIds.map((partnerId) => (
+                                <span
+                                  key={partnerId}
+                                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                                    selected.partner?.lockedBy === partnerId
+                                      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                      : "border-[#ebebeb] bg-white text-[#717171]"
+                                  }`}
+                                >
+                                  {getPrintPartner(partnerId).name}
+                                  {selected.partner?.lockedBy === partnerId ? " accepted" : ""}
+                                </span>
+                              ))}
+                            </div>
+                            {selectedPartnerIds.length > 1 && selected.partner?.responses?.length ? (
+                              <div className="space-y-2">
+                                {selected.partner.responses.map((response) => (
+                                  <div
+                                    key={response.partnerId}
+                                    className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3"
+                                  >
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                      <div className="font-semibold text-[#222222]">
+                                        {response.partnerName}
+                                      </div>
+                                      <span
+                                        className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                                          PARTNER_DECISION_TONES[response.requestStatus]
+                                        }`}
+                                      >
+                                        {PARTNER_DECISION_LABELS[response.requestStatus]}
+                                      </span>
+                                    </div>
+                                    <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-[#717171]">
+                                      <span>
+                                        {response.completionDays
+                                          ? `${response.completionDays} day${response.completionDays === 1 ? "" : "s"}`
+                                          : "No days given"}
+                                      </span>
+                                      <span>
+                                        {response.price
+                                          ? formatMoney(response.price, "Rs")
+                                          : "No price given"}
+                                      </span>
+                                    </div>
+                                    {response.comments ? (
+                                      <p className="mt-2 whitespace-pre-wrap text-sm text-[#484848]">
+                                        {response.comments}
+                                      </p>
+                                    ) : null}
+                                    {response.missingInformation ? (
+                                      <p className="mt-2 whitespace-pre-wrap rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                                        {response.missingInformation}
+                                      </p>
+                                    ) : null}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null}
                             <div className="grid grid-cols-2 gap-3">
                               <div className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3">
                                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
                                   Completion
                                 </div>
                                 <div className="mt-1 font-semibold text-[#222222]">
-                                  {selected.partner.completionDays
+                                  {selected.partner?.completionDays
                                     ? `${selected.partner.completionDays} day${selected.partner.completionDays === 1 ? "" : "s"}`
                                     : "Not given"}
                                 </div>
@@ -2700,7 +2884,7 @@ export default function QuotationApprovalPage() {
                                   Partner price
                                 </div>
                                 <div className="mt-1 font-semibold text-[#222222]">
-                                  {selected.partner.price
+                                  {selected.partner?.price
                                     ? formatMoney(selected.partner.price, "Rs")
                                     : "Not given"}
                                 </div>
@@ -2711,12 +2895,12 @@ export default function QuotationApprovalPage() {
                                 Production status
                               </div>
                               <div className="mt-1 font-semibold text-[#222222]">
-                                {selected.partner.productionStatus
+                                {selected.partner?.productionStatus
                                   ? PARTNER_PRODUCTION_STATUS_LABELS[selected.partner.productionStatus]
                                   : "Not started"}
                               </div>
                             </div>
-                            {selected.partner.comments ? (
+                            {selected.partner?.comments ? (
                               <div className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3">
                                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
                                   Comments
@@ -2726,7 +2910,7 @@ export default function QuotationApprovalPage() {
                                 </p>
                               </div>
                             ) : null}
-                            {selected.partner.missingInformation ? (
+                            {selected.partner?.missingInformation ? (
                               <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
                                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em]">
                                   Missing information
@@ -2739,7 +2923,7 @@ export default function QuotationApprovalPage() {
                           </div>
                         ) : (
                           <div className="mt-4 rounded-2xl border border-dashed border-[#d9d9d9] bg-white px-4 py-8 text-center text-sm text-[#717171]">
-                            Select visible fields, then move this order to Yan or Shabanaz.
+                            Select visible fields, then move this order to Yan, Shabanaz, or both.
                           </div>
                         )}
                       </div>

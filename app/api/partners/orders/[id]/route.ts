@@ -1,15 +1,19 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { serverTimestamp, updateDoc } from "firebase/firestore";
+import { runTransaction, serverTimestamp } from "firebase/firestore";
 import { readAdminSession } from "@/lib/admin-auth";
 import { readPartnerSession } from "@/lib/partner-auth";
 import { readRawPartnerQuote, sanitizePartnerOrder } from "@/lib/partner-orders";
+import { db } from "@/lib/firebase";
 import {
+  getPrintPartner,
   isPartnerDecision,
   isPartnerProductionStatus,
   isPrintPartnerId,
+  normalizePrintPartnerIds,
   type PartnerDecision,
   type PartnerProductionStatus,
+  type PrintPartnerId,
 } from "@/lib/partners";
 import {
   isContentLengthWithinLimit,
@@ -18,6 +22,15 @@ import {
 
 const MAX_UPDATE_REQUEST_BYTES = 8_192;
 const MAX_TEXT_LENGTH = 1_500;
+
+class PartnerOrderUpdateError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
 
 function cleanText(value: unknown) {
   if (typeof value !== "string") return "";
@@ -29,6 +42,34 @@ function cleanOptionalNumber(value: unknown) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) return null;
   return Math.round(parsed * 100) / 100;
+}
+
+function getAssignedPartnerIds(partner: Record<string, unknown>) {
+  const visibleTo = normalizePrintPartnerIds(partner.visibleTo);
+  if (visibleTo.length) return visibleTo;
+  return isPrintPartnerId(partner.id) ? [partner.id] : [];
+}
+
+function getLockedPartnerId(partner: Record<string, unknown>) {
+  return isPrintPartnerId(partner.lockedBy) ? partner.lockedBy : null;
+}
+
+function getPartnerResponses(partner: Record<string, unknown>) {
+  if (!partner.responses || typeof partner.responses !== "object" || Array.isArray(partner.responses)) {
+    return {};
+  }
+  return partner.responses as Record<string, unknown>;
+}
+
+function canReadCurrentPartnerAssignment(
+  partner: Record<string, unknown>,
+  partnerId: PrintPartnerId
+) {
+  const assignedPartnerIds = getAssignedPartnerIds(partner);
+  const lockedBy = getLockedPartnerId(partner);
+
+  if (lockedBy && lockedBy !== partnerId) return false;
+  return assignedPartnerIds.includes(partnerId);
 }
 
 async function canUpdatePartnerOrder(partnerId: string | null) {
@@ -92,40 +133,123 @@ export async function PATCH(
     decision === "accepted" && productionStatus === "not_started"
       ? "in_progress"
       : productionStatus;
+  const partner = getPrintPartner(partnerId);
+  const responseForView = {
+    requestStatus: decision,
+    productionStatus: nextProductionStatus,
+    completionDays,
+    price,
+    comments,
+    missingInformation,
+    respondedAt: new Date(),
+    updatedAt: new Date(),
+  };
 
   try {
-    await updateDoc(existing.ref, {
-      "partner.requestStatus": decision,
-      "partner.productionStatus": nextProductionStatus,
-      "partner.completionDays": completionDays,
-      "partner.price": price,
-      "partner.comments": comments,
-      "partner.missingInformation": missingInformation,
-      "partner.respondedAt": serverTimestamp(),
-      "partner.updatedAt": serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+    const updatedView = await runTransaction(db, async (transaction) => {
+      const currentSnap = await transaction.get(existing.ref);
+      if (!currentSnap.exists()) {
+        throw new PartnerOrderUpdateError("Order not found.", 404);
+      }
 
-    const updatedView = sanitizePartnerOrder(
-      id,
-      {
-        ...existing.data,
-        partner: {
-          ...(existing.data.partner || {}),
-          requestStatus: decision,
-          productionStatus: nextProductionStatus,
-          completionDays,
-          price,
-          comments,
-          missingInformation,
-          updatedAt: new Date(),
+      const currentData = currentSnap.data() as typeof existing.data;
+      const currentPartner =
+        currentData.partner && typeof currentData.partner === "object"
+          ? (currentData.partner as Record<string, unknown>)
+          : {};
+
+      if (!canReadCurrentPartnerAssignment(currentPartner, partnerId)) {
+        throw new PartnerOrderUpdateError(
+          "This order has already been accepted by another partner.",
+          409
+        );
+      }
+
+      const assignedPartnerIds = getAssignedPartnerIds(currentPartner);
+      const lockedBy = getLockedPartnerId(currentPartner);
+      const isUnlockedSharedAssignment = assignedPartnerIds.length > 1 && !lockedBy;
+      const shouldUpdateMainResponse =
+        decision === "accepted" || !isUnlockedSharedAssignment;
+      const responsePayload = {
+        requestStatus: decision,
+        productionStatus: nextProductionStatus,
+        completionDays,
+        price,
+        comments,
+        missingInformation,
+        respondedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+      const updatePayload: Record<string, unknown> = {
+        [`partner.responses.${partnerId}`]: responsePayload,
+        "partner.updatedAt": serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      if (shouldUpdateMainResponse) {
+        updatePayload["partner.requestStatus"] = decision;
+        updatePayload["partner.productionStatus"] = nextProductionStatus;
+        updatePayload["partner.completionDays"] = completionDays;
+        updatePayload["partner.price"] = price;
+        updatePayload["partner.comments"] = comments;
+        updatePayload["partner.missingInformation"] = missingInformation;
+        updatePayload["partner.respondedAt"] = serverTimestamp();
+      }
+
+      if (decision === "accepted") {
+        updatePayload["partner.id"] = partner.id;
+        updatePayload["partner.name"] = partner.name;
+        updatePayload["partner.visibleTo"] = [partner.id];
+        updatePayload["partner.lockedBy"] = partner.id;
+      }
+
+      transaction.update(existing.ref, updatePayload);
+
+      const responses = {
+        ...getPartnerResponses(currentPartner),
+        [partnerId]: responseForView,
+      };
+      const partnerForView = {
+        ...currentPartner,
+        responses,
+        updatedAt: new Date(),
+        ...(shouldUpdateMainResponse
+          ? {
+              requestStatus: decision,
+              productionStatus: nextProductionStatus,
+              completionDays,
+              price,
+              comments,
+              missingInformation,
+              respondedAt: new Date(),
+            }
+          : {}),
+        ...(decision === "accepted"
+          ? {
+              id: partner.id,
+              name: partner.name,
+              visibleTo: [partner.id],
+              lockedBy: partner.id,
+            }
+          : {}),
+      };
+
+      return sanitizePartnerOrder(
+        id,
+        {
+          ...currentData,
+          partner: partnerForView,
         },
-      },
-      partnerId
-    );
+        partnerId
+      );
+    });
 
     return NextResponse.json({ order: updatedView });
   } catch (error) {
+    if (error instanceof PartnerOrderUpdateError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+
     console.error("partners:orders:update", error);
     return NextResponse.json(
       { error: "Failed to update partner order." },

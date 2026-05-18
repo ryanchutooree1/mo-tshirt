@@ -9,6 +9,8 @@ import {
 import { db } from "@/lib/firebase";
 import {
   getPrintPartner,
+  isPrintPartnerId,
+  normalizePrintPartnerIds,
   normalizePartnerVisibleFields,
   PARTNER_PRODUCTION_STATUSES,
   type PartnerDecision,
@@ -64,6 +66,8 @@ type DesignBrief = {
 type RawPartnerAssignment = {
   id?: unknown;
   name?: unknown;
+  visibleTo?: unknown;
+  lockedBy?: unknown;
   visibleFields?: unknown;
   requestStatus?: unknown;
   productionStatus?: unknown;
@@ -72,7 +76,9 @@ type RawPartnerAssignment = {
   comments?: unknown;
   missingInformation?: unknown;
   assignedAt?: unknown;
+  respondedAt?: unknown;
   updatedAt?: unknown;
+  responses?: unknown;
 };
 
 type RawQuote = {
@@ -216,6 +222,50 @@ function normalizeProductionStatus(value: unknown): PartnerProductionStatus {
   return "not_started";
 }
 
+function getAssignedPartnerIds(partner: RawPartnerAssignment) {
+  const visibleTo = normalizePrintPartnerIds(partner.visibleTo);
+  if (visibleTo.length) return visibleTo;
+  return isPrintPartnerId(partner.id) ? [partner.id] : [];
+}
+
+function getLockedPartnerId(partner: RawPartnerAssignment) {
+  return isPrintPartnerId(partner.lockedBy) ? partner.lockedBy : null;
+}
+
+function getPartnerResponses(partner: RawPartnerAssignment) {
+  if (!partner.responses || typeof partner.responses !== "object" || Array.isArray(partner.responses)) {
+    return {};
+  }
+  return partner.responses as Record<string, RawPartnerAssignment>;
+}
+
+function getPartnerResponse(partner: RawPartnerAssignment, partnerId: PrintPartnerId) {
+  const responses = getPartnerResponses(partner);
+  const response = responses[partnerId];
+  return response && typeof response === "object" && !Array.isArray(response)
+    ? response
+    : null;
+}
+
+function getResponseValue(
+  partner: RawPartnerAssignment,
+  response: RawPartnerAssignment | null,
+  key: keyof RawPartnerAssignment
+) {
+  if (response && Object.prototype.hasOwnProperty.call(response, key)) {
+    return response[key];
+  }
+  return partner[key];
+}
+
+function canPartnerReadAssignment(partner: RawPartnerAssignment, partnerId: PrintPartnerId) {
+  const assignedPartnerIds = getAssignedPartnerIds(partner);
+  const lockedBy = getLockedPartnerId(partner);
+
+  if (lockedBy && lockedBy !== partnerId) return false;
+  return assignedPartnerIds.includes(partnerId);
+}
+
 function sanitizeAttachments(attachments: QuoteAttachment[]) {
   return attachments
     .filter(
@@ -243,10 +293,13 @@ export function sanitizePartnerOrder(
   id: string,
   data: RawQuote,
   partnerId: PrintPartnerId
-) {
+): PartnerOrderView | null {
   const partner = data.partner || {};
-  if (partner.id !== partnerId) return null;
+  if (!canPartnerReadAssignment(partner, partnerId)) return null;
 
+  const assignedPartnerIds = getAssignedPartnerIds(partner);
+  const lockedBy = getLockedPartnerId(partner);
+  const partnerResponse = getPartnerResponse(partner, partnerId);
   const partnerConfig = getPrintPartner(partnerId);
   const visibleFields = normalizePartnerVisibleFields(partner.visibleFields);
   const designBrief = parseDesignBrief(data.designBrief);
@@ -333,19 +386,31 @@ export function sanitizePartnerOrder(
     id,
     code: data.quote?.documentNumber || `Q-${id.slice(-5).toUpperCase()}`,
     partnerId,
-    partnerName: safeString(partner.name) || partnerConfig.name,
+    partnerName: partnerConfig.name,
+    assignedPartnerIds,
+    lockedBy,
+    isShared: assignedPartnerIds.length > 1 && !lockedBy,
     visibleFields,
     assignedAt: timestampIso(partner.assignedAt),
     createdAt: timestampIso(data.createdAt),
-    updatedAt: timestampIso(partner.updatedAt) || timestampIso(data.updatedAt),
-    decision: normalizeDecision(partner.requestStatus),
-    productionStatus: normalizeProductionStatus(partner.productionStatus),
-    completionDays: safeNumber(partner.completionDays, 0) > 0
-      ? safeNumber(partner.completionDays, 0)
+    updatedAt:
+      timestampIso(getResponseValue(partner, partnerResponse, "updatedAt")) ||
+      timestampIso(partner.updatedAt) ||
+      timestampIso(data.updatedAt),
+    decision: normalizeDecision(getResponseValue(partner, partnerResponse, "requestStatus")),
+    productionStatus: normalizeProductionStatus(
+      getResponseValue(partner, partnerResponse, "productionStatus")
+    ),
+    completionDays: safeNumber(getResponseValue(partner, partnerResponse, "completionDays"), 0) > 0
+      ? safeNumber(getResponseValue(partner, partnerResponse, "completionDays"), 0)
       : null,
-    price: safeNumber(partner.price, 0) > 0 ? safeNumber(partner.price, 0) : null,
-    comments: safeString(partner.comments),
-    missingInformation: safeString(partner.missingInformation),
+    price: safeNumber(getResponseValue(partner, partnerResponse, "price"), 0) > 0
+      ? safeNumber(getResponseValue(partner, partnerResponse, "price"), 0)
+      : null,
+    comments: safeString(getResponseValue(partner, partnerResponse, "comments")),
+    missingInformation: safeString(
+      getResponseValue(partner, partnerResponse, "missingInformation")
+    ),
     details,
     summary: {
       product,
@@ -360,11 +425,18 @@ export function sanitizePartnerOrder(
 }
 
 export async function listPartnerOrders(partnerId: PrintPartnerId) {
-  const snap = await getDocs(
-    query(collection(db, "quotes"), where("partner.id", "==", partnerId))
-  );
+  const [legacySnap, visibleSnap] = await Promise.all([
+    getDocs(query(collection(db, "quotes"), where("partner.id", "==", partnerId))),
+    getDocs(
+      query(collection(db, "quotes"), where("partner.visibleTo", "array-contains", partnerId))
+    ),
+  ]);
+  const docsById = new Map<string, (typeof legacySnap.docs)[number]>();
+  [...legacySnap.docs, ...visibleSnap.docs].forEach((docSnap) => {
+    docsById.set(docSnap.id, docSnap);
+  });
 
-  return snap.docs
+  return [...docsById.values()]
     .map((docSnap) =>
       sanitizePartnerOrder(docSnap.id, docSnap.data() as RawQuote, partnerId)
     )
@@ -384,7 +456,7 @@ export async function readRawPartnerQuote(
   if (!snap.exists()) return null;
 
   const data = snap.data() as RawQuote;
-  if (data.partner?.id !== partnerId) return null;
+  if (!data.partner || !canPartnerReadAssignment(data.partner, partnerId)) return null;
 
   return {
     ref: snap.ref,

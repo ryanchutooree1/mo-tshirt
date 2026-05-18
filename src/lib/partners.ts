@@ -59,6 +59,9 @@ export type PartnerOrderView = {
   code: string;
   partnerId: PrintPartnerId;
   partnerName: string;
+  assignedPartnerIds: PrintPartnerId[];
+  lockedBy: PrintPartnerId | null;
+  isShared: boolean;
   visibleFields: PartnerVisibleField[];
   assignedAt: string | null;
   createdAt: string | null;
@@ -195,6 +198,27 @@ export function isPrintPartnerId(value: unknown): value is PrintPartnerId {
 
 export function getPrintPartner(partnerId: PrintPartnerId) {
   return PRINT_PARTNERS.find((partner) => partner.id === partnerId) || PRINT_PARTNERS[0];
+}
+
+export function normalizePrintPartnerIds(value: unknown) {
+  const rawIds = Array.isArray(value) ? value : [];
+  const seen = new Set<PrintPartnerId>();
+  const ids: PrintPartnerId[] = [];
+
+  rawIds.forEach((entry) => {
+    if (!isPrintPartnerId(entry)) return;
+    if (seen.has(entry)) return;
+    seen.add(entry);
+    ids.push(entry);
+  });
+
+  return ids;
+}
+
+export function getPrintPartnerRouteLabel(partnerIds: PrintPartnerId[]) {
+  const ids = normalizePrintPartnerIds(partnerIds);
+  if (!ids.length) return "No partner";
+  return ids.map((partnerId) => getPrintPartner(partnerId).name).join(" + ");
 }
 
 export function normalizePartnerVisibleFields(value: unknown) {
