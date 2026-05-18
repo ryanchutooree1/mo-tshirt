@@ -1163,10 +1163,10 @@ export default function DesignStudioClient({ mode = "public" }: DesignStudioClie
                     <button
                       type="button"
                       onClick={openLogoPicker}
-                      className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-800"
+                      className="mt-2 inline-flex w-full items-center justify-center gap-3 rounded-full bg-gradient-to-r from-sky-500 to-blue-500 px-7 py-4 text-base font-semibold text-white shadow-[0_18px_32px_-22px_rgba(59,130,246,0.9)] transition hover:from-sky-400 hover:to-blue-500 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2"
                     >
-                      <UploadCloud className="h-4 w-4" />
-                      Upload logo
+                      <UploadCloud className="h-5 w-5" strokeWidth={2} />
+                      Upload Image
                     </button>
                     <input
                       ref={logoInputRef}
