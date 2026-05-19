@@ -288,36 +288,47 @@ export default function PartnerProductionPage({
     </div>
   ) : null;
   const paymentDetailsCard = paymentDetails ? (
-    <div className={`rounded-2xl border p-4 sm:p-5 ${softSurfaceClass}`}>
-      <div className="flex items-start gap-3">
-        <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white">
-          <FiCreditCard className="h-4 w-4" />
-        </span>
-        <div className="min-w-0">
-          <p className={sectionLabelClass}>Payment details</p>
-          <dl className="mt-3 grid gap-2 text-sm leading-6">
-            {[
-              ["Full name", paymentDetails.fullName],
-              ["Bank name", paymentDetails.bankName],
-              ["Bank account number", paymentDetails.bankAccountNumber],
-              ["Juice number", paymentDetails.juiceNumber],
-            ].map(([label, value]) => (
-              <div
-                key={label}
-                className="rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] px-3 py-2"
-              >
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--partner-muted)]">
-                  {label}
-                </dt>
-                <dd className="mt-1 break-words font-semibold text-[color:var(--partner-text)]">
-                  {value}
-                </dd>
-              </div>
-            ))}
-          </dl>
+    <details className={`group rounded-2xl border ${softSurfaceClass}`}>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 marker:hidden sm:p-4 [&::-webkit-details-marker]:hidden">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white">
+            <FiCreditCard className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <p className={sectionLabelClass}>Payment details</p>
+            <p className="mt-1 truncate text-sm font-semibold text-[color:var(--partner-text)]">
+              {paymentDetails.fullName}
+            </p>
+          </div>
         </div>
+        <span className="shrink-0 rounded-full border border-[color:var(--partner-border)] bg-[var(--partner-card)] px-3 py-1.5 text-xs font-semibold text-[color:var(--partner-muted)]">
+          <span className="group-open:hidden">Show</span>
+          <span className="hidden group-open:inline">Hide</span>
+        </span>
+      </summary>
+      <div className="border-t border-[color:var(--partner-border)] p-3 sm:p-4">
+        <dl className="grid gap-2 text-sm leading-6 sm:grid-cols-2">
+          {[
+            ["Full name", paymentDetails.fullName],
+            ["Bank name", paymentDetails.bankName],
+            ["Bank account number", paymentDetails.bankAccountNumber],
+            ["Juice number", paymentDetails.juiceNumber],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] px-3 py-2"
+            >
+              <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--partner-muted)]">
+                {label}
+              </dt>
+              <dd className="mt-1 break-words font-semibold text-[color:var(--partner-text)]">
+                {value}
+              </dd>
+            </div>
+          ))}
+        </dl>
       </div>
-    </div>
+    </details>
   ) : null;
 
   const counts = useMemo(() => {
@@ -632,7 +643,7 @@ export default function PartnerProductionPage({
       <div className="mx-auto max-w-[1500px] px-3 pt-3 sm:px-6 sm:pt-5 lg:px-8">
         {productionRulesCard || paymentDetailsCard ? (
           <div
-            className={`mb-3 grid gap-3 sm:mb-5 ${
+            className={`mb-3 grid items-start gap-3 sm:mb-5 ${
               productionRulesCard && paymentDetailsCard ? "lg:grid-cols-2" : ""
             }`}
           >
