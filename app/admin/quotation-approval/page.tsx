@@ -1221,6 +1221,7 @@ export default function QuotationApprovalPage() {
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [movingToOrders, setMovingToOrders] = useState(false);
   const [assigningPartner, setAssigningPartner] = useState<PrintPartnerId | "both" | null>(null);
+  const [workflowStudioOpen, setWorkflowStudioOpen] = useState(false);
   const [partnerVisibleFields, setPartnerVisibleFields] =
     useState<PartnerVisibleField[]>(DEFAULT_PARTNER_VISIBLE_FIELDS);
   const [logo, setLogo] = useState<LogoAsset | null>(null);
@@ -1356,6 +1357,10 @@ export default function QuotationApprovalPage() {
     () => quotes.find((quote) => quote.id === selectedId) || null,
     [quotes, selectedId]
   );
+
+  useEffect(() => {
+    setWorkflowStudioOpen(false);
+  }, [selectedId]);
   const selectedPartnerIds =
     selected?.partner?.visibleTo?.length
       ? selected.partner.visibleTo
@@ -3584,7 +3589,7 @@ export default function QuotationApprovalPage() {
                               <div>
                                 <p className={labelClass}>Document Studio</p>
                                 <p className="mt-2 text-sm text-[#6a6a6a]">
-                                  Quick edit the document without leaving the workflow.
+                                  Open the full editor as a popup, like Order Management.
                                 </p>
                               </div>
                               <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${DOC_TYPE_TONES[draft.documentType]}`}>
@@ -3598,162 +3603,33 @@ export default function QuotationApprovalPage() {
                               </div>
                             ) : null}
 
-                            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                              <label className={labelClass}>
-                                Type
-                                <select
-                                  value={draft.documentType}
-                                  onChange={(e) =>
-                                    setDraft({ ...draft, documentType: e.target.value as DocumentType })
-                                  }
-                                  className={fieldClass}
-                                >
-                                  <option value="quotation">Quotation</option>
-                                  <option value="invoice">Invoice</option>
-                                  <option value="partial_receipt">Partial receipt</option>
-                                  <option value="receipt">Receipt</option>
-                                </select>
-                              </label>
-                              <label className={labelClass}>
-                                Number
-                                <input
-                                  value={draft.documentNumber}
-                                  onChange={(e) =>
-                                    setDraft({ ...draft, documentNumber: e.target.value })
-                                  }
-                                  className={fieldClass}
-                                  placeholder="Q-2026-001"
-                                />
-                              </label>
-                            </div>
-
-                            <div className="mt-4 space-y-3">
-                              {draft.lines.map((line, index) => (
-                                <div
-                                  key={`workflow-line-${index}`}
-                                  className="rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] p-3"
-                                >
-                                  <div className="flex items-start justify-between gap-3">
-                                    <label className={`${labelClass} flex-1`}>
-                                      Line {index + 1}
-                                      <input
-                                        value={line.description}
-                                        onChange={(e) =>
-                                          updateDraftLine(index, { description: e.target.value })
-                                        }
-                                        className={fieldClass}
-                                        placeholder="Product / size / print"
-                                      />
-                                    </label>
-                                    <button
-                                      type="button"
-                                      onClick={() => removeDraftLine(index)}
-                                      className="mt-7 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#ebebeb] bg-white text-[#717171] transition hover:border-[#ffd9c2] hover:bg-[#fff4ed] hover:text-[#c2410c]"
-                                      aria-label="Remove line item"
-                                    >
-                                      <FiXCircle className="h-4 w-4" />
-                                    </button>
-                                  </div>
-                                  <div className="mt-3 grid grid-cols-3 gap-2">
-                                    <label className={labelClass}>
-                                      Qty
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        value={line.quantity}
-                                        onChange={(e) =>
-                                          updateDraftLine(index, {
-                                            quantity: parseEditableNumber(e.target.value),
-                                          })
-                                        }
-                                        className={fieldClass}
-                                      />
-                                    </label>
-                                    <label className={labelClass}>
-                                      Unit price
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        value={line.unitPrice}
-                                        onChange={(e) =>
-                                          updateDraftLine(index, {
-                                            unitPrice: parseEditableNumber(e.target.value),
-                                          })
-                                        }
-                                        className={fieldClass}
-                                      />
-                                    </label>
-                                    <div className="rounded-2xl border border-[#ebebeb] bg-white px-3 py-3">
-                                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
-                                        Total
-                                      </div>
-                                      <div className="mt-2 text-sm font-semibold text-[#222222]">
-                                        {formatMoney(
-                                          safeNumber(line.quantity, 0) *
-                                            safeNumber(line.unitPrice, 0),
-                                          draft.currency
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-
                             <button
                               type="button"
-                              onClick={() => addDraftLine("Product / Size")}
-                              className={`mt-3 w-full ${secondaryButtonClass}`}
+                              onClick={() => setWorkflowStudioOpen(true)}
+                              className={`mt-4 w-full ${darkButtonClass}`}
                             >
-                              <FiPlus className="h-4 w-4" />
-                              Add line item
+                              <FiFileText className="h-4 w-4" />
+                              Open Document Studio
                             </button>
 
-                            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                              <label className={labelClass}>
-                                Delivery fee
-                                <input
-                                  type="number"
-                                  min={0}
-                                  value={draft.deliveryFee}
-                                  onChange={(e) =>
-                                    setDraft({
-                                      ...draft,
-                                      deliveryFee: parseEditableNumber(e.target.value),
-                                    })
-                                  }
-                                  className={fieldClass}
-                                />
-                              </label>
-                              <label className={labelClass}>
-                                Discount
-                                <input
-                                  type="number"
-                                  min={0}
-                                  value={draft.discount}
-                                  onChange={(e) =>
-                                    setDraft({
-                                      ...draft,
-                                      discount: parseEditableNumber(e.target.value),
-                                    })
-                                  }
-                                  className={fieldClass}
-                                />
-                              </label>
+                            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                              <button
+                                type="button"
+                                onClick={handleViewPdf}
+                                className={secondaryButtonClass}
+                              >
+                                <FiFileText className="h-4 w-4" />
+                                View PDF
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleDownloadPdf}
+                                className={secondaryButtonClass}
+                              >
+                                <FiDownload className="h-4 w-4" />
+                                Download PDF
+                              </button>
                             </div>
-
-                            <label className={`mt-4 block ${labelClass}`}>
-                              Notes to client
-                              <textarea
-                                value={draft.notes}
-                                onChange={(e) =>
-                                  setDraft({ ...draft, notes: e.target.value })
-                                }
-                                rows={3}
-                                className={`${fieldClass} resize-y`}
-                                placeholder="Add any extra details or delivery notes..."
-                              />
-                            </label>
                           </div>
 
                           <div className="rounded-[24px] border border-[#ebebeb] bg-[#f7f7f7] p-4">
@@ -3923,6 +3799,463 @@ export default function QuotationApprovalPage() {
           </div>
         </div>
       </div>
+      {workflowStudioOpen && selected && draft ? (
+        <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-slate-950/70 px-3 pb-4 pt-16 sm:px-4 sm:pt-20">
+          <div
+            className={`flex max-h-[calc(100vh-5rem)] w-full max-w-6xl flex-col overflow-hidden rounded-[28px] border shadow-2xl ${
+              isDark
+                ? "border-white/15 bg-slate-950 text-slate-100"
+                : "border-[#ebebeb] bg-white text-[#222222]"
+            }`}
+          >
+            <div
+              className={`flex flex-wrap items-start justify-between gap-3 border-b px-5 py-4 ${
+                isDark ? "border-white/10" : "border-[#ebebeb]"
+              }`}
+            >
+              <div>
+                <p className={labelClass}>Document Studio</p>
+                <h3 className="mt-1 text-xl font-semibold tracking-[-0.02em]">
+                  {documentTypeLabel} {draft.documentNumber ? `#${draft.documentNumber}` : ""}
+                </h3>
+                <p className={`mt-1 text-sm ${isDark ? "text-slate-300" : "text-[#6a6a6a]"}`}>
+                  Edit the client document, preview the PDF, then save the quotation.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setWorkflowStudioOpen(false)}
+                className={secondaryButtonClass}
+              >
+                <FiXCircle className="h-4 w-4" />
+                Close
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+              <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+                <div className="space-y-5">
+                  <div className={`${softSurfaceClass} p-5`}>
+                    <p className={labelClass}>Document setup</p>
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                      <label className={labelClass}>
+                        Type
+                        <select
+                          value={draft.documentType}
+                          onChange={(e) =>
+                            setDraft({ ...draft, documentType: e.target.value as DocumentType })
+                          }
+                          className={fieldClass}
+                        >
+                          <option value="quotation">Quotation</option>
+                          <option value="invoice">Invoice</option>
+                          <option value="partial_receipt">Partial receipt</option>
+                          <option value="receipt">Receipt</option>
+                        </select>
+                      </label>
+                      <label className={labelClass}>
+                        Number
+                        <input
+                          value={draft.documentNumber}
+                          onChange={(e) => setDraft({ ...draft, documentNumber: e.target.value })}
+                          className={fieldClass}
+                          placeholder="Q-2026-001"
+                        />
+                      </label>
+                      <label className={labelClass}>
+                        Date
+                        <input
+                          type="date"
+                          value={draft.documentDate}
+                          onChange={(e) => setDraft({ ...draft, documentDate: e.target.value })}
+                          className={fieldClass}
+                        />
+                      </label>
+                      <label className={labelClass}>
+                        {draft.documentType === "quotation" ? "Status" : "Payment status"}
+                        <select
+                          value={draft.paymentStatus}
+                          onChange={(e) => setDraft({ ...draft, paymentStatus: e.target.value })}
+                          className={fieldClass}
+                        >
+                          {paymentStatusOptions.map((status) => (
+                            <option key={status} value={status}>
+                              {status}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className={labelClass}>
+                        Prepared by
+                        <input
+                          value={draft.preparedBy}
+                          onChange={(e) => setDraft({ ...draft, preparedBy: e.target.value })}
+                          className={fieldClass}
+                          placeholder="Your name"
+                        />
+                      </label>
+                      {draft.documentType === "quotation" ? (
+                        <label className={labelClass}>
+                          Valid until
+                          <input
+                            type="date"
+                            value={draft.validUntil}
+                            onChange={(e) => setDraft({ ...draft, validUntil: e.target.value })}
+                            className={fieldClass}
+                          />
+                        </label>
+                      ) : null}
+                    </div>
+
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <p className={labelClass}>Line items visibility</p>
+                        <div className="mt-2 grid grid-cols-2 gap-2 rounded-[22px] border border-[#dddddd] bg-white p-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setDraft({ ...draft, showLineItems: true })}
+                            className={`rounded-2xl px-3 py-2.5 text-xs font-semibold transition ${
+                              draft.showLineItems
+                                ? "bg-[#222222] text-white"
+                                : "text-[#6a6a6a] hover:bg-[#f7f7f7]"
+                            }`}
+                          >
+                            Detailed
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDraft({ ...draft, showLineItems: false })}
+                            className={`rounded-2xl px-3 py-2.5 text-xs font-semibold transition ${
+                              !draft.showLineItems
+                                ? "bg-[#222222] text-white"
+                                : "text-[#6a6a6a] hover:bg-[#f7f7f7]"
+                            }`}
+                          >
+                            Summary
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <p className={labelClass}>Totals on PDF</p>
+                        <div className="mt-2 grid grid-cols-2 gap-2 rounded-[22px] border border-[#dddddd] bg-white p-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setDraft({ ...draft, showTotals: true })}
+                            className={`rounded-2xl px-3 py-2.5 text-xs font-semibold transition ${
+                              draft.showTotals
+                                ? "bg-[#222222] text-white"
+                                : "text-[#6a6a6a] hover:bg-[#f7f7f7]"
+                            }`}
+                          >
+                            Show
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDraft({ ...draft, showTotals: false })}
+                            className={`rounded-2xl px-3 py-2.5 text-xs font-semibold transition ${
+                              !draft.showTotals
+                                ? "bg-[#222222] text-white"
+                                : "text-[#6a6a6a] hover:bg-[#f7f7f7]"
+                            }`}
+                          >
+                            Hide
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={`${softSurfaceClass} p-5`}>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className={labelClass}>Line items</p>
+                        <p className={`mt-2 text-sm ${isDark ? "text-slate-300" : "text-[#6a6a6a]"}`}>
+                          Update quantities, pricing, and the exact document wording.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => addDraftLine("Product / Size")}
+                        className={secondaryButtonClass}
+                      >
+                        <FiPlus className="h-4 w-4" />
+                        Add line item
+                      </button>
+                    </div>
+
+                    <div className="mt-5 space-y-3">
+                      {draft.lines.map((line, index) => (
+                        <div
+                          key={`workflow-studio-line-${index}`}
+                          className={`rounded-[24px] border p-4 ${
+                            isDark ? "border-white/10 bg-black/20" : "border-[#ebebeb] bg-white"
+                          }`}
+                        >
+                          <div className="grid gap-3 md:grid-cols-[minmax(0,1.45fr)_86px_minmax(0,0.8fr)_106px_44px] md:items-center">
+                            <label className={`${labelClass} md:hidden`}>
+                              Description
+                              <input
+                                value={line.description}
+                                onChange={(e) =>
+                                  updateDraftLine(index, { description: e.target.value })
+                                }
+                                className={fieldClass}
+                                placeholder="Product / size / print"
+                              />
+                            </label>
+                            <input
+                              value={line.description}
+                              onChange={(e) =>
+                                updateDraftLine(index, { description: e.target.value })
+                              }
+                              className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff6600] focus:ring-4 focus:ring-[#ff6600]/10 md:block"
+                              placeholder="Product / size / print"
+                              aria-label="Line item description"
+                            />
+                            <label className={`${labelClass} md:hidden`}>
+                              Qty
+                              <input
+                                type="number"
+                                min={0}
+                                value={line.quantity}
+                                onChange={(e) =>
+                                  updateDraftLine(index, {
+                                    quantity: parseEditableNumber(e.target.value),
+                                  })
+                                }
+                                className={fieldClass}
+                              />
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={line.quantity}
+                              onChange={(e) =>
+                                updateDraftLine(index, {
+                                  quantity: parseEditableNumber(e.target.value),
+                                })
+                              }
+                              className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff6600] focus:ring-4 focus:ring-[#ff6600]/10 md:block"
+                              placeholder="Qty"
+                              aria-label="Quantity"
+                            />
+                            <label className={`${labelClass} md:hidden`}>
+                              Unit price
+                              <input
+                                type="number"
+                                min={0}
+                                value={line.unitPrice}
+                                onChange={(e) =>
+                                  updateDraftLine(index, {
+                                    unitPrice: parseEditableNumber(e.target.value),
+                                  })
+                                }
+                                className={fieldClass}
+                              />
+                            </label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={line.unitPrice}
+                              onChange={(e) =>
+                                updateDraftLine(index, {
+                                  unitPrice: parseEditableNumber(e.target.value),
+                                })
+                              }
+                              className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff6600] focus:ring-4 focus:ring-[#ff6600]/10 md:block"
+                              placeholder="Unit price"
+                              aria-label="Unit price"
+                            />
+                            <div className="min-w-0 rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] px-4 py-3 text-right text-sm font-semibold text-[#222222]">
+                              {formatMoney(
+                                safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0),
+                                draft.currency
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeDraftLine(index)}
+                              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#ebebeb] bg-white text-[#717171] transition hover:border-[#ffd9c2] hover:bg-[#fff4ed] hover:text-[#c2410c]"
+                              aria-label="Remove line item"
+                            >
+                              <FiXCircle className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-5">
+                  <div className={`${softSurfaceClass} p-5`}>
+                    <p className={labelClass}>Client details</p>
+                    <div className="mt-4 grid gap-4">
+                      <label className={labelClass}>
+                        Client contact name
+                        <AutoFitInput
+                          value={draft.contactName}
+                          onChange={(e) => setDraft({ ...draft, contactName: e.target.value })}
+                          className={fieldClass}
+                          placeholder="Client name"
+                        />
+                      </label>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <label className={labelClass}>
+                          Client email
+                          <AutoFitInput
+                            type="email"
+                            value={draft.contactEmail}
+                            onChange={(e) => setDraft({ ...draft, contactEmail: e.target.value })}
+                            className={fieldClass}
+                            placeholder="client@email.com"
+                          />
+                        </label>
+                        <label className={labelClass}>
+                          Phone / WhatsApp
+                          <AutoFitInput
+                            value={draft.contactPhone}
+                            onChange={(e) => setDraft({ ...draft, contactPhone: e.target.value })}
+                            className={fieldClass}
+                            placeholder="+230 ..."
+                          />
+                        </label>
+                      </div>
+                      <label className={labelClass}>
+                        Client / Company name
+                        <AutoFitInput
+                          value={draft.clientCompany}
+                          onChange={(e) => setDraft({ ...draft, clientCompany: e.target.value })}
+                          className={fieldClass}
+                          placeholder={selected.name || "Client or company name"}
+                        />
+                      </label>
+                      <label className={labelClass}>
+                        Billing address
+                        <AutoFitInput
+                          value={draft.clientAddress}
+                          onChange={(e) => setDraft({ ...draft, clientAddress: e.target.value })}
+                          className={fieldClass}
+                          placeholder="Street, city, postal code"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className={`${softSurfaceClass} p-5`}>
+                    <p className={labelClass}>Commercial details</p>
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                      <label className={labelClass}>
+                        Currency
+                        <input
+                          value={draft.currency}
+                          onChange={(e) => setDraft({ ...draft, currency: e.target.value })}
+                          className={fieldClass}
+                        />
+                      </label>
+                      <label className={labelClass}>
+                        Delivery fee
+                        <input
+                          type="number"
+                          min={0}
+                          value={draft.deliveryFee}
+                          onChange={(e) =>
+                            setDraft({
+                              ...draft,
+                              deliveryFee: parseEditableNumber(e.target.value),
+                            })
+                          }
+                          className={fieldClass}
+                        />
+                      </label>
+                      <label className={labelClass}>
+                        Discount
+                        <input
+                          type="number"
+                          min={0}
+                          value={draft.discount}
+                          onChange={(e) =>
+                            setDraft({
+                              ...draft,
+                              discount: parseEditableNumber(e.target.value),
+                            })
+                          }
+                          className={fieldClass}
+                        />
+                      </label>
+                      <div className="rounded-[24px] border border-[#ebebeb] bg-white px-4 py-3">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
+                          Grand total
+                        </div>
+                        <div className="mt-2 text-lg font-semibold text-[#222222]">
+                          {formatMoney(totals.total, draft.currency)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={`${softSurfaceClass} p-5`}>
+                    <p className={labelClass}>Notes and terms</p>
+                    <div className="mt-4 grid gap-4">
+                      <label className={labelClass}>
+                        Notes to client
+                        <textarea
+                          value={draft.notes}
+                          onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+                          rows={4}
+                          className={textAreaClass}
+                          placeholder="Add any extra details or delivery notes..."
+                        />
+                      </label>
+                      <label className={labelClass}>
+                        Terms and payment details
+                        <textarea
+                          value={draft.terms}
+                          onChange={(e) => setDraft({ ...draft, terms: e.target.value })}
+                          rows={6}
+                          className={textAreaClass}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className={`flex flex-wrap items-center justify-between gap-3 border-t px-5 py-4 ${
+                isDark ? "border-white/10 bg-slate-950" : "border-[#ebebeb] bg-white"
+              }`}
+            >
+              <div className={`text-sm ${isDark ? "text-slate-300" : "text-[#6a6a6a]"}`}>
+                Current total:{" "}
+                <span className="font-semibold text-[#ff6600]">
+                  {formatMoney(totals.total, draft.currency)}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={handleViewPdf} className={secondaryButtonClass}>
+                  <FiFileText className="h-4 w-4" />
+                  View PDF
+                </button>
+                <button type="button" onClick={handleDownloadPdf} className={secondaryButtonClass}>
+                  <FiDownload className="h-4 w-4" />
+                  Download PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => saveDraft()}
+                  disabled={saving}
+                  className={primaryButtonClass}
+                >
+                  <FiEdit2 className="h-4 w-4" />
+                  {saving ? "Saving..." : "Save quotation"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
