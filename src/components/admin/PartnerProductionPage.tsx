@@ -14,6 +14,7 @@ import {
   FiDownload,
   FiFileText,
   FiImage,
+  FiInfo,
   FiLock,
   FiLogOut,
   FiMessageCircle,
@@ -182,6 +183,7 @@ export default function PartnerProductionPage({
   const { theme, toggleTheme } = useAdminTheme();
   const isDark = theme === "dark";
   const partner = getPrintPartner(partnerId);
+  const productionNotes = partner.productionNotes;
   const [sessionState, setSessionState] = useState<SessionState>("checking");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -260,6 +262,23 @@ export default function PartnerProductionPage({
         ? "bg-[var(--partner-accent)] text-[color:var(--partner-accent-text)]"
         : "text-[color:var(--partner-muted)] hover:bg-[var(--partner-hover)]"
     }`;
+  const productionRulesCard = productionNotes.length ? (
+    <div className={`rounded-2xl border p-4 sm:p-5 ${softSurfaceClass}`}>
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--partner-accent)] text-[color:var(--partner-accent-text)]">
+          <FiInfo className="h-4 w-4" />
+        </span>
+        <div>
+          <p className={sectionLabelClass}>Production rules</p>
+          <ul className="mt-2 space-y-1.5 text-sm leading-6 text-[color:var(--partner-muted)]">
+            {productionNotes.map((note) => (
+              <li key={note}>{note}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   const counts = useMemo(() => {
     return orders.reduce(
@@ -452,6 +471,9 @@ export default function PartnerProductionPage({
               <p className="mt-4 max-w-2xl text-sm leading-6 text-[color:var(--partner-muted)] sm:mt-5 sm:text-base sm:leading-7">
                 Orders assigned by Ryan appear here with only the production details he chooses to share.
               </p>
+              {productionRulesCard ? (
+                <div className="mt-5 max-w-2xl sm:mt-6">{productionRulesCard}</div>
+              ) : null}
               <div className="mt-6 grid max-w-2xl gap-3 sm:mt-8 sm:grid-cols-3">
                 {[
                   ["Accept or reject", "Confirm capacity fast."],
@@ -567,6 +589,9 @@ export default function PartnerProductionPage({
       </header>
 
       <div className="mx-auto max-w-[1500px] px-3 pt-3 sm:px-6 sm:pt-5 lg:px-8">
+        {productionRulesCard ? (
+          <div className="mb-3 sm:mb-5">{productionRulesCard}</div>
+        ) : null}
         <details className={`${surfaceClass} group overflow-hidden`}>
           <summary className="flex cursor-pointer list-none flex-col gap-3 p-4 marker:hidden sm:flex-row sm:items-center sm:justify-between sm:p-5 [&::-webkit-details-marker]:hidden">
             <div>

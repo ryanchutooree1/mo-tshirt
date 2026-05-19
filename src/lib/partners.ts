@@ -3,11 +3,16 @@ export const PRINT_PARTNERS = [
     id: "yan",
     name: "Yan",
     path: "/admin/yan_list",
+    productionNotes: [],
   },
   {
     id: "shabanaz",
     name: "Shabbanaz",
     path: "/admin/shab_list",
+    productionNotes: [
+      "Accepts DTF Printing and Serigraphy Printing orders.",
+      "Minimum order: 15-20 T-Shirts.",
+    ],
   },
 ] as const;
 
