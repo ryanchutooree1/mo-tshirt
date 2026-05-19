@@ -11,6 +11,7 @@ import {
   FiChevronRight,
   FiCheckCircle,
   FiClock,
+  FiCreditCard,
   FiDownload,
   FiFileText,
   FiImage,
@@ -190,6 +191,7 @@ export default function PartnerProductionPage({
   const isDark = theme === "dark";
   const partner = getPrintPartner(partnerId);
   const productionNotes = partner.productionNotes;
+  const paymentDetails = partner.paymentDetails;
   const [sessionState, setSessionState] = useState<SessionState>("checking");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -281,6 +283,38 @@ export default function PartnerProductionPage({
               <li key={note}>{note}</li>
             ))}
           </ul>
+        </div>
+      </div>
+    </div>
+  ) : null;
+  const paymentDetailsCard = paymentDetails ? (
+    <div className={`rounded-2xl border p-4 sm:p-5 ${softSurfaceClass}`}>
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white">
+          <FiCreditCard className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <p className={sectionLabelClass}>Payment details</p>
+          <dl className="mt-3 grid gap-2 text-sm leading-6">
+            {[
+              ["Full name", paymentDetails.fullName],
+              ["Bank name", paymentDetails.bankName],
+              ["Bank account number", paymentDetails.bankAccountNumber],
+              ["Juice number", paymentDetails.juiceNumber],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                className="rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] px-3 py-2"
+              >
+                <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--partner-muted)]">
+                  {label}
+                </dt>
+                <dd className="mt-1 break-words font-semibold text-[color:var(--partner-text)]">
+                  {value}
+                </dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </div>
     </div>
@@ -596,8 +630,15 @@ export default function PartnerProductionPage({
       </header>
 
       <div className="mx-auto max-w-[1500px] px-3 pt-3 sm:px-6 sm:pt-5 lg:px-8">
-        {productionRulesCard ? (
-          <div className="mb-3 sm:mb-5">{productionRulesCard}</div>
+        {productionRulesCard || paymentDetailsCard ? (
+          <div
+            className={`mb-3 grid gap-3 sm:mb-5 ${
+              productionRulesCard && paymentDetailsCard ? "lg:grid-cols-2" : ""
+            }`}
+          >
+            {productionRulesCard}
+            {paymentDetailsCard}
+          </div>
         ) : null}
         <details className={`${surfaceClass} group overflow-hidden`}>
           <summary className="flex cursor-pointer list-none flex-col gap-3 p-4 marker:hidden sm:flex-row sm:items-center sm:justify-between sm:p-5 [&::-webkit-details-marker]:hidden">

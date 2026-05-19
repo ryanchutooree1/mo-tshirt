@@ -4,6 +4,7 @@ export const PRINT_PARTNERS = [
     name: "Yan",
     path: "/admin/yan_list",
     productionNotes: [],
+    paymentDetails: null,
   },
   {
     id: "shabanaz",
@@ -13,6 +14,12 @@ export const PRINT_PARTNERS = [
       "Accepts DTF Printing and Serigraphy Printing orders.",
       "Minimum order: 15-20 T-Shirts.",
     ],
+    paymentDetails: {
+      fullName: "Shabbanaz Bibi Jaunnoo",
+      bankName: "Mauritius Commercial Bank (MCB)",
+      bankAccountNumber: "000449789454",
+      juiceNumber: "58388176",
+    },
   },
 ] as const;
 
