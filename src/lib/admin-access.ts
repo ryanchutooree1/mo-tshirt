@@ -8,6 +8,7 @@ export type AdminPagePath =
   | "/admin/ready-made-uniforms"
   | "/admin/inventory"
   | "/admin/quotation-approval"
+  | "/admin/partners"
   | "/admin/design-studio"
   | "/admin/background-remover"
   | "/admin/ai-assistant"
@@ -106,6 +107,12 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
     label: "Quotation / Invoice",
     description: "Quotes, invoices, and artwork follow-up.",
     group: "Sales",
+  },
+  {
+    path: "/admin/partners",
+    label: "Partners",
+    description: "Partner pages, payment details, and order notification routing.",
+    group: "Operations",
   },
   {
     path: "/admin/design-studio",
@@ -377,6 +384,7 @@ export const DEFAULT_MORE_NAV_PATHS: AdminPagePath[] = [
   "/admin/orders",
   "/admin/inventory",
   "/admin/automation",
+  "/admin/partners",
   "/admin/settings",
 ];
 
@@ -418,6 +426,7 @@ export function resolveAdminPagePath(pathname: string) {
 
 export function resolveAdminApiPermission(pathname: string) {
   if (pathname.startsWith("/api/admin/settings")) return "/admin/settings" as AdminPagePath;
+  if (pathname.startsWith("/api/admin/partners")) return "/admin/partners" as AdminPagePath;
   if (pathname.startsWith("/api/admin/ai-assistant")) return "/admin/ai-assistant" as AdminPagePath;
   if (pathname.startsWith("/api/admin/quotes")) return "/admin/quotation-approval" as AdminPagePath;
   if (pathname.startsWith("/api/admin/ready-made-uniforms")) return "/admin/ready-made-uniforms" as AdminPagePath;

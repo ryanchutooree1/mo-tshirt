@@ -1764,6 +1764,45 @@ export default function QuotationApprovalPage() {
     return left.length === right.length && left.every((partnerId) => right.includes(partnerId));
   };
 
+  const notifyPartnerAssignment = async (partnerIds: PrintPartnerId[]) => {
+    if (!selected) return "";
+    const res = await fetch("/api/admin/partners/order-notification", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        quoteId: selected.id,
+        partnerIds,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data?.error || "Email notification could not be sent.");
+    }
+
+    const sent = Array.isArray(data?.sent) ? data.sent : [];
+    const skipped = Array.isArray(data?.skipped) ? data.skipped : [];
+    if (sent.length) {
+      const names = sent
+        .map((entry: { partnerName?: unknown }) =>
+          typeof entry.partnerName === "string" ? entry.partnerName : ""
+        )
+        .filter(Boolean)
+        .join(", ");
+      return names ? `Email sent to ${names}.` : "Partner email sent.";
+    }
+    if (skipped.length) {
+      const reasons = skipped
+        .map((entry: { partnerName?: unknown; reason?: unknown }) => {
+          const name = typeof entry.partnerName === "string" ? entry.partnerName : "Partner";
+          const reason = typeof entry.reason === "string" ? entry.reason : "Skipped.";
+          return `${name}: ${reason}`;
+        })
+        .join(" ");
+      return `Email notification skipped. ${reasons}`;
+    }
+    return "";
+  };
+
   const assignToPartners = async (partnerIds: PrintPartnerId[]) => {
     if (!selected) return;
     const routePartnerIds = normalizePrintPartnerIds(partnerIds);
@@ -1819,15 +1858,23 @@ export default function QuotationApprovalPage() {
     setNotice(null);
     try {
       await updateDoc(doc(db, "quotes", selected.id), updatePayload);
-      setNotice(
-        hasEmailOnlyArtwork
-          ? `${routeLabel}'s view was updated, but at least one artwork file is email-only. Re-upload it under Artwork so the partner can open the file.`
-          : sameRoute
-            ? `Visible fields updated for ${routeLabel}.`
-            : routePartnerIds.length > 1
-              ? `Sent to ${routeLabel}. The first partner to accept will own this job.`
-              : `Moved order to ${routeLabel}'s production desk.`
-      );
+      const routeNotice = hasEmailOnlyArtwork
+        ? `${routeLabel}'s view was updated, but at least one artwork file is email-only. Re-upload it under Artwork so the partner can open the file.`
+        : sameRoute
+          ? `Visible fields updated for ${routeLabel}.`
+          : routePartnerIds.length > 1
+            ? `Sent to ${routeLabel}. The first partner to accept will own this job.`
+            : `Moved order to ${routeLabel}'s production desk.`;
+      try {
+        const emailNotice = await notifyPartnerAssignment(routePartnerIds);
+        setNotice(emailNotice ? `${routeNotice} ${emailNotice}` : routeNotice);
+      } catch (notificationError) {
+        const message =
+          notificationError instanceof Error
+            ? notificationError.message
+            : "Email notification could not be sent.";
+        setNotice(`${routeNotice} ${message}`);
+      }
     } catch {
       setNotice(`Failed to assign order to ${routeLabel}.`);
     } finally {
@@ -2221,11 +2268,11 @@ export default function QuotationApprovalPage() {
 
   return (
     <div
-      className={`quotation-approval-page relative min-h-screen overflow-hidden ${
+      className={`quotation-approval-page relative min-h-screen max-w-full overflow-x-hidden ${
         isDark ? "ceo-theme bg-slate-950 text-white" : "bg-white text-[#222222]"
       }`}
     >
-      <div className="relative overflow-hidden">
+      <div className="relative max-w-full overflow-x-hidden">
         {isDark ? (
           <>
             <div className="pointer-events-none absolute -top-40 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.32),rgba(56,189,248,0)_70%)] blur-3xl" />
@@ -2240,7 +2287,7 @@ export default function QuotationApprovalPage() {
           </>
         )}
 
-        <div className="relative mx-auto w-full max-w-[1500px] px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+        <div className="relative mx-auto w-full max-w-[1500px] px-2 py-3 sm:px-6 sm:py-6 lg:px-8">
           <header className={`${surfaceClass} relative overflow-hidden px-4 py-5 sm:px-8 sm:py-7`}>
             <div
               className={`absolute inset-0 ${
@@ -2389,9 +2436,9 @@ export default function QuotationApprovalPage() {
             </div>
           </div>
 
-          <div className="mt-6 grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <div className="mt-4 grid min-w-0 gap-4 sm:mt-6 sm:gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
             <aside
-              className={`${mobilePanel === "inbox" ? "block" : "hidden"} ${surfaceClass} h-fit p-4 lg:sticky lg:top-24 lg:block`}
+              className={`${mobilePanel === "inbox" ? "block" : "hidden"} ${surfaceClass} h-fit min-w-0 max-w-full overflow-hidden p-3 sm:p-4 lg:sticky lg:top-24 lg:block`}
             >
               <div className="flex items-center gap-3 rounded-[24px] border border-[#ebebeb] bg-white px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
                 <FiSearch className="h-4 w-4 text-[#717171]" />
@@ -2403,7 +2450,7 @@ export default function QuotationApprovalPage() {
                 />
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-2 text-xs font-semibold">
+              <div className="mt-4 grid grid-cols-1 gap-2 text-xs font-semibold sm:grid-cols-2">
                 {([
                   { key: "all", label: "All", count: stats.total },
                   { key: "new", label: STATUS_LABELS.new, count: stats.new },
@@ -2478,7 +2525,7 @@ export default function QuotationApprovalPage() {
                         setSelectedId(quote.id);
                         setMobilePanel("quote");
                       }}
-                      className={`w-full rounded-[26px] border px-4 py-4 text-left transition ${
+                      className={`w-full overflow-hidden rounded-[26px] border px-4 py-4 text-left transition ${
                         selectedTone
                           ? "border-[#ffb37a] bg-white shadow-[0_18px_36px_-30px_rgba(255,102,0,0.28)]"
                           : "border-[#ebebeb] bg-white hover:border-[#cfcfcf] hover:shadow-[0_10px_24px_rgba(0,0,0,0.06)]"
@@ -2495,7 +2542,7 @@ export default function QuotationApprovalPage() {
                           {initials || "Q"}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between gap-3">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                             <div className="min-w-0">
                               <p className="truncate text-sm font-semibold text-[#222222]">
                                 {quote.name || "Unnamed client"}
@@ -2504,7 +2551,7 @@ export default function QuotationApprovalPage() {
                                 {quote.email || "No email"}
                               </p>
                             </div>
-                            <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${primaryStatus.tone}`}>
+                            <span className={`self-start rounded-full border px-2.5 py-1 text-[10px] font-semibold ${primaryStatus.tone}`}>
                               {primaryStatus.label}
                             </span>
                           </div>
@@ -2512,8 +2559,8 @@ export default function QuotationApprovalPage() {
                             {garmentPreview || "No product line yet"}
                             {totalPieces > 0 ? ` • ${totalPieces} pc${totalPieces > 1 ? "s" : ""}` : ""}
                           </p>
-                          <div className="mt-3 flex items-center justify-between text-[11px] text-[#717171]">
-                            <span>{quote.source || "Website"}</span>
+                          <div className="mt-3 flex items-center justify-between gap-3 text-[11px] text-[#717171]">
+                            <span className="min-w-0 truncate">{quote.source || "Website"}</span>
                             <span>
                               {quote.createdAt
                                 ? formatDistanceToNow(quote.createdAt, { addSuffix: true })
@@ -2534,7 +2581,7 @@ export default function QuotationApprovalPage() {
               </div>
             </aside>
 
-            <section className={`${mobilePanel === "quote" ? "block" : "hidden"} space-y-6 lg:block`}>
+            <section className={`${mobilePanel === "quote" ? "block" : "hidden"} min-w-0 space-y-6 lg:block`}>
               {selected && draft ? (
                 <>
                   <button
@@ -2841,6 +2888,9 @@ export default function QuotationApprovalPage() {
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">
+                        <Link href="/admin/partners" className={secondaryButtonClass}>
+                          Partner settings
+                        </Link>
                         {PRINT_PARTNERS.map((partner) => (
                           <Link
                             key={partner.id}
