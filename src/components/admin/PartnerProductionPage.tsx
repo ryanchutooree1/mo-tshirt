@@ -872,18 +872,21 @@ export default function PartnerProductionPage({
                       active={draft.decision === "accepted"}
                       label="Accept"
                       icon={<FiCheckCircle />}
+                      tone="accept"
                       onClick={() => setDraft((current) => ({ ...current, decision: "accepted" }))}
                     />
                     <DecisionButton
                       active={draft.decision === "needs_info"}
                       label="Need info"
                       icon={<FiAlertTriangle />}
+                      tone="info"
                       onClick={() => setDraft((current) => ({ ...current, decision: "needs_info" }))}
                     />
                     <DecisionButton
                       active={draft.decision === "rejected"}
                       label="Reject"
                       icon={<FiXCircle />}
+                      tone="reject"
                       onClick={() => setDraft((current) => ({ ...current, decision: "rejected" }))}
                     />
                   </div>
@@ -1073,22 +1076,32 @@ function DecisionButton({
   active,
   label,
   icon,
+  tone,
   onClick,
 }: {
   active: boolean;
   label: string;
   icon: ReactNode;
+  tone: "accept" | "info" | "reject";
   onClick: () => void;
 }) {
+  const toneClass = {
+    accept: active
+      ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
+      : "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100",
+    info: active
+      ? "border-amber-500 bg-amber-500 text-white shadow-sm"
+      : "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100",
+    reject: active
+      ? "border-rose-600 bg-rose-600 text-white shadow-sm"
+      : "border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100",
+  }[tone];
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`flex min-h-16 flex-col items-center justify-center gap-2 rounded-xl border px-2 text-xs font-semibold transition sm:min-h-20 ${
-        active
-          ? "border-[color:var(--partner-accent)] bg-[var(--partner-accent)] text-[color:var(--partner-accent-text)]"
-          : "border-[color:var(--partner-border)] bg-[var(--partner-soft)] text-[color:var(--partner-text)] hover:bg-[var(--partner-hover)]"
-      }`}
+      className={`flex min-h-16 flex-col items-center justify-center gap-2 rounded-xl border px-2 text-xs font-semibold transition sm:min-h-20 ${toneClass}`}
     >
       <span className="text-base">{icon}</span>
       {label}
