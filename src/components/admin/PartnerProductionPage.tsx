@@ -909,6 +909,28 @@ export default function PartnerProductionPage({
                       />
                     </label>
                     <label className={fieldLabelClass}>
+                      Print placement
+                      <select
+                        value={draft.printPlacement}
+                        onChange={(event) =>
+                          setDraft((current) => ({
+                            ...current,
+                            printPlacement: event.target.value as PartnerPrintPlacement,
+                          }))
+                        }
+                        className={`mt-2 normal-case tracking-normal ${inputClass}`}
+                      >
+                        {PARTNER_PRINT_PLACEMENT_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="mt-2 block text-xs normal-case tracking-normal text-[color:var(--partner-muted)]">
+                        Prefilled from Ryan&apos;s admin quotation or the client request when available.
+                      </span>
+                    </label>
+                    <label className={fieldLabelClass}>
                       Your price
                       <input
                         type="number"
@@ -942,28 +964,6 @@ export default function PartnerProductionPage({
                           </option>
                         ))}
                       </select>
-                    </label>
-                    <label className={fieldLabelClass}>
-                      Print placement
-                      <select
-                        value={draft.printPlacement}
-                        onChange={(event) =>
-                          setDraft((current) => ({
-                            ...current,
-                            printPlacement: event.target.value as PartnerPrintPlacement,
-                          }))
-                        }
-                        className={`mt-2 normal-case tracking-normal ${inputClass}`}
-                      >
-                        {PARTNER_PRINT_PLACEMENT_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      <span className="mt-2 block text-xs normal-case tracking-normal text-[color:var(--partner-muted)]">
-                        Prefilled from Ryan&apos;s admin quotation or the client request when available.
-                      </span>
                     </label>
                     <label className={fieldLabelClass}>
                       Comments for Ryan
