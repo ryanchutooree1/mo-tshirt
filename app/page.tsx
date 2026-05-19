@@ -569,7 +569,9 @@ export default function HomePage() {
           <p className="mt-6 text-xs text-white/80">
             © 2026 MO T-SHIRT — Mauritius’ trusted name in custom printing.
             <span className="mx-2 text-white/70">|</span>
-            <span>All Rights Reserved</span>
+            <Link href="/login" className="transition hover:text-white hover:underline">
+              All Rights Reserved
+            </Link>
           </p>
         </div>
       </footer>

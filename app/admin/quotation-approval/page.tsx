@@ -29,6 +29,7 @@ import { formatMoney as formatDisplayMoney } from "@/lib/money";
 import { addDays, format, formatDistanceToNow } from "date-fns";
 import { jsPDF } from "jspdf";
 import {
+  FiChevronLeft,
   FiCheckCircle,
   FiClock,
   FiDownload,
@@ -85,6 +86,7 @@ type QuoteLine = {
 };
 
 type DocumentType = "quotation" | "invoice" | "receipt" | "partial_receipt";
+type MobilePanel = "inbox" | "quote";
 
 type QuoteDraft = {
   contactName: string;
@@ -1237,6 +1239,7 @@ export default function QuotationApprovalPage() {
   const [movingToOrders, setMovingToOrders] = useState(false);
   const [assigningPartner, setAssigningPartner] = useState<PrintPartnerId | "both" | null>(null);
   const [workflowStudioOpen, setWorkflowStudioOpen] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState<MobilePanel>("inbox");
   const [partnerVisibleFields, setPartnerVisibleFields] =
     useState<PartnerVisibleField[]>(DEFAULT_PARTNER_VISIBLE_FIELDS);
   const [partnerPrintPlacement, setPartnerPrintPlacement] =
@@ -1852,6 +1855,7 @@ export default function QuotationApprovalPage() {
       setNotice("Quotation deleted.");
       setSelectedId(null);
       setDraft(null);
+      setMobilePanel("inbox");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to delete quote.";
       setNotice(message);
@@ -1929,6 +1933,7 @@ export default function QuotationApprovalPage() {
       setStatusFilter("all");
       setSearch("");
       setSelectedId(ref.id);
+      setMobilePanel("quote");
       setDraft(initialDraft);
       setNotice("New quotation created. Fill details, then save.");
     } catch {
@@ -2191,6 +2196,16 @@ export default function QuotationApprovalPage() {
       ? "border border-cyan-300/30 bg-cyan-300/15 text-cyan-100 shadow-[0_14px_34px_rgba(34,211,238,0.12)] hover:bg-cyan-300/25 disabled:bg-slate-700"
       : "bg-[linear-gradient(135deg,#ff6600,#ea580c)] text-white shadow-[0_10px_24px_rgba(255,102,0,0.24)] hover:shadow-[0_14px_28px_rgba(255,102,0,0.32)] disabled:bg-[#ffd3b3]"
   }`;
+  const mobilePanelButtonClass = (active: boolean) =>
+    `rounded-2xl px-3 py-2.5 text-xs font-semibold transition ${
+      active
+        ? isDark
+          ? "bg-white text-slate-950"
+          : "bg-[#222222] text-white"
+        : isDark
+          ? "text-slate-300 hover:bg-white/10"
+          : "text-[#6a6a6a] hover:bg-[#f7f7f7]"
+    }`;
 
   return (
     <div
@@ -2213,8 +2228,8 @@ export default function QuotationApprovalPage() {
           </>
         )}
 
-        <div className="relative mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-6 lg:px-8">
-          <header className={`${surfaceClass} relative overflow-hidden px-6 py-7 sm:px-8`}>
+        <div className="relative mx-auto w-full max-w-[1500px] px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+          <header className={`${surfaceClass} relative overflow-hidden px-4 py-5 sm:px-8 sm:py-7`}>
             <div
               className={`absolute inset-0 ${
                 isDark
@@ -2240,7 +2255,7 @@ export default function QuotationApprovalPage() {
                   MO Admin HQ
                 </p>
                 <h1
-                  className={`mt-3 text-4xl font-semibold tracking-tight sm:text-6xl ${
+                  className={`mt-3 text-3xl font-semibold tracking-tight sm:text-6xl ${
                     isDark ? "text-white" : "text-slate-900"
                   }`}
                 >
@@ -2281,7 +2296,7 @@ export default function QuotationApprovalPage() {
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="hidden gap-3 sm:grid sm:grid-cols-3">
                 {[
                   { label: "Inbox", value: stats.total, note: "active requests" },
                   { label: "Needs attention", value: stats.new + stats.review, note: "new or in review" },
@@ -2307,11 +2322,11 @@ export default function QuotationApprovalPage() {
 
             <div className="relative mt-6 grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
               <div className={`${softSurfaceClass} p-4 sm:p-5`}>
-                <div className={`flex flex-wrap items-center gap-2 text-[11px] font-semibold ${isDark ? "text-slate-200" : "text-[#6a6a6a]"}`}>
+                <div className={`flex gap-2 overflow-x-auto pb-1 text-[11px] font-semibold sm:flex-wrap sm:overflow-visible sm:pb-0 ${isDark ? "text-slate-200" : "text-[#6a6a6a]"}`}>
                   {["Review request", "Build document", "Approve and send", "Move to orders"].map((step, index) => (
                     <span
                       key={step}
-                      className={`rounded-full border px-3 py-1 ${
+                      className={`shrink-0 rounded-full border px-3 py-1 ${
                         isDark ? "border-white/20 bg-white/10" : "border-[#ebebeb] bg-white"
                       }`}
                     >
@@ -2342,8 +2357,30 @@ export default function QuotationApprovalPage() {
             </div>
           </header>
 
+          <div className="mt-4 lg:hidden">
+            <div className={`${surfaceClass} grid grid-cols-2 gap-1 p-1`}>
+              <button
+                type="button"
+                onClick={() => setMobilePanel("inbox")}
+                className={mobilePanelButtonClass(mobilePanel === "inbox")}
+              >
+                Inbox ({filtered.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobilePanel("quote")}
+                disabled={!selected}
+                className={`${mobilePanelButtonClass(mobilePanel === "quote")} disabled:opacity-50`}
+              >
+                {selected ? draft?.documentNumber || "Document" : "Document"}
+              </button>
+            </div>
+          </div>
+
           <div className="mt-6 grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-            <aside className={`${surfaceClass} h-fit p-4 lg:sticky lg:top-24`}>
+            <aside
+              className={`${mobilePanel === "inbox" ? "block" : "hidden"} ${surfaceClass} h-fit p-4 lg:sticky lg:top-24 lg:block`}
+            >
               <div className="flex items-center gap-3 rounded-[24px] border border-[#ebebeb] bg-white px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
                 <FiSearch className="h-4 w-4 text-[#717171]" />
                 <input
@@ -2425,7 +2462,10 @@ export default function QuotationApprovalPage() {
                     <button
                       key={quote.id}
                       type="button"
-                      onClick={() => setSelectedId(quote.id)}
+                      onClick={() => {
+                        setSelectedId(quote.id);
+                        setMobilePanel("quote");
+                      }}
                       className={`w-full rounded-[26px] border px-4 py-4 text-left transition ${
                         selectedTone
                           ? "border-[#ffb37a] bg-white shadow-[0_18px_36px_-30px_rgba(255,102,0,0.28)]"
@@ -2482,9 +2522,17 @@ export default function QuotationApprovalPage() {
               </div>
             </aside>
 
-            <section className="space-y-6">
+            <section className={`${mobilePanel === "quote" ? "block" : "hidden"} space-y-6 lg:block`}>
               {selected && draft ? (
                 <>
+                  <button
+                    type="button"
+                    onClick={() => setMobilePanel("inbox")}
+                    className={`${secondaryButtonClass} lg:hidden`}
+                  >
+                    <FiChevronLeft className="h-4 w-4" />
+                    Back to inbox
+                  </button>
                   <div className={`${surfaceClass} overflow-hidden`}>
                     <div className="grid gap-6 px-6 py-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_320px]">
                       <div>
@@ -3201,7 +3249,7 @@ export default function QuotationApprovalPage() {
 
                             <div className="mt-4">
                               <p className={labelClass}>Line items visibility</p>
-                              <div className="mt-2 grid grid-cols-2 gap-2 rounded-[22px] border border-[#dddddd] bg-white p-1.5">
+                              <div className="mt-2 grid gap-2 rounded-[22px] border border-[#dddddd] bg-white p-1.5 sm:grid-cols-2">
                                 <button
                                   type="button"
                                   onClick={() => setDraft({ ...draft, showLineItems: true })}
@@ -3232,7 +3280,7 @@ export default function QuotationApprovalPage() {
 
                             <div className="mt-4">
                               <p className={labelClass}>Totals on PDF</p>
-                              <div className="mt-2 grid grid-cols-2 gap-2 rounded-[22px] border border-[#dddddd] bg-white p-1.5">
+                              <div className="mt-2 grid gap-2 rounded-[22px] border border-[#dddddd] bg-white p-1.5 sm:grid-cols-2">
                                 <button
                                   type="button"
                                   onClick={() => setDraft({ ...draft, showTotals: true })}
@@ -4011,7 +4059,7 @@ export default function QuotationApprovalPage() {
                     <div className="mt-4 grid gap-4 sm:grid-cols-2">
                       <div>
                         <p className={labelClass}>Line items visibility</p>
-                        <div className="mt-2 grid grid-cols-2 gap-2 rounded-[22px] border border-[#dddddd] bg-white p-1.5">
+                        <div className="mt-2 grid gap-2 rounded-[22px] border border-[#dddddd] bg-white p-1.5 sm:grid-cols-2">
                           <button
                             type="button"
                             onClick={() => setDraft({ ...draft, showLineItems: true })}
@@ -4038,7 +4086,7 @@ export default function QuotationApprovalPage() {
                       </div>
                       <div>
                         <p className={labelClass}>Totals on PDF</p>
-                        <div className="mt-2 grid grid-cols-2 gap-2 rounded-[22px] border border-[#dddddd] bg-white p-1.5">
+                        <div className="mt-2 grid gap-2 rounded-[22px] border border-[#dddddd] bg-white p-1.5 sm:grid-cols-2">
                           <button
                             type="button"
                             onClick={() => setDraft({ ...draft, showTotals: true })}
