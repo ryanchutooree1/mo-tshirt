@@ -60,6 +60,21 @@ type ResponseDraft = {
   missingInformation: string;
 };
 
+const RESPONSE_SAVE_LABELS: Record<PartnerDecision, string> = {
+  pending: "Save response",
+  accepted: "Save acceptance",
+  needs_info: "Send need info request",
+  rejected: "Save rejection",
+};
+
+const RESPONSE_SAVE_TONES: Record<PartnerDecision, string> = {
+  pending:
+    "bg-[var(--partner-accent)] text-[color:var(--partner-accent-text)] hover:opacity-90",
+  accepted: "bg-emerald-600 text-white hover:bg-emerald-700",
+  needs_info: "bg-amber-500 text-slate-950 hover:bg-amber-400",
+  rejected: "bg-rose-600 text-white hover:bg-rose-700",
+};
+
 function formatDate(value: string | null) {
   if (!value) return "Not set";
   const date = new Date(value);
@@ -264,6 +279,19 @@ export default function PartnerProductionPage({
     "text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--partner-muted)] sm:text-xs sm:tracking-[0.18em]";
   const sectionLabelClass =
     "text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--partner-muted)] sm:text-xs sm:tracking-[0.2em]";
+  const responseSaveButtonClass =
+    RESPONSE_SAVE_TONES[draft.decision] || RESPONSE_SAVE_TONES.pending;
+  const responseSaveLabel = saving
+    ? "Saving..."
+    : RESPONSE_SAVE_LABELS[draft.decision] || RESPONSE_SAVE_LABELS.pending;
+  const responseSaveIcon =
+    draft.decision === "rejected" ? (
+      <FiXCircle className="h-4 w-4" />
+    ) : draft.decision === "needs_info" ? (
+      <FiAlertTriangle className="h-4 w-4" />
+    ) : (
+      <FiCheckCircle className="h-4 w-4" />
+    );
   const mobilePanelButtonClass = (active: boolean) =>
     `rounded-xl px-3 py-2.5 text-xs font-semibold transition ${
       active
@@ -441,9 +469,9 @@ export default function PartnerProductionPage({
     setSessionState("signed_out");
   }
 
-  async function saveResponse(nextDecision?: PartnerDecision) {
+  async function saveResponse() {
     if (!selected) return;
-    const decision = nextDecision || draft.decision;
+    const decision = draft.decision;
     setSaving(true);
     setNotice(null);
     try {
@@ -1054,29 +1082,11 @@ export default function PartnerProductionPage({
                       type="button"
                       onClick={() => saveResponse()}
                       disabled={saving}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--partner-accent)] px-5 py-3 text-sm font-semibold text-[color:var(--partner-accent-text)] transition hover:opacity-90 disabled:opacity-60"
+                      className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition disabled:opacity-60 ${responseSaveButtonClass}`}
                     >
-                      <FiCheckCircle className="h-4 w-4" />
-                      {saving ? "Saving..." : "Save response"}
+                      {responseSaveIcon}
+                      {responseSaveLabel}
                     </button>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => saveResponse("accepted")}
-                        disabled={saving}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-60"
-                      >
-                        Accept
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => saveResponse("rejected")}
-                        disabled={saving}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-semibold text-rose-800 transition hover:bg-rose-100 disabled:opacity-60"
-                      >
-                        Reject
-                      </button>
-                    </div>
                   </div>
 
                   {notice ? (

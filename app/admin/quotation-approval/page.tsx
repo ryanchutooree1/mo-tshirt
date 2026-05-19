@@ -547,10 +547,15 @@ const parseDesignBrief = (value: unknown): DesignBrief | null => {
 
 const getQuoteAttachments = (quote: QuoteRecord | null | undefined) => {
   if (!quote) return [] as QuoteAttachment[];
+  const preferOpenableAttachments = (attachments: QuoteAttachment[]) => {
+    const openableAttachments = attachments.filter((attachment) => attachment.url);
+    return openableAttachments.length ? openableAttachments : attachments;
+  };
   if (Array.isArray(quote.attachments) && quote.attachments.length) {
-    return quote.attachments.filter(
+    const attachments = quote.attachments.filter(
       (entry) => Boolean(entry?.filename || entry?.url || entry?.label || entry?.description || entry?.quantity)
     );
+    return preferOpenableAttachments(attachments);
   }
   if (quote.attachment) return [quote.attachment];
   return [] as QuoteAttachment[];
@@ -1767,8 +1772,12 @@ export default function QuotationApprovalPage() {
       routePartnerIds.length > 1 ? "both" : routePartnerIds[0];
     const routeLabel = getPrintPartnerRouteLabel(routePartnerIds);
     const visibleFields = normalizePartnerVisibleFields(partnerVisibleFields);
+    const hasOpenableArtwork =
+      visibleFields.includes("artwork") &&
+      selectedAttachments.some((attachment) => attachment.url);
     const hasEmailOnlyArtwork =
       visibleFields.includes("artwork") &&
+      !hasOpenableArtwork &&
       selectedAttachments.some((attachment) => !attachment.url);
     const currentPartnerIds = selected.partner?.visibleTo?.length
       ? selected.partner.visibleTo
@@ -2027,7 +2036,10 @@ export default function QuotationApprovalPage() {
           } satisfies QuoteAttachment;
         })
       );
-      const nextAttachments = [...existingAttachments, ...uploadedAttachments];
+      const nextAttachments = [
+        ...existingAttachments.filter((attachment) => attachment.url),
+        ...uploadedAttachments,
+      ];
       await updateDoc(doc(db, "quotes", selected.id), {
         attachments: nextAttachments,
         attachment: nextAttachments[0] || null,

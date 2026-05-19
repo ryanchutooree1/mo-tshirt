@@ -318,15 +318,25 @@ function canPartnerReadAssignment(partner: RawPartnerAssignment, partnerId: Prin
   return assignedPartnerIds.includes(partnerId);
 }
 
+function attachmentHasContent(attachment: QuoteAttachment) {
+  return Boolean(
+    attachment.url ||
+      attachment.filename ||
+      attachment.label ||
+      attachment.description
+  );
+}
+
 function sanitizeAttachments(attachments: QuoteAttachment[]) {
-  return attachments
-    .filter(
-      (attachment) =>
-        attachment.url ||
-        attachment.filename ||
-        attachment.label ||
-        attachment.description
-    )
+  const visibleAttachments = attachments.filter(attachmentHasContent);
+  const openableAttachments = visibleAttachments.filter((attachment) =>
+    Boolean(attachment.url)
+  );
+  const partnerAttachments = openableAttachments.length
+    ? openableAttachments
+    : visibleAttachments;
+
+  return partnerAttachments
     .map((attachment, index) => {
       return {
         label: attachment.label || attachment.description || `Artwork ${index + 1}`,
