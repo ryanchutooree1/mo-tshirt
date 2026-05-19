@@ -31,12 +31,15 @@ import {
   getPrintPartner,
   PARTNER_DECISION_LABELS,
   PARTNER_DECISION_TONES,
+  PARTNER_PRINT_PLACEMENT_LABELS,
+  PARTNER_PRINT_PLACEMENT_OPTIONS,
   PARTNER_PRODUCTION_STATUS_LABELS,
   PARTNER_PRODUCTION_STATUSES,
   type PartnerDecision,
   type PartnerOrderAttachment,
   type PartnerOrderDetails,
   type PartnerOrderView,
+  type PartnerPrintPlacement,
   type PartnerProductionStatus,
   type PrintPartnerId,
 } from "@/lib/partners";
@@ -49,6 +52,7 @@ type MobilePanel = "queue" | "order";
 type ResponseDraft = {
   decision: PartnerDecision;
   productionStatus: PartnerProductionStatus;
+  printPlacement: PartnerPrintPlacement;
   completionDays: string;
   price: string;
   comments: string;
@@ -77,6 +81,7 @@ function buildDraft(order: PartnerOrderView | null): ResponseDraft {
   return {
     decision: order?.decision || "pending",
     productionStatus: order?.productionStatus || "not_started",
+    printPlacement: order?.printPlacement || "not_set",
     completionDays: order?.completionDays ? String(order.completionDays) : "",
     price: order?.price ? String(order.price) : "",
     comments: order?.comments || "",
@@ -137,6 +142,7 @@ function searchableOrderText(order: PartnerOrderView) {
     order.partnerName,
     order.decision,
     order.productionStatus,
+    PARTNER_PRINT_PLACEMENT_LABELS[order.printPlacement],
   ]
     .filter(Boolean)
     .join(" ")
@@ -403,6 +409,7 @@ export default function PartnerProductionPage({
           partnerId,
           decision,
           productionStatus: draft.productionStatus,
+          printPlacement: draft.printPlacement,
           completionDays: draft.completionDays,
           price: draft.price,
           comments: draft.comments,
@@ -826,7 +833,7 @@ export default function PartnerProductionPage({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3 xl:min-w-[520px]">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 xl:min-w-[640px]">
                     <Metric
                       icon={<FiPackage />}
                       label="Quantity"
@@ -841,6 +848,11 @@ export default function PartnerProductionPage({
                       icon={<FiFileText />}
                       label="Print"
                       value={selected.summary.print || "Not set"}
+                    />
+                    <Metric
+                      icon={<FiImage />}
+                      label="Placement"
+                      value={PARTNER_PRINT_PLACEMENT_LABELS[selected.printPlacement]}
                     />
                   </div>
                 </div>
@@ -927,6 +939,28 @@ export default function PartnerProductionPage({
                           </option>
                         ))}
                       </select>
+                    </label>
+                    <label className={fieldLabelClass}>
+                      Print placement
+                      <select
+                        value={draft.printPlacement}
+                        onChange={(event) =>
+                          setDraft((current) => ({
+                            ...current,
+                            printPlacement: event.target.value as PartnerPrintPlacement,
+                          }))
+                        }
+                        className={`mt-2 normal-case tracking-normal ${inputClass}`}
+                      >
+                        {PARTNER_PRINT_PLACEMENT_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="mt-2 block text-xs normal-case tracking-normal text-[color:var(--partner-muted)]">
+                        Prefilled from Ryan&apos;s admin quotation or the client request when available.
+                      </span>
                     </label>
                     <label className={fieldLabelClass}>
                       Comments for Ryan

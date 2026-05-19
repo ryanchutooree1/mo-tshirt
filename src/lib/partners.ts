@@ -39,6 +39,18 @@ export type PartnerProductionStatus =
   | "will_post_tomorrow"
   | "ryan_to_collect";
 
+export type PartnerPrintPlacement =
+  | "not_set"
+  | "small_front_only"
+  | "large_front_only"
+  | "back_only"
+  | "front_back"
+  | "small_front_back"
+  | "sleeve_only"
+  | "custom";
+
+export type PartnerPrintPlacementSource = "partner" | "admin" | "client" | "unset";
+
 export type PartnerOrderAttachment = {
   label: string;
   filename: string;
@@ -73,6 +85,8 @@ export type PartnerOrderView = {
   updatedAt: string | null;
   decision: PartnerDecision;
   productionStatus: PartnerProductionStatus;
+  printPlacement: PartnerPrintPlacement;
+  printPlacementSource: PartnerPrintPlacementSource;
   completionDays: number | null;
   price: number | null;
   comments: string;
@@ -183,12 +197,40 @@ export const PARTNER_PRODUCTION_STATUSES: PartnerProductionStatus[] = [
   "ryan_to_collect",
 ];
 
+export const PARTNER_PRINT_PLACEMENT_LABELS: Record<PartnerPrintPlacement, string> = {
+  not_set: "Use client/admin request",
+  small_front_only: "Small Front Printing only",
+  large_front_only: "Large Front Printing only",
+  back_only: "Back Printing only",
+  front_back: "Front + Back Printing",
+  small_front_back: "Small Front + Back Printing",
+  sleeve_only: "Sleeve Printing only",
+  custom: "Other / see notes",
+};
+
+export const PARTNER_PRINT_PLACEMENT_OPTIONS: {
+  value: PartnerPrintPlacement;
+  label: string;
+}[] = [
+  { value: "not_set", label: PARTNER_PRINT_PLACEMENT_LABELS.not_set },
+  { value: "small_front_only", label: PARTNER_PRINT_PLACEMENT_LABELS.small_front_only },
+  { value: "large_front_only", label: PARTNER_PRINT_PLACEMENT_LABELS.large_front_only },
+  { value: "back_only", label: PARTNER_PRINT_PLACEMENT_LABELS.back_only },
+  { value: "front_back", label: PARTNER_PRINT_PLACEMENT_LABELS.front_back },
+  { value: "small_front_back", label: PARTNER_PRINT_PLACEMENT_LABELS.small_front_back },
+  { value: "sleeve_only", label: PARTNER_PRINT_PLACEMENT_LABELS.sleeve_only },
+  { value: "custom", label: PARTNER_PRINT_PLACEMENT_LABELS.custom },
+];
+
 const PARTNER_ID_SET = new Set<string>(PRINT_PARTNERS.map((partner) => partner.id));
 const VISIBLE_FIELD_SET = new Set<PartnerVisibleField>(
   PARTNER_VISIBLE_FIELD_OPTIONS.map((field) => field.key)
 );
 const PRODUCTION_STATUS_SET = new Set<PartnerProductionStatus>(
   PARTNER_PRODUCTION_STATUSES
+);
+const PRINT_PLACEMENT_SET = new Set<PartnerPrintPlacement>(
+  PARTNER_PRINT_PLACEMENT_OPTIONS.map((option) => option.value)
 );
 const DECISION_SET = new Set<PartnerDecision>([
   "pending",
@@ -255,4 +297,38 @@ export function isPartnerProductionStatus(
     typeof value === "string" &&
     PRODUCTION_STATUS_SET.has(value as PartnerProductionStatus)
   );
+}
+
+export function isPartnerPrintPlacement(value: unknown): value is PartnerPrintPlacement {
+  return (
+    typeof value === "string" &&
+    PRINT_PLACEMENT_SET.has(value as PartnerPrintPlacement)
+  );
+}
+
+export function normalizePartnerPrintPlacement(value: unknown): PartnerPrintPlacement {
+  return isPartnerPrintPlacement(value) ? value : "not_set";
+}
+
+export function inferPartnerPrintPlacementFromText(
+  value: string,
+  flags: { front?: boolean; back?: boolean; sleeve?: boolean } = {}
+): PartnerPrintPlacement {
+  const text = value.toLowerCase();
+  const hasSmallFront = /\b(small front|front left|left chest|chest logo|pocket)\b/.test(text);
+  const hasLargeFront = /\b(big front|large front|full front|front large)\b/.test(text);
+  const hasFront = /\b(front|chest)\b/.test(text) || hasSmallFront || hasLargeFront;
+  const hasBack = /\b(back|rear)\b/.test(text);
+  const hasSleeve = /\bsleeve\b/.test(text);
+  const front = Boolean(flags.front || hasFront);
+  const back = Boolean(flags.back || hasBack);
+  const sleeve = Boolean(flags.sleeve || hasSleeve);
+
+  if (front && back && hasSmallFront) return "small_front_back";
+  if (front && back) return "front_back";
+  if (hasLargeFront) return "large_front_only";
+  if (front || hasSmallFront) return "small_front_only";
+  if (back) return "back_only";
+  if (sleeve) return "sleeve_only";
+  return "not_set";
 }

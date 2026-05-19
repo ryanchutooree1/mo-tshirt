@@ -9,13 +9,18 @@ import {
 import { db } from "@/lib/firebase";
 import {
   getPrintPartner,
+  inferPartnerPrintPlacementFromText,
   isPrintPartnerId,
+  normalizePartnerPrintPlacement,
   normalizePrintPartnerIds,
   normalizePartnerVisibleFields,
+  PARTNER_PRINT_PLACEMENT_LABELS,
   PARTNER_PRODUCTION_STATUSES,
   type PartnerDecision,
   type PartnerOrderAttachment,
   type PartnerOrderDetails,
+  type PartnerPrintPlacement,
+  type PartnerPrintPlacementSource,
   type PartnerOrderView,
   type PartnerProductionStatus,
   type PartnerVisibleField,
@@ -75,6 +80,7 @@ type RawPartnerAssignment = {
   price?: unknown;
   comments?: unknown;
   missingInformation?: unknown;
+  printPlacement?: unknown;
   assignedAt?: unknown;
   respondedAt?: unknown;
   updatedAt?: unknown;
@@ -201,6 +207,52 @@ function getClientNotes(quote: RawQuote, designBrief: DesignBrief | null) {
   return raw;
 }
 
+function inferPrintPlacement(data: RawQuote, designBrief: DesignBrief | null) {
+  const frontRequested = Boolean(
+    designBrief?.frontLogo || designBrief?.frontText
+  );
+  const backRequested = Boolean(designBrief?.backLogo || designBrief?.backText);
+  const briefPlacement = inferPartnerPrintPlacementFromText(
+    [
+      designBrief?.frontText || "",
+      designBrief?.backText || "",
+      designBrief?.clientNotes || "",
+    ].join(" "),
+    { front: frontRequested, back: backRequested }
+  );
+
+  if (briefPlacement !== "not_set") {
+    return {
+      placement: briefPlacement,
+      source: "client" as PartnerPrintPlacementSource,
+    };
+  }
+
+  const quotePlacement = inferPartnerPrintPlacementFromText(
+    [
+      data.printMethod || "",
+      data.notes || "",
+      data.message || "",
+      ...(data.quote?.lines || []).map((line) => line.description || ""),
+      ...getQuoteAttachments(data).map((attachment) =>
+        [
+          attachment.label || "",
+          attachment.description || "",
+          attachment.filename || "",
+        ].join(" ")
+      ),
+    ].join(" ")
+  );
+
+  return {
+    placement: quotePlacement,
+    source:
+      quotePlacement === "not_set"
+        ? ("unset" as PartnerPrintPlacementSource)
+        : ("admin" as PartnerPrintPlacementSource),
+  };
+}
+
 function hasVisibleField(fields: PartnerVisibleField[], field: PartnerVisibleField) {
   return fields.includes(field);
 }
@@ -303,6 +355,24 @@ export function sanitizePartnerOrder(
   const partnerConfig = getPrintPartner(partnerId);
   const visibleFields = normalizePartnerVisibleFields(partner.visibleFields);
   const designBrief = parseDesignBrief(data.designBrief);
+  const responsePrintPlacement = normalizePartnerPrintPlacement(
+    partnerResponse?.printPlacement
+  );
+  const adminPrintPlacement = normalizePartnerPrintPlacement(partner.printPlacement);
+  const inferredPrintPlacement = inferPrintPlacement(data, designBrief);
+  let printPlacement: PartnerPrintPlacement = inferredPrintPlacement.placement;
+  let printPlacementSource: PartnerPrintPlacementSource = inferredPrintPlacement.source;
+
+  if (adminPrintPlacement !== "not_set") {
+    printPlacement = adminPrintPlacement;
+    printPlacementSource = "admin";
+  }
+
+  if (responsePrintPlacement !== "not_set") {
+    printPlacement = responsePrintPlacement;
+    printPlacementSource = "partner";
+  }
+
   const garments = Array.isArray(data.garments) ? data.garments : [];
   const quoteLines = Array.isArray(data.quote?.lines) ? data.quote?.lines || [] : [];
   const garmentRows = garments
@@ -329,6 +399,9 @@ export function sanitizePartnerOrder(
     ? [designBrief.color]
     : sortQuoteColors(garments.map((entry) => safeString(entry.color)).filter(Boolean));
   const designRows: string[] = [];
+  if (printPlacement !== "not_set") {
+    designRows.push(`Print placement: ${PARTNER_PRINT_PLACEMENT_LABELS[printPlacement]}`);
+  }
   if (designBrief?.frontText) designRows.push(`Front text: ${designBrief.frontText}`);
   if (designBrief?.backText) designRows.push(`Back text: ${designBrief.backText}`);
   if (designBrief?.frontLogo) designRows.push("Front logo");
@@ -401,6 +474,8 @@ export function sanitizePartnerOrder(
     productionStatus: normalizeProductionStatus(
       getResponseValue(partner, partnerResponse, "productionStatus")
     ),
+    printPlacement,
+    printPlacementSource,
     completionDays: safeNumber(getResponseValue(partner, partnerResponse, "completionDays"), 0) > 0
       ? safeNumber(getResponseValue(partner, partnerResponse, "completionDays"), 0)
       : null,

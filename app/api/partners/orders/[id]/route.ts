@@ -8,10 +8,12 @@ import { db } from "@/lib/firebase";
 import {
   getPrintPartner,
   isPartnerDecision,
+  isPartnerPrintPlacement,
   isPartnerProductionStatus,
   isPrintPartnerId,
   normalizePrintPartnerIds,
   type PartnerDecision,
+  type PartnerPrintPlacement,
   type PartnerProductionStatus,
   type PrintPartnerId,
 } from "@/lib/partners";
@@ -128,6 +130,11 @@ export async function PATCH(
   const price = cleanOptionalNumber(body?.price);
   const comments = cleanText(body?.comments);
   const missingInformation = cleanText(body?.missingInformation);
+  const printPlacement: PartnerPrintPlacement = isPartnerPrintPlacement(
+    body?.printPlacement
+  )
+    ? body.printPlacement
+    : existing.view.printPlacement;
 
   const nextProductionStatus =
     decision === "accepted" && productionStatus === "not_started"
@@ -141,6 +148,7 @@ export async function PATCH(
     price,
     comments,
     missingInformation,
+    printPlacement,
     respondedAt: new Date(),
     updatedAt: new Date(),
   };
@@ -177,6 +185,7 @@ export async function PATCH(
         price,
         comments,
         missingInformation,
+        printPlacement,
         respondedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -193,6 +202,7 @@ export async function PATCH(
         updatePayload["partner.price"] = price;
         updatePayload["partner.comments"] = comments;
         updatePayload["partner.missingInformation"] = missingInformation;
+        updatePayload["partner.printPlacement"] = printPlacement;
         updatePayload["partner.respondedAt"] = serverTimestamp();
       }
 
@@ -221,6 +231,7 @@ export async function PATCH(
               price,
               comments,
               missingInformation,
+              printPlacement,
               respondedAt: new Date(),
             }
           : {}),

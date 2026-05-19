@@ -55,14 +55,19 @@ import {
   DEFAULT_PARTNER_VISIBLE_FIELDS,
   getPrintPartner,
   getPrintPartnerRouteLabel,
+  inferPartnerPrintPlacementFromText,
+  normalizePartnerPrintPlacement,
   normalizePrintPartnerIds,
   normalizePartnerVisibleFields,
   PARTNER_DECISION_LABELS,
   PARTNER_DECISION_TONES,
+  PARTNER_PRINT_PLACEMENT_LABELS,
+  PARTNER_PRINT_PLACEMENT_OPTIONS,
   PARTNER_PRODUCTION_STATUS_LABELS,
   PARTNER_VISIBLE_FIELD_OPTIONS,
   PRINT_PARTNERS,
   type PartnerDecision,
+  type PartnerPrintPlacement,
   type PartnerProductionStatus,
   type PartnerVisibleField,
   type PrintPartnerId,
@@ -124,6 +129,7 @@ type QuotePartnerAssignment = {
   visibleFields?: PartnerVisibleField[];
   requestStatus?: PartnerDecision;
   productionStatus?: PartnerProductionStatus;
+  printPlacement?: PartnerPrintPlacement;
   completionDays?: number | null;
   price?: number | null;
   comments?: string;
@@ -139,6 +145,7 @@ type QuotePartnerResponse = {
   partnerName: string;
   requestStatus: PartnerDecision;
   productionStatus: PartnerProductionStatus;
+  printPlacement: PartnerPrintPlacement;
   completionDays: number | null;
   price: number | null;
   comments: string;
@@ -681,6 +688,7 @@ const parseQuotePartnerResponse = (
     partnerName: getPrintPartner(partnerId).name,
     requestStatus: parsePartnerDecision(raw.requestStatus),
     productionStatus: parsePartnerProductionStatus(raw.productionStatus),
+    printPlacement: normalizePartnerPrintPlacement(raw.printPlacement),
     completionDays: safeNumber(raw.completionDays, 0) > 0 ? safeNumber(raw.completionDays, 0) : null,
     price: safeNumber(raw.price, 0) > 0 ? safeNumber(raw.price, 0) : null,
     comments: typeof raw.comments === "string" ? raw.comments : "",
@@ -719,6 +727,11 @@ const parseQuotePartnerAssignment = (value: unknown): QuotePartnerAssignment | n
   const activeName = activePartnerId
     ? getPrintPartner(activePartnerId).name
     : getPrintPartnerRouteLabel(assignedPartnerIds);
+  const rawPrintPlacement = normalizePartnerPrintPlacement(raw.printPlacement);
+  const activePrintPlacement =
+    activeResponse?.printPlacement && activeResponse.printPlacement !== "not_set"
+      ? activeResponse.printPlacement
+      : rawPrintPlacement;
 
   return {
     id: activePartnerId || partnerId,
@@ -729,6 +742,7 @@ const parseQuotePartnerAssignment = (value: unknown): QuotePartnerAssignment | n
     requestStatus: activeResponse?.requestStatus || parsePartnerDecision(raw.requestStatus),
     productionStatus:
       activeResponse?.productionStatus || parsePartnerProductionStatus(raw.productionStatus),
+    printPlacement: activePrintPlacement,
     completionDays:
       activeResponse?.completionDays ||
       (safeNumber(raw.completionDays, 0) > 0 ? safeNumber(raw.completionDays, 0) : null),
@@ -754,7 +768,8 @@ const partnerResponseHasContent = (response: QuotePartnerResponse) => {
       response.completionDays ||
         response.price ||
         response.comments ||
-        response.missingInformation
+        response.missingInformation ||
+        response.printPlacement !== "not_set"
     )
   );
 };
@@ -1224,6 +1239,8 @@ export default function QuotationApprovalPage() {
   const [workflowStudioOpen, setWorkflowStudioOpen] = useState(false);
   const [partnerVisibleFields, setPartnerVisibleFields] =
     useState<PartnerVisibleField[]>(DEFAULT_PARTNER_VISIBLE_FIELDS);
+  const [partnerPrintPlacement, setPartnerPrintPlacement] =
+    useState<PartnerPrintPlacement>("not_set");
   const [logo, setLogo] = useState<LogoAsset | null>(null);
   const prevDocumentTypeRef = useRef<DocumentType | null>(null);
 
@@ -1384,6 +1401,7 @@ export default function QuotationApprovalPage() {
       partnerName: getPrintPartner(partnerId).name,
       requestStatus: "pending",
       productionStatus: "not_started",
+      printPlacement: "not_set",
       completionDays: null,
       price: null,
       comments: "",
@@ -1434,6 +1452,36 @@ export default function QuotationApprovalPage() {
     if (selectedDesignBrief.backLogo) rows.push("Back logo");
     return rows;
   }, [selectedDesignBrief]);
+  const selectedInferredPrintPlacement = useMemo(() => {
+    const frontRequested = Boolean(
+      selectedDesignBrief?.frontLogo || selectedDesignBrief?.frontText
+    );
+    const backRequested = Boolean(
+      selectedDesignBrief?.backLogo || selectedDesignBrief?.backText
+    );
+
+    return inferPartnerPrintPlacementFromText(
+      [
+        ...selectedDesignRows,
+        selectedClientNotes,
+        selected?.printMethod || "",
+        selected?.notes || "",
+        selected?.message || "",
+        ...(selected?.quote?.lines || []).map((line) => line.description || ""),
+        ...(draft?.lines || []).map((line) => line.description || ""),
+      ].join(" "),
+      { front: frontRequested, back: backRequested }
+    );
+  }, [
+    draft?.lines,
+    selected?.message,
+    selected?.notes,
+    selected?.printMethod,
+    selected?.quote?.lines,
+    selectedClientNotes,
+    selectedDesignBrief,
+    selectedDesignRows,
+  ]);
   const selectedTotalQty = useMemo(() => {
     if (selectedDesignBrief?.totalQty && selectedDesignBrief.totalQty > 0) {
       return selectedDesignBrief.totalQty;
@@ -1458,6 +1506,17 @@ export default function QuotationApprovalPage() {
     }
     setPartnerVisibleFields(normalizePartnerVisibleFields(selected.partner?.visibleFields));
   }, [selected]);
+
+  useEffect(() => {
+    if (!selected) {
+      setPartnerPrintPlacement("not_set");
+      return;
+    }
+    const storedPlacement = normalizePartnerPrintPlacement(selected.partner?.printPlacement);
+    setPartnerPrintPlacement(
+      storedPlacement !== "not_set" ? storedPlacement : selectedInferredPrintPlacement
+    );
+  }, [selected, selectedInferredPrintPlacement]);
 
   useEffect(() => {
     if (!draft) return;
@@ -1723,6 +1782,7 @@ export default function QuotationApprovalPage() {
       "partner.visibleTo": routePartnerIds,
       "partner.lockedBy": null,
       "partner.visibleFields": visibleFields,
+      "partner.printPlacement": partnerPrintPlacement,
       "partner.updatedAt": serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -1738,6 +1798,7 @@ export default function QuotationApprovalPage() {
       updatePayload["partner.price"] = null;
       updatePayload["partner.comments"] = "";
       updatePayload["partner.missingInformation"] = "";
+      updatePayload["partner.printPlacement"] = partnerPrintPlacement;
       updatePayload["partner.respondedAt"] = null;
       updatePayload["partner.responses"] = {};
     }
@@ -2783,6 +2844,28 @@ export default function QuotationApprovalPage() {
                           })}
                         </div>
 
+                        <label className={`mt-4 block ${labelClass}`}>
+                          Print placement for production
+                          <select
+                            value={partnerPrintPlacement}
+                            onChange={(event) =>
+                              setPartnerPrintPlacement(
+                                event.target.value as PartnerPrintPlacement
+                              )
+                            }
+                            className={`${fieldClass} normal-case tracking-normal`}
+                          >
+                            {PARTNER_PRINT_PLACEMENT_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="mt-2 block text-xs normal-case tracking-normal text-[#717171]">
+                            Prefilled from the client request or admin quotation when possible. Yan and Shabbanaz can confirm or change it on their desk.
+                          </span>
+                        </label>
+
                         <div className="mt-4 flex flex-wrap gap-2">
                           {PRINT_PARTNERS.map((partner) => (
                             <button
@@ -2894,7 +2977,7 @@ export default function QuotationApprovalPage() {
                                         {PARTNER_DECISION_LABELS[response.requestStatus]}
                                       </span>
                                     </div>
-                                    <div className="mt-3 grid grid-cols-3 gap-2">
+                                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                                       <div className="rounded-xl border border-[#ebebeb] bg-[#f7f7f7] px-3 py-2">
                                         <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#717171]">
                                           Days
@@ -2921,6 +3004,14 @@ export default function QuotationApprovalPage() {
                                         </div>
                                         <div className="mt-1 line-clamp-2 font-semibold text-[#222222]">
                                           {PARTNER_PRODUCTION_STATUS_LABELS[response.productionStatus]}
+                                        </div>
+                                      </div>
+                                      <div className="rounded-xl border border-[#ebebeb] bg-[#f7f7f7] px-3 py-2">
+                                        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#717171]">
+                                          Placement
+                                        </div>
+                                        <div className="mt-1 line-clamp-2 font-semibold text-[#222222]">
+                                          {PARTNER_PRINT_PLACEMENT_LABELS[response.printPlacement]}
                                         </div>
                                       </div>
                                     </div>
@@ -2975,6 +3066,16 @@ export default function QuotationApprovalPage() {
                                     {selected.partner?.productionStatus
                                       ? PARTNER_PRODUCTION_STATUS_LABELS[selected.partner.productionStatus]
                                       : "Not started"}
+                                  </div>
+                                </div>
+                                <div className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3">
+                                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
+                                    Print placement
+                                  </div>
+                                  <div className="mt-1 font-semibold text-[#222222]">
+                                    {PARTNER_PRINT_PLACEMENT_LABELS[
+                                      selected.partner?.printPlacement || "not_set"
+                                    ]}
                                   </div>
                                 </div>
                                 {selected.partner?.comments ? (
