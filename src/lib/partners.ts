@@ -4,7 +4,12 @@ export const PRINT_PARTNERS = [
     name: "Yan",
     path: "/admin/yan_list",
     productionNotes: [],
-    paymentDetails: null,
+    paymentDetails: {
+      fullName: "Yan Chineah",
+      bankName: "Mauritius Commercial Bank (MCB)",
+      bankAccountNumber: "000449132366",
+      juiceNumber: "57934043",
+    },
   },
   {
     id: "shabanaz",
