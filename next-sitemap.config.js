@@ -20,8 +20,8 @@ module.exports = {
       {
         userAgent: "*",
         allow: "/",
-        // Let Google crawl noindex pages and redirects; only block truly private routes.
-        disallow: ["/admin", "/admin/*", "/iot"],
+        // Private routes are excluded from the sitemap and return auth/noindex responses.
+        // Do not block them in robots.txt, otherwise Google cannot see the noindex/redirect.
       },
     ],
   },

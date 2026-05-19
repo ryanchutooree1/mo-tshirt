@@ -29,6 +29,17 @@ export const metadata: Metadata = {
   ],
   // Use canonical www host to avoid mixed-domain canonicals/sitemaps
   metadataBase: new URL(SITE_URL),
+  alternates: {
+    canonical: SITE_URL,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
+  },
   icons: {
     icon: [
       { url: `/favicon-16x16.png?v=${ICON_VERSION}`, type: "image/png", sizes: "16x16" },

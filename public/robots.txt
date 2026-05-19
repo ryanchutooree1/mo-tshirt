@@ -1,9 +1,6 @@
 # *
 User-agent: *
 Allow: /
-Disallow: /admin
-Disallow: /admin/*
-Disallow: /iot
 
 # Host
 Host: https://www.mo-tshirt.mu
