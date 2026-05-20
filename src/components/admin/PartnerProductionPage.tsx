@@ -136,6 +136,22 @@ function getArtworkDownloadHref(attachment: PartnerOrderAttachment, index: numbe
   return `/api/shops/download?${params.toString()}`;
 }
 
+function isArtworkImage(attachment: PartnerOrderAttachment) {
+  const contentType = attachment.contentType.toLowerCase();
+  return Boolean(attachment.url && contentType.startsWith("image/"));
+}
+
+function isArtworkPdf(attachment: PartnerOrderAttachment) {
+  const contentType = attachment.contentType.toLowerCase();
+  const filename = attachment.filename.toLowerCase();
+  return Boolean(
+    attachment.url &&
+      (contentType === "application/pdf" ||
+        contentType.includes("pdf") ||
+        filename.endsWith(".pdf"))
+  );
+}
+
 function timestampValue(value: string | null) {
   if (!value) return 0;
   const date = new Date(value);
@@ -1189,9 +1205,8 @@ function OrderDetails({ details }: { details: PartnerOrderDetails }) {
           {details.artwork.length ? (
             <div className="space-y-3">
               {details.artwork.map((attachment, index) => {
-                const isImage = Boolean(
-                  attachment.url && attachment.contentType.startsWith("image/")
-                );
+                const isImage = isArtworkImage(attachment);
+                const isPdf = isArtworkPdf(attachment);
                 const downloadHref = getArtworkDownloadHref(attachment, index);
                 return (
                   <div
@@ -1236,6 +1251,14 @@ function OrderDetails({ details }: { details: PartnerOrderDetails }) {
                         className="mt-3 max-h-56 w-full rounded-lg border border-[color:var(--partner-border)] bg-white object-contain sm:max-h-72"
                         loading="lazy"
                       />
+                    ) : isPdf && attachment.url ? (
+                      <div className="mt-3 overflow-hidden rounded-lg border border-[color:var(--partner-border)] bg-white">
+                        <iframe
+                          src={attachment.url}
+                          title={`Preview ${attachment.filename || "PDF artwork"}`}
+                          className="h-72 w-full bg-white sm:h-96"
+                        />
+                      </div>
                     ) : !attachment.url ? (
                       <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
                         Ryan received this file by email only. Ask Ryan to re-upload it in
