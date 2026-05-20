@@ -15,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAdminTheme } from "@/admin/AdminThemeContext";
+import UnsavedChangesGuard from "@/components/admin/UnsavedChangesGuard";
 import { PRINT_PARTNERS, type PrintPartnerId } from "@/lib/partners";
 
 type PartnerNotificationSetting = {
@@ -177,6 +178,7 @@ export default function AdminPartnersPage() {
   };
 
   const saveSettings = async () => {
+    if (!hasChanges) return true;
     setSaving(true);
     setError(null);
     setNotice(null);
@@ -196,12 +198,14 @@ export default function AdminPartnersPage() {
       setPartners(nextPartners);
       setSavedPartners(nextPartners);
       setNotice("Partner notification settings saved.");
+      return true;
     } catch (saveError) {
       setError(
         saveError instanceof Error
           ? saveError.message
           : "Failed to save partner settings."
       );
+      return false;
     } finally {
       setSaving(false);
     }
@@ -496,6 +500,14 @@ export default function AdminPartnersPage() {
           </div>
         </div>
       </div>
+      <UnsavedChangesGuard
+        active={hasChanges}
+        isSaving={saving}
+        onSave={saveSettings}
+        title="Save partner email changes?"
+        message="You changed partner notification emails. Save them before opening another admin page, or leave without saving."
+        saveLabel="Save partner settings"
+      />
     </main>
   );
 }

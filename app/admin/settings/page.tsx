@@ -26,6 +26,7 @@ import {
   ensureAdminFirebaseSession,
   isFirebaseAdminAuthConfigured,
 } from "@/lib/firebase-admin-client-auth";
+import UnsavedChangesGuard from "@/components/admin/UnsavedChangesGuard";
 
 type AdminUserSummary = {
   email: string;
@@ -576,7 +577,7 @@ export default function SettingsPage() {
   const saveNotificationRecipients = async () => {
     if (!notificationRecipients.length) {
       setNotificationError("Add at least one valid email address.");
-      return;
+      return false;
     }
 
     setNotificationSaving(true);
@@ -611,12 +612,14 @@ export default function SettingsPage() {
       setNotificationInput("");
       setNotificationSaved(true);
       window.setTimeout(() => setNotificationSaved(false), 1600);
+      return true;
     } catch (error) {
       setNotificationError(
         error instanceof Error
           ? error.message
           : "Failed to save quotation notification emails."
       );
+      return false;
     } finally {
       setNotificationSaving(false);
     }
@@ -1453,6 +1456,13 @@ export default function SettingsPage() {
           </div>
         </section>
       </div>
+      <UnsavedChangesGuard
+        active={notificationHasChanges}
+        isSaving={notificationSaving}
+        onSave={saveNotificationRecipients}
+        title="Save quotation notification changes?"
+        message="You changed the quotation email recipients. Save them before opening another admin page, or leave without saving."
+      />
     </main>
   );
 }

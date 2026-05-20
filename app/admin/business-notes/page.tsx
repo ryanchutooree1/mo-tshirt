@@ -27,6 +27,7 @@ import {
   TrendingUp,
   Video,
 } from "lucide-react";
+import UnsavedChangesGuard from "@/components/admin/UnsavedChangesGuard";
 
 type Note = {
   id: string;
@@ -150,10 +151,24 @@ export default function BusinessNotesPage() {
     });
   }, [notes, search, categoryFilter, pinnedOnly, sortDir]);
 
+  const draftHasChanges = useMemo(
+    () =>
+      Boolean(
+        draft.title.trim() ||
+          draft.body.trim() ||
+          draft.source.trim() ||
+          draft.tags.trim() ||
+          draft.pinned
+      ),
+    [draft.body, draft.pinned, draft.source, draft.tags, draft.title]
+  );
+
+  const editHasChanges = useMemo(() => Boolean(editing), [editing]);
+
   const addNote = async () => {
     const title = draft.title.trim();
     const body = draft.body.trim();
-    if (!title && !body) return;
+    if (!title && !body) return false;
     await addDoc(collection(db, "users", adminId, "businessNotes"), {
       title,
       body,
@@ -165,6 +180,7 @@ export default function BusinessNotesPage() {
       updatedAt: serverTimestamp(),
     });
     setDraft({ title: "", body: "", category: draft.category, source: "", tags: "", pinned: false });
+    return true;
   };
 
   const togglePinned = async (note: Note) => {
@@ -187,7 +203,7 @@ export default function BusinessNotesPage() {
   };
 
   const saveEdit = async () => {
-    if (!editing) return;
+    if (!editing) return true;
     await updateDoc(doc(db, "users", adminId, "businessNotes", editing.id), {
       title: editDraft.title.trim(),
       body: editDraft.body.trim(),
@@ -198,6 +214,13 @@ export default function BusinessNotesPage() {
       updatedAt: serverTimestamp(),
     });
     setEditing(null);
+    return true;
+  };
+
+  const savePendingChanges = async () => {
+    if (editing) return saveEdit();
+    if (draftHasChanges) return addNote();
+    return true;
   };
 
   const removeNote = async (note: Note) => {
@@ -637,6 +660,13 @@ export default function BusinessNotesPage() {
           }
         }
       `}</style>
+      <UnsavedChangesGuard
+        active={draftHasChanges || editHasChanges}
+        onSave={savePendingChanges}
+        title="Save business note changes?"
+        message="You have an unsaved business note. Save it before opening another admin page, or leave without saving."
+        saveLabel={editing ? "Save changes" : "Add note"}
+      />
     </main>
   );
 }

@@ -15,6 +15,7 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react";
+import UnsavedChangesGuard from "@/components/admin/UnsavedChangesGuard";
 
 type BusinessDetail = {
   id: string;
@@ -119,6 +120,11 @@ export default function BusinessDetailsPage() {
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
   }, [details, search, categoryFilter]);
 
+  const draftHasChanges = useMemo(
+    () => Boolean(editingId || draft.title.trim() || draft.content.trim()),
+    [draft.content, draft.title, editingId]
+  );
+
   const resetDraft = () => {
     setDraft({ title: "", content: "", category: "Message" });
     setEditingId(null);
@@ -127,7 +133,7 @@ export default function BusinessDetailsPage() {
   const saveDetail = () => {
     const title = draft.title.trim();
     const content = draft.content.trim();
-    if (!content) return;
+    if (!content) return false;
     const now = Date.now();
     if (editingId) {
       setDetails((prev) =>
@@ -150,6 +156,7 @@ export default function BusinessDetailsPage() {
       ]);
     }
     resetDraft();
+    return true;
   };
 
   const editDetail = (detail: BusinessDetail) => {
@@ -492,6 +499,13 @@ export default function BusinessDetailsPage() {
           </div>
         </section>
       </div>
+      <UnsavedChangesGuard
+        active={draftHasChanges}
+        onSave={saveDetail}
+        title="Save business detail changes?"
+        message="You have an unsaved business detail draft. Save it before opening another admin page, or leave without saving."
+        saveLabel={editingId ? "Save changes" : "Add detail"}
+      />
     </main>
   );
 }
