@@ -236,6 +236,7 @@ export default function PartnerProductionPage({
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("queue");
   const [draft, setDraft] = useState<ResponseDraft>(() => buildDraft(null));
   const [saving, setSaving] = useState(false);
+  const [requestingLogoKey, setRequestingLogoKey] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const filteredOrders = useMemo(() => {
@@ -520,6 +521,42 @@ export default function PartnerProductionPage({
       setNotice(error instanceof Error ? error.message : "Could not save response.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function requestLogoUpload(
+    attachment: PartnerOrderAttachment,
+    attachmentIndex: number
+  ) {
+    if (!selected) return;
+
+    const requestKey = `${selected.id}:${attachmentIndex}`;
+    setRequestingLogoKey(requestKey);
+    setNotice(null);
+
+    try {
+      const res = await fetch(`/api/partners/orders/${selected.id}/logo-request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          partnerId,
+          attachmentFilename: attachment.filename,
+          attachmentLabel: attachment.label,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error || "Could not ask Ryan to upload the logo.");
+      }
+      setNotice(data?.message || `Asked Ryan to upload the logo for ${selected.code}.`);
+    } catch (error) {
+      setNotice(
+        error instanceof Error
+          ? error.message
+          : "Could not ask Ryan to upload the logo."
+      );
+    } finally {
+      setRequestingLogoKey(null);
     }
   }
 
@@ -956,7 +993,12 @@ export default function PartnerProductionPage({
 
               <div className="grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
                 <div className="space-y-5">
-                  <OrderDetails details={selected.details} />
+                  <OrderDetails
+                    details={selected.details}
+                    orderId={selected.id}
+                    onRequestLogoUpload={requestLogoUpload}
+                    requestingLogoKey={requestingLogoKey}
+                  />
                 </div>
 
                 <div className={`${surfaceClass} p-4 sm:p-5`}>
@@ -1187,7 +1229,20 @@ function DecisionButton({
   );
 }
 
-function OrderDetails({ details }: { details: PartnerOrderDetails }) {
+function OrderDetails({
+  details,
+  orderId,
+  onRequestLogoUpload,
+  requestingLogoKey,
+}: {
+  details: PartnerOrderDetails;
+  orderId: string;
+  onRequestLogoUpload: (
+    attachment: PartnerOrderAttachment,
+    attachmentIndex: number
+  ) => void;
+  requestingLogoKey: string | null;
+}) {
   const hasDetails = Object.values(details).some(detailHasContent);
 
   if (!hasDetails) {
@@ -1260,9 +1315,22 @@ function OrderDetails({ details }: { details: PartnerOrderDetails }) {
                         />
                       </div>
                     ) : !attachment.url ? (
-                      <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
-                        Ryan received this file by email only. Ask Ryan to re-upload it in
-                        Quotation Approval so you can open the artwork here.
+                      <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-xs font-semibold text-amber-900">
+                        <p>
+                          Ryan received this file by email only. Ask Ryan to re-upload it in
+                          Quotation Approval so you can open the artwork here.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => onRequestLogoUpload(attachment, index)}
+                          disabled={requestingLogoKey === `${orderId}:${index}`}
+                          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(135deg,#f97316,#e11d48)] px-4 py-2.5 text-sm font-bold text-white shadow-[0_14px_30px_rgba(225,29,72,0.24)] transition hover:shadow-[0_18px_36px_rgba(225,29,72,0.32)] disabled:cursor-not-allowed disabled:opacity-65 sm:w-auto"
+                        >
+                          <FiMessageCircle className="h-4 w-4" />
+                          {requestingLogoKey === `${orderId}:${index}`
+                            ? "Asking Ryan..."
+                            : "Ask Ryan to upload logo"}
+                        </button>
                       </div>
                     ) : null}
                   </div>
