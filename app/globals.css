@@ -523,3 +523,84 @@ body {
 .admin-root.admin-dark .ring-\[\#ff6600\]\/10 {
   --tw-ring-color: rgb(255 102 0 / 0.24) !important;
 }
+
+.admin-root {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+.admin-root .admin-page-shell {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+.admin-root .admin-page-shell :is(
+    section,
+    article,
+    aside,
+    header,
+    footer,
+    nav,
+    form,
+    fieldset,
+    div,
+    ul,
+    ol,
+    li
+  ) {
+  min-width: 0;
+}
+
+.admin-root .admin-page-shell :is(img, video, canvas, iframe) {
+  max-width: 100%;
+}
+
+.admin-root .admin-page-shell :is(input, textarea, select) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.admin-root .admin-page-shell :is(
+    p,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    span,
+    a,
+    button,
+    label,
+    dd,
+    dt,
+    td,
+    th
+  ) {
+  overflow-wrap: anywhere;
+}
+
+.admin-root .admin-page-shell :is(.overflow-x-auto, .overflow-auto) {
+  max-width: 100%;
+}
+
+@media (max-width: 640px) {
+  .admin-root .admin-page-shell {
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+  }
+
+  .admin-root .admin-page-shell :is(.whitespace-nowrap) {
+    white-space: normal;
+  }
+
+  .admin-root .admin-page-shell :is(.overflow-x-auto, .overflow-auto) > table {
+    min-width: max-content;
+  }
+}

@@ -87,6 +87,17 @@ type QuoteLine = {
 
 type DocumentType = "quotation" | "invoice" | "receipt" | "partial_receipt";
 type MobilePanel = "inbox" | "quote";
+type PartnerRoutePopup = {
+  title: string;
+  message: string;
+  tone: "success" | "warning";
+};
+
+type PartnerEmailNotificationSummary = {
+  sentNames: string[];
+  skippedMessages: string[];
+  message: string;
+};
 
 type QuoteDraft = {
   contactName: string;
@@ -229,6 +240,35 @@ function AutoFitInput({
   };
 
   return <input {...props} ref={inputRef} value={value} style={mergedStyle} />;
+}
+
+function joinDisplayNames(names: string[]) {
+  if (names.length <= 1) return names[0] || "";
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;
+}
+
+function buildPartnerEmailMessage(
+  sentNames: string[],
+  skippedMessages: string[]
+) {
+  if (sentNames.length === 1) {
+    return `Email sent to ${sentNames[0]} only.${
+      skippedMessages.length ? ` ${skippedMessages.join(" ")}` : ""
+    }`;
+  }
+
+  if (sentNames.length > 1) {
+    return `Email sent to ${joinDisplayNames(sentNames)}.${
+      skippedMessages.length ? ` ${skippedMessages.join(" ")}` : ""
+    }`;
+  }
+
+  if (skippedMessages.length) {
+    return `No partner email was sent. ${skippedMessages.join(" ")}`;
+  }
+
+  return "";
 }
 
 type QuoteRecord = {
@@ -1240,6 +1280,8 @@ export default function QuotationApprovalPage() {
   const [deletingQuote, setDeletingQuote] = useState(false);
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [partnerRoutePopup, setPartnerRoutePopup] =
+    useState<PartnerRoutePopup | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [movingToOrders, setMovingToOrders] = useState(false);
   const [assigningPartner, setAssigningPartner] = useState<PrintPartnerId | "both" | null>(null);
@@ -1764,8 +1806,12 @@ export default function QuotationApprovalPage() {
     return left.length === right.length && left.every((partnerId) => right.includes(partnerId));
   };
 
-  const notifyPartnerAssignment = async (partnerIds: PrintPartnerId[]) => {
-    if (!selected) return "";
+  const notifyPartnerAssignment = async (
+    partnerIds: PrintPartnerId[]
+  ): Promise<PartnerEmailNotificationSummary> => {
+    if (!selected) {
+      return { sentNames: [], skippedMessages: [], message: "" };
+    }
     const res = await fetch("/api/admin/partners/order-notification", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1781,26 +1827,42 @@ export default function QuotationApprovalPage() {
 
     const sent = Array.isArray(data?.sent) ? data.sent : [];
     const skipped = Array.isArray(data?.skipped) ? data.skipped : [];
-    if (sent.length) {
-      const names = sent
-        .map((entry: { partnerName?: unknown }) =>
-          typeof entry.partnerName === "string" ? entry.partnerName : ""
-        )
-        .filter(Boolean)
-        .join(", ");
-      return names ? `Email sent to ${names}.` : "Partner email sent.";
-    }
-    if (skipped.length) {
-      const reasons = skipped
-        .map((entry: { partnerName?: unknown; reason?: unknown }) => {
-          const name = typeof entry.partnerName === "string" ? entry.partnerName : "Partner";
-          const reason = typeof entry.reason === "string" ? entry.reason : "Skipped.";
-          return `${name}: ${reason}`;
-        })
-        .join(" ");
-      return `Email notification skipped. ${reasons}`;
-    }
-    return "";
+    const sentNames = sent
+      .map((entry: { partnerName?: unknown }) =>
+        typeof entry.partnerName === "string" ? entry.partnerName : ""
+      )
+      .filter(Boolean);
+    const skippedMessages = skipped
+      .map((entry: { partnerName?: unknown; reason?: unknown }) => {
+        const name = typeof entry.partnerName === "string" ? entry.partnerName : "Partner";
+        const reason = typeof entry.reason === "string" ? entry.reason : "Skipped.";
+        return `${name}: ${reason}`;
+      })
+      .filter(Boolean);
+
+    return {
+      sentNames,
+      skippedMessages,
+      message: buildPartnerEmailMessage(sentNames, skippedMessages),
+    };
+  };
+
+  const getPartnerRoutePopupTitle = (
+    partnerIds: PrintPartnerId[],
+    sameRoute: boolean,
+    routeLabel: string
+  ) => {
+    if (sameRoute) return `Updated ${routeLabel} view`;
+    if (partnerIds.length > 1) return `Order sent to ${routeLabel}`;
+    return `Order moved to ${routeLabel}`;
+  };
+
+  const showPartnerRoutePopup = ({
+    title,
+    message,
+    tone,
+  }: PartnerRoutePopup) => {
+    setPartnerRoutePopup({ title, message, tone });
   };
 
   const assignToPartners = async (partnerIds: PrintPartnerId[]) => {
@@ -1856,6 +1918,7 @@ export default function QuotationApprovalPage() {
 
     setAssigningPartner(routeKey);
     setNotice(null);
+    setPartnerRoutePopup(null);
     try {
       await updateDoc(doc(db, "quotes", selected.id), updatePayload);
       const routeNotice = hasEmailOnlyArtwork
@@ -1865,18 +1928,44 @@ export default function QuotationApprovalPage() {
           : routePartnerIds.length > 1
             ? `Sent to ${routeLabel}. The first partner to accept will own this job.`
             : `Moved order to ${routeLabel}'s production desk.`;
+      const popupTitle = getPartnerRoutePopupTitle(routePartnerIds, sameRoute, routeLabel);
       try {
-        const emailNotice = await notifyPartnerAssignment(routePartnerIds);
-        setNotice(emailNotice ? `${routeNotice} ${emailNotice}` : routeNotice);
+        const emailSummary = await notifyPartnerAssignment(routePartnerIds);
+        const finalNotice = emailSummary.message
+          ? `${routeNotice} ${emailSummary.message}`
+          : routeNotice;
+        setNotice(finalNotice);
+        showPartnerRoutePopup({
+          title: popupTitle,
+          message: finalNotice,
+          tone:
+            hasEmailOnlyArtwork ||
+            !emailSummary.sentNames.length ||
+            emailSummary.skippedMessages.length
+              ? "warning"
+              : "success",
+        });
       } catch (notificationError) {
         const message =
           notificationError instanceof Error
             ? notificationError.message
             : "Email notification could not be sent.";
-        setNotice(`${routeNotice} ${message}`);
+        const finalNotice = `${routeNotice} ${message}`;
+        setNotice(finalNotice);
+        showPartnerRoutePopup({
+          title: popupTitle,
+          message: finalNotice,
+          tone: "warning",
+        });
       }
     } catch {
-      setNotice(`Failed to assign order to ${routeLabel}.`);
+      const finalNotice = `Failed to assign order to ${routeLabel}.`;
+      setNotice(finalNotice);
+      showPartnerRoutePopup({
+        title: "Partner routing failed",
+        message: finalNotice,
+        tone: "warning",
+      });
     } finally {
       setAssigningPartner(null);
     }
@@ -2225,11 +2314,11 @@ export default function QuotationApprovalPage() {
   };
 
   const surfaceClass = isDark
-    ? "rounded-3xl border border-white/10 bg-white/[0.06] shadow-[0_22px_60px_rgba(5,12,24,0.45)] backdrop-blur-xl"
-    : "rounded-[32px] border border-[#ebebeb] bg-white shadow-[0_8px_28px_rgba(0,0,0,0.08)]";
+    ? "min-w-0 max-w-full rounded-3xl border border-white/10 bg-white/[0.06] shadow-[0_22px_60px_rgba(5,12,24,0.45)] backdrop-blur-xl"
+    : "min-w-0 max-w-full rounded-[32px] border border-[#ebebeb] bg-white shadow-[0_8px_28px_rgba(0,0,0,0.08)]";
   const softSurfaceClass = isDark
-    ? "rounded-2xl border border-white/20 bg-black/20"
-    : "rounded-[28px] border border-[#ebebeb] bg-[#f7f7f7]";
+    ? "min-w-0 max-w-full rounded-2xl border border-white/20 bg-black/20"
+    : "min-w-0 max-w-full rounded-[28px] border border-[#ebebeb] bg-[#f7f7f7]";
   const fieldClass =
     `mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none transition ${
       isDark
@@ -2240,17 +2329,17 @@ export default function QuotationApprovalPage() {
   const labelClass = `text-[11px] font-semibold uppercase tracking-[0.18em] ${
     isDark ? "text-cyan-200/75" : "text-[#717171]"
   }`;
-  const secondaryButtonClass = `inline-flex items-center justify-center gap-2 rounded-full border px-4 py-2.5 text-xs font-semibold transition disabled:cursor-not-allowed ${
+  const secondaryButtonClass = `inline-flex max-w-full min-w-0 items-center justify-center gap-2 rounded-full border px-4 py-2.5 text-center text-xs font-semibold transition disabled:cursor-not-allowed ${
     isDark
       ? "border-white/20 bg-white/10 text-slate-100 hover:bg-white/20 disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
       : "border-[#dddddd] bg-white text-[#484848] hover:border-[#c7c7c7] hover:bg-[#f7f7f7] hover:shadow-[0_4px_14px_rgba(0,0,0,0.06)] disabled:border-[#ececec] disabled:bg-[#f7f7f7] disabled:text-[#b0b0b0]"
   }`;
-  const darkButtonClass = `inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-xs font-semibold transition disabled:cursor-not-allowed ${
+  const darkButtonClass = `inline-flex max-w-full min-w-0 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-center text-xs font-semibold transition disabled:cursor-not-allowed ${
     isDark
       ? "border border-white/10 bg-white text-slate-950 hover:bg-cyan-100 disabled:bg-slate-600 disabled:text-slate-300"
       : "bg-[#222222] text-white hover:bg-black disabled:bg-[#b0b0b0]"
   }`;
-  const primaryButtonClass = `inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:text-white disabled:shadow-none ${
+  const primaryButtonClass = `inline-flex max-w-full min-w-0 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-center text-xs font-semibold transition disabled:cursor-not-allowed disabled:text-white disabled:shadow-none ${
     isDark
       ? "border border-cyan-300/30 bg-cyan-300/15 text-cyan-100 shadow-[0_14px_34px_rgba(34,211,238,0.12)] hover:bg-cyan-300/25 disabled:bg-slate-700"
       : "bg-[linear-gradient(135deg,#ff6600,#ea580c)] text-white shadow-[0_10px_24px_rgba(255,102,0,0.24)] hover:shadow-[0_14px_28px_rgba(255,102,0,0.32)] disabled:bg-[#ffd3b3]"
@@ -2287,7 +2376,7 @@ export default function QuotationApprovalPage() {
           </>
         )}
 
-        <div className="relative mx-auto w-full max-w-[1500px] px-2 py-3 sm:px-6 sm:py-6 lg:px-8">
+        <div className="relative mx-auto w-full max-w-[1500px] px-0 py-2 sm:px-6 sm:py-6 lg:px-8">
           <header className={`${surfaceClass} relative overflow-hidden px-4 py-5 sm:px-8 sm:py-7`}>
             <div
               className={`absolute inset-0 ${
@@ -2394,7 +2483,7 @@ export default function QuotationApprovalPage() {
                   ))}
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2 lg:justify-end">
+              <div className="flex min-w-0 flex-wrap gap-2 lg:justify-end">
                 <button
                   type="button"
                   onClick={createAdminQuote}
@@ -2593,28 +2682,28 @@ export default function QuotationApprovalPage() {
                     Back to inbox
                   </button>
                   <div className={`${surfaceClass} overflow-hidden`}>
-                    <div className="grid gap-6 px-6 py-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_320px]">
-                      <div>
+                    <div className="grid min-w-0 gap-6 px-4 py-5 sm:px-8 sm:py-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+                      <div className="min-w-0">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#717171]">
                           Client Overview
                         </p>
-                        <h2 className="mt-3 text-3xl font-semibold tracking-[-0.03em] text-[#222222]">
+                        <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-[#222222] sm:text-3xl">
                           {draft.contactName || selected.name || "Walk-in client"}
                         </h2>
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          <span className="inline-flex items-center gap-2 rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1.5 text-xs text-[#484848]">
+                        <div className="mt-4 flex min-w-0 flex-wrap gap-2">
+                          <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1.5 text-xs text-[#484848]">
                             <FiMail className="h-3.5 w-3.5 text-[#ff6600]" />
-                            {draft.contactEmail || "No email yet"}
+                            <span className="min-w-0 truncate">{draft.contactEmail || "No email yet"}</span>
                           </span>
-                          <span className="inline-flex items-center gap-2 rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1.5 text-xs text-[#484848]">
+                          <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1.5 text-xs text-[#484848]">
                             <FiPhone className="h-3.5 w-3.5 text-[#ff6600]" />
-                            {draft.contactPhone || "No phone yet"}
+                            <span className="min-w-0 truncate">{draft.contactPhone || "No phone yet"}</span>
                           </span>
-                          <span className="rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1.5 text-xs text-[#484848]">
+                          <span className="max-w-full rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1.5 text-xs text-[#484848]">
                             Source: {selected.source || "Website"}
                           </span>
                           {selected.delivery ? (
-                            <span className="rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1.5 text-xs text-[#484848]">
+                            <span className="max-w-full rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1.5 text-xs text-[#484848]">
                               Delivery: {selected.delivery}
                             </span>
                           ) : null}
@@ -2709,10 +2798,10 @@ export default function QuotationApprovalPage() {
                     </div>
 
                     <div className={`${surfaceClass} p-5 xl:col-span-1`}>
-                      <div className="flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <p className={labelClass}>Artwork</p>
                         <label
-                          className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-semibold transition ${
+                          className={`inline-flex w-full max-w-full items-center justify-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-semibold transition sm:w-auto ${
                             uploadingAttachment
                               ? "border border-[#ececec] bg-[#f4f4f4] text-[#b0b0b0]"
                               : "border border-[#ebebeb] bg-white text-[#484848] hover:border-[#c7c7c7] hover:bg-[#f7f7f7]"
@@ -2748,14 +2837,14 @@ export default function QuotationApprovalPage() {
                             return (
                               <div
                                 key={`${attachment.url || attachment.filename || "attachment"}-${index}`}
-                                className="rounded-[22px] border border-[#ebebeb] bg-[#f7f7f7] p-3.5"
+                                className="min-w-0 overflow-hidden rounded-[22px] border border-[#ebebeb] bg-[#f7f7f7] p-3.5"
                               >
-                                <div className="flex flex-wrap items-start justify-between gap-3">
-                                  <div className="min-w-0">
+                                <div className="flex min-w-0 flex-col items-start gap-3 sm:flex-row sm:justify-between">
+                                  <div className="min-w-0 flex-1">
                                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
                                       {attachment.label || `Design ${index + 1}`}
                                     </p>
-                                    <p className="mt-1 truncate text-sm font-semibold text-[#222222]">
+                                    <p className="mt-1 break-all text-sm font-semibold text-[#222222]">
                                       {attachment.filename || "Attachment"}
                                     </p>
                                     {attachment.description ? (
@@ -2770,12 +2859,12 @@ export default function QuotationApprovalPage() {
                                     ) : null}
                                   </div>
                                   {attachment.url ? (
-                                    <div className="flex items-center gap-2">
+                                    <div className="grid w-full grid-cols-[minmax(0,1fr)_2.5rem] items-center gap-2 sm:flex sm:w-auto">
                                       <a
                                         href={attachment.url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className={secondaryButtonClass}
+                                        className={`${secondaryButtonClass} px-3`}
                                       >
                                         <FiFileText className="h-3.5 w-3.5" />
                                         Open file
@@ -4010,6 +4099,58 @@ export default function QuotationApprovalPage() {
           </div>
         </div>
       </div>
+      {partnerRoutePopup ? (
+        <div className="fixed inset-x-3 top-4 z-[80] flex justify-center sm:top-6">
+          <div
+            role="status"
+            className={`w-full max-w-xl rounded-[24px] border px-4 py-4 shadow-[0_18px_55px_rgba(15,23,42,0.18)] backdrop-blur ${
+              partnerRoutePopup.tone === "success"
+                ? isDark
+                  ? "border-emerald-300/35 bg-emerald-950/90 text-emerald-50"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-950"
+                : isDark
+                  ? "border-amber-300/35 bg-amber-950/90 text-amber-50"
+                  : "border-amber-200 bg-amber-50 text-amber-950"
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <span
+                className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                  partnerRoutePopup.tone === "success"
+                    ? isDark
+                      ? "bg-emerald-300/20 text-emerald-100"
+                      : "bg-emerald-600 text-white"
+                    : isDark
+                      ? "bg-amber-300/20 text-amber-100"
+                      : "bg-amber-500 text-white"
+                }`}
+              >
+                <FiCheckCircle className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold">
+                  {partnerRoutePopup.title}
+                </div>
+                <p className="mt-1 text-sm leading-6">
+                  {partnerRoutePopup.message}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPartnerRoutePopup(null)}
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition ${
+                  isDark
+                    ? "border-white/10 bg-white/10 hover:bg-white/15"
+                    : "border-black/10 bg-white/70 hover:bg-white"
+                }`}
+                aria-label="Close partner notification popup"
+              >
+                <FiXCircle className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {workflowStudioOpen && selected && draft ? (
         <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-slate-950/70 px-3 pb-4 pt-16 sm:px-4 sm:pt-20">
           <div

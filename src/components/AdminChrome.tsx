@@ -266,8 +266,8 @@ export default function AdminChrome({
     ? "border-slate-800 bg-slate-950/85"
     : "border-[#ebebeb] bg-white/92 shadow-[0_10px_30px_rgba(0,0,0,0.04)]";
   const circleButtonClass = isDark
-    ? "inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-slate-100 transition hover:border-slate-600 hover:bg-slate-800"
-    : "inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#ebebeb] bg-white text-[#222222] shadow-[0_4px_14px_rgba(0,0,0,0.04)] transition hover:border-[#d7d7d7] hover:bg-[#f7f7f7] hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)]";
+    ? "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-slate-100 transition hover:border-slate-600 hover:bg-slate-800 sm:h-11 sm:w-11"
+    : "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#ebebeb] bg-white text-[#222222] shadow-[0_4px_14px_rgba(0,0,0,0.04)] transition hover:border-[#d7d7d7] hover:bg-[#f7f7f7] hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)] sm:h-11 sm:w-11";
   const rolePillClass = isDark
     ? "hidden shrink-0 items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-slate-300 sm:inline-flex"
     : "hidden shrink-0 items-center gap-2 rounded-full border border-[#ebebeb] bg-white px-3 py-1.5 text-xs text-[#6a6a6a] shadow-[0_4px_14px_rgba(0,0,0,0.04)] sm:inline-flex";
@@ -309,8 +309,8 @@ export default function AdminChrome({
     ? "border-transparent text-slate-200 hover:border-slate-700 hover:bg-slate-800/70"
     : "border-transparent text-[#484848] hover:border-[#ebebeb] hover:bg-[#f7f7f7]";
   const shellClass = isDark
-    ? "admin-page-shell relative min-h-screen bg-slate-950 p-4 text-slate-100 transition-colors sm:p-6 lg:p-8"
-    : "admin-page-shell airbnb-admin-shell relative min-h-screen bg-transparent p-4 text-[#222222] transition-colors sm:p-6 lg:p-8";
+    ? "admin-page-shell relative min-h-screen max-w-full overflow-x-hidden bg-slate-950 p-3 text-slate-100 transition-colors sm:p-6 lg:p-8"
+    : "admin-page-shell airbnb-admin-shell relative min-h-screen max-w-full overflow-x-hidden bg-transparent p-3 text-[#222222] transition-colors sm:p-6 lg:p-8";
   const logoutButtonClass = isDark
     ? "border-rose-500/45 bg-rose-500/15 text-rose-200 hover:border-rose-400/60 hover:bg-rose-500/25"
     : "border-rose-200 bg-white text-rose-700 hover:border-rose-300 hover:bg-rose-50";
@@ -320,7 +320,7 @@ export default function AdminChrome({
   }
 
   return (
-    <div className={`min-h-screen transition-colors ${rootClass}`}>
+    <div className={`min-h-screen w-full max-w-full overflow-x-hidden transition-colors ${rootClass}`}>
       {!isDark ? (
         <>
           <div
@@ -332,7 +332,7 @@ export default function AdminChrome({
       <div
         className={`sticky top-0 z-40 border-b backdrop-blur-xl transition-colors ${topBarClass}`}
       >
-        <div className="relative z-10 mx-auto flex max-w-[1760px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+        <div className="relative z-10 mx-auto flex w-full max-w-[1760px] min-w-0 items-center justify-between gap-2 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8">
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
@@ -377,9 +377,9 @@ export default function AdminChrome({
             </div>
           </div>
 
-          <div className="ml-auto flex min-w-0 items-center justify-end gap-3">
-            <div className="min-w-0 text-right">
-              <div className={`text-[11px] font-semibold uppercase tracking-[0.28em] ${subtleLabelClass}`}>
+          <div className="ml-auto flex min-w-0 items-center justify-end gap-2 sm:gap-3">
+            <div className="min-w-0 max-w-[52vw] text-right sm:max-w-none">
+              <div className={`truncate text-[10px] font-semibold uppercase tracking-[0.22em] sm:text-[11px] sm:tracking-[0.28em] ${subtleLabelClass}`}>
                 MO Admin
               </div>
               <div className={`truncate text-sm font-semibold ${isDark ? "text-slate-100" : "text-[#222222]"}`}>
@@ -390,7 +390,7 @@ export default function AdminChrome({
               </div>
             </div>
             <div
-              className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full ${
+              className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full sm:h-12 sm:w-12 ${
                 isDark
                   ? "border border-slate-700 bg-white"
                   : "bg-white shadow-[0_12px_28px_rgba(0,0,0,0.14)]"
@@ -401,7 +401,7 @@ export default function AdminChrome({
                 alt="MO T-SHIRT"
                 width={96}
                 height={96}
-                className="h-10 w-10 object-contain"
+                className="h-8 w-8 object-contain sm:h-10 sm:w-10"
                 priority={false}
               />
             </div>
@@ -417,7 +417,7 @@ export default function AdminChrome({
             onClick={() => setOpen(false)}
           />
           <div
-            className={`absolute inset-y-0 left-0 flex w-[24rem] flex-col rounded-r-[32px] border-r p-5 transition-colors ${drawerPanelClass}`}
+            className={`absolute inset-y-0 left-0 flex w-[calc(100vw-1rem)] max-w-[24rem] flex-col rounded-r-[32px] border-r p-5 transition-colors ${drawerPanelClass}`}
             style={{ animation: "drawerIn 0.25s ease-out both" }}
           >
             <div
