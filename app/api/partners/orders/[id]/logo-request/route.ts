@@ -53,6 +53,8 @@ type RawQuoteForLogoRequest = {
   } | null;
 };
 
+type LogoRequestType = "upload_missing_artwork" | "ask_client_for_logo";
+
 function safeText(value: unknown, maxLength = MAX_FIELD_LENGTH) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 }
@@ -116,21 +118,27 @@ function buildEmail({
   partnerId,
   attachmentFilename,
   attachmentLabel,
+  requestType,
 }: {
   quoteId: string;
   quote: RawQuoteForLogoRequest;
   partnerId: PrintPartnerId;
   attachmentFilename: string;
   attachmentLabel: string;
+  requestType: LogoRequestType;
 }) {
   const partner = getPrintPartner(partnerId);
   const orderCode =
     safeText(quote.quote?.documentNumber) || `Q-${quoteId.slice(-5).toUpperCase()}`;
+  const askClientForLogo = requestType === "ask_client_for_logo";
   const rows = [
     row("Order", orderCode),
     row("Quote ID", quoteId),
     row("Partner desk", partner.name),
-    row("Missing file", attachmentFilename || attachmentLabel || "Logo / artwork"),
+    row(
+      askClientForLogo ? "Needed from client" : "Missing file",
+      attachmentFilename || attachmentLabel || "Logo / artwork"
+    ),
     row("Client name", safeText(quote.name)),
     row("Client email", safeText(quote.email)),
     row("Client phone", safeText(quote.phone)),
@@ -169,14 +177,22 @@ function buildEmail({
     })
     .join("");
   const adminUrl = `${SITE_URL}/admin/quotation-approval`;
+  const introText = askClientForLogo
+    ? `Please ask the client to send the logo/artwork for ${orderCode}.`
+    : `Please upload the logo/artwork for ${orderCode}.`;
+  const detailText = askClientForLogo
+    ? "The partner has no artwork files shared on the partner desk, so they need Ryan to request the logo from the client before production can continue."
+    : "The partner only sees an email-only placeholder, so they cannot open this file from the partner desk.";
 
   return {
-    subject: `Upload logo for ${orderCode}`,
+    subject: askClientForLogo
+      ? `Ask client for logo for ${orderCode}`
+      : `Upload logo for ${orderCode}`,
     text: `Hi Ryan,
 
-Please upload the logo/artwork for ${orderCode}.
+${introText}
 
-The partner only sees an email-only placeholder, so they cannot open this file from the partner desk.
+${detailText}
 
 ${textRows}
 
@@ -184,8 +200,8 @@ Open Quotation Approval:
 ${adminUrl}`,
     html: `<div style="font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#111;">
   <p>Hi Ryan,</p>
-  <p>Please upload the logo/artwork for <strong>${escapeHtml(orderCode)}</strong>.</p>
-  <p>The partner only sees an email-only placeholder, so they cannot open this file from the partner desk.</p>
+  <p>${escapeHtml(introText)}</p>
+  <p>${escapeHtml(detailText)}</p>
   <table cellpadding="0" cellspacing="0" style="border-collapse:collapse; width:100%; max-width:720px;">
     ${htmlRows}
   </table>
@@ -271,6 +287,10 @@ export async function POST(
       partnerId,
       attachmentFilename: safeText(body?.attachmentFilename),
       attachmentLabel: safeText(body?.attachmentLabel),
+      requestType:
+        body?.requestType === "ask_client_for_logo"
+          ? "ask_client_for_logo"
+          : "upload_missing_artwork",
     });
 
     await transporter.sendMail({
@@ -283,7 +303,10 @@ export async function POST(
 
     return NextResponse.json({
       ok: true,
-      message: `Asked Ryan to upload the logo for ${existing.view.code}.`,
+      message:
+        body?.requestType === "ask_client_for_logo"
+          ? `Asked Ryan to request the logo from the client for ${existing.view.code}.`
+          : `Asked Ryan to upload the logo for ${existing.view.code}.`,
     });
   } catch (error) {
     console.error("partners:logo-request", error);

@@ -560,6 +560,42 @@ export default function PartnerProductionPage({
     }
   }
 
+  async function requestClientLogo() {
+    if (!selected) return;
+
+    const requestKey = `${selected.id}:client-logo`;
+    setRequestingLogoKey(requestKey);
+    setNotice(null);
+
+    try {
+      const res = await fetch(`/api/partners/orders/${selected.id}/logo-request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          partnerId,
+          attachmentLabel: "Logo / artwork",
+          requestType: "ask_client_for_logo",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error || "Could not ask Ryan to request the logo.");
+      }
+      setNotice(
+        data?.message ||
+          `Asked Ryan to request the logo from the client for ${selected.code}.`
+      );
+    } catch (error) {
+      setNotice(
+        error instanceof Error
+          ? error.message
+          : "Could not ask Ryan to request the logo."
+      );
+    } finally {
+      setRequestingLogoKey(null);
+    }
+  }
+
   if (sessionState === "checking") {
     return (
       <main
@@ -997,6 +1033,7 @@ export default function PartnerProductionPage({
                     details={selected.details}
                     orderId={selected.id}
                     onRequestLogoUpload={requestLogoUpload}
+                    onRequestClientLogo={requestClientLogo}
                     requestingLogoKey={requestingLogoKey}
                   />
                 </div>
@@ -1233,6 +1270,7 @@ function OrderDetails({
   details,
   orderId,
   onRequestLogoUpload,
+  onRequestClientLogo,
   requestingLogoKey,
 }: {
   details: PartnerOrderDetails;
@@ -1241,6 +1279,7 @@ function OrderDetails({
     attachment: PartnerOrderAttachment,
     attachmentIndex: number
   ) => void;
+  onRequestClientLogo: () => void;
   requestingLogoKey: string | null;
 }) {
   const hasDetails = Object.values(details).some(detailHasContent);
@@ -1338,7 +1377,22 @@ function OrderDetails({
               })}
             </div>
           ) : (
-            <EmptyDetail>No artwork files shared.</EmptyDetail>
+            <EmptyDetail>
+              <div className="space-y-3">
+                <p>No artwork files shared.</p>
+                <button
+                  type="button"
+                  onClick={onRequestClientLogo}
+                  disabled={requestingLogoKey === `${orderId}:client-logo`}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-2.5 text-sm font-bold text-white shadow-[0_14px_30px_rgba(8,145,178,0.24)] transition hover:bg-cyan-700 hover:shadow-[0_18px_36px_rgba(8,145,178,0.32)] disabled:cursor-not-allowed disabled:opacity-65 sm:w-auto"
+                >
+                  <FiMessageCircle className="h-4 w-4" />
+                  {requestingLogoKey === `${orderId}:client-logo`
+                    ? "Asking Ryan..."
+                    : "Ask Ryan to ask client for logo"}
+                </button>
+              </div>
+            </EmptyDetail>
           )}
         </DetailPanel>
       ) : null}
