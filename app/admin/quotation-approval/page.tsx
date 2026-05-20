@@ -2850,16 +2850,19 @@ export default function QuotationApprovalPage() {
                                 key={`${attachment.url || attachment.filename || "attachment"}-${index}`}
                                 className="min-w-0 overflow-hidden rounded-[22px] border border-[#ebebeb] bg-[#f7f7f7] p-3.5"
                               >
-                                <div className="flex min-w-0 flex-col items-start gap-3 sm:flex-row sm:justify-between">
-                                  <div className="min-w-0 flex-1">
+                                <div className="grid min-w-0 gap-3">
+                                  <div className="min-w-0">
                                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
                                       {attachment.label || `Design ${index + 1}`}
                                     </p>
-                                    <p className="mt-1 break-all text-sm font-semibold text-[#222222]">
+                                    <p
+                                      className="mt-1 max-w-full truncate text-sm font-semibold text-[#222222]"
+                                      title={attachment.filename || "Attachment"}
+                                    >
                                       {attachment.filename || "Attachment"}
                                     </p>
                                     {attachment.description ? (
-                                      <p className="mt-1 text-xs text-[#717171]">
+                                      <p className="mt-1 break-words text-xs text-[#717171]">
                                         {attachment.description}
                                       </p>
                                     ) : null}
@@ -2870,12 +2873,12 @@ export default function QuotationApprovalPage() {
                                     ) : null}
                                   </div>
                                   {attachment.url ? (
-                                    <div className="grid w-full grid-cols-[minmax(0,1fr)_2.5rem] items-center gap-2 sm:flex sm:w-auto">
+                                    <div className="grid w-full grid-cols-[minmax(0,1fr)_2.5rem] items-center gap-2">
                                       <a
                                         href={attachment.url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className={`${secondaryButtonClass} px-3`}
+                                        className={`${secondaryButtonClass} whitespace-nowrap px-3`}
                                       >
                                         <FiFileText className="h-3.5 w-3.5" />
                                         Open file
