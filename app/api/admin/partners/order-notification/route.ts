@@ -42,6 +42,7 @@ type SentNotification = {
   partnerId: PrintPartnerId;
   partnerName: string;
   email: string;
+  emails: string[];
 };
 
 type SkippedNotification = {
@@ -196,11 +197,11 @@ export async function POST(req: Request) {
       return false;
     }
 
-    if (!setting.email) {
+    if (!setting.emails.length) {
       skipped.push({
         partnerId: setting.partnerId,
         partnerName: setting.partnerName,
-        reason: "No email configured.",
+        reason: "No email recipients configured.",
       });
       return false;
     }
@@ -249,7 +250,7 @@ export async function POST(req: Request) {
       const message = buildMessage({ quoteId, quote, partner });
       await transporter.sendMail({
         from,
-        to: partner.email,
+        to: partner.emails.join(", "),
         subject: message.subject,
         text: message.text,
         html: message.html,
@@ -258,6 +259,7 @@ export async function POST(req: Request) {
         partnerId: partner.partnerId,
         partnerName: partner.partnerName,
         email: partner.email,
+        emails: partner.emails,
       });
     }
 

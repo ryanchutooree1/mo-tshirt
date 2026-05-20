@@ -12,6 +12,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type StoredPartnerNotification = {
   email?: unknown;
+  emails?: unknown;
   emailNotificationsEnabled?: unknown;
 };
 
@@ -20,6 +21,7 @@ export type PartnerNotificationSetting = {
   partnerName: string;
   path: string;
   email: string;
+  emails: string[];
   emailNotificationsEnabled: boolean;
 };
 
@@ -31,20 +33,48 @@ export type ParsedPartnerNotificationSettings = {
 
 const DEFAULT_PARTNER_NOTIFICATIONS: Record<
   PrintPartnerId,
-  { email: string; emailNotificationsEnabled: boolean }
+  { emails: string[]; emailNotificationsEnabled: boolean }
 > = {
   yan: {
-    email: "",
+    emails: [],
     emailNotificationsEnabled: false,
   },
   shabanaz: {
-    email: "jshabbanaz@gmail.com",
+    emails: ["jshabbanaz@gmail.com"],
     emailNotificationsEnabled: true,
   },
 };
 
 function normalizeEmail(value: unknown) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function getEmailCandidates(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => getEmailCandidates(entry));
+  }
+
+  if (typeof value !== "string") return [];
+  return value
+    .split(/[\s,;]+/)
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function normalizeEmails(value: unknown, fallback: string[]): string[] {
+  const source = value === undefined ? fallback : value;
+  const candidates = getEmailCandidates(source);
+  const seen = new Set<string>();
+  const emails: string[] = [];
+
+  candidates.forEach((entry) => {
+    const email = normalizeEmail(entry);
+    if (!email || seen.has(email)) return;
+    seen.add(email);
+    emails.push(email);
+  });
+
+  return emails;
 }
 
 function getRawPartnerSettings(value: unknown, partnerId: PrintPartnerId) {
@@ -79,17 +109,20 @@ export function parsePartnerNotificationSettings(
   const settings = PRINT_PARTNERS.map((partner) => {
     const defaults = DEFAULT_PARTNER_NOTIFICATIONS[partner.id];
     const raw = getRawPartnerSettings(value, partner.id);
-    const email = normalizeEmail(raw?.email ?? defaults.email);
+    const emails = normalizeEmails(raw?.emails ?? raw?.email, defaults.emails);
+    const email = emails[0] || "";
     const emailNotificationsEnabled =
       typeof raw?.emailNotificationsEnabled === "boolean"
         ? raw.emailNotificationsEnabled
         : defaults.emailNotificationsEnabled;
 
-    if (email && !EMAIL_RE.test(email)) {
-      invalidEntries.push(`${partner.name}: ${email}`);
-    }
+    emails.forEach((entry) => {
+      if (!EMAIL_RE.test(entry)) {
+        invalidEntries.push(`${partner.name}: ${entry}`);
+      }
+    });
 
-    if (emailNotificationsEnabled && !email) {
+    if (emailNotificationsEnabled && !emails.length) {
       missingEmailEntries.push(partner.name);
     }
 
@@ -98,6 +131,7 @@ export function parsePartnerNotificationSettings(
       partnerName: partner.name,
       path: partner.path,
       email,
+      emails,
       emailNotificationsEnabled,
     } satisfies PartnerNotificationSetting;
   });
@@ -106,11 +140,13 @@ export function parsePartnerNotificationSettings(
 }
 
 function settingsToStoredMap(settings: PartnerNotificationSetting[]) {
-  return settings.reduce<Record<string, { email: string; emailNotificationsEnabled: boolean }>>(
+  return settings.reduce<Record<string, { email: string; emails: string[]; emailNotificationsEnabled: boolean }>>(
     (acc, setting) => {
       if (!isPrintPartnerId(setting.partnerId)) return acc;
+      const emails = normalizeEmails(setting.emails, setting.email ? [setting.email] : []);
       acc[setting.partnerId] = {
-        email: normalizeEmail(setting.email),
+        email: emails[0] || "",
+        emails,
         emailNotificationsEnabled: Boolean(setting.emailNotificationsEnabled),
       };
       return acc;

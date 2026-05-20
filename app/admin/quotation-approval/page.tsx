@@ -253,7 +253,8 @@ function buildPartnerEmailMessage(
   skippedMessages: string[]
 ) {
   if (sentNames.length === 1) {
-    return `Email sent to ${sentNames[0]} only.${
+    const suffix = sentNames[0].includes(" recipients)") ? "" : " only";
+    return `Email sent to ${sentNames[0]}${suffix}.${
       skippedMessages.length ? ` ${skippedMessages.join(" ")}` : ""
     }`;
   }
@@ -269,6 +270,16 @@ function buildPartnerEmailMessage(
   }
 
   return "";
+}
+
+function getSentPartnerLabel(entry: { partnerName?: unknown; emails?: unknown }) {
+  const name = typeof entry.partnerName === "string" ? entry.partnerName : "";
+  const recipientCount = Array.isArray(entry.emails)
+    ? entry.emails.filter((email) => typeof email === "string" && email.trim()).length
+    : 0;
+
+  if (!name) return "";
+  return recipientCount > 1 ? `${name} (${recipientCount} recipients)` : name;
 }
 
 type QuoteRecord = {
@@ -1828,8 +1839,8 @@ export default function QuotationApprovalPage() {
     const sent = Array.isArray(data?.sent) ? data.sent : [];
     const skipped = Array.isArray(data?.skipped) ? data.skipped : [];
     const sentNames = sent
-      .map((entry: { partnerName?: unknown }) =>
-        typeof entry.partnerName === "string" ? entry.partnerName : ""
+      .map((entry: { partnerName?: unknown; emails?: unknown }) =>
+        getSentPartnerLabel(entry)
       )
       .filter(Boolean);
     const skippedMessages = skipped

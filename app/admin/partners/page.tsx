@@ -8,8 +8,10 @@ import {
   CheckCircle2,
   ExternalLink,
   Mail,
+  Plus,
   RefreshCw,
   Save,
+  Trash2,
   Users,
 } from "lucide-react";
 import { useAdminTheme } from "@/admin/AdminThemeContext";
@@ -20,10 +22,16 @@ type PartnerNotificationSetting = {
   partnerName: string;
   path: string;
   email: string;
+  emails: string[];
   emailNotificationsEnabled: boolean;
 };
 
 const partnerMeta = new Map(PRINT_PARTNERS.map((partner) => [partner.id, partner]));
+
+function getPartnerEmails(partner: PartnerNotificationSetting) {
+  if (Array.isArray(partner.emails)) return partner.emails;
+  return partner.email ? [partner.email] : [];
+}
 
 function haveSameSettings(
   left: PartnerNotificationSetting[],
@@ -34,9 +42,12 @@ function haveSameSettings(
     const rightSetting = right.find(
       (entry) => entry.partnerId === leftSetting.partnerId
     );
+    if (!rightSetting) return false;
+    const leftEmails = getPartnerEmails(leftSetting);
+    const rightEmails = getPartnerEmails(rightSetting);
     return (
-      rightSetting &&
-      rightSetting.email === leftSetting.email &&
+      leftEmails.length === rightEmails.length &&
+      leftEmails.every((email, index) => email === rightEmails[index]) &&
       rightSetting.emailNotificationsEnabled ===
         leftSetting.emailNotificationsEnabled
     );
@@ -58,8 +69,12 @@ export default function AdminPartnersPage() {
     [partners, savedPartners]
   );
   const activeCount = partners.filter(
-    (partner) => partner.emailNotificationsEnabled && partner.email
+    (partner) => partner.emailNotificationsEnabled && getPartnerEmails(partner).some(Boolean)
   ).length;
+  const recipientCount = partners.reduce(
+    (count, partner) => count + getPartnerEmails(partner).filter(Boolean).length,
+    0
+  );
 
   const pageClass = isDark
     ? "min-h-screen overflow-x-hidden bg-slate-950 text-slate-100"
@@ -115,6 +130,47 @@ export default function AdminPartnersPage() {
       current.map((partner) =>
         partner.partnerId === partnerId ? { ...partner, ...patch } : partner
       )
+    );
+    setNotice(null);
+    setError(null);
+  };
+
+  const updatePartnerEmail = (
+    partnerId: PrintPartnerId,
+    emailIndex: number,
+    email: string
+  ) => {
+    setPartners((current) =>
+      current.map((partner) => {
+        if (partner.partnerId !== partnerId) return partner;
+        const emails = getPartnerEmails(partner).slice();
+        emails[emailIndex] = email;
+        return { ...partner, email: emails[0] || "", emails };
+      })
+    );
+    setNotice(null);
+    setError(null);
+  };
+
+  const addPartnerEmail = (partnerId: PrintPartnerId) => {
+    setPartners((current) =>
+      current.map((partner) => {
+        if (partner.partnerId !== partnerId) return partner;
+        const emails = [...getPartnerEmails(partner), ""];
+        return { ...partner, email: emails[0] || "", emails };
+      })
+    );
+    setNotice(null);
+    setError(null);
+  };
+
+  const removePartnerEmail = (partnerId: PrintPartnerId, emailIndex: number) => {
+    setPartners((current) =>
+      current.map((partner) => {
+        if (partner.partnerId !== partnerId) return partner;
+        const emails = getPartnerEmails(partner).filter((_, index) => index !== emailIndex);
+        return { ...partner, email: emails[0] || "", emails };
+      })
     );
     setNotice(null);
     setError(null);
@@ -188,6 +244,9 @@ export default function AdminPartnersPage() {
                   Email active
                 </div>
                 <div className="mt-2 text-2xl font-semibold">{activeCount}</div>
+                <div className={`mt-1 text-xs ${mutedTextClass}`}>
+                  {recipientCount} recipient{recipientCount === 1 ? "" : "s"}
+                </div>
               </div>
             </div>
           </div>
@@ -209,8 +268,13 @@ export default function AdminPartnersPage() {
         <section className="grid gap-4 lg:grid-cols-2">
           {partners.map((partner) => {
             const meta = partnerMeta.get(partner.partnerId);
+            const emails = getPartnerEmails(partner);
+            const savedEmails = emails.filter(Boolean);
+            const emailSummary = savedEmails.length
+              ? savedEmails.join(", ")
+              : "No email configured";
             const active =
-              partner.emailNotificationsEnabled && Boolean(partner.email);
+              partner.emailNotificationsEnabled && savedEmails.length > 0;
 
             return (
               <article key={partner.partnerId} className={`${panelClass} p-4 sm:p-5`}>
@@ -233,7 +297,7 @@ export default function AdminPartnersPage() {
                           {partner.partnerName}
                         </h2>
                         <p className={`mt-1 truncate text-sm ${mutedTextClass}`}>
-                          {partner.email || "No email configured"}
+                          {emailSummary}
                         </p>
                       </div>
                     </div>
@@ -253,22 +317,75 @@ export default function AdminPartnersPage() {
                 </div>
 
                 <div className="mt-5 grid gap-4">
-                  <label className="block">
-                    <span className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${mutedTextClass}`}>
-                      Notification email
-                    </span>
-                    <input
-                      type="email"
-                      value={partner.email}
-                      onChange={(event) =>
-                        updatePartner(partner.partnerId, {
-                          email: event.target.value,
-                        })
-                      }
-                      placeholder="partner@example.com"
-                      className={`mt-2 ${inputClass}`}
-                    />
-                  </label>
+                  <div className="grid gap-3">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <span className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${mutedTextClass}`}>
+                          Notification emails
+                        </span>
+                        <p className={`mt-1 text-xs leading-5 ${mutedTextClass}`}>
+                          Add the partner, backup worker, or manager who should track this desk.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => addPartnerEmail(partner.partnerId)}
+                        className={`inline-flex items-center justify-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition ${
+                          isDark
+                            ? "border-white/10 bg-white/10 text-slate-100 hover:bg-white/15"
+                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                        }`}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Add email
+                      </button>
+                    </div>
+
+                    {emails.length ? (
+                      <div className="grid gap-2">
+                        {emails.map((email, index) => (
+                          <div
+                            key={`${partner.partnerId}-email-${index}`}
+                            className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_2.75rem]"
+                          >
+                            <input
+                              type="email"
+                              value={email}
+                              onChange={(event) =>
+                                updatePartnerEmail(
+                                  partner.partnerId,
+                                  index,
+                                  event.target.value
+                                )
+                              }
+                              placeholder={
+                                index === 0
+                                  ? "partner@example.com"
+                                  : "backup-or-manager@example.com"
+                              }
+                              className={inputClass}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removePartnerEmail(partner.partnerId, index)}
+                              className={`inline-flex h-11 items-center justify-center rounded-2xl border transition ${
+                                isDark
+                                  ? "border-rose-300/30 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20"
+                                  : "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                              }`}
+                              aria-label={`Remove email ${index + 1} for ${partner.partnerName}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className={`rounded-2xl border border-dashed px-4 py-4 text-sm ${softPanelClass} ${mutedTextClass}`}>
+                        No email recipients yet.
+                      </div>
+                    )}
+                  </div>
 
                   <div
                     className={`flex flex-col gap-3 rounded-2xl border p-3 sm:flex-row sm:items-center sm:justify-between ${softPanelClass}`}
