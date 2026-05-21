@@ -58,6 +58,8 @@ export type PartnerPrintPlacement =
   | "back_only"
   | "front_back"
   | "small_front_back"
+  | "logo_only"
+  | "logo_front_back"
   | "sleeve_only"
   | "custom";
 
@@ -216,6 +218,8 @@ export const PARTNER_PRINT_PLACEMENT_LABELS: Record<PartnerPrintPlacement, strin
   back_only: "Back Printing only",
   front_back: "Front + Back Printing",
   small_front_back: "Small Front + Back Printing",
+  logo_only: "Logo Printing only",
+  logo_front_back: "Logo Front + Back Printing",
   sleeve_only: "Sleeve Printing only",
   custom: "Other / see notes",
 };
@@ -234,6 +238,18 @@ export const PARTNER_PRINT_PLACEMENT_OPTIONS: {
   { value: "custom", label: PARTNER_PRINT_PLACEMENT_LABELS.custom },
 ];
 
+export const SHABANAZ_PRINT_PLACEMENT_OPTIONS: {
+  value: PartnerPrintPlacement;
+  label: string;
+}[] = [
+  ...PARTNER_PRINT_PLACEMENT_OPTIONS,
+  { value: "logo_only", label: PARTNER_PRINT_PLACEMENT_LABELS.logo_only },
+  {
+    value: "logo_front_back",
+    label: PARTNER_PRINT_PLACEMENT_LABELS.logo_front_back,
+  },
+];
+
 const PARTNER_ID_SET = new Set<string>(PRINT_PARTNERS.map((partner) => partner.id));
 const VISIBLE_FIELD_SET = new Set<PartnerVisibleField>(
   PARTNER_VISIBLE_FIELD_OPTIONS.map((field) => field.key)
@@ -242,7 +258,7 @@ const PRODUCTION_STATUS_SET = new Set<PartnerProductionStatus>(
   PARTNER_PRODUCTION_STATUSES
 );
 const PRINT_PLACEMENT_SET = new Set<PartnerPrintPlacement>(
-  PARTNER_PRINT_PLACEMENT_OPTIONS.map((option) => option.value)
+  Object.keys(PARTNER_PRINT_PLACEMENT_LABELS) as PartnerPrintPlacement[]
 );
 const DECISION_SET = new Set<PartnerDecision>([
   "pending",

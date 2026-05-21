@@ -36,6 +36,7 @@ import {
   PARTNER_PRINT_PLACEMENT_OPTIONS,
   PARTNER_PRODUCTION_STATUS_LABELS,
   PARTNER_PRODUCTION_STATUSES,
+  SHABANAZ_PRINT_PLACEMENT_OPTIONS,
   type PartnerDecision,
   type PartnerOrderAttachment,
   type PartnerOrderDetails,
@@ -223,6 +224,10 @@ export default function PartnerProductionPage({
   const partner = getPrintPartner(partnerId);
   const productionNotes = partner.productionNotes;
   const paymentDetails = partner.paymentDetails;
+  const printPlacementOptions =
+    partnerId === "shabanaz"
+      ? SHABANAZ_PRINT_PLACEMENT_OPTIONS
+      : PARTNER_PRINT_PLACEMENT_OPTIONS;
   const [sessionState, setSessionState] = useState<SessionState>("checking");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -1095,7 +1100,7 @@ export default function PartnerProductionPage({
                         }
                         className={`mt-2 normal-case tracking-normal ${inputClass}`}
                       >
-                        {PARTNER_PRINT_PLACEMENT_OPTIONS.map((option) => (
+                        {printPlacementOptions.map((option) => (
                           <option key={option.value} value={option.value}>
                             {option.label}
                           </option>
