@@ -11,12 +11,14 @@ import {
   getPrintPartner,
   inferPartnerPrintPlacementFromText,
   isPrintPartnerId,
+  normalizePartnerClientStatus,
   normalizePartnerPrintPlacement,
   normalizePrintPartnerIds,
   normalizePartnerVisibleFields,
   PARTNER_PRINT_PLACEMENT_LABELS,
   PARTNER_PRODUCTION_STATUSES,
   type PartnerDecision,
+  type PartnerClientStatus,
   type PartnerOrderAttachment,
   type PartnerOrderDetails,
   type PartnerPrintPlacement,
@@ -76,6 +78,7 @@ type RawPartnerAssignment = {
   visibleFields?: unknown;
   requestStatus?: unknown;
   productionStatus?: unknown;
+  clientStatus?: unknown;
   completionDays?: unknown;
   price?: unknown;
   comments?: unknown;
@@ -272,6 +275,10 @@ function normalizeProductionStatus(value: unknown): PartnerProductionStatus {
     return value as PartnerProductionStatus;
   }
   return "not_started";
+}
+
+function normalizeClientStatus(value: unknown): PartnerClientStatus {
+  return normalizePartnerClientStatus(value);
 }
 
 function getAssignedPartnerIds(partner: RawPartnerAssignment) {
@@ -484,6 +491,7 @@ export function sanitizePartnerOrder(
     productionStatus: normalizeProductionStatus(
       getResponseValue(partner, partnerResponse, "productionStatus")
     ),
+    clientStatus: normalizeClientStatus(partner.clientStatus),
     printPlacement,
     printPlacementSource,
     completionDays: safeNumber(getResponseValue(partner, partnerResponse, "completionDays"), 0) > 0

@@ -5,6 +5,7 @@ import { readAdminSession } from "@/lib/admin-auth";
 import { readPartnerSession } from "@/lib/partner-auth";
 import { readRawPartnerQuote, sanitizePartnerOrder } from "@/lib/partner-orders";
 import { db } from "@/lib/firebase";
+import { SITE_URL } from "@/lib/seo";
 import {
   getPrintPartner,
   isPartnerDecision,
@@ -24,6 +25,8 @@ import {
 
 const MAX_UPDATE_REQUEST_BYTES = 8_192;
 const MAX_TEXT_LENGTH = 1_500;
+const RYAN_ACTION_EMAIL = "ryanchutooree@gmail.com";
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 class PartnerOrderUpdateError extends Error {
   status: number;
@@ -44,6 +47,177 @@ function cleanOptionalNumber(value: unknown) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) return null;
   return Math.round(parsed * 100) / 100;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function formatFrom(name: string, address: string) {
+  const cleanName = name.replace(/[<>"]/g, "").trim();
+  return cleanName ? `${cleanName} <${address}>` : address;
+}
+
+function resolveMailSender(rawFrom: string | undefined, smtpUser: string | undefined) {
+  const fallbackAddress = (smtpUser || "").trim();
+  const safeFallbackAddress = EMAIL_RE.test(fallbackAddress)
+    ? fallbackAddress
+    : "no-reply@example.com";
+  const fallbackName = "MO T-SHIRT";
+  const raw = (rawFrom || "").trim();
+
+  if (!raw) {
+    return {
+      address: safeFallbackAddress,
+      header: formatFrom(fallbackName, safeFallbackAddress),
+    };
+  }
+
+  const bracketMatch = raw.match(/^(.*)<([^>]*)>\s*$/);
+  if (bracketMatch) {
+    const namePart = (bracketMatch[1] || "").trim();
+    const addressPart = (bracketMatch[2] || "").trim();
+    if (EMAIL_RE.test(addressPart)) {
+      return {
+        address: addressPart,
+        header: formatFrom(namePart || fallbackName, addressPart),
+      };
+    }
+    return {
+      address: safeFallbackAddress,
+      header: formatFrom(namePart || fallbackName, safeFallbackAddress),
+    };
+  }
+
+  if (EMAIL_RE.test(raw)) {
+    return { address: raw, header: formatFrom(fallbackName, raw) };
+  }
+
+  return {
+    address: safeFallbackAddress,
+    header: formatFrom(raw, safeFallbackAddress),
+  };
+}
+
+function emailRow(label: string, value: string) {
+  return [label, value || "Not set"] as const;
+}
+
+function buildRyanActionEmail({
+  orderCode,
+  partnerName,
+  product,
+  pieces,
+  deadline,
+  print,
+  decision,
+  completionDays,
+  price,
+  comments,
+  missingInformation,
+}: {
+  orderCode: string;
+  partnerName: string;
+  product: string;
+  pieces: number | null;
+  deadline: string;
+  print: string;
+  decision: PartnerDecision;
+  completionDays: number | null;
+  price: number | null;
+  comments: string;
+  missingInformation: string;
+}) {
+  const rows = [
+    emailRow("Order", orderCode),
+    emailRow("Partner", partnerName),
+    emailRow("Decision", decision === "needs_info" ? "Needs information" : decision),
+    emailRow("Garment", product),
+    emailRow("Quantity", pieces ? `${pieces} pcs` : ""),
+    emailRow("Print method", print),
+    emailRow("Deadline", deadline),
+    emailRow("Completion days", completionDays ? `${completionDays}` : ""),
+    emailRow("Partner price", price ? `Rs ${price}` : ""),
+    emailRow("Missing information", missingInformation),
+    emailRow("Comments", comments),
+  ];
+  const textRows = rows.map(([label, value]) => `${label}: ${value}`).join("\n");
+  const htmlRows = rows
+    .map(([label, value]) => {
+      return `<tr>
+  <td style="padding:7px 12px 7px 0; font-weight:700; vertical-align:top; white-space:nowrap;">${escapeHtml(label)}</td>
+  <td style="padding:7px 0; color:#111; white-space:pre-wrap;">${escapeHtml(value)}</td>
+</tr>`;
+    })
+    .join("");
+  const adminUrl = `${SITE_URL}/admin/quotation-approval`;
+
+  return {
+    subject: `Ryan action needed for ${orderCode}`,
+    text: `Hi Ryan,
+
+${partnerName} needs your action before this order can continue.
+
+${textRows}
+
+Open Quotation Approval:
+${adminUrl}`,
+    html: `<div style="font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#111;">
+  <p>Hi Ryan,</p>
+  <p><strong>${escapeHtml(partnerName)}</strong> needs your action before this order can continue.</p>
+  <table cellpadding="0" cellspacing="0" style="border-collapse:collapse; width:100%; max-width:720px;">
+    ${htmlRows}
+  </table>
+  <p style="margin-top:16px;">
+    <a href="${escapeHtml(adminUrl)}" style="display:inline-block; border-radius:12px; background:#f97316; color:#fff; padding:10px 14px; text-decoration:none; font-weight:700;">
+      Open Quotation Approval
+    </a>
+  </p>
+</div>`,
+  };
+}
+
+async function sendRyanActionEmail(message: ReturnType<typeof buildRyanActionEmail>) {
+  const host = process.env.SMTP_HOST;
+  const port = Number(process.env.SMTP_PORT || 465);
+  const secure = String(process.env.SMTP_SECURE || "true") === "true";
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const sender = resolveMailSender(process.env.SMTP_FROM, user);
+
+  if (!host || !user || !pass) {
+    throw new Error("Email server is not configured.");
+  }
+
+  // @ts-expect-error nodemailer may not be installed yet
+  const nodemailer = await import("nodemailer");
+  const transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+  });
+
+  await transporter.sendMail({
+    from: sender.header,
+    replyTo: sender.header,
+    to: RYAN_ACTION_EMAIL,
+    envelope: {
+      from: sender.address,
+      to: [RYAN_ACTION_EMAIL],
+    },
+    subject: message.subject,
+    text: message.text,
+    html: message.html,
+    headers: {
+      "X-Entity-Ref-ID": `partner-action-${message.subject.replace(/[^a-z0-9-]/gi, "-")}`,
+      "X-Auto-Response-Suppress": "All",
+    },
+  });
 }
 
 function getAssignedPartnerIds(partner: Record<string, unknown>) {
@@ -135,6 +309,11 @@ export async function PATCH(
   )
     ? body.printPlacement
     : existing.view.printPlacement;
+  const shouldNotifyRyanAction =
+    (decision === "needs_info" || Boolean(missingInformation)) &&
+    (decision !== existing.view.decision ||
+      missingInformation !== existing.view.missingInformation ||
+      comments !== existing.view.comments);
 
   const nextProductionStatus =
     decision === "accepted" && productionStatus === "not_started"
@@ -255,7 +434,41 @@ export async function PATCH(
       );
     });
 
-    return NextResponse.json({ order: updatedView });
+    let actionEmailSent = false;
+    let actionEmailWarning = "";
+
+    if (updatedView && shouldNotifyRyanAction) {
+      try {
+        await sendRyanActionEmail(
+          buildRyanActionEmail({
+            orderCode: updatedView.code,
+            partnerName: updatedView.partnerName,
+            product: updatedView.summary.product,
+            pieces: updatedView.summary.pieces,
+            deadline: updatedView.summary.deadline,
+            print: updatedView.summary.print,
+            decision,
+            completionDays,
+            price,
+            comments,
+            missingInformation,
+          })
+        );
+        actionEmailSent = true;
+      } catch (emailError) {
+        console.error("partners:orders:ryan-action-email", emailError);
+        actionEmailWarning =
+          emailError instanceof Error
+            ? emailError.message
+            : "Ryan action email could not be sent.";
+      }
+    }
+
+    return NextResponse.json({
+      order: updatedView,
+      actionEmailSent,
+      ...(actionEmailWarning ? { actionEmailWarning } : {}),
+    });
   } catch (error) {
     if (error instanceof PartnerOrderUpdateError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

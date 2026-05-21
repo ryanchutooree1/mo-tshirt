@@ -51,6 +51,13 @@ export type PartnerProductionStatus =
   | "will_post_tomorrow"
   | "ryan_to_collect";
 
+export type PartnerClientStatus =
+  | "not_set"
+  | "quotation_sent"
+  | "waiting_client_response"
+  | "changes_needed"
+  | "confirmed_half_payment";
+
 export type PartnerPrintPlacement =
   | "not_set"
   | "small_front_only"
@@ -99,6 +106,7 @@ export type PartnerOrderView = {
   updatedAt: string | null;
   decision: PartnerDecision;
   productionStatus: PartnerProductionStatus;
+  clientStatus: PartnerClientStatus;
   printPlacement: PartnerPrintPlacement;
   printPlacementSource: PartnerPrintPlacementSource;
   completionDays: number | null;
@@ -211,6 +219,31 @@ export const PARTNER_PRODUCTION_STATUSES: PartnerProductionStatus[] = [
   "ryan_to_collect",
 ];
 
+export const PARTNER_CLIENT_STATUS_LABELS: Record<PartnerClientStatus, string> = {
+  not_set: "Not set",
+  quotation_sent: "Quotation sent",
+  waiting_client_response: "Waiting for client response",
+  changes_needed: "Changes need to be made",
+  confirmed_half_payment: "Client confirmed with half payment",
+};
+
+export const PARTNER_CLIENT_STATUS_OPTIONS: {
+  value: PartnerClientStatus;
+  label: string;
+}[] = [
+  { value: "not_set", label: PARTNER_CLIENT_STATUS_LABELS.not_set },
+  { value: "quotation_sent", label: PARTNER_CLIENT_STATUS_LABELS.quotation_sent },
+  {
+    value: "waiting_client_response",
+    label: PARTNER_CLIENT_STATUS_LABELS.waiting_client_response,
+  },
+  { value: "changes_needed", label: PARTNER_CLIENT_STATUS_LABELS.changes_needed },
+  {
+    value: "confirmed_half_payment",
+    label: PARTNER_CLIENT_STATUS_LABELS.confirmed_half_payment,
+  },
+];
+
 export const PARTNER_PRINT_PLACEMENT_LABELS: Record<PartnerPrintPlacement, string> = {
   not_set: "Use client/admin request",
   small_front_only: "Small Front Printing only",
@@ -256,6 +289,9 @@ const VISIBLE_FIELD_SET = new Set<PartnerVisibleField>(
 );
 const PRODUCTION_STATUS_SET = new Set<PartnerProductionStatus>(
   PARTNER_PRODUCTION_STATUSES
+);
+const CLIENT_STATUS_SET = new Set<PartnerClientStatus>(
+  PARTNER_CLIENT_STATUS_OPTIONS.map((status) => status.value)
 );
 const PRINT_PLACEMENT_SET = new Set<PartnerPrintPlacement>(
   Object.keys(PARTNER_PRINT_PLACEMENT_LABELS) as PartnerPrintPlacement[]
@@ -325,6 +361,17 @@ export function isPartnerProductionStatus(
     typeof value === "string" &&
     PRODUCTION_STATUS_SET.has(value as PartnerProductionStatus)
   );
+}
+
+export function isPartnerClientStatus(value: unknown): value is PartnerClientStatus {
+  return (
+    typeof value === "string" &&
+    CLIENT_STATUS_SET.has(value as PartnerClientStatus)
+  );
+}
+
+export function normalizePartnerClientStatus(value: unknown): PartnerClientStatus {
+  return isPartnerClientStatus(value) ? value : "not_set";
 }
 
 export function isPartnerPrintPlacement(value: unknown): value is PartnerPrintPlacement {

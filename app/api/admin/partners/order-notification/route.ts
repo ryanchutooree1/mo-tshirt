@@ -176,6 +176,12 @@ Ryan moved an order to your MO T-SHIRT partner desk.
 
 ${textRows}
 
+Next steps:
+1. Check if the logo/artwork is provided.
+2. Accept or reject the order.
+3. If accepted, add completion days and your price.
+4. Use Missing information when Ryan needs to get something from the client.
+
 Open your partner page:
 ${partnerUrl}
 
@@ -186,6 +192,15 @@ This internal production notice was sent by MO T-SHIRT after Ryan moved this ord
   <table cellpadding="0" cellspacing="0" style="border-collapse:collapse; width:100%; max-width:560px;">
     ${htmlRows}
   </table>
+  <div style="margin-top:16px; padding:12px; border:1px solid #fed7aa; border-radius:12px; background:#fff7ed;">
+    <p style="margin:0 0 8px; font-weight:700;">Next steps</p>
+    <ol style="margin:0; padding-left:20px; color:#333;">
+      <li>Check if the logo/artwork is provided.</li>
+      <li>Accept or reject the order.</li>
+      <li>If accepted, add completion days and your price.</li>
+      <li>Use Missing information when Ryan needs to get something from the client.</li>
+    </ol>
+  </div>
   <p style="margin-top:16px; margin-bottom:4px; font-weight:700;">Partner desk link</p>
   <p style="margin-top:0;">
     <a href="${escapeHtml(partnerUrl)}" style="color:#0f766e; text-decoration:underline; word-break:break-all;">

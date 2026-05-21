@@ -57,9 +57,12 @@ import {
   getPrintPartner,
   getPrintPartnerRouteLabel,
   inferPartnerPrintPlacementFromText,
+  normalizePartnerClientStatus,
   normalizePartnerPrintPlacement,
   normalizePrintPartnerIds,
   normalizePartnerVisibleFields,
+  PARTNER_CLIENT_STATUS_LABELS,
+  PARTNER_CLIENT_STATUS_OPTIONS,
   PARTNER_DECISION_LABELS,
   PARTNER_DECISION_TONES,
   PARTNER_PRINT_PLACEMENT_LABELS,
@@ -67,6 +70,7 @@ import {
   PARTNER_PRODUCTION_STATUS_LABELS,
   PARTNER_VISIBLE_FIELD_OPTIONS,
   PRINT_PARTNERS,
+  type PartnerClientStatus,
   type PartnerDecision,
   type PartnerPrintPlacement,
   type PartnerProductionStatus,
@@ -142,6 +146,7 @@ type QuotePartnerAssignment = {
   visibleFields?: PartnerVisibleField[];
   requestStatus?: PartnerDecision;
   productionStatus?: PartnerProductionStatus;
+  clientStatus?: PartnerClientStatus;
   printPlacement?: PartnerPrintPlacement;
   completionDays?: number | null;
   price?: number | null;
@@ -800,6 +805,7 @@ const parseQuotePartnerAssignment = (value: unknown): QuotePartnerAssignment | n
     requestStatus: activeResponse?.requestStatus || parsePartnerDecision(raw.requestStatus),
     productionStatus:
       activeResponse?.productionStatus || parsePartnerProductionStatus(raw.productionStatus),
+    clientStatus: normalizePartnerClientStatus(raw.clientStatus),
     printPlacement: activePrintPlacement,
     completionDays:
       activeResponse?.completionDays ||
@@ -1287,6 +1293,7 @@ export default function QuotationApprovalPage() {
   const [draft, setDraft] = useState<QuoteDraft | null>(null);
   const [saving, setSaving] = useState(false);
   const [statusSaving, setStatusSaving] = useState(false);
+  const [clientStatusSaving, setClientStatusSaving] = useState(false);
   const [creatingQuote, setCreatingQuote] = useState(false);
   const [deletingQuote, setDeletingQuote] = useState(false);
   const [sending, setSending] = useState(false);
@@ -1803,6 +1810,24 @@ export default function QuotationApprovalPage() {
     }
   };
 
+  const updatePartnerClientStatus = async (nextStatus: PartnerClientStatus) => {
+    if (!selected?.partner) return;
+    setClientStatusSaving(true);
+    setNotice(null);
+    try {
+      await updateDoc(doc(db, "quotes", selected.id), {
+        "partner.clientStatus": nextStatus,
+        "partner.updatedAt": serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      setNotice(`Client status updated: ${PARTNER_CLIENT_STATUS_LABELS[nextStatus]}.`);
+    } catch {
+      setNotice("Failed to update client status.");
+    } finally {
+      setClientStatusSaving(false);
+    }
+  };
+
   const togglePartnerVisibleField = (field: PartnerVisibleField) => {
     setPartnerVisibleFields((current) => {
       if (current.includes(field)) {
@@ -1918,6 +1943,7 @@ export default function QuotationApprovalPage() {
     if (resetPartnerResponse) {
       updatePayload["partner.requestStatus"] = "pending";
       updatePayload["partner.productionStatus"] = "not_started";
+      updatePayload["partner.clientStatus"] = "not_set";
       updatePayload["partner.completionDays"] = null;
       updatePayload["partner.price"] = null;
       updatePayload["partner.comments"] = "";
@@ -3145,6 +3171,39 @@ export default function QuotationApprovalPage() {
                             </span>
                           )}
                         </div>
+
+                        {selectedPartnerIds.length ? (
+                          <div className="mt-4 rounded-2xl border border-[#ffd9c2] bg-[#fff8f1] px-4 py-3">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                              <label className={`${labelClass} flex-1`}>
+                                Ryan client status
+                                <select
+                                  value={selected.partner?.clientStatus || "not_set"}
+                                  onChange={(event) =>
+                                    updatePartnerClientStatus(
+                                      event.target.value as PartnerClientStatus
+                                    )
+                                  }
+                                  disabled={clientStatusSaving}
+                                  className={`${fieldClass} normal-case tracking-normal`}
+                                >
+                                  {PARTNER_CLIENT_STATUS_OPTIONS.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <div className="rounded-xl border border-[#ffe2c7] bg-white px-3 py-2 text-xs font-semibold text-[#9a4b13] sm:w-56">
+                                {clientStatusSaving
+                                  ? "Saving..."
+                                  : selected.partner?.clientStatus === "confirmed_half_payment"
+                                    ? "Production can continue."
+                                    : "Use this after dealing with the client."}
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
 
                         {selectedPartnerIds.length ? (
                           <div className="mt-4 space-y-3 text-sm">

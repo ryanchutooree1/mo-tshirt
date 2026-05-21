@@ -18,6 +18,7 @@ import {
   FiInfo,
   FiLock,
   FiLogOut,
+  FiMail,
   FiMessageCircle,
   FiMoon,
   FiPackage,
@@ -30,6 +31,7 @@ import {
 import { useAdminTheme } from "@/admin/AdminThemeContext";
 import {
   getPrintPartner,
+  PARTNER_CLIENT_STATUS_LABELS,
   PARTNER_DECISION_LABELS,
   PARTNER_DECISION_TONES,
   PARTNER_PRINT_PLACEMENT_LABELS,
@@ -124,6 +126,12 @@ function detailHasContent(value: unknown) {
 
 function getDetailCount(details: PartnerOrderDetails) {
   return Object.values(details).filter(detailHasContent).length;
+}
+
+function orderHasArtwork(details: PartnerOrderDetails) {
+  return Boolean(details.artwork?.some((attachment) =>
+    attachment.url || attachment.filename || attachment.label
+  ));
 }
 
 function getArtworkDownloadHref(attachment: PartnerOrderAttachment, index: number) {
@@ -494,6 +502,20 @@ export default function PartnerProductionPage({
   async function saveResponse() {
     if (!selected) return;
     const decision = draft.decision;
+    if (decision === "accepted") {
+      if (!draft.completionDays.trim() || Number(draft.completionDays) <= 0) {
+        setNotice("Add how many days you need before accepting.");
+        return;
+      }
+      if (!draft.price.trim() || Number(draft.price) <= 0) {
+        setNotice("Add your price before accepting.");
+        return;
+      }
+    }
+    if (decision === "needs_info" && !draft.missingInformation.trim()) {
+      setNotice("Write what Ryan must get or fix before sending the request.");
+      return;
+    }
     setSaving(true);
     setNotice(null);
     try {
@@ -521,7 +543,13 @@ export default function PartnerProductionPage({
         setDraft(buildDraft(updated));
         setSelectedId(updated.id);
       }
-      setNotice("Saved.");
+      setNotice(
+        data?.actionEmailSent
+          ? "Saved. Ryan was emailed for action."
+          : data?.actionEmailWarning
+            ? `Saved, but Ryan email failed: ${data.actionEmailWarning}`
+            : "Saved."
+      );
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Could not save response.");
     } finally {
@@ -1007,7 +1035,7 @@ export default function PartnerProductionPage({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3 xl:min-w-[640px]">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3 xl:min-w-[760px]">
                     <Metric
                       icon={<FiPackage />}
                       label="Quantity"
@@ -1028,12 +1056,24 @@ export default function PartnerProductionPage({
                       label="Placement"
                       value={PARTNER_PRINT_PLACEMENT_LABELS[selected.printPlacement]}
                     />
+                    <Metric
+                      icon={<FiMessageCircle />}
+                      label="Client"
+                      value={PARTNER_CLIENT_STATUS_LABELS[selected.clientStatus]}
+                    />
                   </div>
                 </div>
               </div>
 
               <div className="grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
                 <div className="space-y-5">
+                  <WorkflowSteps
+                    order={selected}
+                    draft={draft}
+                    onRequestClientLogo={requestClientLogo}
+                    requestingLogoKey={requestingLogoKey}
+                  />
+
                   <OrderDetails
                     details={selected.details}
                     orderId={selected.id}
@@ -1045,8 +1085,11 @@ export default function PartnerProductionPage({
 
                 <div className={`${surfaceClass} p-4 sm:p-5`}>
                   <p className={sectionLabelClass}>
-                    Your response
+                    Partner response
                   </p>
+                  <h3 className="mt-1 text-lg font-semibold text-[color:var(--partner-text)]">
+                    Accept, price, then update production
+                  </h3>
                   <div className="mt-4 grid grid-cols-3 gap-2">
                     <DecisionButton
                       active={draft.decision === "accepted"}
@@ -1073,7 +1116,7 @@ export default function PartnerProductionPage({
 
                   <div className="mt-5 grid gap-4">
                     <label className={fieldLabelClass}>
-                      Completion days
+                      Step 3 - Completion days
                       <input
                         type="number"
                         min={0}
@@ -1089,7 +1132,7 @@ export default function PartnerProductionPage({
                       />
                     </label>
                     <label className={fieldLabelClass}>
-                      Print placement
+                      Step 1 - Print placement
                       <select
                         value={draft.printPlacement}
                         onChange={(event) =>
@@ -1111,7 +1154,7 @@ export default function PartnerProductionPage({
                       </span>
                     </label>
                     <label className={fieldLabelClass}>
-                      Your price
+                      Step 3 - Your price
                       <input
                         type="number"
                         min={0}
@@ -1127,7 +1170,7 @@ export default function PartnerProductionPage({
                       />
                     </label>
                     <label className={fieldLabelClass}>
-                      Production status
+                      Step 6 - Production status
                       <select
                         value={draft.productionStatus}
                         onChange={(event) =>
@@ -1146,7 +1189,7 @@ export default function PartnerProductionPage({
                       </select>
                     </label>
                     <label className={fieldLabelClass}>
-                      Comments for Ryan
+                      Step 7 - Comments for Ryan
                       <textarea
                         value={draft.comments}
                         onChange={(event) =>
@@ -1161,7 +1204,7 @@ export default function PartnerProductionPage({
                       />
                     </label>
                     <label className={fieldLabelClass}>
-                      Missing information
+                      Step 7 - Missing information
                       <textarea
                         value={draft.missingInformation}
                         onChange={(event) =>
@@ -1172,8 +1215,11 @@ export default function PartnerProductionPage({
                         }
                         rows={3}
                         className={`mt-2 resize-y normal-case tracking-normal ${inputClass}`}
-                        placeholder="Tell Ryan what is missing before you can print."
+                        placeholder="Tell Ryan what he must get before you can print."
                       />
+                      <span className="mt-2 block text-xs normal-case tracking-normal text-[color:var(--partner-muted)]">
+                        If this field is filled or Need info is selected, Ryan gets an email after saving.
+                      </span>
                     </label>
                   </div>
 
@@ -1231,6 +1277,164 @@ function Metric({
       </div>
       <div className="mt-2 line-clamp-2 text-xs font-semibold text-[color:var(--partner-text)] sm:text-sm">{value}</div>
     </div>
+  );
+}
+
+function WorkflowSteps({
+  order,
+  draft,
+  onRequestClientLogo,
+  requestingLogoKey,
+}: {
+  order: PartnerOrderView;
+  draft: ResponseDraft;
+  onRequestClientLogo: () => void;
+  requestingLogoKey: string | null;
+}) {
+  const hasArtwork = orderHasArtwork(order.details);
+  const days = Number(draft.completionDays);
+  const price = Number(draft.price);
+  const hasOffer = Number.isFinite(days) && days > 0 && Number.isFinite(price) && price > 0;
+  const actionNeeded = draft.decision === "needs_info" || Boolean(draft.missingInformation.trim());
+  const logoRequestKey = `${order.id}:client-logo`;
+  const steps = [
+    {
+      title: "Artwork",
+      value: hasArtwork ? "Ready" : "Missing",
+      icon: <FiImage />,
+      tone: hasArtwork
+        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+        : "border-amber-200 bg-amber-50 text-amber-800",
+      action: hasArtwork ? null : (
+        <button
+          type="button"
+          onClick={onRequestClientLogo}
+          disabled={requestingLogoKey === logoRequestKey}
+          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-3 py-2 text-xs font-semibold text-slate-950 transition hover:bg-amber-400 disabled:opacity-60"
+        >
+          <FiAlertTriangle className="h-3.5 w-3.5" />
+          {requestingLogoKey === logoRequestKey
+            ? "Sending..."
+            : "Ask Ryan for client logo"}
+        </button>
+      ),
+    },
+    {
+      title: "Decision",
+      value:
+        draft.decision === "accepted"
+          ? "Accepted"
+          : draft.decision === "rejected"
+            ? "Rejected"
+            : draft.decision === "needs_info"
+              ? "Need info"
+              : "Waiting",
+      icon:
+        draft.decision === "rejected" ? (
+          <FiXCircle />
+        ) : draft.decision === "needs_info" ? (
+          <FiAlertTriangle />
+        ) : (
+          <FiCheckCircle />
+        ),
+      tone:
+        draft.decision === "accepted"
+          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+          : draft.decision === "rejected"
+            ? "border-rose-200 bg-rose-50 text-rose-800"
+            : draft.decision === "needs_info"
+              ? "border-amber-200 bg-amber-50 text-amber-800"
+              : "border-[color:var(--partner-border)] bg-[var(--partner-soft)] text-[color:var(--partner-muted)]",
+      action: null,
+    },
+    {
+      title: "Days + price",
+      value: hasOffer ? `${days}d / Rs ${price}` : "Needed",
+      icon: <FiClock />,
+      tone: hasOffer
+        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+        : "border-[color:var(--partner-border)] bg-[var(--partner-soft)] text-[color:var(--partner-muted)]",
+      action: null,
+    },
+    {
+      title: "Ryan price",
+      value: hasOffer ? "Ready for Ryan" : "Waiting",
+      icon: <FiMail />,
+      tone: hasOffer
+        ? "border-cyan-200 bg-cyan-50 text-cyan-800"
+        : "border-[color:var(--partner-border)] bg-[var(--partner-soft)] text-[color:var(--partner-muted)]",
+      action: null,
+    },
+    {
+      title: "Client",
+      value: PARTNER_CLIENT_STATUS_LABELS[order.clientStatus],
+      icon: <FiMessageCircle />,
+      tone:
+        order.clientStatus === "confirmed_half_payment"
+          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+          : order.clientStatus === "changes_needed"
+            ? "border-amber-200 bg-amber-50 text-amber-800"
+            : "border-[color:var(--partner-border)] bg-[var(--partner-soft)] text-[color:var(--partner-muted)]",
+      action: null,
+    },
+    {
+      title: "Production",
+      value: PARTNER_PRODUCTION_STATUS_LABELS[draft.productionStatus],
+      icon: <FiTruck />,
+      tone:
+        draft.productionStatus === "completed" ||
+        draft.productionStatus === "ryan_to_collect"
+          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+          : "border-[color:var(--partner-border)] bg-[var(--partner-soft)] text-[color:var(--partner-muted)]",
+      action: null,
+    },
+    {
+      title: "Ryan action",
+      value: actionNeeded ? "Email on save" : "No block",
+      icon: <FiAlertTriangle />,
+      tone: actionNeeded
+        ? "border-amber-200 bg-amber-50 text-amber-800"
+        : "border-[color:var(--partner-border)] bg-[var(--partner-soft)] text-[color:var(--partner-muted)]",
+      action: null,
+    },
+  ];
+
+  return (
+    <section className="rounded-2xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] p-4 shadow-sm sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--partner-muted)] sm:text-xs sm:tracking-[0.2em]">
+            Production protocol
+          </p>
+          <h3 className="mt-1 text-lg font-semibold text-[color:var(--partner-text)]">
+            {order.code} fast path
+          </h3>
+        </div>
+        <span className="rounded-full border border-[color:var(--partner-border)] bg-[var(--partner-soft)] px-3 py-1.5 text-xs font-semibold text-[color:var(--partner-muted)]">
+          1 to 7
+        </span>
+      </div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        {steps.map((step, index) => (
+          <div key={step.title} className={`rounded-xl border px-3 py-3 ${step.tone}`}>
+            <div className="flex items-start gap-3">
+              <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/70">
+                {step.icon}
+              </span>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em]">
+                  {index + 1}. {step.title}
+                </p>
+                <p className="mt-1 line-clamp-2 text-sm font-semibold">
+                  {step.value}
+                </p>
+              </div>
+            </div>
+            {step.action}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
