@@ -51,6 +51,8 @@ type SkippedNotification = {
   reason: string;
 };
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function escapeHtml(value: string) {
   return value
     .replace(/&/g, "&amp;")
@@ -59,20 +61,50 @@ function escapeHtml(value: string) {
     .replace(/"/g, "&quot;");
 }
 
-function resolveFromAddress(rawFrom: string | undefined, fallbackUser: string | undefined) {
-  const fallbackAddress = fallbackUser || "no-reply@example.com";
-  const safeFallbackAddress = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fallbackAddress)
+function formatFrom(name: string, address: string) {
+  const cleanName = name.replace(/[<>"]/g, "").trim();
+  return cleanName ? `${cleanName} <${address}>` : address;
+}
+
+function resolveMailSender(rawFrom: string | undefined, smtpUser: string | undefined) {
+  const fallbackAddress = (smtpUser || "").trim();
+  const safeFallbackAddress = EMAIL_RE.test(fallbackAddress)
     ? fallbackAddress
     : "no-reply@example.com";
-  if (!rawFrom) return safeFallbackAddress;
+  const fallbackName = "MO T-SHIRT";
+  const raw = (rawFrom || "").trim();
 
-  const match = rawFrom.match(/<([^>]+)>/);
-  const addressPart = (match?.[1] || rawFrom).trim();
-  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addressPart)) {
-    return rawFrom;
+  if (!raw) {
+    return {
+      address: safeFallbackAddress,
+      header: formatFrom(fallbackName, safeFallbackAddress),
+    };
   }
 
-  return safeFallbackAddress;
+  const bracketMatch = raw.match(/^(.*)<([^>]*)>\s*$/);
+  if (bracketMatch) {
+    const namePart = (bracketMatch[1] || "").trim();
+    const addressPart = (bracketMatch[2] || "").trim();
+    if (EMAIL_RE.test(addressPart)) {
+      return {
+        address: addressPart,
+        header: formatFrom(namePart || fallbackName, addressPart),
+      };
+    }
+    return {
+      address: safeFallbackAddress,
+      header: formatFrom(namePart || fallbackName, safeFallbackAddress),
+    };
+  }
+
+  if (EMAIL_RE.test(raw)) {
+    return { address: raw, header: formatFrom(fallbackName, raw) };
+  }
+
+  return {
+    address: safeFallbackAddress,
+    header: formatFrom(raw, safeFallbackAddress),
+  };
 }
 
 function safeText(value: unknown) {
@@ -145,17 +177,23 @@ Ryan moved an order to your MO T-SHIRT partner desk.
 ${textRows}
 
 Open your partner page:
-${partnerUrl}`,
+${partnerUrl}
+
+This internal production notice was sent by MO T-SHIRT after Ryan moved this order.`,
     html: `<div style="font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#111;">
   <p>Hi ${escapeHtml(partner.partnerName)},</p>
   <p>Ryan moved an order to your <strong>MO T-SHIRT partner desk</strong>.</p>
   <table cellpadding="0" cellspacing="0" style="border-collapse:collapse; width:100%; max-width:560px;">
     ${htmlRows}
   </table>
-  <p style="margin-top:16px;">
-    <a href="${escapeHtml(partnerUrl)}" style="display:inline-block; border-radius:12px; background:#111827; color:#fff; padding:10px 14px; text-decoration:none; font-weight:700;">
-      Open partner page
+  <p style="margin-top:16px; margin-bottom:4px; font-weight:700;">Partner desk link</p>
+  <p style="margin-top:0;">
+    <a href="${escapeHtml(partnerUrl)}" style="color:#0f766e; text-decoration:underline; word-break:break-all;">
+      ${escapeHtml(partnerUrl)}
     </a>
+  </p>
+  <p style="margin-top:16px; color:#555; font-size:12px;">
+    This internal production notice was sent by MO T-SHIRT after Ryan moved this order.
   </p>
 </div>`,
   };
@@ -214,7 +252,7 @@ export async function POST(req: Request) {
   const secure = String(process.env.SMTP_SECURE || "true") === "true";
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
-  const from = resolveFromAddress(process.env.SMTP_FROM, user);
+  const sender = resolveMailSender(process.env.SMTP_FROM, user);
 
   if (!enabledSettings.length) {
     return NextResponse.json({ sent: [], skipped });
@@ -249,11 +287,20 @@ export async function POST(req: Request) {
     for (const partner of enabledSettings) {
       const message = buildMessage({ quoteId, quote, partner });
       await transporter.sendMail({
-        from,
+        from: sender.header,
+        replyTo: sender.header,
         to: partner.emails.join(", "),
+        envelope: {
+          from: sender.address,
+          to: partner.emails,
+        },
         subject: message.subject,
         text: message.text,
         html: message.html,
+        headers: {
+          "X-Entity-Ref-ID": `partner-order-${quoteId}-${partner.partnerId}`,
+          "X-Auto-Response-Suppress": "All",
+        },
       });
       sent.push({
         partnerId: partner.partnerId,

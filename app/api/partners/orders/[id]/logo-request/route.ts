@@ -54,6 +54,7 @@ type RawQuoteForLogoRequest = {
 };
 
 type LogoRequestType = "upload_missing_artwork" | "ask_client_for_logo";
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function safeText(value: unknown, maxLength = MAX_FIELD_LENGTH) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -72,20 +73,50 @@ function escapeHtml(value: string) {
     .replace(/"/g, "&quot;");
 }
 
-function resolveFromAddress(rawFrom: string | undefined, fallbackUser: string | undefined) {
-  const fallbackAddress = fallbackUser || "no-reply@example.com";
-  const safeFallbackAddress = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fallbackAddress)
+function formatFrom(name: string, address: string) {
+  const cleanName = name.replace(/[<>"]/g, "").trim();
+  return cleanName ? `${cleanName} <${address}>` : address;
+}
+
+function resolveMailSender(rawFrom: string | undefined, smtpUser: string | undefined) {
+  const fallbackAddress = (smtpUser || "").trim();
+  const safeFallbackAddress = EMAIL_RE.test(fallbackAddress)
     ? fallbackAddress
     : "no-reply@example.com";
-  if (!rawFrom) return safeFallbackAddress;
+  const fallbackName = "MO T-SHIRT";
+  const raw = (rawFrom || "").trim();
 
-  const match = rawFrom.match(/<([^>]+)>/);
-  const addressPart = (match?.[1] || rawFrom).trim();
-  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addressPart)) {
-    return rawFrom;
+  if (!raw) {
+    return {
+      address: safeFallbackAddress,
+      header: formatFrom(fallbackName, safeFallbackAddress),
+    };
   }
 
-  return safeFallbackAddress;
+  const bracketMatch = raw.match(/^(.*)<([^>]*)>\s*$/);
+  if (bracketMatch) {
+    const namePart = (bracketMatch[1] || "").trim();
+    const addressPart = (bracketMatch[2] || "").trim();
+    if (EMAIL_RE.test(addressPart)) {
+      return {
+        address: addressPart,
+        header: formatFrom(namePart || fallbackName, addressPart),
+      };
+    }
+    return {
+      address: safeFallbackAddress,
+      header: formatFrom(namePart || fallbackName, safeFallbackAddress),
+    };
+  }
+
+  if (EMAIL_RE.test(raw)) {
+    return { address: raw, header: formatFrom(fallbackName, raw) };
+  }
+
+  return {
+    address: safeFallbackAddress,
+    header: formatFrom(raw, safeFallbackAddress),
+  };
 }
 
 function getGarmentSummary(quote: RawQuoteForLogoRequest) {
@@ -263,7 +294,7 @@ export async function POST(
   const secure = String(process.env.SMTP_SECURE || "true") === "true";
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
-  const from = resolveFromAddress(process.env.SMTP_FROM, user);
+  const sender = resolveMailSender(process.env.SMTP_FROM, user);
 
   if (!host || !user || !pass) {
     return NextResponse.json(
@@ -294,8 +325,13 @@ export async function POST(
     });
 
     await transporter.sendMail({
-      from,
+      from: sender.header,
+      replyTo: sender.header,
       to: RYAN_LOGO_REQUEST_EMAIL,
+      envelope: {
+        from: sender.address,
+        to: [RYAN_LOGO_REQUEST_EMAIL],
+      },
       subject: message.subject,
       text: message.text,
       html: message.html,
