@@ -12,8 +12,11 @@ import {
   FiCheckCircle,
   FiClock,
   FiCreditCard,
+  FiDollarSign,
   FiDownload,
+  FiEdit3,
   FiFileText,
+  FiFlag,
   FiImage,
   FiInfo,
   FiLock,
@@ -24,6 +27,7 @@ import {
   FiPackage,
   FiRefreshCw,
   FiSearch,
+  FiSend,
   FiSun,
   FiTruck,
   FiXCircle,
@@ -63,6 +67,9 @@ type ResponseDraft = {
   missingInformation: string;
 };
 
+type WorkflowTone = "success" | "warning" | "danger" | "info" | "neutral";
+type ResponseSectionTone = "cyan" | "amber" | "emerald" | "rose";
+
 const RESPONSE_SAVE_LABELS: Record<PartnerDecision, string> = {
   pending: "Save response",
   accepted: "Save acceptance",
@@ -76,6 +83,26 @@ const RESPONSE_SAVE_TONES: Record<PartnerDecision, string> = {
   accepted: "bg-emerald-600 text-white hover:bg-emerald-700",
   needs_info: "bg-amber-500 text-slate-950 hover:bg-amber-400",
   rejected: "bg-rose-600 text-white hover:bg-rose-700",
+};
+
+const WORKFLOW_TONE_CLASSES: Record<WorkflowTone, string> = {
+  success:
+    "border-[color:var(--partner-success-border)] bg-[var(--partner-success-bg)] text-[color:var(--partner-success-text)]",
+  warning:
+    "border-[color:var(--partner-warning-border)] bg-[var(--partner-warning-bg)] text-[color:var(--partner-warning-text)]",
+  danger:
+    "border-[color:var(--partner-danger-border)] bg-[var(--partner-danger-bg)] text-[color:var(--partner-danger-text)]",
+  info:
+    "border-[color:var(--partner-info-border)] bg-[var(--partner-info-bg)] text-[color:var(--partner-info-text)]",
+  neutral:
+    "border-[color:var(--partner-border)] bg-[var(--partner-soft)] text-[color:var(--partner-muted)]",
+};
+
+const RESPONSE_SECTION_TONES: Record<ResponseSectionTone, string> = {
+  cyan: "border-cyan-500",
+  amber: "border-amber-500",
+  emerald: "border-emerald-500",
+  rose: "border-rose-500",
 };
 
 function formatDate(value: string | null) {
@@ -279,17 +306,32 @@ export default function PartnerProductionPage({
   const themeVars = useMemo(
     () =>
       ({
-        "--partner-bg": isDark ? "#020617" : "#f6f8fb",
+        "--partner-bg": isDark ? "#020617" : "#f4f7fb",
         "--partner-card": isDark ? "#0f172a" : "#ffffff",
         "--partner-soft": isDark ? "#111c2f" : "#f8fafc",
-        "--partner-hover": isDark ? "#18243a" : "#f1f5f9",
-        "--partner-border": isDark ? "#243249" : "#e2e8f0",
+        "--partner-hover": isDark ? "#17243a" : "#eef4fb",
+        "--partner-border": isDark ? "#243249" : "#d9e2ee",
         "--partner-text": isDark ? "#e5e7eb" : "#0f172a",
         "--partner-muted": isDark ? "#94a3b8" : "#64748b",
         "--partner-faint": isDark ? "#64748b" : "#94a3b8",
-        "--partner-accent": isDark ? "#0e7490" : "#0f172a",
-        "--partner-accent-soft": isDark ? "#164e63" : "#e0f2fe",
+        "--partner-accent": isDark ? "#0e7490" : "#155e75",
+        "--partner-accent-soft": isDark ? "#12364a" : "#e0f2fe",
         "--partner-accent-text": "#ffffff",
+        "--partner-success-bg": isDark ? "#052e26" : "#ecfdf5",
+        "--partner-success-border": isDark ? "#0f766e" : "#a7f3d0",
+        "--partner-success-text": isDark ? "#a7f3d0" : "#065f46",
+        "--partner-warning-bg": isDark ? "#3a2705" : "#fffbeb",
+        "--partner-warning-border": isDark ? "#b45309" : "#fde68a",
+        "--partner-warning-text": isDark ? "#fde68a" : "#92400e",
+        "--partner-danger-bg": isDark ? "#3b0712" : "#fff1f2",
+        "--partner-danger-border": isDark ? "#be123c" : "#fecdd3",
+        "--partner-danger-text": isDark ? "#fecdd3" : "#9f1239",
+        "--partner-info-bg": isDark ? "#082f49" : "#eff6ff",
+        "--partner-info-border": isDark ? "#0369a1" : "#bfdbfe",
+        "--partner-info-text": isDark ? "#bae6fd" : "#1e3a8a",
+        "--partner-shadow": isDark
+          ? "0 18px 50px rgba(0,0,0,0.28)"
+          : "0 18px 45px rgba(15,23,42,0.08)",
         colorScheme: theme,
       }) as CSSProperties,
     [isDark, theme]
@@ -298,7 +340,7 @@ export default function PartnerProductionPage({
   const shellClass =
     "min-h-screen bg-[var(--partner-bg)] text-[color:var(--partner-text)] transition-colors";
   const surfaceClass =
-    "rounded-2xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] shadow-sm";
+    "rounded-2xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] shadow-[var(--partner-shadow)]";
   const softSurfaceClass =
     "border-[color:var(--partner-border)] bg-[var(--partner-soft)]";
   const secondaryButtonClass =
@@ -976,7 +1018,7 @@ export default function PartnerProductionPage({
           {selected ? (
             <div className="space-y-4 sm:space-y-5">
               <div className={`${surfaceClass} p-4 sm:p-6`}>
-                <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                <div className="flex flex-col gap-5 2xl:flex-row 2xl:items-start 2xl:justify-between">
                   <div>
                     <button
                       type="button"
@@ -1035,7 +1077,7 @@ export default function PartnerProductionPage({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3 xl:min-w-[760px]">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3 2xl:min-w-[720px]">
                     <Metric
                       icon={<FiPackage />}
                       label="Quantity"
@@ -1065,7 +1107,7 @@ export default function PartnerProductionPage({
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
+              <div className="grid gap-4 sm:gap-5 2xl:grid-cols-[minmax(0,1fr)_minmax(420px,480px)]">
                 <div className="space-y-5">
                   <WorkflowSteps
                     order={selected}
@@ -1083,163 +1125,218 @@ export default function PartnerProductionPage({
                   />
                 </div>
 
-                <div className={`${surfaceClass} p-4 sm:p-5`}>
-                  <p className={sectionLabelClass}>
-                    Partner response
-                  </p>
-                  <h3 className="mt-1 text-lg font-semibold text-[color:var(--partner-text)]">
-                    Accept, price, then update production
-                  </h3>
-                  <div className="mt-4 grid grid-cols-3 gap-2">
-                    <DecisionButton
-                      active={draft.decision === "accepted"}
-                      label="Accept"
-                      icon={<FiCheckCircle />}
-                      tone="accept"
-                      onClick={() => setDraft((current) => ({ ...current, decision: "accepted" }))}
-                    />
-                    <DecisionButton
-                      active={draft.decision === "needs_info"}
-                      label="Need info"
-                      icon={<FiAlertTriangle />}
-                      tone="info"
-                      onClick={() => setDraft((current) => ({ ...current, decision: "needs_info" }))}
-                    />
-                    <DecisionButton
-                      active={draft.decision === "rejected"}
-                      label="Reject"
-                      icon={<FiXCircle />}
-                      tone="reject"
-                      onClick={() => setDraft((current) => ({ ...current, decision: "rejected" }))}
-                    />
+                <div className={`${surfaceClass} overflow-hidden 2xl:sticky 2xl:top-5`}>
+                  <div className="border-b border-[color:var(--partner-border)] bg-[linear-gradient(135deg,var(--partner-accent-soft),var(--partner-card))] p-4 sm:p-5">
+                    <div className="flex items-start gap-3">
+                      <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--partner-accent)] text-[color:var(--partner-accent-text)]">
+                        <FiSend className="h-4 w-4" />
+                      </span>
+                      <div>
+                        <p className={sectionLabelClass}>
+                          Partner response
+                        </p>
+                        <h3 className="mt-1 text-xl font-semibold tracking-tight text-[color:var(--partner-text)]">
+                          Decision, quote, production update
+                        </h3>
+                        <p className="mt-2 text-sm leading-6 text-[color:var(--partner-muted)]">
+                          Give Ryan the exact answer he needs to move the order without a follow-up call.
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="mt-5 grid gap-4">
-                    <label className={fieldLabelClass}>
-                      Step 3 - Completion days
-                      <input
-                        type="number"
-                        min={0}
-                        value={draft.completionDays}
-                        onChange={(event) =>
-                          setDraft((current) => ({
-                            ...current,
-                            completionDays: event.target.value,
-                          }))
-                        }
-                        className={`mt-2 normal-case tracking-normal ${inputClass}`}
-                        placeholder="e.g. 3"
-                      />
-                    </label>
-                    <label className={fieldLabelClass}>
-                      Step 1 - Print placement
-                      <select
-                        value={draft.printPlacement}
-                        onChange={(event) =>
-                          setDraft((current) => ({
-                            ...current,
-                            printPlacement: event.target.value as PartnerPrintPlacement,
-                          }))
-                        }
-                        className={`mt-2 normal-case tracking-normal ${inputClass}`}
-                      >
-                        {printPlacementOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      <span className="mt-2 block text-xs normal-case tracking-normal text-[color:var(--partner-muted)]">
-                        Prefilled from Ryan&apos;s admin quotation or the client request when available.
-                      </span>
-                    </label>
-                    <label className={fieldLabelClass}>
-                      Step 3 - Your price
-                      <input
-                        type="number"
-                        min={0}
-                        value={draft.price}
-                        onChange={(event) =>
-                          setDraft((current) => ({
-                            ...current,
-                            price: event.target.value,
-                          }))
-                        }
-                        className={`mt-2 normal-case tracking-normal ${inputClass}`}
-                        placeholder="Rs"
-                      />
-                    </label>
-                    <label className={fieldLabelClass}>
-                      Step 6 - Production status
-                      <select
-                        value={draft.productionStatus}
-                        onChange={(event) =>
-                          setDraft((current) => ({
-                            ...current,
-                            productionStatus: event.target.value as PartnerProductionStatus,
-                          }))
-                        }
-                        className={`mt-2 normal-case tracking-normal ${inputClass}`}
-                      >
-                        {PARTNER_PRODUCTION_STATUSES.map((status) => (
-                          <option key={status} value={status}>
-                            {PARTNER_PRODUCTION_STATUS_LABELS[status]}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className={fieldLabelClass}>
-                      Step 7 - Comments for Ryan
-                      <textarea
-                        value={draft.comments}
-                        onChange={(event) =>
-                          setDraft((current) => ({
-                            ...current,
-                            comments: event.target.value,
-                          }))
-                        }
-                        rows={4}
-                        className={`mt-2 resize-y normal-case tracking-normal ${inputClass}`}
-                        placeholder="Production notes, price explanation, or delivery plan."
-                      />
-                    </label>
-                    <label className={fieldLabelClass}>
-                      Step 7 - Missing information
-                      <textarea
-                        value={draft.missingInformation}
-                        onChange={(event) =>
-                          setDraft((current) => ({
-                            ...current,
-                            missingInformation: event.target.value,
-                          }))
-                        }
-                        rows={3}
-                        className={`mt-2 resize-y normal-case tracking-normal ${inputClass}`}
-                        placeholder="Tell Ryan what he must get before you can print."
-                      />
-                      <span className="mt-2 block text-xs normal-case tracking-normal text-[color:var(--partner-muted)]">
-                        If this field is filled or Need info is selected, Ryan gets an email after saving.
-                      </span>
-                    </label>
-                  </div>
+                  <div className="space-y-5 p-4 sm:p-5">
+                    <ResponseSection
+                      icon={<FiFlag className="h-4 w-4" />}
+                      label="Step 2"
+                      title="Choose the job decision"
+                      tone="cyan"
+                    >
+                      <div className="grid grid-cols-3 gap-2">
+                        <DecisionButton
+                          active={draft.decision === "accepted"}
+                          label="Accept"
+                          icon={<FiCheckCircle />}
+                          tone="accept"
+                          onClick={() =>
+                            setDraft((current) => ({ ...current, decision: "accepted" }))
+                          }
+                        />
+                        <DecisionButton
+                          active={draft.decision === "needs_info"}
+                          label="Need info"
+                          icon={<FiAlertTriangle />}
+                          tone="info"
+                          onClick={() =>
+                            setDraft((current) => ({ ...current, decision: "needs_info" }))
+                          }
+                        />
+                        <DecisionButton
+                          active={draft.decision === "rejected"}
+                          label="Reject"
+                          icon={<FiXCircle />}
+                          tone="reject"
+                          onClick={() =>
+                            setDraft((current) => ({ ...current, decision: "rejected" }))
+                          }
+                        />
+                      </div>
+                    </ResponseSection>
 
-                  <div className="mt-5 grid gap-2">
+                    <ResponseSection
+                      icon={<FiDollarSign className="h-4 w-4" />}
+                      label="Step 3"
+                      title="Quote Ryan clearly"
+                      tone="amber"
+                    >
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className={fieldLabelClass}>
+                          Completion days
+                          <input
+                            type="number"
+                            min={0}
+                            value={draft.completionDays}
+                            onChange={(event) =>
+                              setDraft((current) => ({
+                                ...current,
+                                completionDays: event.target.value,
+                              }))
+                            }
+                            className={`mt-2 normal-case tracking-normal ${inputClass}`}
+                            placeholder="e.g. 3"
+                          />
+                        </label>
+                        <label className={fieldLabelClass}>
+                          Your price
+                          <input
+                            type="number"
+                            min={0}
+                            value={draft.price}
+                            onChange={(event) =>
+                              setDraft((current) => ({
+                                ...current,
+                                price: event.target.value,
+                              }))
+                            }
+                            className={`mt-2 normal-case tracking-normal ${inputClass}`}
+                            placeholder="Rs"
+                          />
+                        </label>
+                      </div>
+                    </ResponseSection>
+
+                    <ResponseSection
+                      icon={<FiTruck className="h-4 w-4" />}
+                      label="Steps 1 + 6"
+                      title="Confirm print plan"
+                      tone="emerald"
+                    >
+                      <div className="grid gap-3">
+                        <label className={fieldLabelClass}>
+                          Print placement
+                          <select
+                            value={draft.printPlacement}
+                            onChange={(event) =>
+                              setDraft((current) => ({
+                                ...current,
+                                printPlacement: event.target.value as PartnerPrintPlacement,
+                              }))
+                            }
+                            className={`mt-2 normal-case tracking-normal ${inputClass}`}
+                          >
+                            {printPlacementOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="mt-2 block text-xs normal-case tracking-normal text-[color:var(--partner-muted)]">
+                            Prefilled from Ryan&apos;s quotation or the client request when available.
+                          </span>
+                        </label>
+                        <label className={fieldLabelClass}>
+                          Production status
+                          <select
+                            value={draft.productionStatus}
+                            onChange={(event) =>
+                              setDraft((current) => ({
+                                ...current,
+                                productionStatus: event.target.value as PartnerProductionStatus,
+                              }))
+                            }
+                            className={`mt-2 normal-case tracking-normal ${inputClass}`}
+                          >
+                            {PARTNER_PRODUCTION_STATUSES.map((status) => (
+                              <option key={status} value={status}>
+                                {PARTNER_PRODUCTION_STATUS_LABELS[status]}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                    </ResponseSection>
+
+                    <ResponseSection
+                      icon={<FiEdit3 className="h-4 w-4" />}
+                      label="Step 7"
+                      title="Notes and blockers"
+                      tone="rose"
+                    >
+                      <div className="grid gap-3">
+                        <label className={fieldLabelClass}>
+                          Comments for Ryan
+                          <textarea
+                            value={draft.comments}
+                            onChange={(event) =>
+                              setDraft((current) => ({
+                                ...current,
+                                comments: event.target.value,
+                              }))
+                            }
+                            rows={4}
+                            className={`mt-2 resize-y normal-case tracking-normal ${inputClass}`}
+                            placeholder="Production notes, price explanation, or delivery plan."
+                          />
+                        </label>
+                        <label className={fieldLabelClass}>
+                          Missing information
+                          <textarea
+                            value={draft.missingInformation}
+                            onChange={(event) =>
+                              setDraft((current) => ({
+                                ...current,
+                                missingInformation: event.target.value,
+                              }))
+                            }
+                            rows={3}
+                            className={`mt-2 resize-y normal-case tracking-normal ${inputClass}`}
+                            placeholder="Tell Ryan what he must get before you can print."
+                          />
+                          <span className="mt-2 block text-xs normal-case tracking-normal text-[color:var(--partner-muted)]">
+                            If this field is filled or Need info is selected, Ryan gets an email after saving.
+                          </span>
+                        </label>
+                      </div>
+                    </ResponseSection>
+
+                    <div className="grid gap-2">
                     <button
                       type="button"
                       onClick={() => saveResponse()}
                       disabled={saving}
-                      className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition disabled:opacity-60 ${responseSaveButtonClass}`}
+                      className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition disabled:opacity-60 ${responseSaveButtonClass}`}
                     >
                       {responseSaveIcon}
                       {responseSaveLabel}
                     </button>
-                  </div>
+                    </div>
 
-                  {notice ? (
-                    <p className={`mt-4 rounded-xl border px-4 py-3 text-sm text-[color:var(--partner-text)] ${softSurfaceClass}`}>
-                      {notice}
-                    </p>
-                  ) : null}
+                    {notice ? (
+                      <p className={`rounded-xl border px-4 py-3 text-sm text-[color:var(--partner-text)] ${softSurfaceClass}`}>
+                        {notice}
+                      </p>
+                    ) : null}
+                  </div>
 
                 </div>
               </div>
@@ -1297,14 +1394,30 @@ function WorkflowSteps({
   const hasOffer = Number.isFinite(days) && days > 0 && Number.isFinite(price) && price > 0;
   const actionNeeded = draft.decision === "needs_info" || Boolean(draft.missingInformation.trim());
   const logoRequestKey = `${order.id}:client-logo`;
-  const steps = [
+  const flowStatus = actionNeeded
+    ? "Ryan action needed"
+    : hasOffer && draft.decision === "accepted"
+      ? "Ready for Ryan"
+      : hasOffer
+        ? "Quote drafted"
+        : "Quote needed";
+  const flowTone: WorkflowTone = actionNeeded ? "warning" : hasOffer ? "success" : "neutral";
+  const steps: Array<{
+    title: string;
+    value: string;
+    helper: string;
+    icon: ReactNode;
+    tone: WorkflowTone;
+    action: ReactNode;
+  }> = [
     {
       title: "Artwork",
       value: hasArtwork ? "Ready" : "Missing",
+      helper: hasArtwork ? "Open and check the logo before quoting." : "Ask Ryan before any print work starts.",
       icon: <FiImage />,
       tone: hasArtwork
-        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-        : "border-amber-200 bg-amber-50 text-amber-800",
+        ? "success"
+        : "warning",
       action: hasArtwork ? null : (
         <button
           type="button"
@@ -1339,94 +1452,106 @@ function WorkflowSteps({
         ),
       tone:
         draft.decision === "accepted"
-          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+          ? "success"
           : draft.decision === "rejected"
-            ? "border-rose-200 bg-rose-50 text-rose-800"
+            ? "danger"
             : draft.decision === "needs_info"
-              ? "border-amber-200 bg-amber-50 text-amber-800"
-              : "border-[color:var(--partner-border)] bg-[var(--partner-soft)] text-[color:var(--partner-muted)]",
+              ? "warning"
+              : "neutral",
+      helper: "Accept, request info, or reject from the response panel.",
       action: null,
     },
     {
       title: "Days + price",
       value: hasOffer ? `${days}d / Rs ${price}` : "Needed",
+      helper: "Required before an acceptance can be saved.",
       icon: <FiClock />,
       tone: hasOffer
-        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-        : "border-[color:var(--partner-border)] bg-[var(--partner-soft)] text-[color:var(--partner-muted)]",
+        ? "success"
+        : "neutral",
       action: null,
     },
     {
       title: "Ryan price",
       value: hasOffer ? "Ready for Ryan" : "Waiting",
+      helper: "Ryan uses this to quote and confirm the client.",
       icon: <FiMail />,
       tone: hasOffer
-        ? "border-cyan-200 bg-cyan-50 text-cyan-800"
-        : "border-[color:var(--partner-border)] bg-[var(--partner-soft)] text-[color:var(--partner-muted)]",
+        ? "info"
+        : "neutral",
       action: null,
     },
     {
       title: "Client",
       value: PARTNER_CLIENT_STATUS_LABELS[order.clientStatus],
+      helper: "Ryan keeps client approval and payment status here.",
       icon: <FiMessageCircle />,
       tone:
         order.clientStatus === "confirmed_half_payment"
-          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+          ? "success"
           : order.clientStatus === "changes_needed"
-            ? "border-amber-200 bg-amber-50 text-amber-800"
-            : "border-[color:var(--partner-border)] bg-[var(--partner-soft)] text-[color:var(--partner-muted)]",
+            ? "warning"
+            : "neutral",
       action: null,
     },
     {
       title: "Production",
       value: PARTNER_PRODUCTION_STATUS_LABELS[draft.productionStatus],
+      helper: "Update this as the job moves through your shop.",
       icon: <FiTruck />,
       tone:
         draft.productionStatus === "completed" ||
         draft.productionStatus === "ryan_to_collect"
-          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-          : "border-[color:var(--partner-border)] bg-[var(--partner-soft)] text-[color:var(--partner-muted)]",
+          ? "success"
+          : "neutral",
       action: null,
     },
     {
       title: "Ryan action",
       value: actionNeeded ? "Email on save" : "No block",
+      helper: actionNeeded ? "Ryan gets the blocker when you save." : "Nothing blocks production right now.",
       icon: <FiAlertTriangle />,
       tone: actionNeeded
-        ? "border-amber-200 bg-amber-50 text-amber-800"
-        : "border-[color:var(--partner-border)] bg-[var(--partner-soft)] text-[color:var(--partner-muted)]",
+        ? "warning"
+        : "neutral",
       action: null,
     },
   ];
 
   return (
-    <section className="rounded-2xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] p-4 shadow-sm sm:p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <section className="overflow-hidden rounded-2xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] shadow-[var(--partner-shadow)]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--partner-border)] bg-[linear-gradient(135deg,var(--partner-soft),var(--partner-card))] p-4 sm:p-5">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--partner-muted)] sm:text-xs sm:tracking-[0.2em]">
             Production protocol
           </p>
-          <h3 className="mt-1 text-lg font-semibold text-[color:var(--partner-text)]">
+          <h3 className="mt-1 text-xl font-semibold tracking-tight text-[color:var(--partner-text)]">
             {order.code} fast path
           </h3>
         </div>
-        <span className="rounded-full border border-[color:var(--partner-border)] bg-[var(--partner-soft)] px-3 py-1.5 text-xs font-semibold text-[color:var(--partner-muted)]">
-          1 to 7
+        <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${WORKFLOW_TONE_CLASSES[flowTone]}`}>
+          {flowStatus}
         </span>
       </div>
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5 2xl:grid-cols-4">
         {steps.map((step, index) => (
-          <div key={step.title} className={`rounded-xl border px-3 py-3 ${step.tone}`}>
+          <div key={step.title} className={`rounded-xl border p-4 ${WORKFLOW_TONE_CLASSES[step.tone]}`}>
             <div className="flex items-start gap-3">
-              <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/70">
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/70 text-base text-current">
                 {step.icon}
               </span>
               <div className="min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.12em]">
-                  {index + 1}. {step.title}
+                  Step {index + 1}
                 </p>
-                <p className="mt-1 line-clamp-2 text-sm font-semibold">
+                <h4 className="mt-1 text-sm font-semibold text-current">
+                  {step.title}
+                </h4>
+                <p className="mt-2 line-clamp-2 text-sm font-semibold">
                   {step.value}
+                </p>
+                <p className="mt-2 line-clamp-2 text-xs leading-5 opacity-75">
+                  {step.helper}
                 </p>
               </div>
             </div>
@@ -1472,6 +1597,39 @@ function DecisionButton({
       <span className="text-base">{icon}</span>
       {label}
     </button>
+  );
+}
+
+function ResponseSection({
+  icon,
+  label,
+  title,
+  tone,
+  children,
+}: {
+  icon: ReactNode;
+  label: string;
+  title: string;
+  tone: ResponseSectionTone;
+  children: ReactNode;
+}) {
+  return (
+    <section className={`border-l-4 pl-4 ${RESPONSE_SECTION_TONES[tone]}`}>
+      <div className="mb-3 flex items-center gap-3">
+        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[color:var(--partner-border)] bg-[var(--partner-soft)] text-[color:var(--partner-text)]">
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--partner-muted)]">
+            {label}
+          </p>
+          <h4 className="mt-0.5 text-sm font-semibold text-[color:var(--partner-text)]">
+            {title}
+          </h4>
+        </div>
+      </div>
+      {children}
+    </section>
   );
 }
 
