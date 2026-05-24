@@ -5,7 +5,8 @@ import {
   createPartnerSessionToken,
   verifyPartnerPassword,
 } from "@/lib/partner-auth";
-import { getPrintPartner, isPrintPartnerId } from "@/lib/partners";
+import { getPrintPartnerById } from "@/lib/partner-registry";
+import { isPrintPartnerId } from "@/lib/partners";
 import {
   isContentLengthWithinLimit,
   isRequestOriginAllowed,
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
   const partnerId = body?.partnerId;
   const password = String(body?.password ?? "");
 
-  if (!isPrintPartnerId(partnerId)) {
+  if (!isPrintPartnerId(partnerId) || !(await getPrintPartnerById(partnerId))) {
     return NextResponse.json({ error: "Unknown partner." }, { status: 400 });
   }
 
@@ -40,7 +41,10 @@ export async function POST(req: Request) {
   }
 
   const token = await createPartnerSessionToken(partnerId);
-  const partner = getPrintPartner(partnerId);
+  const partner = await getPrintPartnerById(partnerId);
+  if (!partner) {
+    return NextResponse.json({ error: "Unknown partner." }, { status: 400 });
+  }
   const response = NextResponse.json({
     ok: true,
     session: {

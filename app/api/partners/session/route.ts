@@ -2,7 +2,8 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { readAdminSession } from "@/lib/admin-auth";
 import { readPartnerSession } from "@/lib/partner-auth";
-import { getPrintPartner, isPrintPartnerId } from "@/lib/partners";
+import { getPrintPartnerById } from "@/lib/partner-registry";
+import { isPrintPartnerId } from "@/lib/partners";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -11,7 +12,10 @@ export async function GET(req: Request) {
   const adminSession = await readAdminSession(cookieStore);
 
   if (adminSession?.isOwner && isPrintPartnerId(partnerParam)) {
-    const partner = getPrintPartner(partnerParam);
+    const partner = await getPrintPartnerById(partnerParam);
+    if (!partner) {
+      return NextResponse.json({ session: null }, { status: 404 });
+    }
     return NextResponse.json({
       session: {
         partnerId: partner.id,

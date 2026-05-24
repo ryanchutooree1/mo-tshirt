@@ -94,7 +94,9 @@ export default function AdminChrome({
   const { theme, toggleTheme } = useAdminTheme();
   const isDark = theme === "dark";
   const isPartnerDesk =
-    pathname === "/admin/yan_list" || pathname === "/admin/shab_list";
+    pathname === "/admin/yan_list" ||
+    pathname === "/admin/shab_list" ||
+    (pathname.startsWith("/admin/partners/") && pathname !== "/admin/partners");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [hasLoadedNav, setHasLoadedNav] = useState(false);

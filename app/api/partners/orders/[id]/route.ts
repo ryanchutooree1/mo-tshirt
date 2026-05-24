@@ -5,9 +5,9 @@ import { readAdminSession } from "@/lib/admin-auth";
 import { readPartnerSession } from "@/lib/partner-auth";
 import { readRawPartnerQuote, sanitizePartnerOrder } from "@/lib/partner-orders";
 import { db } from "@/lib/firebase";
+import { getPrintPartnerById } from "@/lib/partner-registry";
 import { SITE_URL } from "@/lib/seo";
 import {
-  getPrintPartner,
   isPartnerDecision,
   isPartnerPrintPlacement,
   isPartnerProductionStatus,
@@ -250,6 +250,7 @@ function canReadCurrentPartnerAssignment(
 
 async function canUpdatePartnerOrder(partnerId: string | null) {
   if (!isPrintPartnerId(partnerId)) return false;
+  if (!(await getPrintPartnerById(partnerId))) return false;
 
   const cookieStore = await cookies();
   const adminSession = await readAdminSession(cookieStore);
@@ -319,7 +320,10 @@ export async function PATCH(
     decision === "accepted" && productionStatus === "not_started"
       ? "in_progress"
       : productionStatus;
-  const partner = getPrintPartner(partnerId);
+  const partner = await getPrintPartnerById(partnerId);
+  if (!partner) {
+    return NextResponse.json({ error: "Unknown partner." }, { status: 400 });
+  }
   const responseForView = {
     requestStatus: decision,
     productionStatus: nextProductionStatus,
@@ -430,7 +434,8 @@ export async function PATCH(
           ...currentData,
           partner: partnerForView,
         },
-        partnerId
+        partnerId,
+        partner
       );
     });
 

@@ -3,11 +3,8 @@ import { NextResponse } from "next/server";
 import { readAdminSession } from "@/lib/admin-auth";
 import { readPartnerSession } from "@/lib/partner-auth";
 import { readRawPartnerQuote } from "@/lib/partner-orders";
-import {
-  getPrintPartner,
-  isPrintPartnerId,
-  type PrintPartnerId,
-} from "@/lib/partners";
+import { getPrintPartnerById } from "@/lib/partner-registry";
+import { isPrintPartnerId } from "@/lib/partners";
 import {
   formatQuoteGarmentDescription,
   type QuoteGarmentLine,
@@ -146,26 +143,25 @@ function row(label: string, value: string) {
 function buildEmail({
   quoteId,
   quote,
-  partnerId,
+  partnerName,
   attachmentFilename,
   attachmentLabel,
   requestType,
 }: {
   quoteId: string;
   quote: RawQuoteForLogoRequest;
-  partnerId: PrintPartnerId;
+  partnerName: string;
   attachmentFilename: string;
   attachmentLabel: string;
   requestType: LogoRequestType;
 }) {
-  const partner = getPrintPartner(partnerId);
   const orderCode =
     safeText(quote.quote?.documentNumber) || `Q-${quoteId.slice(-5).toUpperCase()}`;
   const askClientForLogo = requestType === "ask_client_for_logo";
   const rows = [
     row("Order", orderCode),
     row("Quote ID", quoteId),
-    row("Partner desk", partner.name),
+    row("Partner desk", partnerName),
     row(
       askClientForLogo ? "Needed from client" : "Missing file",
       attachmentFilename || attachmentLabel || "Logo / artwork"
@@ -247,6 +243,7 @@ ${adminUrl}`,
 
 async function canRequestLogoUpload(partnerId: string | null) {
   if (!isPrintPartnerId(partnerId)) return false;
+  if (!(await getPrintPartnerById(partnerId))) return false;
 
   const cookieStore = await cookies();
   const adminSession = await readAdminSession(cookieStore);
@@ -277,6 +274,11 @@ export async function POST(
   }
 
   if (!isPrintPartnerId(partnerId)) {
+    return NextResponse.json({ error: "Unknown partner." }, { status: 400 });
+  }
+
+  const partner = await getPrintPartnerById(partnerId);
+  if (!partner) {
     return NextResponse.json({ error: "Unknown partner." }, { status: 400 });
   }
 
@@ -315,7 +317,7 @@ export async function POST(
     const message = buildEmail({
       quoteId: id,
       quote: existing.data as RawQuoteForLogoRequest,
-      partnerId,
+      partnerName: partner.name,
       attachmentFilename: safeText(body?.attachmentFilename),
       attachmentLabel: safeText(body?.attachmentLabel),
       requestType:

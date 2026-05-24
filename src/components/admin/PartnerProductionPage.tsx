@@ -49,6 +49,7 @@ import {
   type PartnerOrderView,
   type PartnerPrintPlacement,
   type PartnerProductionStatus,
+  type PrintPartner,
   type PrintPartnerId,
 } from "@/lib/partners";
 
@@ -251,16 +252,18 @@ function sortOrders(orders: PartnerOrderView[], sort: SortKey) {
 
 export default function PartnerProductionPage({
   partnerId,
+  initialPartner,
 }: {
   partnerId: PrintPartnerId;
+  initialPartner?: PrintPartner | null;
 }) {
   const { theme, toggleTheme } = useAdminTheme();
   const isDark = theme === "dark";
-  const partner = getPrintPartner(partnerId);
+  const partner = initialPartner || getPrintPartner(partnerId);
   const productionNotes = partner.productionNotes;
   const paymentDetails = partner.paymentDetails;
   const printPlacementOptions =
-    partnerId === "shabanaz"
+    partner.supportsLogoPrintPlacements
       ? SHABANAZ_PRINT_PLACEMENT_OPTIONS
       : PARTNER_PRINT_PLACEMENT_OPTIONS;
   const [sessionState, setSessionState] = useState<SessionState>("checking");

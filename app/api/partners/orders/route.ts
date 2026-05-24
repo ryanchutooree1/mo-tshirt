@@ -3,10 +3,12 @@ import { NextResponse } from "next/server";
 import { readAdminSession } from "@/lib/admin-auth";
 import { readPartnerSession } from "@/lib/partner-auth";
 import { listPartnerOrders } from "@/lib/partner-orders";
+import { getPrintPartnerById } from "@/lib/partner-registry";
 import { isPrintPartnerId } from "@/lib/partners";
 
 async function canReadPartnerOrders(partnerId: string | null) {
   if (!isPrintPartnerId(partnerId)) return false;
+  if (!(await getPrintPartnerById(partnerId))) return false;
 
   const cookieStore = await cookies();
   const adminSession = await readAdminSession(cookieStore);

@@ -1,6 +1,9 @@
 import type { NextResponse } from "next/server";
 import {
-  getPrintPartner,
+  getPrintPartnerById,
+  verifyPartnerPassword as verifyRegisteredPartnerPassword,
+} from "@/lib/partner-registry";
+import {
   isPrintPartnerId,
   type PrintPartnerId,
 } from "@/lib/partners";
@@ -23,22 +26,6 @@ export type PartnerSession = {
   displayName: string;
 };
 
-function getPartnerPassword(partnerId: PrintPartnerId) {
-  if (partnerId === "yan") {
-    return (
-      process.env.PARTNER_YAN_PASSWORD ||
-      process.env.NEXT_PARTNER_YAN_PASSWORD ||
-      "Samsam"
-    );
-  }
-
-  return (
-    process.env.PARTNER_SHABANAZ_PASSWORD ||
-    process.env.NEXT_PARTNER_SHABANAZ_PASSWORD ||
-    "Paulpaul"
-  );
-}
-
 function getPartnerSessionSecret() {
   const explicitSecret = (process.env.PARTNER_SESSION_SECRET || "").trim();
   if (explicitSecret) return explicitSecret;
@@ -51,7 +38,7 @@ function getPartnerSessionSecret() {
   ).trim();
   if (adminSecret) return adminSecret;
 
-  return `${getPartnerPassword("yan")}:${getPartnerPassword("shabanaz")}`;
+  return "mo-t-shirt-partner-session";
 }
 
 function getNowUnix() {
@@ -120,11 +107,12 @@ export async function verifyPartnerPassword(
   partnerId: PrintPartnerId,
   password: string
 ) {
-  return constantTimeEqual(password, getPartnerPassword(partnerId));
+  return verifyRegisteredPartnerPassword(partnerId, password);
 }
 
 export async function createPartnerSessionToken(partnerId: PrintPartnerId) {
-  const partner = getPrintPartner(partnerId);
+  const partner = await getPrintPartnerById(partnerId);
+  if (!partner) throw new Error("Unknown partner.");
   const payload = {
     version: SESSION_VERSION,
     expiresAt: getNowUnix() + SESSION_TTL_SECONDS,
@@ -161,6 +149,8 @@ export async function readPartnerSessionToken(token: string | null | undefined) 
     }
     if (typeof payload.nonce !== "string" || !payload.nonce) return null;
     if (!isPrintPartnerId(payload.partnerId)) return null;
+    const partner = await getPrintPartnerById(payload.partnerId);
+    if (!partner) return null;
     if (typeof payload.displayName !== "string") return null;
 
     return {
@@ -168,7 +158,7 @@ export async function readPartnerSessionToken(token: string | null | undefined) 
       expiresAt: Number(payload.expiresAt),
       nonce: payload.nonce,
       partnerId: payload.partnerId,
-      displayName: payload.displayName,
+      displayName: partner.name,
     } satisfies PartnerSession;
   } catch {
     return null;

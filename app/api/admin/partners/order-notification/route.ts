@@ -8,7 +8,6 @@ import {
 } from "@/lib/partner-notification-settings";
 import {
   PARTNER_PRINT_PLACEMENT_LABELS,
-  getPrintPartner,
   normalizePartnerPrintPlacement,
   normalizePrintPartnerIds,
   type PrintPartnerId,
@@ -148,7 +147,7 @@ function buildMessage({
   const orderCode = quote.quote?.documentNumber || `Q-${quoteId.slice(-5).toUpperCase()}`;
   const pieces = getTotalPieces(quote);
   const printPlacement = normalizePartnerPrintPlacement(quote.partner?.printPlacement);
-  const partnerPath = getPrintPartner(partner.partnerId).path;
+  const partnerPath = partner.path;
   const partnerUrl = `${SITE_URL}${partnerPath}`;
   const rows = [
     ["Order", orderCode],

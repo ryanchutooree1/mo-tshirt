@@ -32,7 +32,10 @@ function isPartnerLoginPayload(value: unknown): value is PartnerLoginPayload {
   return (
     typeof candidate.partnerId === "string" &&
     typeof candidate.displayName === "string" &&
-    (candidate.path === "/admin/yan_list" || candidate.path === "/admin/shab_list")
+    typeof candidate.path === "string" &&
+    (candidate.path === "/admin/yan_list" ||
+      candidate.path === "/admin/shab_list" ||
+      candidate.path.startsWith("/admin/partners/"))
   );
 }
 

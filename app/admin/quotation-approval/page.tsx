@@ -75,6 +75,7 @@ import {
   type PartnerPrintPlacement,
   type PartnerProductionStatus,
   type PartnerVisibleField,
+  type PrintPartner,
   type PrintPartnerId,
 } from "@/lib/partners";
 import { useAdminTheme } from "@/admin/AdminThemeContext";
@@ -1303,6 +1304,7 @@ export default function QuotationApprovalPage() {
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [movingToOrders, setMovingToOrders] = useState(false);
   const [assigningPartner, setAssigningPartner] = useState<PrintPartnerId | "both" | null>(null);
+  const [printPartners, setPrintPartners] = useState<PrintPartner[]>(PRINT_PARTNERS);
   const [workflowStudioOpen, setWorkflowStudioOpen] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("inbox");
   const [partnerVisibleFields, setPartnerVisibleFields] =
@@ -1311,6 +1313,25 @@ export default function QuotationApprovalPage() {
     useState<PartnerPrintPlacement>("not_set");
   const [logo, setLogo] = useState<LogoAsset | null>(null);
   const prevDocumentTypeRef = useRef<DocumentType | null>(null);
+
+  useEffect(() => {
+    let ignore = false;
+
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/partners", { cache: "no-store" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !Array.isArray(data?.partners)) return;
+        if (!ignore) setPrintPartners(data.partners as PrintPartner[]);
+      } catch {
+        // Keep bundled defaults available if the registry cannot be loaded.
+      }
+    })();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -1442,6 +1463,22 @@ export default function QuotationApprovalPage() {
     () => quotes.find((quote) => quote.id === selectedId) || null,
     [quotes, selectedId]
   );
+  const printPartnerById = useMemo(
+    () => new Map(printPartners.map((partner) => [partner.id, partner])),
+    [printPartners]
+  );
+  const activePrintPartners = useMemo(
+    () => printPartners.filter((partner) => partner.active),
+    [printPartners]
+  );
+  const getPartnerDisplayName = (partnerId: PrintPartnerId) =>
+    printPartnerById.get(partnerId)?.name || getPrintPartner(partnerId).name;
+  const getPartnerRouteName = (partnerIds: PrintPartnerId[]) => {
+    const labels = partnerIds
+      .map((partnerId) => getPartnerDisplayName(partnerId))
+      .filter(Boolean);
+    return labels.length ? labels.join(" + ") : getPrintPartnerRouteLabel(partnerIds);
+  };
 
   useEffect(() => {
     setWorkflowStudioOpen(false);
@@ -1453,10 +1490,10 @@ export default function QuotationApprovalPage() {
         ? [selected.partner.id]
         : [];
   const selectedPartnerLabel = selectedPartnerIds.length
-    ? getPrintPartnerRouteLabel(selectedPartnerIds)
+    ? getPartnerRouteName(selectedPartnerIds)
     : "Not assigned yet";
   const lockedPartner = selected?.partner?.lockedBy
-    ? getPrintPartner(selected.partner.lockedBy)
+    ? printPartnerById.get(selected.partner.lockedBy) || getPrintPartner(selected.partner.lockedBy)
     : null;
   const isSharedPartnerOffer = selectedPartnerIds.length > 1 && !lockedPartner;
   const selectedPartnerResponses = selectedPartnerIds.map((partnerId) => {
@@ -1466,7 +1503,7 @@ export default function QuotationApprovalPage() {
     if (response) return response;
     return {
       partnerId,
-      partnerName: getPrintPartner(partnerId).name,
+      partnerName: getPartnerDisplayName(partnerId),
       requestStatus: "pending",
       productionStatus: "not_started",
       printPlacement: "not_set",
@@ -1903,11 +1940,14 @@ export default function QuotationApprovalPage() {
 
   const assignToPartners = async (partnerIds: PrintPartnerId[]) => {
     if (!selected) return;
-    const routePartnerIds = normalizePrintPartnerIds(partnerIds);
+    const activePartnerIds = new Set(printPartners.filter((partner) => partner.active).map((partner) => partner.id));
+    const routePartnerIds = normalizePrintPartnerIds(partnerIds).filter((partnerId) =>
+      activePartnerIds.has(partnerId)
+    );
     if (!routePartnerIds.length) return;
     const routeKey: PrintPartnerId | "both" =
       routePartnerIds.length > 1 ? "both" : routePartnerIds[0];
-    const routeLabel = getPrintPartnerRouteLabel(routePartnerIds);
+    const routeLabel = getPartnerRouteName(routePartnerIds);
     const visibleFields = normalizePartnerVisibleFields(partnerVisibleFields);
     const hasOpenableArtwork =
       visibleFields.includes("artwork") &&
@@ -1924,7 +1964,9 @@ export default function QuotationApprovalPage() {
     const sameRoute = arePartnerRoutesSame(currentPartnerIds, routePartnerIds);
     const resetPartnerResponse = !sameRoute;
     const singlePartner =
-      routePartnerIds.length === 1 ? getPrintPartner(routePartnerIds[0]) : null;
+      routePartnerIds.length === 1
+        ? printPartnerById.get(routePartnerIds[0]) || getPrintPartner(routePartnerIds[0])
+        : null;
     const updatePayload: Record<string, unknown> = {
       "partner.id": singlePartner?.id || null,
       "partner.name": singlePartner?.name || routeLabel,
@@ -3013,14 +3055,14 @@ export default function QuotationApprovalPage() {
                           Send only the production details they need
                         </h3>
                         <p className="mt-2 max-w-3xl text-sm leading-6 text-[#6a6a6a]">
-                          Customer name, phone, email, billing address, and delivery address stay hidden from the partner desk. If you send it to both partners, the first acceptance locks the order to that partner.
+                          Customer name, phone, email, billing address, and delivery address stay hidden from the partner desk. If you send it to multiple partners, the first acceptance locks the order to that partner.
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Link href="/admin/partners" className={secondaryButtonClass}>
                           Partner settings
                         </Link>
-                        {PRINT_PARTNERS.map((partner) => (
+                        {activePrintPartners.map((partner) => (
                           <Link
                             key={partner.id}
                             href={partner.path}
@@ -3038,7 +3080,7 @@ export default function QuotationApprovalPage() {
                           <div>
                             <p className={labelClass}>Visible fields</p>
                             <p className="mt-1 text-sm text-[#6a6a6a]">
-                              Select exactly what Yan and Shabbanaz can view for this order.
+                              Select exactly what production partners can view for this order.
                             </p>
                           </div>
                           <span className="rounded-full border border-[#ebebeb] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#717171]">
@@ -3101,18 +3143,18 @@ export default function QuotationApprovalPage() {
                             ))}
                           </select>
                           <span className="mt-2 block text-xs normal-case tracking-normal text-[#717171]">
-                            Prefilled from the client request or admin quotation when possible. Yan and Shabbanaz can confirm or change it on their desk.
+                            Prefilled from the client request or admin quotation when possible. The partner can confirm or change it on their desk.
                           </span>
                         </label>
 
                         <div className="mt-4 flex flex-wrap gap-2">
-                          {PRINT_PARTNERS.map((partner) => (
+                          {activePrintPartners.map((partner) => (
                             <button
                               key={partner.id}
                               type="button"
                               onClick={() => assignToPartners([partner.id])}
                               disabled={assigningPartner !== null}
-                              className={partner.id === "yan" ? primaryButtonClass : darkButtonClass}
+                              className={partner.id === activePrintPartners[0]?.id ? primaryButtonClass : darkButtonClass}
                             >
                               <FiUsers className="h-4 w-4" />
                               {assigningPartner === partner.id
@@ -3124,16 +3166,16 @@ export default function QuotationApprovalPage() {
                           ))}
                           <button
                             type="button"
-                            onClick={() => assignToPartners(PRINT_PARTNERS.map((partner) => partner.id))}
-                            disabled={assigningPartner !== null}
+                            onClick={() => assignToPartners(activePrintPartners.map((partner) => partner.id))}
+                            disabled={assigningPartner !== null || activePrintPartners.length < 2}
                             className={secondaryButtonClass}
                           >
                             <FiUsers className="h-4 w-4" />
                             {assigningPartner === "both"
-                              ? "Sending to both..."
+                              ? "Sending to partners..."
                               : selectedPartnerIds.length > 1 && !lockedPartner
-                                ? "Update both partner views"
-                                : "Send to Yan + Shabbanaz"}
+                                ? "Update partner views"
+                                : "Send to all active partners"}
                           </button>
                         </div>
                       </div>
@@ -3149,7 +3191,7 @@ export default function QuotationApprovalPage() {
                             </h4>
                             {isSharedPartnerOffer ? (
                               <p className="mt-1 text-xs font-semibold text-[#717171]">
-                                Compare both partner responses here. The first accepted response removes it from the other partner&apos;s desk.
+                                Compare partner responses here. The first accepted response removes it from other partner desks.
                               </p>
                             ) : null}
                           </div>
@@ -3375,7 +3417,7 @@ export default function QuotationApprovalPage() {
                           </div>
                         ) : (
                           <div className="mt-4 rounded-2xl border border-dashed border-[#d9d9d9] bg-white px-4 py-8 text-center text-sm text-[#717171]">
-                            Select visible fields, then move this order to Yan, Shabbanaz, or both.
+                            Select visible fields, then move this order to one or more active partners.
                           </div>
                         )}
                       </div>

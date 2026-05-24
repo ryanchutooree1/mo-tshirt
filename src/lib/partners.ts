@@ -1,8 +1,30 @@
-export const PRINT_PARTNERS = [
+export type PartnerPaymentDetails = {
+  fullName: string;
+  bankName: string;
+  bankAccountNumber: string;
+  juiceNumber: string;
+};
+
+export type PrintPartner = {
+  id: string;
+  name: string;
+  path: string;
+  active: boolean;
+  productionNotes: string[];
+  paymentDetails?: PartnerPaymentDetails | null;
+  email: string;
+  emails: string[];
+  emailNotificationsEnabled: boolean;
+  supportsLogoPrintPlacements: boolean;
+  hasPassword?: boolean;
+};
+
+export const DEFAULT_PRINT_PARTNERS: PrintPartner[] = [
   {
     id: "yan",
     name: "Yan",
     path: "/admin/yan_list",
+    active: true,
     productionNotes: [],
     paymentDetails: {
       fullName: "Yan Chineah",
@@ -10,11 +32,17 @@ export const PRINT_PARTNERS = [
       bankAccountNumber: "000449132366",
       juiceNumber: "57934043",
     },
+    email: "",
+    emails: [],
+    emailNotificationsEnabled: false,
+    supportsLogoPrintPlacements: false,
+    hasPassword: true,
   },
   {
     id: "shabanaz",
     name: "Shabbanaz",
     path: "/admin/shab_list",
+    active: true,
     productionNotes: [
       "Accepts DTF Printing and Serigraphy Printing orders.",
       "Minimum order: 15-20 T-Shirts.",
@@ -25,10 +53,17 @@ export const PRINT_PARTNERS = [
       bankAccountNumber: "000449789454",
       juiceNumber: "58388176",
     },
+    email: "jshabbanaz@gmail.com",
+    emails: ["jshabbanaz@gmail.com"],
+    emailNotificationsEnabled: true,
+    supportsLogoPrintPlacements: true,
+    hasPassword: true,
   },
-] as const;
+] satisfies PrintPartner[];
 
-export type PrintPartnerId = (typeof PRINT_PARTNERS)[number]["id"];
+export const PRINT_PARTNERS = DEFAULT_PRINT_PARTNERS;
+
+export type PrintPartnerId = string;
 
 export type PartnerVisibleField =
   | "artwork"
@@ -283,7 +318,7 @@ export const SHABANAZ_PRINT_PLACEMENT_OPTIONS: {
   },
 ];
 
-const PARTNER_ID_SET = new Set<string>(PRINT_PARTNERS.map((partner) => partner.id));
+const PARTNER_ID_RE = /^[a-z0-9][a-z0-9_-]{1,48}$/;
 const VISIBLE_FIELD_SET = new Set<PartnerVisibleField>(
   PARTNER_VISIBLE_FIELD_OPTIONS.map((field) => field.key)
 );
@@ -304,11 +339,39 @@ const DECISION_SET = new Set<PartnerDecision>([
 ]);
 
 export function isPrintPartnerId(value: unknown): value is PrintPartnerId {
-  return typeof value === "string" && PARTNER_ID_SET.has(value);
+  return typeof value === "string" && PARTNER_ID_RE.test(value);
+}
+
+export function getPrintPartnerPath(partnerId: PrintPartnerId) {
+  if (partnerId === "yan") return "/admin/yan_list";
+  if (partnerId === "shabanaz") return "/admin/shab_list";
+  return `/admin/partners/${partnerId}`;
+}
+
+export function formatPartnerNameFromId(partnerId: PrintPartnerId) {
+  return partnerId
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ") || "Partner";
 }
 
 export function getPrintPartner(partnerId: PrintPartnerId) {
-  return PRINT_PARTNERS.find((partner) => partner.id === partnerId) || PRINT_PARTNERS[0];
+  return (
+    PRINT_PARTNERS.find((partner) => partner.id === partnerId) || {
+      id: partnerId,
+      name: formatPartnerNameFromId(partnerId),
+      path: getPrintPartnerPath(partnerId),
+      active: true,
+      productionNotes: [],
+      paymentDetails: null,
+      email: "",
+      emails: [],
+      emailNotificationsEnabled: false,
+      supportsLogoPrintPlacements: false,
+      hasPassword: false,
+    }
+  );
 }
 
 export function normalizePrintPartnerIds(value: unknown) {

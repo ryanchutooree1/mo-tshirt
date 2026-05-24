@@ -7,6 +7,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { getPrintPartnerById } from "@/lib/partner-registry";
 import {
   getPrintPartner,
   inferPartnerPrintPlacementFromText,
@@ -26,6 +27,7 @@ import {
   type PartnerOrderView,
   type PartnerProductionStatus,
   type PartnerVisibleField,
+  type PrintPartner,
   type PrintPartnerId,
 } from "@/lib/partners";
 import {
@@ -361,7 +363,8 @@ function sanitizeAttachments(attachments: QuoteAttachment[]) {
 export function sanitizePartnerOrder(
   id: string,
   data: RawQuote,
-  partnerId: PrintPartnerId
+  partnerId: PrintPartnerId,
+  partnerConfigOverride?: PrintPartner | null
 ): PartnerOrderView | null {
   const partner = data.partner || {};
   if (!canPartnerReadAssignment(partner, partnerId)) return null;
@@ -369,7 +372,7 @@ export function sanitizePartnerOrder(
   const assignedPartnerIds = getAssignedPartnerIds(partner);
   const lockedBy = getLockedPartnerId(partner);
   const partnerResponse = getPartnerResponse(partner, partnerId);
-  const partnerConfig = getPrintPartner(partnerId);
+  const partnerConfig = partnerConfigOverride || getPrintPartner(partnerId);
   const visibleFields = normalizePartnerVisibleFields(partner.visibleFields);
   const designBrief = parseDesignBrief(data.designBrief);
   const responsePrintPlacement = normalizePartnerPrintPlacement(
@@ -518,6 +521,7 @@ export function sanitizePartnerOrder(
 }
 
 export async function listPartnerOrders(partnerId: PrintPartnerId) {
+  const partnerConfig = await getPrintPartnerById(partnerId);
   const [legacySnap, visibleSnap] = await Promise.all([
     getDocs(query(collection(db, "quotes"), where("partner.id", "==", partnerId))),
     getDocs(
@@ -531,7 +535,12 @@ export async function listPartnerOrders(partnerId: PrintPartnerId) {
 
   return [...docsById.values()]
     .map((docSnap) =>
-      sanitizePartnerOrder(docSnap.id, docSnap.data() as RawQuote, partnerId)
+      sanitizePartnerOrder(
+        docSnap.id,
+        docSnap.data() as RawQuote,
+        partnerId,
+        partnerConfig
+      )
     )
     .filter((entry): entry is PartnerOrderView => Boolean(entry))
     .sort((left, right) => {
@@ -550,10 +559,11 @@ export async function readRawPartnerQuote(
 
   const data = snap.data() as RawQuote;
   if (!data.partner || !canPartnerReadAssignment(data.partner, partnerId)) return null;
+  const partnerConfig = await getPrintPartnerById(partnerId);
 
   return {
     ref: snap.ref,
     data,
-    view: sanitizePartnerOrder(snap.id, data, partnerId),
+    view: sanitizePartnerOrder(snap.id, data, partnerId, partnerConfig),
   };
 }

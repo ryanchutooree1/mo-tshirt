@@ -10,24 +10,13 @@ import {
   applyPartnerSessionCookie,
   clearPartnerSessionCookie,
   createPartnerSessionToken,
-  verifyPartnerPassword,
 } from "@/lib/partner-auth";
-import { PRINT_PARTNERS } from "@/lib/partners";
+import { getPartnerByPassword } from "@/lib/partner-registry";
 import { isContentLengthWithinLimit, isRequestOriginAllowed } from "@/lib/request-safety";
 
 const MAX_LOGIN_REQUEST_BYTES = 2_048;
 const MAX_PASSWORD_LENGTH = 256;
 const MAX_EMAIL_LENGTH = 254;
-
-async function getPartnerByPassword(password: string) {
-  for (const partner of PRINT_PARTNERS) {
-    if (await verifyPartnerPassword(partner.id, password)) {
-      return partner;
-    }
-  }
-
-  return null;
-}
 
 export async function POST(req: Request) {
   if (!isRequestOriginAllowed(req)) {
