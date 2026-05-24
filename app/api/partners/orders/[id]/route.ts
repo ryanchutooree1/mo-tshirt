@@ -5,7 +5,10 @@ import { readAdminSession } from "@/lib/admin-auth";
 import { readPartnerSession } from "@/lib/partner-auth";
 import { readRawPartnerQuote, sanitizePartnerOrder } from "@/lib/partner-orders";
 import { db } from "@/lib/firebase";
-import { getPrintPartnerById } from "@/lib/partner-registry";
+import {
+  getPrintPartnerById,
+  getProductionManager,
+} from "@/lib/partner-registry";
 import { SITE_URL } from "@/lib/seo";
 import {
   isPartnerDecision,
@@ -25,7 +28,7 @@ import {
 
 const MAX_UPDATE_REQUEST_BYTES = 8_192;
 const MAX_TEXT_LENGTH = 1_500;
-const RYAN_ACTION_EMAIL = "ryanchutooree@gmail.com";
+const FALLBACK_MANAGER_EMAIL = "ryanchutooree@gmail.com";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 class PartnerOrderUpdateError extends Error {
@@ -107,7 +110,8 @@ function emailRow(label: string, value: string) {
   return [label, value || "Not set"] as const;
 }
 
-function buildRyanActionEmail({
+function buildManagerActionEmail({
+  managerName,
   orderCode,
   partnerName,
   product,
@@ -120,6 +124,7 @@ function buildRyanActionEmail({
   comments,
   missingInformation,
 }: {
+  managerName: string;
   orderCode: string;
   partnerName: string;
   product: string;
@@ -157,8 +162,8 @@ function buildRyanActionEmail({
   const adminUrl = `${SITE_URL}/admin/quotation-approval`;
 
   return {
-    subject: `Ryan action needed for ${orderCode}`,
-    text: `Hi Ryan,
+    subject: `${managerName} action needed for ${orderCode}`,
+    text: `Hi ${managerName},
 
 ${partnerName} needs your action before this order can continue.
 
@@ -167,7 +172,7 @@ ${textRows}
 Open Quotation Approval:
 ${adminUrl}`,
     html: `<div style="font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#111;">
-  <p>Hi Ryan,</p>
+  <p>Hi ${escapeHtml(managerName)},</p>
   <p><strong>${escapeHtml(partnerName)}</strong> needs your action before this order can continue.</p>
   <table cellpadding="0" cellspacing="0" style="border-collapse:collapse; width:100%; max-width:720px;">
     ${htmlRows}
@@ -181,7 +186,10 @@ ${adminUrl}`,
   };
 }
 
-async function sendRyanActionEmail(message: ReturnType<typeof buildRyanActionEmail>) {
+async function sendManagerActionEmail(
+  message: ReturnType<typeof buildManagerActionEmail>,
+  managerEmail: string
+) {
   const host = process.env.SMTP_HOST;
   const port = Number(process.env.SMTP_PORT || 465);
   const secure = String(process.env.SMTP_SECURE || "true") === "true";
@@ -205,10 +213,10 @@ async function sendRyanActionEmail(message: ReturnType<typeof buildRyanActionEma
   await transporter.sendMail({
     from: sender.header,
     replyTo: sender.header,
-    to: RYAN_ACTION_EMAIL,
+    to: managerEmail,
     envelope: {
       from: sender.address,
-      to: [RYAN_ACTION_EMAIL],
+      to: [managerEmail],
     },
     subject: message.subject,
     text: message.text,
@@ -310,7 +318,7 @@ export async function PATCH(
   )
     ? body.printPlacement
     : existing.view.printPlacement;
-  const shouldNotifyRyanAction =
+  const shouldNotifyManagerAction =
     (decision === "needs_info" || Boolean(missingInformation)) &&
     (decision !== existing.view.decision ||
       missingInformation !== existing.view.missingInformation ||
@@ -442,10 +450,14 @@ export async function PATCH(
     let actionEmailSent = false;
     let actionEmailWarning = "";
 
-    if (updatedView && shouldNotifyRyanAction) {
+    if (updatedView && shouldNotifyManagerAction) {
       try {
-        await sendRyanActionEmail(
-          buildRyanActionEmail({
+        const manager = await getProductionManager();
+        const managerEmail =
+          manager.email || process.env.PARTNER_MANAGER_EMAIL || FALLBACK_MANAGER_EMAIL;
+        await sendManagerActionEmail(
+          buildManagerActionEmail({
+            managerName: manager.name,
             orderCode: updatedView.code,
             partnerName: updatedView.partnerName,
             product: updatedView.summary.product,
@@ -457,15 +469,16 @@ export async function PATCH(
             price,
             comments,
             missingInformation,
-          })
+          }),
+          managerEmail
         );
         actionEmailSent = true;
       } catch (emailError) {
-        console.error("partners:orders:ryan-action-email", emailError);
+        console.error("partners:orders:manager-action-email", emailError);
         actionEmailWarning =
           emailError instanceof Error
             ? emailError.message
-            : "Ryan action email could not be sent.";
+            : "Manager action email could not be sent.";
       }
     }
 

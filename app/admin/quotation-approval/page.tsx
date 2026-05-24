@@ -53,6 +53,7 @@ import {
   type QuoteGarmentLine as QuoteGarmentRequestLine,
 } from "@/lib/shops";
 import {
+  DEFAULT_PRODUCTION_MANAGER,
   DEFAULT_PARTNER_VISIBLE_FIELDS,
   getPrintPartner,
   getPrintPartnerRouteLabel,
@@ -75,6 +76,7 @@ import {
   type PartnerPrintPlacement,
   type PartnerProductionStatus,
   type PartnerVisibleField,
+  type ProductionManager,
   type PrintPartner,
   type PrintPartnerId,
 } from "@/lib/partners";
@@ -1304,6 +1306,8 @@ export default function QuotationApprovalPage() {
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [movingToOrders, setMovingToOrders] = useState(false);
   const [assigningPartner, setAssigningPartner] = useState<PrintPartnerId | "both" | null>(null);
+  const [productionManager, setProductionManager] =
+    useState<ProductionManager>(DEFAULT_PRODUCTION_MANAGER);
   const [printPartners, setPrintPartners] = useState<PrintPartner[]>(PRINT_PARTNERS);
   const [workflowStudioOpen, setWorkflowStudioOpen] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("inbox");
@@ -1322,7 +1326,14 @@ export default function QuotationApprovalPage() {
         const res = await fetch("/api/admin/partners", { cache: "no-store" });
         const data = await res.json().catch(() => ({}));
         if (!res.ok || !Array.isArray(data?.partners)) return;
-        if (!ignore) setPrintPartners(data.partners as PrintPartner[]);
+        if (!ignore) {
+          setPrintPartners(data.partners as PrintPartner[]);
+          setProductionManager(
+            data?.manager && typeof data.manager === "object"
+              ? (data.manager as ProductionManager)
+              : DEFAULT_PRODUCTION_MANAGER
+          );
+        }
       } catch {
         // Keep bundled defaults available if the registry cannot be loaded.
       }
@@ -3050,12 +3061,15 @@ export default function QuotationApprovalPage() {
                   <div className={`${surfaceClass} p-5 sm:p-6`}>
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div>
-                        <p className={labelClass}>Partner routing</p>
+                        <p className={labelClass}>{productionManager.name} routing</p>
                         <h3 className="mt-2 text-2xl font-semibold tracking-[-0.02em] text-[#222222]">
-                          Send only the production details they need
+                          Move the order to the right production partner
                         </h3>
                         <p className="mt-2 max-w-3xl text-sm leading-6 text-[#6a6a6a]">
-                          Customer name, phone, email, billing address, and delivery address stay hidden from the partner desk. If you send it to multiple partners, the first acceptance locks the order to that partner.
+                          {productionManager.name} sees every quotation here, chooses Yan,
+                          Shabbanaz, or another active partner, and keeps blockers tracked
+                          before print work starts. Customer name, phone, email, billing
+                          address, and delivery address stay hidden from partner desks.
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -3218,7 +3232,7 @@ export default function QuotationApprovalPage() {
                           <div className="mt-4 rounded-2xl border border-[#ffd9c2] bg-[#fff8f1] px-4 py-3">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                               <label className={`${labelClass} flex-1`}>
-                                Ryan client status
+                                {productionManager.name} client status
                                 <select
                                   value={selected.partner?.clientStatus || "not_set"}
                                   onChange={(event) =>

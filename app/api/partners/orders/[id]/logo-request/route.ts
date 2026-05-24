@@ -3,7 +3,10 @@ import { NextResponse } from "next/server";
 import { readAdminSession } from "@/lib/admin-auth";
 import { readPartnerSession } from "@/lib/partner-auth";
 import { readRawPartnerQuote } from "@/lib/partner-orders";
-import { getPrintPartnerById } from "@/lib/partner-registry";
+import {
+  getPrintPartnerById,
+  getProductionManager,
+} from "@/lib/partner-registry";
 import { isPrintPartnerId } from "@/lib/partners";
 import {
   formatQuoteGarmentDescription,
@@ -15,7 +18,7 @@ import {
   isRequestOriginAllowed,
 } from "@/lib/request-safety";
 
-const RYAN_LOGO_REQUEST_EMAIL = "ryanchutooree@gmail.com";
+const FALLBACK_MANAGER_EMAIL = "ryanchutooree@gmail.com";
 const MAX_LOGO_REQUEST_BYTES = 2_048;
 const MAX_FIELD_LENGTH = 240;
 
@@ -144,6 +147,7 @@ function buildEmail({
   quoteId,
   quote,
   partnerName,
+  managerName,
   attachmentFilename,
   attachmentLabel,
   requestType,
@@ -151,6 +155,7 @@ function buildEmail({
   quoteId: string;
   quote: RawQuoteForLogoRequest;
   partnerName: string;
+  managerName: string;
   attachmentFilename: string;
   attachmentLabel: string;
   requestType: LogoRequestType;
@@ -208,14 +213,14 @@ function buildEmail({
     ? `Please ask the client to send the logo/artwork for ${orderCode}.`
     : `Please upload the logo/artwork for ${orderCode}.`;
   const detailText = askClientForLogo
-    ? "The partner has no artwork files shared on the partner desk, so they need Ryan to request the logo from the client before production can continue."
+    ? `The partner has no artwork files shared on the partner desk, so they need ${managerName} to request the logo from the client before production can continue.`
     : "The partner only sees an email-only placeholder, so they cannot open this file from the partner desk.";
 
   return {
     subject: askClientForLogo
       ? `Ask client for logo for ${orderCode}`
       : `Upload logo for ${orderCode}`,
-    text: `Hi Ryan,
+    text: `Hi ${managerName},
 
 ${introText}
 
@@ -226,7 +231,7 @@ ${textRows}
 Open Quotation Approval:
 ${adminUrl}`,
     html: `<div style="font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#111;">
-  <p>Hi Ryan,</p>
+  <p>Hi ${escapeHtml(managerName)},</p>
   <p>${escapeHtml(introText)}</p>
   <p>${escapeHtml(detailText)}</p>
   <table cellpadding="0" cellspacing="0" style="border-collapse:collapse; width:100%; max-width:720px;">
@@ -297,6 +302,8 @@ export async function POST(
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   const sender = resolveMailSender(process.env.SMTP_FROM, user);
+  const manager = await getProductionManager();
+  const managerEmail = manager.email || process.env.PARTNER_MANAGER_EMAIL || FALLBACK_MANAGER_EMAIL;
 
   if (!host || !user || !pass) {
     return NextResponse.json(
@@ -318,6 +325,7 @@ export async function POST(
       quoteId: id,
       quote: existing.data as RawQuoteForLogoRequest,
       partnerName: partner.name,
+      managerName: manager.name,
       attachmentFilename: safeText(body?.attachmentFilename),
       attachmentLabel: safeText(body?.attachmentLabel),
       requestType:
@@ -329,10 +337,10 @@ export async function POST(
     await transporter.sendMail({
       from: sender.header,
       replyTo: sender.header,
-      to: RYAN_LOGO_REQUEST_EMAIL,
+      to: managerEmail,
       envelope: {
         from: sender.address,
-        to: [RYAN_LOGO_REQUEST_EMAIL],
+        to: [managerEmail],
       },
       subject: message.subject,
       text: message.text,
@@ -343,8 +351,8 @@ export async function POST(
       ok: true,
       message:
         body?.requestType === "ask_client_for_logo"
-          ? `Asked Ryan to request the logo from the client for ${existing.view.code}.`
-          : `Asked Ryan to upload the logo for ${existing.view.code}.`,
+          ? `Asked ${manager.name} to request the logo from the client for ${existing.view.code}.`
+          : `Asked ${manager.name} to upload the logo for ${existing.view.code}.`,
     });
   } catch (error) {
     console.error("partners:logo-request", error);

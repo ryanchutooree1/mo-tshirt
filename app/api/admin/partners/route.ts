@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { isAdminRequest } from "@/lib/admin-request";
 import {
-  getPrintPartners,
+  getPrintPartnerRegistry,
+  getProductionManager,
   savePrintPartners,
 } from "@/lib/partner-registry";
 
@@ -11,8 +12,8 @@ export async function GET() {
   }
 
   try {
-    const partners = await getPrintPartners({ includeInactive: true });
-    return NextResponse.json({ partners });
+    const registry = await getPrintPartnerRegistry({ includeInactive: true });
+    return NextResponse.json(registry);
   } catch (error) {
     console.error("partners:get", error);
     return NextResponse.json(
@@ -29,8 +30,12 @@ export async function PUT(req: Request) {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const partners = await savePrintPartners(body?.partners);
-    return NextResponse.json({ partners });
+    const partners = await savePrintPartners(body?.partners, body?.manager);
+    const manager = await getProductionManager();
+    return NextResponse.json({
+      partners,
+      manager,
+    });
   } catch (error) {
     console.error("partners:put", error);
     return NextResponse.json(

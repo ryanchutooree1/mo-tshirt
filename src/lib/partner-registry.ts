@@ -1,11 +1,13 @@
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
+  DEFAULT_PRODUCTION_MANAGER,
   DEFAULT_PRINT_PARTNERS,
   formatPartnerNameFromId,
   getPrintPartnerPath,
   isPrintPartnerId,
   type PartnerPaymentDetails,
+  type ProductionManager,
   type PrintPartner,
   type PrintPartnerId,
 } from "@/lib/partners";
@@ -19,6 +21,11 @@ type StoredPrintPartner = PrintPartner & {
   password?: string;
 };
 
+type StoredPartnerRegistry = {
+  manager: ProductionManager;
+  partners: StoredPrintPartner[];
+};
+
 type SavePrintPartnerInput = Partial<PrintPartner> & {
   password?: unknown;
   paymentDetails?: Partial<PartnerPaymentDetails> | null;
@@ -30,6 +37,18 @@ function cleanString(value: unknown) {
 
 function normalizeEmail(value: unknown) {
   return cleanString(value).toLowerCase();
+}
+
+function normalizeManager(value: unknown): ProductionManager {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return DEFAULT_PRODUCTION_MANAGER;
+  }
+
+  const raw = value as Partial<Record<keyof ProductionManager, unknown>>;
+  return {
+    name: cleanString(raw.name) || DEFAULT_PRODUCTION_MANAGER.name,
+    email: normalizeEmail(raw.email),
+  };
 }
 
 function getEmailCandidates(value: unknown): string[] {
@@ -218,11 +237,11 @@ async function getLegacyNotificationMap() {
   return map;
 }
 
-async function readStoredPartners() {
+async function readStoredRegistry(): Promise<StoredPartnerRegistry> {
   const snap = await getDoc(doc(db, SETTINGS_COLLECTION, PRINT_PARTNERS_DOC));
   if (!snap.exists()) {
     const legacyNotifications = await getLegacyNotificationMap();
-    return defaultStoredPartners().map((partner) => {
+    const partners = defaultStoredPartners().map((partner) => {
       const legacy = legacyNotifications.get(partner.id);
       if (!legacy) return partner;
       return {
@@ -232,9 +251,11 @@ async function readStoredPartners() {
         emailNotificationsEnabled: legacy.enabled,
       };
     });
+    return { manager: DEFAULT_PRODUCTION_MANAGER, partners };
   }
 
-  const rawPartners = (snap.data() as { partners?: unknown }).partners;
+  const rawData = snap.data() as { manager?: unknown; partners?: unknown };
+  const rawPartners = rawData.partners;
   const fallbackById = new Map(defaultStoredPartners().map((partner) => [partner.id, partner]));
   const partners = getRawPartnerEntries(rawPartners)
     .map((entry) => {
@@ -245,7 +266,14 @@ async function readStoredPartners() {
     })
     .filter((partner): partner is StoredPrintPartner => Boolean(partner));
 
-  return partners;
+  return {
+    manager: normalizeManager(rawData.manager),
+    partners,
+  };
+}
+
+async function readStoredPartners() {
+  return (await readStoredRegistry()).partners;
 }
 
 function validatePartners(partners: StoredPrintPartner[]) {
@@ -286,11 +314,33 @@ function validatePartners(partners: StoredPrintPartner[]) {
   }
 }
 
+function validateManager(manager: ProductionManager) {
+  if (manager.email && !EMAIL_RE.test(manager.email)) {
+    throw new Error(`Invalid manager email address: ${manager.email}`);
+  }
+}
+
 export async function getPrintPartners(options: { includeInactive?: boolean } = {}) {
   const partners = await readStoredPartners();
   return partners
     .filter((partner) => options.includeInactive || partner.active)
     .map(stripPassword);
+}
+
+export async function getProductionManager() {
+  return (await readStoredRegistry()).manager;
+}
+
+export async function getPrintPartnerRegistry(
+  options: { includeInactive?: boolean } = {}
+) {
+  const registry = await readStoredRegistry();
+  return {
+    manager: registry.manager,
+    partners: registry.partners
+      .filter((partner) => options.includeInactive || partner.active)
+      .map(stripPassword),
+  };
 }
 
 export async function getPrintPartnerById(
@@ -327,13 +377,13 @@ export async function getPrintPartnerRouteLabel(partnerIds: PrintPartnerId[]) {
   return labels.length ? labels.join(" + ") : "No partner";
 }
 
-export async function savePrintPartners(value: unknown) {
+export async function savePrintPartners(value: unknown, managerValue?: unknown) {
   if (!Array.isArray(value)) {
     throw new Error("Partner list is invalid.");
   }
 
-  const existingPartners = await readStoredPartners();
-  const fallbackById = new Map(existingPartners.map((partner) => [partner.id, partner]));
+  const existingRegistry = await readStoredRegistry();
+  const fallbackById = new Map(existingRegistry.partners.map((partner) => [partner.id, partner]));
   const partners = value
     .map((entry) => {
       const id = entry && typeof entry === "object" && !Array.isArray(entry)
@@ -344,10 +394,16 @@ export async function savePrintPartners(value: unknown) {
     .filter((partner): partner is StoredPrintPartner => Boolean(partner));
 
   validatePartners(partners);
+  const manager =
+    managerValue === undefined
+      ? existingRegistry.manager
+      : normalizeManager(managerValue);
+  validateManager(manager);
 
   await setDoc(
     doc(db, SETTINGS_COLLECTION, PRINT_PARTNERS_DOC),
     {
+      manager,
       partners,
       updatedAt: serverTimestamp(),
     },

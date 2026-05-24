@@ -253,9 +253,11 @@ function sortOrders(orders: PartnerOrderView[], sort: SortKey) {
 export default function PartnerProductionPage({
   partnerId,
   initialPartner,
+  managerName = "Tanvi",
 }: {
   partnerId: PrintPartnerId;
   initialPartner?: PrintPartner | null;
+  managerName?: string;
 }) {
   const { theme, toggleTheme } = useAdminTheme();
   const isDark = theme === "dark";
@@ -558,7 +560,7 @@ export default function PartnerProductionPage({
       }
     }
     if (decision === "needs_info" && !draft.missingInformation.trim()) {
-      setNotice("Write what Ryan must get or fix before sending the request.");
+      setNotice(`Write what ${managerName} must get or fix before sending the request.`);
       return;
     }
     setSaving(true);
@@ -590,9 +592,9 @@ export default function PartnerProductionPage({
       }
       setNotice(
         data?.actionEmailSent
-          ? "Saved. Ryan was emailed for action."
+          ? `Saved. ${managerName} was emailed for action.`
           : data?.actionEmailWarning
-            ? `Saved, but Ryan email failed: ${data.actionEmailWarning}`
+            ? `Saved, but ${managerName} email failed: ${data.actionEmailWarning}`
             : "Saved."
       );
     } catch (error) {
@@ -624,14 +626,14 @@ export default function PartnerProductionPage({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data?.error || "Could not ask Ryan to upload the logo.");
+        throw new Error(data?.error || `Could not ask ${managerName} to upload the logo.`);
       }
-      setNotice(data?.message || `Asked Ryan to upload the logo for ${selected.code}.`);
+      setNotice(data?.message || `Asked ${managerName} to upload the logo for ${selected.code}.`);
     } catch (error) {
       setNotice(
         error instanceof Error
           ? error.message
-          : "Could not ask Ryan to upload the logo."
+          : `Could not ask ${managerName} to upload the logo.`
       );
     } finally {
       setRequestingLogoKey(null);
@@ -657,17 +659,17 @@ export default function PartnerProductionPage({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data?.error || "Could not ask Ryan to request the logo.");
+        throw new Error(data?.error || `Could not ask ${managerName} to request the logo.`);
       }
       setNotice(
         data?.message ||
-          `Asked Ryan to request the logo from the client for ${selected.code}.`
+          `Asked ${managerName} to request the logo from the client for ${selected.code}.`
       );
     } catch (error) {
       setNotice(
         error instanceof Error
           ? error.message
-          : "Could not ask Ryan to request the logo."
+          : `Could not ask ${managerName} to request the logo.`
       );
     } finally {
       setRequestingLogoKey(null);
@@ -716,7 +718,7 @@ export default function PartnerProductionPage({
                 {partner.name} production desk
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-6 text-[color:var(--partner-muted)] sm:mt-5 sm:text-base sm:leading-7">
-                Orders assigned by Ryan appear here with only the production details he chooses to share.
+                Orders assigned by {managerName} appear here with only the production details they choose to share.
               </p>
               {productionRulesCard ? (
                 <div className="mt-5 max-w-2xl sm:mt-6">{productionRulesCard}</div>
@@ -725,7 +727,7 @@ export default function PartnerProductionPage({
                 {[
                   ["Accept or reject", "Confirm capacity fast."],
                   ["Price your work", "Send cost and timing."],
-                  ["Update status", "Keep Ryan in sync."],
+                  ["Update status", `Keep ${managerName} in sync.`],
                 ].map(([title, copy]) => (
                   <div key={title} className={`rounded-xl border p-4 ${softSurfaceClass}`}>
                     <p className="text-sm font-semibold text-[color:var(--partner-text)]">{title}</p>
@@ -1115,6 +1117,7 @@ export default function PartnerProductionPage({
                   <WorkflowSteps
                     order={selected}
                     draft={draft}
+                    managerName={managerName}
                     onRequestClientLogo={requestClientLogo}
                     requestingLogoKey={requestingLogoKey}
                   />
@@ -1122,6 +1125,7 @@ export default function PartnerProductionPage({
                   <OrderDetails
                     details={selected.details}
                     orderId={selected.id}
+                    managerName={managerName}
                     onRequestLogoUpload={requestLogoUpload}
                     onRequestClientLogo={requestClientLogo}
                     requestingLogoKey={requestingLogoKey}
@@ -1142,7 +1146,7 @@ export default function PartnerProductionPage({
                           Decision, quote, production update
                         </h3>
                         <p className="mt-2 text-sm leading-6 text-[color:var(--partner-muted)]">
-                          Give Ryan the exact answer he needs to move the order without a follow-up call.
+                          Give {managerName} the exact answer needed to move the order without a follow-up call.
                         </p>
                       </div>
                     </div>
@@ -1189,7 +1193,7 @@ export default function PartnerProductionPage({
                     <ResponseSection
                       icon={<FiDollarSign className="h-4 w-4" />}
                       label="Step 3"
-                      title="Quote Ryan clearly"
+                      title={`Quote ${managerName} clearly`}
                       tone="amber"
                     >
                       <div className="grid gap-3 sm:grid-cols-2">
@@ -1254,7 +1258,7 @@ export default function PartnerProductionPage({
                             ))}
                           </select>
                           <span className="mt-2 block text-xs normal-case tracking-normal text-[color:var(--partner-muted)]">
-                            Prefilled from Ryan&apos;s quotation or the client request when available.
+                            Prefilled from {managerName}&apos;s quotation or the client request when available.
                           </span>
                         </label>
                         <label className={fieldLabelClass}>
@@ -1287,7 +1291,7 @@ export default function PartnerProductionPage({
                     >
                       <div className="grid gap-3">
                         <label className={fieldLabelClass}>
-                          Comments for Ryan
+                          Comments for {managerName}
                           <textarea
                             value={draft.comments}
                             onChange={(event) =>
@@ -1313,10 +1317,10 @@ export default function PartnerProductionPage({
                             }
                             rows={3}
                             className={`mt-2 resize-y normal-case tracking-normal ${inputClass}`}
-                            placeholder="Tell Ryan what he must get before you can print."
+                            placeholder={`Tell ${managerName} what they must get before you can print.`}
                           />
                           <span className="mt-2 block text-xs normal-case tracking-normal text-[color:var(--partner-muted)]">
-                            If this field is filled or Need info is selected, Ryan gets an email after saving.
+                            If this field is filled or Need info is selected, {managerName} gets an email after saving.
                           </span>
                         </label>
                       </div>
@@ -1349,7 +1353,7 @@ export default function PartnerProductionPage({
               <FiPackage className="mx-auto h-8 w-8 text-[color:var(--partner-muted)]" />
               <h2 className="mt-4 text-xl font-semibold">No assigned orders in this view</h2>
               <p className="mt-2 text-sm text-[color:var(--partner-muted)]">
-                Try another filter or search. New jobs will appear here when Ryan moves an
+                Try another filter or search. New jobs will appear here when {managerName} moves an
                 order to {partner.name}.
               </p>
             </div>
@@ -1383,11 +1387,13 @@ function Metric({
 function WorkflowSteps({
   order,
   draft,
+  managerName,
   onRequestClientLogo,
   requestingLogoKey,
 }: {
   order: PartnerOrderView;
   draft: ResponseDraft;
+  managerName: string;
   onRequestClientLogo: () => void;
   requestingLogoKey: string | null;
 }) {
@@ -1398,9 +1404,9 @@ function WorkflowSteps({
   const actionNeeded = draft.decision === "needs_info" || Boolean(draft.missingInformation.trim());
   const logoRequestKey = `${order.id}:client-logo`;
   const flowStatus = actionNeeded
-    ? "Ryan action needed"
+    ? `${managerName} action needed`
     : hasOffer && draft.decision === "accepted"
-      ? "Ready for Ryan"
+      ? `Ready for ${managerName}`
       : hasOffer
         ? "Quote drafted"
         : "Quote needed";
@@ -1416,7 +1422,7 @@ function WorkflowSteps({
     {
       title: "Artwork",
       value: hasArtwork ? "Ready" : "Missing",
-      helper: hasArtwork ? "Open and check the logo before quoting." : "Ask Ryan before any print work starts.",
+      helper: hasArtwork ? "Open and check the logo before quoting." : `Ask ${managerName} before any print work starts.`,
       icon: <FiImage />,
       tone: hasArtwork
         ? "success"
@@ -1431,7 +1437,7 @@ function WorkflowSteps({
           <FiAlertTriangle className="h-3.5 w-3.5" />
           {requestingLogoKey === logoRequestKey
             ? "Sending..."
-            : "Ask Ryan for client logo"}
+            : `Ask ${managerName} for client logo`}
         </button>
       ),
     },
@@ -1475,9 +1481,9 @@ function WorkflowSteps({
       action: null,
     },
     {
-      title: "Ryan price",
-      value: hasOffer ? "Ready for Ryan" : "Waiting",
-      helper: "Ryan uses this to quote and confirm the client.",
+      title: `${managerName} price`,
+      value: hasOffer ? `Ready for ${managerName}` : "Waiting",
+      helper: `${managerName} uses this to quote and confirm the client.`,
       icon: <FiMail />,
       tone: hasOffer
         ? "info"
@@ -1487,7 +1493,7 @@ function WorkflowSteps({
     {
       title: "Client",
       value: PARTNER_CLIENT_STATUS_LABELS[order.clientStatus],
-      helper: "Ryan keeps client approval and payment status here.",
+      helper: `${managerName} keeps client approval and payment status here.`,
       icon: <FiMessageCircle />,
       tone:
         order.clientStatus === "confirmed_half_payment"
@@ -1510,9 +1516,9 @@ function WorkflowSteps({
       action: null,
     },
     {
-      title: "Ryan action",
+      title: `${managerName} action`,
       value: actionNeeded ? "Email on save" : "No block",
-      helper: actionNeeded ? "Ryan gets the blocker when you save." : "Nothing blocks production right now.",
+      helper: actionNeeded ? `${managerName} gets the blocker when you save.` : "Nothing blocks production right now.",
       icon: <FiAlertTriangle />,
       tone: actionNeeded
         ? "warning"
@@ -1639,12 +1645,14 @@ function ResponseSection({
 function OrderDetails({
   details,
   orderId,
+  managerName,
   onRequestLogoUpload,
   onRequestClientLogo,
   requestingLogoKey,
 }: {
   details: PartnerOrderDetails;
   orderId: string;
+  managerName: string;
   onRequestLogoUpload: (
     attachment: PartnerOrderAttachment,
     attachmentIndex: number
@@ -1657,7 +1665,7 @@ function OrderDetails({
   if (!hasDetails) {
     return (
       <div className="rounded-2xl border border-dashed border-[color:var(--partner-border)] bg-[var(--partner-card)] px-6 py-12 text-center text-sm text-[color:var(--partner-muted)] shadow-sm">
-        Ryan has not shared production fields for this order yet.
+        {managerName} has not shared production fields for this order yet.
       </div>
     );
   }
@@ -1726,7 +1734,7 @@ function OrderDetails({
                     ) : !attachment.url ? (
                       <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-xs font-semibold text-amber-900">
                         <p>
-                          Ryan received this file by email only. Ask Ryan to re-upload it in
+                          {managerName} received this file by email only. Ask {managerName} to re-upload it in
                           Quotation Approval so you can open the artwork here.
                         </p>
                         <button
@@ -1737,8 +1745,8 @@ function OrderDetails({
                         >
                           <FiMessageCircle className="h-4 w-4" />
                           {requestingLogoKey === `${orderId}:${index}`
-                            ? "Asking Ryan..."
-                            : "Ask Ryan to upload logo"}
+                            ? `Asking ${managerName}...`
+                            : `Ask ${managerName} to upload logo`}
                         </button>
                       </div>
                     ) : null}
@@ -1758,8 +1766,8 @@ function OrderDetails({
                 >
                   <FiMessageCircle className="h-4 w-4" />
                   {requestingLogoKey === `${orderId}:client-logo`
-                    ? "Asking Ryan..."
-                    : "Ask Ryan to ask client for logo"}
+                    ? `Asking ${managerName}...`
+                    : `Ask ${managerName} to ask client for logo`}
                 </button>
               </div>
             </EmptyDetail>

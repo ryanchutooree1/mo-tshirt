@@ -5,6 +5,16 @@ export type PartnerPaymentDetails = {
   juiceNumber: string;
 };
 
+export type ProductionManager = {
+  name: string;
+  email: string;
+};
+
+export const DEFAULT_PRODUCTION_MANAGER: ProductionManager = {
+  name: "Tanvi",
+  email: "",
+};
+
 export type PrintPartner = {
   id: string;
   name: string;
@@ -239,10 +249,10 @@ export const PARTNER_PRODUCTION_STATUS_LABELS: Record<
 > = {
   not_started: "Not started",
   in_progress: "In progress",
-  waiting_for_tshirts_from_ryan: "Waiting for t-shirts from Ryan",
+  waiting_for_tshirts_from_ryan: "Waiting for t-shirts from MO",
   completed: "Completed",
   will_post_tomorrow: "Will post tomorrow",
-  ryan_to_collect: "Ryan to collect",
+  ryan_to_collect: "MO to collect",
 };
 
 export const PARTNER_PRODUCTION_STATUSES: PartnerProductionStatus[] = [

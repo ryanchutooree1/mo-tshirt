@@ -18,7 +18,11 @@ import {
 } from "lucide-react";
 import { useAdminTheme } from "@/admin/AdminThemeContext";
 import UnsavedChangesGuard from "@/components/admin/UnsavedChangesGuard";
-import type { PartnerPaymentDetails, PrintPartner } from "@/lib/partners";
+import type {
+  PartnerPaymentDetails,
+  PrintPartner,
+  ProductionManager,
+} from "@/lib/partners";
 
 type PartnerDraft = PrintPartner & {
   password: string;
@@ -29,6 +33,11 @@ const emptyPaymentDetails: PartnerPaymentDetails = {
   bankName: "",
   bankAccountNumber: "",
   juiceNumber: "",
+};
+
+const defaultManager: ProductionManager = {
+  name: "Tanvi",
+  email: "",
 };
 
 function getPartnerEmails(partner: PartnerDraft) {
@@ -58,6 +67,10 @@ function normalizeForCompare(partners: PartnerDraft[]) {
 
 function haveSameSettings(left: PartnerDraft[], right: PartnerDraft[]) {
   return JSON.stringify(normalizeForCompare(left)) === JSON.stringify(normalizeForCompare(right));
+}
+
+function haveSameManager(left: ProductionManager, right: ProductionManager) {
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 function makePartnerId(name: string, existingIds: string[]) {
@@ -100,6 +113,8 @@ function createNewPartner(existingIds: string[]): PartnerDraft {
 export default function AdminPartnersPage() {
   const { theme } = useAdminTheme();
   const isDark = theme === "dark";
+  const [manager, setManager] = useState<ProductionManager>(defaultManager);
+  const [savedManager, setSavedManager] = useState<ProductionManager>(defaultManager);
   const [partners, setPartners] = useState<PartnerDraft[]>([]);
   const [savedPartners, setSavedPartners] = useState<PartnerDraft[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,8 +123,8 @@ export default function AdminPartnersPage() {
   const [error, setError] = useState<string | null>(null);
 
   const hasChanges = useMemo(
-    () => !haveSameSettings(partners, savedPartners),
-    [partners, savedPartners]
+    () => !haveSameSettings(partners, savedPartners) || !haveSameManager(manager, savedManager),
+    [manager, partners, savedManager, savedPartners]
   );
   const activeCount = partners.filter((partner) => partner.active).length;
   const recipientCount = partners.reduce(
@@ -147,6 +162,12 @@ export default function AdminPartnersPage() {
       const nextPartners = Array.isArray(data?.partners)
         ? (data.partners as PrintPartner[]).map(toPartnerDraft)
         : [];
+      const nextManager =
+        data?.manager && typeof data.manager === "object"
+          ? (data.manager as ProductionManager)
+          : defaultManager;
+      setManager(nextManager);
+      setSavedManager(nextManager);
       setPartners(nextPartners);
       setSavedPartners(nextPartners);
     } catch (loadError) {
@@ -287,7 +308,7 @@ export default function AdminPartnersPage() {
       const res = await fetch("/api/admin/partners", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ partners }),
+        body: JSON.stringify({ partners, manager }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -296,6 +317,12 @@ export default function AdminPartnersPage() {
       const nextPartners = Array.isArray(data?.partners)
         ? (data.partners as PrintPartner[]).map(toPartnerDraft)
         : partners.map((partner) => ({ ...partner, password: "" }));
+      const nextManager =
+        data?.manager && typeof data.manager === "object"
+          ? (data.manager as ProductionManager)
+          : manager;
+      setManager(nextManager);
+      setSavedManager(nextManager);
       setPartners(nextPartners);
       setSavedPartners(nextPartners);
       setNotice("Partner settings saved.");
@@ -382,6 +409,64 @@ export default function AdminPartnersPage() {
             Reload
           </button>
         </div>
+
+        <section className={`${panelClass} p-4 sm:p-5`}>
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-cyan-900">
+                <Users className="h-3.5 w-3.5" />
+                Production manager
+              </div>
+              <h2 className="mt-3 text-xl font-semibold tracking-tight">
+                {manager.name || "Production manager"}
+              </h2>
+              <p className={`mt-2 max-w-3xl text-sm leading-6 ${mutedTextClass}`}>
+                This manager sees Quotation / Invoice, decides which partner receives each
+                order, and tracks partner blockers before print work starts.
+              </p>
+              <Link
+                href="/admin/quotation-approval"
+                className={`mt-4 inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-semibold transition ${
+                  isDark
+                    ? "border-white/10 bg-white/10 text-slate-100 hover:bg-white/15"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                Open Quotation / Invoice
+                <ExternalLink className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+
+            <div className="grid w-full gap-3 lg:max-w-xl lg:grid-cols-2">
+              <label className={smallLabelClass}>
+                Manager name
+                <input
+                  value={manager.name}
+                  onChange={(event) =>
+                    setManager((current) => ({ ...current, name: event.target.value }))
+                  }
+                  className={`mt-2 normal-case tracking-normal ${inputClass}`}
+                  placeholder="Tanvi"
+                />
+              </label>
+              <label className={smallLabelClass}>
+                Manager email
+                <input
+                  type="email"
+                  value={manager.email}
+                  onChange={(event) =>
+                    setManager((current) => ({
+                      ...current,
+                      email: event.target.value.trim().toLowerCase(),
+                    }))
+                  }
+                  className={`mt-2 normal-case tracking-normal ${inputClass}`}
+                  placeholder="tanvi@example.com"
+                />
+              </label>
+            </div>
+          </div>
+        </section>
 
         <section className="grid gap-4">
           {partners.map((partner) => {

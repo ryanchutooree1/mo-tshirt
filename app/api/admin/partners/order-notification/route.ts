@@ -6,6 +6,7 @@ import {
   getPartnerNotificationSettings,
   type PartnerNotificationSetting,
 } from "@/lib/partner-notification-settings";
+import { getProductionManager } from "@/lib/partner-registry";
 import {
   PARTNER_PRINT_PLACEMENT_LABELS,
   normalizePartnerPrintPlacement,
@@ -139,10 +140,12 @@ function buildMessage({
   quoteId,
   quote,
   partner,
+  managerName,
 }: {
   quoteId: string;
   quote: RawQuote;
   partner: PartnerNotificationSetting;
+  managerName: string;
 }) {
   const orderCode = quote.quote?.documentNumber || `Q-${quoteId.slice(-5).toUpperCase()}`;
   const pieces = getTotalPieces(quote);
@@ -171,7 +174,7 @@ function buildMessage({
     subject: `New MO T-SHIRT order ${orderCode}`,
     text: `Hi ${partner.partnerName},
 
-Ryan moved an order to your MO T-SHIRT partner desk.
+${managerName} moved an order to your MO T-SHIRT partner desk.
 
 ${textRows}
 
@@ -179,15 +182,15 @@ Next steps:
 1. Check if the logo/artwork is provided.
 2. Accept or reject the order.
 3. If accepted, add completion days and your price.
-4. Use Missing information when Ryan needs to get something from the client.
+4. Use Missing information when ${managerName} needs to get something from the client.
 
 Open your partner page:
 ${partnerUrl}
 
-This internal production notice was sent by MO T-SHIRT after Ryan moved this order.`,
+This internal production notice was sent by MO T-SHIRT after ${managerName} moved this order.`,
     html: `<div style="font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#111;">
   <p>Hi ${escapeHtml(partner.partnerName)},</p>
-  <p>Ryan moved an order to your <strong>MO T-SHIRT partner desk</strong>.</p>
+  <p>${escapeHtml(managerName)} moved an order to your <strong>MO T-SHIRT partner desk</strong>.</p>
   <table cellpadding="0" cellspacing="0" style="border-collapse:collapse; width:100%; max-width:560px;">
     ${htmlRows}
   </table>
@@ -197,7 +200,7 @@ This internal production notice was sent by MO T-SHIRT after Ryan moved this ord
       <li>Check if the logo/artwork is provided.</li>
       <li>Accept or reject the order.</li>
       <li>If accepted, add completion days and your price.</li>
-      <li>Use Missing information when Ryan needs to get something from the client.</li>
+      <li>Use Missing information when ${escapeHtml(managerName)} needs to get something from the client.</li>
     </ol>
   </div>
   <p style="margin-top:16px; margin-bottom:4px; font-weight:700;">Partner desk link</p>
@@ -207,7 +210,7 @@ This internal production notice was sent by MO T-SHIRT after Ryan moved this ord
     </a>
   </p>
   <p style="margin-top:16px; color:#555; font-size:12px;">
-    This internal production notice was sent by MO T-SHIRT after Ryan moved this order.
+    This internal production notice was sent by MO T-SHIRT after ${escapeHtml(managerName)} moved this order.
   </p>
 </div>`,
   };
@@ -235,6 +238,7 @@ export async function POST(req: Request) {
   }
 
   const settings = await getPartnerNotificationSettings();
+  const manager = await getProductionManager();
   const requestedSettings = partnerIds
     .map((partnerId) => settings.find((setting) => setting.partnerId === partnerId))
     .filter((setting): setting is PartnerNotificationSetting => Boolean(setting));
@@ -299,7 +303,12 @@ export async function POST(req: Request) {
     const sent: SentNotification[] = [];
 
     for (const partner of enabledSettings) {
-      const message = buildMessage({ quoteId, quote, partner });
+      const message = buildMessage({
+        quoteId,
+        quote,
+        partner,
+        managerName: manager.name,
+      });
       await transporter.sendMail({
         from: sender.header,
         replyTo: sender.header,
