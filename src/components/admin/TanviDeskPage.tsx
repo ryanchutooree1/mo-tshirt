@@ -6,6 +6,8 @@ import {
   CheckCircle2,
   CircleDollarSign,
   Clock3,
+  Eye,
+  EyeOff,
   FileText,
   RefreshCw,
   Route,
@@ -145,6 +147,7 @@ export default function TanviDeskPage() {
   const [saving, setSaving] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showQueue, setShowQueue] = useState(true);
 
   const activePartners = useMemo(
     () => partners.filter((partner) => partner.active),
@@ -274,34 +277,88 @@ export default function TanviDeskPage() {
     ? "min-h-screen bg-slate-950 text-slate-100"
     : "min-h-screen bg-[#f5f7fb] text-slate-950";
   const panelClass = isDark
-    ? "rounded-lg border border-white/10 bg-slate-900/80 shadow-[0_20px_60px_rgba(0,0,0,0.28)]"
-    : "rounded-lg border border-slate-200 bg-white shadow-[0_16px_46px_rgba(15,23,42,0.08)]";
+    ? "rounded-[24px] border border-white/10 bg-slate-900/80 shadow-[0_20px_60px_rgba(0,0,0,0.28)]"
+    : "rounded-[24px] border border-slate-200 bg-white shadow-[0_16px_46px_rgba(15,23,42,0.08)]";
   const mutedClass = isDark ? "text-slate-400" : "text-slate-500";
+  const dividerClass = isDark ? "border-white/10" : "border-slate-200/70";
+  const strongTextClass = isDark ? "text-slate-100" : "text-slate-950";
+  const subtleCardClass = isDark
+    ? "rounded-2xl border border-white/10 bg-slate-950/60"
+    : "rounded-2xl border border-slate-200 bg-slate-50";
+  const elevatedCardClass = isDark
+    ? "rounded-2xl border border-white/10 bg-slate-950/50"
+    : "rounded-2xl border border-slate-200 bg-white";
+  const neutralBadgeClass = isDark
+    ? "rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-xs font-semibold text-slate-200"
+    : "rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700";
   const fieldClass = isDark
-    ? "rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none focus:border-cyan-300"
-    : "rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900";
+    ? "rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-300 focus:ring-4 focus:ring-cyan-300/10"
+    : "rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-cyan-700 focus:ring-4 focus:ring-cyan-700/10";
   const quietButtonClass = isDark
-    ? "inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/15 disabled:opacity-50"
-    : "inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50";
+    ? "inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/15 disabled:opacity-50"
+    : "inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50";
   const darkButtonClass =
-    "inline-flex items-center justify-center gap-2 rounded-lg bg-slate-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50";
+    "inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50";
   const accentButtonClass =
-    "inline-flex items-center justify-center gap-2 rounded-lg bg-cyan-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-cyan-800 disabled:opacity-50";
+    "inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-cyan-800 disabled:opacity-50";
+  const heroClass = isDark
+    ? "overflow-hidden rounded-[28px] border border-white/10 bg-slate-950 text-white shadow-[0_28px_70px_rgba(2,6,23,0.24)]"
+    : "overflow-hidden rounded-[28px] border border-slate-200 bg-white text-slate-950 shadow-[0_18px_45px_rgba(15,23,42,0.08)]";
+  const heroBadgeClass = isDark
+    ? "inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100"
+    : "inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-900";
+  const heroSubtextClass = isDark ? "text-slate-300" : "text-slate-600";
+  const heroPrimaryButtonClass = isDark
+    ? "inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-50 disabled:opacity-60"
+    : "inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60";
+  const heroSecondaryButtonClass = isDark
+    ? "inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10"
+    : "inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50";
+  const summaryCards = [
+    {
+      label: "All quotes",
+      value: metrics.total,
+      icon: FileText,
+      card: isDark ? "border-cyan-300/20 bg-cyan-300/10" : "border-cyan-100 bg-cyan-50",
+      iconClass: isDark ? "text-cyan-200" : "text-cyan-700",
+    },
+    {
+      label: "Need routing",
+      value: metrics.unrouted,
+      icon: Route,
+      card: isDark ? "border-amber-300/20 bg-amber-300/10" : "border-amber-100 bg-amber-50",
+      iconClass: isDark ? "text-amber-200" : "text-amber-700",
+    },
+    {
+      label: "Blockers",
+      value: metrics.blockers,
+      icon: AlertTriangle,
+      card: isDark ? "border-rose-300/20 bg-rose-300/10" : "border-rose-100 bg-rose-50",
+      iconClass: isDark ? "text-rose-200" : "text-rose-700",
+    },
+    {
+      label: "Ready to print",
+      value: metrics.ready,
+      icon: CheckCircle2,
+      card: isDark ? "border-emerald-300/20 bg-emerald-300/10" : "border-emerald-100 bg-emerald-50",
+      iconClass: isDark ? "text-emerald-200" : "text-emerald-700",
+    },
+  ];
 
   return (
     <main className={pageClass}>
       <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-5 px-3 py-4 sm:px-6 lg:px-8">
-        <section className="overflow-hidden rounded-lg border border-slate-900 bg-slate-950 text-white shadow-[0_28px_70px_rgba(2,6,23,0.24)]">
+        <section className={heroClass}>
           <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_32rem] lg:p-7">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-lg border border-cyan-300/30 bg-cyan-300/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100">
+              <div className={heroBadgeClass}>
                 <ShieldCheck className="h-4 w-4" />
                 Production Manager
               </div>
-              <h1 className="mt-5 text-3xl font-semibold tracking-tight sm:text-5xl">
+              <h1 className="mt-5 text-3xl font-semibold tracking-tight sm:text-4xl">
                 {manager.name} command desk
               </h1>
-              <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-300 sm:text-base">
+              <p className={`mt-4 max-w-3xl text-sm leading-6 sm:text-base ${heroSubtextClass}`}>
                 Every quotation, partner handoff, blocker, and print-start decision in one serious daily workspace.
               </p>
               <div className="mt-6 flex flex-wrap gap-2">
@@ -309,12 +366,20 @@ export default function TanviDeskPage() {
                   type="button"
                   onClick={loadDesk}
                   disabled={loading}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-50 disabled:opacity-60"
+                  className={heroPrimaryButtonClass}
                 >
                   <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                   Refresh
                 </button>
-                <span className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setShowQueue((current) => !current)}
+                  className={heroSecondaryButtonClass}
+                >
+                  {showQueue ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showQueue ? "Hide quote list" : "Show quote list"}
+                </button>
+                <span className={heroSecondaryButtonClass}>
                   <Sparkles className="h-4 w-4 text-amber-300" />
                   Password protected
                 </span>
@@ -322,18 +387,13 @@ export default function TanviDeskPage() {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              {[
-                { label: "All quotes", value: metrics.total, icon: FileText, tone: "text-cyan-200" },
-                { label: "Need routing", value: metrics.unrouted, icon: Route, tone: "text-amber-200" },
-                { label: "Blockers", value: metrics.blockers, icon: AlertTriangle, tone: "text-rose-200" },
-                { label: "Ready to print", value: metrics.ready, icon: CheckCircle2, tone: "text-emerald-200" },
-              ].map(({ label, value, icon: Icon, tone }) => (
-                <div key={label} className="rounded-lg border border-white/10 bg-white/[0.06] p-4">
+              {summaryCards.map(({ label, value, icon: Icon, card, iconClass }) => (
+                <div key={label} className={`rounded-2xl border p-4 ${card}`}>
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                    <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
                       {label}
                     </p>
-                    <Icon className={`h-4 w-4 ${tone}`} />
+                    <Icon className={`h-4 w-4 ${iconClass}`} />
                   </div>
                   <div className="mt-3 text-3xl font-semibold">{value}</div>
                 </div>
@@ -343,32 +403,55 @@ export default function TanviDeskPage() {
         </section>
 
         {notice ? (
-          <div className="inline-flex w-fit items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800">
+          <div className="inline-flex w-fit items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800">
             <CheckCircle2 className="h-4 w-4" />
             {notice}
           </div>
         ) : null}
 
         {error ? (
-          <div className="inline-flex w-fit items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-800">
+          <div className="inline-flex w-fit items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-800">
             <AlertTriangle className="h-4 w-4" />
             {error}
           </div>
         ) : null}
 
-        <section className="grid gap-5 xl:grid-cols-[25rem_minmax(0,1fr)]">
-          <aside className={`${panelClass} overflow-hidden`}>
-            <div className="border-b border-slate-200/70 p-4">
-              <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-600">
+        <section className={showQueue ? "grid gap-5 xl:grid-cols-[25rem_minmax(0,1fr)]" : "grid gap-5"}>
+          {showQueue ? (
+            <aside className={`${panelClass} overflow-hidden`}>
+              <div className={`flex items-center justify-between gap-3 border-b p-4 ${dividerClass}`}>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
+                    Quote queue
+                  </p>
+                  <p className={`mt-1 text-sm ${mutedClass}`}>
+                    {filteredQuotes.length} in this view
+                  </p>
+                </div>
+                <button type="button" onClick={() => setShowQueue(false)} className={quietButtonClass}>
+                  <EyeOff className="h-4 w-4" />
+                  Focus
+                </button>
+              </div>
+              <div className={`border-b p-4 ${dividerClass}`}>
+              <label
+                className={`flex items-center gap-2 rounded-2xl border px-3 py-2 ${
+                  isDark
+                    ? "border-white/10 bg-slate-950 text-slate-300"
+                    : "border-slate-200 bg-white text-slate-600"
+                }`}
+              >
                 <Search className="h-4 w-4" />
                 <input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search quote, client, product"
-                  className="min-w-0 flex-1 bg-transparent text-sm text-slate-950 outline-none placeholder:text-slate-400"
+                  className={`min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400 ${
+                    isDark ? "text-slate-100" : "text-slate-950"
+                  }`}
                 />
               </label>
-              <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {[
                   ["all", "All", metrics.total],
                   ["unrouted", "Route", metrics.unrouted],
@@ -381,16 +464,26 @@ export default function TanviDeskPage() {
                     key={String(key)}
                     type="button"
                     onClick={() => setFilter(key as QueueFilter)}
-                    className={`rounded-lg border px-3 py-2 text-left text-xs font-semibold transition ${
+                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                       filter === key
-                        ? "border-slate-950 bg-slate-950 text-white"
+                        ? "border-cyan-700 bg-cyan-700 text-white"
                         : isDark
-                          ? "border-white/10 bg-white/10 text-slate-200"
+                          ? "border-white/10 bg-white/10 text-slate-200 hover:bg-white/15"
                           : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-white"
                     }`}
                   >
-                    <span className="block uppercase tracking-[0.12em]">{label as string}</span>
-                    <span className="mt-1 block text-lg">{String(count)}</span>
+                    <span className="uppercase tracking-[0.12em]">{label as string}</span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 ${
+                        filter === key
+                          ? "bg-white/20 text-white"
+                          : isDark
+                            ? "bg-slate-950 text-slate-200"
+                            : "bg-white text-slate-700"
+                      }`}
+                    >
+                      {String(count)}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -406,7 +499,7 @@ export default function TanviDeskPage() {
                         key={quote.id}
                         type="button"
                         onClick={() => setSelectedId(quote.id)}
-                        className={`w-full rounded-lg border p-3 text-left transition ${
+                        className={`w-full rounded-2xl border p-3 text-left transition ${
                           active
                             ? "border-cyan-500 bg-cyan-50 text-slate-950 shadow-sm"
                             : isDark
@@ -438,12 +531,13 @@ export default function TanviDeskPage() {
                   })}
                 </div>
               ) : (
-                <div className={`rounded-lg border border-dashed p-8 text-center text-sm ${mutedClass}`}>
+                <div className={`rounded-2xl border border-dashed p-8 text-center text-sm ${mutedClass}`}>
                   No quotations match this view.
                 </div>
               )}
             </div>
           </aside>
+          ) : null}
 
           {selected ? (
             <section className="grid gap-5">
@@ -463,16 +557,16 @@ export default function TanviDeskPage() {
                     </div>
                   </div>
                   <div className="grid gap-2 sm:min-w-[24rem] sm:grid-cols-2">
-                    <span className={`rounded-lg border px-3 py-2 text-xs font-semibold ${statusTone(selected.partner.requestStatus)}`}>
+                    <span className={`rounded-xl border px-3 py-2 text-xs font-semibold ${statusTone(selected.partner.requestStatus)}`}>
                       Partner: {PARTNER_DECISION_LABELS[selected.partner.requestStatus]}
                     </span>
-                    <span className={`rounded-lg border px-3 py-2 text-xs font-semibold ${statusTone(selected.partner.clientStatus)}`}>
+                    <span className={`rounded-xl border px-3 py-2 text-xs font-semibold ${statusTone(selected.partner.clientStatus)}`}>
                       Client: {PARTNER_CLIENT_STATUS_LABELS[selected.partner.clientStatus]}
                     </span>
-                    <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+                    <span className={neutralBadgeClass}>
                       Production: {PARTNER_PRODUCTION_STATUS_LABELS[selected.partner.productionStatus]}
                     </span>
-                    <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700">
+                    <span className={neutralBadgeClass}>
                       Total: {formatMoney(selected.total, selected.currency)}
                     </span>
                   </div>
@@ -489,11 +583,11 @@ export default function TanviDeskPage() {
                     ["Route", selected.partner.visibleLabel],
                     ["Updated", formatRelative(selected.updatedAt)],
                   ].map(([label, value]) => (
-                    <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    <div key={label} className={`${subtleCardClass} px-3 py-3`}>
+                      <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
                         {label}
                       </p>
-                      <p className="mt-1 truncate text-sm font-semibold text-slate-900">
+                      <p className={`mt-1 truncate text-sm font-semibold ${strongTextClass}`}>
                         {value}
                       </p>
                     </div>
@@ -558,7 +652,7 @@ export default function TanviDeskPage() {
                   </div>
 
                   <div className="mt-5 grid gap-4 xl:grid-cols-2">
-                    <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    <label className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
                       Print placement
                       <select
                         value={printPlacement}
@@ -575,7 +669,7 @@ export default function TanviDeskPage() {
                       </select>
                     </label>
 
-                    <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    <label className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
                       Client status
                       <select
                         value={selected.partner.clientStatus}
@@ -599,16 +693,18 @@ export default function TanviDeskPage() {
                   </div>
 
                   <div className="mt-5">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
                       Fields shared with partners
                     </p>
                     <div className="mt-3 grid gap-2 sm:grid-cols-2">
                       {PARTNER_VISIBLE_FIELD_OPTIONS.map((field) => (
                         <label
                           key={field.key}
-                          className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2 text-sm transition ${
+                          className={`flex cursor-pointer items-start gap-3 rounded-2xl border px-3 py-2 text-sm transition ${
                             visibleFields.includes(field.key)
-                              ? "border-cyan-300 bg-cyan-50 text-cyan-950"
+                              ? isDark
+                                ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-100"
+                                : "border-cyan-300 bg-cyan-50 text-cyan-950"
                               : isDark
                                 ? "border-white/10 bg-slate-950 text-slate-200"
                                 : "border-slate-200 bg-white text-slate-700"
@@ -642,28 +738,28 @@ export default function TanviDeskPage() {
                   </div>
 
                   <div className="mt-5 space-y-3">
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    <div className={`${subtleCardClass} p-3`}>
+                      <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
                         Missing information
                       </p>
-                      <p className="mt-2 whitespace-pre-wrap text-sm font-medium text-slate-900">
+                      <p className={`mt-2 whitespace-pre-wrap text-sm font-medium ${strongTextClass}`}>
                         {selected.partner.missingInformation || "No blocker from partner."}
                       </p>
                     </div>
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    <div className={`${subtleCardClass} p-3`}>
+                      <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
                         Partner comments
                       </p>
-                      <p className="mt-2 whitespace-pre-wrap text-sm font-medium text-slate-900">
+                      <p className={`mt-2 whitespace-pre-wrap text-sm font-medium ${strongTextClass}`}>
                         {selected.partner.comments || "No comments yet."}
                       </p>
                     </div>
                     {selected.notes ? (
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                      <div className={`${subtleCardClass} p-3`}>
+                        <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
                           Client notes
                         </p>
-                        <p className="mt-2 whitespace-pre-wrap text-sm font-medium text-slate-900">
+                        <p className={`mt-2 whitespace-pre-wrap text-sm font-medium ${strongTextClass}`}>
                           {selected.notes}
                         </p>
                       </div>
@@ -673,14 +769,14 @@ export default function TanviDeskPage() {
                   <div className="mt-5 space-y-2">
                     {selected.partner.responses.length ? (
                       selected.partner.responses.map((response) => (
-                        <div key={response.partnerId} className="rounded-lg border border-slate-200 bg-white p-3">
+                        <div key={response.partnerId} className={`${elevatedCardClass} p-3`}>
                           <div className="flex items-center justify-between gap-3">
-                            <p className="font-semibold text-slate-950">{response.partnerName}</p>
+                            <p className={`font-semibold ${strongTextClass}`}>{response.partnerName}</p>
                             <span className={`rounded-md border px-2 py-1 text-[11px] font-semibold ${statusTone(response.requestStatus)}`}>
                               {PARTNER_DECISION_LABELS[response.requestStatus]}
                             </span>
                           </div>
-                          <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-slate-600">
+                          <div className={`mt-3 grid grid-cols-3 gap-2 text-xs ${mutedClass}`}>
                             <span>{response.completionDays ? `${response.completionDays} days` : "Days n/a"}</span>
                             <span>{response.price ? `Rs ${response.price}` : "Price n/a"}</span>
                             <span>{formatRelative(response.updatedAt)}</span>
