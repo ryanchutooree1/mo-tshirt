@@ -5,10 +5,15 @@ import {
   AlertTriangle,
   CheckCircle2,
   CircleDollarSign,
+  ClipboardCheck,
   Clock3,
+  Download,
   Eye,
   EyeOff,
+  ExternalLink,
   FileText,
+  Image as ImageIcon,
+  LockKeyhole,
   RefreshCw,
   Route,
   Search,
@@ -33,7 +38,7 @@ import {
   type PrintPartner,
   type ProductionManager,
 } from "@/lib/partners";
-import type { TanviQuoteSummary } from "@/lib/tanvi-quotes";
+import type { TanviArtworkAttachment, TanviQuoteSummary } from "@/lib/tanvi-quotes";
 
 type DeskPayload = {
   manager: ProductionManager;
@@ -42,6 +47,7 @@ type DeskPayload = {
 };
 
 type QueueFilter = "all" | "unrouted" | "waiting" | "blocked" | "ready" | "active";
+type WorkflowTone = "success" | "warning" | "danger" | "info" | "neutral";
 
 const defaultManager: ProductionManager = {
   name: "Tanvi",
@@ -65,6 +71,12 @@ function formatRelative(value: string | null) {
 function formatMoney(value: number | null, currency: string) {
   if (!value) return "Not set";
   return `${currency || "Rs"} ${value.toLocaleString("en-MU")}`;
+}
+
+function formatFileSize(value: number | null) {
+  if (!value) return "";
+  if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function quoteNeedsRouting(quote: TanviQuoteSummary) {
@@ -130,6 +142,40 @@ function statusTone(value: string) {
     return "border-rose-200 bg-rose-50 text-rose-800";
   }
   return "border-slate-200 bg-slate-50 text-slate-700";
+}
+
+function getArtworkDownloadHref(attachment: TanviArtworkAttachment, index: number) {
+  if (!attachment.url) return "";
+
+  const params = new URLSearchParams({
+    url: attachment.url,
+    name: attachment.filename || attachment.label || `artwork-${index + 1}`,
+  });
+
+  return `/api/shops/download?${params.toString()}`;
+}
+
+function isArtworkImage(attachment: TanviArtworkAttachment) {
+  const contentType = attachment.contentType.toLowerCase();
+  const filename = attachment.filename.toLowerCase();
+  return Boolean(
+    attachment.url &&
+      (contentType.startsWith("image/") ||
+        [".png", ".jpg", ".jpeg", ".webp", ".gif"].some((suffix) =>
+          filename.endsWith(suffix)
+        ))
+  );
+}
+
+function isArtworkPdf(attachment: TanviArtworkAttachment) {
+  const contentType = attachment.contentType.toLowerCase();
+  const filename = attachment.filename.toLowerCase();
+  return Boolean(
+    attachment.url &&
+      (contentType === "application/pdf" ||
+        contentType.includes("pdf") ||
+        filename.endsWith(".pdf"))
+  );
 }
 
 export default function TanviDeskPage() {
@@ -314,6 +360,23 @@ export default function TanviDeskPage() {
   const heroSecondaryButtonClass = isDark
     ? "inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10"
     : "inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50";
+  const workflowToneClass: Record<WorkflowTone, string> = {
+    success: isDark
+      ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-100"
+      : "border-emerald-200 bg-emerald-50 text-emerald-900",
+    warning: isDark
+      ? "border-amber-300/25 bg-amber-300/10 text-amber-100"
+      : "border-amber-200 bg-amber-50 text-amber-900",
+    danger: isDark
+      ? "border-rose-300/25 bg-rose-300/10 text-rose-100"
+      : "border-rose-200 bg-rose-50 text-rose-900",
+    info: isDark
+      ? "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"
+      : "border-cyan-200 bg-cyan-50 text-cyan-900",
+    neutral: isDark
+      ? "border-white/10 bg-slate-950/60 text-slate-200"
+      : "border-slate-200 bg-slate-50 text-slate-800",
+  };
   const summaryCards = [
     {
       label: "All quotes",
@@ -344,6 +407,99 @@ export default function TanviDeskPage() {
       iconClass: isDark ? "text-emerald-200" : "text-emerald-700",
     },
   ];
+  const selectedHasArtwork = Boolean(selected?.artwork.length);
+  const selectedHasOpenArtwork = Boolean(selected?.hasOpenArtwork);
+  const selectedHasOffer = Boolean(selected?.partner.completionDays && selected.partner.price);
+  const selectedCanPrint = Boolean(
+    selected?.partner.requestStatus === "accepted" &&
+      selected.partner.clientStatus === "confirmed_half_payment"
+  );
+  const selectedWorkflow: Array<{
+    title: string;
+    value: string;
+    helper: string;
+    icon: typeof ImageIcon;
+    tone: WorkflowTone;
+  }> = selected
+    ? [
+        {
+          title: "Artwork",
+          value: selectedHasOpenArtwork
+            ? "Open and judge"
+            : selectedHasArtwork
+              ? "Email-only"
+              : "Missing",
+          helper: selectedHasOpenArtwork
+            ? "Review logo quality before routing."
+            : selectedHasArtwork
+              ? "Ask Ryan to re-upload so partners can open it."
+              : "Ask for logo before assigning production.",
+          icon: ImageIcon,
+          tone: selectedHasOpenArtwork
+            ? "success"
+            : selectedHasArtwork
+              ? "warning"
+              : "danger",
+        },
+        {
+          title: "Route",
+          value: selected.partner.visibleTo.length ? selected.partner.visibleLabel : "Choose partner",
+          helper: "Send to the desk that fits the artwork and method.",
+          icon: Route,
+          tone: selected.partner.visibleTo.length ? "success" : "warning",
+        },
+        {
+          title: "Partner reply",
+          value: PARTNER_DECISION_LABELS[selected.partner.requestStatus],
+          helper:
+            selected.partner.requestStatus === "needs_info"
+              ? "Clear the blocker before print."
+              : "Track accept, reject, or waiting.",
+          icon:
+            selected.partner.requestStatus === "needs_info"
+              ? AlertTriangle
+              : selected.partner.requestStatus === "accepted"
+                ? CheckCircle2
+                : Clock3,
+          tone:
+            selected.partner.requestStatus === "accepted"
+              ? "success"
+              : selected.partner.requestStatus === "needs_info"
+                ? "warning"
+                : selected.partner.requestStatus === "rejected"
+                  ? "danger"
+                  : "neutral",
+        },
+        {
+          title: "Days + price",
+          value: selectedHasOffer
+            ? `${selected.partner.completionDays}d / ${formatMoney(selected.partner.price, selected.currency)}`
+            : "Needed",
+          helper: "Needed before Ryan can confirm the client.",
+          icon: CircleDollarSign,
+          tone: selectedHasOffer ? "success" : "neutral",
+        },
+        {
+          title: "Client",
+          value: PARTNER_CLIENT_STATUS_LABELS[selected.partner.clientStatus],
+          helper: "Tanvi keeps approval and half payment visible.",
+          icon: ClipboardCheck,
+          tone:
+            selected.partner.clientStatus === "confirmed_half_payment"
+              ? "success"
+              : selected.partner.clientStatus === "changes_needed"
+                ? "warning"
+                : "neutral",
+        },
+        {
+          title: "Print start",
+          value: selectedCanPrint ? "Tanvi gate" : "Do not print",
+          helper: "Ask Tanvi before any print work starts.",
+          icon: LockKeyhole,
+          tone: selectedCanPrint ? "info" : "neutral",
+        },
+      ]
+    : [];
 
   return (
     <main className={pageClass}>
@@ -595,12 +751,182 @@ export default function TanviDeskPage() {
                 </div>
               </div>
 
+              <div className={`${panelClass} overflow-hidden`}>
+                <div className={`flex flex-wrap items-center justify-between gap-3 border-b p-5 ${dividerClass}`}>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
+                      Production protocol
+                    </p>
+                    <h3 className="mt-1 text-xl font-semibold tracking-tight">
+                      {selected.code} fast path
+                    </h3>
+                  </div>
+                  <span
+                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                      selectedCanPrint
+                        ? workflowToneClass.info
+                        : selectedHasOpenArtwork && selected.partner.visibleTo.length
+                          ? workflowToneClass.success
+                          : workflowToneClass.warning
+                    }`}
+                  >
+                    {selectedCanPrint
+                      ? "Tanvi print gate"
+                      : selectedHasOpenArtwork && selected.partner.visibleTo.length
+                        ? "Moving"
+                        : "Needs decision"}
+                  </span>
+                </div>
+                <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+                  {selectedWorkflow.map((step, index) => {
+                    const StepIcon = step.icon;
+                    return (
+                      <div
+                        key={step.title}
+                        className={`rounded-2xl border p-4 ${workflowToneClass[step.tone]}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/70 text-current">
+                            <StepIcon className="h-5 w-5" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em]">
+                              Step {index + 1}
+                            </p>
+                            <h4 className="mt-1 text-sm font-semibold text-current">
+                              {step.title}
+                            </h4>
+                            <p className="mt-2 text-sm font-semibold">
+                              {step.value}
+                            </p>
+                            <p className="mt-2 text-xs leading-5 opacity-75">
+                              {step.helper}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className={`${panelClass} overflow-hidden`}>
+                <div className={`flex flex-wrap items-start justify-between gap-3 border-b p-5 ${dividerClass}`}>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
+                      Step 1 - Artwork / logo
+                    </p>
+                    <h3 className="mt-1 text-xl font-semibold tracking-tight">
+                      Judge the artwork before routing
+                    </h3>
+                    <p className={`mt-2 max-w-3xl text-sm leading-6 ${mutedClass}`}>
+                      Tanvi can open the files, inspect the logo size and detail, then send the order to the best production desk.
+                    </p>
+                  </div>
+                  <span className={neutralBadgeClass}>
+                    {selected.artworkCount ? `${selected.artworkCount} file(s)` : "No file"}
+                  </span>
+                </div>
+
+                {selected.artwork.length ? (
+                  <div className="grid gap-4 p-4 lg:grid-cols-2">
+                    {selected.artwork.map((attachment, index) => {
+                      const isImage = isArtworkImage(attachment);
+                      const isPdf = isArtworkPdf(attachment);
+                      const downloadHref = getArtworkDownloadHref(attachment, index);
+                      return (
+                        <article key={`${attachment.url || attachment.filename}-${index}`} className={`${elevatedCardClass} overflow-hidden`}>
+                          <div className={`flex flex-wrap items-start justify-between gap-3 border-b p-4 ${dividerClass}`}>
+                            <div className="min-w-0">
+                              <p className={`truncate text-base font-semibold ${strongTextClass}`}>
+                                {attachment.filename}
+                              </p>
+                              <p className={`mt-1 text-xs ${mutedClass}`}>
+                                {attachment.label}
+                                {attachment.quantity ? ` - Qty ${attachment.quantity}` : ""}
+                                {formatFileSize(attachment.size) ? ` - ${formatFileSize(attachment.size)}` : ""}
+                              </p>
+                            </div>
+                            {attachment.url ? (
+                              <div className="flex shrink-0 items-center gap-2">
+                                <a
+                                  href={attachment.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={quietButtonClass}
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                  Open
+                                </a>
+                                <a
+                                  href={downloadHref}
+                                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
+                                  aria-label={`Download ${attachment.filename || "artwork"}`}
+                                  title="Download artwork"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </a>
+                              </div>
+                            ) : null}
+                          </div>
+
+                          {isImage ? (
+                            <div className="bg-white p-3">
+                              <img
+                                src={attachment.url}
+                                alt={attachment.filename}
+                                className="h-[22rem] w-full rounded-2xl border border-slate-200 bg-white object-contain sm:h-[28rem]"
+                                loading="lazy"
+                              />
+                            </div>
+                          ) : isPdf ? (
+                            <div className="bg-white p-3">
+                              <iframe
+                                src={attachment.url}
+                                title={`Preview ${attachment.filename || "PDF artwork"}`}
+                                className="h-[28rem] w-full rounded-2xl border border-slate-200 bg-white"
+                              />
+                            </div>
+                          ) : attachment.url ? (
+                            <div className="p-4">
+                              <div className={`grid min-h-48 place-items-center text-center ${subtleCardClass} p-6`}>
+                                <div>
+                                  <FileText className="mx-auto h-8 w-8 text-cyan-700" />
+                                  <p className={`mt-3 text-sm font-semibold ${strongTextClass}`}>
+                                    Preview unavailable
+                                  </p>
+                                  <p className={`mt-1 text-xs ${mutedClass}`}>
+                                    Open the file to inspect this artwork.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-4">
+                              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
+                                Email-only artwork. Ask Ryan to re-upload it in Quotation Approval so Tanvi and the partner can open it here.
+                              </div>
+                            </div>
+                          )}
+                        </article>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-4">
+                    <div className="rounded-2xl border border-dashed border-amber-200 bg-amber-50 px-5 py-8 text-center text-sm font-semibold text-amber-900">
+                      No artwork shared yet. Tanvi should not move this to print until Ryan gets the logo from the client.
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(22rem,0.9fr)]">
                 <div className={`${panelClass} p-5`}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
-                        Route order
+                        Step 2 - Route order
                       </p>
                       <h3 className="mt-2 text-xl font-semibold">Choose the production desk</h3>
                     </div>
@@ -730,7 +1056,7 @@ export default function TanviDeskPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
-                        Follow-up
+                        Step 3 - Follow-up
                       </p>
                       <h3 className="mt-2 text-xl font-semibold">Status and partner answers</h3>
                     </div>

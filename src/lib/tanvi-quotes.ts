@@ -28,6 +28,7 @@ type FirestoreTimestampLike = {
 type RawAttachment = {
   label?: unknown;
   description?: unknown;
+  quantity?: unknown;
   filename?: unknown;
   contentType?: unknown;
   size?: unknown;
@@ -78,6 +79,16 @@ export type TanviPartnerResponse = {
   updatedAt: string | null;
 };
 
+export type TanviArtworkAttachment = {
+  label: string;
+  description: string;
+  quantity: string;
+  filename: string;
+  contentType: string;
+  size: number | null;
+  url: string;
+};
+
 export type TanviQuotePartner = {
   id: PrintPartnerId | null;
   name: string;
@@ -119,6 +130,7 @@ export type TanviQuoteSummary = {
   notes: string;
   currency: string;
   total: number | null;
+  artwork: TanviArtworkAttachment[];
   artworkCount: number;
   hasOpenArtwork: boolean;
   hasEmailOnlyArtwork: boolean;
@@ -309,6 +321,21 @@ function getAttachments(quote: RawQuote) {
   );
 }
 
+function sanitizeArtwork(attachments: RawAttachment[]): TanviArtworkAttachment[] {
+  return attachments.map((attachment, index) => {
+    const label = safeString(attachment.label) || safeString(attachment.description);
+    return {
+      label: label || `Artwork ${index + 1}`,
+      description: safeString(attachment.description),
+      quantity: safeString(attachment.quantity),
+      filename: safeString(attachment.filename) || label || `artwork-${index + 1}`,
+      contentType: safeString(attachment.contentType),
+      size: safeNumber(attachment.size, 0) > 0 ? safeNumber(attachment.size, 0) : null,
+      url: safeString(attachment.url),
+    };
+  });
+}
+
 function getDesignBrief(quote: RawQuote) {
   return quote.designBrief && typeof quote.designBrief === "object" && !Array.isArray(quote.designBrief)
     ? quote.designBrief
@@ -397,6 +424,7 @@ export function mapTanviQuote(
       safeString(quote.message),
     currency: safeString(quote.quote?.currency) || "Rs",
     total: total > 0 ? total : null,
+    artwork: sanitizeArtwork(attachments),
     artworkCount: attachments.length,
     hasOpenArtwork: attachments.some((attachment) => Boolean(safeString(attachment.url))),
     hasEmailOnlyArtwork: attachments.some((attachment) => !safeString(attachment.url)),
