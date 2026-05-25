@@ -25,6 +25,11 @@ type PartnerLoginPayload = {
   path: string;
 };
 
+type ManagerLoginPayload = {
+  displayName: string;
+  path: "/admin/tanvi";
+};
+
 function isPartnerLoginPayload(value: unknown): value is PartnerLoginPayload {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<PartnerLoginPayload>;
@@ -37,6 +42,13 @@ function isPartnerLoginPayload(value: unknown): value is PartnerLoginPayload {
       candidate.path === "/admin/shab_list" ||
       candidate.path.startsWith("/admin/partners/"))
   );
+}
+
+function isManagerLoginPayload(value: unknown): value is ManagerLoginPayload {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<ManagerLoginPayload>;
+
+  return candidate.path === "/admin/tanvi" && typeof candidate.displayName === "string";
 }
 
 function LoginInner() {
@@ -69,6 +81,12 @@ function LoginInner() {
       if (isPartnerLoginPayload(data?.partner)) {
         await signOutAdminFromFirebase().catch(() => null);
         router.push(data.partner.path);
+        return;
+      }
+
+      if (isManagerLoginPayload(data?.manager)) {
+        await signOutAdminFromFirebase().catch(() => null);
+        router.push(data.manager.path);
         return;
       }
 
@@ -138,7 +156,7 @@ function LoginInner() {
               <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={120} height={48} className="h-12 w-auto" />
               <h1 className="mt-6 text-2xl font-semibold tracking-tight">Admin Access</h1>
               <p className="mt-2 text-sm text-neutral-600">
-                Use the owner password, a team account, or a partner password.
+                Use the owner password, a team account, a partner password, or Tanvi&apos;s manager password.
               </p>
             </div>
 

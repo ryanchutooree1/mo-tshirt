@@ -11,7 +11,15 @@ import {
   clearPartnerSessionCookie,
   createPartnerSessionToken,
 } from "@/lib/partner-auth";
-import { getPartnerByPassword } from "@/lib/partner-registry";
+import {
+  getPartnerByPassword,
+  getProductionManager,
+} from "@/lib/partner-registry";
+import {
+  PRODUCTION_MANAGER_ALLOWED_PAGES,
+  PRODUCTION_MANAGER_PATH,
+  verifyProductionManagerPassword,
+} from "@/lib/production-manager-auth";
 import { isContentLengthWithinLimit, isRequestOriginAllowed } from "@/lib/request-safety";
 
 const MAX_LOGIN_REQUEST_BYTES = 2_048;
@@ -35,6 +43,35 @@ export async function POST(req: Request) {
 
     if (password.length > MAX_PASSWORD_LENGTH || email.length > MAX_EMAIL_LENGTH) {
       return NextResponse.json({ error: "Invalid password." }, { status: 400 });
+    }
+
+    if (verifyProductionManagerPassword(password)) {
+      const manager = await getProductionManager();
+      const sessionToken = await createAdminSessionToken({
+        userId: "production-manager",
+        displayName: manager.name || "Tanvi",
+        email: email || manager.email || "tanvi@mo.local",
+        allowedPages: PRODUCTION_MANAGER_ALLOWED_PAGES,
+        isOwner: false,
+      });
+
+      if (!sessionToken) {
+        return NextResponse.json(
+          { error: "Server is missing ADMIN session secret." },
+          { status: 500 }
+        );
+      }
+
+      const res = NextResponse.json({
+        ok: true,
+        manager: {
+          displayName: manager.name || "Tanvi",
+          path: PRODUCTION_MANAGER_PATH,
+        },
+      });
+      applyAdminSessionCookie(res, sessionToken);
+      clearPartnerSessionCookie(res);
+      return res;
     }
 
     const partner = await getPartnerByPassword(password);

@@ -8,6 +8,7 @@ export type AdminPagePath =
   | "/admin/ready-made-uniforms"
   | "/admin/inventory"
   | "/admin/quotation-approval"
+  | "/admin/tanvi"
   | "/admin/partners"
   | "/admin/design-studio"
   | "/admin/background-remover"
@@ -107,6 +108,12 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
     label: "Quotation / Invoice",
     description: "Quotes, invoices, and artwork follow-up.",
     group: "Sales",
+  },
+  {
+    path: "/admin/tanvi",
+    label: "Tanvi Desk",
+    description: "Production manager routing, blockers, and partner follow-up.",
+    group: "Operations",
   },
   {
     path: "/admin/partners",
@@ -347,6 +354,7 @@ export const DEFAULT_TOP_NAV_PATHS: AdminPagePath[] = [
   "/admin/shops",
   "/admin/ready-made-uniforms",
   "/admin/quotation-approval",
+  "/admin/tanvi",
   "/admin/design-studio",
   "/admin/background-remover",
   "/admin/analytics",
@@ -425,6 +433,7 @@ export function resolveAdminPagePath(pathname: string) {
 }
 
 export function resolveAdminApiPermission(pathname: string) {
+  if (pathname.startsWith("/api/admin/tanvi")) return "/admin/tanvi" as AdminPagePath;
   if (pathname.startsWith("/api/admin/settings")) return "/admin/settings" as AdminPagePath;
   if (pathname.startsWith("/api/admin/partners")) return "/admin/partners" as AdminPagePath;
   if (pathname.startsWith("/api/admin/ai-assistant")) return "/admin/ai-assistant" as AdminPagePath;

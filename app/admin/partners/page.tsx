@@ -424,17 +424,39 @@ export default function AdminPartnersPage() {
                 This manager sees Quotation / Invoice, decides which partner receives each
                 order, and tracks partner blockers before print work starts.
               </p>
-              <Link
-                href="/admin/quotation-approval"
-                className={`mt-4 inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-semibold transition ${
-                  isDark
-                    ? "border-white/10 bg-white/10 text-slate-100 hover:bg-white/15"
-                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                Open Quotation / Invoice
-                <ExternalLink className="h-3.5 w-3.5" />
-              </Link>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link
+                  href="/admin/tanvi"
+                  className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-semibold transition ${
+                    isDark
+                      ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-100 hover:bg-cyan-300/15"
+                      : "border-cyan-200 bg-cyan-50 text-cyan-900 hover:bg-cyan-100"
+                  }`}
+                >
+                  Open Tanvi desk
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </Link>
+                <Link
+                  href="/admin/quotation-approval"
+                  className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-semibold transition ${
+                    isDark
+                      ? "border-white/10 bg-white/10 text-slate-100 hover:bg-white/15"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  Open Quotation / Invoice
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </Link>
+                <span
+                  className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-semibold ${
+                    isDark
+                      ? "border-white/10 bg-slate-950 text-slate-300"
+                      : "border-slate-200 bg-slate-50 text-slate-600"
+                  }`}
+                >
+                  Password: Tuffy
+                </span>
+              </div>
             </div>
 
             <div className="grid w-full gap-3 lg:max-w-xl lg:grid-cols-2">
