@@ -16,6 +16,7 @@ import {
   LockKeyhole,
   RefreshCw,
   Route,
+  Save,
   Search,
   Send,
   ShieldCheck,
@@ -189,6 +190,7 @@ export default function TanviDeskPage() {
   const [search, setSearch] = useState("");
   const [visibleFields, setVisibleFields] = useState<PartnerVisibleField[]>([]);
   const [printPlacement, setPrintPlacement] = useState<PartnerPrintPlacement>("not_set");
+  const [partnerPriceDrafts, setPartnerPriceDrafts] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -268,7 +270,16 @@ export default function TanviDeskPage() {
     if (!selected) return;
     setVisibleFields(selected.partner.visibleFields);
     setPrintPlacement(selected.partner.printPlacement);
-  }, [selected]);
+    setPartnerPriceDrafts(
+      activePartners.reduce<Record<string, string>>((drafts, partner) => {
+        const response = selected.partner.responses.find(
+          (entry) => entry.partnerId === partner.id
+        );
+        drafts[partner.id] = response?.price ? String(response.price) : "";
+        return drafts;
+      }, {})
+    );
+  }, [activePartners, selected]);
 
   function replaceQuote(quote: TanviQuoteSummary) {
     setQuotes((current) =>
@@ -284,6 +295,7 @@ export default function TanviDeskPage() {
       visibleFields?: PartnerVisibleField[];
       printPlacement?: PartnerPrintPlacement;
       clientStatus?: PartnerClientStatus;
+      partnerPrices?: Record<string, { price: number | null }>;
     },
     label: string
   ) {
@@ -423,6 +435,13 @@ export default function TanviDeskPage() {
   }> = selected
     ? [
         {
+          title: "Client onboarding",
+          value: selected.phone || selected.email ? "Contact ready" : "Contact missing",
+          helper: "Confirm client, product, quantity, deadline, and contact details.",
+          icon: ClipboardCheck,
+          tone: selected.phone || selected.email ? "success" : "warning",
+        },
+        {
           title: "Artwork",
           value: selectedHasOpenArtwork
             ? "Open and judge"
@@ -442,48 +461,21 @@ export default function TanviDeskPage() {
               : "danger",
         },
         {
-          title: "Route",
-          value: selected.partner.visibleTo.length ? selected.partner.visibleLabel : "Choose partner",
-          helper: "Send to the desk that fits the artwork and method.",
-          icon: Route,
-          tone: selected.partner.visibleTo.length ? "success" : "warning",
-        },
-        {
-          title: "Partner reply",
-          value: PARTNER_DECISION_LABELS[selected.partner.requestStatus],
-          helper:
-            selected.partner.requestStatus === "needs_info"
-              ? "Clear the blocker before print."
-              : "Track accept, reject, or waiting.",
-          icon:
-            selected.partner.requestStatus === "needs_info"
-              ? AlertTriangle
-              : selected.partner.requestStatus === "accepted"
-                ? CheckCircle2
-                : Clock3,
-          tone:
-            selected.partner.requestStatus === "accepted"
-              ? "success"
-              : selected.partner.requestStatus === "needs_info"
-                ? "warning"
-                : selected.partner.requestStatus === "rejected"
-                  ? "danger"
-                  : "neutral",
-        },
-        {
-          title: "Days + price",
+          title: "Route + prices",
           value: selectedHasOffer
-            ? `${selected.partner.completionDays}d / ${formatMoney(selected.partner.price, selected.currency)}`
-            : "Needed",
-          helper: "Needed before Ryan can confirm the client.",
+            ? formatMoney(selected.partner.price, selected.currency)
+            : selected.partner.visibleTo.length
+              ? selected.partner.visibleLabel
+              : "Choose partner",
+          helper: "Compare partner prices, set placement, then move the order.",
           icon: CircleDollarSign,
-          tone: selectedHasOffer ? "success" : "neutral",
+          tone: selected.partner.visibleTo.length || selectedHasOffer ? "success" : "warning",
         },
         {
-          title: "Client",
+          title: "Client approval",
           value: PARTNER_CLIENT_STATUS_LABELS[selected.partner.clientStatus],
           helper: "Tanvi keeps approval and half payment visible.",
-          icon: ClipboardCheck,
+          icon: Clock3,
           tone:
             selected.partner.clientStatus === "confirmed_half_payment"
               ? "success"
@@ -497,6 +489,17 @@ export default function TanviDeskPage() {
           helper: "Ask Tanvi before any print work starts.",
           icon: LockKeyhole,
           tone: selectedCanPrint ? "info" : "neutral",
+        },
+        {
+          title: "Production status",
+          value: PARTNER_PRODUCTION_STATUS_LABELS[selected.partner.productionStatus],
+          helper: "Keep the live order status clean after print approval.",
+          icon: CheckCircle2,
+          tone:
+            selected.partner.productionStatus === "completed" ||
+            selected.partner.productionStatus === "ryan_to_collect"
+              ? "success"
+              : "neutral",
         },
       ]
     : [];
@@ -814,7 +817,75 @@ export default function TanviDeskPage() {
                 <div className={`flex flex-wrap items-start justify-between gap-3 border-b p-5 ${dividerClass}`}>
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
-                      Step 1 - Artwork / logo
+                      Step 1 - Client onboarding
+                    </p>
+                    <h3 className="mt-1 text-xl font-semibold tracking-tight">
+                      Know who this order belongs to
+                    </h3>
+                    <p className={`mt-2 max-w-3xl text-sm leading-6 ${mutedClass}`}>
+                      Tanvi checks the client, contact details, garment, quantity, deadline, and notes before touching production.
+                    </p>
+                  </div>
+                  <span
+                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                      selected.phone || selected.email
+                        ? workflowToneClass.success
+                        : workflowToneClass.warning
+                    }`}
+                  >
+                    {selected.phone || selected.email ? "Client reachable" : "Need contact"}
+                  </span>
+                </div>
+                <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.7fr)]">
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {[
+                      ["Client", selected.clientName],
+                      ["Company", selected.clientCompany || "Not set"],
+                      ["Phone", selected.phone || "Not set"],
+                      ["Email", selected.email || "Not set"],
+                      ["Source", selected.source],
+                      ["Created", formatDateTime(selected.createdAt)],
+                      ["Product", selected.product],
+                      ["Garments", selected.garmentSummary],
+                      ["Quantity", selected.pieces ? `${selected.pieces} pcs` : "Not set"],
+                      ["Colours", selected.colors.length ? selected.colors.join(", ") : "Not set"],
+                      ["Print method", selected.printMethod],
+                      ["Deadline", selected.deadline],
+                    ].map(([label, value]) => (
+                      <div key={label} className={`${subtleCardClass} px-3 py-3`}>
+                        <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                          {label}
+                        </p>
+                        <p className={`mt-1 break-words text-sm font-semibold ${strongTextClass}`}>
+                          {value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className={`${subtleCardClass} p-4`}>
+                    <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                      Client notes
+                    </p>
+                    <p className={`mt-3 whitespace-pre-wrap text-sm font-medium leading-6 ${strongTextClass}`}>
+                      {selected.notes || "No client notes shared."}
+                    </p>
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <span className={neutralBadgeClass}>
+                        Quote total: {formatMoney(selected.total, selected.currency)}
+                      </span>
+                      <span className={neutralBadgeClass}>
+                        Route: {selected.partner.visibleLabel}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className={`${panelClass} overflow-hidden`}>
+                <div className={`flex flex-wrap items-start justify-between gap-3 border-b p-5 ${dividerClass}`}>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
+                      Step 2 - Artwork / logo
                     </p>
                     <h3 className="mt-1 text-xl font-semibold tracking-tight">
                       Judge the artwork before routing
@@ -926,55 +997,11 @@ export default function TanviDeskPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
-                        Step 2 - Route order
+                        Step 3 - Route, placement, partner prices
                       </p>
-                      <h3 className="mt-2 text-xl font-semibold">Choose the production desk</h3>
+                      <h3 className="mt-2 text-xl font-semibold">Compare partners and move the order</h3>
                     </div>
                     <Route className="h-5 w-5 text-cyan-700" />
-                  </div>
-
-                  <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                    {activePartners.map((partner) => (
-                      <button
-                        key={partner.id}
-                        type="button"
-                        disabled={Boolean(saving)}
-                        onClick={() =>
-                          updateQuote(
-                            selected,
-                            {
-                              partnerIds: [partner.id],
-                              visibleFields,
-                              printPlacement,
-                            },
-                            partner.id
-                          )
-                        }
-                        className={partner.id === activePartners[0]?.id ? accentButtonClass : darkButtonClass}
-                      >
-                        <Send className="h-4 w-4" />
-                        {saving === partner.id ? "Moving..." : `Move to ${partner.name}`}
-                      </button>
-                    ))}
-                    <button
-                      type="button"
-                      disabled={Boolean(saving) || activePartners.length < 2}
-                      onClick={() =>
-                        updateQuote(
-                          selected,
-                          {
-                            partnerIds: activePartners.map((partner) => partner.id),
-                            visibleFields,
-                            printPlacement,
-                          },
-                          "all"
-                        )
-                      }
-                      className={quietButtonClass}
-                    >
-                      <Users className="h-4 w-4" />
-                      {saving === "all" ? "Sending..." : "Send to all active"}
-                    </button>
                   </div>
 
                   <div className="mt-5 grid gap-4 xl:grid-cols-2">
@@ -996,27 +1023,148 @@ export default function TanviDeskPage() {
                     </label>
 
                     <label className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
-                      Client status
-                      <select
-                        value={selected.partner.clientStatus}
-                        onChange={(event) =>
-                          updateQuote(
-                            selected,
-                            { clientStatus: event.target.value as PartnerClientStatus },
-                            "client-status"
-                          )
-                        }
-                        disabled={Boolean(saving)}
-                        className={`mt-2 w-full normal-case tracking-normal ${fieldClass}`}
-                      >
-                        {PARTNER_CLIENT_STATUS_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                      Current route
+                      <div className={`mt-2 flex min-h-[42px] items-center rounded-xl px-3 py-2 normal-case tracking-normal ${subtleCardClass}`}>
+                        <span className={`text-sm font-semibold ${strongTextClass}`}>
+                          {selected.partner.visibleLabel}
+                        </span>
+                      </div>
                     </label>
                   </div>
+
+                  <div className="mt-5 grid gap-3 xl:grid-cols-2">
+                    {activePartners.map((partner) => {
+                      const response = selected.partner.responses.find(
+                        (entry) => entry.partnerId === partner.id
+                      );
+                      const isRouted = selected.partner.visibleTo.includes(partner.id);
+                      const priceDraft = partnerPriceDrafts[partner.id] || "";
+                      const priceValue = Number(priceDraft);
+                      const nextPrice =
+                        priceDraft.trim() && Number.isFinite(priceValue) && priceValue > 0
+                          ? priceValue
+                          : null;
+
+                      return (
+                        <article key={partner.id} className={`${elevatedCardClass} p-4`}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className={`text-base font-semibold ${strongTextClass}`}>
+                                {partner.name}
+                              </p>
+                              <p className={`mt-1 text-xs ${mutedClass}`}>
+                                {isRouted ? "Currently seeing this order" : "Available partner"}
+                              </p>
+                            </div>
+                            <span
+                              className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${
+                                response?.requestStatus
+                                  ? statusTone(response.requestStatus)
+                                  : workflowToneClass.neutral
+                              }`}
+                            >
+                              {response?.requestStatus
+                                ? PARTNER_DECISION_LABELS[response.requestStatus]
+                                : "No reply"}
+                            </span>
+                          </div>
+
+                          <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+                            <label className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                              Partner price
+                              <div className="mt-2 flex items-center gap-2">
+                                <span className={`rounded-xl border px-3 py-2 text-sm font-semibold ${isDark ? "border-white/10 bg-slate-950 text-slate-300" : "border-slate-200 bg-slate-50 text-slate-600"}`}>
+                                  {selected.currency}
+                                </span>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={priceDraft}
+                                  onChange={(event) =>
+                                    setPartnerPriceDrafts((current) => ({
+                                      ...current,
+                                      [partner.id]: event.target.value,
+                                    }))
+                                  }
+                                  className={`w-full normal-case tracking-normal ${fieldClass}`}
+                                  placeholder="0"
+                                />
+                              </div>
+                            </label>
+                            <button
+                              type="button"
+                              disabled={Boolean(saving)}
+                              onClick={() =>
+                                updateQuote(
+                                  selected,
+                                  {
+                                    partnerPrices: {
+                                      [partner.id]: { price: nextPrice },
+                                    },
+                                  },
+                                  `price-${partner.id}`
+                                )
+                              }
+                              className={quietButtonClass}
+                            >
+                              <Save className="h-4 w-4" />
+                              {saving === `price-${partner.id}` ? "Saving..." : "Save price"}
+                            </button>
+                          </div>
+
+                          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                            <div className={`${subtleCardClass} px-3 py-2`}>
+                              <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${mutedClass}`}>
+                                Last saved
+                              </p>
+                              <p className={`mt-1 text-sm font-semibold ${strongTextClass}`}>
+                                {formatMoney(response?.price || null, selected.currency)}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              disabled={Boolean(saving)}
+                              onClick={() =>
+                                updateQuote(
+                                  selected,
+                                  {
+                                    partnerIds: [partner.id],
+                                    visibleFields,
+                                    printPlacement,
+                                  },
+                                  partner.id
+                                )
+                              }
+                              className={partner.id === activePartners[0]?.id ? accentButtonClass : darkButtonClass}
+                            >
+                              <Send className="h-4 w-4" />
+                              {saving === partner.id ? "Moving..." : `Move to ${partner.name}`}
+                            </button>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={Boolean(saving) || activePartners.length < 2}
+                    onClick={() =>
+                      updateQuote(
+                        selected,
+                        {
+                          partnerIds: activePartners.map((partner) => partner.id),
+                          visibleFields,
+                          printPlacement,
+                        },
+                        "all"
+                      )
+                    }
+                    className={`mt-3 w-full ${quietButtonClass}`}
+                  >
+                    <Users className="h-4 w-4" />
+                    {saving === "all" ? "Sending..." : "Send to all active partners"}
+                  </button>
 
                   <div className="mt-5">
                     <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
@@ -1056,11 +1204,35 @@ export default function TanviDeskPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
-                        Step 3 - Follow-up
+                        Step 4 - Client approval
                       </p>
-                      <h3 className="mt-2 text-xl font-semibold">Status and partner answers</h3>
+                      <h3 className="mt-2 text-xl font-semibold">Payment, approval, and partner answers</h3>
                     </div>
                     <Clock3 className="h-5 w-5 text-amber-600" />
+                  </div>
+
+                  <div className="mt-5">
+                    <label className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                      Client status
+                      <select
+                        value={selected.partner.clientStatus}
+                        onChange={(event) =>
+                          updateQuote(
+                            selected,
+                            { clientStatus: event.target.value as PartnerClientStatus },
+                            "client-status"
+                          )
+                        }
+                        disabled={Boolean(saving)}
+                        className={`mt-2 w-full normal-case tracking-normal ${fieldClass}`}
+                      >
+                        {PARTNER_CLIENT_STATUS_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
                   </div>
 
                   <div className="mt-5 space-y-3">
@@ -1093,6 +1265,9 @@ export default function TanviDeskPage() {
                   </div>
 
                   <div className="mt-5 space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
+                      Step 5 - Partner answer
+                    </p>
                     {selected.partner.responses.length ? (
                       selected.partner.responses.map((response) => (
                         <div key={response.partnerId} className={`${elevatedCardClass} p-3`}>

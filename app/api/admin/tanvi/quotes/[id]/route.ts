@@ -22,7 +22,11 @@ import {
   isRequestOriginAllowed,
 } from "@/lib/request-safety";
 
-const MAX_TANVI_UPDATE_BYTES = 4_096;
+const MAX_TANVI_UPDATE_BYTES = 12_288;
+
+type PartnerPriceDraft = {
+  price: number | null;
+};
 
 function getCurrentPartnerIds(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return [];
@@ -34,6 +38,39 @@ function getCurrentPartnerIds(value: unknown) {
 
 function arePartnerRoutesSame(left: PrintPartnerId[], right: PrintPartnerId[]) {
   return left.length === right.length && left.every((partnerId) => right.includes(partnerId));
+}
+
+function getPartnerPriceDrafts(value: unknown, allowedPartnerIds: Set<string>) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return new Map<PrintPartnerId, PartnerPriceDraft>();
+  }
+
+  const drafts = new Map<PrintPartnerId, PartnerPriceDraft>();
+  Object.entries(value as Record<string, unknown>).forEach(([rawPartnerId, rawDraft]) => {
+    const partnerId = normalizePrintPartnerIds([rawPartnerId])[0];
+    if (!partnerId || !allowedPartnerIds.has(partnerId)) return;
+    if (!rawDraft || typeof rawDraft !== "object" || Array.isArray(rawDraft)) return;
+    const price = Number((rawDraft as Record<string, unknown>).price);
+    drafts.set(partnerId, {
+      price: Number.isFinite(price) && price > 0 ? price : null,
+    });
+  });
+
+  return drafts;
+}
+
+function getCurrentPartnerResponse(currentPartner: unknown, partnerId: PrintPartnerId) {
+  if (!currentPartner || typeof currentPartner !== "object" || Array.isArray(currentPartner)) {
+    return {};
+  }
+  const responses = (currentPartner as Record<string, unknown>).responses;
+  if (!responses || typeof responses !== "object" || Array.isArray(responses)) {
+    return {};
+  }
+  const response = (responses as Record<string, unknown>)[partnerId];
+  return response && typeof response === "object" && !Array.isArray(response)
+    ? (response as Record<string, unknown>)
+    : {};
 }
 
 export async function PATCH(
@@ -68,9 +105,13 @@ export async function PATCH(
     const allPartners = await getPrintPartners({ includeInactive: true });
     const activePartners = allPartners.filter((partner) => partner.active);
     const activeById = new Map(activePartners.map((partner) => [partner.id, partner]));
+    const activeIds = new Set(activePartners.map((partner) => partner.id));
+    const currentData = quoteSnap.data() as Record<string, unknown>;
+    const currentPartner = currentData.partner;
     const routePartnerIds = normalizePrintPartnerIds(body?.partnerIds).filter((partnerId) =>
       activeById.has(partnerId)
     );
+    const partnerPriceDrafts = getPartnerPriceDrafts(body?.partnerPrices, activeIds);
     const nextClientStatus =
       body?.clientStatus === undefined
         ? null
@@ -81,8 +122,6 @@ export async function PATCH(
     };
 
     if (routePartnerIds.length) {
-      const currentData = quoteSnap.data() as Record<string, unknown>;
-      const currentPartner = currentData.partner;
       const currentPartnerIds = getCurrentPartnerIds(currentPartner);
       const sameRoute = arePartnerRoutesSame(currentPartnerIds, routePartnerIds);
       const singlePartner =
@@ -119,6 +158,30 @@ export async function PATCH(
 
     if (nextClientStatus) {
       updatePayload["partner.clientStatus"] = nextClientStatus;
+    }
+
+    partnerPriceDrafts.forEach((draft, partnerId) => {
+      const partner = activeById.get(partnerId);
+      if (!partner) return;
+      const currentResponse = getCurrentPartnerResponse(currentPartner, partnerId);
+      updatePayload[`partner.responses.${partnerId}.partnerId`] = partnerId;
+      updatePayload[`partner.responses.${partnerId}.partnerName`] = partner.name;
+      updatePayload[`partner.responses.${partnerId}.requestStatus`] =
+        currentResponse.requestStatus || "pending";
+      updatePayload[`partner.responses.${partnerId}.productionStatus`] =
+        currentResponse.productionStatus || "not_started";
+      updatePayload[`partner.responses.${partnerId}.printPlacement`] =
+        currentResponse.printPlacement || normalizePartnerPrintPlacement(body?.printPlacement);
+      updatePayload[`partner.responses.${partnerId}.price`] = draft.price;
+      updatePayload[`partner.responses.${partnerId}.updatedAt`] = serverTimestamp();
+      updatePayload[`partner.responses.${partnerId}.comments`] = currentResponse.comments || "";
+      updatePayload[`partner.responses.${partnerId}.missingInformation`] =
+        currentResponse.missingInformation || "";
+    });
+
+    if (partnerPriceDrafts.size === 1) {
+      const firstDraft = Array.from(partnerPriceDrafts.values())[0];
+      updatePayload["partner.price"] = firstDraft.price;
     }
 
     await updateDoc(quoteRef, updatePayload);
