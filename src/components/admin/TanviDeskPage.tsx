@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
+  BarChart3,
   CheckCircle2,
   CircleDollarSign,
   ClipboardCheck,
@@ -14,6 +15,8 @@ import {
   FileText,
   Image as ImageIcon,
   LockKeyhole,
+  PackageCheck,
+  Printer,
   RefreshCw,
   Route,
   Save,
@@ -21,9 +24,10 @@ import {
   Send,
   ShieldCheck,
   Sparkles,
+  TimerReset,
   Users,
 } from "lucide-react";
-import { format, formatDistanceToNow } from "date-fns";
+import { differenceInCalendarDays, format, formatDistanceToNow } from "date-fns";
 import { useAdminTheme } from "@/admin/AdminThemeContext";
 import {
   PARTNER_CLIENT_STATUS_LABELS,
@@ -91,6 +95,106 @@ function formatFileSize(value: number | null) {
   if (!value) return "";
   if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`;
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function parseDeadlineDate(value: string) {
+  const cleanValue = value.trim();
+  if (!cleanValue || cleanValue.toLowerCase() === "no deadline") return null;
+
+  const directDate = new Date(cleanValue);
+  if (!Number.isNaN(directDate.getTime())) return directDate;
+
+  const numericDate = cleanValue.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
+  if (!numericDate) return null;
+
+  const day = Number(numericDate[1]);
+  const month = Number(numericDate[2]) - 1;
+  const year = Number(numericDate[3].length === 2 ? `20${numericDate[3]}` : numericDate[3]);
+  const parsed = new Date(year, month, day);
+
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getDeadlineInsight(value: string) {
+  const deadlineDate = parseDeadlineDate(value);
+  if (!deadlineDate) {
+    return {
+      label: value && value !== "No deadline" ? value : "No deadline shared",
+      helper: "No countdown available until Ryan or the client gives a date.",
+      tone: "neutral" as WorkflowTone,
+      daysLeft: null as number | null,
+      progress: 0,
+    };
+  }
+
+  const daysLeft = differenceInCalendarDays(deadlineDate, new Date());
+  if (daysLeft < 0) {
+    return {
+      label: `${Math.abs(daysLeft)} day${Math.abs(daysLeft) === 1 ? "" : "s"} late`,
+      helper: format(deadlineDate, "dd MMM yyyy"),
+      tone: "danger" as WorkflowTone,
+      daysLeft,
+      progress: 100,
+    };
+  }
+
+  if (daysLeft === 0) {
+    return {
+      label: "Due today",
+      helper: format(deadlineDate, "dd MMM yyyy"),
+      tone: "warning" as WorkflowTone,
+      daysLeft,
+      progress: 92,
+    };
+  }
+
+  return {
+    label: `${daysLeft} day${daysLeft === 1 ? "" : "s"} left`,
+    helper: format(deadlineDate, "dd MMM yyyy"),
+    tone: daysLeft <= 2 ? "warning" as WorkflowTone : "success" as WorkflowTone,
+    daysLeft,
+    progress: Math.max(10, Math.min(88, 100 - daysLeft * 8)),
+  };
+}
+
+function getProductionStageInsight(status: TanviQuoteSummary["partner"]["productionStatus"]) {
+  if (status === "waiting_for_tshirts_from_ryan") {
+    return {
+      supply: "Waiting for Ryan to supply the t-shirts",
+      printing: "Printing cannot start yet",
+      helper: "Keep this open until Ryan confirms the garments are with the partner.",
+      tone: "warning" as WorkflowTone,
+      progress: 25,
+    };
+  }
+
+  if (status === "in_progress") {
+    return {
+      supply: "Ryan has already supplied the t-shirts",
+      printing: "Printing in progress",
+      helper: "Track deadline pressure and partner updates daily.",
+      tone: "info" as WorkflowTone,
+      progress: 62,
+    };
+  }
+
+  if (status === "completed" || status === "ryan_to_collect" || status === "will_post_tomorrow") {
+    return {
+      supply: "Ryan has already supplied the t-shirts",
+      printing: PARTNER_PRODUCTION_STATUS_LABELS[status],
+      helper: "Move attention to collection, delivery, and client handoff.",
+      tone: "success" as WorkflowTone,
+      progress: status === "completed" ? 100 : 84,
+    };
+  }
+
+  return {
+    supply: "T-shirt supply not confirmed yet",
+    printing: "Printing not started",
+    helper: "Start only after Tanvi confirms approval, payment readiness, and partner ownership.",
+    tone: "neutral" as WorkflowTone,
+    progress: 8,
+  };
 }
 
 function quoteNeedsRouting(quote: TanviQuoteSummary) {
@@ -548,6 +652,19 @@ export default function TanviDeskPage() {
       activePartners.length >= 2 &&
       activePartners.every((partner) => selected.partner.visibleTo.includes(partner.id))
   );
+  const selectedDeadlineInsight = selected ? getDeadlineInsight(selected.deadline) : null;
+  const selectedProductionInsight = selected
+    ? getProductionStageInsight(selected.partner.productionStatus)
+    : null;
+  const partnerInsightMax = Math.max(
+    1,
+    ...partnerLoads.flatMap(({ count, accepted }) => [count, accepted])
+  );
+  const partnerVisibleTotal = partnerLoads.reduce((total, { count }) => total + count, 0);
+  const partnerAcceptedTotal = partnerLoads.reduce((total, { accepted }) => total + accepted, 0);
+  const partnerAcceptedPercent = partnerVisibleTotal
+    ? Math.round((partnerAcceptedTotal / partnerVisibleTotal) * 100)
+    : 0;
 
   function getStepState(stepKey: TanviStepKey) {
     const index = TANVI_STEPS.findIndex((step) => step.key === stepKey);
@@ -1538,43 +1655,194 @@ export default function TanviDeskPage() {
                   stepNumber: 6,
                   title: "Print start",
                   description:
-                    "Final gate: use this after Tanvi has confirmed client approval, payment readiness, and the correct production partner.",
+                    "Final gate: Ryan supply, printing movement, deadline pressure, and Tanvi's print-start decision.",
                   badge: (
                     <span className={selectedCanPrint ? workflowToneClass.info : neutralBadgeClass}>
                       {selectedCanPrint ? "Ready for Tanvi gate" : "Do not print yet"}
                     </span>
                   ),
                 })}
-                <div className="grid gap-3 p-5 lg:grid-cols-3">
-                  {partnerLoads.map(({ partner, count, accepted }) => (
-                    <div key={partner.id} className={`${elevatedCardClass} p-4`}>
+                <div className="grid gap-4 p-5 xl:grid-cols-[minmax(0,1fr)_26rem]">
+                  <div className="grid gap-4">
+                    <div className={`${elevatedCardClass} overflow-hidden`}>
+                      <div className={`border-b p-4 ${dividerClass}`}>
+                        <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                          Current production movement
+                        </p>
+                        <h4 className={`mt-2 text-xl font-semibold ${strongTextClass}`}>
+                          {selectedProductionInsight?.printing || "Printing not started"}
+                        </h4>
+                      </div>
+                      <div className="grid gap-3 p-4 md:grid-cols-3">
+                        <div className={`${subtleCardClass} p-4`}>
+                          <PackageCheck className="h-5 w-5 text-orange-600" />
+                          <p className={`mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                            Ryan supply
+                          </p>
+                          <p className={`mt-2 text-sm font-semibold leading-5 ${strongTextClass}`}>
+                            {selectedProductionInsight?.supply || "T-shirt supply not confirmed yet"}
+                          </p>
+                        </div>
+                        <div className={`${subtleCardClass} p-4`}>
+                          <Printer className="h-5 w-5 text-cyan-700" />
+                          <p className={`mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                            Print status
+                          </p>
+                          <p className={`mt-2 text-sm font-semibold leading-5 ${strongTextClass}`}>
+                            {PARTNER_PRODUCTION_STATUS_LABELS[selected.partner.productionStatus]}
+                          </p>
+                        </div>
+                        <div className={`${subtleCardClass} p-4`}>
+                          <TimerReset className="h-5 w-5 text-amber-600" />
+                          <p className={`mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                            Deadline
+                          </p>
+                          <p className={`mt-2 text-sm font-semibold leading-5 ${strongTextClass}`}>
+                            {selectedDeadlineInsight?.label || "No deadline shared"}
+                          </p>
+                          <p className={`mt-1 text-xs ${mutedClass}`}>
+                            {selectedDeadlineInsight?.helper || "No countdown available."}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="px-4 pb-4">
+                        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_11rem]">
+                          <div className={`${subtleCardClass} p-4`}>
+                            <div className="flex items-center justify-between gap-3">
+                              <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                                Production progress
+                              </p>
+                              <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${workflowToneClass[selectedProductionInsight?.tone || "neutral"]}`}>
+                                {selectedProductionInsight?.progress || 0}%
+                              </span>
+                            </div>
+                            <div className={`mt-3 h-3 overflow-hidden rounded-full ${isDark ? "bg-slate-950" : "bg-slate-100"}`}>
+                              <div
+                                className="h-full rounded-full bg-orange-500 transition-all"
+                                style={{ width: `${selectedProductionInsight?.progress || 0}%` }}
+                              />
+                            </div>
+                            <p className={`mt-3 text-sm leading-6 ${mutedClass}`}>
+                              {selectedProductionInsight?.helper}
+                            </p>
+                          </div>
+                          <div className={`rounded-2xl border p-4 ${selectedCanPrint ? workflowToneClass.info : workflowToneClass.warning}`}>
+                            <LockKeyhole className="h-5 w-5" />
+                            <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.14em]">
+                              Tanvi gate
+                            </p>
+                            <p className="mt-2 text-sm font-semibold leading-5">
+                              Ask Tanvi before any print work starts.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className={`${elevatedCardClass} p-4`}>
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                            Deadline pressure
+                          </p>
+                          <p className={`mt-1 text-sm font-semibold ${strongTextClass}`}>
+                            {selectedDeadlineInsight?.daysLeft === null
+                              ? "No dated promise to count down."
+                              : selectedDeadlineInsight?.label}
+                          </p>
+                        </div>
+                        <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${workflowToneClass[selectedDeadlineInsight?.tone || "neutral"]}`}>
+                          {selected.deadline || "No deadline"}
+                        </span>
+                      </div>
+                      <div className={`mt-4 h-4 overflow-hidden rounded-full ${isDark ? "bg-slate-950" : "bg-slate-100"}`}>
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            selectedDeadlineInsight?.tone === "danger"
+                              ? "bg-rose-500"
+                              : selectedDeadlineInsight?.tone === "warning"
+                                ? "bg-amber-400"
+                                : "bg-emerald-500"
+                          }`}
+                          style={{ width: `${selectedDeadlineInsight?.progress || 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <aside className={`${elevatedCardClass} p-4`}>
                     <div className="flex items-center justify-between gap-3">
-                      <p className="font-semibold">{partner.name}</p>
-                      <CircleDollarSign className="h-5 w-5 text-emerald-600" />
-                    </div>
-                    <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
                       <div>
-                        <p className={`text-xs uppercase tracking-[0.14em] ${mutedClass}`}>Visible</p>
-                        <p className="mt-1 text-2xl font-semibold">{count}</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-700">
+                          General insight
+                        </p>
+                        <h4 className={`mt-1 text-lg font-semibold ${strongTextClass}`}>
+                          Partner workload
+                        </h4>
                       </div>
-                      <div>
-                        <p className={`text-xs uppercase tracking-[0.14em] ${mutedClass}`}>Accepted</p>
-                        <p className="mt-1 text-2xl font-semibold">{accepted}</p>
+                      <BarChart3 className="h-5 w-5 text-orange-600" />
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <div className={`${subtleCardClass} p-3`}>
+                        <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${mutedClass}`}>
+                          Visible
+                        </p>
+                        <p className={`mt-1 text-2xl font-semibold ${strongTextClass}`}>
+                          {partnerVisibleTotal}
+                        </p>
+                      </div>
+                      <div className={`${subtleCardClass} p-3`}>
+                        <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${mutedClass}`}>
+                          Accepted
+                        </p>
+                        <p className={`mt-1 text-2xl font-semibold ${strongTextClass}`}>
+                          {partnerAcceptedTotal}
+                        </p>
                       </div>
                     </div>
-                  </div>
-                ))}
-                  <div className={`${subtleCardClass} p-4 lg:col-span-3`}>
-                    <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
-                      Tanvi gate
-                    </p>
-                    <p className={`mt-2 text-sm font-semibold ${strongTextClass}`}>
-                      Ask Tanvi before any print work starts.
-                    </p>
-                    <p className={`mt-2 text-sm leading-6 ${mutedClass}`}>
-                      Production should stay paused until this step is checked and the client status is ready.
-                    </p>
-                  </div>
+
+                    <div className="mt-4 space-y-4">
+                      {partnerLoads.map(({ partner, count, accepted }) => (
+                        <div key={partner.id}>
+                          <div className="flex items-center justify-between gap-3">
+                            <p className={`text-sm font-semibold ${strongTextClass}`}>
+                              {partner.name}
+                            </p>
+                            <p className={`text-xs ${mutedClass}`}>
+                              {accepted}/{count} accepted
+                            </p>
+                          </div>
+                          <div className="mt-2 grid gap-1.5">
+                            <div className={`h-2 overflow-hidden rounded-full ${isDark ? "bg-slate-950" : "bg-slate-100"}`}>
+                              <div
+                                className="h-full rounded-full bg-cyan-500"
+                                style={{ width: `${Math.round((count / partnerInsightMax) * 100)}%` }}
+                              />
+                            </div>
+                            <div className={`h-2 overflow-hidden rounded-full ${isDark ? "bg-slate-950" : "bg-slate-100"}`}>
+                              <div
+                                className="h-full rounded-full bg-emerald-500"
+                                style={{ width: `${Math.round((accepted / partnerInsightMax) * 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-5 rounded-2xl border border-orange-200 bg-orange-50 p-4 text-orange-950">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em]">
+                        Acceptance rate
+                      </p>
+                      <div className="mt-3 flex items-end justify-between gap-3">
+                        <span className="text-3xl font-semibold">{partnerAcceptedPercent}%</span>
+                        <span className="text-xs font-semibold text-orange-800">
+                          {partnerAcceptedTotal} accepted from {partnerVisibleTotal} visible jobs
+                        </span>
+                      </div>
+                    </div>
+                  </aside>
                 </div>
               </div>
             </section>
