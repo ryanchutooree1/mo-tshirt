@@ -507,22 +507,28 @@ export default function TanviDeskPage() {
                 : "neutral",
         },
         {
+          title: "Partner answer",
+          value: PARTNER_DECISION_LABELS[selected.partner.requestStatus],
+          helper:
+            selected.partner.requestStatus === "needs_info"
+              ? "Clear the blocker before print."
+              : "Review days, price, and partner comments.",
+          icon: CheckCircle2,
+          tone:
+            selected.partner.requestStatus === "accepted"
+              ? "success"
+              : selected.partner.requestStatus === "needs_info"
+                ? "warning"
+                : selected.partner.requestStatus === "rejected"
+                  ? "danger"
+                  : "neutral",
+        },
+        {
           title: "Print start",
           value: selectedCanPrint ? "Tanvi gate" : "Do not print",
           helper: "Ask Tanvi before any print work starts.",
           icon: LockKeyhole,
           tone: selectedCanPrint ? "info" : "neutral",
-        },
-        {
-          title: "Production status",
-          value: PARTNER_PRODUCTION_STATUS_LABELS[selected.partner.productionStatus],
-          helper: "Keep the live order status clean after print approval.",
-          icon: CheckCircle2,
-          tone:
-            selected.partner.productionStatus === "completed" ||
-            selected.partner.productionStatus === "ryan_to_collect"
-              ? "success"
-              : "neutral",
         },
       ]
     : [];
@@ -546,25 +552,25 @@ export default function TanviDeskPage() {
   function getStepPanelClass(stepKey: TanviStepKey) {
     const state = getStepState(stepKey);
     const base =
-      "overflow-hidden rounded-[24px] border transition-all duration-200";
+      "overflow-hidden rounded-[26px] border transition-all duration-200";
     if (state.checked) {
       return `${base} ${
         isDark
-          ? "border-white/10 bg-slate-950/90 shadow-[0_20px_60px_rgba(0,0,0,0.26)]"
-          : "border-slate-800 bg-slate-900 text-white shadow-[0_20px_55px_rgba(15,23,42,0.18)]"
+          ? "border-white/10 bg-slate-900 shadow-[0_14px_42px_rgba(0,0,0,0.22)]"
+          : "border-slate-300 bg-slate-100 shadow-[0_12px_34px_rgba(15,23,42,0.08)]"
       }`;
     }
     if (state.current) {
       return `${base} ${
         isDark
-          ? "border-cyan-300/40 bg-slate-900 shadow-[0_0_0_4px_rgba(34,211,238,0.12),0_22px_60px_rgba(0,0,0,0.28)]"
-          : "border-cyan-300 bg-white shadow-[0_0_0_5px_rgba(6,182,212,0.16),0_20px_55px_rgba(15,23,42,0.12)]"
+          ? "border-cyan-300/50 bg-slate-900 shadow-[0_0_0_4px_rgba(34,211,238,0.12),0_22px_60px_rgba(0,0,0,0.28)]"
+          : "border-cyan-300 bg-white shadow-[0_0_0_5px_rgba(6,182,212,0.14),0_20px_55px_rgba(15,23,42,0.1)]"
       }`;
     }
     return `${base} ${
       isDark
-        ? "border-white/10 bg-slate-900/70 opacity-80"
-        : "border-slate-200 bg-white opacity-80 shadow-[0_12px_35px_rgba(15,23,42,0.06)]"
+        ? "border-white/10 bg-slate-900/70"
+        : "border-slate-200 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.05)]"
     }`;
   }
 
@@ -582,20 +588,45 @@ export default function TanviDeskPage() {
     badge?: ReactNode;
   }) {
     const state = getStepState(stepKey);
-    const headerTextClass = state.checked && !isDark ? "text-white" : strongTextClass;
-    const headerMutedClass = state.checked && !isDark ? "text-slate-300" : mutedClass;
+    const headerTextClass = state.checked && !isDark ? "text-slate-900" : strongTextClass;
+    const headerMutedClass = state.checked && !isDark ? "text-slate-600" : mutedClass;
     return (
-      <div className={`flex flex-wrap items-start justify-between gap-4 border-b p-5 ${state.checked && !isDark ? "border-white/10" : dividerClass}`}>
-        <div className="min-w-0">
-          <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${state.checked && !isDark ? "text-cyan-200" : "text-cyan-700"}`}>
-            Step {stepNumber}
-          </p>
-          <h3 className={`mt-1 text-xl font-semibold tracking-tight ${headerTextClass}`}>
-            {title}
-          </h3>
-          <p className={`mt-2 max-w-3xl text-sm leading-6 ${headerMutedClass}`}>
-            {description}
-          </p>
+      <div
+        className={`flex flex-wrap items-start justify-between gap-4 border-b p-5 ${
+          state.checked && !isDark ? "border-slate-200 bg-slate-200/70" : dividerClass
+        }`}
+      >
+        <div className="flex min-w-0 gap-4">
+          <span
+            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold ${
+              state.checked
+                ? isDark
+                  ? "bg-cyan-300/10 text-cyan-100"
+                  : "bg-slate-900 text-white"
+                : state.current
+                  ? "bg-cyan-700 text-white"
+                  : isDark
+                    ? "bg-slate-950 text-slate-300"
+                    : "bg-slate-100 text-slate-600"
+            }`}
+          >
+            {stepNumber}
+          </span>
+          <div className="min-w-0">
+            <p
+              className={`text-xs font-semibold uppercase tracking-[0.16em] ${
+                state.checked && !isDark ? "text-slate-500" : "text-cyan-700"
+              }`}
+            >
+              Step {stepNumber}
+            </p>
+            <h3 className={`mt-1 text-xl font-semibold tracking-tight ${headerTextClass}`}>
+              {title}
+            </h3>
+            <p className={`mt-2 max-w-3xl text-sm leading-6 ${headerMutedClass}`}>
+              {description}
+            </p>
+          </div>
         </div>
         <div className="flex items-start gap-3">
           {badge}
@@ -604,7 +635,7 @@ export default function TanviDeskPage() {
               state.checked
                 ? isDark
                   ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-100"
-                  : "border-white/15 bg-white/10 text-white"
+                  : "border-slate-300 bg-white text-slate-800"
                 : state.current
                   ? "border-cyan-300 bg-cyan-50 text-cyan-900"
                   : isDark
@@ -617,7 +648,7 @@ export default function TanviDeskPage() {
               checked={state.checked}
               disabled={saving === `step-${stepKey}`}
               onChange={(event) => toggleTanviStep(stepKey, event.target.checked)}
-              className="h-4 w-4 rounded border-slate-300"
+              className="h-4 w-4 rounded border-slate-300 accent-cyan-700"
             />
             {state.checked ? "Checked" : state.current ? "Current" : "Mark done"}
           </label>
