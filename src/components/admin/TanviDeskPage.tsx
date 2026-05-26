@@ -34,7 +34,6 @@ import {
   PARTNER_CLIENT_STATUS_OPTIONS,
   PARTNER_DECISION_LABELS,
   PARTNER_PRINT_PLACEMENT_LABELS,
-  PARTNER_PRINT_PLACEMENT_OPTIONS,
   PARTNER_PRODUCTION_STATUS_LABELS,
   PARTNER_VISIBLE_FIELD_OPTIONS,
   type PartnerClientStatus,
@@ -65,6 +64,23 @@ const TANVI_STEPS: { key: TanviStepKey; label: string }[] = [
   { key: "client_approval", label: "Client approval" },
   { key: "partner_answer", label: "Partner answer" },
   { key: "print_start", label: "Print start" },
+];
+
+const TANVI_PRINT_PLACEMENT_PRICE_OPTIONS: {
+  value: PartnerPrintPlacement;
+  label: string;
+  price: number | null;
+}[] = [
+  { value: "small_front_only", label: "Small Front Printing only", price: 150 },
+  { value: "small_back_only", label: "Small Back Printing only", price: 150 },
+  { value: "large_front_only", label: "Large Front Printing only", price: 200 },
+  { value: "back_only", label: "Large Back Printing only", price: 200 },
+  { value: "small_front_back", label: "Small Front and Small Back Printing", price: 200 },
+  { value: "small_front_large_back", label: "Small Front and Large Back Printing", price: 250 },
+  { value: "large_front_small_back", label: "Large Front and Small Back Printing", price: 250 },
+  { value: "front_back", label: "Large Front and Large Back Printing", price: 300 },
+  { value: "not_set", label: "Use client/admin request", price: null },
+  { value: "custom", label: "Other / see notes", price: null },
 ];
 
 const defaultManager: ProductionManager = {
@@ -447,6 +463,25 @@ export default function TanviDeskPage() {
       }
       return [...current, field];
     });
+  }
+
+  function updatePrintPlacementDraft(value: PartnerPrintPlacement) {
+    setPrintPlacement(value);
+
+    const preset = TANVI_PRINT_PLACEMENT_PRICE_OPTIONS.find(
+      (option) => option.value === value
+    );
+    if (!preset?.price) return;
+
+    setPartnerPriceDrafts((current) =>
+      activePartners.reduce<Record<string, string>>(
+        (drafts, partner) => ({
+          ...drafts,
+          [partner.id]: String(preset.price),
+        }),
+        { ...current }
+      )
+    );
   }
 
   function toggleTanviStep(stepKey: TanviStepKey, checked: boolean) {
@@ -1339,13 +1374,15 @@ export default function TanviDeskPage() {
                       <select
                         value={printPlacement}
                         onChange={(event) =>
-                          setPrintPlacement(event.target.value as PartnerPrintPlacement)
+                          updatePrintPlacementDraft(event.target.value as PartnerPrintPlacement)
                         }
                         className={`mt-2 w-full normal-case tracking-normal ${fieldClass}`}
                       >
-                        {PARTNER_PRINT_PLACEMENT_OPTIONS.map((option) => (
+                        {TANVI_PRINT_PLACEMENT_PRICE_OPTIONS.map((option) => (
                           <option key={option.value} value={option.value}>
-                            {option.label}
+                            {option.price
+                              ? `${option.label} Rs ${option.price}`
+                              : option.label}
                           </option>
                         ))}
                       </select>
@@ -1427,6 +1464,7 @@ export default function TanviDeskPage() {
                                 updateQuote(
                                   selected,
                                   {
+                                    printPlacement,
                                     partnerPrices: {
                                       [partner.id]: { price: nextPrice },
                                     },
@@ -1662,7 +1700,7 @@ export default function TanviDeskPage() {
                     </span>
                   ),
                 })}
-                <div className="grid gap-4 p-5 xl:grid-cols-[minmax(0,1fr)_26rem]">
+                <div className="grid gap-4 p-5">
                   <div className="grid gap-4">
                     <div className={`${elevatedCardClass} overflow-hidden`}>
                       <div className={`border-b p-4 ${dividerClass}`}>
@@ -1770,7 +1808,11 @@ export default function TanviDeskPage() {
                     </div>
                   </div>
 
-                  <aside className={`${elevatedCardClass} p-4`}>
+                </div>
+              </div>
+
+              <div className={`${panelClass} p-5`}>
+                <div className={`${elevatedCardClass} p-4`}>
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-700">
@@ -1842,7 +1884,6 @@ export default function TanviDeskPage() {
                         </span>
                       </div>
                     </div>
-                  </aside>
                 </div>
               </div>
             </section>

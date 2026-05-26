@@ -106,10 +106,14 @@ export type PartnerClientStatus =
 export type PartnerPrintPlacement =
   | "not_set"
   | "small_front_only"
+  | "small_back_only"
   | "large_front_only"
   | "back_only"
   | "front_back"
   | "small_front_back"
+  | "small_front_large_back"
+  | "large_front_small_back"
+  | "large_front_large_back"
   | "logo_only"
   | "logo_front_back"
   | "sleeve_only"
@@ -292,10 +296,14 @@ export const PARTNER_CLIENT_STATUS_OPTIONS: {
 export const PARTNER_PRINT_PLACEMENT_LABELS: Record<PartnerPrintPlacement, string> = {
   not_set: "Use client/admin request",
   small_front_only: "Small Front Printing only",
+  small_back_only: "Small Back Printing only",
   large_front_only: "Large Front Printing only",
-  back_only: "Back Printing only",
-  front_back: "Front + Back Printing",
-  small_front_back: "Small Front + Back Printing",
+  back_only: "Large Back Printing only",
+  front_back: "Large Front and Large Back Printing",
+  small_front_back: "Small Front and Small Back Printing",
+  small_front_large_back: "Small Front and Large Back Printing",
+  large_front_small_back: "Large Front and Small Back Printing",
+  large_front_large_back: "Large Front and Large Back Printing",
   logo_only: "Logo Printing only",
   logo_front_back: "Logo Front + Back Printing",
   sleeve_only: "Sleeve Printing only",
@@ -308,10 +316,13 @@ export const PARTNER_PRINT_PLACEMENT_OPTIONS: {
 }[] = [
   { value: "not_set", label: PARTNER_PRINT_PLACEMENT_LABELS.not_set },
   { value: "small_front_only", label: PARTNER_PRINT_PLACEMENT_LABELS.small_front_only },
+  { value: "small_back_only", label: PARTNER_PRINT_PLACEMENT_LABELS.small_back_only },
   { value: "large_front_only", label: PARTNER_PRINT_PLACEMENT_LABELS.large_front_only },
   { value: "back_only", label: PARTNER_PRINT_PLACEMENT_LABELS.back_only },
-  { value: "front_back", label: PARTNER_PRINT_PLACEMENT_LABELS.front_back },
   { value: "small_front_back", label: PARTNER_PRINT_PLACEMENT_LABELS.small_front_back },
+  { value: "small_front_large_back", label: PARTNER_PRINT_PLACEMENT_LABELS.small_front_large_back },
+  { value: "large_front_small_back", label: PARTNER_PRINT_PLACEMENT_LABELS.large_front_small_back },
+  { value: "front_back", label: PARTNER_PRINT_PLACEMENT_LABELS.front_back },
   { value: "sleeve_only", label: PARTNER_PRINT_PLACEMENT_LABELS.sleeve_only },
   { value: "custom", label: PARTNER_PRINT_PLACEMENT_LABELS.custom },
 ];
