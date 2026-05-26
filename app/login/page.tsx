@@ -155,9 +155,6 @@ function LoginInner() {
             <div className="flex flex-col items-center text-center">
               <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={120} height={48} className="h-12 w-auto" />
               <h1 className="mt-6 text-2xl font-semibold tracking-tight">Admin Access</h1>
-              <p className="mt-2 text-sm text-neutral-600">
-                Use the owner password, a team account, a partner password, or Tanvi&apos;s manager password.
-              </p>
             </div>
 
             <form onSubmit={onSubmit} className="mt-8 space-y-6" aria-describedby={error ? "login-error" : undefined}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -39,7 +39,11 @@ import {
   type PrintPartner,
   type ProductionManager,
 } from "@/lib/partners";
-import type { TanviArtworkAttachment, TanviQuoteSummary } from "@/lib/tanvi-quotes";
+import type {
+  TanviArtworkAttachment,
+  TanviQuoteSummary,
+  TanviStepKey,
+} from "@/lib/tanvi-quotes";
 
 type DeskPayload = {
   manager: ProductionManager;
@@ -49,6 +53,15 @@ type DeskPayload = {
 
 type QueueFilter = "all" | "unrouted" | "waiting" | "blocked" | "ready" | "active";
 type WorkflowTone = "success" | "warning" | "danger" | "info" | "neutral";
+
+const TANVI_STEPS: { key: TanviStepKey; label: string }[] = [
+  { key: "client_onboarding", label: "Client onboarding" },
+  { key: "artwork", label: "Artwork / logo" },
+  { key: "route_prices", label: "Route, placement, partner prices" },
+  { key: "client_approval", label: "Client approval" },
+  { key: "partner_answer", label: "Partner answer" },
+  { key: "print_start", label: "Print start" },
+];
 
 const defaultManager: ProductionManager = {
   name: "Tanvi",
@@ -296,6 +309,7 @@ export default function TanviDeskPage() {
       printPlacement?: PartnerPrintPlacement;
       clientStatus?: PartnerClientStatus;
       partnerPrices?: Record<string, { price: number | null }>;
+      tanviStepChecks?: Partial<Record<TanviStepKey, boolean>>;
     },
     label: string
   ) {
@@ -329,6 +343,15 @@ export default function TanviDeskPage() {
       }
       return [...current, field];
     });
+  }
+
+  function toggleTanviStep(stepKey: TanviStepKey, checked: boolean) {
+    if (!selected) return;
+    void updateQuote(
+      selected,
+      { tanviStepChecks: { [stepKey]: checked } },
+      `step-${stepKey}`
+    );
   }
 
   const pageClass = isDark
@@ -503,6 +526,105 @@ export default function TanviDeskPage() {
         },
       ]
     : [];
+  const firstOpenStepIndex = selected
+    ? TANVI_STEPS.findIndex((step) => !selected.tanviStepChecks[step.key])
+    : -1;
+  const currentStepIndex =
+    firstOpenStepIndex === -1 && selected ? TANVI_STEPS.length - 1 : firstOpenStepIndex;
+  const checkedStepCount = selected
+    ? TANVI_STEPS.filter((step) => selected.tanviStepChecks[step.key]).length
+    : 0;
+  const progressPercent = Math.round((checkedStepCount / TANVI_STEPS.length) * 100);
+
+  function getStepState(stepKey: TanviStepKey) {
+    const index = TANVI_STEPS.findIndex((step) => step.key === stepKey);
+    const checked = Boolean(selected?.tanviStepChecks[stepKey]);
+    const current = Boolean(selected && index === currentStepIndex && !checked);
+    return { checked, current, upcoming: Boolean(selected && index > currentStepIndex && !checked) };
+  }
+
+  function getStepPanelClass(stepKey: TanviStepKey) {
+    const state = getStepState(stepKey);
+    const base =
+      "overflow-hidden rounded-[24px] border transition-all duration-200";
+    if (state.checked) {
+      return `${base} ${
+        isDark
+          ? "border-white/10 bg-slate-950/90 shadow-[0_20px_60px_rgba(0,0,0,0.26)]"
+          : "border-slate-800 bg-slate-900 text-white shadow-[0_20px_55px_rgba(15,23,42,0.18)]"
+      }`;
+    }
+    if (state.current) {
+      return `${base} ${
+        isDark
+          ? "border-cyan-300/40 bg-slate-900 shadow-[0_0_0_4px_rgba(34,211,238,0.12),0_22px_60px_rgba(0,0,0,0.28)]"
+          : "border-cyan-300 bg-white shadow-[0_0_0_5px_rgba(6,182,212,0.16),0_20px_55px_rgba(15,23,42,0.12)]"
+      }`;
+    }
+    return `${base} ${
+      isDark
+        ? "border-white/10 bg-slate-900/70 opacity-80"
+        : "border-slate-200 bg-white opacity-80 shadow-[0_12px_35px_rgba(15,23,42,0.06)]"
+    }`;
+  }
+
+  function renderStepHeader({
+    stepKey,
+    stepNumber,
+    title,
+    description,
+    badge,
+  }: {
+    stepKey: TanviStepKey;
+    stepNumber: number;
+    title: string;
+    description: string;
+    badge?: ReactNode;
+  }) {
+    const state = getStepState(stepKey);
+    const headerTextClass = state.checked && !isDark ? "text-white" : strongTextClass;
+    const headerMutedClass = state.checked && !isDark ? "text-slate-300" : mutedClass;
+    return (
+      <div className={`flex flex-wrap items-start justify-between gap-4 border-b p-5 ${state.checked && !isDark ? "border-white/10" : dividerClass}`}>
+        <div className="min-w-0">
+          <p className={`text-xs font-semibold uppercase tracking-[0.16em] ${state.checked && !isDark ? "text-cyan-200" : "text-cyan-700"}`}>
+            Step {stepNumber}
+          </p>
+          <h3 className={`mt-1 text-xl font-semibold tracking-tight ${headerTextClass}`}>
+            {title}
+          </h3>
+          <p className={`mt-2 max-w-3xl text-sm leading-6 ${headerMutedClass}`}>
+            {description}
+          </p>
+        </div>
+        <div className="flex items-start gap-3">
+          {badge}
+          <label
+            className={`flex cursor-pointer items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-semibold transition ${
+              state.checked
+                ? isDark
+                  ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-100"
+                  : "border-white/15 bg-white/10 text-white"
+                : state.current
+                  ? "border-cyan-300 bg-cyan-50 text-cyan-900"
+                  : isDark
+                    ? "border-white/10 bg-slate-950/60 text-slate-300"
+                    : "border-slate-200 bg-slate-50 text-slate-700"
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={state.checked}
+              disabled={saving === `step-${stepKey}`}
+              onChange={(event) => toggleTanviStep(stepKey, event.target.checked)}
+              className="h-4 w-4 rounded border-slate-300"
+            />
+            {state.checked ? "Checked" : state.current ? "Current" : "Mark done"}
+          </label>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className={pageClass}>
@@ -758,10 +880,10 @@ export default function TanviDeskPage() {
                 <div className={`flex flex-wrap items-center justify-between gap-3 border-b p-5 ${dividerClass}`}>
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
-                      Production protocol
+                      Tanvi progress
                     </p>
                     <h3 className="mt-1 text-xl font-semibold tracking-tight">
-                      {selected.code} fast path
+                      {checkedStepCount} of {TANVI_STEPS.length} checkpoints complete
                     </h3>
                   </div>
                   <span
@@ -780,62 +902,74 @@ export default function TanviDeskPage() {
                         : "Needs decision"}
                   </span>
                 </div>
-                <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-                  {selectedWorkflow.map((step, index) => {
-                    const StepIcon = step.icon;
-                    return (
-                      <div
-                        key={step.title}
-                        className={`rounded-2xl border p-4 ${workflowToneClass[step.tone]}`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/70 text-current">
-                            <StepIcon className="h-5 w-5" />
-                          </span>
-                          <div className="min-w-0">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.12em]">
-                              Step {index + 1}
-                            </p>
-                            <h4 className="mt-1 text-sm font-semibold text-current">
-                              {step.title}
-                            </h4>
-                            <p className="mt-2 text-sm font-semibold">
-                              {step.value}
-                            </p>
-                            <p className="mt-2 text-xs leading-5 opacity-75">
-                              {step.helper}
-                            </p>
+                <div className="p-4">
+                  <div className={`h-3 overflow-hidden rounded-full ${isDark ? "bg-slate-950" : "bg-slate-100"}`}>
+                    <div
+                      className="h-full rounded-full bg-cyan-600 transition-all"
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+                    {selectedWorkflow.map((step, index) => {
+                      const StepIcon = step.icon;
+                      const stepMeta = TANVI_STEPS[index];
+                      const checked = stepMeta ? selected.tanviStepChecks[stepMeta.key] : false;
+                      return (
+                        <div
+                          key={step.title}
+                          className={`rounded-2xl border p-4 ${
+                            checked
+                              ? isDark
+                                ? "border-white/10 bg-slate-950 text-slate-300"
+                                : "border-slate-800 bg-slate-900 text-slate-200"
+                              : workflowToneClass[step.tone]
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/70 text-current">
+                              <StepIcon className="h-5 w-5" />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.12em]">
+                                Step {index + 1}
+                              </p>
+                              <h4 className="mt-1 text-sm font-semibold text-current">
+                                {step.title}
+                              </h4>
+                              <p className="mt-2 text-sm font-semibold">
+                                {step.value}
+                              </p>
+                              <p className="mt-2 text-xs leading-5 opacity-75">
+                                {step.helper}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
-              <div className={`${panelClass} overflow-hidden`}>
-                <div className={`flex flex-wrap items-start justify-between gap-3 border-b p-5 ${dividerClass}`}>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
-                      Step 1 - Client onboarding
-                    </p>
-                    <h3 className="mt-1 text-xl font-semibold tracking-tight">
-                      Know who this order belongs to
-                    </h3>
-                    <p className={`mt-2 max-w-3xl text-sm leading-6 ${mutedClass}`}>
-                      Tanvi checks the client, contact details, garment, quantity, deadline, and notes before touching production.
-                    </p>
-                  </div>
-                  <span
-                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
-                      selected.phone || selected.email
-                        ? workflowToneClass.success
-                        : workflowToneClass.warning
-                    }`}
-                  >
-                    {selected.phone || selected.email ? "Client reachable" : "Need contact"}
-                  </span>
-                </div>
+              <div className={getStepPanelClass("client_onboarding")}>
+                {renderStepHeader({
+                  stepKey: "client_onboarding",
+                  stepNumber: 1,
+                  title: "Client onboarding",
+                  description:
+                    "Tanvi checks the client, contact details, garment, quantity, deadline, and notes before touching production.",
+                  badge: (
+                    <span
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                        selected.phone || selected.email
+                          ? workflowToneClass.success
+                          : workflowToneClass.warning
+                      }`}
+                    >
+                      {selected.phone || selected.email ? "Client reachable" : "Need contact"}
+                    </span>
+                  ),
+                })}
                 <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.7fr)]">
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     {[
@@ -881,23 +1015,19 @@ export default function TanviDeskPage() {
                 </div>
               </div>
 
-              <div className={`${panelClass} overflow-hidden`}>
-                <div className={`flex flex-wrap items-start justify-between gap-3 border-b p-5 ${dividerClass}`}>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
-                      Step 2 - Artwork / logo
-                    </p>
-                    <h3 className="mt-1 text-xl font-semibold tracking-tight">
-                      Judge the artwork before routing
-                    </h3>
-                    <p className={`mt-2 max-w-3xl text-sm leading-6 ${mutedClass}`}>
-                      Tanvi can open the files, inspect the logo size and detail, then send the order to the best production desk.
-                    </p>
-                  </div>
-                  <span className={neutralBadgeClass}>
-                    {selected.artworkCount ? `${selected.artworkCount} file(s)` : "No file"}
-                  </span>
-                </div>
+              <div className={getStepPanelClass("artwork")}>
+                {renderStepHeader({
+                  stepKey: "artwork",
+                  stepNumber: 2,
+                  title: "Artwork / logo",
+                  description:
+                    "Tanvi can open the files, inspect the logo size and detail, then send the order to the best production desk.",
+                  badge: (
+                    <span className={neutralBadgeClass}>
+                      {selected.artworkCount ? `${selected.artworkCount} file(s)` : "No file"}
+                    </span>
+                  ),
+                })}
 
                 {selected.artwork.length ? (
                   <div className="grid gap-4 p-4 lg:grid-cols-2">
@@ -992,17 +1122,16 @@ export default function TanviDeskPage() {
                 )}
               </div>
 
-              <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(22rem,0.9fr)]">
-                <div className={`${panelClass} p-5`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
-                        Step 3 - Route, placement, partner prices
-                      </p>
-                      <h3 className="mt-2 text-xl font-semibold">Compare partners and move the order</h3>
-                    </div>
-                    <Route className="h-5 w-5 text-cyan-700" />
-                  </div>
+              <div className={getStepPanelClass("route_prices")}>
+                {renderStepHeader({
+                  stepKey: "route_prices",
+                  stepNumber: 3,
+                  title: "Route, placement, partner prices",
+                  description:
+                    "Compare each partner, set the print placement, edit the partner price, then move the order to the right desk.",
+                  badge: <Route className="h-5 w-5 text-cyan-700" />,
+                })}
+                <div className="p-5">
 
                   <div className="mt-5 grid gap-4 xl:grid-cols-2">
                     <label className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
@@ -1199,17 +1328,18 @@ export default function TanviDeskPage() {
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <div className={`${panelClass} p-5`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
-                        Step 4 - Client approval
-                      </p>
-                      <h3 className="mt-2 text-xl font-semibold">Payment, approval, and partner answers</h3>
-                    </div>
-                    <Clock3 className="h-5 w-5 text-amber-600" />
-                  </div>
+              <div className={getStepPanelClass("client_approval")}>
+                {renderStepHeader({
+                  stepKey: "client_approval",
+                  stepNumber: 4,
+                  title: "Client approval",
+                  description:
+                    "Track quotation approval, payment readiness, missing information, and client-facing notes before print starts.",
+                  badge: <Clock3 className="h-5 w-5 text-amber-600" />,
+                })}
+                <div className="p-5">
 
                   <div className="mt-5">
                     <label className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
@@ -1264,38 +1394,59 @@ export default function TanviDeskPage() {
                     ) : null}
                   </div>
 
-                  <div className="mt-5 space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
-                      Step 5 - Partner answer
-                    </p>
-                    {selected.partner.responses.length ? (
-                      selected.partner.responses.map((response) => (
-                        <div key={response.partnerId} className={`${elevatedCardClass} p-3`}>
-                          <div className="flex items-center justify-between gap-3">
-                            <p className={`font-semibold ${strongTextClass}`}>{response.partnerName}</p>
-                            <span className={`rounded-md border px-2 py-1 text-[11px] font-semibold ${statusTone(response.requestStatus)}`}>
-                              {PARTNER_DECISION_LABELS[response.requestStatus]}
-                            </span>
-                          </div>
-                          <div className={`mt-3 grid grid-cols-3 gap-2 text-xs ${mutedClass}`}>
-                            <span>{response.completionDays ? `${response.completionDays} days` : "Days n/a"}</span>
-                            <span>{response.price ? `Rs ${response.price}` : "Price n/a"}</span>
-                            <span>{formatRelative(response.updatedAt)}</span>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className={`rounded-lg border border-dashed p-5 text-center text-sm ${mutedClass}`}>
-                        Waiting for partner response.
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
 
-              <div className="grid gap-3 lg:grid-cols-3">
-                {partnerLoads.map(({ partner, count, accepted }) => (
-                  <div key={partner.id} className={`${panelClass} p-4`}>
+              <div className={getStepPanelClass("partner_answer")}>
+                {renderStepHeader({
+                  stepKey: "partner_answer",
+                  stepNumber: 5,
+                  title: "Partner answer",
+                  description:
+                    "Review each partner reply, completion days, price, blockers, and production comments in one clean place.",
+                  badge: <CheckCircle2 className="h-5 w-5 text-emerald-600" />,
+                })}
+                <div className="space-y-2 p-5">
+                  {selected.partner.responses.length ? (
+                    selected.partner.responses.map((response) => (
+                      <div key={response.partnerId} className={`${elevatedCardClass} p-3`}>
+                        <div className="flex items-center justify-between gap-3">
+                          <p className={`font-semibold ${strongTextClass}`}>{response.partnerName}</p>
+                          <span className={`rounded-md border px-2 py-1 text-[11px] font-semibold ${statusTone(response.requestStatus)}`}>
+                            {PARTNER_DECISION_LABELS[response.requestStatus]}
+                          </span>
+                        </div>
+                        <div className={`mt-3 grid grid-cols-3 gap-2 text-xs ${mutedClass}`}>
+                          <span>{response.completionDays ? `${response.completionDays} days` : "Days n/a"}</span>
+                          <span>{response.price ? `Rs ${response.price}` : "Price n/a"}</span>
+                          <span>{formatRelative(response.updatedAt)}</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className={`rounded-2xl border border-dashed p-5 text-center text-sm ${mutedClass}`}>
+                      Waiting for partner response.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className={getStepPanelClass("print_start")}>
+                {renderStepHeader({
+                  stepKey: "print_start",
+                  stepNumber: 6,
+                  title: "Print start",
+                  description:
+                    "Final gate: use this after Tanvi has confirmed client approval, payment readiness, and the correct production partner.",
+                  badge: (
+                    <span className={selectedCanPrint ? workflowToneClass.info : neutralBadgeClass}>
+                      {selectedCanPrint ? "Ready for Tanvi gate" : "Do not print yet"}
+                    </span>
+                  ),
+                })}
+                <div className="grid gap-3 p-5 lg:grid-cols-3">
+                  {partnerLoads.map(({ partner, count, accepted }) => (
+                    <div key={partner.id} className={`${elevatedCardClass} p-4`}>
                     <div className="flex items-center justify-between gap-3">
                       <p className="font-semibold">{partner.name}</p>
                       <CircleDollarSign className="h-5 w-5 text-emerald-600" />
@@ -1312,6 +1463,18 @@ export default function TanviDeskPage() {
                     </div>
                   </div>
                 ))}
+                  <div className={`${subtleCardClass} p-4 lg:col-span-3`}>
+                    <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                      Tanvi gate
+                    </p>
+                    <p className={`mt-2 text-sm font-semibold ${strongTextClass}`}>
+                      Ask Tanvi before any print work starts.
+                    </p>
+                    <p className={`mt-2 text-sm leading-6 ${mutedClass}`}>
+                      Production should stay paused until this step is checked and the client status is ready.
+                    </p>
+                  </div>
+                </div>
               </div>
             </section>
           ) : (

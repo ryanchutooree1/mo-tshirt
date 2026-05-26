@@ -28,6 +28,15 @@ type PartnerPriceDraft = {
   price: number | null;
 };
 
+const TANVI_STEP_KEYS = new Set([
+  "client_onboarding",
+  "artwork",
+  "route_prices",
+  "client_approval",
+  "partner_answer",
+  "print_start",
+]);
+
 function getCurrentPartnerIds(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return [];
   const raw = value as Record<string, unknown>;
@@ -57,6 +66,21 @@ function getPartnerPriceDrafts(value: unknown, allowedPartnerIds: Set<string>) {
   });
 
   return drafts;
+}
+
+function getTanviStepCheckUpdates(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return new Map<string, boolean>();
+  }
+
+  const updates = new Map<string, boolean>();
+  Object.entries(value as Record<string, unknown>).forEach(([key, checked]) => {
+    if (!TANVI_STEP_KEYS.has(key)) return;
+    if (typeof checked !== "boolean") return;
+    updates.set(key, checked);
+  });
+
+  return updates;
 }
 
 function getCurrentPartnerResponse(currentPartner: unknown, partnerId: PrintPartnerId) {
@@ -112,6 +136,7 @@ export async function PATCH(
       activeById.has(partnerId)
     );
     const partnerPriceDrafts = getPartnerPriceDrafts(body?.partnerPrices, activeIds);
+    const stepCheckUpdates = getTanviStepCheckUpdates(body?.tanviStepChecks);
     const nextClientStatus =
       body?.clientStatus === undefined
         ? null
@@ -183,6 +208,10 @@ export async function PATCH(
       const firstDraft = Array.from(partnerPriceDrafts.values())[0];
       updatePayload["partner.price"] = firstDraft.price;
     }
+
+    stepCheckUpdates.forEach((checked, key) => {
+      updatePayload[`tanviStepChecks.${key}`] = checked;
+    });
 
     await updateDoc(quoteRef, updatePayload);
     const updatedSnap = await getDoc(quoteRef);

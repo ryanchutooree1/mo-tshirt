@@ -51,6 +51,7 @@ type RawQuote = {
   attachment?: RawAttachment | null;
   attachments?: RawAttachment[];
   partner?: unknown;
+  tanviStepChecks?: unknown;
   createdAt?: unknown;
   updatedAt?: unknown;
   designBrief?: Record<string, unknown> | null;
@@ -88,6 +89,14 @@ export type TanviArtworkAttachment = {
   size: number | null;
   url: string;
 };
+
+export type TanviStepKey =
+  | "client_onboarding"
+  | "artwork"
+  | "route_prices"
+  | "client_approval"
+  | "partner_answer"
+  | "print_start";
 
 export type TanviQuotePartner = {
   id: PrintPartnerId | null;
@@ -134,6 +143,7 @@ export type TanviQuoteSummary = {
   artworkCount: number;
   hasOpenArtwork: boolean;
   hasEmailOnlyArtwork: boolean;
+  tanviStepChecks: Record<TanviStepKey, boolean>;
   createdAt: string | null;
   updatedAt: string | null;
   partner: TanviQuotePartner;
@@ -321,6 +331,21 @@ function getAttachments(quote: RawQuote) {
   );
 }
 
+function getTanviStepChecks(value: unknown): Record<TanviStepKey, boolean> {
+  const raw = value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+
+  return {
+    client_onboarding: Boolean(raw.client_onboarding),
+    artwork: Boolean(raw.artwork),
+    route_prices: Boolean(raw.route_prices),
+    client_approval: Boolean(raw.client_approval),
+    partner_answer: Boolean(raw.partner_answer),
+    print_start: Boolean(raw.print_start),
+  };
+}
+
 function sanitizeArtwork(attachments: RawAttachment[]): TanviArtworkAttachment[] {
   return attachments.map((attachment, index) => {
     const label = safeString(attachment.label) || safeString(attachment.description);
@@ -428,6 +453,7 @@ export function mapTanviQuote(
     artworkCount: attachments.length,
     hasOpenArtwork: attachments.some((attachment) => Boolean(safeString(attachment.url))),
     hasEmailOnlyArtwork: attachments.some((attachment) => !safeString(attachment.url)),
+    tanviStepChecks: getTanviStepChecks(quote.tanviStepChecks),
     createdAt: timestampIso(quote.createdAt),
     updatedAt: timestampIso(quote.updatedAt),
     partner: parsePartnerAssignment(quote.partner, partnerById),
