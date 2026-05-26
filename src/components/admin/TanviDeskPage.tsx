@@ -66,21 +66,38 @@ const TANVI_STEPS: { key: TanviStepKey; label: string }[] = [
   { key: "print_start", label: "Print start" },
 ];
 
-const TANVI_PRINT_PLACEMENT_PRICE_OPTIONS: {
+const YAN_PRINT_PRICE_OPTIONS: {
   value: PartnerPrintPlacement;
   label: string;
-  price: number | null;
+  price: number;
 }[] = [
-  { value: "small_front_only", label: "Small Front Printing only", price: 150 },
-  { value: "small_back_only", label: "Small Back Printing only", price: 150 },
-  { value: "large_front_only", label: "Large Front Printing only", price: 200 },
-  { value: "back_only", label: "Large Back Printing only", price: 200 },
-  { value: "small_front_back", label: "Small Front and Small Back Printing", price: 200 },
-  { value: "small_front_large_back", label: "Small Front and Large Back Printing", price: 250 },
-  { value: "large_front_small_back", label: "Large Front and Small Back Printing", price: 250 },
-  { value: "front_back", label: "Large Front and Large Back Printing", price: 300 },
-  { value: "not_set", label: "Use client/admin request", price: null },
-  { value: "custom", label: "Other / see notes", price: null },
+  { value: "small_front_only", label: "DTF Small Front Printing only", price: 150 },
+  { value: "small_back_only", label: "DTF Small Back Printing only", price: 150 },
+  { value: "large_front_only", label: "DTF Large Front Printing only", price: 200 },
+  { value: "back_only", label: "DTF Large Back Printing only", price: 200 },
+  { value: "small_front_back", label: "DTF Small Front and Small Back Printing", price: 200 },
+  { value: "small_front_large_back", label: "DTF Small Front and Large Back Printing", price: 250 },
+  { value: "large_front_small_back", label: "DTF Large Front and Small Back Printing", price: 250 },
+  { value: "front_back", label: "DTF Large Front and Large Back Printing", price: 300 },
+];
+
+const SHABBANAZ_PRINT_PRICE_OPTIONS: typeof YAN_PRINT_PRICE_OPTIONS = [
+  { value: "small_front_only", label: "DTF Small Front Printing only", price: 50 },
+  { value: "small_back_only", label: "DTF Small Back Printing only", price: 50 },
+  { value: "large_front_only", label: "DTF Large Front Printing only", price: 80 },
+  { value: "back_only", label: "DTF Large Back Printing only", price: 80 },
+  { value: "small_front_back", label: "DTF Small Front and Small Back Printing", price: 100 },
+  { value: "small_front_large_back", label: "DTF Small Front and Large Back Printing", price: 100 },
+  { value: "large_front_small_back", label: "DTF Large Front and Small Back Printing", price: 100 },
+  { value: "front_back", label: "DTF Large Front and Large Back Printing", price: 150 },
+  { value: "small_front_only", label: "SP Small Front Printing only", price: 50 },
+  { value: "small_back_only", label: "SP Small Back Printing only", price: 50 },
+  { value: "large_front_only", label: "SP Large Front Printing only", price: 80 },
+  { value: "back_only", label: "SP Large Back Printing only", price: 80 },
+  { value: "small_front_back", label: "SP Small Front and Small Back Printing", price: 100 },
+  { value: "small_front_large_back", label: "SP Small Front and Large Back Printing", price: 100 },
+  { value: "large_front_small_back", label: "SP Large Front and Small Back Printing", price: 100 },
+  { value: "front_back", label: "SP Large Front and Large Back Printing", price: 150 },
 ];
 
 const defaultManager: ProductionManager = {
@@ -465,23 +482,21 @@ export default function TanviDeskPage() {
     });
   }
 
-  function updatePrintPlacementDraft(value: PartnerPrintPlacement) {
-    setPrintPlacement(value);
+  function getPartnerPriceOptions(partnerId: string) {
+    if (partnerId === "yan") return YAN_PRINT_PRICE_OPTIONS;
+    if (partnerId === "shabanaz") return SHABBANAZ_PRINT_PRICE_OPTIONS;
+    return YAN_PRINT_PRICE_OPTIONS;
+  }
 
-    const preset = TANVI_PRINT_PLACEMENT_PRICE_OPTIONS.find(
-      (option) => option.value === value
-    );
-    if (!preset?.price) return;
+  function applyPartnerPricePreset(partnerId: string, presetIndex: number) {
+    const preset = getPartnerPriceOptions(partnerId)[presetIndex];
+    if (!preset) return;
 
-    setPartnerPriceDrafts((current) =>
-      activePartners.reduce<Record<string, string>>(
-        (drafts, partner) => ({
-          ...drafts,
-          [partner.id]: String(preset.price),
-        }),
-        { ...current }
-      )
-    );
+    setPrintPlacement(preset.value);
+    setPartnerPriceDrafts((current) => ({
+      ...current,
+      [partnerId]: String(preset.price),
+    }));
   }
 
   function toggleTanviStep(stepKey: TanviStepKey, checked: boolean) {
@@ -1368,31 +1383,12 @@ export default function TanviDeskPage() {
                 })}
                 <div className="p-5">
 
-                  <div className="grid gap-4 xl:grid-cols-2">
+                  <div className="grid gap-4">
                     <label className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
-                      Print placement
-                      <select
-                        value={printPlacement}
-                        onChange={(event) =>
-                          updatePrintPlacementDraft(event.target.value as PartnerPrintPlacement)
-                        }
-                        className={`mt-2 w-full normal-case tracking-normal ${fieldClass}`}
-                      >
-                        {TANVI_PRINT_PLACEMENT_PRICE_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.price
-                              ? `${option.label} Rs ${option.price}`
-                              : option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
-                      Current route
+                      Current route and selected placement
                       <div className={`mt-2 flex min-h-[42px] items-center rounded-xl px-3 py-2 normal-case tracking-normal ${subtleCardClass}`}>
                         <span className={`text-sm font-semibold ${strongTextClass}`}>
-                          {selected.partner.visibleLabel}
+                          {selected.partner.visibleLabel} / {PARTNER_PRINT_PLACEMENT_LABELS[printPlacement]}
                         </span>
                       </div>
                     </label>
@@ -1406,6 +1402,7 @@ export default function TanviDeskPage() {
                       const isRouted = selected.partner.visibleTo.includes(partner.id);
                       const priceDraft = partnerPriceDrafts[partner.id] || "";
                       const priceValue = Number(priceDraft);
+                      const partnerPresetOptions = getPartnerPriceOptions(partner.id);
                       const nextPrice =
                         priceDraft.trim() && Number.isFinite(priceValue) && priceValue > 0
                           ? priceValue
@@ -1434,6 +1431,27 @@ export default function TanviDeskPage() {
                                 : "No reply"}
                             </span>
                           </div>
+
+                          <label className={`mt-4 block text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                            Price preset
+                            <select
+                              defaultValue=""
+                              onChange={(event) => {
+                                const presetIndex = Number(event.target.value);
+                                if (Number.isInteger(presetIndex)) {
+                                  applyPartnerPricePreset(partner.id, presetIndex);
+                                }
+                              }}
+                              className={`mt-2 w-full normal-case tracking-normal ${fieldClass}`}
+                            >
+                              <option value="">Select placement and preset price</option>
+                              {partnerPresetOptions.map((option, index) => (
+                                <option key={`${partner.id}-${option.label}-${option.price}`} value={index}>
+                                  {option.label} Rs {option.price}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
 
                           <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
                             <label className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
