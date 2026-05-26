@@ -373,21 +373,21 @@ export default function TanviDeskPage() {
     ? "rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-xs font-semibold text-slate-200"
     : "rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700";
   const fieldClass = isDark
-    ? "rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-300 focus:ring-4 focus:ring-cyan-300/10"
-    : "rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-cyan-700 focus:ring-4 focus:ring-cyan-700/10";
+    ? "rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-300/10"
+    : "rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-orange-700 focus:ring-4 focus:ring-orange-700/10";
   const quietButtonClass = isDark
     ? "inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-white/15 disabled:opacity-50"
     : "inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50";
   const darkButtonClass =
     "inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50";
   const accentButtonClass =
-    "inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-cyan-800 disabled:opacity-50";
+    "inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:opacity-50";
   const heroClass = isDark
     ? "overflow-hidden rounded-[28px] border border-white/10 bg-slate-950 text-white shadow-[0_28px_70px_rgba(2,6,23,0.24)]"
     : "overflow-hidden rounded-[28px] border border-slate-200 bg-white text-slate-950 shadow-[0_18px_45px_rgba(15,23,42,0.08)]";
   const heroBadgeClass = isDark
-    ? "inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100"
-    : "inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-900";
+    ? "inline-flex items-center gap-2 rounded-full border border-orange-300/30 bg-orange-300/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-orange-100"
+    : "inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-orange-900";
   const heroSubtextClass = isDark ? "text-slate-300" : "text-slate-600";
   const heroPrimaryButtonClass = isDark
     ? "inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-50 disabled:opacity-60"
@@ -395,6 +395,8 @@ export default function TanviDeskPage() {
   const heroSecondaryButtonClass = isDark
     ? "inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10"
     : "inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50";
+  const sentButtonClass =
+    "inline-flex items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-800 disabled:opacity-100";
   const workflowToneClass: Record<WorkflowTone, string> = {
     success: isDark
       ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-100"
@@ -424,8 +426,8 @@ export default function TanviDeskPage() {
       label: "Need routing",
       value: metrics.unrouted,
       icon: Route,
-      card: isDark ? "border-amber-300/20 bg-amber-300/10" : "border-amber-100 bg-amber-50",
-      iconClass: isDark ? "text-amber-200" : "text-amber-700",
+      card: isDark ? "border-orange-300/20 bg-orange-300/10" : "border-orange-100 bg-orange-50",
+      iconClass: isDark ? "text-orange-200" : "text-orange-700",
     },
     {
       label: "Blockers",
@@ -541,6 +543,11 @@ export default function TanviDeskPage() {
     ? TANVI_STEPS.filter((step) => selected.tanviStepChecks[step.key]).length
     : 0;
   const progressPercent = Math.round((checkedStepCount / TANVI_STEPS.length) * 100);
+  const allActivePartnersRouted = Boolean(
+    selected &&
+      activePartners.length >= 2 &&
+      activePartners.every((partner) => selected.partner.visibleTo.includes(partner.id))
+  );
 
   function getStepState(stepKey: TanviStepKey) {
     const index = TANVI_STEPS.findIndex((step) => step.key === stepKey);
@@ -556,15 +563,15 @@ export default function TanviDeskPage() {
     if (state.checked) {
       return `${base} ${
         isDark
-          ? "border-white/10 bg-slate-950/90 opacity-80 shadow-none hover:opacity-90"
-          : "border-slate-300 bg-slate-200 opacity-80 shadow-none hover:opacity-90"
+          ? "border-white/10 bg-black/80 opacity-80 shadow-none hover:opacity-90"
+          : "border-slate-950 bg-slate-950 text-white opacity-75 shadow-none hover:opacity-90"
       }`;
     }
     if (state.current) {
       return `${base} ${
         isDark
-          ? "border-cyan-300/50 bg-slate-900 shadow-[0_0_0_4px_rgba(34,211,238,0.12),0_22px_60px_rgba(0,0,0,0.28)]"
-          : "border-cyan-300 bg-white shadow-[0_0_0_5px_rgba(6,182,212,0.14),0_20px_55px_rgba(15,23,42,0.1)]"
+          ? "border-orange-300/50 bg-slate-900 shadow-[0_0_0_4px_rgba(249,115,22,0.16),0_22px_60px_rgba(0,0,0,0.28)]"
+          : "border-orange-300 bg-white shadow-[0_0_0_5px_rgba(249,115,22,0.14),0_20px_55px_rgba(15,23,42,0.1)]"
       }`;
     }
     return `${base} ${
@@ -572,6 +579,23 @@ export default function TanviDeskPage() {
         ? "border-white/10 bg-slate-900/70"
         : "border-slate-200 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.05)]"
     }`;
+  }
+
+  function getStepSurfaceClass(stepKey: TanviStepKey, fallback: string) {
+    if (!getStepState(stepKey).checked) return fallback;
+    return isDark
+      ? "rounded-2xl border border-white/10 bg-black/50 text-slate-200"
+      : "rounded-2xl border border-slate-800 bg-slate-900 text-slate-100";
+  }
+
+  function getStepTextClass(stepKey: TanviStepKey, fallback: string) {
+    if (!getStepState(stepKey).checked) return fallback;
+    return isDark ? "text-slate-200" : "text-slate-100";
+  }
+
+  function getStepMutedClass(stepKey: TanviStepKey) {
+    if (!getStepState(stepKey).checked) return mutedClass;
+    return isDark ? "text-slate-400" : "text-slate-400";
   }
 
   function renderStepHeader({
@@ -588,12 +612,16 @@ export default function TanviDeskPage() {
     badge?: ReactNode;
   }) {
     const state = getStepState(stepKey);
-    const headerTextClass = state.checked && !isDark ? "text-slate-900" : strongTextClass;
-    const headerMutedClass = state.checked && !isDark ? "text-slate-600" : mutedClass;
+    const headerTextClass = state.checked ? "text-slate-100" : strongTextClass;
+    const headerMutedClass = state.checked ? "text-slate-400" : mutedClass;
     return (
       <div
         className={`flex flex-wrap items-start justify-between gap-4 border-b p-5 ${
-          state.checked && !isDark ? "border-slate-300 bg-slate-300/70" : dividerClass
+          state.checked
+            ? isDark
+              ? "border-white/10 bg-black/30"
+              : "border-slate-800 bg-black/40"
+            : dividerClass
         }`}
       >
         <div className="flex min-w-0 gap-4">
@@ -604,7 +632,7 @@ export default function TanviDeskPage() {
                   ? "bg-cyan-300/10 text-cyan-100"
                   : "bg-slate-800 text-white"
                 : state.current
-                  ? "bg-cyan-700 text-white"
+                  ? "bg-orange-500 text-white"
                   : isDark
                     ? "bg-slate-950 text-slate-300"
                     : "bg-slate-100 text-slate-600"
@@ -615,7 +643,7 @@ export default function TanviDeskPage() {
           <div className="min-w-0">
             <p
               className={`text-xs font-semibold uppercase tracking-[0.16em] ${
-                state.checked && !isDark ? "text-slate-500" : "text-cyan-700"
+                state.checked ? "text-slate-400" : "text-cyan-700"
               }`}
             >
               Step {stepNumber}
@@ -634,10 +662,10 @@ export default function TanviDeskPage() {
             className={`flex cursor-pointer items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-semibold transition ${
               state.checked
                 ? isDark
-                  ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-100"
-                  : "border-slate-300 bg-slate-100 text-slate-700"
+                  ? "border-white/10 bg-white/10 text-slate-200"
+                  : "border-slate-700 bg-slate-900 text-slate-200"
                 : state.current
-                  ? "border-cyan-300 bg-cyan-50 text-cyan-900"
+                  ? "border-orange-300 bg-orange-50 text-orange-900"
                   : isDark
                     ? "border-white/10 bg-slate-950/60 text-slate-300"
                     : "border-slate-200 bg-slate-50 text-slate-700"
@@ -648,7 +676,7 @@ export default function TanviDeskPage() {
               checked={state.checked}
               disabled={saving === `step-${stepKey}`}
               onChange={(event) => toggleTanviStep(stepKey, event.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 accent-cyan-700"
+              className="h-4 w-4 rounded border-slate-300 accent-orange-500"
             />
             {state.checked ? "Checked" : state.current ? "Current" : "Mark done"}
           </label>
@@ -1017,28 +1045,31 @@ export default function TanviDeskPage() {
                       ["Print method", selected.printMethod],
                       ["Deadline", selected.deadline],
                     ].map(([label, value]) => (
-                      <div key={label} className={`${subtleCardClass} px-3 py-3`}>
-                        <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                      <div
+                        key={label}
+                        className={`${getStepSurfaceClass("client_onboarding", subtleCardClass)} px-3 py-3`}
+                      >
+                        <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${getStepMutedClass("client_onboarding")}`}>
                           {label}
                         </p>
-                        <p className={`mt-1 break-words text-sm font-semibold ${strongTextClass}`}>
+                        <p className={`mt-1 break-words text-sm font-semibold ${getStepTextClass("client_onboarding", strongTextClass)}`}>
                           {value}
                         </p>
                       </div>
                     ))}
                   </div>
-                  <div className={`${subtleCardClass} p-4`}>
-                    <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                  <div className={`${getStepSurfaceClass("client_onboarding", subtleCardClass)} p-4`}>
+                    <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${getStepMutedClass("client_onboarding")}`}>
                       Client notes
                     </p>
-                    <p className={`mt-3 whitespace-pre-wrap text-sm font-medium leading-6 ${strongTextClass}`}>
+                    <p className={`mt-3 whitespace-pre-wrap text-sm font-medium leading-6 ${getStepTextClass("client_onboarding", strongTextClass)}`}>
                       {selected.notes || "No client notes shared."}
                     </p>
                     <div className="mt-4 grid grid-cols-2 gap-2">
-                      <span className={neutralBadgeClass}>
+                      <span className={`${getStepSurfaceClass("client_onboarding", neutralBadgeClass)} px-3 py-2 text-xs font-semibold`}>
                         Quote total: {formatMoney(selected.total, selected.currency)}
                       </span>
-                      <span className={neutralBadgeClass}>
+                      <span className={`${getStepSurfaceClass("client_onboarding", neutralBadgeClass)} px-3 py-2 text-xs font-semibold`}>
                         Route: {selected.partner.visibleLabel}
                       </span>
                     </div>
@@ -1066,14 +1097,31 @@ export default function TanviDeskPage() {
                       const isImage = isArtworkImage(attachment);
                       const isPdf = isArtworkPdf(attachment);
                       const downloadHref = getArtworkDownloadHref(attachment, index);
+                      const artworkChecked = getStepState("artwork").checked;
+                      const artworkSurfaceClass = getStepSurfaceClass("artwork", elevatedCardClass);
+                      const artworkMutedClass = getStepMutedClass("artwork");
+                      const artworkTextClass = getStepTextClass("artwork", strongTextClass);
+                      const artworkDividerClass = artworkChecked
+                        ? isDark
+                          ? "border-white/10"
+                          : "border-slate-800"
+                        : dividerClass;
+                      const artworkPreviewShellClass = artworkChecked
+                        ? isDark
+                          ? "bg-black p-3"
+                          : "bg-slate-950 p-3"
+                        : "bg-white p-3";
+                      const artworkPreviewClass = artworkChecked
+                        ? "h-[22rem] w-full rounded-2xl border border-slate-800 bg-black object-contain sm:h-[28rem]"
+                        : "h-[22rem] w-full rounded-2xl border border-slate-200 bg-white object-contain sm:h-[28rem]";
                       return (
-                        <article key={`${attachment.url || attachment.filename}-${index}`} className={`${elevatedCardClass} overflow-hidden`}>
-                          <div className={`flex flex-wrap items-start justify-between gap-3 border-b p-4 ${dividerClass}`}>
+                        <article key={`${attachment.url || attachment.filename}-${index}`} className={`${artworkSurfaceClass} overflow-hidden`}>
+                          <div className={`flex flex-wrap items-start justify-between gap-3 border-b p-4 ${artworkDividerClass}`}>
                             <div className="min-w-0">
-                              <p className={`truncate text-base font-semibold ${strongTextClass}`}>
+                              <p className={`truncate text-base font-semibold ${artworkTextClass}`}>
                                 {attachment.filename}
                               </p>
-                              <p className={`mt-1 text-xs ${mutedClass}`}>
+                              <p className={`mt-1 text-xs ${artworkMutedClass}`}>
                                 {attachment.label}
                                 {attachment.quantity ? ` - Qty ${attachment.quantity}` : ""}
                                 {formatFileSize(attachment.size) ? ` - ${formatFileSize(attachment.size)}` : ""}
@@ -1103,31 +1151,35 @@ export default function TanviDeskPage() {
                           </div>
 
                           {isImage ? (
-                            <div className="bg-white p-3">
+                            <div className={artworkPreviewShellClass}>
                               <img
                                 src={attachment.url}
                                 alt={attachment.filename}
-                                className="h-[22rem] w-full rounded-2xl border border-slate-200 bg-white object-contain sm:h-[28rem]"
+                                className={artworkPreviewClass}
                                 loading="lazy"
                               />
                             </div>
                           ) : isPdf ? (
-                            <div className="bg-white p-3">
+                            <div className={artworkPreviewShellClass}>
                               <iframe
                                 src={attachment.url}
                                 title={`Preview ${attachment.filename || "PDF artwork"}`}
-                                className="h-[28rem] w-full rounded-2xl border border-slate-200 bg-white"
+                                className={
+                                  artworkChecked
+                                    ? "h-[28rem] w-full rounded-2xl border border-slate-800 bg-black"
+                                    : "h-[28rem] w-full rounded-2xl border border-slate-200 bg-white"
+                                }
                               />
                             </div>
                           ) : attachment.url ? (
                             <div className="p-4">
-                              <div className={`grid min-h-48 place-items-center text-center ${subtleCardClass} p-6`}>
+                              <div className={`grid min-h-48 place-items-center text-center ${getStepSurfaceClass("artwork", subtleCardClass)} p-6`}>
                                 <div>
                                   <FileText className="mx-auto h-8 w-8 text-cyan-700" />
-                                  <p className={`mt-3 text-sm font-semibold ${strongTextClass}`}>
+                                  <p className={`mt-3 text-sm font-semibold ${artworkTextClass}`}>
                                     Preview unavailable
                                   </p>
-                                  <p className={`mt-1 text-xs ${mutedClass}`}>
+                                  <p className={`mt-1 text-xs ${artworkMutedClass}`}>
                                     Open the file to inspect this artwork.
                                   </p>
                                 </div>
@@ -1164,7 +1216,7 @@ export default function TanviDeskPage() {
                 })}
                 <div className="p-5">
 
-                  <div className="mt-5 grid gap-4 xl:grid-cols-2">
+                  <div className="grid gap-4 xl:grid-cols-2">
                     <label className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
                       Print placement
                       <select
@@ -1233,7 +1285,7 @@ export default function TanviDeskPage() {
                             <label className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
                               Partner price
                               <div className="mt-2 flex items-center gap-2">
-                                <span className={`rounded-xl border px-3 py-2 text-sm font-semibold ${isDark ? "border-white/10 bg-slate-950 text-slate-300" : "border-slate-200 bg-slate-50 text-slate-600"}`}>
+                                <span className={`inline-flex min-w-12 shrink-0 items-center justify-center whitespace-nowrap rounded-xl border px-3 py-2 text-xs font-semibold leading-none ${isDark ? "border-white/10 bg-slate-950 text-slate-300" : "border-slate-200 bg-slate-50 text-slate-600"}`}>
                                   {selected.currency}
                                 </span>
                                 <input
@@ -1283,7 +1335,7 @@ export default function TanviDeskPage() {
                             </div>
                             <button
                               type="button"
-                              disabled={Boolean(saving)}
+                              disabled={Boolean(saving) || isRouted}
                               onClick={() =>
                                 updateQuote(
                                   selected,
@@ -1295,10 +1347,20 @@ export default function TanviDeskPage() {
                                   partner.id
                                 )
                               }
-                              className={partner.id === activePartners[0]?.id ? accentButtonClass : darkButtonClass}
+                              className={
+                                isRouted
+                                  ? sentButtonClass
+                                  : partner.id === activePartners[0]?.id
+                                    ? accentButtonClass
+                                    : darkButtonClass
+                              }
                             >
-                              <Send className="h-4 w-4" />
-                              {saving === partner.id ? "Moving..." : `Move to ${partner.name}`}
+                              {isRouted ? <CheckCircle2 className="h-4 w-4" /> : <Send className="h-4 w-4" />}
+                              {isRouted
+                                ? `Already sent to ${partner.name}`
+                                : saving === partner.id
+                                  ? "Moving..."
+                                  : `Move to ${partner.name}`}
                             </button>
                           </div>
                         </article>
@@ -1308,7 +1370,7 @@ export default function TanviDeskPage() {
 
                   <button
                     type="button"
-                    disabled={Boolean(saving) || activePartners.length < 2}
+                    disabled={Boolean(saving) || activePartners.length < 2 || allActivePartnersRouted}
                     onClick={() =>
                       updateQuote(
                         selected,
@@ -1320,10 +1382,18 @@ export default function TanviDeskPage() {
                         "all"
                       )
                     }
-                    className={`mt-3 w-full ${quietButtonClass}`}
+                    className={`mt-3 w-full ${allActivePartnersRouted ? sentButtonClass : quietButtonClass}`}
                   >
-                    <Users className="h-4 w-4" />
-                    {saving === "all" ? "Sending..." : "Send to all active partners"}
+                    {allActivePartnersRouted ? (
+                      <CheckCircle2 className="h-4 w-4" />
+                    ) : (
+                      <Users className="h-4 w-4" />
+                    )}
+                    {allActivePartnersRouted
+                      ? "Already sent to all active partners"
+                      : saving === "all"
+                        ? "Sending..."
+                        : "Send to all active partners"}
                   </button>
 
                   <div className="mt-5">
