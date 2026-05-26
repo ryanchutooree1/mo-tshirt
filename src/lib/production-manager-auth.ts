@@ -6,11 +6,7 @@ export const PRODUCTION_MANAGER_ALLOWED_PAGES: AdminPagePath[] = [
 ];
 
 function getProductionManagerPassword() {
-  return (
-    process.env.PRODUCTION_MANAGER_PASSWORD ||
-    process.env.TANVI_PASSWORD ||
-    "Tuffy"
-  );
+  return process.env.PRODUCTION_MANAGER_PASSWORD?.trim() || "";
 }
 
 function constantTimeEqual(left: string, right: string) {

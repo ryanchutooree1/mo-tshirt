@@ -88,24 +88,20 @@ function normalizePartnerId(value: unknown, fallbackName: unknown) {
   return isPrintPartnerId(fromName) ? fromName : "";
 }
 
-function getDefaultPartnerPassword(partnerId: PrintPartnerId) {
+function getEnvironmentPartnerPassword(partnerId: PrintPartnerId) {
   if (partnerId === "yan") {
-    return (
-      process.env.PARTNER_YAN_PASSWORD ||
-      process.env.NEXT_PARTNER_YAN_PASSWORD ||
-      "Samsam"
-    );
+    return process.env.YAN_PARTNER_PASSWORD?.trim() || "";
   }
 
   if (partnerId === "shabanaz") {
-    return (
-      process.env.PARTNER_SHABANAZ_PASSWORD ||
-      process.env.NEXT_PARTNER_SHABANAZ_PASSWORD ||
-      "Paulpaul"
-    );
+    return process.env.SHABBANAZ_PARTNER_PASSWORD?.trim() || "";
   }
 
   return "";
+}
+
+function isEnvironmentPasswordPartner(partnerId: PrintPartnerId) {
+  return partnerId === "yan" || partnerId === "shabanaz";
 }
 
 function normalizePaymentDetails(value: unknown): PartnerPaymentDetails | null {
@@ -143,7 +139,7 @@ function getRawPartnerEntries(value: unknown): unknown[] {
 }
 
 function stripPassword(partner: StoredPrintPartner): PrintPartner {
-  const fallbackPassword = getDefaultPartnerPassword(partner.id);
+  const environmentPassword = getEnvironmentPartnerPassword(partner.id);
   return {
     id: partner.id,
     name: partner.name,
@@ -155,7 +151,7 @@ function stripPassword(partner: StoredPrintPartner): PrintPartner {
     emails: partner.emails,
     emailNotificationsEnabled: partner.emailNotificationsEnabled,
     supportsLogoPrintPlacements: partner.supportsLogoPrintPlacements,
-    hasPassword: Boolean(partner.password || fallbackPassword),
+    hasPassword: Boolean(partner.password || environmentPassword),
   };
 }
 
@@ -171,7 +167,10 @@ function normalizeStoredPartner(
   const emails = normalizeEmails(raw.emails ?? raw.email, fallback?.emails || []);
   const paymentDetails = normalizePaymentDetails(raw.paymentDetails) || fallback?.paymentDetails || null;
   const rawPassword = cleanString(raw.password);
-  const password = rawPassword || fallback?.password || getDefaultPartnerPassword(id);
+  const environmentPassword = getEnvironmentPartnerPassword(id);
+  const password = isEnvironmentPasswordPartner(id)
+    ? environmentPassword
+    : rawPassword || fallback?.password || "";
 
   return {
     id,
@@ -198,8 +197,14 @@ function normalizeStoredPartner(
 function defaultStoredPartners(): StoredPrintPartner[] {
   return DEFAULT_PRINT_PARTNERS.map((partner) => ({
     ...partner,
-    password: getDefaultPartnerPassword(partner.id),
+    password: getEnvironmentPartnerPassword(partner.id),
   }));
+}
+
+function preparePartnerForStorage(partner: StoredPrintPartner): StoredPrintPartner {
+  if (!isEnvironmentPasswordPartner(partner.id)) return partner;
+  const { password: _password, ...partnerWithoutPassword } = partner;
+  return partnerWithoutPassword;
 }
 
 async function getLegacyNotificationMap() {
@@ -404,7 +409,7 @@ export async function savePrintPartners(value: unknown, managerValue?: unknown) 
     doc(db, SETTINGS_COLLECTION, PRINT_PARTNERS_DOC),
     {
       manager,
-      partners,
+      partners: partners.map(preparePartnerForStorage),
       updatedAt: serverTimestamp(),
     },
     { merge: true }

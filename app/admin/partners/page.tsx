@@ -45,6 +45,12 @@ function getPartnerEmails(partner: PartnerDraft) {
   return partner.email ? [partner.email] : [];
 }
 
+function getPartnerPasswordEnvName(partnerId: string) {
+  if (partnerId === "yan") return "YAN_PARTNER_PASSWORD";
+  if (partnerId === "shabanaz") return "SHABBANAZ_PARTNER_PASSWORD";
+  return null;
+}
+
 function toPartnerDraft(partner: PrintPartner): PartnerDraft {
   return {
     ...partner,
@@ -447,15 +453,6 @@ export default function AdminPartnersPage() {
                   Open Quotation / Invoice
                   <ExternalLink className="h-3.5 w-3.5" />
                 </Link>
-                <span
-                  className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-semibold ${
-                    isDark
-                      ? "border-white/10 bg-slate-950 text-slate-300"
-                      : "border-slate-200 bg-slate-50 text-slate-600"
-                  }`}
-                >
-                  Password: Tuffy
-                </span>
               </div>
             </div>
 
@@ -498,6 +495,7 @@ export default function AdminPartnersPage() {
               partner.emailNotificationsEnabled && savedEmails.length > 0;
             const paymentDetails = partner.paymentDetails || emptyPaymentDetails;
             const productionNotesText = partner.productionNotes.join("\n");
+            const passwordEnvName = getPartnerPasswordEnvName(partner.id);
 
             return (
               <article key={partner.id} className={`${panelClass} overflow-hidden`}>
@@ -587,14 +585,22 @@ export default function AdminPartnersPage() {
                             onChange={(event) =>
                               updatePartner(partner.id, { password: event.target.value })
                             }
+                            disabled={Boolean(passwordEnvName)}
                             className={`${inputClass} pl-10 normal-case tracking-normal`}
                             placeholder={
-                              partner.hasPassword
-                                ? "Leave blank to keep current password"
-                                : "Set partner password"
+                              passwordEnvName
+                                ? passwordEnvName
+                                : partner.hasPassword
+                                  ? "Leave blank to keep current password"
+                                  : "Set partner password"
                             }
                           />
                         </div>
+                        {passwordEnvName ? (
+                          <p className={`mt-2 text-xs normal-case tracking-normal ${mutedTextClass}`}>
+                            Managed by server environment variable.
+                          </p>
+                        ) : null}
                       </label>
                       <label className={smallLabelClass}>
                         Active
