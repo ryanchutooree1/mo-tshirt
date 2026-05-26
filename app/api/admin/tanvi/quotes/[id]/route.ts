@@ -197,6 +197,7 @@ export async function PATCH(
         currentResponse.productionStatus || "not_started";
       updatePayload[`partner.responses.${partnerId}.printPlacement`] =
         currentResponse.printPlacement || normalizePartnerPrintPlacement(body?.printPlacement);
+      updatePayload[`partner.responses.${partnerId}.managerPrice`] = draft.price;
       updatePayload[`partner.responses.${partnerId}.price`] = draft.price;
       updatePayload[`partner.responses.${partnerId}.updatedAt`] = serverTimestamp();
       updatePayload[`partner.responses.${partnerId}.comments`] = currentResponse.comments || "";
@@ -206,6 +207,7 @@ export async function PATCH(
 
     if (partnerPriceDrafts.size === 1) {
       const firstDraft = Array.from(partnerPriceDrafts.values())[0];
+      updatePayload["partner.managerPrice"] = firstDraft.price;
       updatePayload["partner.price"] = firstDraft.price;
     }
 

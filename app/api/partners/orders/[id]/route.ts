@@ -300,15 +300,16 @@ export async function PATCH(
   if (!existing?.view) {
     return NextResponse.json({ error: "Order not found." }, { status: 404 });
   }
+  const existingView = existing.view;
 
   const decision: PartnerDecision = isPartnerDecision(body?.decision)
     ? body.decision
-    : existing.view.decision;
+    : existingView.decision;
   const productionStatus: PartnerProductionStatus = isPartnerProductionStatus(
     body?.productionStatus
   )
     ? body.productionStatus
-    : existing.view.productionStatus;
+    : existingView.productionStatus;
   const completionDays = cleanOptionalNumber(body?.completionDays);
   const price = cleanOptionalNumber(body?.price);
   const comments = cleanText(body?.comments);
@@ -317,12 +318,12 @@ export async function PATCH(
     body?.printPlacement
   )
     ? body.printPlacement
-    : existing.view.printPlacement;
+    : existingView.printPlacement;
   const shouldNotifyManagerAction =
     (decision === "needs_info" || Boolean(missingInformation)) &&
-    (decision !== existing.view.decision ||
-      missingInformation !== existing.view.missingInformation ||
-      comments !== existing.view.comments);
+    (decision !== existingView.decision ||
+      missingInformation !== existingView.missingInformation ||
+      comments !== existingView.comments);
 
   const nextProductionStatus =
     decision === "accepted" && productionStatus === "not_started"
@@ -336,6 +337,7 @@ export async function PATCH(
     requestStatus: decision,
     productionStatus: nextProductionStatus,
     completionDays,
+    managerPrice: existingView.managerPrice,
     price,
     comments,
     missingInformation,
@@ -373,6 +375,7 @@ export async function PATCH(
         requestStatus: decision,
         productionStatus: nextProductionStatus,
         completionDays,
+        managerPrice: existingView.managerPrice,
         price,
         comments,
         missingInformation,

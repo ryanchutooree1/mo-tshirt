@@ -82,6 +82,7 @@ type RawPartnerAssignment = {
   productionStatus?: unknown;
   clientStatus?: unknown;
   completionDays?: unknown;
+  managerPrice?: unknown;
   price?: unknown;
   comments?: unknown;
   missingInformation?: unknown;
@@ -474,6 +475,14 @@ export function sanitizePartnerOrder(
     (hasVisibleField(visibleFields, "deadline") &&
       (designBrief?.deadline || data.deadline || "")) ||
     "";
+  const rawManagerPrice = safeNumber(
+    getResponseValue(partner, partnerResponse, "managerPrice"),
+    0
+  );
+  const rawPrice = safeNumber(getResponseValue(partner, partnerResponse, "price"), 0);
+  const decision = normalizeDecision(getResponseValue(partner, partnerResponse, "requestStatus"));
+  const managerPrice =
+    rawManagerPrice > 0 ? rawManagerPrice : decision === "pending" && rawPrice > 0 ? rawPrice : null;
 
   return {
     id,
@@ -490,7 +499,7 @@ export function sanitizePartnerOrder(
       timestampIso(getResponseValue(partner, partnerResponse, "updatedAt")) ||
       timestampIso(partner.updatedAt) ||
       timestampIso(data.updatedAt),
-    decision: normalizeDecision(getResponseValue(partner, partnerResponse, "requestStatus")),
+    decision,
     productionStatus: normalizeProductionStatus(
       getResponseValue(partner, partnerResponse, "productionStatus")
     ),
@@ -500,8 +509,9 @@ export function sanitizePartnerOrder(
     completionDays: safeNumber(getResponseValue(partner, partnerResponse, "completionDays"), 0) > 0
       ? safeNumber(getResponseValue(partner, partnerResponse, "completionDays"), 0)
       : null,
-    price: safeNumber(getResponseValue(partner, partnerResponse, "price"), 0) > 0
-      ? safeNumber(getResponseValue(partner, partnerResponse, "price"), 0)
+    managerPrice,
+    price: rawPrice > 0
+      ? rawPrice
       : null,
     comments: safeString(getResponseValue(partner, partnerResponse, "comments")),
     missingInformation: safeString(

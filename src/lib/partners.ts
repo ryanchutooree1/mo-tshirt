@@ -159,6 +159,7 @@ export type PartnerOrderView = {
   printPlacement: PartnerPrintPlacement;
   printPlacementSource: PartnerPrintPlacementSource;
   completionDays: number | null;
+  managerPrice: number | null;
   price: number | null;
   comments: string;
   missingInformation: string;

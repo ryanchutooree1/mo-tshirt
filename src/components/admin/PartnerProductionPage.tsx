@@ -1196,7 +1196,7 @@ export default function PartnerProductionPage({
                       title={`Quote ${managerName} clearly`}
                       tone="amber"
                     >
-                      <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="grid gap-3 xl:grid-cols-3">
                         <label className={fieldLabelClass}>
                           Completion days
                           <input
@@ -1213,8 +1213,20 @@ export default function PartnerProductionPage({
                             placeholder="e.g. 3"
                           />
                         </label>
+                        <div>
+                          <p className={fieldLabelClass}>
+                            {managerName} selected price
+                          </p>
+                          <div className={`mt-2 flex min-h-11 items-center rounded-xl px-3 py-2 text-sm font-semibold normal-case tracking-normal ${softSurfaceClass}`}>
+                            {selected.managerPrice
+                              ? `Rs ${selected.managerPrice}`
+                              : selected.price
+                                ? `Rs ${selected.price}`
+                                : "Not set"}
+                          </div>
+                        </div>
                         <label className={fieldLabelClass}>
-                          Your price
+                          Suggested price
                           <input
                             type="number"
                             min={0}
