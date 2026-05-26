@@ -556,8 +556,8 @@ export default function TanviDeskPage() {
     if (state.checked) {
       return `${base} ${
         isDark
-          ? "border-white/10 bg-slate-900 shadow-[0_14px_42px_rgba(0,0,0,0.22)]"
-          : "border-slate-300 bg-slate-100 shadow-[0_12px_34px_rgba(15,23,42,0.08)]"
+          ? "border-white/10 bg-slate-950/90 opacity-80 shadow-none hover:opacity-90"
+          : "border-slate-300 bg-slate-200 opacity-80 shadow-none hover:opacity-90"
       }`;
     }
     if (state.current) {
@@ -593,7 +593,7 @@ export default function TanviDeskPage() {
     return (
       <div
         className={`flex flex-wrap items-start justify-between gap-4 border-b p-5 ${
-          state.checked && !isDark ? "border-slate-200 bg-slate-200/70" : dividerClass
+          state.checked && !isDark ? "border-slate-300 bg-slate-300/70" : dividerClass
         }`}
       >
         <div className="flex min-w-0 gap-4">
@@ -602,7 +602,7 @@ export default function TanviDeskPage() {
               state.checked
                 ? isDark
                   ? "bg-cyan-300/10 text-cyan-100"
-                  : "bg-slate-900 text-white"
+                  : "bg-slate-800 text-white"
                 : state.current
                   ? "bg-cyan-700 text-white"
                   : isDark
@@ -635,7 +635,7 @@ export default function TanviDeskPage() {
               state.checked
                 ? isDark
                   ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-100"
-                  : "border-slate-300 bg-white text-slate-800"
+                  : "border-slate-300 bg-slate-100 text-slate-700"
                 : state.current
                   ? "border-cyan-300 bg-cyan-50 text-cyan-900"
                   : isDark
