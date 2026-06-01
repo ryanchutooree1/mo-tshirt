@@ -2270,9 +2270,20 @@ export default function TanviDeskPage() {
                       </p>
                     </div>
                     <div className={`${subtleCardClass} p-3`}>
-                      <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
-                        Partner comments
-                      </p>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                          Partner comments
+                        </p>
+                        <span
+                          className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                            isDark
+                              ? "border-emerald-300/30 bg-emerald-300/10 text-emerald-100"
+                              : "border-emerald-200 bg-emerald-50 text-emerald-800"
+                          }`}
+                        >
+                          {selected.partner.name || selected.partner.visibleLabel || "Partner"}
+                        </span>
+                      </div>
                       <p className={`mt-2 whitespace-pre-wrap text-sm font-medium ${strongTextClass}`}>
                         {selected.partner.comments || "No comments yet."}
                       </p>
