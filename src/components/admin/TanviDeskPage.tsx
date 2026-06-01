@@ -15,7 +15,9 @@ import {
   FileText,
   Image as ImageIcon,
   LockKeyhole,
+  MessageCircle,
   PackageCheck,
+  Plus,
   Printer,
   RefreshCw,
   Route,
@@ -56,6 +58,19 @@ type DeskPayload = {
 
 type QueueFilter = "all" | "unrouted" | "waiting" | "blocked" | "ready" | "active";
 type WorkflowTone = "success" | "warning" | "danger" | "info" | "neutral";
+
+type WhatsappOrderDraft = {
+  clientName: string;
+  phone: string;
+  email: string;
+  product: string;
+  quantity: string;
+  color: string;
+  printMethod: string;
+  deadline: string;
+  total: string;
+  notes: string;
+};
 
 const TANVI_STEPS: { key: TanviStepKey; label: string }[] = [
   { key: "client_onboarding", label: "Client onboarding" },
@@ -103,6 +118,19 @@ const SHABBANAZ_PRINT_PRICE_OPTIONS: typeof YAN_PRINT_PRICE_OPTIONS = [
 const defaultManager: ProductionManager = {
   name: "Tanvi",
   email: "",
+};
+
+const emptyWhatsappDraft: WhatsappOrderDraft = {
+  clientName: "",
+  phone: "",
+  email: "",
+  product: "",
+  quantity: "",
+  color: "",
+  printMethod: "",
+  deadline: "",
+  total: "",
+  notes: "",
 };
 
 function formatDateTime(value: string | null) {
@@ -346,6 +374,9 @@ export default function TanviDeskPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showQueue, setShowQueue] = useState(true);
+  const [showWhatsappIntake, setShowWhatsappIntake] = useState(false);
+  const [whatsappDraft, setWhatsappDraft] = useState<WhatsappOrderDraft>(emptyWhatsappDraft);
+  const [creatingWhatsappOrder, setCreatingWhatsappOrder] = useState(false);
 
   const activePartners = useMemo(
     () => partners.filter((partner) => partner.active),
@@ -447,6 +478,7 @@ export default function TanviDeskPage() {
       clientStatus?: PartnerClientStatus;
       partnerPrices?: Record<string, { price: number | null }>;
       tanviStepChecks?: Partial<Record<TanviStepKey, boolean>>;
+      whatsappDetails?: WhatsappOrderDraft;
     },
     label: string
   ) {
@@ -508,6 +540,66 @@ export default function TanviDeskPage() {
     );
   }
 
+  function updateWhatsappDraft(field: keyof WhatsappOrderDraft, value: string) {
+    setWhatsappDraft((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  function loadSelectedIntoWhatsappDraft() {
+    if (!selected) return;
+    setWhatsappDraft({
+      clientName: selected.clientName === "Client not set" ? "" : selected.clientName,
+      phone: selected.phone,
+      email: selected.email,
+      product: selected.product === "Not set" ? "" : selected.product,
+      quantity: selected.pieces ? String(selected.pieces) : "",
+      color: selected.colors.join(", "),
+      printMethod: selected.printMethod === "Not set" ? "" : selected.printMethod,
+      deadline: selected.deadline === "No deadline" ? "" : selected.deadline,
+      total: selected.total ? String(selected.total) : "",
+      notes: selected.notes,
+    });
+    setShowWhatsappIntake(true);
+  }
+
+  async function createWhatsappOrder() {
+    setCreatingWhatsappOrder(true);
+    setNotice(null);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/tanvi/quotes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ whatsappDetails: whatsappDraft }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.quote) {
+        throw new Error(data?.error || "Could not create WhatsApp order.");
+      }
+      const quote = data.quote as TanviQuoteSummary;
+      setQuotes((current) => [quote, ...current]);
+      setSelectedId(quote.id);
+      setWhatsappDraft(emptyWhatsappDraft);
+      setShowWhatsappIntake(false);
+      setNotice(`${quote.code} WhatsApp order created.`);
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : "Could not create WhatsApp order.");
+    } finally {
+      setCreatingWhatsappOrder(false);
+    }
+  }
+
+  function saveWhatsappDetailsToSelected() {
+    if (!selected) return;
+    void updateQuote(
+      selected,
+      { whatsappDetails: whatsappDraft },
+      "whatsapp-details"
+    );
+  }
+
   const pageClass = isDark
     ? "min-h-screen bg-slate-950 text-slate-100"
     : "min-h-screen bg-[#f5f7fb] text-slate-950";
@@ -536,6 +628,8 @@ export default function TanviDeskPage() {
     "inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50";
   const accentButtonClass =
     "inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:opacity-50";
+  const whatsappButtonClass =
+    "inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50";
   const heroClass = isDark
     ? "overflow-hidden rounded-[28px] border border-white/10 bg-slate-950 text-white shadow-[0_28px_70px_rgba(2,6,23,0.24)]"
     : "overflow-hidden rounded-[28px] border border-slate-200 bg-white text-slate-950 shadow-[0_18px_45px_rgba(15,23,42,0.08)]";
@@ -783,7 +877,7 @@ export default function TanviDeskPage() {
     const headerMutedClass = state.checked ? "text-slate-400" : mutedClass;
     return (
       <div
-        className={`flex flex-wrap items-start justify-between gap-4 border-b p-5 ${
+        className={`flex flex-wrap items-start justify-between gap-3 border-b p-4 sm:gap-4 sm:p-5 ${
           state.checked
             ? isDark
               ? "border-white/10 bg-black/30"
@@ -793,7 +887,7 @@ export default function TanviDeskPage() {
       >
         <div className="flex min-w-0 gap-4">
           <span
-            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold ${
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold sm:h-12 sm:w-12 ${
               state.checked
                 ? isDark
                   ? "bg-cyan-300/10 text-cyan-100"
@@ -815,10 +909,10 @@ export default function TanviDeskPage() {
             >
               Step {stepNumber}
             </p>
-            <h3 className={`mt-1 text-xl font-semibold tracking-tight ${headerTextClass}`}>
+            <h3 className={`mt-1 text-lg font-semibold tracking-tight sm:text-xl ${headerTextClass}`}>
               {title}
             </h3>
-            <p className={`mt-2 max-w-3xl text-sm leading-6 ${headerMutedClass}`}>
+            <p className={`mt-1.5 max-w-3xl text-sm leading-6 sm:mt-2 ${headerMutedClass}`}>
               {description}
             </p>
           </div>
@@ -854,21 +948,21 @@ export default function TanviDeskPage() {
 
   return (
     <main className={pageClass}>
-      <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-5 px-3 py-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-4 px-2 py-3 sm:gap-5 sm:px-6 sm:py-4 lg:px-8">
         <section className={heroClass}>
-          <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_32rem] lg:p-7">
+          <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_32rem] lg:p-7">
             <div>
               <div className={heroBadgeClass}>
                 <ShieldCheck className="h-4 w-4" />
                 Production Manager
               </div>
-              <h1 className="mt-5 text-3xl font-semibold tracking-tight sm:text-4xl">
+              <h1 className="mt-4 text-2xl font-semibold tracking-tight sm:mt-5 sm:text-4xl">
                 {manager.name} command desk
               </h1>
-              <p className={`mt-4 max-w-3xl text-sm leading-6 sm:text-base ${heroSubtextClass}`}>
-                Every quotation, partner handoff, blocker, and print-start decision in one serious daily workspace.
+              <p className={`mt-3 max-w-3xl text-sm leading-6 sm:mt-4 sm:text-base ${heroSubtextClass}`}>
+                Fast phone workspace for quotations, WhatsApp orders, partner handoff, blockers, and print-start decisions.
               </p>
-              <div className="mt-6 flex flex-wrap gap-2">
+              <div className="mt-5 flex flex-wrap gap-2 sm:mt-6">
                 <button
                   type="button"
                   onClick={loadDesk}
@@ -886,6 +980,17 @@ export default function TanviDeskPage() {
                   {showQueue ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   {showQueue ? "Hide quote list" : "Show quote list"}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWhatsappDraft(emptyWhatsappDraft);
+                    setShowWhatsappIntake((current) => !current);
+                  }}
+                  className={whatsappButtonClass}
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  WhatsApp order
+                </button>
                 <span className={heroSecondaryButtonClass}>
                   <Sparkles className="h-4 w-4 text-amber-300" />
                   Password protected
@@ -893,16 +998,16 @@ export default function TanviDeskPage() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
               {summaryCards.map(({ label, value, icon: Icon, card, iconClass }) => (
-                <div key={label} className={`rounded-2xl border p-4 ${card}`}>
+                <div key={label} className={`rounded-2xl border p-3 sm:p-4 ${card}`}>
                   <div className="flex items-center justify-between gap-3">
-                    <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                    <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] sm:text-xs sm:tracking-[0.14em] ${mutedClass}`}>
                       {label}
                     </p>
                     <Icon className={`h-4 w-4 ${iconClass}`} />
                   </div>
-                  <div className="mt-3 text-3xl font-semibold">{value}</div>
+                  <div className="mt-2 text-2xl font-semibold sm:mt-3 sm:text-3xl">{value}</div>
                 </div>
               ))}
             </div>
@@ -921,6 +1026,90 @@ export default function TanviDeskPage() {
             <AlertTriangle className="h-4 w-4" />
             {error}
           </div>
+        ) : null}
+
+        {showWhatsappIntake ? (
+          <section className={`${panelClass} overflow-hidden`}>
+            <div className={`flex flex-wrap items-center justify-between gap-3 border-b p-4 ${dividerClass}`}>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
+                  WhatsApp order
+                </p>
+                <h2 className="mt-1 text-lg font-semibold tracking-tight sm:text-xl">
+                  Add or update the details Tanvi receives in chat
+                </h2>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {selected ? (
+                  <button type="button" onClick={loadSelectedIntoWhatsappDraft} className={quietButtonClass}>
+                    <ClipboardCheck className="h-4 w-4" />
+                    Use selected
+                  </button>
+                ) : null}
+                <button type="button" onClick={() => setShowWhatsappIntake(false)} className={quietButtonClass}>
+                  <EyeOff className="h-4 w-4" />
+                  Hide
+                </button>
+              </div>
+            </div>
+            <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
+              {[
+                ["clientName", "Client name", "Name from WhatsApp"],
+                ["phone", "Phone", "+230..."],
+                ["email", "Email", "Optional"],
+                ["product", "Product", "T-shirt / polo / hoodie"],
+                ["quantity", "Quantity", "No. of pieces"],
+                ["color", "Colour", "Black, white..."],
+                ["printMethod", "Print", "DTF, embroidery..."],
+                ["deadline", "Deadline", "Date or urgent note"],
+                ["total", "Total", "Optional amount"],
+              ].map(([field, label, placeholder]) => (
+                <label key={field} className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                  {label}
+                  <input
+                    value={whatsappDraft[field as keyof WhatsappOrderDraft]}
+                    onChange={(event) =>
+                      updateWhatsappDraft(field as keyof WhatsappOrderDraft, event.target.value)
+                    }
+                    placeholder={placeholder}
+                    className={`mt-2 w-full normal-case tracking-normal ${fieldClass}`}
+                  />
+                </label>
+              ))}
+              <label className={`md:col-span-2 xl:col-span-4 text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                Notes from WhatsApp
+                <textarea
+                  value={whatsappDraft.notes}
+                  onChange={(event) => updateWhatsappDraft("notes", event.target.value)}
+                  placeholder="Paste the client request, delivery note, artwork reminder, or price discussion."
+                  rows={3}
+                  className={`mt-2 w-full resize-none normal-case tracking-normal ${fieldClass}`}
+                />
+              </label>
+            </div>
+            <div className={`flex flex-col gap-2 border-t p-4 sm:flex-row sm:justify-end ${dividerClass}`}>
+              {selected ? (
+                <button
+                  type="button"
+                  disabled={Boolean(saving) || creatingWhatsappOrder}
+                  onClick={saveWhatsappDetailsToSelected}
+                  className={quietButtonClass}
+                >
+                  <Save className="h-4 w-4" />
+                  {saving === "whatsapp-details" ? "Saving..." : `Update ${selected.code}`}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                disabled={creatingWhatsappOrder || Boolean(saving)}
+                onClick={createWhatsappOrder}
+                className={whatsappButtonClass}
+              >
+                <Plus className="h-4 w-4" />
+                {creatingWhatsappOrder ? "Creating..." : "Create WhatsApp order"}
+              </button>
+            </div>
+          </section>
         ) : null}
 
         <section className={showQueue ? "grid gap-5 xl:grid-cols-[25rem_minmax(0,1fr)]" : "grid gap-5"}>
@@ -1048,13 +1237,13 @@ export default function TanviDeskPage() {
 
           {selected ? (
             <section className="grid gap-5">
-              <div className={`${panelClass} p-5`}>
+              <div className={`${panelClass} p-4 sm:p-5`}>
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div>
                     <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
                       {selected.code}
                     </p>
-                    <h2 className="mt-2 text-3xl font-semibold tracking-tight">
+                    <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
                       {selected.clientName}
                     </h2>
                     <div className={`mt-3 flex flex-wrap gap-2 text-xs font-semibold ${mutedClass}`}>
@@ -1079,7 +1268,7 @@ export default function TanviDeskPage() {
                   </div>
                 </div>
 
-                <div className="mt-5 grid gap-3 md:grid-cols-4">
+                <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-3 md:grid-cols-4">
                   {[
                     ["Product", selected.product],
                     ["Quantity", selected.pieces ? `${selected.pieces} pcs` : "Not set"],
@@ -1090,8 +1279,8 @@ export default function TanviDeskPage() {
                     ["Route", selected.partner.visibleLabel],
                     ["Updated", formatRelative(selected.updatedAt)],
                   ].map(([label, value]) => (
-                    <div key={label} className={`${subtleCardClass} px-3 py-3`}>
-                      <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                    <div key={label} className={`${subtleCardClass} px-3 py-2.5 sm:py-3`}>
+                      <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] sm:text-[11px] sm:tracking-[0.14em] ${mutedClass}`}>
                         {label}
                       </p>
                       <p className={`mt-1 truncate text-sm font-semibold ${strongTextClass}`}>

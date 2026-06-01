@@ -37,6 +37,35 @@ const TANVI_STEP_KEYS = new Set([
   "print_start",
 ]);
 
+function safeText(value: unknown, maxLength = 500) {
+  return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+}
+
+function safePositiveNumber(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function getWhatsappDetails(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const raw = value as Record<string, unknown>;
+  return {
+    clientName: safeText(raw.clientName, 120),
+    phone: safeText(raw.phone, 80),
+    email: safeText(raw.email, 160),
+    product: safeText(raw.product, 160),
+    quantity: safePositiveNumber(raw.quantity),
+    color: safeText(raw.color, 120),
+    printMethod: safeText(raw.printMethod, 120),
+    deadline: safeText(raw.deadline, 120),
+    total: safePositiveNumber(raw.total),
+    notes: safeText(raw.notes, 2_000),
+  };
+}
+
 function getCurrentPartnerIds(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return [];
   const raw = value as Record<string, unknown>;
@@ -137,6 +166,7 @@ export async function PATCH(
     );
     const partnerPriceDrafts = getPartnerPriceDrafts(body?.partnerPrices, activeIds);
     const stepCheckUpdates = getTanviStepCheckUpdates(body?.tanviStepChecks);
+    const whatsappDetails = getWhatsappDetails(body?.whatsappDetails);
     const nextClientStatus =
       body?.clientStatus === undefined
         ? null
@@ -214,6 +244,41 @@ export async function PATCH(
     stepCheckUpdates.forEach((checked, key) => {
       updatePayload[`tanviStepChecks.${key}`] = checked;
     });
+
+    if (whatsappDetails) {
+      updatePayload.name = whatsappDetails.clientName || "WhatsApp client";
+      updatePayload.phone = whatsappDetails.phone;
+      updatePayload.email = whatsappDetails.email;
+      updatePayload.source = "WhatsApp";
+      updatePayload.quantity = whatsappDetails.quantity || "";
+      updatePayload.printMethod = whatsappDetails.printMethod;
+      updatePayload.deadline = whatsappDetails.deadline;
+      updatePayload.notes = whatsappDetails.notes;
+      updatePayload.message = whatsappDetails.notes || "Updated from Tanvi WhatsApp intake";
+      updatePayload.garments = [
+        {
+          garment: whatsappDetails.product || "WhatsApp order",
+          color: whatsappDetails.color,
+          size: "",
+          quantity: whatsappDetails.quantity || 1,
+        },
+      ];
+      updatePayload["designBrief.product"] = whatsappDetails.product;
+      updatePayload["designBrief.color"] = whatsappDetails.color;
+      updatePayload["designBrief.totalQty"] = whatsappDetails.quantity || "";
+      updatePayload["designBrief.printMethod"] = whatsappDetails.printMethod;
+      updatePayload["designBrief.deadline"] = whatsappDetails.deadline;
+      updatePayload["designBrief.clientNotes"] = whatsappDetails.notes;
+      updatePayload["quote.total"] = whatsappDetails.total || 0;
+      updatePayload["quote.currency"] = "Rs";
+      updatePayload["quote.lines"] = [
+        {
+          description: whatsappDetails.product || "WhatsApp order",
+          quantity: whatsappDetails.quantity || 1,
+          unitPrice: "",
+        },
+      ];
+    }
 
     await updateDoc(quoteRef, updatePayload);
     const updatedSnap = await getDoc(quoteRef);
