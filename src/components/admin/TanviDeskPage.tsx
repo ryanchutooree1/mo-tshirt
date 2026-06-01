@@ -1100,8 +1100,8 @@ export default function TanviDeskPage() {
   }
 
   return (
-    <main className={pageClass}>
-      <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-4 px-2 py-3 sm:gap-5 sm:px-6 sm:py-4 lg:px-8">
+    <main className={`${pageClass} max-w-full overflow-x-hidden`}>
+      <div className="mx-auto flex w-full max-w-[1680px] min-w-0 flex-col gap-4 overflow-x-hidden px-2 py-3 sm:gap-5 sm:px-6 sm:py-4 lg:px-8">
         <section className={heroClass}>
           <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_32rem] lg:p-7">
             <div>
@@ -1182,7 +1182,7 @@ export default function TanviDeskPage() {
         ) : null}
 
         {showWhatsappIntake ? (
-          <section className={`${panelClass} overflow-hidden`}>
+          <section className={`${panelClass} max-w-full overflow-hidden`}>
             <div className={`flex flex-wrap items-center justify-between gap-3 border-b p-4 ${dividerClass}`}>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
@@ -1205,7 +1205,7 @@ export default function TanviDeskPage() {
                 </button>
               </div>
             </div>
-            <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid min-w-0 max-w-full grid-cols-1 gap-3 p-3 sm:p-4 md:grid-cols-2 xl:grid-cols-4">
               {[
                 ["clientName", "Client name", "Name from WhatsApp"],
                 ["phone", "Phone", "+230..."],
@@ -1217,7 +1217,7 @@ export default function TanviDeskPage() {
                 ["deadline", "Deadline", "Date or urgent note"],
                 ["total", "Total", "Optional amount"],
               ].map(([field, label, placeholder]) => (
-                <label key={field} className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                <label key={field} className={`min-w-0 text-xs font-semibold uppercase tracking-[0.08em] sm:tracking-[0.14em] ${mutedClass}`}>
                   {label}
                   <input
                     value={whatsappDraft[field as keyof WhatsappOrderDraft]}
@@ -1245,7 +1245,7 @@ export default function TanviDeskPage() {
               ]).map((logo) => {
                 const file = whatsappLogoFiles[logo.side];
                 return (
-                  <div key={logo.side} className={`${subtleCardClass} p-3 md:col-span-1 xl:col-span-2`}>
+                  <div key={logo.side} className={`${subtleCardClass} min-w-0 max-w-full p-3 md:col-span-1 xl:col-span-2`}>
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <p className={`text-sm font-semibold ${strongTextClass}`}>{logo.title}</p>
@@ -1262,7 +1262,7 @@ export default function TanviDeskPage() {
                       ) : null}
                     </div>
                     <label
-                      className={`mt-3 flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-3 py-4 text-center transition ${
+                      className={`mt-3 flex min-h-24 max-w-full cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-3 py-4 text-center transition ${
                         isDark
                           ? "border-white/15 bg-slate-950/70 hover:bg-slate-950"
                           : "border-slate-300 bg-white hover:bg-slate-50"
@@ -1282,7 +1282,7 @@ export default function TanviDeskPage() {
                         PNG, JPG, WEBP, SVG, HEIC, or PDF. Max 5MB.
                       </span>
                     </label>
-                    <label className={`mt-3 block text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                    <label className={`mt-3 block min-w-0 text-xs font-semibold uppercase tracking-[0.06em] sm:tracking-[0.14em] ${mutedClass}`}>
                       Description below {logo.title.toLowerCase()}
                       <textarea
                         value={whatsappDraft[logo.descriptionField]}
@@ -1295,7 +1295,7 @@ export default function TanviDeskPage() {
                   </div>
                 );
               })}
-              <label className={`md:col-span-2 xl:col-span-4 text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+              <label className={`min-w-0 text-xs font-semibold uppercase tracking-[0.08em] sm:tracking-[0.14em] md:col-span-2 xl:col-span-4 ${mutedClass}`}>
                 Notes from WhatsApp
                 <textarea
                   value={whatsappDraft.notes}
