@@ -366,6 +366,67 @@ function isArtworkPdf(attachment: TanviArtworkAttachment) {
   );
 }
 
+function ArtworkImagePreview({
+  src,
+  alt,
+  className,
+  isDark,
+}: {
+  src: string;
+  alt: string;
+  className: string;
+  isDark: boolean;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  return (
+    <div className="relative">
+      {!loaded && !failed ? (
+        <div
+          className={`absolute inset-0 z-10 grid place-items-center rounded-2xl border ${
+            isDark
+              ? "border-white/10 bg-slate-950 text-slate-200"
+              : "border-slate-200 bg-slate-50 text-slate-700"
+          }`}
+        >
+          <div className="flex flex-col items-center gap-3 text-center">
+            <span className="h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            <span className="text-sm font-semibold">Loading logo...</span>
+            <span className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+              Large files can take a few seconds.
+            </span>
+          </div>
+        </div>
+      ) : null}
+      {failed ? (
+        <div
+          className={`grid place-items-center text-center ${className} ${
+            isDark ? "text-slate-300" : "text-slate-600"
+          }`}
+        >
+          <div className="px-4">
+            <AlertTriangle className="mx-auto h-7 w-7 text-amber-500" />
+            <p className="mt-3 text-sm font-semibold">Preview could not load</p>
+            <p className="mt-1 text-xs">Use Open to view or download this artwork.</p>
+          </div>
+        </div>
+      ) : (
+        <img
+          src={src}
+          alt={alt}
+          className={`${className} transition-opacity duration-300 ${
+            loaded ? "opacity-100" : "opacity-0"
+          }`}
+          loading="lazy"
+          onLoad={() => setLoaded(true)}
+          onError={() => setFailed(true)}
+        />
+      )}
+    </div>
+  );
+}
+
 export default function TanviDeskPage() {
   const { theme } = useAdminTheme();
   const isDark = theme === "dark";
@@ -1666,11 +1727,11 @@ export default function TanviDeskPage() {
 
                           {isImage ? (
                             <div className={artworkPreviewShellClass}>
-                              <img
+                              <ArtworkImagePreview
                                 src={attachment.url}
                                 alt={attachment.filename}
                                 className={artworkPreviewClass}
-                                loading="lazy"
+                                isDark={isDark}
                               />
                             </div>
                           ) : isPdf ? (
