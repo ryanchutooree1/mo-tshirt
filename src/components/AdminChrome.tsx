@@ -419,18 +419,18 @@ export default function AdminChrome({
             onClick={() => setOpen(false)}
           />
           <div
-            className={`absolute inset-y-0 left-0 flex w-[calc(100vw-1rem)] max-w-[24rem] flex-col rounded-r-[32px] border-r p-5 transition-colors ${drawerPanelClass}`}
+            className={`absolute inset-y-0 left-0 flex w-[min(20rem,calc(100vw-4rem))] flex-col rounded-r-[22px] border-r p-3 transition-colors sm:w-[22rem] sm:p-4 ${drawerPanelClass}`}
             style={{ animation: "drawerIn 0.25s ease-out both" }}
           >
             <div
-              className={`relative overflow-hidden rounded-[28px] border p-4 transition-colors ${profileCardClass}`}
+              className={`relative overflow-hidden rounded-[20px] border p-3 transition-colors ${profileCardClass}`}
             >
               <div className="relative flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className={`text-[11px] font-semibold uppercase tracking-[0.28em] ${profileMetaClass}`}>
+                  <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${profileMetaClass}`}>
                     {session?.isOwner ? "Owner Session" : "Team Session"}
                   </div>
-                  <div className={`mt-2 truncate text-lg font-semibold ${isDark ? "text-[#f7fff3]" : "text-[#222222]"}`}>
+                  <div className={`mt-1.5 truncate text-base font-semibold ${isDark ? "text-[#f7fff3]" : "text-[#222222]"}`}>
                     {session?.displayName || "Admin"}
                   </div>
                   <div className={`mt-1 truncate text-xs ${profileMetaClass}`}>
@@ -439,32 +439,49 @@ export default function AdminChrome({
                 </div>
 
                 {canEditNavigation ? (
+                  <div className="flex shrink-0 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setOpen(false)}
+                      className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${editButtonClass(false)}`}
+                    >
+                      Close
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditing((value) => !value)}
+                      className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${editButtonClass(editing)}`}
+                    >
+                      {editing ? "Done" : "Edit"}
+                    </button>
+                  </div>
+                ) : (
                   <button
                     type="button"
-                    onClick={() => setEditing((value) => !value)}
-                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${editButtonClass(editing)}`}
+                    onClick={() => setOpen(false)}
+                    className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${editButtonClass(false)}`}
                   >
-                    {editing ? "Done" : "Edit"}
+                    Close
                   </button>
-                ) : null}
+                )}
               </div>
 
-              <div className="relative mt-4 grid gap-3">
+              <div className="relative mt-3 grid gap-2">
                 <button
                   type="button"
                   onClick={toggleTheme}
-                  className={`inline-flex items-center justify-center rounded-full border px-3 py-2 text-xs font-semibold transition ${themeButtonClass}`}
+                  className={`inline-flex items-center justify-center rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${themeButtonClass}`}
                 >
                   {isDark ? "Switch To Light Mode" : "Switch To Dark Mode"}
                 </button>
 
                 <div
-                  className={`rounded-[22px] border px-4 py-3 ${accessCardClass}`}
+                  className={`rounded-[16px] border px-3 py-2 ${accessCardClass}`}
                 >
-                  <div className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${subtleLabelClass}`}>
+                  <div className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${subtleLabelClass}`}>
                     Access
                   </div>
-                  <div className="mt-1 text-sm font-semibold text-inherit">
+                  <div className="mt-0.5 text-xs font-semibold text-inherit">
                     {session?.isOwner
                       ? "Full admin access"
                       : `${session?.allowedPages.length || 0} page permissions assigned`}
@@ -473,12 +490,12 @@ export default function AdminChrome({
               </div>
             </div>
 
-            <nav className="mt-5 flex-1 space-y-4 overflow-y-auto pr-1">
+            <nav className="mt-3 flex-1 space-y-3 overflow-y-auto pr-1">
               <div>
-                <div className={`text-[11px] font-semibold uppercase tracking-[0.28em] ${subtleLabelClass}`}>
+                <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${subtleLabelClass}`}>
                   Core
                 </div>
-                <div className="mt-3 space-y-2">
+                <div className="mt-2 space-y-1.5">
                   {visibleTopNav.map(({ path, index }) => {
                     const active = isNavPathActive(path, pathname);
                     const label = getLabel(path);
@@ -522,7 +539,7 @@ export default function AdminChrome({
                         key={path}
                         href={path}
                         onClick={() => setOpen(false)}
-                        className={`group flex items-center justify-between rounded-2xl border px-3 py-2 text-sm font-semibold transition ${
+                        className={`group flex items-center justify-between rounded-xl border px-3 py-2 text-sm font-semibold transition ${
                           active ? navActiveClass : navInactiveClass
                         }`}
                         title={getDescription(path)}
@@ -546,10 +563,10 @@ export default function AdminChrome({
               </div>
 
               <div>
-                <div className={`text-[11px] font-semibold uppercase tracking-[0.28em] ${subtleLabelClass}`}>
+                <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${subtleLabelClass}`}>
                   More
                 </div>
-                <div className="mt-3 space-y-2">
+                <div className="mt-2 space-y-1.5">
                   {visibleMoreNav.map(({ path, index }) => {
                     const active = isNavPathActive(path, pathname);
                     const label = getLabel(path);
@@ -593,7 +610,7 @@ export default function AdminChrome({
                         key={path}
                         href={path}
                         onClick={() => setOpen(false)}
-                        className={`group flex items-center justify-between rounded-2xl border px-3 py-2 text-sm font-semibold transition ${
+                        className={`group flex items-center justify-between rounded-xl border px-3 py-2 text-sm font-semibold transition ${
                           active ? navActiveClass : navInactiveClass
                         }`}
                         title={getDescription(path)}
@@ -618,7 +635,7 @@ export default function AdminChrome({
             </nav>
 
             <div
-              className={`mt-4 border-t pt-4 ${isDark ? "border-[#21491f]" : "border-[#ebebeb]"}`}
+              className={`mt-3 border-t pt-3 ${isDark ? "border-[#21491f]" : "border-[#ebebeb]"}`}
             >
               <button
                 type="button"
@@ -626,7 +643,7 @@ export default function AdminChrome({
                   setOpen(false);
                   logout();
                 }}
-                className={`w-full rounded-full border px-4 py-2 text-sm font-semibold shadow-sm transition ${logoutButtonClass}`}
+                className={`w-full rounded-full border px-4 py-1.5 text-xs font-semibold shadow-sm transition ${logoutButtonClass}`}
               >
                 Logout
               </button>
