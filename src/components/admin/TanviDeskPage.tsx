@@ -1232,16 +1232,16 @@ export default function TanviDeskPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-2 sm:gap-2">
               {summaryCards.map(({ label, value, icon: Icon, card, iconClass }) => (
-                <div key={label} className={`rounded-xl border p-2.5 sm:p-3 ${card}`}>
-                  <div className="flex items-center justify-between gap-2">
-                    <p className={`text-[9px] font-semibold uppercase tracking-[0.08em] sm:text-[10px] ${mutedClass}`}>
+                <div key={label} className={`rounded-lg border px-1.5 py-1.5 text-center sm:rounded-xl sm:p-3 sm:text-left ${card}`}>
+                  <div className="flex items-center justify-center gap-1 sm:justify-between sm:gap-2">
+                    <p className={`min-w-0 truncate text-[8px] font-semibold uppercase tracking-0 sm:text-[10px] sm:tracking-[0.08em] ${mutedClass}`}>
                       {label}
                     </p>
-                    <Icon className={`h-3.5 w-3.5 ${iconClass}`} />
+                    <Icon className={`hidden h-3.5 w-3.5 sm:block ${iconClass}`} />
                   </div>
-                  <div className="mt-1 text-xl font-semibold sm:text-2xl">{value}</div>
+                  <div className="text-base font-semibold leading-tight sm:mt-1 sm:text-2xl">{value}</div>
                 </div>
               ))}
             </div>
