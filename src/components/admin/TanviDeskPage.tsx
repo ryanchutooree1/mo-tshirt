@@ -57,6 +57,7 @@ type DeskPayload = {
 type QueueFilter = "all" | "unrouted" | "waiting" | "blocked" | "ready" | "active";
 type WorkflowTone = "success" | "warning" | "danger" | "info" | "neutral";
 type WhatsappPrintPlacement = "front" | "back" | "front_back";
+type WhatsappLogoSlot = "front" | "back";
 
 type WhatsappOrderLine = {
   id: string;
@@ -141,6 +142,18 @@ function createWhatsappOrderLine(index = 1): WhatsappOrderLine {
     printPlacement: "front",
     logoDescription: "",
   };
+}
+
+function getWhatsappLogoSlots(printPlacement: WhatsappPrintPlacement): WhatsappLogoSlot[] {
+  return printPlacement === "front_back" ? ["front", "back"] : [printPlacement];
+}
+
+function getWhatsappLogoKey(lineId: string, slot: WhatsappLogoSlot) {
+  return `${lineId}:${slot}`;
+}
+
+function getWhatsappLogoSlotLabel(slot: WhatsappLogoSlot) {
+  return slot === "front" ? "Front logo" : "Back logo";
 }
 
 const emptyWhatsappDraft: WhatsappOrderDraft = {
@@ -708,15 +721,17 @@ export default function TanviDeskPage() {
     });
     setWhatsappLogoFiles((current) => {
       const next = { ...current };
-      delete next[lineId];
+      getWhatsappLogoSlots("front_back").forEach((slot) => {
+        delete next[getWhatsappLogoKey(lineId, slot)];
+      });
       return next;
     });
   }
 
-  function updateWhatsappLogoFile(lineId: string, file: File | null) {
+  function updateWhatsappLogoFile(lineId: string, slot: WhatsappLogoSlot, file: File | null) {
     setWhatsappLogoFiles((current) => ({
       ...current,
-      [lineId]: file,
+      [getWhatsappLogoKey(lineId, slot)]: file,
     }));
   }
 
@@ -727,11 +742,14 @@ export default function TanviDeskPage() {
 
   function buildWhatsappRequestBody() {
     const logoEntries = whatsappDraft.lineItems
-      .map((line, index) => ({
-        line,
-        index,
-        file: whatsappLogoFiles[line.id],
-      }))
+      .flatMap((line, index) =>
+        getWhatsappLogoSlots(line.printPlacement).map((slot) => ({
+          line,
+          index,
+          slot,
+          file: whatsappLogoFiles[getWhatsappLogoKey(line.id, slot)],
+        }))
+      )
       .filter((entry) => entry.file);
 
     if (!logoEntries.length) {
@@ -747,14 +765,14 @@ export default function TanviDeskPage() {
       "attachments",
       JSON.stringify(
         logoEntries.map((entry) => ({
-          label: `Logo ${entry.index + 1}`,
+          label: `${getWhatsappLogoSlotLabel(entry.slot)} ${entry.index + 1}`,
           description: entry.line.logoDescription.trim(),
           quantity: entry.line.quantity,
           lineId: entry.line.id,
           product: entry.line.product,
           color: entry.line.color,
           size: entry.line.size,
-          printPlacement: entry.line.printPlacement,
+          printPlacement: entry.slot,
         }))
       )
     );
@@ -1325,7 +1343,7 @@ export default function TanviDeskPage() {
 
                 <div className="mt-3 space-y-3">
                   {whatsappDraft.lineItems.map((line, index) => {
-                    const file = whatsappLogoFiles[line.id] || null;
+                    const logoSlots = getWhatsappLogoSlots(line.printPlacement);
                     return (
                       <article key={line.id} className={`${subtleCardClass} min-w-0 max-w-full p-3`}>
                         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1382,55 +1400,94 @@ export default function TanviDeskPage() {
                           </label>
                         </div>
 
-                        <div className="mt-3">
-                          {!file ? (
-                            <label className={`${whatsappButtonClass} w-full cursor-pointer py-3`}>
-                              <input
-                                type="file"
-                                accept={WHATSAPP_LOGO_ACCEPT}
-                                onClick={(event) => {
-                                  event.currentTarget.value = "";
-                                }}
-                                onChange={(event) => updateWhatsappLogoFile(line.id, event.target.files?.[0] || null)}
-                                className="sr-only"
-                              />
-                              <ImageIcon className="h-4 w-4" />
-                              + Upload logo for item {index + 1}
-                            </label>
-                          ) : (
-                            <div>
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <p className={`text-xs font-semibold ${mutedClass}`}>
-                                  Logo {index + 1}
-                                </p>
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <label className={quietButtonClass}>
+                        <div className="mt-3 grid gap-3 md:grid-cols-2">
+                          {logoSlots.map((slot) => {
+                            const file = whatsappLogoFiles[getWhatsappLogoKey(line.id, slot)] || null;
+                            const slotLabel = getWhatsappLogoSlotLabel(slot);
+                            return (
+                              <div
+                                key={slot}
+                                className={`min-w-0 rounded-2xl border p-3 ${
+                                  isDark ? "border-white/10 bg-white/[0.03]" : "border-black/10 bg-white"
+                                }`}
+                              >
+                                <div className="flex flex-wrap items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <p className={`text-sm font-semibold ${strongTextClass}`}>
+                                      {slotLabel}
+                                    </p>
+                                    <p className={`mt-1 text-xs ${mutedClass}`}>
+                                      {line.printPlacement === "front_back"
+                                        ? "Required for front and back printing."
+                                        : "Required for selected print side."}
+                                    </p>
+                                  </div>
+                                  {file ? (
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <label className={quietButtonClass}>
+                                        <input
+                                          type="file"
+                                          accept={WHATSAPP_LOGO_ACCEPT}
+                                          onClick={(event) => {
+                                            event.currentTarget.value = "";
+                                          }}
+                                          onChange={(event) =>
+                                            updateWhatsappLogoFile(line.id, slot, event.target.files?.[0] || null)
+                                          }
+                                          className="sr-only"
+                                        />
+                                        <ImageIcon className="h-4 w-4" />
+                                        Change
+                                      </label>
+                                      <button
+                                        type="button"
+                                        onClick={() => updateWhatsappLogoFile(line.id, slot, null)}
+                                        className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
+                                  ) : null}
+                                </div>
+
+                                {!file ? (
+                                  <label
+                                    className={`mt-3 flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-3 py-4 text-center transition ${
+                                      isDark
+                                        ? "border-white/15 bg-black/20 hover:border-emerald-300/60"
+                                        : "border-black/10 bg-slate-50 hover:border-emerald-500/60"
+                                    }`}
+                                  >
                                     <input
                                       type="file"
                                       accept={WHATSAPP_LOGO_ACCEPT}
                                       onClick={(event) => {
                                         event.currentTarget.value = "";
                                       }}
-                                      onChange={(event) => updateWhatsappLogoFile(line.id, event.target.files?.[0] || null)}
+                                      onChange={(event) =>
+                                        updateWhatsappLogoFile(line.id, slot, event.target.files?.[0] || null)
+                                      }
                                       className="sr-only"
                                     />
-                                    <ImageIcon className="h-4 w-4" />
-                                    Change logo
+                                    <ImageIcon className="h-5 w-5 text-emerald-600" />
+                                    <span className={`mt-2 text-sm font-semibold ${strongTextClass}`}>
+                                      Choose {slotLabel.toLowerCase()}
+                                    </span>
+                                    <span className={`mt-1 max-w-52 text-xs ${mutedClass}`}>
+                                      PNG, JPG, WEBP, SVG, HEIC, or PDF. Max 5MB.
+                                    </span>
                                   </label>
-                                  <button
-                                    type="button"
-                                    onClick={() => updateWhatsappLogoFile(line.id, null)}
-                                    className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
-                                  >
-                                    Remove logo
-                                  </button>
-                                </div>
+                                ) : (
+                                  <div className="mt-3">
+                                    <WhatsappLogoFilePreview file={file} isDark={isDark} />
+                                    <p className={`mt-2 truncate text-xs ${mutedClass}`}>
+                                      Selected: {file.name}
+                                    </p>
+                                  </div>
+                                )}
                               </div>
-                              <div className="mt-2">
-                                <WhatsappLogoFilePreview file={file} isDark={isDark} />
-                              </div>
-                            </div>
-                          )}
+                            );
+                          })}
                         </div>
 
                         <label className={`mt-3 block min-w-0 text-xs font-semibold uppercase tracking-[0.06em] sm:tracking-[0.12em] ${mutedClass}`}>
