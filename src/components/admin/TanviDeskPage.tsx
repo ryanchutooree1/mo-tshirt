@@ -56,23 +56,29 @@ type DeskPayload = {
 
 type QueueFilter = "all" | "unrouted" | "waiting" | "blocked" | "ready" | "active";
 type WorkflowTone = "success" | "warning" | "danger" | "info" | "neutral";
+type WhatsappPrintPlacement = "front" | "back" | "front_back";
+
+type WhatsappOrderLine = {
+  id: string;
+  product: string;
+  color: string;
+  size: string;
+  quantity: string;
+  printPlacement: WhatsappPrintPlacement;
+  logoDescription: string;
+};
 
 type WhatsappOrderDraft = {
   clientName: string;
   phone: string;
   email: string;
-  product: string;
-  quantity: string;
-  color: string;
-  printMethod: string;
   deadline: string;
   total: string;
   notes: string;
-  frontLogoDescription: string;
-  backLogoDescription: string;
+  lineItems: WhatsappOrderLine[];
 };
 
-type WhatsappLogoSide = "front" | "back";
+type WhatsappDraftTextField = Exclude<keyof WhatsappOrderDraft, "lineItems">;
 
 const TANVI_STEPS: { key: TanviStepKey; label: string }[] = [
   { key: "client_onboarding", label: "Client onboarding" },
@@ -125,19 +131,26 @@ const defaultManager: ProductionManager = {
   email: "",
 };
 
+function createWhatsappOrderLine(index = 1): WhatsappOrderLine {
+  return {
+    id: `line-${Date.now().toString(36)}-${index}-${Math.random().toString(36).slice(2, 6)}`,
+    product: "",
+    color: "",
+    size: "",
+    quantity: "",
+    printPlacement: "front",
+    logoDescription: "",
+  };
+}
+
 const emptyWhatsappDraft: WhatsappOrderDraft = {
   clientName: "",
   phone: "",
   email: "",
-  product: "",
-  quantity: "",
-  color: "",
-  printMethod: "",
   deadline: "",
   total: "",
   notes: "",
-  frontLogoDescription: "",
-  backLogoDescription: "",
+  lineItems: [{ ...createWhatsappOrderLine(1), id: "line-1" }],
 };
 
 function formatDateTime(value: string | null) {
@@ -493,10 +506,7 @@ export default function TanviDeskPage() {
   const [showQueue, setShowQueue] = useState(true);
   const [showWhatsappIntake, setShowWhatsappIntake] = useState(false);
   const [whatsappDraft, setWhatsappDraft] = useState<WhatsappOrderDraft>(emptyWhatsappDraft);
-  const [whatsappLogoFiles, setWhatsappLogoFiles] = useState<Record<WhatsappLogoSide, File | null>>({
-    front: null,
-    back: null,
-  });
+  const [whatsappLogoFiles, setWhatsappLogoFiles] = useState<Record<string, File | null>>({});
   const [creatingWhatsappOrder, setCreatingWhatsappOrder] = useState(false);
 
   const activePartners = useMemo(
@@ -661,40 +671,68 @@ export default function TanviDeskPage() {
     );
   }
 
-  function updateWhatsappDraft(field: keyof WhatsappOrderDraft, value: string) {
+  function updateWhatsappDraft(field: WhatsappDraftTextField, value: string) {
     setWhatsappDraft((current) => ({
       ...current,
       [field]: value,
     }));
   }
 
-  function updateWhatsappLogoFile(side: WhatsappLogoSide, file: File | null) {
+  function updateWhatsappLine(
+    lineId: string,
+    field: keyof WhatsappOrderLine,
+    value: string
+  ) {
+    setWhatsappDraft((current) => ({
+      ...current,
+      lineItems: current.lineItems.map((line) =>
+        line.id === lineId ? { ...line, [field]: value } : line
+      ),
+    }));
+  }
+
+  function addWhatsappLine() {
+    setWhatsappDraft((current) => ({
+      ...current,
+      lineItems: [...current.lineItems, createWhatsappOrderLine(current.lineItems.length + 1)],
+    }));
+  }
+
+  function removeWhatsappLine(lineId: string) {
+    setWhatsappDraft((current) => {
+      const nextLines = current.lineItems.filter((line) => line.id !== lineId);
+      return {
+        ...current,
+        lineItems: nextLines.length ? nextLines : current.lineItems,
+      };
+    });
+    setWhatsappLogoFiles((current) => {
+      const next = { ...current };
+      delete next[lineId];
+      return next;
+    });
+  }
+
+  function updateWhatsappLogoFile(lineId: string, file: File | null) {
     setWhatsappLogoFiles((current) => ({
       ...current,
-      [side]: file,
+      [lineId]: file,
     }));
   }
 
   function resetWhatsappIntake() {
     setWhatsappDraft(emptyWhatsappDraft);
-    setWhatsappLogoFiles({ front: null, back: null });
+    setWhatsappLogoFiles({});
   }
 
   function buildWhatsappRequestBody() {
-    const logoEntries = ([
-      {
-        side: "front" as const,
-        file: whatsappLogoFiles.front,
-        label: "Front logo",
-        description: whatsappDraft.frontLogoDescription,
-      },
-      {
-        side: "back" as const,
-        file: whatsappLogoFiles.back,
-        label: "Back logo",
-        description: whatsappDraft.backLogoDescription,
-      },
-    ]).filter((entry) => entry.file);
+    const logoEntries = whatsappDraft.lineItems
+      .map((line, index) => ({
+        line,
+        index,
+        file: whatsappLogoFiles[line.id],
+      }))
+      .filter((entry) => entry.file);
 
     if (!logoEntries.length) {
       return {
@@ -709,10 +747,14 @@ export default function TanviDeskPage() {
       "attachments",
       JSON.stringify(
         logoEntries.map((entry) => ({
-          label: entry.label,
-          description: entry.description.trim(),
-          quantity: whatsappDraft.quantity,
-          side: entry.side,
+          label: `Logo ${entry.index + 1}`,
+          description: entry.line.logoDescription.trim(),
+          quantity: entry.line.quantity,
+          lineId: entry.line.id,
+          product: entry.line.product,
+          color: entry.line.color,
+          size: entry.line.size,
+          printPlacement: entry.line.printPlacement,
         }))
       )
     );
@@ -729,21 +771,23 @@ export default function TanviDeskPage() {
       clientName: selected.clientName === "Client not set" ? "" : selected.clientName,
       phone: selected.phone,
       email: selected.email,
-      product: selected.product === "Not set" ? "" : selected.product,
-      quantity: selected.pieces ? String(selected.pieces) : "",
-      color: selected.colors.join(", "),
-      printMethod: selected.printMethod === "Not set" ? "" : selected.printMethod,
       deadline: selected.deadline === "No deadline" ? "" : selected.deadline,
       total: selected.total ? String(selected.total) : "",
       notes: selected.notes,
-      frontLogoDescription:
-        selected.artwork.find((attachment) => attachment.label.toLowerCase() === "front logo")
-          ?.description || "",
-      backLogoDescription:
-        selected.artwork.find((attachment) => attachment.label.toLowerCase() === "back logo")
-          ?.description || "",
+      lineItems: [
+        {
+          ...createWhatsappOrderLine(1),
+          id: "line-1",
+          product: selected.product === "Not set" ? "" : selected.product,
+          color: selected.colors.join(", "),
+          size: "",
+          quantity: selected.pieces ? String(selected.pieces) : "",
+          printPlacement: "front",
+          logoDescription: selected.artwork[0]?.description || "",
+        },
+      ],
     });
-    setWhatsappLogoFiles({ front: null, back: null });
+    setWhatsappLogoFiles({});
     setShowWhatsappIntake(true);
   }
 
@@ -1243,117 +1287,170 @@ export default function TanviDeskPage() {
               </div>
             </div>
             <div className="grid min-w-0 max-w-full grid-cols-1 gap-3 p-3 sm:p-4 md:grid-cols-2 xl:grid-cols-4">
-              {[
+              {([
                 ["clientName", "Client name", "Name from WhatsApp"],
                 ["phone", "Phone", "+230..."],
                 ["email", "Email", "Optional"],
-                ["product", "Product", "T-shirt / polo / hoodie"],
-                ["quantity", "Quantity", "No. of pieces"],
-                ["color", "Colour", "Black, white..."],
-                ["printMethod", "Print", "DTF, embroidery..."],
                 ["deadline", "Deadline", "Date or urgent note"],
                 ["total", "Total", "Optional amount"],
-              ].map(([field, label, placeholder]) => (
+              ] as Array<[WhatsappDraftTextField, string, string]>).map(([field, label, placeholder]) => (
                 <label key={field} className={`min-w-0 text-xs font-semibold uppercase tracking-[0.08em] sm:tracking-[0.14em] ${mutedClass}`}>
                   {label}
                   <input
-                    value={whatsappDraft[field as keyof WhatsappOrderDraft]}
+                    value={whatsappDraft[field]}
                     onChange={(event) =>
-                      updateWhatsappDraft(field as keyof WhatsappOrderDraft, event.target.value)
+                      updateWhatsappDraft(field, event.target.value)
                     }
                     placeholder={placeholder}
                     className={`mt-2 w-full normal-case tracking-normal ${fieldClass}`}
                   />
                 </label>
               ))}
-              {([
-                {
-                  side: "front" as const,
-                  title: "Front logo",
-                  buttonLabel: "+ Upload Front Logo",
-                  changeLabel: "Change front logo",
-                  descriptionField: "frontLogoDescription" as const,
-                  helper: "Upload the logo or artwork for the front side.",
-                },
-                {
-                  side: "back" as const,
-                  title: "Back logo",
-                  buttonLabel: "+ Upload Back Logo",
-                  changeLabel: "Change back logo",
-                  descriptionField: "backLogoDescription" as const,
-                  helper: "Upload the logo or artwork for the back side.",
-                },
-              ]).map((logo) => {
-                const file = whatsappLogoFiles[logo.side];
-                return (
-                  <div key={logo.side} className={`${file ? subtleCardClass : ""} min-w-0 max-w-full md:col-span-2 xl:col-span-4 ${file ? "p-3" : ""}`}>
-                    {!file ? (
-                      <label className={`${whatsappButtonClass} w-full cursor-pointer py-3`}>
-                        <input
-                          type="file"
-                          accept={WHATSAPP_LOGO_ACCEPT}
-                          onClick={(event) => {
-                            event.currentTarget.value = "";
-                          }}
-                          onChange={(event) => updateWhatsappLogoFile(logo.side, event.target.files?.[0] || null)}
-                          className="sr-only"
-                        />
-                        <ImageIcon className="h-4 w-4" />
-                        {logo.buttonLabel}
-                      </label>
-                    ) : (
-                      <>
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className={`text-sm font-semibold ${strongTextClass}`}>{logo.title}</p>
-                            <p className={`mt-1 text-xs ${mutedClass}`}>{logo.helper}</p>
-                          </div>
-                          <div className="flex shrink-0 flex-wrap gap-2">
-                            <label className={quietButtonClass}>
+
+              <div className="min-w-0 md:col-span-2 xl:col-span-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">
+                      Order items
+                    </p>
+                    <p className={`mt-1 text-xs ${mutedClass}`}>
+                      Add one row per product, size, logo, or print side.
+                    </p>
+                  </div>
+                  <button type="button" onClick={addWhatsappLine} className={quietButtonClass}>
+                    <Plus className="h-4 w-4" />
+                    Add item
+                  </button>
+                </div>
+
+                <div className="mt-3 space-y-3">
+                  {whatsappDraft.lineItems.map((line, index) => {
+                    const file = whatsappLogoFiles[line.id] || null;
+                    return (
+                      <article key={line.id} className={`${subtleCardClass} min-w-0 max-w-full p-3`}>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className={`text-sm font-semibold ${strongTextClass}`}>
+                            Item {index + 1}
+                          </p>
+                          {whatsappDraft.lineItems.length > 1 ? (
+                            <button
+                              type="button"
+                              onClick={() => removeWhatsappLine(line.id)}
+                              className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
+                            >
+                              Remove item
+                            </button>
+                          ) : null}
+                        </div>
+
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                          {[
+                            ["product", "Product", "T-shirt / polo / hoodie"],
+                            ["color", "Colour", "Navy blue"],
+                            ["size", "Size", "S / M / 2XL"],
+                            ["quantity", "Qty", "2"],
+                          ].map(([field, label, placeholder]) => (
+                            <label key={field} className={`min-w-0 text-xs font-semibold uppercase tracking-[0.08em] ${mutedClass}`}>
+                              {label}
+                              <input
+                                value={line[field as keyof WhatsappOrderLine]}
+                                onChange={(event) =>
+                                  updateWhatsappLine(line.id, field as keyof WhatsappOrderLine, event.target.value)
+                                }
+                                placeholder={placeholder}
+                                className={`mt-2 w-full normal-case tracking-normal ${fieldClass}`}
+                              />
+                            </label>
+                          ))}
+                          <label className={`min-w-0 text-xs font-semibold uppercase tracking-[0.08em] ${mutedClass}`}>
+                            Print side
+                            <select
+                              value={line.printPlacement}
+                              onChange={(event) =>
+                                updateWhatsappLine(
+                                  line.id,
+                                  "printPlacement",
+                                  event.target.value as WhatsappPrintPlacement
+                                )
+                              }
+                              className={`mt-2 w-full normal-case tracking-normal ${fieldClass}`}
+                            >
+                              <option value="front">Front only</option>
+                              <option value="back">Back only</option>
+                              <option value="front_back">Front and back</option>
+                            </select>
+                          </label>
+                        </div>
+
+                        <div className="mt-3">
+                          {!file ? (
+                            <label className={`${whatsappButtonClass} w-full cursor-pointer py-3`}>
                               <input
                                 type="file"
                                 accept={WHATSAPP_LOGO_ACCEPT}
                                 onClick={(event) => {
                                   event.currentTarget.value = "";
                                 }}
-                                onChange={(event) => updateWhatsappLogoFile(logo.side, event.target.files?.[0] || null)}
+                                onChange={(event) => updateWhatsappLogoFile(line.id, event.target.files?.[0] || null)}
                                 className="sr-only"
                               />
                               <ImageIcon className="h-4 w-4" />
-                              {logo.changeLabel}
+                              + Upload logo for item {index + 1}
                             </label>
-                            <button
-                              type="button"
-                              onClick={() => updateWhatsappLogoFile(logo.side, null)}
-                              className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
-                            >
-                              Remove
-                            </button>
-                          </div>
+                          ) : (
+                            <div>
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <p className={`text-xs font-semibold ${mutedClass}`}>
+                                  Logo {index + 1}
+                                </p>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <label className={quietButtonClass}>
+                                    <input
+                                      type="file"
+                                      accept={WHATSAPP_LOGO_ACCEPT}
+                                      onClick={(event) => {
+                                        event.currentTarget.value = "";
+                                      }}
+                                      onChange={(event) => updateWhatsappLogoFile(line.id, event.target.files?.[0] || null)}
+                                      className="sr-only"
+                                    />
+                                    <ImageIcon className="h-4 w-4" />
+                                    Change logo
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() => updateWhatsappLogoFile(line.id, null)}
+                                    className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
+                                  >
+                                    Remove logo
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="mt-2">
+                                <WhatsappLogoFilePreview file={file} isDark={isDark} />
+                              </div>
+                            </div>
+                          )}
                         </div>
 
-                        <div className="mt-3">
-                          <WhatsappLogoFilePreview file={file} isDark={isDark} />
-                          <p className={`mt-2 break-all text-xs ${mutedClass}`}>
-                            Selected: {file.name}
-                          </p>
-                        </div>
-
-                        <label className={`mt-3 block min-w-0 text-xs font-semibold uppercase tracking-[0.06em] sm:tracking-[0.14em] ${mutedClass}`}>
-                          Description below {logo.title.toLowerCase()}
+                        <label className={`mt-3 block min-w-0 text-xs font-semibold uppercase tracking-[0.06em] sm:tracking-[0.12em] ${mutedClass}`}>
+                          Logo / print note
                           <textarea
-                            value={whatsappDraft[logo.descriptionField]}
-                            onChange={(event) => updateWhatsappDraft(logo.descriptionField, event.target.value)}
-                            placeholder="Example: print small on left chest, keep original logo colour."
+                            value={line.logoDescription}
+                            onChange={(event) =>
+                              updateWhatsappLine(line.id, "logoDescription", event.target.value)
+                            }
+                            placeholder="Example: Logo 1, front chest only."
                             rows={2}
                             className={`mt-2 w-full resize-none normal-case tracking-normal ${fieldClass}`}
                           />
                         </label>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
+                      </article>
+                    );
+                  })}
+                </div>
+              </div>
+
               <label className={`min-w-0 text-xs font-semibold uppercase tracking-[0.08em] sm:tracking-[0.14em] md:col-span-2 xl:col-span-4 ${mutedClass}`}>
                 Notes from WhatsApp
                 <textarea

@@ -12,7 +12,7 @@ import {
 
 const MAX_TANVI_CREATE_BYTES = 16 * 1024 * 1024;
 const MAX_TANVI_LOGO_BYTES = 5 * 1024 * 1024;
-const MAX_TANVI_LOGO_COUNT = 2;
+const MAX_TANVI_LOGO_COUNT = 12;
 const TANVI_ALLOWED_LOGO_TYPES = [
   "image/png",
   "image/jpeg",
@@ -28,7 +28,21 @@ type TanviAttachmentDraft = {
   label?: string;
   description?: string;
   quantity?: string | number | null;
-  side?: string;
+  lineId?: string;
+  product?: string;
+  color?: string;
+  size?: string;
+  printPlacement?: string;
+};
+
+type WhatsappLineDetails = {
+  id: string;
+  product: string;
+  color: string;
+  size: string;
+  quantity: number | null;
+  printPlacement: string;
+  logoDescription: string;
 };
 
 function safeText(value: unknown, maxLength = 500) {
@@ -40,24 +54,104 @@ function safePositiveNumber(value: unknown) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
+function getPrintPlacementLabel(value: string) {
+  if (value === "back") return "Back printing only";
+  if (value === "front_back") return "Front and back printing";
+  return "Front printing only";
+}
+
+function getWhatsappLineItems(value: unknown): WhatsappLineDetails[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((entry, index) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
+      const raw = entry as Record<string, unknown>;
+      const product = safeText(raw.product, 160);
+      const color = safeText(raw.color, 120);
+      const size = safeText(raw.size, 80);
+      const quantity = safePositiveNumber(raw.quantity);
+      const printPlacement = safeText(raw.printPlacement, 40);
+      const normalizedPlacement =
+        printPlacement === "back" || printPlacement === "front_back"
+          ? printPlacement
+          : "front";
+      const logoDescription = safeText(raw.logoDescription, 500);
+
+      if (!product && !color && !size && !quantity && !logoDescription) return null;
+
+      return {
+        id: safeText(raw.id, 80) || `line-${index + 1}`,
+        product,
+        color,
+        size,
+        quantity,
+        printPlacement: normalizedPlacement,
+        logoDescription,
+      };
+    })
+    .filter((entry): entry is WhatsappLineDetails => Boolean(entry));
+}
+
+function getLineSummary(line: WhatsappLineDetails, index: number) {
+  const rows = [
+    line.quantity ? `${line.quantity} pcs` : "",
+    line.product || `Item ${index + 1}`,
+    line.color,
+    line.size ? `Size ${line.size}` : "",
+    getPrintPlacementLabel(line.printPlacement),
+    line.logoDescription || `Logo ${index + 1}`,
+  ].filter(Boolean);
+  return rows.join(" - ");
+}
+
 function getWhatsappDetails(value: unknown) {
   const raw = value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
+  const lineItems = getWhatsappLineItems(raw.lineItems);
+  const fallbackQuantity = safePositiveNumber(raw.quantity);
+  const fallbackLine =
+    lineItems.length
+      ? []
+      : [{
+          id: "line-1",
+          product: safeText(raw.product, 160),
+          color: safeText(raw.color, 120),
+          size: "",
+          quantity: fallbackQuantity,
+          printPlacement: safeText(raw.printMethod, 120).toLowerCase().includes("back") ? "back" : "front",
+          logoDescription:
+            safeText(raw.frontLogoDescription, 500) ||
+            safeText(raw.backLogoDescription, 500),
+        }].filter((line) => line.product || line.color || line.quantity || line.logoDescription);
+  const normalizedLineItems = lineItems.length ? lineItems : fallbackLine;
+  const totalQty = normalizedLineItems.reduce(
+    (sum, line) => sum + (line.quantity || 0),
+    0
+  );
+  const productSummary = normalizedLineItems.length
+    ? normalizedLineItems.map((line, index) => getLineSummary(line, index)).join("; ")
+    : safeText(raw.product, 160);
+  const colorSummary = Array.from(new Set(normalizedLineItems.map((line) => line.color).filter(Boolean))).join(", ");
+  const printSummary = Array.from(
+    new Set(normalizedLineItems.map((line) => getPrintPlacementLabel(line.printPlacement)))
+  ).join(", ");
 
   return {
     clientName: safeText(raw.clientName, 120),
     phone: safeText(raw.phone, 80),
     email: safeText(raw.email, 160),
-    product: safeText(raw.product, 160),
-    quantity: safePositiveNumber(raw.quantity),
-    color: safeText(raw.color, 120),
-    printMethod: safeText(raw.printMethod, 120),
+    product: productSummary,
+    quantity: totalQty || fallbackQuantity,
+    color: colorSummary || safeText(raw.color, 120),
+    printMethod: printSummary || safeText(raw.printMethod, 120),
     deadline: safeText(raw.deadline, 120),
     total: safePositiveNumber(raw.total),
     notes: safeText(raw.notes, 2_000),
     frontLogoDescription: safeText(raw.frontLogoDescription, 500),
     backLogoDescription: safeText(raw.backLogoDescription, 500),
+    lineItems: normalizedLineItems,
   };
 }
 
@@ -106,7 +200,7 @@ async function parseTanviCreateRequest(req: Request) {
 
 async function storeWhatsappAttachments(files: File[], drafts: TanviAttachmentDraft[]) {
   if (files.length > MAX_TANVI_LOGO_COUNT) {
-    throw new Error("Upload front logo, back logo, or both only.");
+    throw new Error("Upload up to 12 logo files per WhatsApp order.");
   }
 
   const uploadSessionId = `tanvi-whatsapp-${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}`;
@@ -133,9 +227,19 @@ async function storeWhatsappAttachments(files: File[], drafts: TanviAttachmentDr
       });
 
       return {
-        label: safeText(draft.label, 80) || (draft.side === "back" ? "Back logo" : "Front logo"),
-        description: safeText(draft.description, 500),
+        label: safeText(draft.label, 80) || `Logo ${index + 1}`,
+        description: [
+          safeText(draft.description, 500),
+          safeText(draft.product, 120),
+          safeText(draft.color, 80),
+          safeText(draft.size, 40) ? `Size ${safeText(draft.size, 40)}` : "",
+          safeText(draft.printPlacement, 40)
+            ? getPrintPlacementLabel(safeText(draft.printPlacement, 40))
+            : "",
+        ].filter(Boolean).join(" - "),
         quantity: safeText(draft.quantity, 80),
+        lineId: safeText(draft.lineId, 80),
+        printPlacement: safeText(draft.printPlacement, 40),
         url: upload.url,
         filename: upload.filename,
         contentType: upload.contentType,
@@ -200,19 +304,40 @@ export async function POST(req: Request) {
     const registry = await getPrintPartnerRegistry({ includeInactive: true });
     const attachments = await storeWhatsappAttachments(files, attachmentDrafts);
     const documentNumber = `WA-${String(Date.now()).slice(-6)}`;
+    const garmentLines = details.lineItems.length
+      ? details.lineItems.map((line) => ({
+          garment: line.product || "WhatsApp order",
+          color: line.color,
+          size: line.size,
+          quantity: line.quantity || 1,
+        }))
+      : [
+          {
+            garment: details.product || "WhatsApp order",
+            color: details.color,
+            size: "",
+            quantity: details.quantity || 1,
+          },
+        ];
+    const quoteLines = details.lineItems.length
+      ? details.lineItems.map((line, index) => ({
+          description: getLineSummary(line, index),
+          quantity: line.quantity || 1,
+          unitPrice: "",
+        }))
+      : [
+          {
+            description: details.product || "WhatsApp order",
+            quantity: details.quantity || 1,
+            unitPrice: "",
+          },
+        ];
     const quotePayload = {
       name: details.clientName || "WhatsApp client",
       email: details.email,
       phone: details.phone,
       message: details.notes || "Created from Tanvi WhatsApp intake",
-      garments: [
-        {
-          garment: details.product || "WhatsApp order",
-          color: details.color,
-          size: "",
-          quantity: details.quantity || 1,
-        },
-      ],
+      garments: garmentLines,
       printMethod: details.printMethod,
       quantity: details.quantity || "",
       deadline: details.deadline,
@@ -228,8 +353,9 @@ export async function POST(req: Request) {
         printMethod: details.printMethod,
         deadline: details.deadline,
         clientNotes: details.notes,
-        frontLogo: attachments.some((attachment) => attachment.label.toLowerCase() === "front logo"),
-        backLogo: attachments.some((attachment) => attachment.label.toLowerCase() === "back logo"),
+        lineItems: details.lineItems,
+        frontLogo: details.lineItems.some((line) => line.printPlacement === "front" || line.printPlacement === "front_back"),
+        backLogo: details.lineItems.some((line) => line.printPlacement === "back" || line.printPlacement === "front_back"),
         frontLogoDescription: details.frontLogoDescription,
         backLogoDescription: details.backLogoDescription,
       },
@@ -239,13 +365,7 @@ export async function POST(req: Request) {
         clientCompany: "",
         currency: "Rs",
         total: details.total || 0,
-        lines: [
-          {
-            description: details.product || "WhatsApp order",
-            quantity: details.quantity || 1,
-            unitPrice: "",
-          },
-        ],
+        lines: quoteLines,
       },
       status: "new",
       createdAt: serverTimestamp(),
