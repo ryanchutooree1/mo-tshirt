@@ -4,12 +4,32 @@ import { isAdminRequest } from "@/lib/admin-request";
 import { db } from "@/lib/firebase";
 import { getPrintPartnerRegistry } from "@/lib/partner-registry";
 import { mapTanviQuote } from "@/lib/tanvi-quotes";
+import { storePublicUploadBuffer } from "@/lib/public-upload-store";
 import {
   isContentLengthWithinLimit,
   isRequestOriginAllowed,
 } from "@/lib/request-safety";
 
-const MAX_TANVI_CREATE_BYTES = 12_288;
+const MAX_TANVI_CREATE_BYTES = 16 * 1024 * 1024;
+const MAX_TANVI_LOGO_BYTES = 5 * 1024 * 1024;
+const MAX_TANVI_LOGO_COUNT = 2;
+const TANVI_ALLOWED_LOGO_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/svg+xml",
+  "image/heic",
+  "image/heif",
+  "application/pdf",
+];
+
+type TanviAttachmentDraft = {
+  label?: string;
+  description?: string;
+  quantity?: string | number | null;
+  side?: string;
+};
 
 function safeText(value: unknown, maxLength = 500) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -36,7 +56,93 @@ function getWhatsappDetails(value: unknown) {
     deadline: safeText(raw.deadline, 120),
     total: safePositiveNumber(raw.total),
     notes: safeText(raw.notes, 2_000),
+    frontLogoDescription: safeText(raw.frontLogoDescription, 500),
+    backLogoDescription: safeText(raw.backLogoDescription, 500),
   };
+}
+
+function parseJsonObject(value: unknown) {
+  if (!value || typeof value !== "string") return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function parseAttachmentDrafts(value: unknown): TanviAttachmentDraft[] {
+  if (!value || typeof value !== "string") return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((entry) => entry && typeof entry === "object") : [];
+  } catch {
+    return [];
+  }
+}
+
+async function parseTanviCreateRequest(req: Request) {
+  const contentType = req.headers.get("content-type") || "";
+  if (!contentType.includes("multipart/form-data")) {
+    const body = await req.json().catch(() => ({}));
+    return {
+      details: getWhatsappDetails(body?.whatsappDetails),
+      files: [] as File[],
+      attachmentDrafts: [] as TanviAttachmentDraft[],
+    };
+  }
+
+  const formData = await req.formData();
+  return {
+    details: getWhatsappDetails(parseJsonObject(formData.get("whatsappDetails"))),
+    files: formData
+      .getAll("files")
+      .filter((entry): entry is File => entry instanceof File && entry.size > 0),
+    attachmentDrafts: parseAttachmentDrafts(formData.get("attachments")),
+  };
+}
+
+async function storeWhatsappAttachments(files: File[], drafts: TanviAttachmentDraft[]) {
+  if (files.length > MAX_TANVI_LOGO_COUNT) {
+    throw new Error("Upload front logo, back logo, or both only.");
+  }
+
+  const uploadSessionId = `tanvi-whatsapp-${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}`;
+
+  return Promise.all(
+    files.map(async (file, index) => {
+      if (!TANVI_ALLOWED_LOGO_TYPES.includes(file.type || "")) {
+        throw new Error("Unsupported logo type. Use PNG, JPG, WEBP, SVG, HEIC, or PDF.");
+      }
+      if (file.size > MAX_TANVI_LOGO_BYTES) {
+        throw new Error("Logo is too large. Keep each file under 5MB.");
+      }
+
+      const draft = drafts[index] || {};
+      const upload = await storePublicUploadBuffer({
+        buffer: Buffer.from(await file.arrayBuffer()),
+        filename: file.name || `logo-${index + 1}`,
+        contentType: file.type || "application/octet-stream",
+        size: file.size,
+        sessionId: uploadSessionId,
+        sessionPrefix: "tanvi-whatsapp",
+        source: "tanvi-whatsapp-upload",
+        maxUploadBytes: MAX_TANVI_LOGO_BYTES,
+      });
+
+      return {
+        label: safeText(draft.label, 80) || (draft.side === "back" ? "Back logo" : "Front logo"),
+        description: safeText(draft.description, 500),
+        quantity: safeText(draft.quantity, 80),
+        url: upload.url,
+        filename: upload.filename,
+        contentType: upload.contentType,
+        size: upload.size,
+      };
+    })
+  );
 }
 
 export async function GET() {
@@ -81,8 +187,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const body = await req.json().catch(() => ({}));
-  const details = getWhatsappDetails(body?.whatsappDetails);
+  const { details, files, attachmentDrafts } = await parseTanviCreateRequest(req);
 
   if (!details.clientName && !details.phone && !details.product && !details.notes) {
     return NextResponse.json(
@@ -93,8 +198,9 @@ export async function POST(req: Request) {
 
   try {
     const registry = await getPrintPartnerRegistry({ includeInactive: true });
+    const attachments = await storeWhatsappAttachments(files, attachmentDrafts);
     const documentNumber = `WA-${String(Date.now()).slice(-6)}`;
-    const ref = await addDoc(collection(db, "quotes"), {
+    const quotePayload = {
       name: details.clientName || "WhatsApp client",
       email: details.email,
       phone: details.phone,
@@ -113,6 +219,8 @@ export async function POST(req: Request) {
       notes: details.notes,
       source: "WhatsApp",
       delivery: "",
+      attachments,
+      attachment: attachments[0] || null,
       designBrief: {
         product: details.product,
         color: details.color,
@@ -120,6 +228,10 @@ export async function POST(req: Request) {
         printMethod: details.printMethod,
         deadline: details.deadline,
         clientNotes: details.notes,
+        frontLogo: attachments.some((attachment) => attachment.label.toLowerCase() === "front logo"),
+        backLogo: attachments.some((attachment) => attachment.label.toLowerCase() === "back logo"),
+        frontLogoDescription: details.frontLogoDescription,
+        backLogoDescription: details.backLogoDescription,
       },
       quote: {
         documentType: "quotation",
@@ -138,49 +250,12 @@ export async function POST(req: Request) {
       status: "new",
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    };
+    const ref = await addDoc(collection(db, "quotes"), quotePayload);
 
     return NextResponse.json({
       quote: mapTanviQuote(ref.id, {
-        name: details.clientName || "WhatsApp client",
-        email: details.email,
-        phone: details.phone,
-        message: details.notes || "Created from Tanvi WhatsApp intake",
-        garments: [
-          {
-            garment: details.product || "WhatsApp order",
-            color: details.color,
-            size: "",
-            quantity: details.quantity || 1,
-          },
-        ],
-        printMethod: details.printMethod,
-        quantity: details.quantity || "",
-        deadline: details.deadline,
-        notes: details.notes,
-        source: "WhatsApp",
-        designBrief: {
-          product: details.product,
-          color: details.color,
-          totalQty: details.quantity || "",
-          printMethod: details.printMethod,
-          deadline: details.deadline,
-          clientNotes: details.notes,
-        },
-        quote: {
-          documentType: "quotation",
-          documentNumber,
-          clientCompany: "",
-          currency: "Rs",
-          total: details.total || 0,
-          lines: [
-            {
-              description: details.product || "WhatsApp order",
-              quantity: details.quantity || 1,
-            },
-          ],
-        },
-        status: "new",
+        ...quotePayload,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }, registry.partners),

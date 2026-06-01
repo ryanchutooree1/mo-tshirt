@@ -21,11 +21,31 @@ import {
   isContentLengthWithinLimit,
   isRequestOriginAllowed,
 } from "@/lib/request-safety";
+import { storePublicUploadBuffer } from "@/lib/public-upload-store";
 
-const MAX_TANVI_UPDATE_BYTES = 12_288;
+const MAX_TANVI_UPDATE_BYTES = 16 * 1024 * 1024;
+const MAX_TANVI_LOGO_BYTES = 5 * 1024 * 1024;
+const MAX_TANVI_LOGO_COUNT = 2;
+const TANVI_ALLOWED_LOGO_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/svg+xml",
+  "image/heic",
+  "image/heif",
+  "application/pdf",
+];
 
 type PartnerPriceDraft = {
   price: number | null;
+};
+
+type TanviAttachmentDraft = {
+  label?: string;
+  description?: string;
+  quantity?: string | number | null;
+  side?: string;
 };
 
 const TANVI_STEP_KEYS = new Set([
@@ -63,7 +83,110 @@ function getWhatsappDetails(value: unknown) {
     deadline: safeText(raw.deadline, 120),
     total: safePositiveNumber(raw.total),
     notes: safeText(raw.notes, 2_000),
+    frontLogoDescription: safeText(raw.frontLogoDescription, 500),
+    backLogoDescription: safeText(raw.backLogoDescription, 500),
   };
+}
+
+function parseJsonObject(value: unknown) {
+  if (!value || typeof value !== "string") return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function parseAttachmentDrafts(value: unknown): TanviAttachmentDraft[] {
+  if (!value || typeof value !== "string") return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((entry) => entry && typeof entry === "object") : [];
+  } catch {
+    return [];
+  }
+}
+
+async function parseTanviUpdateRequest(req: Request) {
+  const contentType = req.headers.get("content-type") || "";
+  if (!contentType.includes("multipart/form-data")) {
+    const body = await req.json().catch(() => ({}));
+    return {
+      body,
+      files: [] as File[],
+      attachmentDrafts: [] as TanviAttachmentDraft[],
+    };
+  }
+
+  const formData = await req.formData();
+  return {
+    body: {
+      whatsappDetails: parseJsonObject(formData.get("whatsappDetails")),
+    },
+    files: formData
+      .getAll("files")
+      .filter((entry): entry is File => entry instanceof File && entry.size > 0),
+    attachmentDrafts: parseAttachmentDrafts(formData.get("attachments")),
+  };
+}
+
+async function storeWhatsappAttachments(files: File[], drafts: TanviAttachmentDraft[]) {
+  if (files.length > MAX_TANVI_LOGO_COUNT) {
+    throw new Error("Upload front logo, back logo, or both only.");
+  }
+
+  const uploadSessionId = `tanvi-whatsapp-${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}`;
+
+  return Promise.all(
+    files.map(async (file, index) => {
+      if (!TANVI_ALLOWED_LOGO_TYPES.includes(file.type || "")) {
+        throw new Error("Unsupported logo type. Use PNG, JPG, WEBP, SVG, HEIC, or PDF.");
+      }
+      if (file.size > MAX_TANVI_LOGO_BYTES) {
+        throw new Error("Logo is too large. Keep each file under 5MB.");
+      }
+
+      const draft = drafts[index] || {};
+      const upload = await storePublicUploadBuffer({
+        buffer: Buffer.from(await file.arrayBuffer()),
+        filename: file.name || `logo-${index + 1}`,
+        contentType: file.type || "application/octet-stream",
+        size: file.size,
+        sessionId: uploadSessionId,
+        sessionPrefix: "tanvi-whatsapp",
+        source: "tanvi-whatsapp-upload",
+        maxUploadBytes: MAX_TANVI_LOGO_BYTES,
+      });
+
+      return {
+        label: safeText(draft.label, 80) || (draft.side === "back" ? "Back logo" : "Front logo"),
+        description: safeText(draft.description, 500),
+        quantity: safeText(draft.quantity, 80),
+        url: upload.url,
+        filename: upload.filename,
+        contentType: upload.contentType,
+        size: upload.size,
+      };
+    })
+  );
+}
+
+function mergeWhatsappAttachments(currentValue: unknown, nextAttachments: Awaited<ReturnType<typeof storeWhatsappAttachments>>) {
+  const currentAttachments = Array.isArray(currentValue)
+    ? currentValue.filter((entry): entry is Record<string, unknown> => Boolean(entry && typeof entry === "object" && !Array.isArray(entry)))
+    : [];
+  const replacedLabels = new Set(nextAttachments.map((attachment) => attachment.label.toLowerCase()));
+
+  return [
+    ...currentAttachments.filter((attachment) => {
+      const label = safeText(attachment.label, 80).toLowerCase();
+      return !replacedLabels.has(label);
+    }),
+    ...nextAttachments,
+  ];
 }
 
 function getCurrentPartnerIds(value: unknown) {
@@ -147,7 +270,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Missing quote id." }, { status: 400 });
   }
 
-  const body = await req.json().catch(() => ({}));
+  const { body, files, attachmentDrafts } = await parseTanviUpdateRequest(req);
   const quoteRef = doc(db, "quotes", id);
   const quoteSnap = await getDoc(quoteRef);
   if (!quoteSnap.exists()) {
@@ -167,6 +290,7 @@ export async function PATCH(
     const partnerPriceDrafts = getPartnerPriceDrafts(body?.partnerPrices, activeIds);
     const stepCheckUpdates = getTanviStepCheckUpdates(body?.tanviStepChecks);
     const whatsappDetails = getWhatsappDetails(body?.whatsappDetails);
+    const uploadedWhatsappAttachments = await storeWhatsappAttachments(files, attachmentDrafts);
     const nextClientStatus =
       body?.clientStatus === undefined
         ? null
@@ -269,6 +393,8 @@ export async function PATCH(
       updatePayload["designBrief.printMethod"] = whatsappDetails.printMethod;
       updatePayload["designBrief.deadline"] = whatsappDetails.deadline;
       updatePayload["designBrief.clientNotes"] = whatsappDetails.notes;
+      updatePayload["designBrief.frontLogoDescription"] = whatsappDetails.frontLogoDescription;
+      updatePayload["designBrief.backLogoDescription"] = whatsappDetails.backLogoDescription;
       updatePayload["quote.total"] = whatsappDetails.total || 0;
       updatePayload["quote.currency"] = "Rs";
       updatePayload["quote.lines"] = [
@@ -278,6 +404,21 @@ export async function PATCH(
           unitPrice: "",
         },
       ];
+    }
+
+    if (uploadedWhatsappAttachments.length) {
+      const nextAttachments = mergeWhatsappAttachments(
+        currentData.attachments,
+        uploadedWhatsappAttachments
+      );
+      updatePayload.attachments = nextAttachments;
+      updatePayload.attachment = nextAttachments[0] || null;
+      updatePayload["designBrief.frontLogo"] = nextAttachments.some(
+        (attachment) => safeText(attachment.label, 80).toLowerCase() === "front logo"
+      );
+      updatePayload["designBrief.backLogo"] = nextAttachments.some(
+        (attachment) => safeText(attachment.label, 80).toLowerCase() === "back logo"
+      );
     }
 
     await updateDoc(quoteRef, updatePayload);

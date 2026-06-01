@@ -70,7 +70,11 @@ type WhatsappOrderDraft = {
   deadline: string;
   total: string;
   notes: string;
+  frontLogoDescription: string;
+  backLogoDescription: string;
 };
+
+type WhatsappLogoSide = "front" | "back";
 
 const TANVI_STEPS: { key: TanviStepKey; label: string }[] = [
   { key: "client_onboarding", label: "Client onboarding" },
@@ -115,6 +119,9 @@ const SHABBANAZ_PRINT_PRICE_OPTIONS: typeof YAN_PRINT_PRICE_OPTIONS = [
   { value: "front_back", label: "SP Large Front and Large Back Printing", price: 150 },
 ];
 
+const WHATSAPP_LOGO_ACCEPT =
+  "image/png,image/jpeg,image/jpg,image/webp,image/svg+xml,image/heic,image/heif,application/pdf";
+
 const defaultManager: ProductionManager = {
   name: "Tanvi",
   email: "",
@@ -131,6 +138,8 @@ const emptyWhatsappDraft: WhatsappOrderDraft = {
   deadline: "",
   total: "",
   notes: "",
+  frontLogoDescription: "",
+  backLogoDescription: "",
 };
 
 function formatDateTime(value: string | null) {
@@ -376,6 +385,10 @@ export default function TanviDeskPage() {
   const [showQueue, setShowQueue] = useState(true);
   const [showWhatsappIntake, setShowWhatsappIntake] = useState(false);
   const [whatsappDraft, setWhatsappDraft] = useState<WhatsappOrderDraft>(emptyWhatsappDraft);
+  const [whatsappLogoFiles, setWhatsappLogoFiles] = useState<Record<WhatsappLogoSide, File | null>>({
+    front: null,
+    back: null,
+  });
   const [creatingWhatsappOrder, setCreatingWhatsappOrder] = useState(false);
 
   const activePartners = useMemo(
@@ -547,6 +560,61 @@ export default function TanviDeskPage() {
     }));
   }
 
+  function updateWhatsappLogoFile(side: WhatsappLogoSide, file: File | null) {
+    setWhatsappLogoFiles((current) => ({
+      ...current,
+      [side]: file,
+    }));
+  }
+
+  function resetWhatsappIntake() {
+    setWhatsappDraft(emptyWhatsappDraft);
+    setWhatsappLogoFiles({ front: null, back: null });
+  }
+
+  function buildWhatsappRequestBody() {
+    const logoEntries = ([
+      {
+        side: "front" as const,
+        file: whatsappLogoFiles.front,
+        label: "Front logo",
+        description: whatsappDraft.frontLogoDescription,
+      },
+      {
+        side: "back" as const,
+        file: whatsappLogoFiles.back,
+        label: "Back logo",
+        description: whatsappDraft.backLogoDescription,
+      },
+    ]).filter((entry) => entry.file);
+
+    if (!logoEntries.length) {
+      return {
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ whatsappDetails: whatsappDraft }),
+      };
+    }
+
+    const formData = new FormData();
+    formData.append("whatsappDetails", JSON.stringify(whatsappDraft));
+    formData.append(
+      "attachments",
+      JSON.stringify(
+        logoEntries.map((entry) => ({
+          label: entry.label,
+          description: entry.description.trim(),
+          quantity: whatsappDraft.quantity,
+          side: entry.side,
+        }))
+      )
+    );
+    logoEntries.forEach((entry) => {
+      if (entry.file) formData.append("files", entry.file);
+    });
+
+    return { body: formData };
+  }
+
   function loadSelectedIntoWhatsappDraft() {
     if (!selected) return;
     setWhatsappDraft({
@@ -560,7 +628,14 @@ export default function TanviDeskPage() {
       deadline: selected.deadline === "No deadline" ? "" : selected.deadline,
       total: selected.total ? String(selected.total) : "",
       notes: selected.notes,
+      frontLogoDescription:
+        selected.artwork.find((attachment) => attachment.label.toLowerCase() === "front logo")
+          ?.description || "",
+      backLogoDescription:
+        selected.artwork.find((attachment) => attachment.label.toLowerCase() === "back logo")
+          ?.description || "",
     });
+    setWhatsappLogoFiles({ front: null, back: null });
     setShowWhatsappIntake(true);
   }
 
@@ -571,8 +646,7 @@ export default function TanviDeskPage() {
     try {
       const res = await fetch("/api/admin/tanvi/quotes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ whatsappDetails: whatsappDraft }),
+        ...buildWhatsappRequestBody(),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.quote) {
@@ -581,7 +655,7 @@ export default function TanviDeskPage() {
       const quote = data.quote as TanviQuoteSummary;
       setQuotes((current) => [quote, ...current]);
       setSelectedId(quote.id);
-      setWhatsappDraft(emptyWhatsappDraft);
+      resetWhatsappIntake();
       setShowWhatsappIntake(false);
       setNotice(`${quote.code} WhatsApp order created.`);
     } catch (createError) {
@@ -593,11 +667,29 @@ export default function TanviDeskPage() {
 
   function saveWhatsappDetailsToSelected() {
     if (!selected) return;
-    void updateQuote(
-      selected,
-      { whatsappDetails: whatsappDraft },
-      "whatsapp-details"
-    );
+    const quote = selected;
+    setSaving("whatsapp-details");
+    setNotice(null);
+    setError(null);
+    void (async () => {
+      try {
+        const res = await fetch(`/api/admin/tanvi/quotes/${encodeURIComponent(quote.id)}`, {
+          method: "PATCH",
+          ...buildWhatsappRequestBody(),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data?.quote) {
+          throw new Error(data?.error || "Could not update quote.");
+        }
+        replaceQuote(data.quote as TanviQuoteSummary);
+        setWhatsappLogoFiles({ front: null, back: null });
+        setNotice(`${quote.code} updated.`);
+      } catch (updateError) {
+        setError(updateError instanceof Error ? updateError.message : "Could not update quote.");
+      } finally {
+        setSaving(null);
+      }
+    })();
   }
 
   const pageClass = isDark
@@ -983,7 +1075,7 @@ export default function TanviDeskPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setWhatsappDraft(emptyWhatsappDraft);
+                    resetWhatsappIntake();
                     setShowWhatsappIntake((current) => !current);
                   }}
                   className={whatsappButtonClass}
@@ -1076,6 +1168,72 @@ export default function TanviDeskPage() {
                   />
                 </label>
               ))}
+              {([
+                {
+                  side: "front" as const,
+                  title: "Front logo",
+                  descriptionField: "frontLogoDescription" as const,
+                  helper: "Upload the logo or artwork for the front side.",
+                },
+                {
+                  side: "back" as const,
+                  title: "Back logo",
+                  descriptionField: "backLogoDescription" as const,
+                  helper: "Upload the logo or artwork for the back side.",
+                },
+              ]).map((logo) => {
+                const file = whatsappLogoFiles[logo.side];
+                return (
+                  <div key={logo.side} className={`${subtleCardClass} p-3 md:col-span-1 xl:col-span-2`}>
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className={`text-sm font-semibold ${strongTextClass}`}>{logo.title}</p>
+                        <p className={`mt-1 text-xs ${mutedClass}`}>{logo.helper}</p>
+                      </div>
+                      {file ? (
+                        <button
+                          type="button"
+                          onClick={() => updateWhatsappLogoFile(logo.side, null)}
+                          className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
+                        >
+                          Remove
+                        </button>
+                      ) : null}
+                    </div>
+                    <label
+                      className={`mt-3 flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed px-3 py-4 text-center transition ${
+                        isDark
+                          ? "border-white/15 bg-slate-950/70 hover:bg-slate-950"
+                          : "border-slate-300 bg-white hover:bg-slate-50"
+                      }`}
+                    >
+                      <input
+                        type="file"
+                        accept={WHATSAPP_LOGO_ACCEPT}
+                        onChange={(event) => updateWhatsappLogoFile(logo.side, event.target.files?.[0] || null)}
+                        className="sr-only"
+                      />
+                      <ImageIcon className="h-6 w-6 text-emerald-600" />
+                      <span className={`mt-2 max-w-full truncate text-sm font-semibold ${strongTextClass}`}>
+                        {file ? file.name : `Choose ${logo.title.toLowerCase()}`}
+                      </span>
+                      <span className={`mt-1 text-xs ${mutedClass}`}>
+                        PNG, JPG, WEBP, SVG, HEIC, or PDF. Max 5MB.
+                      </span>
+                    </label>
+                    <label className={`mt-3 block text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                      Description below {logo.title.toLowerCase()}
+                      <textarea
+                        value={whatsappDraft[logo.descriptionField]}
+                        onChange={(event) => updateWhatsappDraft(logo.descriptionField, event.target.value)}
+                        placeholder="Example: print small on left chest, keep original logo colour."
+                        rows={2}
+                        className={`mt-2 w-full resize-none normal-case tracking-normal ${fieldClass}`}
+                      />
+                    </label>
+                  </div>
+                );
+              })}
               <label className={`md:col-span-2 xl:col-span-4 text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
                 Notes from WhatsApp
                 <textarea
