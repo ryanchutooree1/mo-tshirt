@@ -1062,16 +1062,40 @@ export default function OwnerDashboard() {
               </p>
 
               <div className="mt-6 flex flex-wrap gap-2.5">
-                <span className="rounded-full border border-[#7cff45]/45 bg-[#59d62e]/14 px-4 py-2 text-sm font-semibold text-[#dfffca]">
+                <span
+                  className={`rounded-full border px-4 py-2 text-sm font-semibold ${
+                    isDark
+                      ? "border-[#7cff45]/45 bg-[#59d62e]/14 text-[#dfffca]"
+                      : "border-[#4ade80] bg-[#dcfce7] text-[#14532d]"
+                  }`}
+                >
                   {money(todayRevenue)} today
                 </span>
-                <span className="rounded-full border border-[#1f63ff]/45 bg-[#1f63ff]/14 px-4 py-2 text-sm font-semibold text-[#c8d9ff]">
+                <span
+                  className={`rounded-full border px-4 py-2 text-sm font-semibold ${
+                    isDark
+                      ? "border-[#1f63ff]/45 bg-[#1f63ff]/14 text-[#c8d9ff]"
+                      : "border-[#60a5fa] bg-[#dbeafe] text-[#1e3a8a]"
+                  }`}
+                >
                   {efficiencyPct}% efficiency
                 </span>
-                <span className="rounded-full border border-[#ff7a1f]/45 bg-[#ff7a1f]/14 px-4 py-2 text-sm font-semibold text-[#ffd5b8]">
+                <span
+                  className={`rounded-full border px-4 py-2 text-sm font-semibold ${
+                    isDark
+                      ? "border-[#ff7a1f]/45 bg-[#ff7a1f]/14 text-[#ffd5b8]"
+                      : "border-[#fb923c] bg-[#ffedd5] text-[#9a3412]"
+                  }`}
+                >
                   {quoteMetrics.awaiting} quotes waiting
                 </span>
-                <span className="rounded-full border border-[#f01862]/45 bg-[#f01862]/14 px-4 py-2 text-sm font-semibold text-[#ffc2d5]">
+                <span
+                  className={`rounded-full border px-4 py-2 text-sm font-semibold ${
+                    isDark
+                      ? "border-[#f01862]/45 bg-[#f01862]/14 text-[#ffc2d5]"
+                      : "border-[#fb7185] bg-[#ffe4e6] text-[#9f1239]"
+                  }`}
+                >
                   {inventoryMetrics.low.length + inventoryMetrics.out.length} stock risks
                 </span>
               </div>
@@ -1180,8 +1204,8 @@ export default function OwnerDashboard() {
 
         <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {kpiCards.map(({ label, value, sub, href, Icon, accent }, index) => {
-            const accentClass =
-              accent === "green"
+            const accentClass = isDark
+              ? accent === "green"
                 ? "border-[#7cff45]/38 bg-[#59d62e]/12 text-[#dfffca]"
                 : accent === "orange"
                   ? "border-[#ff7a1f]/38 bg-[#ff7a1f]/12 text-[#ffd5b8]"
@@ -1191,7 +1215,18 @@ export default function OwnerDashboard() {
                       ? "border-[#f6b51f]/38 bg-[#f6b51f]/12 text-[#fff0ba]"
                       : accent === "pink"
                         ? "border-[#f01862]/38 bg-[#f01862]/12 text-[#ffc2d5]"
-                        : "border-[#7a35ff]/38 bg-[#7a35ff]/12 text-[#d7c7ff]";
+                        : "border-[#7a35ff]/38 bg-[#7a35ff]/12 text-[#d7c7ff]"
+              : accent === "green"
+                ? "border-[#4ade80] bg-[#dcfce7] text-[#14532d]"
+                : accent === "orange"
+                  ? "border-[#fb923c] bg-[#ffedd5] text-[#9a3412]"
+                  : accent === "blue"
+                    ? "border-[#60a5fa] bg-[#dbeafe] text-[#1e3a8a]"
+                    : accent === "yellow"
+                      ? "border-[#facc15] bg-[#fef9c3] text-[#713f12]"
+                      : accent === "pink"
+                        ? "border-[#fb7185] bg-[#ffe4e6] text-[#9f1239]"
+                        : "border-[#a78bfa] bg-[#ede9fe] text-[#4c1d95]";
             return (
             <Link
               key={label}
