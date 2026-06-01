@@ -263,55 +263,55 @@ export default function AdminChrome({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
-  const rootClass = isDark ? "bg-slate-950 text-slate-100" : "bg-white text-[#222222]";
+  const rootClass = isDark ? "bg-[#010503] text-[#f7fff3]" : "bg-white text-[#222222]";
   const topBarClass = isDark
-    ? "border-slate-800 bg-slate-950/85"
+    ? "border-[#17331b] bg-black/88 shadow-[0_1px_0_rgba(89,214,46,0.28),0_18px_50px_rgba(0,0,0,0.55)]"
     : "border-[#ebebeb] bg-white/92 shadow-[0_10px_30px_rgba(0,0,0,0.04)]";
   const circleButtonClass = isDark
-    ? "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-slate-100 transition hover:border-slate-600 hover:bg-slate-800 sm:h-11 sm:w-11"
+    ? "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#285b25] bg-[#04100a] text-[#7cff45] shadow-[0_0_22px_rgba(89,214,46,0.13)] transition hover:border-[#7cff45] hover:bg-[#07190d] sm:h-11 sm:w-11"
     : "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#ebebeb] bg-white text-[#222222] shadow-[0_4px_14px_rgba(0,0,0,0.04)] transition hover:border-[#d7d7d7] hover:bg-[#f7f7f7] hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)] sm:h-11 sm:w-11";
   const rolePillClass = isDark
-    ? "hidden shrink-0 items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-slate-300 sm:inline-flex"
+    ? "hidden shrink-0 items-center gap-2 rounded-full border border-[#285b25] bg-[#04100a] px-3 py-1.5 text-xs font-semibold text-[#9af45c] sm:inline-flex"
     : "hidden shrink-0 items-center gap-2 rounded-full border border-[#ebebeb] bg-white px-3 py-1.5 text-xs text-[#6a6a6a] shadow-[0_4px_14px_rgba(0,0,0,0.04)] sm:inline-flex";
   const drawerPanelClass = isDark
-    ? "border-slate-800 bg-slate-950"
+    ? "border-[#17331b] bg-[#020604] shadow-[24px_0_80px_rgba(0,0,0,0.72)]"
     : "border-[#ebebeb] bg-white shadow-[0_24px_60px_rgba(0,0,0,0.12)]";
   const profileCardClass = isDark
-    ? "border-slate-700 bg-slate-900"
+    ? "border-[#21491f] bg-[#04100a] shadow-[0_0_30px_rgba(89,214,46,0.08)]"
     : "border-[#ebebeb] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.06)]";
-  const subtleLabelClass = isDark ? "text-slate-500" : "text-[#8a8a8a]";
-  const profileMetaClass = isDark ? "text-slate-400" : "text-[#6a6a6a]";
+  const subtleLabelClass = isDark ? "text-[#79d95a]" : "text-[#8a8a8a]";
+  const profileMetaClass = isDark ? "text-[#b7c6b3]" : "text-[#6a6a6a]";
   const editButtonClass = (active: boolean) =>
     active
       ? isDark
-        ? "border-cyan-300/60 bg-cyan-400/20 text-cyan-100"
+        ? "border-[#7cff45] bg-[#59d62e]/20 text-[#dfffca]"
         : "border-[#222222] bg-[#222222] text-white shadow-[0_8px_20px_rgba(0,0,0,0.16)]"
       : isDark
-        ? "border-slate-700 bg-slate-900 text-slate-200 hover:border-slate-600 hover:bg-slate-800"
+        ? "border-[#21491f] bg-[#04100a] text-[#f7fff3] hover:border-[#7cff45] hover:bg-[#07190d]"
         : "border-[#ebebeb] bg-white text-[#484848] hover:border-[#d7d7d7] hover:bg-[#f7f7f7]";
   const themeButtonClass = isDark
-    ? "border-cyan-400/45 bg-cyan-400/15 text-cyan-100 hover:border-cyan-300/70 hover:bg-cyan-400/25"
+    ? "border-[#1f63ff]/55 bg-[#1f63ff]/14 text-[#b9d1ff] hover:border-[#1f63ff] hover:bg-[#1f63ff]/22"
     : "border-[#ebebeb] bg-white text-[#484848] hover:border-[#d7d7d7] hover:bg-[#f7f7f7]";
   const accessCardClass = isDark
-    ? "border-slate-700 bg-slate-950/60 text-slate-300"
+    ? "border-[#21491f] bg-black/45 text-[#b7c6b3]"
     : "border-[#ebebeb] bg-white text-[#6a6a6a]";
   const editRowClass = isDark
-    ? "border-slate-700 bg-slate-900"
+    ? "border-[#21491f] bg-[#04100a]"
     : "border-[#ebebeb] bg-white";
   const editChipClass = isDark
-    ? "border-slate-700 text-slate-300 hover:bg-slate-800"
+    ? "border-[#21491f] text-[#b7c6b3] hover:bg-[#07190d]"
     : "border-[#ebebeb] text-[#6a6a6a] hover:bg-[#f7f7f7]";
   const editLabelClass = isDark
-    ? "border-slate-700 bg-slate-800 text-slate-200"
+    ? "border-[#21491f] bg-black/35 text-[#f7fff3]"
     : "border-[#ebebeb] bg-white text-[#222222]";
   const navActiveClass = isDark
-    ? "border-cyan-300/55 bg-cyan-400/18 text-cyan-100 shadow"
+    ? "border-[#7cff45]/70 bg-[#59d62e]/16 text-[#dfffca] shadow-[0_0_24px_rgba(89,214,46,0.18)]"
     : "border-[#222222] bg-[#222222] text-white shadow-[0_10px_24px_rgba(0,0,0,0.12)]";
   const navInactiveClass = isDark
-    ? "border-transparent text-slate-200 hover:border-slate-700 hover:bg-slate-800/70"
+    ? "border-transparent text-[#e9f4e5] hover:border-[#21491f] hover:bg-[#07190d]"
     : "border-transparent text-[#484848] hover:border-[#ebebeb] hover:bg-[#f7f7f7]";
   const shellClass = isDark
-    ? "admin-page-shell relative min-h-screen max-w-full overflow-x-hidden bg-slate-950 p-3 text-slate-100 transition-colors sm:p-6 lg:p-8"
+    ? "admin-page-shell relative min-h-screen max-w-full overflow-x-hidden bg-[#010503] p-3 text-[#f7fff3] transition-colors sm:p-6 lg:p-8"
     : "admin-page-shell airbnb-admin-shell relative min-h-screen max-w-full overflow-x-hidden bg-transparent p-3 text-[#222222] transition-colors sm:p-6 lg:p-8";
   const logoutButtonClass = isDark
     ? "border-rose-500/45 bg-rose-500/15 text-rose-200 hover:border-rose-400/60 hover:bg-rose-500/25"
@@ -374,7 +374,7 @@ export default function AdminChrome({
               </svg>
             </button>
             <div className={rolePillClass}>
-              <span className={`h-2 w-2 rounded-full ${isDark ? "bg-emerald-400" : "bg-[#ff6600]"}`} />
+              <span className={`h-2 w-2 rounded-full ${isDark ? "bg-[#7cff45] shadow-[0_0_12px_rgba(124,255,69,0.8)]" : "bg-[#ff6600]"}`} />
               {session?.isOwner ? "Owner" : "Live"}
             </div>
           </div>
@@ -384,17 +384,17 @@ export default function AdminChrome({
               <div className={`truncate text-[10px] font-semibold uppercase tracking-[0.22em] sm:text-[11px] sm:tracking-[0.28em] ${subtleLabelClass}`}>
                 MO Admin
               </div>
-              <div className={`truncate text-sm font-semibold ${isDark ? "text-slate-100" : "text-[#222222]"}`}>
+              <div className={`truncate text-sm font-semibold ${isDark ? "text-[#f7fff3]" : "text-[#222222]"}`}>
                 {currentLabel}
               </div>
               <div className={`hidden truncate text-xs sm:block ${profileMetaClass}`}>
-                Clean internal workspace
+                Dream operating dashboard
               </div>
             </div>
             <div
               className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full sm:h-12 sm:w-12 ${
                 isDark
-                  ? "border border-slate-700 bg-white"
+                  ? "border border-[#285b25] bg-[#07190d]"
                   : "bg-white shadow-[0_12px_28px_rgba(0,0,0,0.14)]"
               }`}
             >
@@ -430,7 +430,7 @@ export default function AdminChrome({
                   <div className={`text-[11px] font-semibold uppercase tracking-[0.28em] ${profileMetaClass}`}>
                     {session?.isOwner ? "Owner Session" : "Team Session"}
                   </div>
-                  <div className={`mt-2 truncate text-lg font-semibold ${isDark ? "text-white" : "text-[#222222]"}`}>
+                  <div className={`mt-2 truncate text-lg font-semibold ${isDark ? "text-[#f7fff3]" : "text-[#222222]"}`}>
                     {session?.displayName || "Admin"}
                   </div>
                   <div className={`mt-1 truncate text-xs ${profileMetaClass}`}>
@@ -532,10 +532,10 @@ export default function AdminChrome({
                           className={`h-2 w-2 rounded-full ${
                             active
                               ? isDark
-                                ? "bg-emerald-400"
+                                ? "bg-[#7cff45] shadow-[0_0_10px_rgba(124,255,69,0.7)]"
                                 : "bg-[#ff6600]"
                               : isDark
-                                ? "bg-slate-300 group-hover:bg-slate-400"
+                                ? "bg-[#2c6228] group-hover:bg-[#7cff45]"
                                 : "bg-[#d0d0d0] group-hover:bg-[#999999]"
                           }`}
                         />
@@ -603,10 +603,10 @@ export default function AdminChrome({
                           className={`h-2 w-2 rounded-full ${
                             active
                               ? isDark
-                                ? "bg-emerald-400"
+                                ? "bg-[#7cff45] shadow-[0_0_10px_rgba(124,255,69,0.7)]"
                                 : "bg-[#ff6600]"
                               : isDark
-                                ? "bg-slate-300 group-hover:bg-slate-400"
+                                ? "bg-[#2c6228] group-hover:bg-[#7cff45]"
                                 : "bg-[#d0d0d0] group-hover:bg-[#999999]"
                           }`}
                         />
@@ -618,7 +618,7 @@ export default function AdminChrome({
             </nav>
 
             <div
-              className={`mt-4 border-t pt-4 ${isDark ? "border-slate-700" : "border-[#ebebeb]"}`}
+              className={`mt-4 border-t pt-4 ${isDark ? "border-[#21491f]" : "border-[#ebebeb]"}`}
             >
               <button
                 type="button"
@@ -644,7 +644,12 @@ export default function AdminChrome({
                 className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,0.92))]"
               />
             </>
-          ) : null}
+          ) : (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(89,214,46,0.14),transparent_28%),radial-gradient(circle_at_88%_10%,rgba(31,99,255,0.16),transparent_28%),linear-gradient(rgba(124,255,69,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(124,255,69,0.035)_1px,transparent_1px)] bg-[size:auto,auto,36px_36px,36px_36px]"
+            />
+          )}
           <div className="relative z-10">{children}</div>
         </div>
       </main>

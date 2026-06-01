@@ -273,10 +273,10 @@ export default function OwnerDashboard() {
   const { theme, toggleTheme } = useAdminTheme();
   const isDark = theme === "dark";
   const cardBase = isDark
-    ? "rounded-3xl border border-white/10 bg-white/[0.06] backdrop-blur-xl shadow-[0_22px_60px_rgba(5,12,24,0.45)]"
+    ? "rounded-lg border border-[#17331b] bg-[#020604]/92 shadow-[inset_0_1px_0_rgba(124,255,69,0.08),0_18px_55px_rgba(0,0,0,0.58)]"
     : "rounded-[32px] border border-[#ebebeb] bg-white/92 backdrop-blur-xl shadow-[0_14px_34px_rgba(0,0,0,0.06)]";
   const heroPanelClass = isDark
-    ? "rounded-2xl border border-white/20 bg-black/20 p-4"
+    ? "rounded-lg border border-[#21491f] bg-black/36 p-4 shadow-[0_0_24px_rgba(89,214,46,0.07)]"
     : "rounded-[26px] border border-[#ebebeb] bg-[#f7f7f7]/95 p-4";
 
   const [now, setNow] = useState(new Date());
@@ -740,6 +740,7 @@ export default function OwnerDashboard() {
     sub: string;
     href: string;
     Icon: LucideIcon;
+    accent: "green" | "orange" | "blue" | "yellow" | "pink" | "violet";
   }[] = [
     {
       label: "Revenue Today",
@@ -747,6 +748,7 @@ export default function OwnerDashboard() {
       sub: `${todayOrders} orders live`,
       href: "/admin/orders?range=today",
       Icon: Wallet,
+      accent: "green",
     },
     {
       label: "Pending Orders",
@@ -754,6 +756,7 @@ export default function OwnerDashboard() {
       sub: "Production queue",
       href: "/admin/orders?status=Pending",
       Icon: Clock3,
+      accent: "orange",
     },
     {
       label: "AOV Today",
@@ -761,6 +764,7 @@ export default function OwnerDashboard() {
       sub: "Average order value",
       href: "/admin/analytics?preset=30d",
       Icon: Gauge,
+      accent: "blue",
     },
     {
       label: "Quote Pipeline",
@@ -768,6 +772,7 @@ export default function OwnerDashboard() {
       sub: "Waiting follow-up",
       href: "/admin/quotation-approval",
       Icon: FileStack,
+      accent: "yellow",
     },
     {
       label: "Inventory Alerts",
@@ -775,6 +780,7 @@ export default function OwnerDashboard() {
       sub: `${inventoryMetrics.out.length} out of stock`,
       href: "/admin/inventory",
       Icon: Package,
+      accent: "pink",
     },
     {
       label: "Automation Health",
@@ -782,6 +788,7 @@ export default function OwnerDashboard() {
       sub: automationMetrics.errors > 0 ? `${automationMetrics.errors} failures` : "No failures",
       href: "/admin/automation",
       Icon: Bot,
+      accent: "violet",
     },
   ];
 
@@ -998,14 +1005,14 @@ export default function OwnerDashboard() {
         <div
           className={`absolute -top-40 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full blur-3xl ${
             isDark
-              ? "bg-[radial-gradient(circle,rgba(56,189,248,0.35),rgba(56,189,248,0)_70%)]"
+              ? "bg-[radial-gradient(circle,rgba(89,214,46,0.26),rgba(89,214,46,0)_70%)]"
               : "bg-[radial-gradient(circle,rgba(255,102,0,0.16),rgba(255,102,0,0)_70%)]"
           }`}
         />
         <div
           className={`absolute right-[-6rem] top-32 h-[420px] w-[420px] rounded-full blur-3xl ${
             isDark
-              ? "bg-[radial-gradient(circle,rgba(14,165,233,0.28),rgba(14,165,233,0)_70%)]"
+              ? "bg-[radial-gradient(circle,rgba(31,99,255,0.24),rgba(31,99,255,0)_70%)]"
               : "bg-[radial-gradient(circle,rgba(229,231,235,0.85),rgba(229,231,235,0)_70%)]"
           }`}
         />
@@ -1016,55 +1023,55 @@ export default function OwnerDashboard() {
           <div
             className={`absolute inset-0 ${
               isDark
-                ? "bg-[linear-gradient(120deg,rgba(15,23,42,0.95),rgba(10,36,62,0.88))]"
+                ? "bg-[linear-gradient(120deg,rgba(1,5,3,0.97),rgba(4,16,10,0.92))]"
                 : "bg-white"
             }`}
           />
           <div
             className={`absolute inset-0 [background-size:20px_20px] ${
               isDark
-                ? "opacity-30 [background-image:radial-gradient(rgba(148,163,184,0.32)_1px,transparent_1px)]"
+                ? "opacity-50 [background-image:radial-gradient(rgba(124,255,69,0.2)_1px,transparent_1px)]"
                 : "opacity-0"
             }`}
           />
 
           <div className="relative grid gap-8 xl:grid-cols-[1.4fr_0.9fr]">
             <div>
-              <p className={`text-xs uppercase tracking-[0.28em] ${isDark ? "text-cyan-200/80" : "text-[#6a6a6a]"}`}>
-                MO Admin HQ
+              <p className={`text-xs font-bold uppercase tracking-[0.28em] ${isDark ? "text-[#7cff45]" : "text-[#6a6a6a]"}`}>
+                MO-T-SHIRT.MU
               </p>
               <h1
                 className={`${displayFont.className} mt-3 text-4xl font-semibold tracking-tight sm:text-6xl ${
                   isDark ? "text-white" : "text-slate-900"
                 }`}
               >
-                The CEO Control Panel
+                The Dream Dashboard
               </h1>
               <p className={`mt-4 max-w-2xl text-base sm:text-lg ${isDark ? "text-slate-200/90" : "text-slate-700"}`}>
-                One command view for sales, quote pipeline, stock pressure, automations, and execution rhythm.
+                A command view for the dream: sales, quote pipeline, stock pressure, automations, and execution rhythm.
               </p>
               <p className={`mt-3 text-sm ${isDark ? "text-slate-200/95" : "text-slate-700"}`}>
                 {formattedDate} • Primary{" "}
-                <span className={`font-semibold ${isDark ? "text-cyan-200" : "text-[#222222]"}`}>{numerologyToday.primary}</span> • Secondary{" "}
-                <span className={`font-semibold ${isDark ? "text-emerald-200" : "text-[#222222]"}`}>{numerologyToday.secondary}</span>
+                <span className={`font-semibold ${isDark ? "text-[#1f63ff]" : "text-[#222222]"}`}>{numerologyToday.primary}</span> • Secondary{" "}
+                <span className={`font-semibold ${isDark ? "text-[#7cff45]" : "text-[#222222]"}`}>{numerologyToday.secondary}</span>
               </p>
               <p className={`mt-1 text-xs ${isDark ? "text-slate-300" : "text-slate-600"}`}>
                 Tomorrow ({tomorrowCalc.dateStr}) • Primary{" "}
-                <span className={`font-medium ${isDark ? "text-cyan-100" : "text-[#222222]"}`}>{tomorrowCalc.primary}</span> • Secondary{" "}
-                <span className={`font-medium ${isDark ? "text-emerald-100" : "text-[#222222]"}`}>{tomorrowCalc.secondary}</span>
+                <span className={`font-medium ${isDark ? "text-[#9fc0ff]" : "text-[#222222]"}`}>{tomorrowCalc.primary}</span> • Secondary{" "}
+                <span className={`font-medium ${isDark ? "text-[#baff91]" : "text-[#222222]"}`}>{tomorrowCalc.secondary}</span>
               </p>
 
               <div className="mt-6 flex flex-wrap gap-2.5">
-                <span className="rounded-full border border-cyan-300/35 bg-cyan-300/15 px-4 py-2 text-sm font-semibold text-cyan-100">
+                <span className="rounded-full border border-[#7cff45]/45 bg-[#59d62e]/14 px-4 py-2 text-sm font-semibold text-[#dfffca]">
                   {money(todayRevenue)} today
                 </span>
-                <span className="rounded-full border border-blue-300/35 bg-blue-300/15 px-4 py-2 text-sm font-semibold text-blue-100">
+                <span className="rounded-full border border-[#1f63ff]/45 bg-[#1f63ff]/14 px-4 py-2 text-sm font-semibold text-[#c8d9ff]">
                   {efficiencyPct}% efficiency
                 </span>
-                <span className="rounded-full border border-indigo-300/35 bg-indigo-300/15 px-4 py-2 text-sm font-semibold text-indigo-100">
+                <span className="rounded-full border border-[#ff7a1f]/45 bg-[#ff7a1f]/14 px-4 py-2 text-sm font-semibold text-[#ffd5b8]">
                   {quoteMetrics.awaiting} quotes waiting
                 </span>
-                <span className="rounded-full border border-teal-300/35 bg-teal-300/15 px-4 py-2 text-sm font-semibold text-teal-100">
+                <span className="rounded-full border border-[#f01862]/45 bg-[#f01862]/14 px-4 py-2 text-sm font-semibold text-[#ffc2d5]">
                   {inventoryMetrics.low.length + inventoryMetrics.out.length} stock risks
                 </span>
               </div>
@@ -1072,7 +1079,7 @@ export default function OwnerDashboard() {
               <div className="mt-7 flex flex-wrap gap-3">
                 <Link
                   href="/admin/pos"
-                  className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-cyan-100"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#7cff45] px-4 py-2.5 text-sm font-bold text-black shadow-[0_0_26px_rgba(124,255,69,0.25)] transition hover:bg-[#baff91]"
                 >
                   Launch POS
                   <ArrowUpRight className="h-4 w-4" />
@@ -1081,7 +1088,7 @@ export default function OwnerDashboard() {
                   href="/admin/quotation-approval"
                   className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-semibold transition ${
                     isDark
-                      ? "border-white/30 bg-white/10 text-white hover:bg-white/20"
+                      ? "rounded-lg border-[#21491f] bg-[#04100a] text-[#f7fff3] hover:border-[#7cff45] hover:bg-[#07190d]"
                       : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
                   }`}
                 >
@@ -1093,7 +1100,7 @@ export default function OwnerDashboard() {
                   onClick={toggleTheme}
                   className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-semibold transition ${
                     isDark
-                      ? "border-white/30 bg-white/10 text-white hover:bg-white/20"
+                      ? "rounded-lg border-[#21491f] bg-[#04100a] text-[#f7fff3] hover:border-[#1f63ff] hover:bg-[#07190d]"
                       : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
                   }`}
                 >
@@ -1114,7 +1121,7 @@ export default function OwnerDashboard() {
 
             <div className="grid gap-4 self-end sm:grid-cols-2 xl:grid-cols-1">
               <div className={heroPanelClass}>
-                <div className={`text-xs uppercase tracking-[0.2em] ${isDark ? "text-cyan-200/75" : "text-slate-600"}`}>
+                <div className={`text-xs font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#7cff45]/80" : "text-slate-600"}`}>
                   Live Clock
                 </div>
                 <div className={`${displayFont.className} mt-2 text-3xl ${isDark ? "text-white" : "text-slate-900"}`}>
@@ -1126,7 +1133,7 @@ export default function OwnerDashboard() {
               </div>
 
               <div className={heroPanelClass}>
-                <div className={`text-xs uppercase tracking-[0.2em] ${isDark ? "text-cyan-200/75" : "text-slate-600"}`}>
+                <div className={`text-xs font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#ff7a1f]/85" : "text-slate-600"}`}>
                   Command Focus
                 </div>
                 <div className={`mt-2 text-sm ${isDark ? "text-slate-100" : "text-slate-700"}`}>
@@ -1135,8 +1142,8 @@ export default function OwnerDashboard() {
                     : "Queue is clean, shift to growth and outreach."}
                 </div>
                 <div
-                  className={`mt-3 inline-flex items-center gap-2 rounded-full border border-cyan-300/40 bg-cyan-300/10 px-3 py-1 text-xs ${
-                    isDark ? "text-cyan-100" : "text-cyan-700"
+                  className={`mt-3 inline-flex items-center gap-2 rounded-full border border-[#1f63ff]/45 bg-[#1f63ff]/12 px-3 py-1 text-xs ${
+                    isDark ? "text-[#c8d9ff]" : "text-cyan-700"
                   }`}
                 >
                   <Sparkles className="h-3.5 w-3.5" />
@@ -1145,20 +1152,20 @@ export default function OwnerDashboard() {
               </div>
 
               <div className={heroPanelClass}>
-                <div className={`text-xs uppercase tracking-[0.2em] ${isDark ? "text-cyan-200/75" : "text-slate-600"}`}>
+                <div className={`text-xs font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#f01862]/85" : "text-slate-600"}`}>
                   Numerology Outlook
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2">
-                  <div className="rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-2">
-                    <div className={`text-[11px] uppercase tracking-[0.14em] ${isDark ? "text-cyan-100/85" : "text-cyan-700"}`}>
+                  <div className="rounded-lg border border-[#1f63ff]/35 bg-[#1f63ff]/10 px-3 py-2">
+                    <div className={`text-[11px] uppercase tracking-[0.14em] ${isDark ? "text-[#c8d9ff]" : "text-cyan-700"}`}>
                       Today
                     </div>
                     <div className={`mt-1 text-sm ${isDark ? "text-slate-100" : "text-slate-700"}`}>
                       {numerologyToday.primary} / {numerologyToday.secondary}
                     </div>
                   </div>
-                  <div className="rounded-xl border border-emerald-300/30 bg-emerald-300/10 px-3 py-2">
-                    <div className={`text-[11px] uppercase tracking-[0.14em] ${isDark ? "text-emerald-100/85" : "text-emerald-700"}`}>
+                  <div className="rounded-lg border border-[#7cff45]/35 bg-[#59d62e]/10 px-3 py-2">
+                    <div className={`text-[11px] uppercase tracking-[0.14em] ${isDark ? "text-[#dfffca]" : "text-emerald-700"}`}>
                       Tomorrow
                     </div>
                     <div className={`mt-1 text-sm ${isDark ? "text-slate-100" : "text-slate-700"}`}>
@@ -1172,25 +1179,39 @@ export default function OwnerDashboard() {
         </section>
 
         <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {kpiCards.map(({ label, value, sub, href, Icon }, index) => (
+          {kpiCards.map(({ label, value, sub, href, Icon, accent }, index) => {
+            const accentClass =
+              accent === "green"
+                ? "border-[#7cff45]/38 bg-[#59d62e]/12 text-[#dfffca]"
+                : accent === "orange"
+                  ? "border-[#ff7a1f]/38 bg-[#ff7a1f]/12 text-[#ffd5b8]"
+                  : accent === "blue"
+                    ? "border-[#1f63ff]/38 bg-[#1f63ff]/12 text-[#c8d9ff]"
+                    : accent === "yellow"
+                      ? "border-[#f6b51f]/38 bg-[#f6b51f]/12 text-[#fff0ba]"
+                      : accent === "pink"
+                        ? "border-[#f01862]/38 bg-[#f01862]/12 text-[#ffc2d5]"
+                        : "border-[#7a35ff]/38 bg-[#7a35ff]/12 text-[#d7c7ff]";
+            return (
             <Link
               key={label}
               href={href}
-              className={`${cardBase} animate-rise p-4 transition hover:-translate-y-0.5 hover:border-cyan-300/40`}
+              className={`${cardBase} animate-rise p-4 transition hover:-translate-y-0.5 hover:border-[#7cff45]/45`}
               style={{ animationDelay: `${index * 60}ms` }}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-xs uppercase tracking-[0.2em] text-slate-300">{label}</div>
+                  <div className="text-xs font-bold uppercase tracking-[0.2em] text-[#b7c6b3]">{label}</div>
                   <div className={`${displayFont.className} mt-2 text-2xl font-semibold text-white`}>{value}</div>
-                  <div className="mt-1 text-xs text-slate-300">{sub}</div>
+                  <div className="mt-1 text-xs text-[#b7c6b3]">{sub}</div>
                 </div>
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-300/10 text-cyan-200">
+                <span className={`inline-flex h-10 w-10 items-center justify-center rounded-lg border ${accentClass}`}>
                   <Icon className="h-5 w-5" />
                 </span>
               </div>
             </Link>
-          ))}
+            );
+          })}
         </section>
 
         <section className="mt-6 grid gap-6 xl:grid-cols-[1.45fr_0.95fr]">
@@ -1639,13 +1660,17 @@ export default function OwnerDashboard() {
 
       <style jsx>{`
         .ceo-theme {
-          --ceo-bg: #050b17;
-          --ceo-surface: rgba(255, 255, 255, 0.06);
-          --ceo-border: rgba(255, 255, 255, 0.1);
-          --ceo-text: #f8fafc;
+          --ceo-bg: #010503;
+          --ceo-surface: rgba(4, 16, 10, 0.92);
+          --ceo-border: rgba(124, 255, 69, 0.14);
+          --ceo-text: #f7fff3;
           background:
-            radial-gradient(120% 90% at 50% -20%, rgba(56, 189, 248, 0.25), transparent 65%),
-            linear-gradient(145deg, #040814 0%, #081325 46%, #0a1b30 100%);
+            radial-gradient(100% 70% at 15% -10%, rgba(89, 214, 46, 0.22), transparent 58%),
+            radial-gradient(70% 65% at 92% 4%, rgba(31, 99, 255, 0.2), transparent 56%),
+            linear-gradient(rgba(124, 255, 69, 0.035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(124, 255, 69, 0.035) 1px, transparent 1px),
+            #010503;
+          background-size: auto, auto, 36px 36px, 36px 36px, auto;
           color: var(--ceo-text);
         }
 

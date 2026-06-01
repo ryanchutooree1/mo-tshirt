@@ -27,8 +27,8 @@ body {
 
 .admin-root.admin-dark {
   color-scheme: dark;
-  background: #020617;
-  color: #e2e8f0;
+  background: #010503;
+  color: #f7fff3;
 }
 
 .admin-root.admin-light {
@@ -186,8 +186,8 @@ body {
 }
 
 .admin-root.admin-dark .admin-page-shell {
-  background: #020617;
-  color: #e2e8f0;
+  background: #010503;
+  color: #f7fff3;
 }
 
 .admin-root.admin-dark :is(
@@ -223,7 +223,7 @@ body {
     .bg-zinc-200,
     .bg-zinc-300
   ) {
-  background-color: #0f172a !important;
+  background-color: #04100a !important;
 }
 
 .admin-root.admin-dark :is(
@@ -252,7 +252,7 @@ body {
     .text-\[\#111827\],
     .text-\[\#1f2937\]
   ) {
-  color: #e2e8f0 !important;
+  color: #f7fff3 !important;
 }
 
 .admin-root.admin-dark :is(
@@ -263,7 +263,7 @@ body {
     .text-gray-500,
     .text-gray-400
   ) {
-  color: #94a3b8 !important;
+  color: #b7c6b3 !important;
 }
 
 .admin-root.admin-dark :is(
@@ -277,26 +277,26 @@ body {
     .text-\[\#999999\],
     .text-\[\#b0b0b0\]
   ) {
-  color: #94a3b8 !important;
+  color: #b7c6b3 !important;
 }
 
 .admin-root.admin-dark :is(
     .text-\[\#c2410c\],
     .text-\[\#ff6600\]
   ) {
-  color: #fb923c !important;
+  color: #ff7a1f !important;
 }
 
 .admin-root.admin-dark .text-\[\#1f7a4d\] {
-  color: #34d399 !important;
+  color: #7cff45 !important;
 }
 
 .admin-root.admin-dark .text-\[\#3566d6\] {
-  color: #60a5fa !important;
+  color: #1f63ff !important;
 }
 
 .admin-root.admin-dark .text-\[\#b76a12\] {
-  color: #fbbf24 !important;
+  color: #f6b51f !important;
 }
 
 .admin-root.admin-dark :is(
@@ -327,7 +327,7 @@ body {
     .border-\[\#e5e5e5\],
     .border-\[\#bfa37a\]
   ) {
-  border-color: #334155 !important;
+  border-color: #21491f !important;
 }
 
 .admin-root.admin-dark :is(
@@ -354,23 +354,23 @@ body {
 .admin-root.admin-dark .shadow,
 .admin-root.admin-dark .shadow-md,
 .admin-root.admin-dark .shadow-lg {
-  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.35) !important;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.52), 0 0 22px rgba(89, 214, 46, 0.06) !important;
 }
 
 .admin-root.admin-dark :is(input, textarea, select) {
-  background-color: #111827;
-  color: #e2e8f0;
-  border-color: #334155;
+  background-color: #020604;
+  color: #f7fff3;
+  border-color: #285b25;
 }
 
 .admin-root.admin-dark :is(input, textarea)::placeholder {
-  color: #64748b;
+  color: #74866f;
 }
 
 .admin-root.admin-dark .admin-page-shell :is(.border, .border-t, .border-b, .border-l, .border-r):not(
     [class*="border-"]
   ) {
-  border-color: #334155 !important;
+  border-color: #21491f !important;
 }
 
 .admin-root.admin-dark .admin-page-shell :is(button, a, summary) {
@@ -384,30 +384,30 @@ body {
 .admin-root.admin-dark .admin-page-shell .recharts-text,
 .admin-root.admin-dark .admin-page-shell .recharts-cartesian-axis-tick-value,
 .admin-root.admin-dark .admin-page-shell .recharts-legend-item-text {
-  fill: #cbd5e1 !important;
-  color: #cbd5e1 !important;
+  fill: #d9e8d4 !important;
+  color: #d9e8d4 !important;
 }
 
 .admin-root.admin-dark .admin-page-shell .recharts-cartesian-grid line,
 .admin-root.admin-dark .admin-page-shell .recharts-polar-grid line,
 .admin-root.admin-dark .admin-page-shell .recharts-polar-grid-concentric path,
 .admin-root.admin-dark .admin-page-shell .recharts-reference-line line {
-  stroke: #334155 !important;
+  stroke: #21491f !important;
 }
 
 .admin-root.admin-dark .admin-page-shell .recharts-tooltip-wrapper :is(.bg-white, .bg-gray-50, .bg-slate-50) {
-  background-color: #111827 !important;
+  background-color: #020604 !important;
 }
 
 .admin-root.admin-dark .admin-page-shell .recharts-default-tooltip {
-  background-color: #111827 !important;
-  border-color: #334155 !important;
+  background-color: #020604 !important;
+  border-color: #285b25 !important;
   border-radius: 14px;
   box-shadow: 0 16px 36px rgb(2 6 23 / 0.35) !important;
 }
 
 .admin-root.admin-dark .admin-page-shell .recharts-default-tooltip :is(p, span, li) {
-  color: #e2e8f0 !important;
+  color: #f7fff3 !important;
 }
 
 /* Normalize light utility surfaces to dark on non-dashboard admin pages */
@@ -418,12 +418,12 @@ body {
     [class*="bg-gray-50/"],
     [class*="bg-gray-100/"]
   ) {
-  background-color: #111827 !important;
+  background-color: #04100a !important;
 }
 
 .admin-root.admin-dark .admin-page-shell > :not(.ceo-theme) [class*="bg-gradient-to-"] {
   background-image: none !important;
-  background-color: #0f172a !important;
+  background-color: #04100a !important;
 }
 
 .admin-root.admin-dark .admin-page-shell > :not(.ceo-theme) [class*="bg-[linear-gradient"][class*="rgba(255,255,255"],
@@ -446,8 +446,8 @@ body {
     .to-gray-50,
     .to-gray-100
   ) {
-  --tw-gradient-from: #0f172a var(--tw-gradient-from-position) !important;
-  --tw-gradient-to: rgb(15 23 42 / 0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-from: #04100a var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgb(4 16 10 / 0) var(--tw-gradient-to-position) !important;
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
 }
 
@@ -498,11 +498,11 @@ body {
   background-color: rgb(245 158 11 / 0.14) !important;
 }
 
-.admin-root.admin-dark :is(.text-amber-600, .text-amber-700, .text-amber-800, .text-orange-600, .text-orange-700, .text-orange-800) { color: #fbbf24 !important; }
-.admin-root.admin-dark :is(.text-emerald-600, .text-emerald-700, .text-emerald-800, .text-teal-600, .text-teal-700, .text-teal-800) { color: #34d399 !important; }
-.admin-root.admin-dark :is(.text-sky-600, .text-sky-700, .text-sky-800, .text-blue-600, .text-blue-700, .text-blue-800, .text-cyan-600, .text-cyan-700, .text-cyan-800) { color: #38bdf8 !important; }
-.admin-root.admin-dark :is(.text-rose-600, .text-rose-700, .text-rose-800, .text-pink-600, .text-pink-700, .text-pink-800) { color: #fb7185 !important; }
-.admin-root.admin-dark :is(.text-violet-600, .text-violet-700, .text-violet-800, .text-indigo-600, .text-indigo-700, .text-indigo-800) { color: #a78bfa !important; }
+.admin-root.admin-dark :is(.text-amber-600, .text-amber-700, .text-amber-800, .text-orange-600, .text-orange-700, .text-orange-800) { color: #f6b51f !important; }
+.admin-root.admin-dark :is(.text-emerald-600, .text-emerald-700, .text-emerald-800, .text-teal-600, .text-teal-700, .text-teal-800) { color: #7cff45 !important; }
+.admin-root.admin-dark :is(.text-sky-600, .text-sky-700, .text-sky-800, .text-blue-600, .text-blue-700, .text-blue-800, .text-cyan-600, .text-cyan-700, .text-cyan-800) { color: #1f63ff !important; }
+.admin-root.admin-dark :is(.text-rose-600, .text-rose-700, .text-rose-800, .text-pink-600, .text-pink-700, .text-pink-800) { color: #f01862 !important; }
+.admin-root.admin-dark :is(.text-violet-600, .text-violet-700, .text-violet-800, .text-indigo-600, .text-indigo-700, .text-indigo-800) { color: #7a35ff !important; }
 
 .admin-root.admin-dark :is(.border-amber-200, .border-orange-200) { border-color: rgb(245 158 11 / 0.3) !important; }
 .admin-root.admin-dark :is(.border-emerald-200, .border-teal-200) { border-color: rgb(16 185 129 / 0.3) !important; }
