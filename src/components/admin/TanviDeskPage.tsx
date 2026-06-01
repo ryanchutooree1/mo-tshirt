@@ -24,8 +24,6 @@ import {
   Save,
   Search,
   Send,
-  ShieldCheck,
-  Sparkles,
   TimerReset,
   Users,
 } from "lucide-react";
@@ -833,12 +831,8 @@ export default function TanviDeskPage() {
   const whatsappButtonClass =
     "inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50";
   const heroClass = isDark
-    ? "overflow-hidden rounded-[28px] border border-white/10 bg-slate-950 text-white shadow-[0_28px_70px_rgba(2,6,23,0.24)]"
-    : "overflow-hidden rounded-[28px] border border-slate-200 bg-white text-slate-950 shadow-[0_18px_45px_rgba(15,23,42,0.08)]";
-  const heroBadgeClass = isDark
-    ? "inline-flex items-center gap-2 rounded-full border border-orange-300/30 bg-orange-300/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-orange-100"
-    : "inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-orange-900";
-  const heroSubtextClass = isDark ? "text-slate-300" : "text-slate-600";
+    ? "overflow-hidden rounded-[20px] border border-white/10 bg-slate-950 text-white shadow-[0_18px_46px_rgba(2,6,23,0.2)]"
+    : "overflow-hidden rounded-[20px] border border-slate-200 bg-white text-slate-950 shadow-[0_12px_30px_rgba(15,23,42,0.06)]";
   const heroPrimaryButtonClass = isDark
     ? "inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-50 disabled:opacity-60"
     : "inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60";
@@ -1150,66 +1144,60 @@ export default function TanviDeskPage() {
 
   return (
     <main className={`${pageClass} max-w-full overflow-x-hidden`}>
-      <div className="mx-auto flex w-full max-w-[1680px] min-w-0 flex-col gap-4 overflow-x-hidden px-2 py-3 sm:gap-5 sm:px-6 sm:py-4 lg:px-8">
+      <div className="mx-auto flex w-full max-w-[1680px] min-w-0 flex-col gap-3 overflow-x-hidden px-2 py-3 sm:gap-5 sm:px-6 sm:py-4 lg:px-8">
         <section className={heroClass}>
-          <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_32rem] lg:p-7">
-            <div>
-              <div className={heroBadgeClass}>
-                <ShieldCheck className="h-4 w-4" />
-                Production Manager
-              </div>
-              <h1 className="mt-4 text-2xl font-semibold tracking-tight sm:mt-5 sm:text-4xl">
-                {manager.name} command desk
-              </h1>
-              <p className={`mt-3 max-w-3xl text-sm leading-6 sm:mt-4 sm:text-base ${heroSubtextClass}`}>
-                Fast phone workspace for quotations, WhatsApp orders, partner handoff, blockers, and print-start decisions.
+          <div className="grid gap-3 p-3 sm:p-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(24rem,1fr)] lg:p-5">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-700">
+                Tanvi Desk
               </p>
-              <div className="mt-5 flex flex-wrap gap-2 sm:mt-6">
-                <button
-                  type="button"
-                  onClick={loadDesk}
-                  disabled={loading}
-                  className={heroPrimaryButtonClass}
-                >
-                  <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-                  Refresh
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowQueue((current) => !current)}
-                  className={heroSecondaryButtonClass}
-                >
-                  {showQueue ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  {showQueue ? "Hide quote list" : "Show quote list"}
-                </button>
+              <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
+                Orders and follow-up
+              </h1>
+              <div className="mt-3 grid gap-2">
                 <button
                   type="button"
                   onClick={() => {
                     resetWhatsappIntake();
                     setShowWhatsappIntake((current) => !current);
                   }}
-                  className={whatsappButtonClass}
+                  className={`${whatsappButtonClass} w-full py-3`}
                 >
                   <MessageCircle className="h-4 w-4" />
-                  WhatsApp order
+                  New WhatsApp order
                 </button>
-                <span className={heroSecondaryButtonClass}>
-                  <Sparkles className="h-4 w-4 text-amber-300" />
-                  Password protected
-                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowQueue((current) => !current)}
+                    className={heroSecondaryButtonClass}
+                  >
+                    {showQueue ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showQueue ? "Hide list" : "Show list"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={loadDesk}
+                    disabled={loading}
+                    className={heroPrimaryButtonClass}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                    Refresh
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:gap-3">
+            <div className="grid grid-cols-2 gap-2">
               {summaryCards.map(({ label, value, icon: Icon, card, iconClass }) => (
-                <div key={label} className={`rounded-2xl border p-3 sm:p-4 ${card}`}>
-                  <div className="flex items-center justify-between gap-3">
-                    <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] sm:text-xs sm:tracking-[0.14em] ${mutedClass}`}>
+                <div key={label} className={`rounded-xl border p-2.5 sm:p-3 ${card}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className={`text-[9px] font-semibold uppercase tracking-[0.08em] sm:text-[10px] ${mutedClass}`}>
                       {label}
                     </p>
-                    <Icon className={`h-4 w-4 ${iconClass}`} />
+                    <Icon className={`h-3.5 w-3.5 ${iconClass}`} />
                   </div>
-                  <div className="mt-2 text-2xl font-semibold sm:mt-3 sm:text-3xl">{value}</div>
+                  <div className="mt-1 text-xl font-semibold sm:text-2xl">{value}</div>
                 </div>
               ))}
             </div>
