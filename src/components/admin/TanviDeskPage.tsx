@@ -1742,17 +1742,17 @@ export default function TanviDeskPage() {
               </div>
 
               <div className={`${panelClass} overflow-hidden`}>
-                <div className={`flex flex-wrap items-center justify-between gap-3 border-b p-5 ${dividerClass}`}>
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-700">
+                <div className={`flex items-start justify-between gap-3 border-b px-4 py-3 sm:p-5 ${dividerClass}`}>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-700 sm:text-xs sm:tracking-[0.16em]">
                       Tanvi progress
                     </p>
-                    <h3 className="mt-1 text-xl font-semibold tracking-tight">
-                      {checkedStepCount} of {TANVI_STEPS.length} checkpoints complete
+                    <h3 className="mt-1 text-base font-semibold tracking-tight sm:text-xl">
+                      {checkedStepCount}/{TANVI_STEPS.length} complete
                     </h3>
                   </div>
                   <span
-                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                    className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold sm:px-3 sm:py-1.5 sm:text-xs ${
                       selectedCanPrint
                         ? workflowToneClass.info
                         : selectedHasOpenArtwork && selected.partner.visibleTo.length
@@ -1767,14 +1767,14 @@ export default function TanviDeskPage() {
                         : "Needs decision"}
                   </span>
                 </div>
-                <div className="p-4">
-                  <div className={`h-3 overflow-hidden rounded-full ${isDark ? "bg-slate-950" : "bg-slate-100"}`}>
+                <div className="p-3 sm:p-4">
+                  <div className={`h-2 overflow-hidden rounded-full sm:h-3 ${isDark ? "bg-slate-950" : "bg-slate-100"}`}>
                     <div
                       className="h-full rounded-full bg-cyan-600 transition-all"
                       style={{ width: `${progressPercent}%` }}
                     />
                   </div>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+                  <div className="mt-3 grid gap-2 sm:mt-4 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 2xl:grid-cols-6">
                     {selectedWorkflow.map((step, index) => {
                       const StepIcon = step.icon;
                       const stepMeta = TANVI_STEPS[index];
@@ -1782,7 +1782,7 @@ export default function TanviDeskPage() {
                       return (
                         <div
                           key={step.title}
-                          className={`rounded-2xl border p-4 ${
+                          className={`rounded-xl border px-3 py-2.5 sm:rounded-2xl sm:p-4 ${
                             checked
                               ? isDark
                                 ? "border-white/10 bg-slate-950 text-slate-300"
@@ -1790,21 +1790,25 @@ export default function TanviDeskPage() {
                               : workflowToneClass[step.tone]
                           }`}
                         >
-                          <div className="flex items-start gap-3">
-                            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/70 text-current">
-                              <StepIcon className="h-5 w-5" />
+                          <div className="flex items-center gap-2.5 sm:items-start sm:gap-3">
+                            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/70 text-current sm:h-10 sm:w-10 sm:rounded-xl">
+                              <StepIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                             </span>
-                            <div className="min-w-0">
-                              <p className="text-[10px] font-semibold uppercase tracking-[0.12em]">
-                                Step {index + 1}
-                              </p>
-                              <h4 className="mt-1 text-sm font-semibold text-current">
-                                {step.title}
-                              </h4>
-                              <p className="mt-2 text-sm font-semibold">
-                                {step.value}
-                              </p>
-                              <p className="mt-2 text-xs leading-5 opacity-75">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex min-w-0 items-start justify-between gap-2 sm:block">
+                                <div className="min-w-0">
+                                  <p className="text-[9px] font-semibold uppercase tracking-[0.1em] opacity-75 sm:text-[10px] sm:tracking-[0.12em]">
+                                    Step {index + 1}
+                                  </p>
+                                  <h4 className="truncate text-sm font-semibold text-current sm:mt-1">
+                                    {step.title}
+                                  </h4>
+                                </div>
+                                <p className="max-w-[44%] shrink-0 truncate text-right text-xs font-semibold sm:mt-2 sm:max-w-none sm:text-left sm:text-sm">
+                                  {step.value}
+                                </p>
+                              </div>
+                              <p className="mt-2 hidden text-xs leading-5 opacity-75 sm:block">
                                 {step.helper}
                               </p>
                             </div>
