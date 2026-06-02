@@ -157,13 +157,13 @@ function createArtworkItem(id: number): ArtworkItem {
     id,
     label: "",
     description: "",
-    product: "",
+    product: garmentOptions[0],
     color: "",
-    size: "",
+    size: sizeOptions[0],
     printPlacement: "front",
     frontLogoDescription: "",
     backLogoDescription: "",
-    quantity: "",
+    quantity: "1",
     frontFile: null,
     backFile: null,
   };
@@ -485,7 +485,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     { garment: garmentOptions[0], color: "", size: sizeOptions[0], quantity: "1" },
   ]);
   const [printMethod, setPrintMethod] = useState<string>(NOT_SURE_METHOD);
-  const [showArtworkSection, setShowArtworkSection] = useState(false);
+  const [showArtworkSection, setShowArtworkSection] = useState(true);
   const [artworkItems, setArtworkItems] = useState<ArtworkItem[]>([createArtworkItem(1)]);
   const [nextArtworkId, setNextArtworkId] = useState(2);
   const [pendingArtworkPickerId, setPendingArtworkPickerId] = useState<number | null>(null);
@@ -544,11 +544,16 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     setShowArtworkSection(true);
     setArtworkItems((prev) => [...prev, createArtworkItem(createdId)]);
     setNextArtworkId((prev) => prev + 1);
-    setPendingArtworkPickerId(createdId);
+  }
+
+  function addOrderItem() {
+    addGarmentLine();
+    addArtworkItem();
   }
 
   function removeArtworkItem(index: number) {
     setArtworkItems((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
+    removeGarmentLine(index);
   }
 
   function getArtworkInputKey(id: number, slot: ArtworkSlot) {
@@ -958,119 +963,6 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           </div>
         </div>
 
-        <div className="space-y-3">
-          {!loadingColors && !availableColors.length ? (
-            <p className="text-xs text-amber-700">No live colours available right now. Add the preferred colour in notes if needed.</p>
-          ) : null}
-          {garmentLines.map((line, index) => {
-            const colorOptions = getGarmentColorOptions(line.garment);
-            const colorPlaceholder =
-              loadingColors && colorOptions.length === 0
-                ? "Loading colors..."
-                : colorOptions.length
-                  ? "Select color"
-                  : "No colors available";
-
-            return (
-              <div
-                key={`${index}-${line.garment}`}
-                className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.45fr)_minmax(0,0.72fr)_minmax(0,0.9fr)]"
-              >
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700">Garment</label>
-                  <select
-                    value={line.garment}
-                    onChange={(e) => {
-                      const nextGarment = e.target.value;
-                      const nextColorOptions = getGarmentColorOptions(nextGarment);
-                      updateGarmentLine(index, {
-                        garment: nextGarment,
-                        color: nextColorOptions.includes(line.color) ? line.color : "",
-                      });
-                    }}
-                    className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                  >
-                    {garmentOptions.map((opt) => (
-                      <option key={opt}>{opt}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700">Color</label>
-                  <ColorSelect
-                    value={line.color}
-                    options={colorOptions}
-                    placeholder={colorPlaceholder}
-                    disabled={loadingColors && colorOptions.length === 0}
-                    onChange={(value) => updateGarmentLine(index, { color: value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700">Size</label>
-                  <select
-                    value={line.size}
-                    onChange={(e) => updateGarmentLine(index, { size: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                  >
-                    {sizeOptions.map((size) => (
-                      <option key={size} value={size}>
-                        {size}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700">Quantity *</label>
-                  <div className="mt-1 flex items-center gap-3">
-                    <input
-                      required
-                      type="number"
-                      min={1}
-                      value={line.quantity}
-                      onChange={(e) => updateGarmentLine(index, { quantity: e.target.value })}
-                      className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
-                      placeholder="50"
-                    />
-                    {garmentLines.length > 1 ? (
-                      <button
-                        type="button"
-                        onClick={() => removeGarmentLine(index)}
-                        className="inline-flex aspect-square h-[34px] w-[34px] items-center justify-center rounded-full border border-red-300 bg-gradient-to-br from-red-500 to-rose-500 text-base font-semibold text-white shadow-[0_10px_20px_-14px_rgba(239,68,68,0.95)] transition hover:from-red-600 hover:to-rose-600"
-                        aria-label="Remove garment"
-                        title="Remove garment"
-                      >
-                        ×
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-          {garmentLines.length > 1 ? (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-              <div className="md:col-start-4">
-                <label className="block text-sm font-medium text-neutral-700">Total quantity</label>
-                <div className="mt-1 flex items-center gap-3">
-                  <input
-                    readOnly
-                    value={`${totalQuantity || 0} pcs`}
-                    className="w-full cursor-default rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm font-semibold text-neutral-700 shadow-[inset_0_1px_2px_rgba(15,23,42,0.06),0_14px_28px_-24px_rgba(15,23,42,0.35)] focus:outline-none"
-                  />
-                  <span aria-hidden="true" className="h-[34px] w-[34px] flex-shrink-0 invisible" />
-                </div>
-              </div>
-            </div>
-          ) : null}
-          <button
-            type="button"
-            onClick={addGarmentLine}
-            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 px-4 py-2 text-xs font-semibold text-white shadow-[0_12px_24px_-16px_rgba(249,115,22,0.75)] transition hover:from-orange-600 hover:via-amber-500 hover:to-orange-700"
-          >
-            + Add more garment
-          </button>
-        </div>
-
         <div className={`grid grid-cols-1 gap-4 ${selectedPrintMethodInfo ? "sm:grid-cols-2" : ""}`}>
           <div>
             <label className="block text-sm font-medium text-neutral-700">Print method</label>
@@ -1166,9 +1058,27 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                     : "No file chosen yet"}
                 </div>
               </div>
+              {!loadingColors && !availableColors.length ? (
+                <p className="text-xs text-amber-700">
+                  No live colours available right now. Add the preferred colour in notes if needed.
+                </p>
+              ) : null}
 
               {artworkItems.map((item, index) => {
                 const logoSlots = getArtworkSlots(item.printPlacement);
+                const line = garmentLines[index] || garmentLines[0] || {
+                  garment: garmentOptions[0],
+                  color: "",
+                  size: sizeOptions[0],
+                  quantity: "1",
+                };
+                const colorOptions = getGarmentColorOptions(line.garment);
+                const colorPlaceholder =
+                  loadingColors && colorOptions.length === 0
+                    ? "Loading colors..."
+                    : colorOptions.length
+                      ? "Select color"
+                      : "No colors available";
                 return (
                 <div key={item.id} className="rounded-[24px] border border-neutral-200 bg-neutral-50/80 p-4 shadow-[0_20px_45px_-40px_rgba(15,23,42,0.55)]">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1190,38 +1100,69 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                   <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Product</label>
-                      <input
-                        value={item.product}
-                        onChange={(e) => updateArtworkItem(index, { product: e.target.value })}
+                      <select
+                        value={line.garment}
+                        onChange={(e) => {
+                          const nextGarment = e.target.value;
+                          const nextColorOptions = getGarmentColorOptions(nextGarment);
+                          const nextColor = nextColorOptions.includes(line.color) ? line.color : "";
+                          updateGarmentLine(index, {
+                            garment: nextGarment,
+                            color: nextColor,
+                          });
+                          updateArtworkItem(index, {
+                            product: nextGarment,
+                            color: nextColor,
+                          });
+                        }}
                         className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
-                        placeholder="T-shirt / polo / hoodie"
-                      />
+                      >
+                        {garmentOptions.map((opt) => (
+                          <option key={opt}>{opt}</option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Colour</label>
-                      <input
-                        value={item.color}
-                        onChange={(e) => updateArtworkItem(index, { color: e.target.value })}
-                        className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
-                        placeholder="Navy blue"
+                      <ColorSelect
+                        value={line.color}
+                        options={colorOptions}
+                        placeholder={colorPlaceholder}
+                        disabled={loadingColors && colorOptions.length === 0}
+                        onChange={(value) => {
+                          updateGarmentLine(index, { color: value });
+                          updateArtworkItem(index, { color: value });
+                        }}
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Size</label>
-                      <input
-                        value={item.size}
-                        onChange={(e) => updateArtworkItem(index, { size: e.target.value })}
+                      <select
+                        value={line.size}
+                        onChange={(e) => {
+                          updateGarmentLine(index, { size: e.target.value });
+                          updateArtworkItem(index, { size: e.target.value });
+                        }}
                         className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
-                        placeholder="S / M / 2XL"
-                      />
+                      >
+                        {sizeOptions.map((size) => (
+                          <option key={size} value={size}>
+                            {size}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Qty</label>
                       <input
                         type="number"
                         min={1}
-                        value={item.quantity}
-                        onChange={(e) => updateArtworkItem(index, { quantity: e.target.value })}
+                        required
+                        value={line.quantity}
+                        onChange={(e) => {
+                          updateGarmentLine(index, { quantity: e.target.value });
+                          updateArtworkItem(index, { quantity: e.target.value });
+                        }}
                         className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
                         placeholder="2"
                       />
@@ -1343,7 +1284,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
 
               <button
                 type="button"
-                onClick={addArtworkItem}
+                onClick={addOrderItem}
                 className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-black hover:text-black"
               >
                 + Add another item / logo
