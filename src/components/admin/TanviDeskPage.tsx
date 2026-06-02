@@ -1785,13 +1785,21 @@ export default function TanviDeskPage() {
                           className={`rounded-xl border px-3 py-2.5 sm:rounded-2xl sm:p-4 ${
                             checked
                               ? isDark
-                                ? "border-white/10 bg-slate-950 text-slate-300"
-                                : "border-slate-800 bg-slate-900 text-slate-200"
+                                ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-100"
+                                : "border-emerald-200 bg-emerald-50 text-slate-900"
                               : workflowToneClass[step.tone]
                           }`}
                         >
                           <div className="flex items-center gap-2.5 sm:items-start sm:gap-3">
-                            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/70 text-current sm:h-10 sm:w-10 sm:rounded-xl">
+                            <span
+                              className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10 sm:rounded-xl ${
+                                checked
+                                  ? isDark
+                                    ? "bg-emerald-300/15 text-emerald-100"
+                                    : "bg-white text-emerald-700"
+                                  : "bg-white/70 text-current"
+                              }`}
+                            >
                               <StepIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                             </span>
                             <div className="min-w-0 flex-1">
