@@ -1130,8 +1130,8 @@ export default function TanviDeskPage() {
     if (state.checked) {
       return `${base} ${
         isDark
-          ? "border-white/10 bg-black/80 opacity-80 shadow-none hover:opacity-90"
-          : "border-slate-950 bg-slate-950 text-white opacity-75 shadow-none hover:opacity-90"
+          ? "border-violet-300/20 bg-violet-950/65 text-violet-50 shadow-none"
+          : "border-violet-300 bg-violet-950/90 text-white shadow-[0_18px_42px_rgba(76,29,149,0.18)]"
       }`;
     }
     if (state.current) {
@@ -1151,18 +1151,18 @@ export default function TanviDeskPage() {
   function getStepSurfaceClass(stepKey: TanviStepKey, fallback: string) {
     if (!getStepState(stepKey).checked) return fallback;
     return isDark
-      ? "rounded-2xl border border-white/10 bg-black/50 text-slate-200"
-      : "rounded-2xl border border-slate-800 bg-slate-900 text-slate-100";
+      ? "rounded-2xl border border-violet-300/15 bg-violet-900/35 text-violet-50"
+      : "rounded-2xl border border-violet-300/25 bg-violet-900/35 text-violet-50";
   }
 
   function getStepTextClass(stepKey: TanviStepKey, fallback: string) {
     if (!getStepState(stepKey).checked) return fallback;
-    return isDark ? "text-slate-200" : "text-slate-100";
+    return "text-violet-50";
   }
 
   function getStepMutedClass(stepKey: TanviStepKey) {
     if (!getStepState(stepKey).checked) return mutedClass;
-    return isDark ? "text-slate-400" : "text-slate-400";
+    return "text-violet-200/70";
   }
 
   function renderStepHeader({
@@ -1179,15 +1179,15 @@ export default function TanviDeskPage() {
     badge?: ReactNode;
   }) {
     const state = getStepState(stepKey);
-    const headerTextClass = state.checked ? "text-slate-100" : strongTextClass;
-    const headerMutedClass = state.checked ? "text-slate-400" : mutedClass;
+    const headerTextClass = state.checked ? "text-violet-50" : strongTextClass;
+    const headerMutedClass = state.checked ? "text-violet-200/70" : mutedClass;
     return (
       <div
         className={`flex flex-wrap items-start justify-between gap-3 border-b p-4 sm:gap-4 sm:p-5 ${
           state.checked
             ? isDark
-              ? "border-white/10 bg-black/30"
-              : "border-slate-800 bg-black/40"
+              ? "border-violet-300/15 bg-violet-950/25"
+              : "border-violet-300/20 bg-violet-950/20"
             : dividerClass
         }`}
       >
@@ -1196,8 +1196,8 @@ export default function TanviDeskPage() {
             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold sm:h-12 sm:w-12 ${
               state.checked
                 ? isDark
-                  ? "bg-cyan-300/10 text-cyan-100"
-                  : "bg-slate-800 text-white"
+                  ? "bg-violet-300/15 text-violet-50"
+                  : "bg-violet-800 text-white"
                 : state.current
                   ? "bg-orange-500 text-white"
                   : isDark
@@ -1210,7 +1210,7 @@ export default function TanviDeskPage() {
           <div className="min-w-0">
             <p
               className={`text-xs font-semibold uppercase tracking-[0.16em] ${
-                state.checked ? "text-slate-400" : "text-cyan-700"
+                state.checked ? "text-violet-200/70" : "text-cyan-700"
               }`}
             >
               Step {stepNumber}
@@ -1229,8 +1229,8 @@ export default function TanviDeskPage() {
             className={`flex cursor-pointer items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-semibold transition ${
               state.checked
                 ? isDark
-                  ? "border-white/10 bg-white/10 text-slate-200"
-                  : "border-slate-700 bg-slate-900 text-slate-200"
+                  ? "border-violet-300/20 bg-violet-300/10 text-violet-50"
+                  : "border-violet-300/30 bg-violet-900/45 text-violet-50"
                 : state.current
                   ? "border-orange-300 bg-orange-50 text-orange-900"
                   : isDark
@@ -1243,7 +1243,7 @@ export default function TanviDeskPage() {
               checked={state.checked}
               disabled={saving === `step-${stepKey}`}
               onChange={(event) => toggleTanviStep(stepKey, event.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 accent-orange-500"
+              className="h-4 w-4 rounded border-violet-300 accent-violet-500"
             />
             {state.checked ? "Checked" : state.current ? "Current" : "Mark done"}
           </label>
