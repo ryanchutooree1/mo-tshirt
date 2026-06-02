@@ -936,16 +936,16 @@ export default function TanviDeskPage() {
   };
   const completedStepClass = isDark
     ? [
-        "border-sky-300/25 bg-sky-300/10 text-sky-100",
-        "border-teal-300/25 bg-teal-300/10 text-teal-100",
+        "border-violet-300/25 bg-violet-300/10 text-violet-100",
+        "border-violet-300/25 bg-violet-300/10 text-violet-100",
         "border-violet-300/25 bg-violet-300/10 text-violet-100",
         "border-amber-300/25 bg-amber-300/10 text-amber-100",
         "border-emerald-300/25 bg-emerald-300/10 text-emerald-100",
         "border-slate-300/25 bg-slate-300/10 text-slate-100",
       ]
     : [
-        "border-sky-200 bg-sky-50 text-sky-950",
-        "border-teal-200 bg-teal-50 text-teal-950",
+        "border-violet-200 bg-violet-50 text-violet-950",
+        "border-violet-200 bg-violet-50 text-violet-950",
         "border-violet-200 bg-violet-50 text-violet-950",
         "border-amber-200 bg-amber-50 text-amber-950",
         "border-emerald-200 bg-emerald-50 text-emerald-950",
@@ -953,16 +953,16 @@ export default function TanviDeskPage() {
       ];
   const completedStepIconClass = isDark
     ? [
-        "bg-sky-300/15 text-sky-100",
-        "bg-teal-300/15 text-teal-100",
+        "bg-violet-300/15 text-violet-100",
+        "bg-violet-300/15 text-violet-100",
         "bg-violet-300/15 text-violet-100",
         "bg-amber-300/15 text-amber-100",
         "bg-emerald-300/15 text-emerald-100",
         "bg-slate-300/15 text-slate-100",
       ]
     : [
-        "bg-white text-sky-700",
-        "bg-white text-teal-700",
+        "bg-white text-violet-700",
+        "bg-white text-violet-700",
         "bg-white text-violet-700",
         "bg-white text-amber-700",
         "bg-white text-emerald-700",
