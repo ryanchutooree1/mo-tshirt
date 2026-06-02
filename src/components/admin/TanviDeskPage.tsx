@@ -509,7 +509,7 @@ function WhatsappLogoFilePreview({
 }
 
 export default function TanviDeskPage() {
-  const { theme } = useAdminTheme();
+  const { theme, setTheme, ready: themeReady } = useAdminTheme();
   const isDark = theme === "dark";
   const [manager, setManager] = useState<ProductionManager>(defaultManager);
   const [partners, setPartners] = useState<PrintPartner[]>([]);
@@ -529,6 +529,11 @@ export default function TanviDeskPage() {
   const [whatsappDraft, setWhatsappDraft] = useState<WhatsappOrderDraft>(emptyWhatsappDraft);
   const [whatsappLogoFiles, setWhatsappLogoFiles] = useState<Record<string, File | null>>({});
   const [creatingWhatsappOrder, setCreatingWhatsappOrder] = useState(false);
+
+  useEffect(() => {
+    if (!themeReady || theme === "light") return;
+    setTheme("light");
+  }, [setTheme, theme, themeReady]);
 
   const activePartners = useMemo(
     () => partners.filter((partner) => partner.active),
