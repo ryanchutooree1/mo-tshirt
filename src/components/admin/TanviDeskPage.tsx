@@ -366,6 +366,50 @@ function statusTone(value: string) {
   return "border-slate-200 bg-slate-50 text-slate-700";
 }
 
+function quoteQueueCardTone(quote: TanviQuoteSummary, active: boolean, isDark: boolean) {
+  if (quote.partner.requestStatus === "accepted") {
+    return isDark
+      ? "border-emerald-400 bg-emerald-900/70 text-emerald-50 shadow-sm"
+      : "border-emerald-500 bg-emerald-600 text-white shadow-sm";
+  }
+  if (quote.partner.requestStatus === "rejected") {
+    return isDark
+      ? "border-rose-400 bg-rose-900/70 text-rose-50 shadow-sm"
+      : "border-rose-500 bg-rose-600 text-white shadow-sm";
+  }
+  if (active) {
+    return "border-cyan-500 bg-cyan-50 text-slate-950 shadow-sm";
+  }
+  return isDark
+    ? "border-white/10 bg-slate-950/50 text-slate-100 hover:bg-slate-900"
+    : "border-slate-200 bg-white text-slate-950 hover:border-slate-300";
+}
+
+function quoteQueueMetaTone(quote: TanviQuoteSummary, active: boolean, isDark: boolean) {
+  if (quote.partner.requestStatus === "accepted" || quote.partner.requestStatus === "rejected") {
+    return "text-white/85";
+  }
+  if (active) return "text-slate-600";
+  return isDark ? "text-slate-400" : "text-slate-500";
+}
+
+function quoteQueueCodeTone(quote: TanviQuoteSummary, isDark: boolean) {
+  if (quote.partner.requestStatus === "accepted" || quote.partner.requestStatus === "rejected") {
+    return "text-white";
+  }
+  return isDark ? "text-cyan-300" : "text-cyan-700";
+}
+
+function quoteQueueStatusTone(quote: TanviQuoteSummary) {
+  if (quote.partner.requestStatus === "accepted") {
+    return "border-white/25 bg-white/95 text-emerald-800";
+  }
+  if (quote.partner.requestStatus === "rejected") {
+    return "border-white/25 bg-white/95 text-rose-800";
+  }
+  return statusTone(quote.partner.requestStatus);
+}
+
 function getArtworkDownloadHref(attachment: TanviArtworkAttachment, index: number) {
   if (!attachment.url) return "";
 
@@ -1766,28 +1810,22 @@ export default function TanviDeskPage() {
                         key={quote.id}
                         type="button"
                         onClick={() => setSelectedId(quote.id)}
-                        className={`w-full rounded-2xl border p-3 text-left transition ${
-                          active
-                            ? "border-cyan-500 bg-cyan-50 text-slate-950 shadow-sm"
-                            : isDark
-                              ? "border-white/10 bg-slate-950/50 text-slate-100 hover:bg-slate-900"
-                              : "border-slate-200 bg-white text-slate-950 hover:border-slate-300"
-                        }`}
+                        className={`w-full rounded-2xl border p-3 text-left transition ${quoteQueueCardTone(quote, active, isDark)}`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="font-mono text-xs font-semibold text-cyan-700">
+                            <p className={`font-mono text-xs font-semibold ${quoteQueueCodeTone(quote, isDark)}`}>
                               {quote.code}
                             </p>
                             <p className="mt-1 truncate text-sm font-semibold">
                               {quote.clientName}
                             </p>
                           </div>
-                          <span className={`rounded-md border px-2 py-1 text-[11px] font-semibold ${statusTone(quote.partner.requestStatus)}`}>
+                          <span className={`rounded-md border px-2 py-1 text-[11px] font-semibold ${quoteQueueStatusTone(quote)}`}>
                             {PARTNER_DECISION_LABELS[quote.partner.requestStatus]}
                           </span>
                         </div>
-                        <div className={`mt-3 grid grid-cols-2 gap-2 text-xs ${active ? "text-slate-600" : mutedClass}`}>
+                        <div className={`mt-3 grid grid-cols-2 gap-2 text-xs ${quoteQueueMetaTone(quote, active, isDark)}`}>
                           <span className="truncate">{quote.product}</span>
                           <span className="truncate text-right">{quote.partner.visibleLabel}</span>
                           <span>{quote.pieces ? `${quote.pieces} pcs` : "Qty n/a"}</span>
