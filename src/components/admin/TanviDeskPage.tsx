@@ -66,7 +66,8 @@ type WhatsappOrderLine = {
   size: string;
   quantity: string;
   printPlacement: WhatsappPrintPlacement;
-  logoDescription: string;
+  frontLogoDescription: string;
+  backLogoDescription: string;
 };
 
 type WhatsappOrderDraft = {
@@ -140,7 +141,8 @@ function createWhatsappOrderLine(index = 1): WhatsappOrderLine {
     size: "",
     quantity: "",
     printPlacement: "front",
-    logoDescription: "",
+    frontLogoDescription: "",
+    backLogoDescription: "",
   };
 }
 
@@ -154,6 +156,12 @@ function getWhatsappLogoKey(lineId: string, slot: WhatsappLogoSlot) {
 
 function getWhatsappLogoSlotLabel(slot: WhatsappLogoSlot) {
   return slot === "front" ? "Front logo" : "Back logo";
+}
+
+function getWhatsappLogoDescriptionField(
+  slot: WhatsappLogoSlot
+): "frontLogoDescription" | "backLogoDescription" {
+  return slot === "front" ? "frontLogoDescription" : "backLogoDescription";
 }
 
 const emptyWhatsappDraft: WhatsappOrderDraft = {
@@ -766,7 +774,7 @@ export default function TanviDeskPage() {
       JSON.stringify(
         logoEntries.map((entry) => ({
           label: `${getWhatsappLogoSlotLabel(entry.slot)} ${entry.index + 1}`,
-          description: entry.line.logoDescription.trim(),
+          description: entry.line[getWhatsappLogoDescriptionField(entry.slot)].trim(),
           quantity: entry.line.quantity,
           lineId: entry.line.id,
           product: entry.line.product,
@@ -801,7 +809,8 @@ export default function TanviDeskPage() {
           size: "",
           quantity: selected.pieces ? String(selected.pieces) : "",
           printPlacement: "front",
-          logoDescription: selected.artwork[0]?.description || "",
+          frontLogoDescription: selected.artwork[0]?.description || "",
+          backLogoDescription: "",
         },
       ],
     });
@@ -1404,6 +1413,7 @@ export default function TanviDeskPage() {
                           {logoSlots.map((slot) => {
                             const file = whatsappLogoFiles[getWhatsappLogoKey(line.id, slot)] || null;
                             const slotLabel = getWhatsappLogoSlotLabel(slot);
+                            const descriptionField = getWhatsappLogoDescriptionField(slot);
                             return (
                               <div
                                 key={slot}
@@ -1485,23 +1495,26 @@ export default function TanviDeskPage() {
                                     </p>
                                   </div>
                                 )}
+                                <label className={`mt-3 block text-xs font-semibold uppercase tracking-[0.06em] ${mutedClass}`}>
+                                  Description below {slotLabel.toLowerCase()}
+                                  <textarea
+                                    value={line[descriptionField]}
+                                    onChange={(event) =>
+                                      updateWhatsappLine(line.id, descriptionField, event.target.value)
+                                    }
+                                    placeholder={
+                                      slot === "front"
+                                        ? "Example: print small on left chest."
+                                        : "Example: print large centered on back."
+                                    }
+                                    rows={2}
+                                    className={`mt-2 w-full resize-none normal-case tracking-normal ${fieldClass}`}
+                                  />
+                                </label>
                               </div>
                             );
                           })}
                         </div>
-
-                        <label className={`mt-3 block min-w-0 text-xs font-semibold uppercase tracking-[0.06em] sm:tracking-[0.12em] ${mutedClass}`}>
-                          Logo / print note
-                          <textarea
-                            value={line.logoDescription}
-                            onChange={(event) =>
-                              updateWhatsappLine(line.id, "logoDescription", event.target.value)
-                            }
-                            placeholder="Example: Logo 1, front chest only."
-                            rows={2}
-                            className={`mt-2 w-full resize-none normal-case tracking-normal ${fieldClass}`}
-                          />
-                        </label>
                       </article>
                     );
                   })}

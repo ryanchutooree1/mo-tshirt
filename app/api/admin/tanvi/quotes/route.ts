@@ -42,7 +42,8 @@ type WhatsappLineDetails = {
   size: string;
   quantity: number | null;
   printPlacement: string;
-  logoDescription: string;
+  frontLogoDescription: string;
+  backLogoDescription: string;
 };
 
 function safeText(value: unknown, maxLength = 500) {
@@ -76,9 +77,11 @@ function getWhatsappLineItems(value: unknown): WhatsappLineDetails[] {
         printPlacement === "back" || printPlacement === "front_back"
           ? printPlacement
           : "front";
-      const logoDescription = safeText(raw.logoDescription, 500);
+      const sharedLogoDescription = safeText(raw.logoDescription, 500);
+      const frontLogoDescription = safeText(raw.frontLogoDescription, 500) || sharedLogoDescription;
+      const backLogoDescription = safeText(raw.backLogoDescription, 500) || sharedLogoDescription;
 
-      if (!product && !color && !size && !quantity && !logoDescription) return null;
+      if (!product && !color && !size && !quantity && !frontLogoDescription && !backLogoDescription) return null;
 
       return {
         id: safeText(raw.id, 80) || `line-${index + 1}`,
@@ -87,20 +90,25 @@ function getWhatsappLineItems(value: unknown): WhatsappLineDetails[] {
         size,
         quantity,
         printPlacement: normalizedPlacement,
-        logoDescription,
+        frontLogoDescription,
+        backLogoDescription,
       };
     })
     .filter((entry): entry is WhatsappLineDetails => Boolean(entry));
 }
 
 function getLineSummary(line: WhatsappLineDetails, index: number) {
+  const logoDescriptions = [
+    line.frontLogoDescription ? `Front: ${line.frontLogoDescription}` : "",
+    line.backLogoDescription ? `Back: ${line.backLogoDescription}` : "",
+  ].filter(Boolean);
   const rows = [
     line.quantity ? `${line.quantity} pcs` : "",
     line.product || `Item ${index + 1}`,
     line.color,
     line.size ? `Size ${line.size}` : "",
     getPrintPlacementLabel(line.printPlacement),
-    line.logoDescription || `Logo ${index + 1}`,
+    logoDescriptions.length ? logoDescriptions.join(" / ") : `Logo ${index + 1}`,
   ].filter(Boolean);
   return rows.join(" - ");
 }
@@ -121,10 +129,15 @@ function getWhatsappDetails(value: unknown) {
           size: "",
           quantity: fallbackQuantity,
           printPlacement: safeText(raw.printMethod, 120).toLowerCase().includes("back") ? "back" : "front",
-          logoDescription:
-            safeText(raw.frontLogoDescription, 500) ||
-            safeText(raw.backLogoDescription, 500),
-        }].filter((line) => line.product || line.color || line.quantity || line.logoDescription);
+          frontLogoDescription: safeText(raw.frontLogoDescription, 500),
+          backLogoDescription: safeText(raw.backLogoDescription, 500),
+        }].filter((line) =>
+          line.product ||
+          line.color ||
+          line.quantity ||
+          line.frontLogoDescription ||
+          line.backLogoDescription
+        );
   const normalizedLineItems = lineItems.length ? lineItems : fallbackLine;
   const totalQty = normalizedLineItems.reduce(
     (sum, line) => sum + (line.quantity || 0),
@@ -149,8 +162,14 @@ function getWhatsappDetails(value: unknown) {
     deadline: safeText(raw.deadline, 120),
     total: safePositiveNumber(raw.total),
     notes: safeText(raw.notes, 2_000),
-    frontLogoDescription: safeText(raw.frontLogoDescription, 500),
-    backLogoDescription: safeText(raw.backLogoDescription, 500),
+    frontLogoDescription:
+      safeText(raw.frontLogoDescription, 500) ||
+      normalizedLineItems.find((line) => line.frontLogoDescription)?.frontLogoDescription ||
+      "",
+    backLogoDescription:
+      safeText(raw.backLogoDescription, 500) ||
+      normalizedLineItems.find((line) => line.backLogoDescription)?.backLogoDescription ||
+      "",
     lineItems: normalizedLineItems,
   };
 }
