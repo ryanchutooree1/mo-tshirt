@@ -43,6 +43,9 @@ type ArtworkItem = {
   id: number;
   label: string;
   description: string;
+  printPlacement: "front" | "back" | "front_back";
+  frontLogoDescription: string;
+  backLogoDescription: string;
   quantity: string;
   file: File | null;
 };
@@ -148,6 +151,9 @@ function createArtworkItem(id: number): ArtworkItem {
     id,
     label: "",
     description: "",
+    printPlacement: "front",
+    frontLogoDescription: "",
+    backLogoDescription: "",
     quantity: "",
     file: null,
   };
@@ -300,10 +306,23 @@ function ColorSelect({
 function buildArtworkAttachmentMetadata(item: ArtworkItem, index: number) {
   const currentFile = item.file;
   if (!currentFile) return null;
+  const legacyDescription = item.description.trim();
+  const frontDescription = item.frontLogoDescription.trim() || legacyDescription;
+  const backDescription = item.backLogoDescription.trim() || legacyDescription;
+  const descriptionRows = [
+    item.printPlacement !== "back" && frontDescription ? `Front: ${frontDescription}` : "",
+    item.printPlacement !== "front" && backDescription ? `Back: ${backDescription}` : "",
+  ].filter(Boolean);
+  const placementLabel =
+    item.printPlacement === "back"
+      ? "Back logo"
+      : item.printPlacement === "front_back"
+        ? "Front and back logo"
+        : "Front logo";
 
   return {
-    label: item.label.trim() || `Logo ${index + 1}`,
-    description: item.description.trim() || null,
+    label: item.label.trim() || `${placementLabel} ${index + 1}`,
+    description: descriptionRows.join(" / ") || null,
     quantity: item.quantity.trim() || null,
     filename: currentFile.name,
     contentType: currentFile.type || "application/octet-stream",
@@ -646,7 +665,13 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
 
   function getScreenPrintingValidationMessage() {
     const filledArtworkItems = artworkItems.filter(
-      (item) => item.file || item.label.trim() || item.description.trim() || item.quantity.trim()
+      (item) =>
+        item.file ||
+        item.label.trim() ||
+        item.description.trim() ||
+        item.frontLogoDescription.trim() ||
+        item.backLogoDescription.trim() ||
+        item.quantity.trim()
     );
     const incompleteArtwork = filledArtworkItems.find((item) => !item.file);
     if (incompleteArtwork) {
@@ -727,6 +752,34 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     payload.append("deliveryPhone", form.deliveryPhone);
 
     const uploadedArtworkItems = artworkItems.filter((item) => item.file);
+    const firstFrontLogoDescription =
+      artworkItems.find((item) => item.printPlacement !== "back" && item.frontLogoDescription.trim())
+        ?.frontLogoDescription.trim() || "";
+    const firstBackLogoDescription =
+      artworkItems.find((item) => item.printPlacement !== "front" && item.backLogoDescription.trim())
+        ?.backLogoDescription.trim() || "";
+    payload.append(
+      "designBrief",
+      JSON.stringify({
+        product: primaryLine.garment,
+        color: primaryLine.color,
+        printMethod,
+        deadline: form.deadline,
+        totalQty: totalQuantity,
+        clientNotes: form.notes,
+        frontLogoDescription: firstFrontLogoDescription,
+        backLogoDescription: firstBackLogoDescription,
+        lineItems: garmentLines,
+        artwork: uploadedArtworkItems.map((item, index) => ({
+          label: item.label.trim() || `Logo ${index + 1}`,
+          printPlacement: item.printPlacement,
+          frontLogoDescription: item.frontLogoDescription.trim(),
+          backLogoDescription: item.backLogoDescription.trim(),
+          quantity: item.quantity.trim(),
+          filename: item.file?.name || "",
+        })),
+      })
+    );
     if (uploadedArtworkItems.length) {
       const attachmentMetadata = uploadedArtworkItems
         .map((item, index) => buildArtworkAttachmentMetadata(item, index))
@@ -1040,7 +1093,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                 <div>
                   <label className="block text-sm font-medium text-neutral-700">Upload your logo / artwork</label>
                   <p className="mt-1 text-xs text-neutral-500">
-                    Click a design card to choose a file, then add notes or quantity if this artwork needs its own count.
+                    Choose the print side, then add the exact front or back logo instruction.
                   </p>
                 </div>
                 <div className="inline-flex items-center rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-semibold text-neutral-500">
@@ -1055,7 +1108,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-lg font-semibold text-neutral-900">Design {index + 1}</p>
-                      <p className="mt-1 text-xs text-neutral-500">Upload one logo or artwork file for this design.</p>
+                      <p className="mt-1 text-xs text-neutral-500">Upload one logo or artwork file, then tell us where it prints.</p>
                     </div>
                     {artworkItems.length > 1 ? (
                       <button
@@ -1129,24 +1182,52 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                     )}
                   </div>
 
-                  <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_180px]">
+                  <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_180px]">
                     <div>
-                      <label className="block text-sm font-medium text-neutral-700">Label</label>
-                      <input
-                        value={item.label}
-                        onChange={(e) => updateArtworkItem(index, { label: e.target.value })}
+                      <label className="block text-sm font-medium text-neutral-700">Print side</label>
+                      <select
+                        value={item.printPlacement}
+                        onChange={(e) =>
+                          updateArtworkItem(index, {
+                            printPlacement: e.target.value as ArtworkItem["printPlacement"],
+                          })
+                        }
                         className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
-                        placeholder={`Logo ${index + 1}`}
-                      />
+                      >
+                        <option value="front">Front only</option>
+                        <option value="back">Back only</option>
+                        <option value="front_back">Front and back</option>
+                      </select>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-700">Little Description</label>
-                      <input
-                        value={item.description}
-                        onChange={(e) => updateArtworkItem(index, { description: e.target.value })}
-                        className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
-                        placeholder="Optional"
-                      />
+                    <div className="grid gap-3">
+                      {item.printPlacement !== "back" ? (
+                        <div>
+                          <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-neutral-600">
+                            Description below front logo
+                          </label>
+                          <textarea
+                            value={item.frontLogoDescription}
+                            onChange={(e) => updateArtworkItem(index, { frontLogoDescription: e.target.value })}
+                            rows={2}
+                            className="mt-1 w-full resize-none rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                            placeholder="Example: print small on left chest."
+                          />
+                        </div>
+                      ) : null}
+                      {item.printPlacement !== "front" ? (
+                        <div>
+                          <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-neutral-600">
+                            Description below back logo
+                          </label>
+                          <textarea
+                            value={item.backLogoDescription}
+                            onChange={(e) => updateArtworkItem(index, { backLogoDescription: e.target.value })}
+                            rows={2}
+                            className="mt-1 w-full resize-none rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                            placeholder="Example: print large centered on back."
+                          />
+                        </div>
+                      ) : null}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutral-700">Qty for this design</label>

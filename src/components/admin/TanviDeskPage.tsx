@@ -1979,6 +1979,13 @@ export default function TanviDeskPage() {
                       const artworkPreviewClass = artworkChecked
                         ? "h-48 w-full rounded-xl border border-slate-800 bg-black object-contain sm:h-80 sm:rounded-2xl"
                         : "h-48 w-full rounded-xl border border-slate-200 bg-white object-contain sm:h-80 sm:rounded-2xl";
+                      const lowerArtworkLabel = `${attachment.label} ${attachment.description}`.toLowerCase();
+                      const artworkDescriptionLabel =
+                        lowerArtworkLabel.includes("back") && !lowerArtworkLabel.includes("front")
+                          ? "Description below back logo"
+                          : lowerArtworkLabel.includes("front") && lowerArtworkLabel.includes("back")
+                            ? "Description below front and back logo"
+                            : "Description below front logo";
                       return (
                         <article
                           key={`${attachment.url || attachment.filename}-${index}`}
@@ -2069,6 +2076,22 @@ export default function TanviDeskPage() {
                               </div>
                             </div>
                           )}
+                          {attachment.description ? (
+                            <div className={`border-t px-3 py-2.5 sm:px-4 ${
+                              artworkChecked
+                                ? "border-violet-300/15"
+                                : isDark
+                                  ? "border-white/10"
+                                  : "border-slate-200"
+                            }`}>
+                              <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${artworkMutedClass}`}>
+                                {artworkDescriptionLabel}
+                              </p>
+                              <p className={`mt-1 whitespace-pre-wrap text-sm font-semibold leading-5 ${artworkTextClass}`}>
+                                {attachment.description}
+                              </p>
+                            </div>
+                          ) : null}
                         </article>
                       );
                     })}
