@@ -1110,6 +1110,16 @@ export default function TanviDeskPage() {
   const routePricesCardClass = getStepSurfaceClass("route_prices", elevatedCardClass);
   const routePricesTextClass = getStepTextClass("route_prices", strongTextClass);
   const routePricesMutedClass = getStepMutedClass("route_prices");
+  const acceptedPartnerIds = selected
+    ? new Set(
+        selected.partner.responses
+          .filter((response) => response.requestStatus === "accepted")
+          .map((response) => response.partnerId)
+      )
+    : new Set<string>();
+  const visibleRoutePartners = acceptedPartnerIds.size
+    ? activePartners.filter((partner) => acceptedPartnerIds.has(partner.id))
+    : activePartners;
   const selectedDeadlineInsight = selected ? getDeadlineInsight(selected.deadline) : null;
   const selectedProductionInsight = selected
     ? getProductionStageInsight(selected.partner.productionStatus)
@@ -2095,7 +2105,7 @@ export default function TanviDeskPage() {
                   </div>
 
                   <div className="mt-3 grid gap-2.5 sm:mt-5 sm:gap-3 xl:grid-cols-2">
-                    {activePartners.map((partner) => {
+                    {visibleRoutePartners.map((partner) => {
                       const response = selected.partner.responses.find(
                         (entry) => entry.partnerId === partner.id
                       );
