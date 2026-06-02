@@ -8,6 +8,10 @@ import { CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work"
 import { trackQuoteSubmit } from "@/lib/analytics";
 import { formatWholeMoney as formatDisplayWholeMoney } from "@/lib/money";
 import {
+  PARTNER_PRINT_PLACEMENT_OPTIONS,
+  type PartnerPrintPlacement,
+} from "@/lib/partners";
+import {
   QUOTE_GARMENT_OPTIONS,
   SIZE_ORDER,
   createQuoteColorOptionsByGarment,
@@ -48,13 +52,15 @@ type ArtworkItem = {
   product: string;
   color: string;
   size: string;
-  printPlacement: "front" | "back" | "front_back";
+  printPlacement: QuotePrintPlacement;
   frontLogoDescription: string;
   backLogoDescription: string;
   quantity: string;
   frontFile: File | null;
   backFile: File | null;
 };
+
+type QuotePrintPlacement = Exclude<PartnerPrintPlacement, "not_set">;
 
 type PrintMethodInfo = {
   title: string;
@@ -88,6 +94,9 @@ const deliveryOptions = [
 ];
 const artworkAccept =
   ".png,.jpg,.jpeg,.webp,.svg,.heic,.heif,.pdf,image/png,image/jpeg,image/webp,image/svg+xml,image/heic,image/heif,application/pdf";
+const quotePrintPlacementOptions = PARTNER_PRINT_PLACEMENT_OPTIONS.filter(
+  (option): option is { value: QuotePrintPlacement; label: string } => option.value !== "not_set"
+);
 const COLOR_SWATCH_RULES = [
   { match: ["white"], value: "#f8fafc" },
   { match: ["black"], value: "#171717" },
@@ -160,7 +169,7 @@ function createArtworkItem(id: number): ArtworkItem {
     product: garmentOptions[0],
     color: "",
     size: sizeOptions[0],
-    printPlacement: "front",
+    printPlacement: "small_front_only",
     frontLogoDescription: "",
     backLogoDescription: "",
     quantity: "1",
@@ -313,8 +322,28 @@ function ColorSelect({
   );
 }
 
-function getArtworkSlots(printPlacement: ArtworkItem["printPlacement"]): ArtworkSlot[] {
-  return printPlacement === "front_back" ? ["front", "back"] : [printPlacement];
+function getArtworkSlots(printPlacement: QuotePrintPlacement): ArtworkSlot[] {
+  if (
+    printPlacement === "small_front_back" ||
+    printPlacement === "small_front_large_back" ||
+    printPlacement === "large_front_small_back" ||
+    printPlacement === "front_back" ||
+    printPlacement === "large_front_large_back" ||
+    printPlacement === "logo_front_back"
+  ) {
+    return ["front", "back"];
+  }
+  if (printPlacement === "small_back_only" || printPlacement === "back_only") {
+    return ["back"];
+  }
+  if (
+    printPlacement === "small_front_only" ||
+    printPlacement === "large_front_only" ||
+    printPlacement === "logo_only"
+  ) {
+    return ["front"];
+  }
+  return [];
 }
 
 function getArtworkSlotLabel(slot: ArtworkSlot) {
@@ -808,10 +837,10 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     const uploadedArtworkEntries = getArtworkUploadEntries(artworkItems);
     const uploadedArtworkItems = artworkItems.filter(hasArtworkFile);
     const firstFrontLogoDescription =
-      artworkItems.find((item) => item.printPlacement !== "back" && item.frontLogoDescription.trim())
+      artworkItems.find((item) => getArtworkSlots(item.printPlacement).includes("front") && item.frontLogoDescription.trim())
         ?.frontLogoDescription.trim() || "";
     const firstBackLogoDescription =
-      artworkItems.find((item) => item.printPlacement !== "front" && item.backLogoDescription.trim())
+      artworkItems.find((item) => getArtworkSlots(item.printPlacement).includes("back") && item.backLogoDescription.trim())
         ?.backLogoDescription.trim() || "";
     payload.append(
       "designBrief",
@@ -1084,7 +1113,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-base font-semibold text-neutral-900">Item {index + 1}</p>
-                      <p className="mt-1 text-xs text-neutral-500">Choose the print side, then upload the required logo.</p>
+                      <p className="mt-1 text-xs text-neutral-500">Choose the exact placement, then upload the required logo.</p>
                     </div>
                     {artworkItems.length > 1 ? (
                       <button
@@ -1173,20 +1202,23 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                         value={item.printPlacement}
                         onChange={(e) =>
                           updateArtworkItem(index, {
-                            printPlacement: e.target.value as ArtworkItem["printPlacement"],
+                            printPlacement: e.target.value as QuotePrintPlacement,
                           })
                         }
                         className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
                       >
-                        <option value="front">Front only</option>
-                        <option value="back">Back only</option>
-                        <option value="front_back">Front and back</option>
+                        {quotePrintPlacementOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
 
-                  <div className="mt-3 grid gap-3 md:grid-cols-2">
-                    {logoSlots.map((slot) => {
+                  {logoSlots.length ? (
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                      {logoSlots.map((slot) => {
                       const file = getArtworkSlotFile(item, slot);
                       const slotLabel = getArtworkSlotLabel(slot);
                       return (
@@ -1195,7 +1227,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                             <div>
                               <p className="text-sm font-semibold text-neutral-900">{slotLabel}</p>
                               <p className="mt-1 text-xs text-neutral-500">
-                                {item.printPlacement === "front_back"
+                                {logoSlots.length > 1
                                   ? "Required for front and back printing."
                                   : "Required for selected print side."}
                               </p>
@@ -1277,7 +1309,12 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                         </div>
                       );
                     })}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="mt-3 rounded-2xl border border-neutral-200 bg-white p-3 text-sm text-neutral-600">
+                      No front/back logo upload is required for this placement. Add the details in notes if needed.
+                    </div>
+                  )}
                 </div>
                 );
               })}
