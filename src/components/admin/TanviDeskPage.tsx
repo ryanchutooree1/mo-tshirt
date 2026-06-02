@@ -532,6 +532,8 @@ export default function TanviDeskPage() {
   const [whatsappLogoFiles, setWhatsappLogoFiles] = useState<Record<string, File | null>>({});
   const [creatingWhatsappOrder, setCreatingWhatsappOrder] = useState(false);
   const [zoomArtwork, setZoomArtwork] = useState<TanviArtworkAttachment | null>(null);
+  const [partnerReplyDrafts, setPartnerReplyDrafts] = useState<Record<string, string>>({});
+  const [sendingPartnerReply, setSendingPartnerReply] = useState<string | null>(null);
 
   useEffect(() => {
     if (!themeReady || theme === "light") return;
@@ -661,6 +663,46 @@ export default function TanviDeskPage() {
       setError(updateError instanceof Error ? updateError.message : "Could not update quote.");
     } finally {
       setSaving(null);
+    }
+  }
+
+  async function sendPartnerReply(quote: TanviQuoteSummary) {
+    const partnerId = quote.partner.id;
+    const draft = partnerReplyDrafts[quote.id]?.trim() || "";
+    if (!partnerId) {
+      setError("Select a partner before sending a reply.");
+      return;
+    }
+    if (!draft) {
+      setError("Write a reply before sending.");
+      return;
+    }
+
+    setSendingPartnerReply(quote.id);
+    setNotice(null);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/tanvi/quotes/${encodeURIComponent(quote.id)}/partner-reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          partnerId,
+          message: draft,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error || "Could not send reply to partner.");
+      }
+      setPartnerReplyDrafts((current) => ({
+        ...current,
+        [quote.id]: "",
+      }));
+      setNotice(`Reply sent to ${data?.sent?.partnerName || quote.partner.name || "partner"}.`);
+    } catch (replyError) {
+      setError(replyError instanceof Error ? replyError.message : "Could not send reply to partner.");
+    } finally {
+      setSendingPartnerReply(null);
     }
   }
 
@@ -2409,6 +2451,36 @@ export default function TanviDeskPage() {
                       <p className={`mt-2 whitespace-pre-wrap text-sm font-medium ${getStepTextClass("client_approval", strongTextClass)}`}>
                         {selected.partner.comments || "No comments yet."}
                       </p>
+                      <div className="mt-3 border-t border-current/10 pt-3">
+                        <label className={`text-[10px] font-semibold uppercase tracking-[0.12em] sm:text-xs sm:tracking-[0.14em] ${getStepMutedClass("client_approval")}`}>
+                          Reply to partner
+                          <textarea
+                            value={partnerReplyDrafts[selected.id] || ""}
+                            onChange={(event) =>
+                              setPartnerReplyDrafts((current) => ({
+                                ...current,
+                                [selected.id]: event.target.value,
+                              }))
+                            }
+                            rows={3}
+                            placeholder="Write Tanvi's reply here. The partner will receive it by email."
+                            className={`mt-2 w-full resize-none normal-case tracking-normal ${fieldClass}`}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => void sendPartnerReply(selected)}
+                          disabled={
+                            sendingPartnerReply === selected.id ||
+                            !selected.partner.id ||
+                            !(partnerReplyDrafts[selected.id] || "").trim()
+                          }
+                          className={`mt-2 w-full ${whatsappButtonClass}`}
+                        >
+                          <Send className="h-4 w-4" />
+                          {sendingPartnerReply === selected.id ? "Sending..." : "Send reply by email"}
+                        </button>
+                      </div>
                     </div>
                     {selected.notes ? (
                       <div className={`${getStepSurfaceClass("client_approval", subtleCardClass)} p-3`}>
