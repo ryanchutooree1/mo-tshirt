@@ -1102,6 +1102,11 @@ export default function TanviDeskPage() {
       activePartners.length >= 2 &&
       activePartners.every((partner) => selected.partner.visibleTo.includes(partner.id))
   );
+  const routePricesChecked = Boolean(selected?.tanviStepChecks.route_prices);
+  const routePricesSurfaceClass = getStepSurfaceClass("route_prices", subtleCardClass);
+  const routePricesCardClass = getStepSurfaceClass("route_prices", elevatedCardClass);
+  const routePricesTextClass = getStepTextClass("route_prices", strongTextClass);
+  const routePricesMutedClass = getStepMutedClass("route_prices");
   const selectedDeadlineInsight = selected ? getDeadlineInsight(selected.deadline) : null;
   const selectedProductionInsight = selected
     ? getProductionStageInsight(selected.partner.productionStatus)
@@ -2063,10 +2068,10 @@ export default function TanviDeskPage() {
                 <div className="p-5">
 
                   <div className="grid gap-4">
-                    <label className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                    <label className={`text-xs font-semibold uppercase tracking-[0.14em] ${routePricesMutedClass}`}>
                       Current route and selected placement
-                      <div className={`mt-2 flex min-h-[42px] items-center rounded-xl px-3 py-2 normal-case tracking-normal ${subtleCardClass}`}>
-                        <span className={`text-sm font-semibold ${strongTextClass}`}>
+                      <div className={`mt-2 flex min-h-[42px] items-center rounded-xl px-3 py-2 normal-case tracking-normal ${routePricesSurfaceClass}`}>
+                        <span className={`text-sm font-semibold ${routePricesTextClass}`}>
                           {selected.partner.visibleLabel} / {PARTNER_PRINT_PLACEMENT_LABELS[printPlacement]}
                         </span>
                       </div>
@@ -2088,13 +2093,13 @@ export default function TanviDeskPage() {
                           : null;
 
                       return (
-                        <article key={partner.id} className={`${elevatedCardClass} p-4`}>
+                        <article key={partner.id} className={`${routePricesCardClass} p-4`}>
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <p className={`text-base font-semibold ${strongTextClass}`}>
+                              <p className={`text-base font-semibold ${routePricesTextClass}`}>
                                 {partner.name}
                               </p>
-                              <p className={`mt-1 text-xs ${mutedClass}`}>
+                              <p className={`mt-1 text-xs ${routePricesMutedClass}`}>
                                 {isRouted ? "Currently seeing this order" : "Available partner"}
                               </p>
                             </div>
@@ -2111,7 +2116,7 @@ export default function TanviDeskPage() {
                             </span>
                           </div>
 
-                          <label className={`mt-4 block text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                          <label className={`mt-4 block text-xs font-semibold uppercase tracking-[0.14em] ${routePricesMutedClass}`}>
                             Price preset
                             <select
                               defaultValue=""
@@ -2133,10 +2138,16 @@ export default function TanviDeskPage() {
                           </label>
 
                           <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-                            <label className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                            <label className={`text-xs font-semibold uppercase tracking-[0.14em] ${routePricesMutedClass}`}>
                               Partner price
                               <div className="mt-2 flex items-center gap-2">
-                                <span className={`inline-flex min-w-12 shrink-0 items-center justify-center whitespace-nowrap rounded-xl border px-3 py-2 text-xs font-semibold leading-none ${isDark ? "border-white/10 bg-slate-950 text-slate-300" : "border-slate-200 bg-slate-50 text-slate-600"}`}>
+                                <span className={`inline-flex min-w-12 shrink-0 items-center justify-center whitespace-nowrap rounded-xl border px-3 py-2 text-xs font-semibold leading-none ${
+                                  routePricesChecked
+                                    ? "border-violet-300/25 bg-violet-950/25 text-violet-50"
+                                    : isDark
+                                      ? "border-white/10 bg-slate-950 text-slate-300"
+                                      : "border-slate-200 bg-slate-50 text-slate-600"
+                                }`}>
                                   {selected.currency}
                                 </span>
                                 <input
@@ -2177,11 +2188,11 @@ export default function TanviDeskPage() {
                           </div>
 
                           <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                            <div className={`${subtleCardClass} px-3 py-2`}>
-                              <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${mutedClass}`}>
+                            <div className={`${routePricesSurfaceClass} px-3 py-2`}>
+                              <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${routePricesMutedClass}`}>
                                 Last saved
                               </p>
-                              <p className={`mt-1 text-sm font-semibold ${strongTextClass}`}>
+                              <p className={`mt-1 text-sm font-semibold ${routePricesTextClass}`}>
                                 {formatMoney(response?.price || null, selected.currency)}
                               </p>
                             </div>
@@ -2249,7 +2260,7 @@ export default function TanviDeskPage() {
                   </button>
 
                   <div className="mt-5">
-                    <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                    <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${routePricesMutedClass}`}>
                       Fields shared with partners
                     </p>
                     <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -2258,12 +2269,16 @@ export default function TanviDeskPage() {
                           key={field.key}
                           className={`flex cursor-pointer items-start gap-3 rounded-2xl border px-3 py-2 text-sm transition ${
                             visibleFields.includes(field.key)
-                              ? isDark
-                                ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-100"
-                                : "border-cyan-300 bg-cyan-50 text-cyan-950"
-                              : isDark
-                                ? "border-white/10 bg-slate-950 text-slate-200"
-                                : "border-slate-200 bg-white text-slate-700"
+                              ? routePricesChecked
+                                ? "border-violet-300/35 bg-violet-300/10 text-violet-50"
+                                : isDark
+                                  ? "border-cyan-300/40 bg-cyan-300/10 text-cyan-100"
+                                  : "border-cyan-300 bg-cyan-50 text-cyan-950"
+                              : routePricesChecked
+                                ? "border-violet-300/20 bg-violet-950/20 text-violet-100"
+                                : isDark
+                                  ? "border-white/10 bg-slate-950 text-slate-200"
+                                  : "border-slate-200 bg-white text-slate-700"
                           }`}
                         >
                           <input
