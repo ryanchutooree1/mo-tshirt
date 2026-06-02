@@ -26,6 +26,8 @@ import {
   Send,
   TimerReset,
   Users,
+  X,
+  ZoomIn,
 } from "lucide-react";
 import { differenceInCalendarDays, format, formatDistanceToNow } from "date-fns";
 import { useAdminTheme } from "@/admin/AdminThemeContext";
@@ -529,6 +531,7 @@ export default function TanviDeskPage() {
   const [whatsappDraft, setWhatsappDraft] = useState<WhatsappOrderDraft>(emptyWhatsappDraft);
   const [whatsappLogoFiles, setWhatsappLogoFiles] = useState<Record<string, File | null>>({});
   const [creatingWhatsappOrder, setCreatingWhatsappOrder] = useState(false);
+  const [zoomArtwork, setZoomArtwork] = useState<TanviArtworkAttachment | null>(null);
 
   useEffect(() => {
     if (!themeReady || theme === "light") return;
@@ -1258,6 +1261,7 @@ export default function TanviDeskPage() {
   }
 
   return (
+    <>
     <main className={`${pageClass} max-w-full overflow-x-hidden`}>
       <div className="mx-auto flex w-full max-w-[1680px] min-w-0 flex-col gap-3 overflow-x-hidden px-2 py-3 sm:gap-5 sm:px-6 sm:py-4 lg:px-8">
         <section className={heroClass}>
@@ -1959,14 +1963,19 @@ export default function TanviDeskPage() {
                         : dividerClass;
                       const artworkPreviewShellClass = artworkChecked
                         ? isDark
-                          ? "bg-black p-3"
-                          : "bg-slate-950 p-3"
-                        : "bg-white p-3";
+                          ? "bg-black p-2.5 sm:p-3"
+                          : "bg-slate-950 p-2.5 sm:p-3"
+                        : "bg-white p-2.5 sm:p-3";
                       const artworkPreviewClass = artworkChecked
-                        ? "h-[22rem] w-full rounded-2xl border border-slate-800 bg-black object-contain sm:h-[28rem]"
-                        : "h-[22rem] w-full rounded-2xl border border-slate-200 bg-white object-contain sm:h-[28rem]";
+                        ? "h-56 w-full rounded-xl border border-slate-800 bg-black object-contain sm:h-80 sm:rounded-2xl"
+                        : "h-56 w-full rounded-xl border border-slate-200 bg-white object-contain sm:h-80 sm:rounded-2xl";
                       return (
-                        <article key={`${attachment.url || attachment.filename}-${index}`} className={`${artworkSurfaceClass} overflow-hidden`}>
+                        <article
+                          key={`${attachment.url || attachment.filename}-${index}`}
+                          className={`${artworkSurfaceClass} ${
+                            index % 2 === 0 ? "mr-auto" : "ml-auto"
+                          } w-[90%] overflow-hidden sm:mx-0 sm:w-full`}
+                        >
                           <div className={`flex flex-wrap items-start justify-between gap-2 border-b p-3 sm:gap-3 sm:p-4 ${artworkDividerClass}`}>
                             <div className="min-w-0">
                               <p className={`truncate text-sm font-semibold sm:text-base ${artworkTextClass}`}>
@@ -1997,6 +2006,15 @@ export default function TanviDeskPage() {
                                 >
                                   <Download className="h-4 w-4" />
                                 </a>
+                                <button
+                                  type="button"
+                                  onClick={() => setZoomArtwork(attachment)}
+                                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
+                                  aria-label={`Zoom ${attachment.filename || "artwork"}`}
+                                  title="Zoom artwork"
+                                >
+                                  <ZoomIn className="h-4 w-4" />
+                                </button>
                               </div>
                             ) : null}
                           </div>
@@ -2017,8 +2035,8 @@ export default function TanviDeskPage() {
                                 title={`Preview ${attachment.filename || "PDF artwork"}`}
                                 className={
                                   artworkChecked
-                                    ? "h-[28rem] w-full rounded-2xl border border-slate-800 bg-black"
-                                    : "h-[28rem] w-full rounded-2xl border border-slate-200 bg-white"
+                                    ? "h-64 w-full rounded-xl border border-slate-800 bg-black sm:h-80 sm:rounded-2xl"
+                                    : "h-64 w-full rounded-xl border border-slate-200 bg-white sm:h-80 sm:rounded-2xl"
                                 }
                               />
                             </div>
@@ -2624,5 +2642,74 @@ export default function TanviDeskPage() {
         </section>
       </div>
     </main>
+    {zoomArtwork ? (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Artwork zoom preview"
+        onClick={() => setZoomArtwork(null)}
+      >
+        <div
+          className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-3 py-2.5">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-slate-950">
+                {zoomArtwork.filename || "Artwork preview"}
+              </p>
+              <p className="text-xs text-slate-500">
+                {zoomArtwork.label}
+                {formatFileSize(zoomArtwork.size) ? ` - ${formatFileSize(zoomArtwork.size)}` : ""}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setZoomArtwork(null)}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700"
+              aria-label="Close artwork preview"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 bg-slate-950 p-2">
+            {isArtworkImage(zoomArtwork) ? (
+              <ArtworkImagePreview
+                src={zoomArtwork.url}
+                alt={zoomArtwork.filename}
+                className="h-[78vh] w-full rounded-xl bg-black object-contain"
+                isDark
+              />
+            ) : isArtworkPdf(zoomArtwork) ? (
+              <iframe
+                src={zoomArtwork.url}
+                title={`Preview ${zoomArtwork.filename || "PDF artwork"}`}
+                className="h-[78vh] w-full rounded-xl bg-white"
+              />
+            ) : (
+              <div className="grid min-h-[50vh] place-items-center rounded-xl bg-white p-6 text-center">
+                <div>
+                  <FileText className="mx-auto h-8 w-8 text-cyan-700" />
+                  <p className="mt-3 text-sm font-semibold text-slate-950">
+                    Preview unavailable
+                  </p>
+                  <a
+                    href={zoomArtwork.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Open file
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    ) : null}
+    </>
   );
 }
