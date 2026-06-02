@@ -39,15 +39,21 @@ type GarmentLine = {
   quantity: string;
 };
 
+type ArtworkSlot = "front" | "back";
+
 type ArtworkItem = {
   id: number;
   label: string;
   description: string;
+  product: string;
+  color: string;
+  size: string;
   printPlacement: "front" | "back" | "front_back";
   frontLogoDescription: string;
   backLogoDescription: string;
   quantity: string;
-  file: File | null;
+  frontFile: File | null;
+  backFile: File | null;
 };
 
 type PrintMethodInfo = {
@@ -151,11 +157,15 @@ function createArtworkItem(id: number): ArtworkItem {
     id,
     label: "",
     description: "",
+    product: "",
+    color: "",
+    size: "",
     printPlacement: "front",
     frontLogoDescription: "",
     backLogoDescription: "",
     quantity: "",
-    file: null,
+    frontFile: null,
+    backFile: null,
   };
 }
 
@@ -303,22 +313,49 @@ function ColorSelect({
   );
 }
 
-function buildArtworkAttachmentMetadata(item: ArtworkItem, index: number) {
-  const currentFile = item.file;
-  if (!currentFile) return null;
+function getArtworkSlots(printPlacement: ArtworkItem["printPlacement"]): ArtworkSlot[] {
+  return printPlacement === "front_back" ? ["front", "back"] : [printPlacement];
+}
+
+function getArtworkSlotLabel(slot: ArtworkSlot) {
+  return slot === "front" ? "Front logo" : "Back logo";
+}
+
+function getArtworkSlotFile(item: ArtworkItem, slot: ArtworkSlot) {
+  return slot === "front" ? item.frontFile : item.backFile;
+}
+
+function getArtworkSlotDescription(item: ArtworkItem, slot: ArtworkSlot) {
   const legacyDescription = item.description.trim();
-  const frontDescription = item.frontLogoDescription.trim() || legacyDescription;
-  const backDescription = item.backLogoDescription.trim() || legacyDescription;
+  return (slot === "front" ? item.frontLogoDescription : item.backLogoDescription).trim() || legacyDescription;
+}
+
+function hasArtworkFile(item: ArtworkItem) {
+  return getArtworkSlots(item.printPlacement).some((slot) => Boolean(getArtworkSlotFile(item, slot)));
+}
+
+function getArtworkUploadEntries(items: ArtworkItem[]) {
+  return items.flatMap((item) =>
+    getArtworkSlots(item.printPlacement)
+      .map((slot) => ({ item, slot, file: getArtworkSlotFile(item, slot) }))
+      .filter((entry): entry is { item: ArtworkItem; slot: ArtworkSlot; file: File } => Boolean(entry.file))
+  );
+}
+
+function buildArtworkAttachmentMetadata(
+  entry: { item: ArtworkItem; slot: ArtworkSlot; file: File },
+  index: number
+) {
+  const { item, slot, file: currentFile } = entry;
+  if (!currentFile) return null;
+  const slotDescription = getArtworkSlotDescription(item, slot);
   const descriptionRows = [
-    item.printPlacement !== "back" && frontDescription ? `Front: ${frontDescription}` : "",
-    item.printPlacement !== "front" && backDescription ? `Back: ${backDescription}` : "",
+    item.product.trim() ? `Product: ${item.product.trim()}` : "",
+    item.color.trim() ? `Colour: ${item.color.trim()}` : "",
+    item.size.trim() ? `Size: ${item.size.trim()}` : "",
+    slotDescription ? `${getArtworkSlotLabel(slot).replace(" logo", "")}: ${slotDescription}` : "",
   ].filter(Boolean);
-  const placementLabel =
-    item.printPlacement === "back"
-      ? "Back logo"
-      : item.printPlacement === "front_back"
-        ? "Front and back logo"
-        : "Front logo";
+  const placementLabel = getArtworkSlotLabel(slot);
 
   return {
     label: item.label.trim() || `${placementLabel} ${index + 1}`,
@@ -464,7 +501,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     Record<QuoteGarmentOption, string[]>
   >(() => createQuoteColorOptionsByGarment());
   const [loadingColors, setLoadingColors] = useState(true);
-  const artworkInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const artworkInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const isValidPhone = (value: string) => /^[0-9+()\s-]+$/.test(value);
   const isValidPostCode = (value: string) => /^\d+$/.test(value);
@@ -514,17 +551,21 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     setArtworkItems((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== index)));
   }
 
-  function setArtworkInputRef(id: number, node: HTMLInputElement | null) {
-    if (node) {
-      artworkInputRefs.current[id] = node;
-      return;
-    }
-    delete artworkInputRefs.current[id];
+  function getArtworkInputKey(id: number, slot: ArtworkSlot) {
+    return `${id}-${slot}`;
   }
 
-  function openArtworkPicker(id: number) {
+  function setArtworkInputRef(key: string, node: HTMLInputElement | null) {
+    if (node) {
+      artworkInputRefs.current[key] = node;
+      return;
+    }
+    delete artworkInputRefs.current[key];
+  }
+
+  function openArtworkPicker(id: number, slot: ArtworkSlot = "front") {
     setShowArtworkSection(true);
-    const targetInput = artworkInputRefs.current[id];
+    const targetInput = artworkInputRefs.current[getArtworkInputKey(id, slot)];
     if (targetInput) {
       targetInput.click();
       return;
@@ -544,9 +585,9 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     }
   }
 
-  function handleFileChange(index: number, e: ChangeEvent<HTMLInputElement>) {
+  function handleFileChange(index: number, slot: ArtworkSlot, e: ChangeEvent<HTMLInputElement>) {
     const nextFile = e.target.files?.[0] || null;
-    updateArtworkItem(index, { file: nextFile });
+    updateArtworkItem(index, slot === "front" ? { frontFile: nextFile } : { backFile: nextFile });
   }
 
   function handlePhoneChange(value: string) {
@@ -580,7 +621,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
   const screenPrintingSelected = printMethod === SCREEN_PRINTING_METHOD;
   const showScreenPrintingWarning = screenPrintingSelected && totalQuantity < 10;
   const selectedPrintMethodInfo = printMethodInfoByMethod[printMethod];
-  const uploadedArtworkCount = artworkItems.filter((item) => item.file).length;
+  const uploadedArtworkCount = getArtworkUploadEntries(artworkItems).length;
 
   function getGarmentColorOptions(garment: string) {
     const garmentKey = QUOTE_GARMENT_OPTIONS.includes(garment as QuoteGarmentOption)
@@ -657,7 +698,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
 
   useEffect(() => {
     if (pendingArtworkPickerId === null) return;
-    const targetInput = artworkInputRefs.current[pendingArtworkPickerId];
+    const targetInput = artworkInputRefs.current[getArtworkInputKey(pendingArtworkPickerId, "front")];
     if (!targetInput) return;
     targetInput.click();
     setPendingArtworkPickerId(null);
@@ -666,16 +707,21 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
   function getScreenPrintingValidationMessage() {
     const filledArtworkItems = artworkItems.filter(
       (item) =>
-        item.file ||
+        hasArtworkFile(item) ||
         item.label.trim() ||
         item.description.trim() ||
+        item.product.trim() ||
+        item.color.trim() ||
+        item.size.trim() ||
         item.frontLogoDescription.trim() ||
         item.backLogoDescription.trim() ||
         item.quantity.trim()
     );
-    const incompleteArtwork = filledArtworkItems.find((item) => !item.file);
+    const incompleteArtwork = filledArtworkItems.find((item) =>
+      getArtworkSlots(item.printPlacement).some((slot) => !getArtworkSlotFile(item, slot))
+    );
     if (incompleteArtwork) {
-      return "Upload a file or clear the extra logo row before sending the quote.";
+      return "Upload the required front/back logo file or clear the extra logo row before sending the quote.";
     }
 
     if (!screenPrintingSelected) return null;
@@ -683,7 +729,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
       return "Screen printing requires at least 10 pieces for the same design.";
     }
 
-    const uploadedArtworkItems = filledArtworkItems.filter((item) => item.file);
+    const uploadedArtworkItems = filledArtworkItems.filter(hasArtworkFile);
     if (uploadedArtworkItems.length > 1) {
       const missingQty = uploadedArtworkItems.find((item) => !item.quantity.trim() || Number(item.quantity) <= 0);
       if (missingQty) {
@@ -695,7 +741,10 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
       (item) => item.quantity.trim() && Number(item.quantity) > 0 && Number(item.quantity) < 10
     );
     if (tooSmall) {
-      return `${tooSmall.label.trim() || tooSmall.file?.name || "This design"} needs at least 10 pieces for screen printing.`;
+      const firstFile = getArtworkSlots(tooSmall.printPlacement)
+        .map((slot) => getArtworkSlotFile(tooSmall, slot))
+        .find(Boolean);
+      return `${tooSmall.label.trim() || firstFile?.name || "This design"} needs at least 10 pieces for screen printing.`;
     }
 
     const declaredArtworkQty = uploadedArtworkItems.reduce((sum, item) => sum + Math.max(0, Number(item.quantity) || 0), 0);
@@ -751,7 +800,8 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     payload.append("deliveryPostCode", form.deliveryPostCode);
     payload.append("deliveryPhone", form.deliveryPhone);
 
-    const uploadedArtworkItems = artworkItems.filter((item) => item.file);
+    const uploadedArtworkEntries = getArtworkUploadEntries(artworkItems);
+    const uploadedArtworkItems = artworkItems.filter(hasArtworkFile);
     const firstFrontLogoDescription =
       artworkItems.find((item) => item.printPlacement !== "back" && item.frontLogoDescription.trim())
         ?.frontLogoDescription.trim() || "";
@@ -772,22 +822,28 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
         lineItems: garmentLines,
         artwork: uploadedArtworkItems.map((item, index) => ({
           label: item.label.trim() || `Logo ${index + 1}`,
+          product: item.product.trim(),
+          color: item.color.trim(),
+          size: item.size.trim(),
           printPlacement: item.printPlacement,
           frontLogoDescription: item.frontLogoDescription.trim(),
           backLogoDescription: item.backLogoDescription.trim(),
           quantity: item.quantity.trim(),
-          filename: item.file?.name || "",
+          files: getArtworkSlots(item.printPlacement).map((slot) => ({
+            side: slot,
+            filename: getArtworkSlotFile(item, slot)?.name || "",
+          })),
         })),
       })
     );
-    if (uploadedArtworkItems.length) {
-      const attachmentMetadata = uploadedArtworkItems
-        .map((item, index) => buildArtworkAttachmentMetadata(item, index))
+    if (uploadedArtworkEntries.length) {
+      const attachmentMetadata = uploadedArtworkEntries
+        .map((entry, index) => buildArtworkAttachmentMetadata(entry, index))
         .filter((entry): entry is NonNullable<ReturnType<typeof buildArtworkAttachmentMetadata>> => Boolean(entry));
 
       payload.append("attachments", JSON.stringify(attachmentMetadata));
-      uploadedArtworkItems.forEach((item) => {
-        if (item.file) payload.append("files", item.file);
+      uploadedArtworkEntries.forEach((entry) => {
+        payload.append("files", entry.file);
       });
     }
 
@@ -803,7 +859,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           print_method: printMethod,
           garment_lines: garmentLines.length,
           total_quantity: totalQuantity,
-          artwork_count: uploadedArtworkItems.length,
+          artwork_count: uploadedArtworkEntries.length,
           delivery_method: form.delivery,
         });
         setResult({ ok: true, msg: body?.message || "Got it! We’ll reply soon." });
@@ -1062,26 +1118,34 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
 
         <div className="space-y-3">
           <div className="sr-only" aria-hidden="true">
-            {artworkItems.map((item) => (
-              <input
-                key={`${item.id}-${item.file ? `${item.file.name}-${item.file.size}-${item.file.lastModified}` : "empty"}`}
-                ref={(node) => setArtworkInputRef(item.id, node)}
-                id={`quote-artwork-file-${item.id}`}
-                type="file"
-                accept={artworkAccept}
-                onClick={(event) => {
-                  event.currentTarget.value = "";
-                }}
-                onChange={(e) => handleFileChange(artworkItems.findIndex((entry) => entry.id === item.id), e)}
-                className="sr-only"
-              />
-            ))}
+            {artworkItems.flatMap((item) =>
+              (["front", "back"] as ArtworkSlot[]).map((slot) => (
+                <input
+                  key={getArtworkInputKey(item.id, slot)}
+                  ref={(node) => setArtworkInputRef(getArtworkInputKey(item.id, slot), node)}
+                  id={`quote-artwork-file-${item.id}-${slot}`}
+                  type="file"
+                  accept={artworkAccept}
+                  onClick={(event) => {
+                    event.currentTarget.value = "";
+                  }}
+                  onChange={(e) =>
+                    handleFileChange(
+                      artworkItems.findIndex((entry) => entry.id === item.id),
+                      slot,
+                      e
+                    )
+                  }
+                  className="sr-only"
+                />
+              ))
+            )}
           </div>
 
           {!showArtworkSection ? (
             <button
               type="button"
-              onClick={() => openArtworkPicker(artworkItems[0]?.id ?? 1)}
+              onClick={() => openArtworkPicker(artworkItems[0]?.id ?? 1, "front")}
               className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-6 py-3 text-sm font-semibold text-neutral-800 shadow-[0_8px_20px_-18px_rgba(15,23,42,0.45)] transition hover:border-neutral-900 hover:bg-neutral-50"
             >
               <UploadCloud className="h-4 w-4" />
@@ -1093,7 +1157,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                 <div>
                   <label className="block text-sm font-medium text-neutral-700">Upload your logo / artwork</label>
                   <p className="mt-1 text-xs text-neutral-500">
-                    Choose the print side, then add the exact front or back logo instruction.
+                    Add one item per product, size, logo, or print side.
                   </p>
                 </div>
                 <div className="inline-flex items-center rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-semibold text-neutral-500">
@@ -1103,12 +1167,14 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                 </div>
               </div>
 
-              {artworkItems.map((item, index) => (
-                <div key={item.id} className="rounded-[28px] border border-neutral-200 bg-neutral-50/80 p-5 shadow-[0_20px_45px_-40px_rgba(15,23,42,0.55)]">
+              {artworkItems.map((item, index) => {
+                const logoSlots = getArtworkSlots(item.printPlacement);
+                return (
+                <div key={item.id} className="rounded-[24px] border border-neutral-200 bg-neutral-50/80 p-4 shadow-[0_20px_45px_-40px_rgba(15,23,42,0.55)]">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="text-lg font-semibold text-neutral-900">Design {index + 1}</p>
-                      <p className="mt-1 text-xs text-neutral-500">Upload one logo or artwork file, then tell us where it prints.</p>
+                      <p className="text-base font-semibold text-neutral-900">Item {index + 1}</p>
+                      <p className="mt-1 text-xs text-neutral-500">Choose the print side, then upload the required logo.</p>
                     </div>
                     {artworkItems.length > 1 ? (
                       <button
@@ -1121,70 +1187,47 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                     ) : null}
                   </div>
 
-                  <div className="mt-3">
-                    <label className="block text-sm font-medium text-neutral-700">File</label>
-                    {item.file ? (
-                      <div className="mt-1 overflow-hidden rounded-[24px] border border-neutral-200 bg-white">
-                        <div className="grid gap-4 p-4 sm:grid-cols-[132px_minmax(0,1fr)] sm:items-center">
-                          <div className="relative flex h-28 items-center justify-center overflow-hidden rounded-2xl bg-neutral-100">
-                            {isPreviewableArtworkFile(item.file) ? (
-                              <ArtworkFilePreview file={item.file} />
-                            ) : (
-                              <FileText className="h-8 w-8 text-neutral-400" />
-                            )}
-                          </div>
-
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-neutral-900">{item.file.name}</p>
-                            <p className="mt-1 text-sm text-neutral-500">
-                              {item.file.size ? `${formatBytes(item.file.size)} file ready to quote.` : "File ready to quote."}
-                            </p>
-                            <p className="mt-3 text-xs text-neutral-500">
-                              Accepted: PNG, JPG, WEBP, SVG, HEIC, HEIF, PDF.
-                            </p>
-                            <div className="mt-4 flex flex-wrap gap-2">
-                              <button
-                                type="button"
-                                onClick={() => openArtworkPicker(item.id)}
-                                className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-black hover:text-black"
-                              >
-                                <UploadCloud className="h-4 w-4" />
-                                Replace file
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => updateArtworkItem(index, { file: null })}
-                                className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
-                              >
-                                Remove file
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => openArtworkPicker(item.id)}
-                          className="mt-1 flex min-h-[220px] w-full flex-col items-center justify-center rounded-[28px] border-2 border-dashed border-sky-200 bg-sky-50/40 px-6 py-10 text-center transition hover:border-sky-300 hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                        >
-                          <span className="inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-sky-500 to-blue-500 px-7 py-4 text-base font-semibold text-white shadow-[0_18px_32px_-22px_rgba(59,130,246,0.85)]">
-                            <UploadCloud className="h-5 w-5" strokeWidth={2} />
-                            Upload Image
-                          </span>
-                          <span className="mt-7 text-[clamp(1.8rem,2.6vw,2.4rem)] font-medium tracking-[-0.03em] text-neutral-700">
-                            No file chosen
-                          </span>
-                        </button>
-                        <p className="mt-2 text-xs text-neutral-500">Accepted: PNG, JPG, WEBP, SVG, HEIC, HEIF, PDF.</p>
-                      </>
-                    )}
-                  </div>
-
-                  <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_180px]">
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                     <div>
-                      <label className="block text-sm font-medium text-neutral-700">Print side</label>
+                      <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Product</label>
+                      <input
+                        value={item.product}
+                        onChange={(e) => updateArtworkItem(index, { product: e.target.value })}
+                        className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                        placeholder="T-shirt / polo / hoodie"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Colour</label>
+                      <input
+                        value={item.color}
+                        onChange={(e) => updateArtworkItem(index, { color: e.target.value })}
+                        className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                        placeholder="Navy blue"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Size</label>
+                      <input
+                        value={item.size}
+                        onChange={(e) => updateArtworkItem(index, { size: e.target.value })}
+                        className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                        placeholder="S / M / 2XL"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Qty</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={item.quantity}
+                        onChange={(e) => updateArtworkItem(index, { quantity: e.target.value })}
+                        className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
+                        placeholder="2"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Print side</label>
                       <select
                         value={item.printPlacement}
                         onChange={(e) =>
@@ -1199,57 +1242,111 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                         <option value="front_back">Front and back</option>
                       </select>
                     </div>
-                    <div className="grid gap-3">
-                      {item.printPlacement !== "back" ? (
-                        <div>
-                          <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-neutral-600">
-                            Description below front logo
+                  </div>
+
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    {logoSlots.map((slot) => {
+                      const file = getArtworkSlotFile(item, slot);
+                      const slotLabel = getArtworkSlotLabel(slot);
+                      return (
+                        <div key={slot} className="rounded-2xl border border-neutral-200 bg-white p-3">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div>
+                              <p className="text-sm font-semibold text-neutral-900">{slotLabel}</p>
+                              <p className="mt-1 text-xs text-neutral-500">
+                                {item.printPlacement === "front_back"
+                                  ? "Required for front and back printing."
+                                  : "Required for selected print side."}
+                              </p>
+                            </div>
+                            {file ? (
+                              <button
+                                type="button"
+                                onClick={() => updateArtworkItem(index, slot === "front" ? { frontFile: null } : { backFile: null })}
+                                className="text-xs font-semibold text-rose-600 transition hover:text-rose-700"
+                              >
+                                Remove
+                              </button>
+                            ) : null}
+                          </div>
+
+                          {file ? (
+                            <div className="mt-3 overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50">
+                              <div className="grid gap-3 p-3 sm:grid-cols-[104px_minmax(0,1fr)] sm:items-center">
+                                <div className="relative flex h-24 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
+                                  {isPreviewableArtworkFile(file) ? (
+                                    <ArtworkFilePreview file={file} />
+                                  ) : (
+                                    <FileText className="h-7 w-7 text-neutral-400" />
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-semibold text-neutral-900">{file.name}</p>
+                                  <p className="mt-1 text-xs text-neutral-500">
+                                    {file.size ? `${formatBytes(file.size)} file ready.` : "File ready."}
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => openArtworkPicker(item.id, slot)}
+                                    className="mt-3 inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:border-black hover:text-black"
+                                  >
+                                    <UploadCloud className="h-4 w-4" />
+                                    Change
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => openArtworkPicker(item.id, slot)}
+                              className="mt-3 flex min-h-32 w-full flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 px-4 py-5 text-center transition hover:border-emerald-500 hover:bg-emerald-50/40 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                            >
+                              <UploadCloud className="h-5 w-5 text-emerald-600" />
+                              <span className="mt-2 text-sm font-semibold text-neutral-900">
+                                Choose {slotLabel.toLowerCase()}
+                              </span>
+                              <span className="mt-1 max-w-56 text-xs text-neutral-500">
+                                PNG, JPG, WEBP, SVG, HEIC, or PDF. Max 5MB.
+                              </span>
+                            </button>
+                          )}
+
+                          <label className="mt-3 block text-xs font-semibold uppercase tracking-[0.06em] text-neutral-600">
+                            Description below {slotLabel.toLowerCase()}
+                            <textarea
+                              value={slot === "front" ? item.frontLogoDescription : item.backLogoDescription}
+                              onChange={(e) =>
+                                updateArtworkItem(
+                                  index,
+                                  slot === "front"
+                                    ? { frontLogoDescription: e.target.value }
+                                    : { backLogoDescription: e.target.value }
+                                )
+                              }
+                              rows={2}
+                              className="mt-2 w-full resize-none rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm normal-case tracking-normal focus:border-black focus:outline-none"
+                              placeholder={
+                                slot === "front"
+                                  ? "Example: print small on left chest."
+                                  : "Example: print large centered on back."
+                              }
+                            />
                           </label>
-                          <textarea
-                            value={item.frontLogoDescription}
-                            onChange={(e) => updateArtworkItem(index, { frontLogoDescription: e.target.value })}
-                            rows={2}
-                            className="mt-1 w-full resize-none rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
-                            placeholder="Example: print small on left chest."
-                          />
                         </div>
-                      ) : null}
-                      {item.printPlacement !== "front" ? (
-                        <div>
-                          <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-neutral-600">
-                            Description below back logo
-                          </label>
-                          <textarea
-                            value={item.backLogoDescription}
-                            onChange={(e) => updateArtworkItem(index, { backLogoDescription: e.target.value })}
-                            rows={2}
-                            className="mt-1 w-full resize-none rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
-                            placeholder="Example: print large centered on back."
-                          />
-                        </div>
-                      ) : null}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-neutral-700">Qty for this design</label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={item.quantity}
-                        onChange={(e) => updateArtworkItem(index, { quantity: e.target.value })}
-                        className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
-                        placeholder="Optional"
-                      />
-                    </div>
+                      );
+                    })}
                   </div>
                 </div>
-              ))}
+                );
+              })}
 
               <button
                 type="button"
                 onClick={addArtworkItem}
                 className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-black hover:text-black"
               >
-                + Add another logo
+                + Add another item / logo
               </button>
             </>
           )}

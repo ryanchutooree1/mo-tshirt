@@ -153,7 +153,7 @@ const MAX_CONTACT_EMAIL_LENGTH = 254;
 const MAX_CONTACT_PHONE_LENGTH = 40;
 const MAX_CONTACT_MESSAGE_LENGTH = 2_000;
 const MAX_CONTACT_NOTES_LENGTH = 4_000;
-const MAX_EMAIL_ATTACHMENT_COUNT = 4;
+const MAX_EMAIL_ATTACHMENT_COUNT = 12;
 const MAX_TOTAL_ATTACHMENT_BYTES = 15 * 1024 * 1024;
 
 function formatFrom(name: string, address: string) {
@@ -331,7 +331,7 @@ export async function POST(req: Request) {
         : [];
 
     if (requestFiles.length > MAX_EMAIL_ATTACHMENT_COUNT) {
-      return json({ error: "Too many files. Send up to 4 attachments." }, 400);
+      return json({ error: "Too many files. Send up to 12 attachments." }, 400);
     }
 
     const totalAttachmentBytes = requestFiles.reduce(
