@@ -52,6 +52,11 @@ type TanviAttachmentDraft = {
   printPlacement?: string;
 };
 
+type ArtworkDescriptionDraft = {
+  index: number;
+  description: string;
+};
+
 type WhatsappLineDetails = {
   id: string;
   product: string;
@@ -202,6 +207,23 @@ function getWhatsappDetails(value: unknown) {
   };
 }
 
+function getArtworkDescriptionDrafts(value: unknown): ArtworkDescriptionDraft[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((entry) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
+      const raw = entry as Record<string, unknown>;
+      const index = Number(raw.index);
+      if (!Number.isInteger(index) || index < 0) return null;
+      return {
+        index,
+        description: safeText(raw.description, 1_000),
+      };
+    })
+    .filter((entry): entry is ArtworkDescriptionDraft => Boolean(entry));
+}
+
 function parseJsonObject(value: unknown) {
   if (!value || typeof value !== "string") return {};
   try {
@@ -316,6 +338,22 @@ function mergeWhatsappAttachments(currentValue: unknown, nextAttachments: Awaite
   ];
 }
 
+function updateArtworkDescriptions(currentValue: unknown, drafts: ArtworkDescriptionDraft[]) {
+  const currentAttachments = Array.isArray(currentValue)
+    ? currentValue.filter((entry): entry is Record<string, unknown> => Boolean(entry && typeof entry === "object" && !Array.isArray(entry)))
+    : [];
+  if (!currentAttachments.length || !drafts.length) return null;
+
+  const descriptionByIndex = new Map(drafts.map((draft) => [draft.index, draft.description]));
+  return currentAttachments.map((attachment, index) => {
+    if (!descriptionByIndex.has(index)) return attachment;
+    return {
+      ...attachment,
+      description: descriptionByIndex.get(index) || "",
+    };
+  });
+}
+
 function getCurrentPartnerIds(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return [];
   const raw = value as Record<string, unknown>;
@@ -417,6 +455,7 @@ export async function PATCH(
     const partnerPriceDrafts = getPartnerPriceDrafts(body?.partnerPrices, activeIds);
     const stepCheckUpdates = getTanviStepCheckUpdates(body?.tanviStepChecks);
     const whatsappDetails = getWhatsappDetails(body?.whatsappDetails);
+    const artworkDescriptionDrafts = getArtworkDescriptionDrafts(body?.artworkDescriptions);
     const uploadedWhatsappAttachments = await storeWhatsappAttachments(files, attachmentDrafts);
     const nextClientStatus =
       body?.clientStatus === undefined
@@ -563,6 +602,15 @@ export async function PATCH(
       );
       updatePayload.attachments = nextAttachments;
       updatePayload.attachment = nextAttachments[0] || null;
+    } else if (artworkDescriptionDrafts.length) {
+      const nextAttachments = updateArtworkDescriptions(
+        currentData.attachments,
+        artworkDescriptionDrafts
+      );
+      if (nextAttachments) {
+        updatePayload.attachments = nextAttachments;
+        updatePayload.attachment = nextAttachments[0] || null;
+      }
     }
 
     await updateDoc(quoteRef, updatePayload);

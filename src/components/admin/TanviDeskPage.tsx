@@ -534,6 +534,7 @@ export default function TanviDeskPage() {
   const [zoomArtwork, setZoomArtwork] = useState<TanviArtworkAttachment | null>(null);
   const [partnerReplyDrafts, setPartnerReplyDrafts] = useState<Record<string, string>>({});
   const [sendingPartnerReply, setSendingPartnerReply] = useState<string | null>(null);
+  const [artworkDescriptionDrafts, setArtworkDescriptionDrafts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!themeReady || theme === "light") return;
@@ -641,6 +642,7 @@ export default function TanviDeskPage() {
       partnerPrices?: Record<string, { price: number | null }>;
       tanviStepChecks?: Partial<Record<TanviStepKey, boolean>>;
       whatsappDetails?: WhatsappOrderDraft;
+      artworkDescriptions?: { index: number; description: string }[];
     },
     label: string
   ) {
@@ -704,6 +706,30 @@ export default function TanviDeskPage() {
     } finally {
       setSendingPartnerReply(null);
     }
+  }
+
+  function getArtworkDescriptionDraft(quote: TanviQuoteSummary, index: number, attachment: TanviArtworkAttachment) {
+    const key = `${quote.id}:${index}`;
+    return artworkDescriptionDrafts[key] ?? attachment.description ?? "";
+  }
+
+  function updateArtworkDescriptionDraft(quoteId: string, index: number, description: string) {
+    const key = `${quoteId}:${index}`;
+    setArtworkDescriptionDrafts((current) => ({
+      ...current,
+      [key]: description,
+    }));
+  }
+
+  function saveArtworkDescription(quote: TanviQuoteSummary, index: number, attachment: TanviArtworkAttachment) {
+    const description = getArtworkDescriptionDraft(quote, index, attachment);
+    void updateQuote(
+      quote,
+      {
+        artworkDescriptions: [{ index, description }],
+      },
+      `artwork-description-${index}`
+    );
   }
 
   function toggleVisibleField(field: PartnerVisibleField) {
@@ -2118,22 +2144,38 @@ export default function TanviDeskPage() {
                               </div>
                             </div>
                           )}
-                          {attachment.description ? (
-                            <div className={`border-t px-3 py-2.5 sm:px-4 ${
-                              artworkChecked
-                                ? "border-violet-300/15"
-                                : isDark
-                                  ? "border-white/10"
-                                  : "border-slate-200"
-                            }`}>
-                              <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${artworkMutedClass}`}>
-                                {artworkDescriptionLabel}
-                              </p>
-                              <p className={`mt-1 whitespace-pre-wrap text-sm font-semibold leading-5 ${artworkTextClass}`}>
-                                {attachment.description}
-                              </p>
-                            </div>
-                          ) : null}
+                          <div className={`border-t px-3 py-2.5 sm:px-4 ${
+                            artworkChecked
+                              ? "border-violet-300/15"
+                              : isDark
+                                ? "border-white/10"
+                                : "border-slate-200"
+                          }`}>
+                            <label className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${artworkMutedClass}`}>
+                              {artworkDescriptionLabel}
+                              <textarea
+                                value={getArtworkDescriptionDraft(selected, index, attachment)}
+                                onChange={(event) =>
+                                  updateArtworkDescriptionDraft(selected.id, index, event.target.value)
+                                }
+                                rows={2}
+                                placeholder="Write placement, size, colour, or printing instruction."
+                                className={`mt-2 w-full resize-none normal-case tracking-normal ${fieldClass}`}
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => saveArtworkDescription(selected, index, attachment)}
+                              disabled={
+                                Boolean(saving) ||
+                                getArtworkDescriptionDraft(selected, index, attachment).trim() === (attachment.description || "").trim()
+                              }
+                              className={`mt-2 w-full ${quietButtonClass}`}
+                            >
+                              <Save className="h-4 w-4" />
+                              {saving === `artwork-description-${index}` ? "Saving..." : "Save description"}
+                            </button>
+                          </div>
                         </article>
                       );
                     })}
