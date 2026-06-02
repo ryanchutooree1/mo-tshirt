@@ -934,6 +934,40 @@ export default function TanviDeskPage() {
       ? "border-white/10 bg-slate-950/60 text-slate-200"
       : "border-slate-200 bg-slate-50 text-slate-800",
   };
+  const completedStepClass = isDark
+    ? [
+        "border-sky-300/25 bg-sky-300/10 text-sky-100",
+        "border-teal-300/25 bg-teal-300/10 text-teal-100",
+        "border-violet-300/25 bg-violet-300/10 text-violet-100",
+        "border-amber-300/25 bg-amber-300/10 text-amber-100",
+        "border-emerald-300/25 bg-emerald-300/10 text-emerald-100",
+        "border-slate-300/25 bg-slate-300/10 text-slate-100",
+      ]
+    : [
+        "border-sky-200 bg-sky-50 text-sky-950",
+        "border-teal-200 bg-teal-50 text-teal-950",
+        "border-violet-200 bg-violet-50 text-violet-950",
+        "border-amber-200 bg-amber-50 text-amber-950",
+        "border-emerald-200 bg-emerald-50 text-emerald-950",
+        "border-slate-200 bg-slate-50 text-slate-900",
+      ];
+  const completedStepIconClass = isDark
+    ? [
+        "bg-sky-300/15 text-sky-100",
+        "bg-teal-300/15 text-teal-100",
+        "bg-violet-300/15 text-violet-100",
+        "bg-amber-300/15 text-amber-100",
+        "bg-emerald-300/15 text-emerald-100",
+        "bg-slate-300/15 text-slate-100",
+      ]
+    : [
+        "bg-white text-sky-700",
+        "bg-white text-teal-700",
+        "bg-white text-violet-700",
+        "bg-white text-amber-700",
+        "bg-white text-emerald-700",
+        "bg-white text-slate-700",
+      ];
   const summaryCards = [
     {
       label: "All quotes",
@@ -1779,25 +1813,19 @@ export default function TanviDeskPage() {
                       const StepIcon = step.icon;
                       const stepMeta = TANVI_STEPS[index];
                       const checked = stepMeta ? selected.tanviStepChecks[stepMeta.key] : false;
+                      const completedClass = completedStepClass[index] || completedStepClass[0];
+                      const completedIconClass = completedStepIconClass[index] || completedStepIconClass[0];
                       return (
                         <div
                           key={step.title}
                           className={`rounded-xl border px-3 py-2.5 sm:rounded-2xl sm:p-4 ${
-                            checked
-                              ? isDark
-                                ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-100"
-                                : "border-emerald-200 bg-emerald-50 text-slate-900"
-                              : workflowToneClass[step.tone]
+                            checked ? completedClass : workflowToneClass[step.tone]
                           }`}
                         >
                           <div className="flex items-center gap-2.5 sm:items-start sm:gap-3">
                             <span
                               className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10 sm:rounded-xl ${
-                                checked
-                                  ? isDark
-                                    ? "bg-emerald-300/15 text-emerald-100"
-                                    : "bg-white text-emerald-700"
-                                  : "bg-white/70 text-current"
+                                checked ? completedIconClass : "bg-white/70 text-current"
                               }`}
                             >
                               <StepIcon className="h-4 w-4 sm:h-5 sm:w-5" />
