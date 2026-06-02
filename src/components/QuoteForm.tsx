@@ -1285,7 +1285,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
               <button
                 type="button"
                 onClick={addOrderItem}
-                className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold text-neutral-700 transition hover:border-black hover:text-black"
+                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 px-4 py-2 text-xs font-semibold text-white shadow-[0_12px_24px_-16px_rgba(249,115,22,0.75)] transition hover:from-orange-600 hover:via-amber-500 hover:to-orange-700"
               >
                 + Add another item / logo
               </button>
