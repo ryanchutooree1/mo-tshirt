@@ -1131,7 +1131,7 @@ export default function TanviDeskPage() {
   function getStepPanelClass(stepKey: TanviStepKey) {
     const state = getStepState(stepKey);
     const base =
-      "overflow-hidden rounded-[26px] border transition-all duration-200";
+      "overflow-hidden rounded-2xl border transition-all duration-200 sm:rounded-[26px]";
     if (state.checked) {
       return `${base} ${
         isDark
@@ -1188,7 +1188,7 @@ export default function TanviDeskPage() {
     const headerMutedClass = state.checked ? "text-violet-200/70" : mutedClass;
     return (
       <div
-        className={`flex flex-wrap items-start justify-between gap-3 border-b p-4 sm:gap-4 sm:p-5 ${
+        className={`flex items-start justify-between gap-2 border-b p-3 sm:gap-4 sm:p-5 ${
           state.checked
             ? isDark
               ? "border-violet-300/15 bg-violet-950/25"
@@ -1196,9 +1196,9 @@ export default function TanviDeskPage() {
             : dividerClass
         }`}
       >
-        <div className="flex min-w-0 gap-4">
+        <div className="flex min-w-0 gap-2.5 sm:gap-4">
           <span
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold sm:h-12 sm:w-12 ${
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm font-semibold sm:h-12 sm:w-12 sm:rounded-2xl ${
               state.checked
                 ? isDark
                   ? "bg-violet-300/15 text-violet-50"
@@ -1214,24 +1214,24 @@ export default function TanviDeskPage() {
           </span>
           <div className="min-w-0">
             <p
-              className={`text-xs font-semibold uppercase tracking-[0.16em] ${
+              className={`text-[10px] font-semibold uppercase tracking-[0.12em] sm:text-xs sm:tracking-[0.16em] ${
                 state.checked ? "text-violet-200/70" : "text-cyan-700"
               }`}
             >
               Step {stepNumber}
             </p>
-            <h3 className={`mt-1 text-lg font-semibold tracking-tight sm:text-xl ${headerTextClass}`}>
+            <h3 className={`mt-0.5 text-base font-semibold tracking-tight sm:mt-1 sm:text-xl ${headerTextClass}`}>
               {title}
             </h3>
-            <p className={`mt-1.5 max-w-3xl text-sm leading-6 sm:mt-2 ${headerMutedClass}`}>
+            <p className={`mt-1.5 hidden max-w-3xl text-sm leading-6 sm:mt-2 sm:block ${headerMutedClass}`}>
               {description}
             </p>
           </div>
         </div>
-        <div className="flex items-start gap-3">
-          {badge}
+        <div className="flex shrink-0 items-start gap-2 sm:gap-3">
+          <span className="hidden sm:inline-flex">{badge}</span>
           <label
-            className={`flex cursor-pointer items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-semibold transition ${
+            className={`flex cursor-pointer items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-semibold transition sm:gap-2 sm:rounded-2xl sm:px-3 sm:py-2 sm:text-xs ${
               state.checked
                 ? isDark
                   ? "border-violet-300/20 bg-violet-300/10 text-violet-50"
@@ -1248,7 +1248,7 @@ export default function TanviDeskPage() {
               checked={state.checked}
               disabled={saving === `step-${stepKey}`}
               onChange={(event) => toggleTanviStep(stepKey, event.target.checked)}
-              className="h-4 w-4 rounded border-violet-300 accent-violet-500"
+              className="h-3.5 w-3.5 rounded border-violet-300 accent-violet-500 sm:h-4 sm:w-4"
             />
             {state.checked ? "Checked" : state.current ? "Current" : "Mark done"}
           </label>
@@ -1880,8 +1880,8 @@ export default function TanviDeskPage() {
                     </span>
                   ),
                 })}
-                <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.7fr)]">
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-2.5 p-3 sm:gap-4 sm:p-4 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.7fr)]">
+                  <div className="grid gap-2 sm:grid-cols-2 sm:gap-3 xl:grid-cols-3">
                     {[
                       ["Client", selected.clientName],
                       ["Company", selected.clientCompany || "Not set"],
@@ -1898,25 +1898,25 @@ export default function TanviDeskPage() {
                     ].map(([label, value]) => (
                       <div
                         key={label}
-                        className={`${getStepSurfaceClass("client_onboarding", subtleCardClass)} px-3 py-3`}
+                        className={`${getStepSurfaceClass("client_onboarding", subtleCardClass)} px-3 py-2.5 sm:py-3`}
                       >
-                        <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${getStepMutedClass("client_onboarding")}`}>
+                        <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] sm:text-[11px] sm:tracking-[0.14em] ${getStepMutedClass("client_onboarding")}`}>
                           {label}
                         </p>
-                        <p className={`mt-1 break-words text-sm font-semibold ${getStepTextClass("client_onboarding", strongTextClass)}`}>
+                        <p className={`mt-1 break-words text-sm font-semibold leading-5 ${getStepTextClass("client_onboarding", strongTextClass)}`}>
                           {value}
                         </p>
                       </div>
                     ))}
                   </div>
-                  <div className={`${getStepSurfaceClass("client_onboarding", subtleCardClass)} p-4`}>
-                    <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${getStepMutedClass("client_onboarding")}`}>
+                  <div className={`${getStepSurfaceClass("client_onboarding", subtleCardClass)} p-3 sm:p-4`}>
+                    <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] sm:text-[11px] sm:tracking-[0.14em] ${getStepMutedClass("client_onboarding")}`}>
                       Client notes
                     </p>
-                    <p className={`mt-3 whitespace-pre-wrap text-sm font-medium leading-6 ${getStepTextClass("client_onboarding", strongTextClass)}`}>
+                    <p className={`mt-2 whitespace-pre-wrap text-sm font-medium leading-5 sm:mt-3 sm:leading-6 ${getStepTextClass("client_onboarding", strongTextClass)}`}>
                       {selected.notes || "No client notes shared."}
                     </p>
-                    <div className="mt-4 grid grid-cols-2 gap-2">
+                    <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4">
                       <span className={`${getStepSurfaceClass("client_onboarding", neutralBadgeClass)} px-3 py-2 text-xs font-semibold`}>
                         Quote total: {formatMoney(selected.total, selected.currency)}
                       </span>
@@ -1943,7 +1943,7 @@ export default function TanviDeskPage() {
                 })}
 
                 {selected.artwork.length ? (
-                  <div className="grid gap-4 p-4 lg:grid-cols-2">
+                  <div className="grid gap-3 p-3 sm:gap-4 sm:p-4 lg:grid-cols-2">
                     {selected.artwork.map((attachment, index) => {
                       const isImage = isArtworkImage(attachment);
                       const isPdf = isArtworkPdf(attachment);
@@ -1967,9 +1967,9 @@ export default function TanviDeskPage() {
                         : "h-[22rem] w-full rounded-2xl border border-slate-200 bg-white object-contain sm:h-[28rem]";
                       return (
                         <article key={`${attachment.url || attachment.filename}-${index}`} className={`${artworkSurfaceClass} overflow-hidden`}>
-                          <div className={`flex flex-wrap items-start justify-between gap-3 border-b p-4 ${artworkDividerClass}`}>
+                          <div className={`flex flex-wrap items-start justify-between gap-2 border-b p-3 sm:gap-3 sm:p-4 ${artworkDividerClass}`}>
                             <div className="min-w-0">
-                              <p className={`truncate text-base font-semibold ${artworkTextClass}`}>
+                              <p className={`truncate text-sm font-semibold sm:text-base ${artworkTextClass}`}>
                                 {attachment.filename}
                               </p>
                               <p className={`mt-1 text-xs ${artworkMutedClass}`}>
@@ -2023,8 +2023,8 @@ export default function TanviDeskPage() {
                               />
                             </div>
                           ) : attachment.url ? (
-                            <div className="p-4">
-                              <div className={`grid min-h-48 place-items-center text-center ${getStepSurfaceClass("artwork", subtleCardClass)} p-6`}>
+                            <div className="p-3 sm:p-4">
+                              <div className={`grid min-h-36 place-items-center text-center sm:min-h-48 ${getStepSurfaceClass("artwork", subtleCardClass)} p-4 sm:p-6`}>
                                 <div>
                                   <FileText className="mx-auto h-8 w-8 text-cyan-700" />
                                   <p className={`mt-3 text-sm font-semibold ${artworkTextClass}`}>
@@ -2037,8 +2037,8 @@ export default function TanviDeskPage() {
                               </div>
                             </div>
                           ) : (
-                            <div className="p-4">
-                              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">
+                            <div className="p-3 sm:p-4">
+                              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900 sm:p-4">
                                 Email-only artwork. Ask Ryan to re-upload it in Quotation Approval so Tanvi and the partner can open it here.
                               </div>
                             </div>
@@ -2048,8 +2048,8 @@ export default function TanviDeskPage() {
                     })}
                   </div>
                 ) : (
-                  <div className="p-4">
-                    <div className="rounded-2xl border border-dashed border-amber-200 bg-amber-50 px-5 py-8 text-center text-sm font-semibold text-amber-900">
+                  <div className="p-3 sm:p-4">
+                    <div className="rounded-2xl border border-dashed border-amber-200 bg-amber-50 px-4 py-5 text-center text-sm font-semibold text-amber-900 sm:px-5 sm:py-8">
                       No artwork shared yet. Tanvi should not move this to print until Ryan gets the logo from the client.
                     </div>
                   </div>
@@ -2065,10 +2065,10 @@ export default function TanviDeskPage() {
                     "Compare each partner, set the print placement, edit the partner price, then move the order to the right desk.",
                   badge: <Route className="h-5 w-5 text-cyan-700" />,
                 })}
-                <div className="p-5">
+                <div className="p-3 sm:p-5">
 
-                  <div className="grid gap-4">
-                    <label className={`text-xs font-semibold uppercase tracking-[0.14em] ${routePricesMutedClass}`}>
+                  <div className="grid gap-3 sm:gap-4">
+                    <label className={`text-[10px] font-semibold uppercase tracking-[0.12em] sm:text-xs sm:tracking-[0.14em] ${routePricesMutedClass}`}>
                       Current route and selected placement
                       <div className={`mt-2 flex min-h-[42px] items-center rounded-xl px-3 py-2 normal-case tracking-normal ${routePricesSurfaceClass}`}>
                         <span className={`text-sm font-semibold ${routePricesTextClass}`}>
@@ -2078,7 +2078,7 @@ export default function TanviDeskPage() {
                     </label>
                   </div>
 
-                  <div className="mt-5 grid gap-3 xl:grid-cols-2">
+                  <div className="mt-3 grid gap-2.5 sm:mt-5 sm:gap-3 xl:grid-cols-2">
                     {activePartners.map((partner) => {
                       const response = selected.partner.responses.find(
                         (entry) => entry.partnerId === partner.id
@@ -2093,7 +2093,7 @@ export default function TanviDeskPage() {
                           : null;
 
                       return (
-                        <article key={partner.id} className={`${routePricesCardClass} p-4`}>
+                        <article key={partner.id} className={`${routePricesCardClass} p-3 sm:p-4`}>
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <p className={`text-base font-semibold ${routePricesTextClass}`}>
@@ -2116,7 +2116,7 @@ export default function TanviDeskPage() {
                             </span>
                           </div>
 
-                          <label className={`mt-4 block text-xs font-semibold uppercase tracking-[0.14em] ${routePricesMutedClass}`}>
+                          <label className={`mt-3 block text-[10px] font-semibold uppercase tracking-[0.12em] sm:mt-4 sm:text-xs sm:tracking-[0.14em] ${routePricesMutedClass}`}>
                             Price preset
                             <select
                               defaultValue=""
@@ -2137,8 +2137,8 @@ export default function TanviDeskPage() {
                             </select>
                           </label>
 
-                          <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-                            <label className={`text-xs font-semibold uppercase tracking-[0.14em] ${routePricesMutedClass}`}>
+                          <div className="mt-3 grid gap-2.5 sm:mt-4 sm:gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+                            <label className={`text-[10px] font-semibold uppercase tracking-[0.12em] sm:text-xs sm:tracking-[0.14em] ${routePricesMutedClass}`}>
                               Partner price
                               <div className="mt-2 flex items-center gap-2">
                                 <span className={`inline-flex min-w-12 shrink-0 items-center justify-center whitespace-nowrap rounded-xl border px-3 py-2 text-xs font-semibold leading-none ${
@@ -2187,7 +2187,7 @@ export default function TanviDeskPage() {
                             </button>
                           </div>
 
-                          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                          <div className="mt-3 grid gap-2 sm:mt-4 sm:grid-cols-2">
                             <div className={`${routePricesSurfaceClass} px-3 py-2`}>
                               <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${routePricesMutedClass}`}>
                                 Last saved
@@ -2245,7 +2245,7 @@ export default function TanviDeskPage() {
                         "all"
                       )
                     }
-                    className={`mt-3 w-full ${allActivePartnersRouted ? sentButtonClass : quietButtonClass}`}
+                    className={`mt-2.5 w-full sm:mt-3 ${allActivePartnersRouted ? sentButtonClass : quietButtonClass}`}
                   >
                     {allActivePartnersRouted ? (
                       <CheckCircle2 className="h-4 w-4" />
@@ -2259,11 +2259,11 @@ export default function TanviDeskPage() {
                         : "Send to all active partners"}
                   </button>
 
-                  <div className="mt-5">
-                    <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${routePricesMutedClass}`}>
+                  <div className="mt-4 sm:mt-5">
+                    <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] sm:text-xs sm:tracking-[0.14em] ${routePricesMutedClass}`}>
                       Fields shared with partners
                     </p>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <div className="mt-2 grid gap-2 sm:mt-3 sm:grid-cols-2">
                       {PARTNER_VISIBLE_FIELD_OPTIONS.map((field) => (
                         <label
                           key={field.key}
@@ -2307,10 +2307,10 @@ export default function TanviDeskPage() {
                     "Track quotation approval, payment readiness, missing information, and client-facing notes before print starts.",
                   badge: <Clock3 className="h-5 w-5 text-amber-600" />,
                 })}
-                <div className="p-5">
+                <div className="p-3 sm:p-5">
 
-                  <div className="mt-5">
-                    <label className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                  <div>
+                    <label className={`text-[10px] font-semibold uppercase tracking-[0.12em] sm:text-xs sm:tracking-[0.14em] ${getStepMutedClass("client_approval")}`}>
                       Client status
                       <select
                         value={selected.partner.clientStatus}
@@ -2333,18 +2333,18 @@ export default function TanviDeskPage() {
                     </label>
                   </div>
 
-                  <div className="mt-5 space-y-3">
-                    <div className={`${subtleCardClass} p-3`}>
-                      <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                  <div className="mt-3 space-y-2.5 sm:mt-5 sm:space-y-3">
+                    <div className={`${getStepSurfaceClass("client_approval", subtleCardClass)} p-3`}>
+                      <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] sm:text-xs sm:tracking-[0.14em] ${getStepMutedClass("client_approval")}`}>
                         Missing information
                       </p>
-                      <p className={`mt-2 whitespace-pre-wrap text-sm font-medium ${strongTextClass}`}>
+                      <p className={`mt-2 whitespace-pre-wrap text-sm font-medium ${getStepTextClass("client_approval", strongTextClass)}`}>
                         {selected.partner.missingInformation || "No blocker from partner."}
                       </p>
                     </div>
-                    <div className={`${subtleCardClass} p-3`}>
+                    <div className={`${getStepSurfaceClass("client_approval", subtleCardClass)} p-3`}>
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                        <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] sm:text-xs sm:tracking-[0.14em] ${getStepMutedClass("client_approval")}`}>
                           Partner comments
                         </p>
                         <span
@@ -2357,16 +2357,16 @@ export default function TanviDeskPage() {
                           {selected.partner.name || selected.partner.visibleLabel || "Partner"}
                         </span>
                       </div>
-                      <p className={`mt-2 whitespace-pre-wrap text-sm font-medium ${strongTextClass}`}>
+                      <p className={`mt-2 whitespace-pre-wrap text-sm font-medium ${getStepTextClass("client_approval", strongTextClass)}`}>
                         {selected.partner.comments || "No comments yet."}
                       </p>
                     </div>
                     {selected.notes ? (
-                      <div className={`${subtleCardClass} p-3`}>
-                        <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                      <div className={`${getStepSurfaceClass("client_approval", subtleCardClass)} p-3`}>
+                        <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] sm:text-xs sm:tracking-[0.14em] ${getStepMutedClass("client_approval")}`}>
                           Client notes
                         </p>
-                        <p className={`mt-2 whitespace-pre-wrap text-sm font-medium ${strongTextClass}`}>
+                        <p className={`mt-2 whitespace-pre-wrap text-sm font-medium ${getStepTextClass("client_approval", strongTextClass)}`}>
                           {selected.notes}
                         </p>
                       </div>
@@ -2385,17 +2385,17 @@ export default function TanviDeskPage() {
                     "Review each partner reply, completion days, price, blockers, and production comments in one clean place.",
                   badge: <CheckCircle2 className="h-5 w-5 text-emerald-600" />,
                 })}
-                <div className="space-y-2 p-5">
+                <div className="space-y-2 p-3 sm:p-5">
                   {selected.partner.responses.length ? (
                     selected.partner.responses.map((response) => (
-                      <div key={response.partnerId} className={`${elevatedCardClass} p-3`}>
+                      <div key={response.partnerId} className={`${getStepSurfaceClass("partner_answer", elevatedCardClass)} p-3`}>
                         <div className="flex items-center justify-between gap-3">
-                          <p className={`font-semibold ${strongTextClass}`}>{response.partnerName}</p>
+                          <p className={`font-semibold ${getStepTextClass("partner_answer", strongTextClass)}`}>{response.partnerName}</p>
                           <span className={`rounded-md border px-2 py-1 text-[11px] font-semibold ${statusTone(response.requestStatus)}`}>
                             {PARTNER_DECISION_LABELS[response.requestStatus]}
                           </span>
                         </div>
-                        <div className={`mt-3 grid grid-cols-3 gap-2 text-xs ${mutedClass}`}>
+                        <div className={`mt-2 grid grid-cols-3 gap-2 text-xs sm:mt-3 ${getStepMutedClass("partner_answer")}`}>
                           <span>{response.completionDays ? `${response.completionDays} days` : "Days n/a"}</span>
                           <span>{response.price ? `Rs ${response.price}` : "Price n/a"}</span>
                           <span>{formatRelative(response.updatedAt)}</span>
@@ -2403,7 +2403,7 @@ export default function TanviDeskPage() {
                       </div>
                     ))
                   ) : (
-                    <div className={`rounded-2xl border border-dashed p-5 text-center text-sm ${mutedClass}`}>
+                    <div className={`rounded-2xl border border-dashed p-4 text-center text-sm sm:p-5 ${getStepMutedClass("partner_answer")}`}>
                       Waiting for partner response.
                     </div>
                   )}
@@ -2423,54 +2423,54 @@ export default function TanviDeskPage() {
                     </span>
                   ),
                 })}
-                <div className="grid gap-4 p-5">
-                  <div className="grid gap-4">
-                    <div className={`${elevatedCardClass} overflow-hidden`}>
-                      <div className={`border-b p-4 ${dividerClass}`}>
-                        <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                <div className="grid gap-3 p-3 sm:gap-4 sm:p-5">
+                  <div className="grid gap-3 sm:gap-4">
+                    <div className={`${getStepSurfaceClass("print_start", elevatedCardClass)} overflow-hidden`}>
+                      <div className={`border-b p-3 sm:p-4 ${getStepState("print_start").checked ? "border-violet-300/15" : dividerClass}`}>
+                        <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] sm:text-[11px] sm:tracking-[0.14em] ${getStepMutedClass("print_start")}`}>
                           Current production movement
                         </p>
-                        <h4 className={`mt-2 text-xl font-semibold ${strongTextClass}`}>
+                        <h4 className={`mt-1.5 text-base font-semibold sm:mt-2 sm:text-xl ${getStepTextClass("print_start", strongTextClass)}`}>
                           {selectedProductionInsight?.printing || "Printing not started"}
                         </h4>
                       </div>
-                      <div className="grid gap-3 p-4 md:grid-cols-3">
-                        <div className={`${subtleCardClass} p-4`}>
+                      <div className="grid gap-2.5 p-3 sm:gap-3 sm:p-4 md:grid-cols-3">
+                        <div className={`${getStepSurfaceClass("print_start", subtleCardClass)} p-3 sm:p-4`}>
                           <PackageCheck className="h-5 w-5 text-orange-600" />
-                          <p className={`mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                          <p className={`mt-2 text-[10px] font-semibold uppercase tracking-[0.12em] sm:mt-3 sm:text-[11px] sm:tracking-[0.14em] ${getStepMutedClass("print_start")}`}>
                             Ryan supply
                           </p>
-                          <p className={`mt-2 text-sm font-semibold leading-5 ${strongTextClass}`}>
+                          <p className={`mt-1.5 text-sm font-semibold leading-5 sm:mt-2 ${getStepTextClass("print_start", strongTextClass)}`}>
                             {selectedProductionInsight?.supply || "T-shirt supply not confirmed yet"}
                           </p>
                         </div>
-                        <div className={`${subtleCardClass} p-4`}>
+                        <div className={`${getStepSurfaceClass("print_start", subtleCardClass)} p-3 sm:p-4`}>
                           <Printer className="h-5 w-5 text-cyan-700" />
-                          <p className={`mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                          <p className={`mt-2 text-[10px] font-semibold uppercase tracking-[0.12em] sm:mt-3 sm:text-[11px] sm:tracking-[0.14em] ${getStepMutedClass("print_start")}`}>
                             Print status
                           </p>
-                          <p className={`mt-2 text-sm font-semibold leading-5 ${strongTextClass}`}>
+                          <p className={`mt-1.5 text-sm font-semibold leading-5 sm:mt-2 ${getStepTextClass("print_start", strongTextClass)}`}>
                             {PARTNER_PRODUCTION_STATUS_LABELS[selected.partner.productionStatus]}
                           </p>
                         </div>
-                        <div className={`${subtleCardClass} p-4`}>
+                        <div className={`${getStepSurfaceClass("print_start", subtleCardClass)} p-3 sm:p-4`}>
                           <TimerReset className="h-5 w-5 text-amber-600" />
-                          <p className={`mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                          <p className={`mt-2 text-[10px] font-semibold uppercase tracking-[0.12em] sm:mt-3 sm:text-[11px] sm:tracking-[0.14em] ${getStepMutedClass("print_start")}`}>
                             Deadline
                           </p>
-                          <p className={`mt-2 text-sm font-semibold leading-5 ${strongTextClass}`}>
+                          <p className={`mt-1.5 text-sm font-semibold leading-5 sm:mt-2 ${getStepTextClass("print_start", strongTextClass)}`}>
                             {selectedDeadlineInsight?.label || "No deadline shared"}
                           </p>
-                          <p className={`mt-1 text-xs ${mutedClass}`}>
+                          <p className={`mt-1 text-xs ${getStepMutedClass("print_start")}`}>
                             {selectedDeadlineInsight?.helper || "No countdown available."}
                           </p>
                         </div>
                       </div>
-                      <div className="px-4 pb-4">
-                        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_11rem]">
-                          <div className={`${subtleCardClass} p-4`}>
+                      <div className="px-3 pb-3 sm:px-4 sm:pb-4">
+                        <div className="grid gap-2.5 sm:gap-3 md:grid-cols-[minmax(0,1fr)_11rem]">
+                          <div className={`${getStepSurfaceClass("print_start", subtleCardClass)} p-3 sm:p-4`}>
                             <div className="flex items-center justify-between gap-3">
-                              <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                              <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] sm:text-[11px] sm:tracking-[0.14em] ${getStepMutedClass("print_start")}`}>
                                 Production progress
                               </p>
                               <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${workflowToneClass[selectedProductionInsight?.tone || "neutral"]}`}>
@@ -2483,7 +2483,7 @@ export default function TanviDeskPage() {
                                 style={{ width: `${selectedProductionInsight?.progress || 0}%` }}
                               />
                             </div>
-                            <p className={`mt-3 text-sm leading-6 ${mutedClass}`}>
+                            <p className={`mt-2 text-sm leading-5 sm:mt-3 sm:leading-6 ${getStepMutedClass("print_start")}`}>
                               {selectedProductionInsight?.helper}
                             </p>
                           </div>
