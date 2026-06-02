@@ -1947,7 +1947,7 @@ export default function TanviDeskPage() {
                 })}
 
                 {selected.artwork.length ? (
-                  <div className="grid gap-3 p-3 sm:gap-4 sm:p-4 lg:grid-cols-2">
+                  <div className="grid gap-2.5 p-3 sm:gap-4 sm:p-4 lg:grid-cols-2">
                     {selected.artwork.map((attachment, index) => {
                       const isImage = isArtworkImage(attachment);
                       const isPdf = isArtworkPdf(attachment);
@@ -1967,16 +1967,14 @@ export default function TanviDeskPage() {
                           : "bg-slate-950 p-2.5 sm:p-3"
                         : "bg-white p-2.5 sm:p-3";
                       const artworkPreviewClass = artworkChecked
-                        ? "h-56 w-full rounded-xl border border-slate-800 bg-black object-contain sm:h-80 sm:rounded-2xl"
-                        : "h-56 w-full rounded-xl border border-slate-200 bg-white object-contain sm:h-80 sm:rounded-2xl";
+                        ? "h-48 w-full rounded-xl border border-slate-800 bg-black object-contain sm:h-80 sm:rounded-2xl"
+                        : "h-48 w-full rounded-xl border border-slate-200 bg-white object-contain sm:h-80 sm:rounded-2xl";
                       return (
                         <article
                           key={`${attachment.url || attachment.filename}-${index}`}
-                          className={`${artworkSurfaceClass} ${
-                            index % 2 === 0 ? "mr-auto" : "ml-auto"
-                          } w-[90%] overflow-hidden sm:mx-0 sm:w-full`}
+                          className={`${artworkSurfaceClass} w-full overflow-hidden`}
                         >
-                          <div className={`flex flex-wrap items-start justify-between gap-2 border-b p-3 sm:gap-3 sm:p-4 ${artworkDividerClass}`}>
+                          <div className={`border-b p-3 sm:p-4 ${artworkDividerClass}`}>
                             <div className="min-w-0">
                               <p className={`truncate text-sm font-semibold sm:text-base ${artworkTextClass}`}>
                                 {attachment.filename}
@@ -1988,19 +1986,19 @@ export default function TanviDeskPage() {
                               </p>
                             </div>
                             {attachment.url ? (
-                              <div className="flex shrink-0 items-center gap-2">
+                              <div className="mt-2 flex items-center gap-2">
                                 <a
                                   href={attachment.url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className={quietButtonClass}
+                                  className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:h-10"
                                 >
                                   <ExternalLink className="h-4 w-4" />
                                   Open
                                 </a>
                                 <a
                                   href={downloadHref}
-                                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 sm:h-10 sm:w-10"
                                   aria-label={`Download ${attachment.filename || "artwork"}`}
                                   title="Download artwork"
                                 >
@@ -2009,7 +2007,7 @@ export default function TanviDeskPage() {
                                 <button
                                   type="button"
                                   onClick={() => setZoomArtwork(attachment)}
-                                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 sm:h-10 sm:w-10"
                                   aria-label={`Zoom ${attachment.filename || "artwork"}`}
                                   title="Zoom artwork"
                                 >
@@ -2035,8 +2033,8 @@ export default function TanviDeskPage() {
                                 title={`Preview ${attachment.filename || "PDF artwork"}`}
                                 className={
                                   artworkChecked
-                                    ? "h-64 w-full rounded-xl border border-slate-800 bg-black sm:h-80 sm:rounded-2xl"
-                                    : "h-64 w-full rounded-xl border border-slate-200 bg-white sm:h-80 sm:rounded-2xl"
+                                    ? "h-52 w-full rounded-xl border border-slate-800 bg-black sm:h-80 sm:rounded-2xl"
+                                    : "h-52 w-full rounded-xl border border-slate-200 bg-white sm:h-80 sm:rounded-2xl"
                                 }
                               />
                             </div>
