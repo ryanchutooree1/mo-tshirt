@@ -33,6 +33,7 @@ export type AdminPagePath =
   | "/admin/finance"
   | "/admin/hr"
   | "/admin/technology"
+  | "/admin/docker-postgres"
   | "/admin/legal-compliance"
   | "/admin/automation"
   | "/admin/dms"
@@ -278,6 +279,12 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
     group: "Departments",
   },
   {
+    path: "/admin/docker-postgres",
+    label: "Docker PostgreSQL",
+    description: "Test a Docker-backed PostgreSQL database connection.",
+    group: "Administration",
+  },
+  {
     path: "/admin/legal-compliance",
     label: "Legal & Compliance Department",
     description: "Contracts, policies, records, privacy, and risk control.",
@@ -376,6 +383,7 @@ export const DEFAULT_TOP_NAV_PATHS: AdminPagePath[] = [
   "/admin/finance",
   "/admin/hr",
   "/admin/technology",
+  "/admin/docker-postgres",
   "/admin/legal-compliance",
   "/admin/prescription-ocr",
   "/admin/dms",
@@ -436,6 +444,7 @@ export function resolveAdminApiPermission(pathname: string) {
   if (pathname.startsWith("/api/admin/tanvi")) return "/admin/tanvi" as AdminPagePath;
   if (pathname.startsWith("/api/admin/settings")) return "/admin/settings" as AdminPagePath;
   if (pathname.startsWith("/api/admin/partners")) return "/admin/partners" as AdminPagePath;
+  if (pathname.startsWith("/api/admin/docker-postgres")) return "/admin/docker-postgres" as AdminPagePath;
   if (pathname.startsWith("/api/admin/ai-assistant")) return "/admin/ai-assistant" as AdminPagePath;
   if (pathname.startsWith("/api/admin/quotes")) return "/admin/quotation-approval" as AdminPagePath;
   if (pathname.startsWith("/api/admin/ready-made-uniforms")) return "/admin/ready-made-uniforms" as AdminPagePath;
