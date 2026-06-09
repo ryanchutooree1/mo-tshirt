@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { FiSearch } from "react-icons/fi";
+import LoadingImage from "@/components/LoadingImage";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
 import type { ReadyMadeUniformItem } from "@/lib/ready-made-uniforms-store";
@@ -133,12 +134,16 @@ function UniformCard({ uniform }: { uniform: ReadyMadeUniformItem }) {
   return (
     <article className="overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-sm">
       <div className="relative aspect-square overflow-hidden bg-white">
-        <img
+        <LoadingImage
           src={selectedImage}
           alt={`${uniform.title} ${uniform.code}`}
           className="h-full w-full object-contain"
+          wrapperClassName="h-full w-full"
           loading="lazy"
           decoding="async"
+          delayMs={150}
+          statusText="Loading image..."
+          errorText="Image unavailable"
         />
         <div className="absolute left-4 top-4 flex flex-wrap gap-2">
           <span className="rounded-full bg-black px-3 py-1.5 text-xs font-bold text-white shadow-sm">{uniform.code}</span>
@@ -162,7 +167,17 @@ function UniformCard({ uniform }: { uniform: ReadyMadeUniformItem }) {
                 }`}
                 aria-label={`Show ${uniform.title} image ${index + 1}`}
               >
-                <img src={image} alt="" className="h-full w-full object-contain" loading="lazy" decoding="async" />
+                <LoadingImage
+                  src={image}
+                  alt=""
+                  className="h-full w-full object-contain"
+                  wrapperClassName="h-full w-full"
+                  loading="lazy"
+                  decoding="async"
+                  delayMs={150}
+                  statusText="Loading..."
+                  errorText="Unavailable"
+                />
               </button>
             ))}
           </div>

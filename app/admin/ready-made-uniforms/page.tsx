@@ -5,6 +5,7 @@ import {
   READY_MADE_UNIFORM_ACCENT_OPTIONS,
   type ReadyMadeUniformItem,
 } from "@/lib/ready-made-uniforms-store";
+import LoadingImage from "@/components/LoadingImage";
 import {
   FiActivity,
   FiEye,
@@ -131,13 +132,7 @@ function UniformImage({
   alt: string;
   className?: string;
 }) {
-  const [hasError, setHasError] = useState(false);
-
-  useEffect(() => {
-    setHasError(false);
-  }, [src]);
-
-  if (!src || hasError) {
+  if (!src) {
     return (
       <div className="flex h-full w-full items-center justify-center text-slate-300">
         <FiImage className="h-6 w-6" />
@@ -146,13 +141,16 @@ function UniformImage({
   }
 
   return (
-    <img
+    <LoadingImage
       src={src}
       alt={alt}
       className={className}
+      wrapperClassName="h-full w-full"
       loading="lazy"
       decoding="async"
-      onError={() => setHasError(true)}
+      delayMs={150}
+      statusText="Loading image..."
+      errorText="Image unavailable"
     />
   );
 }
