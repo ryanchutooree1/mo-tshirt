@@ -14,6 +14,8 @@ import {
   LayoutDashboard,
   LockKeyhole,
   Mail,
+  Menu,
+  PanelLeftClose,
   Plus,
   RefreshCw,
   ShieldCheck,
@@ -36,8 +38,11 @@ type ProjectEntry = {
   name: string;
   owner: string;
   status: "Planning" | "In progress" | "Waiting" | "Done";
+  priority: "Normal" | "Important" | "Urgent";
   dueDate: string;
   notes: string;
+  startedAt: string;
+  completedAt: string;
   createdAt: string;
 };
 
@@ -66,6 +71,12 @@ const statusStyles: Record<ProjectEntry["status"], string> = {
   Done: "border-emerald-200 bg-emerald-50 text-emerald-800",
 };
 
+const priorityStyles: Record<ProjectEntry["priority"], string> = {
+  Normal: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  Important: "border-amber-200 bg-amber-50 text-amber-800",
+  Urgent: "border-rose-200 bg-rose-50 text-rose-800",
+};
+
 const EMPTY_INFO_DRAFT = {
   title: "",
   email: "",
@@ -76,7 +87,7 @@ const EMPTY_INFO_DRAFT = {
 const EMPTY_PROJECT_DRAFT = {
   name: "",
   owner: "",
-  status: "Planning" as ProjectEntry["status"],
+  priority: "Normal" as ProjectEntry["priority"],
   dueDate: "",
   notes: "",
 };
@@ -92,14 +103,15 @@ export default function CbePortalClient() {
   const [savingProject, setSavingProject] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(true);
   const [infoDraft, setInfoDraft] = useState(EMPTY_INFO_DRAFT);
   const [projectDraft, setProjectDraft] = useState(EMPTY_PROJECT_DRAFT);
 
   const projectSummary = useMemo(() => {
     return {
       total: projects.length,
-      active: projects.filter((project) => project.status !== "Done").length,
-      done: projects.filter((project) => project.status === "Done").length,
+      active: projects.filter((project) => project.status !== "Done" && !project.completedAt).length,
+      done: projects.filter((project) => project.status === "Done" || project.completedAt).length,
     };
   }, [projects]);
 
@@ -224,6 +236,30 @@ export default function CbePortalClient() {
     }
   }
 
+  async function toggleProjectCompletion(id: string, completed: boolean) {
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/cbe-portal/projects/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        project?: ProjectEntry;
+        error?: string;
+      };
+      if (!res.ok || !data.project) throw new Error(data.error || "Could not update project.");
+      setProjects((current) =>
+        current.map((project) => (project.id === id ? data.project! : project))
+      );
+      setNotice(completed ? "Task completed date saved." : "Task reopened.");
+      await loadPortalData();
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Could not update project.");
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f7f5ef] text-slate-950">
       <section className="border-b border-slate-200 bg-white">
@@ -252,39 +288,64 @@ export default function CbePortalClient() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[260px_minmax(0,1fr)] lg:px-8">
-        <aside className="rounded-lg border border-slate-200 bg-white p-3 lg:sticky lg:top-4 lg:self-start">
-          <div className="mb-2 px-3 py-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-              CBE Menu
-            </p>
-          </div>
-          <nav className="grid gap-1">
-            <TabButton
-              active={activeTab === "information"}
-              icon={<KeyRound size={18} />}
-              label="Information"
-              description="Emails, passwords, notes"
-              onClick={() => setActiveTab("information")}
-            />
-            <TabButton
-              active={activeTab === "projects"}
-              icon={<LayoutDashboard size={18} />}
-              label="Project Management"
-              description="Tasks and progress"
-              onClick={() => setActiveTab("projects")}
-            />
-            <TabButton
-              active={activeTab === "storage"}
-              icon={<HardDrive size={18} />}
-              label="PostgreSQL Storage"
-              description="Capacity progress"
-              onClick={() => setActiveTab("storage")}
-            />
-          </nav>
-        </aside>
+      <section
+        className={`mx-auto grid max-w-7xl gap-5 px-4 py-5 sm:px-6 lg:px-8 ${
+          menuOpen ? "lg:grid-cols-[260px_minmax(0,1fr)]" : "lg:grid-cols-1"
+        }`}
+      >
+        {menuOpen ? (
+          <aside className="rounded-lg border border-slate-200 bg-white p-3 lg:sticky lg:top-4 lg:self-start">
+            <div className="mb-2 flex items-center justify-between gap-2 px-3 py-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                CBE Menu
+              </p>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(false)}
+                className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-950"
+                aria-label="Hide CBE menu"
+              >
+                <PanelLeftClose size={18} />
+              </button>
+            </div>
+            <nav className="grid gap-1">
+              <TabButton
+                active={activeTab === "information"}
+                icon={<KeyRound size={18} />}
+                label="Information"
+                description="Emails, passwords, notes"
+                onClick={() => setActiveTab("information")}
+              />
+              <TabButton
+                active={activeTab === "projects"}
+                icon={<LayoutDashboard size={18} />}
+                label="Project Management"
+                description="Deadlines and task progress"
+                onClick={() => setActiveTab("projects")}
+              />
+              <TabButton
+                active={activeTab === "storage"}
+                icon={<HardDrive size={18} />}
+                label="PostgreSQL Storage"
+                description="Capacity progress"
+                onClick={() => setActiveTab("storage")}
+              />
+            </nav>
+          </aside>
+        ) : null}
 
         <div className="grid gap-4">
+          {!menuOpen ? (
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              className="inline-flex w-fit items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              <Menu size={18} />
+              Show menu
+            </button>
+          ) : null}
+
           {error ? (
             <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">
               {error}
@@ -323,6 +384,7 @@ export default function CbePortalClient() {
               onDraftChange={setProjectDraft}
               onSave={addProject}
               onDelete={deleteProject}
+              onToggleComplete={toggleProjectCompletion}
             />
           ) : null}
 
@@ -461,6 +523,7 @@ function ProjectsTab({
   onDraftChange,
   onSave,
   onDelete,
+  onToggleComplete,
 }: {
   draft: typeof EMPTY_PROJECT_DRAFT;
   projects: ProjectEntry[];
@@ -469,19 +532,20 @@ function ProjectsTab({
   onDraftChange: (draft: typeof EMPTY_PROJECT_DRAFT) => void;
   onSave: () => void;
   onDelete: (id: string) => void;
+  onToggleComplete: (id: string, completed: boolean) => void;
 }) {
   return (
     <section className="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
       <div className="rounded-lg border border-slate-200 bg-white p-5">
         <div className="flex items-center gap-2">
           <ClipboardList className="text-teal-700" size={20} />
-          <h2 className="text-lg font-semibold">New project item</h2>
+          <h2 className="text-lg font-semibold">New task</h2>
         </div>
         <div className="mt-4 grid gap-3">
           <Field
-            label="Project name"
+            label="Task name"
             value={draft.name}
-            placeholder="Example: Product photo upload"
+            placeholder="Example: Send first website preview"
             onChange={(value) => onDraftChange({ ...draft, name: value })}
           />
           <Field
@@ -491,25 +555,24 @@ function ProjectsTab({
             onChange={(value) => onDraftChange({ ...draft, owner: value })}
           />
           <label className="grid gap-1.5 text-sm font-semibold text-slate-700">
-            Status
+            Task type
             <select
-              value={draft.status}
+              value={draft.priority}
               onChange={(event) =>
                 onDraftChange({
                   ...draft,
-                  status: event.target.value as ProjectEntry["status"],
+                  priority: event.target.value as ProjectEntry["priority"],
                 })
               }
               className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-950 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
             >
-              <option>Planning</option>
-              <option>In progress</option>
-              <option>Waiting</option>
-              <option>Done</option>
+              <option>Normal</option>
+              <option>Important</option>
+              <option>Urgent</option>
             </select>
           </label>
           <Field
-            label="Due date"
+            label="Deadline date"
             type="date"
             value={draft.dueDate}
             onChange={(value) => onDraftChange({ ...draft, dueDate: value })}
@@ -520,6 +583,9 @@ function ProjectsTab({
             placeholder="Next actions, blockers, links, or delivery notes"
             onChange={(value) => onDraftChange({ ...draft, notes: value })}
           />
+          <p className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs font-semibold leading-5 text-slate-500">
+            Started date is saved automatically when the task is created. Ended date is saved when you tick completed.
+          </p>
           <button
             type="button"
             onClick={onSave}
@@ -527,7 +593,7 @@ function ProjectsTab({
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
           >
             <Plus size={18} />
-            {saving ? "Saving..." : "Save project"}
+            {saving ? "Saving..." : "Save task"}
           </button>
         </div>
       </div>
@@ -541,41 +607,94 @@ function ProjectsTab({
         </div>
         <div className="mt-4 grid gap-3">
           {projects.length === 0 ? (
-            <EmptyState icon={<ClipboardList size={20} />} text="No projects saved yet." />
+            <EmptyState icon={<ClipboardList size={20} />} text="No tasks saved yet." />
           ) : null}
           {projects.map((project) => (
-            <article key={project.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold text-slate-950">{project.name}</h3>
-                  <p className="mt-1 text-sm text-slate-600">Owner: {project.owner}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusStyles[project.status]}`}>
-                    {project.status}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => onDelete(project.id)}
-                    className="rounded-lg p-2 text-slate-400 transition hover:bg-white hover:text-rose-600"
-                    aria-label={`Delete ${project.name}`}
-                  >
-                    <Trash2 size={17} />
-                  </button>
-                </div>
-              </div>
-              {project.dueDate ? (
-                <p className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-slate-600">
-                  <CalendarDays size={16} />
-                  Due {project.dueDate}
-                </p>
-              ) : null}
-              {project.notes ? <p className="mt-3 text-sm leading-6 text-slate-600">{project.notes}</p> : null}
-            </article>
+            <TaskCard
+              key={project.id}
+              project={project}
+              onDelete={onDelete}
+              onToggleComplete={onToggleComplete}
+            />
           ))}
         </div>
       </div>
     </section>
+  );
+}
+
+function TaskCard({
+  project,
+  onDelete,
+  onToggleComplete,
+}: {
+  project: ProjectEntry;
+  onDelete: (id: string) => void;
+  onToggleComplete: (id: string, completed: boolean) => void;
+}) {
+  const deadline = getDeadlineProgress(project);
+  const completed = project.status === "Done" || Boolean(project.completedAt);
+
+  return (
+    <article className={`rounded-lg border p-4 ${completed ? "border-emerald-200 bg-emerald-50/60" : "border-slate-200 bg-slate-50"}`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={completed}
+            onChange={(event) => onToggleComplete(project.id, event.target.checked)}
+            className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-700"
+          />
+          <span className="min-w-0">
+            <span className={`block font-semibold ${completed ? "text-slate-500 line-through" : "text-slate-950"}`}>
+              {project.name}
+            </span>
+            <span className="mt-1 block text-sm text-slate-600">Owner: {project.owner}</span>
+          </span>
+        </label>
+        <div className="flex items-center gap-2">
+          <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${priorityStyles[project.priority]}`}>
+            {project.priority}
+          </span>
+          <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${statusStyles[project.status]}`}>
+            {completed ? "Completed" : project.status}
+          </span>
+          <button
+            type="button"
+            onClick={() => onDelete(project.id)}
+            className="rounded-lg p-2 text-slate-400 transition hover:bg-white hover:text-rose-600"
+            aria-label={`Delete ${project.name}`}
+          >
+            <Trash2 size={17} />
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3">
+        <div className="grid gap-2 rounded-lg border border-slate-200 bg-white p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-semibold text-slate-700">
+            <span className="inline-flex items-center gap-2">
+              <CalendarDays size={16} />
+              {deadline.label}
+            </span>
+            <span>{deadline.percent.toFixed(0)}%</span>
+          </div>
+          <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+            <div
+              className={`h-full rounded-full transition-all ${deadline.color}`}
+              style={{ width: `${Math.max(3, Math.min(100, deadline.percent))}%` }}
+            />
+          </div>
+          <div className="grid gap-1 text-xs font-semibold text-slate-500 sm:grid-cols-3">
+            <span>Started: {formatDate(project.startedAt)}</span>
+            <span>Deadline: {project.dueDate || "Not set"}</span>
+            <span>Ended: {project.completedAt ? formatDate(project.completedAt) : "Not completed"}</span>
+          </div>
+        </div>
+
+        {project.notes ? <p className="text-sm leading-6 text-slate-600">{project.notes}</p> : null}
+      </div>
+    </article>
   );
 }
 
@@ -763,6 +882,71 @@ function TextArea({
       />
     </label>
   );
+}
+
+function getDeadlineProgress(project: ProjectEntry) {
+  if (project.completedAt) {
+    return {
+      percent: 100,
+      color: "bg-emerald-600",
+      label: "Completed",
+    };
+  }
+
+  if (!project.dueDate) {
+    return {
+      percent: 0,
+      color: "bg-slate-400",
+      label: "No deadline set",
+    };
+  }
+
+  const start = startOfDay(project.startedAt ? new Date(project.startedAt) : new Date(project.createdAt));
+  const end = endOfDay(new Date(`${project.dueDate}T00:00:00`));
+  const now = new Date();
+  const totalMs = Math.max(1, end.getTime() - start.getTime());
+  const elapsedMs = Math.max(0, now.getTime() - start.getTime());
+  const percent = Math.min(100, Math.max(0, (elapsedMs / totalMs) * 100));
+  const daysLeft = Math.ceil((end.getTime() - now.getTime()) / 86_400_000);
+
+  let color = "bg-emerald-600";
+  if (percent >= 85 || daysLeft <= 1) color = "bg-rose-600";
+  else if (percent >= 65 || daysLeft <= 3) color = "bg-orange-500";
+  else if (percent >= 40 || daysLeft <= 7) color = "bg-amber-500";
+
+  return {
+    percent,
+    color,
+    label:
+      daysLeft < 0
+        ? `${Math.abs(daysLeft)} day${Math.abs(daysLeft) === 1 ? "" : "s"} overdue`
+        : daysLeft === 0
+          ? "Due today"
+          : `${daysLeft} day${daysLeft === 1 ? "" : "s"} left`,
+  };
+}
+
+function startOfDay(date: Date) {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
+function endOfDay(date: Date) {
+  const next = new Date(date);
+  next.setHours(23, 59, 59, 999);
+  return next;
+}
+
+function formatDate(value: string) {
+  if (!value) return "Not set";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function formatStorageBytes(value: number) {

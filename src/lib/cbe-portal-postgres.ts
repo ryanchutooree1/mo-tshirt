@@ -18,8 +18,11 @@ export type CbeProjectEntry = {
   name: string;
   owner: string;
   status: "Planning" | "In progress" | "Waiting" | "Done";
+  priority: "Normal" | "Important" | "Urgent";
   dueDate: string;
   notes: string;
+  startedAt: string;
+  completedAt: string;
   createdAt: string;
 };
 
@@ -107,6 +110,28 @@ async function ensureCbeTables(client: Client) {
       created_at timestamptz not null default now()
     )
   `);
+
+  await client.query(`
+    alter table cbe_portal_projects
+      add column if not exists priority text not null default 'Normal',
+      add column if not exists started_at timestamptz not null default now(),
+      add column if not exists completed_at timestamptz
+  `);
+
+  await client.query(`
+    do $$
+    begin
+      if not exists (
+        select 1
+        from pg_constraint
+        where conname = 'cbe_portal_projects_priority_check'
+      ) then
+        alter table cbe_portal_projects
+          add constraint cbe_portal_projects_priority_check
+          check (priority in ('Normal', 'Important', 'Urgent'));
+      end if;
+    end $$;
+  `);
 }
 
 function toInfoEntry(row: {
@@ -132,8 +157,11 @@ function toProjectEntry(row: {
   name: string;
   owner: string;
   status: CbeProjectEntry["status"];
+  priority: CbeProjectEntry["priority"];
   due_date: string | null;
   notes: string;
+  started_at: string;
+  completed_at: string | null;
   created_at: string;
 }): CbeProjectEntry {
   return {
@@ -141,8 +169,11 @@ function toProjectEntry(row: {
     name: row.name,
     owner: row.owner,
     status: row.status,
+    priority: row.priority,
     dueDate: row.due_date || "",
     notes: row.notes,
+    startedAt: row.started_at,
+    completedAt: row.completed_at || "",
     createdAt: row.created_at,
   };
 }
@@ -178,13 +209,26 @@ async function listCbeProjects(client: Client) {
     name: string;
     owner: string;
     status: CbeProjectEntry["status"];
+    priority: CbeProjectEntry["priority"];
     due_date: string | null;
     notes: string;
+    started_at: string;
+    completed_at: string | null;
     created_at: string;
   }>(`
-    select id::text, name, owner, status, due_date::text, notes, created_at::text
+    select
+      id::text,
+      name,
+      owner,
+      status,
+      priority,
+      due_date::text,
+      notes,
+      started_at::text,
+      completed_at::text,
+      created_at::text
     from cbe_portal_projects
-    order by created_at desc, id desc
+    order by completed_at nulls first, due_date nulls last, created_at desc, id desc
   `);
   return result.rows.map(toProjectEntry);
 }
@@ -253,7 +297,7 @@ export async function deleteCbeInformation(id: string) {
 export async function createCbeProject(input: {
   name: string;
   owner: string;
-  status: CbeProjectEntry["status"];
+  priority: CbeProjectEntry["priority"];
   dueDate: string;
   notes: string;
 }) {
@@ -263,17 +307,73 @@ export async function createCbeProject(input: {
       name: string;
       owner: string;
       status: CbeProjectEntry["status"];
+      priority: CbeProjectEntry["priority"];
       due_date: string | null;
       notes: string;
+      started_at: string;
+      completed_at: string | null;
       created_at: string;
     }>(
       `
-        insert into cbe_portal_projects (name, owner, status, due_date, notes)
-        values ($1, $2, $3, $4, $5)
-        returning id::text, name, owner, status, due_date::text, notes, created_at::text
+        insert into cbe_portal_projects (name, owner, status, priority, due_date, notes)
+        values ($1, $2, 'In progress', $3, $4, $5)
+        returning
+          id::text,
+          name,
+          owner,
+          status,
+          priority,
+          due_date::text,
+          notes,
+          started_at::text,
+          completed_at::text,
+          created_at::text
       `,
-      [input.name, input.owner, input.status, input.dueDate || null, input.notes]
+      [input.name, input.owner, input.priority, input.dueDate || null, input.notes]
     );
+    return toProjectEntry(result.rows[0]);
+  });
+}
+
+export async function updateCbeProjectCompletion(id: string, completed: boolean) {
+  return withClient(async (client) => {
+    const result = await client.query<{
+      id: string;
+      name: string;
+      owner: string;
+      status: CbeProjectEntry["status"];
+      priority: CbeProjectEntry["priority"];
+      due_date: string | null;
+      notes: string;
+      started_at: string;
+      completed_at: string | null;
+      created_at: string;
+    }>(
+      `
+        update cbe_portal_projects
+        set
+          status = $2,
+          completed_at = case when $3 then coalesce(completed_at, now()) else null end
+        where id = $1
+        returning
+          id::text,
+          name,
+          owner,
+          status,
+          priority,
+          due_date::text,
+          notes,
+          started_at::text,
+          completed_at::text,
+          created_at::text
+      `,
+      [id, completed ? "Done" : "In progress", completed]
+    );
+
+    if (!result.rows[0]) {
+      throw new Error("Project was not found.");
+    }
+
     return toProjectEntry(result.rows[0]);
   });
 }

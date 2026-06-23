@@ -6,16 +6,16 @@ import {
 
 export const runtime = "nodejs";
 
-const STATUSES = new Set(["Planning", "In progress", "Waiting", "Done"]);
+const PRIORITIES = new Set(["Normal", "Important", "Urgent"]);
 
 function readText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function readStatus(value: unknown): CbeProjectEntry["status"] {
-  return typeof value === "string" && STATUSES.has(value)
-    ? (value as CbeProjectEntry["status"])
-    : "Planning";
+function readPriority(value: unknown): CbeProjectEntry["priority"] {
+  return typeof value === "string" && PRIORITIES.has(value)
+    ? (value as CbeProjectEntry["priority"])
+    : "Normal";
 }
 
 export async function POST(req: Request) {
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     const project = await createCbeProject({
       name,
       owner: readText(payload.owner) || "Unassigned",
-      status: readStatus(payload.status),
+      priority: readPriority(payload.priority),
       dueDate: readText(payload.dueDate),
       notes: readText(payload.notes),
     });
