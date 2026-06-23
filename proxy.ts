@@ -34,8 +34,18 @@ function isPartnerDeskRoute(pathname: string) {
   return pathname === "/admin/yan_list" || pathname === "/admin/shab_list";
 }
 
+function isCbeHost(host: string | null) {
+  return Boolean(host?.split(":")[0].toLowerCase() === "cbe.mo-tshirt.mu");
+}
+
 export async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
+
+  if (isCbeHost(req.headers.get("host")) && pathname === "/") {
+    const url = req.nextUrl.clone();
+    url.pathname = "/cbe";
+    return applySecurityHeaders(NextResponse.rewrite(url));
+  }
 
   if (pathname.startsWith("/api/")) {
     const rateLimit = evaluateRequestRateLimit(req.headers, resolveApiRateLimit(pathname));
@@ -132,5 +142,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/design-studio", "/iot", "/api/:path*"],
+  matcher: ["/", "/admin/:path*", "/design-studio", "/iot", "/api/:path*"],
 };
