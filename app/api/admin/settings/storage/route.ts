@@ -36,6 +36,10 @@ async function pathExists(targetPath: string) {
   }
 }
 
+function fromProjectRoot(entry: string) {
+  return path.join(/* turbopackIgnore: true */ process.cwd(), entry);
+}
+
 async function sumPathBytes(targetPath: string): Promise<number> {
   const info = await stat(targetPath);
 
@@ -67,10 +71,9 @@ export async function GET() {
   }
 
   try {
-    const cwd = process.cwd();
-    const buildTargets = BUILD_FOOTPRINT_PATHS.map((entry) => path.join(cwd, entry));
-    const sourceTargets = SOURCE_FOOTPRINT_PATHS.map((entry) => path.join(cwd, entry));
-    const hasBuildOutput = await pathExists(path.join(cwd, ".next"));
+    const buildTargets = BUILD_FOOTPRINT_PATHS.map(fromProjectRoot);
+    const sourceTargets = SOURCE_FOOTPRINT_PATHS.map(fromProjectRoot);
+    const hasBuildOutput = await pathExists(fromProjectRoot(".next"));
     const targets = hasBuildOutput ? buildTargets : sourceTargets;
 
     let usedBytes = 0;
