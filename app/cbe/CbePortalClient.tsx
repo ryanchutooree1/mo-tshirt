@@ -25,7 +25,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-type PortalTab = "information" | "projects" | "storage" | "gemma";
+type PortalTab = "information" | "projects" | "storage" | "gemini";
 
 type InfoEntry = {
   id: string;
@@ -67,16 +67,16 @@ type PortalPayload = {
   error?: string;
 };
 
-type GemmaStatus = {
+type GeminiStatus = {
   ok: boolean;
-  installed?: boolean;
+  configured?: boolean;
   model: string;
   endpoint: string;
-  models?: string[];
+  provider?: string;
   error?: string | null;
 };
 
-type GemmaMessage = {
+type GeminiMessage = {
   id: number;
   role: "user" | "assistant";
   content: string;
@@ -122,10 +122,10 @@ export default function CbePortalClient() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(true);
-  const [gemmaStatus, setGemmaStatus] = useState<GemmaStatus | null>(null);
-  const [gemmaPrompt, setGemmaPrompt] = useState("");
-  const [gemmaMessages, setGemmaMessages] = useState<GemmaMessage[]>([]);
-  const [gemmaLoading, setGemmaLoading] = useState(false);
+  const [geminiStatus, setGeminiStatus] = useState<GeminiStatus | null>(null);
+  const [geminiPrompt, setGeminiPrompt] = useState("");
+  const [geminiMessages, setGeminiMessages] = useState<GeminiMessage[]>([]);
+  const [geminiLoading, setGeminiLoading] = useState(false);
   const [infoDraft, setInfoDraft] = useState(EMPTY_INFO_DRAFT);
   const [projectDraft, setProjectDraft] = useState(EMPTY_PROJECT_DRAFT);
 
@@ -163,28 +163,32 @@ export default function CbePortalClient() {
 
   useEffect(() => {
     void loadPortalData();
-    void loadGemmaStatus();
+    void loadGeminiStatus();
   }, []);
 
-  async function loadGemmaStatus() {
+  async function loadGeminiStatus() {
     try {
-      const res = await fetch("/api/cbe-portal/gemma", { cache: "no-store" });
-      const data = (await res.json().catch(() => ({}))) as GemmaStatus;
-      setGemmaStatus({
+      const res = await fetch("/api/cbe-portal/gemini", { cache: "no-store" });
+      const data = (await res.json().catch(() => ({}))) as GeminiStatus;
+      setGeminiStatus({
         ok: Boolean(data.ok),
-        installed: data.installed,
-        model: data.model || "gemma3:1b",
-        endpoint: data.endpoint || "http://localhost:11434",
-        models: data.models || [],
+        configured: data.configured,
+        model: data.model || "gemini-2.5-flash",
+        endpoint:
+          data.endpoint ||
+          "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+        provider: data.provider || "Google Gemini",
         error: data.error || null,
       });
     } catch {
-      setGemmaStatus({
+      setGeminiStatus({
         ok: false,
-        installed: false,
-        model: "gemma3:1b",
-        endpoint: "http://localhost:11434",
-        error: "Could not check Gemma status.",
+        configured: false,
+        model: "gemini-2.5-flash",
+        endpoint:
+          "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+        provider: "Google Gemini",
+        error: "Could not check Gemini status.",
       });
     }
   }
@@ -306,22 +310,22 @@ export default function CbePortalClient() {
     }
   }
 
-  async function sendGemmaMessage() {
-    const prompt = gemmaPrompt.trim();
+  async function sendGeminiMessage() {
+    const prompt = geminiPrompt.trim();
     if (!prompt) return;
 
-    const userMessage: GemmaMessage = {
+    const userMessage: GeminiMessage = {
       id: Date.now(),
       role: "user",
       content: prompt,
     };
-    setGemmaMessages((current) => [...current, userMessage]);
-    setGemmaPrompt("");
-    setGemmaLoading(true);
+    setGeminiMessages((current) => [...current, userMessage]);
+    setGeminiPrompt("");
+    setGeminiLoading(true);
     setError(null);
 
     try {
-      const res = await fetch("/api/cbe-portal/gemma", {
+      const res = await fetch("/api/cbe-portal/gemini", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
@@ -330,18 +334,18 @@ export default function CbePortalClient() {
         reply?: string;
         error?: string;
       };
-      if (!res.ok) throw new Error(data.error || "Gemma did not respond.");
-      setGemmaMessages((current) => [
+      if (!res.ok) throw new Error(data.error || "Gemini did not respond.");
+      setGeminiMessages((current) => [
         ...current,
         {
           id: Date.now() + 1,
           role: "assistant",
-          content: data.reply || "Gemma returned an empty response.",
+          content: data.reply || "Gemini returned an empty response.",
         },
       ]);
-      await loadGemmaStatus();
+      await loadGeminiStatus();
     } catch (sendError) {
-      setGemmaMessages((current) => [
+      setGeminiMessages((current) => [
         ...current,
         {
           id: Date.now() + 1,
@@ -349,12 +353,12 @@ export default function CbePortalClient() {
           content:
             sendError instanceof Error
               ? sendError.message
-              : "Gemma/Ollama is not reachable.",
+              : "Gemini is not reachable.",
         },
       ]);
-      await loadGemmaStatus();
+      await loadGeminiStatus();
     } finally {
-      setGemmaLoading(false);
+      setGeminiLoading(false);
     }
   }
 
@@ -429,11 +433,11 @@ export default function CbePortalClient() {
                 onClick={() => setActiveTab("storage")}
               />
               <TabButton
-                active={activeTab === "gemma"}
+                active={activeTab === "gemini"}
                 icon={<Bot size={18} />}
-                label="Gemma AI"
-                description="Local Docker assistant"
-                onClick={() => setActiveTab("gemma")}
+                label="Gemini AI"
+                description="Hosted AI assistant"
+                onClick={() => setActiveTab("gemini")}
               />
             </nav>
           </aside>
@@ -497,15 +501,15 @@ export default function CbePortalClient() {
             <StorageTab storage={storage} onRefresh={() => void refreshStorage()} />
           ) : null}
 
-          {activeTab === "gemma" ? (
-            <GemmaTab
-              status={gemmaStatus}
-              messages={gemmaMessages}
-              prompt={gemmaPrompt}
-              loading={gemmaLoading}
-              onPromptChange={setGemmaPrompt}
-              onRefresh={() => void loadGemmaStatus()}
-              onSend={() => void sendGemmaMessage()}
+          {activeTab === "gemini" ? (
+            <GeminiTab
+              status={geminiStatus}
+              messages={geminiMessages}
+              prompt={geminiPrompt}
+              loading={geminiLoading}
+              onPromptChange={setGeminiPrompt}
+              onRefresh={() => void loadGeminiStatus()}
+              onSend={() => void sendGeminiMessage()}
             />
           ) : null}
         </div>
@@ -916,7 +920,7 @@ function StorageTab({
   );
 }
 
-function GemmaTab({
+function GeminiTab({
   status,
   messages,
   prompt,
@@ -925,8 +929,8 @@ function GemmaTab({
   onRefresh,
   onSend,
 }: {
-  status: GemmaStatus | null;
-  messages: GemmaMessage[];
+  status: GeminiStatus | null;
+  messages: GeminiMessage[];
   prompt: string;
   loading: boolean;
   onPromptChange: (value: string) => void;
@@ -938,7 +942,7 @@ function GemmaTab({
       <div className="rounded-lg border border-slate-200 bg-white p-5">
         <div className="flex items-center gap-2">
           <Bot className="text-teal-700" size={20} />
-          <h2 className="text-lg font-semibold">Gemma AI</h2>
+          <h2 className="text-lg font-semibold">Gemini AI</h2>
         </div>
 
         <div className="mt-4 grid gap-3">
@@ -950,16 +954,23 @@ function GemmaTab({
             }`}
           >
             <p className="text-sm font-bold">
-              {status?.ok ? "Connected" : "Waiting for Docker Gemma"}
+              {status?.ok ? "Connected to Gemini" : "Waiting for Gemini key"}
             </p>
             <dl className="mt-3 grid gap-2 text-xs font-semibold">
               <div>
+                <dt className="text-slate-500">Provider</dt>
+                <dd className="mt-1 font-mono">{status?.provider || "Google Gemini"}</dd>
+              </div>
+              <div>
                 <dt className="text-slate-500">Model</dt>
-                <dd className="mt-1 font-mono">{status?.model || "gemma3:1b"}</dd>
+                <dd className="mt-1 font-mono">{status?.model || "gemini-2.5-flash"}</dd>
               </div>
               <div>
                 <dt className="text-slate-500">Endpoint</dt>
-                <dd className="mt-1 break-all font-mono">{status?.endpoint || "http://localhost:11434"}</dd>
+                <dd className="mt-1 break-all font-mono">
+                  {status?.endpoint ||
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"}
+                </dd>
               </div>
             </dl>
             {status?.error ? <p className="mt-3 text-xs font-bold">{status.error}</p> : null}
@@ -975,9 +986,9 @@ function GemmaTab({
           </button>
 
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-xs font-semibold leading-6 text-slate-600">
-            Run locally with Docker:
+            Vercel server variable:
             <code className="mt-2 block break-all rounded-lg bg-white p-3 font-mono text-slate-800">
-              npm run docker:gemma
+              GEMINI_API_KEY or GOOGLE_API_KEY
             </code>
           </div>
         </div>
@@ -986,14 +997,14 @@ function GemmaTab({
       <div className="rounded-lg border border-slate-200 bg-white p-5">
         <div className="flex items-center gap-2">
           <Sparkles className="text-teal-700" size={20} />
-          <h2 className="text-lg font-semibold">Ask Gemma</h2>
+          <h2 className="text-lg font-semibold">Ask Gemini</h2>
         </div>
 
         <div className="mt-4 grid min-h-[320px] gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
           {messages.length === 0 ? (
             <EmptyState
               icon={<Bot size={20} />}
-              text="Ask Gemma to summarize tasks, plan next steps, draft notes, or review project deadlines."
+              text="Ask Gemini to summarize tasks, plan next steps, draft notes, or review project deadlines."
             />
           ) : null}
 
