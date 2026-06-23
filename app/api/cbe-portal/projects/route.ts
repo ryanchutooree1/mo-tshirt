@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { getAdminRequestSession } from "@/lib/admin-request";
 import {
   createCbeProject,
   type CbeProjectEntry,
@@ -20,10 +19,6 @@ function readStatus(value: unknown): CbeProjectEntry["status"] {
 }
 
 export async function POST(req: Request) {
-  if (!(await getAdminRequestSession())) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  }
-
   const payload = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const name = readText(payload.name);
 

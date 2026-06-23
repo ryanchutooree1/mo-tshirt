@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { getAdminRequestSession } from "@/lib/admin-request";
 import { createCbeInformation } from "@/lib/cbe-portal-postgres";
 
 export const runtime = "nodejs";
@@ -9,10 +8,6 @@ function readText(value: unknown) {
 }
 
 export async function POST(req: Request) {
-  if (!(await getAdminRequestSession())) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  }
-
   const payload = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const title = readText(payload.title);
   const email = readText(payload.email);
