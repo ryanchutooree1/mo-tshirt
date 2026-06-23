@@ -634,9 +634,10 @@ function TaskCard({
 }) {
   const deadline = getDeadlineProgress(project);
   const completed = project.status === "Done" || Boolean(project.completedAt);
+  const timelineDays = getTimelineDays(project);
 
   return (
-    <article className={`rounded-lg border p-4 ${completed ? "border-emerald-200 bg-emerald-50/60" : "border-slate-200 bg-slate-50"}`}>
+    <article className={`rounded-lg border p-5 ${completed ? "border-emerald-200 bg-emerald-50/60" : "border-slate-200 bg-slate-50"}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-3">
           <input
@@ -670,24 +671,53 @@ function TaskCard({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3">
-        <div className="grid gap-2 rounded-lg border border-slate-200 bg-white p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-semibold text-slate-700">
+      <div className="mt-5 grid gap-4">
+        <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-lg font-bold text-slate-800">
             <span className="inline-flex items-center gap-2">
-              <CalendarDays size={16} />
+              <CalendarDays size={20} />
               {deadline.label}
             </span>
             <span>{deadline.percent.toFixed(0)}%</span>
           </div>
-          <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
             <div
-              className={`h-full rounded-full transition-all ${deadline.color}`}
+              className={`absolute inset-y-0 left-0 ${deadline.color} transition-all`}
               style={{ width: `${Math.max(3, Math.min(100, deadline.percent))}%` }}
             />
+            <div
+              className="relative z-10 grid min-h-16"
+              style={{
+                gridTemplateColumns: `repeat(${Math.max(1, timelineDays.length)}, minmax(42px, 1fr))`,
+              }}
+            >
+              {timelineDays.map((day, index) => (
+                <div
+                  key={day.key}
+                  className={`flex flex-col items-center justify-center border-l border-white/55 px-1 text-center first:border-l-0 ${
+                    day.isToday ? "bg-white/30" : ""
+                  }`}
+                >
+                  <span className="text-sm font-black tabular-nums text-slate-950">
+                    {day.label}
+                  </span>
+                  <span className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-700">
+                    {day.month}
+                  </span>
+                  {index === 0 || index === timelineDays.length - 1 || day.isToday ? (
+                    <span className="mt-1 rounded-full bg-white/85 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+                      {day.badge}
+                    </span>
+                  ) : null}
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="grid gap-1 text-xs font-semibold text-slate-500 sm:grid-cols-3">
+
+          <div className="grid gap-3 text-sm font-bold text-slate-600 sm:grid-cols-3">
             <span>Started: {formatDate(project.startedAt)}</span>
-            <span>Deadline: {project.dueDate || "Not set"}</span>
+            <span>Deadline: {formatDeadlineDate(project.dueDate)}</span>
             <span>Ended: {project.completedAt ? formatDate(project.completedAt) : "Not completed"}</span>
           </div>
         </div>
@@ -938,6 +968,61 @@ function endOfDay(date: Date) {
   return next;
 }
 
+function getTimelineDays(project: ProjectEntry) {
+  const start = startOfDay(project.startedAt ? new Date(project.startedAt) : new Date(project.createdAt));
+  const end = project.dueDate
+    ? startOfDay(new Date(`${project.dueDate}T00:00:00`))
+    : startOfDay(new Date());
+  const last = end.getTime() >= start.getTime() ? end : start;
+  const totalDays = Math.floor((last.getTime() - start.getTime()) / 86_400_000) + 1;
+  const maxTicks = 16;
+  const step = Math.max(1, Math.ceil(totalDays / maxTicks));
+  const todayKey = toDateKey(new Date());
+  const days: Array<{
+    key: string;
+    label: string;
+    month: string;
+    badge: string;
+    isToday: boolean;
+  }> = [];
+
+  for (let index = 0; index < totalDays; index += step) {
+    days.push(toTimelineDay(addDays(start, index), todayKey, index === 0, false));
+  }
+
+  const endDay = toTimelineDay(last, todayKey, false, true);
+  if (days[days.length - 1]?.key !== endDay.key) {
+    days.push(endDay);
+  } else {
+    days[days.length - 1] = endDay;
+  }
+
+  return days;
+}
+
+function toTimelineDay(date: Date, todayKey: string, isStart: boolean, isDeadline: boolean) {
+  const key = toDateKey(date);
+  const label = date.toLocaleDateString(undefined, { day: "2-digit" });
+  const month = date.toLocaleDateString(undefined, { month: "short" });
+  return {
+    key,
+    label,
+    month,
+    badge: key === todayKey ? "Today" : isStart ? "Start" : isDeadline ? "Deadline" : "",
+    isToday: key === todayKey,
+  };
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function toDateKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 function formatDate(value: string) {
   if (!value) return "Not set";
   const date = new Date(value);
@@ -947,6 +1032,11 @@ function formatDate(value: string) {
     month: "short",
     year: "numeric",
   });
+}
+
+function formatDeadlineDate(value: string) {
+  if (!value) return "Not set";
+  return formatDate(`${value}T00:00:00`);
 }
 
 function formatStorageBytes(value: number) {
