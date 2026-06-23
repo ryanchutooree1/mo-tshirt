@@ -1316,7 +1316,12 @@ export default function QuotationApprovalPage() {
   const [partnerPrintPlacement, setPartnerPrintPlacement] =
     useState<PartnerPrintPlacement>("not_set");
   const [logo, setLogo] = useState<LogoAsset | null>(null);
+  const [requestedQuoteId, setRequestedQuoteId] = useState<string | null>(null);
   const prevDocumentTypeRef = useRef<DocumentType | null>(null);
+
+  useEffect(() => {
+    setRequestedQuoteId(new URLSearchParams(window.location.search).get("quoteId"));
+  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -1465,10 +1470,14 @@ export default function QuotationApprovalPage() {
       setSelectedId(null);
       return;
     }
+    if (requestedQuoteId && quotes.find((q) => q.id === requestedQuoteId)) {
+      setSelectedId(requestedQuoteId);
+      return;
+    }
     if (!selectedId || !quotes.find((q) => q.id === selectedId)) {
       setSelectedId(quotes[0].id);
     }
-  }, [quotes, selectedId]);
+  }, [quotes, requestedQuoteId, selectedId]);
 
   const selected = useMemo(
     () => quotes.find((quote) => quote.id === selectedId) || null,

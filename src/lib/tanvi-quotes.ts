@@ -58,11 +58,30 @@ type RawQuote = {
   quote?: {
     documentType?: unknown;
     documentNumber?: unknown;
+    documentDate?: unknown;
+    validUntil?: unknown;
     clientCompany?: unknown;
+    clientAddress?: unknown;
+    clientBrn?: unknown;
+    clientVat?: unknown;
     paymentStatus?: unknown;
+    preparedBy?: unknown;
     currency?: unknown;
+    deliveryFee?: unknown;
+    discount?: unknown;
+    amountReceived?: unknown;
+    notes?: unknown;
+    terms?: unknown;
+    showLineItems?: unknown;
+    showTotals?: unknown;
     total?: unknown;
-    lines?: { description?: unknown; quantity?: unknown }[];
+    subtotal?: unknown;
+    lines?: {
+      description?: unknown;
+      quantity?: unknown;
+      unitPrice?: unknown;
+      includeInTotals?: unknown;
+    }[];
   };
 };
 
@@ -119,6 +138,37 @@ export type TanviQuotePartner = {
   responses: TanviPartnerResponse[];
 };
 
+export type TanviDocumentLine = {
+  description: string;
+  quantity: number | null;
+  unitPrice: number | null;
+  includeInTotals: boolean;
+};
+
+export type TanviDocumentSummary = {
+  documentType: string;
+  documentNumber: string;
+  documentDate: string;
+  validUntil: string;
+  clientCompany: string;
+  clientAddress: string;
+  clientBrn: string;
+  clientVat: string;
+  paymentStatus: string;
+  preparedBy: string;
+  currency: string;
+  deliveryFee: number;
+  discount: number;
+  amountReceived: number;
+  notes: string;
+  terms: string;
+  showLineItems: boolean;
+  showTotals: boolean;
+  subtotal: number;
+  total: number;
+  lines: TanviDocumentLine[];
+};
+
 export type TanviQuoteSummary = {
   id: string;
   code: string;
@@ -139,6 +189,7 @@ export type TanviQuoteSummary = {
   notes: string;
   currency: string;
   total: number | null;
+  document: TanviDocumentSummary;
   artwork: TanviArtworkAttachment[];
   artworkCount: number;
   hasOpenArtwork: boolean;
@@ -151,6 +202,18 @@ export type TanviQuoteSummary = {
 
 function safeString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function getDocumentLines(quote: RawQuote): TanviDocumentLine[] {
+  const lines = Array.isArray(quote.quote?.lines) ? quote.quote.lines : [];
+  return lines
+    .map((line) => ({
+      description: safeString(line.description),
+      quantity: safeNumber(line.quantity, 0) > 0 ? safeNumber(line.quantity, 0) : null,
+      unitPrice: safeNumber(line.unitPrice, 0) > 0 ? safeNumber(line.unitPrice, 0) : null,
+      includeInTotals: line.includeInTotals === undefined ? true : Boolean(line.includeInTotals),
+    }))
+    .filter((line) => line.description || line.quantity || line.unitPrice);
 }
 
 function safeNumber(value: unknown, fallback = 0) {
@@ -419,6 +482,11 @@ export function mapTanviQuote(
   const attachments = getAttachments(quote);
   const garmentRows = getGarmentRows(quote);
   const total = safeNumber(quote.quote?.total, 0);
+  const documentLines = getDocumentLines(quote);
+  const subtotal = safeNumber(quote.quote?.subtotal, 0);
+  const deliveryFee = safeNumber(quote.quote?.deliveryFee, 0);
+  const discount = safeNumber(quote.quote?.discount, 0);
+  const amountReceived = safeNumber(quote.quote?.amountReceived, 0);
 
   return {
     id,
@@ -449,6 +517,29 @@ export function mapTanviQuote(
       safeString(quote.message),
     currency: safeString(quote.quote?.currency) || "Rs",
     total: total > 0 ? total : null,
+    document: {
+      documentType: safeString(quote.quote?.documentType) || "quotation",
+      documentNumber: safeString(quote.quote?.documentNumber) || `Q-${id.slice(-5).toUpperCase()}`,
+      documentDate: safeString(quote.quote?.documentDate),
+      validUntil: safeString(quote.quote?.validUntil),
+      clientCompany: safeString(quote.quote?.clientCompany),
+      clientAddress: safeString(quote.quote?.clientAddress),
+      clientBrn: safeString(quote.quote?.clientBrn),
+      clientVat: safeString(quote.quote?.clientVat),
+      paymentStatus: safeString(quote.quote?.paymentStatus),
+      preparedBy: safeString(quote.quote?.preparedBy),
+      currency: safeString(quote.quote?.currency) || "Rs",
+      deliveryFee,
+      discount,
+      amountReceived,
+      notes: safeString(quote.quote?.notes),
+      terms: safeString(quote.quote?.terms),
+      showLineItems: quote.quote?.showLineItems === undefined ? true : Boolean(quote.quote.showLineItems),
+      showTotals: quote.quote?.showTotals === undefined ? true : Boolean(quote.quote.showTotals),
+      subtotal,
+      total,
+      lines: documentLines,
+    },
     artwork: sanitizeArtwork(attachments),
     artworkCount: attachments.length,
     hasOpenArtwork: attachments.some((attachment) => Boolean(safeString(attachment.url))),

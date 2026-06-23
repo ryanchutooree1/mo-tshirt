@@ -25,6 +25,7 @@ import {
   Search,
   Send,
   TimerReset,
+  Trash2,
   Users,
   X,
   ZoomIn,
@@ -83,6 +84,39 @@ type WhatsappOrderDraft = {
 };
 
 type WhatsappDraftTextField = Exclude<keyof WhatsappOrderDraft, "lineItems">;
+type TanviDocumentType = "quotation" | "invoice" | "partial_receipt" | "receipt";
+
+type DocumentStudioLine = {
+  id: string;
+  description: string;
+  quantity: string;
+  unitPrice: string;
+  includeInTotals: boolean;
+};
+
+type DocumentStudioDraft = {
+  documentType: TanviDocumentType;
+  documentNumber: string;
+  documentDate: string;
+  validUntil: string;
+  clientCompany: string;
+  clientAddress: string;
+  clientBrn: string;
+  clientVat: string;
+  paymentStatus: string;
+  preparedBy: string;
+  currency: string;
+  deliveryFee: string;
+  discount: string;
+  amountReceived: string;
+  notes: string;
+  terms: string;
+  showLineItems: boolean;
+  showTotals: boolean;
+  lines: DocumentStudioLine[];
+};
+
+type DocumentStudioField = Exclude<keyof DocumentStudioDraft, "lines" | "showLineItems" | "showTotals">;
 
 const TANVI_STEPS: { key: TanviStepKey; label: string }[] = [
   { key: "client_onboarding", label: "Client onboarding" },
@@ -129,11 +163,33 @@ const SHABBANAZ_PRINT_PRICE_OPTIONS: typeof YAN_PRINT_PRICE_OPTIONS = [
 
 const WHATSAPP_LOGO_ACCEPT =
   "image/png,image/jpeg,image/jpg,image/webp,image/svg+xml,image/heic,image/heif,application/pdf";
+const DOCUMENT_TYPE_LABELS: Record<TanviDocumentType, string> = {
+  quotation: "Quotation",
+  invoice: "Invoice",
+  partial_receipt: "Partial receipt",
+  receipt: "Receipt",
+};
+const DOCUMENT_TYPE_OPTIONS: TanviDocumentType[] = [
+  "quotation",
+  "invoice",
+  "partial_receipt",
+  "receipt",
+];
 
 const defaultManager: ProductionManager = {
   name: "Tanvi",
   email: "",
 };
+
+function createDocumentLine(index = 1): DocumentStudioLine {
+  return {
+    id: `doc-line-${Date.now().toString(36)}-${index}-${Math.random().toString(36).slice(2, 6)}`,
+    description: "",
+    quantity: "1",
+    unitPrice: "",
+    includeInTotals: true,
+  };
+}
 
 function createWhatsappOrderLine(index = 1): WhatsappOrderLine {
   return {
@@ -175,6 +231,74 @@ const emptyWhatsappDraft: WhatsappOrderDraft = {
   notes: "",
   lineItems: [{ ...createWhatsappOrderLine(1), id: "line-1" }],
 };
+
+function getDefaultTerms(documentType: TanviDocumentType) {
+  if (documentType === "invoice") {
+    return "Orders are processed after receipt of the required advance payment.";
+  }
+  if (documentType === "receipt") {
+    return "This receipt confirms payment received by MO T-SHIRT.";
+  }
+  if (documentType === "partial_receipt") {
+    return "This receipt confirms partial payment received by MO T-SHIRT.";
+  }
+  return "This quotation is valid for a limited period and production starts after approval.";
+}
+
+function normalizeDocumentType(value: string): TanviDocumentType {
+  return DOCUMENT_TYPE_OPTIONS.includes(value as TanviDocumentType)
+    ? (value as TanviDocumentType)
+    : "quotation";
+}
+
+function getDefaultPaymentStatus(documentType: TanviDocumentType) {
+  if (documentType === "invoice") return "Unpaid";
+  if (documentType === "receipt") return "Paid";
+  if (documentType === "partial_receipt") return "Partially paid";
+  return "Quotation only";
+}
+
+function buildDocumentDraftFromQuote(quote: TanviQuoteSummary): DocumentStudioDraft {
+  const documentType = normalizeDocumentType(quote.document.documentType);
+  const lines = quote.document.lines.length
+    ? quote.document.lines.map((line, index) => ({
+        id: `doc-line-${index + 1}`,
+        description: line.description,
+        quantity: line.quantity ? String(line.quantity) : "",
+        unitPrice: line.unitPrice ? String(line.unitPrice) : "",
+        includeInTotals: line.includeInTotals,
+      }))
+    : [
+        {
+          ...createDocumentLine(1),
+          id: "doc-line-1",
+          description: quote.product === "Not set" ? "" : quote.product,
+          quantity: quote.pieces ? String(quote.pieces) : "1",
+        },
+      ];
+
+  return {
+    documentType,
+    documentNumber: quote.document.documentNumber || quote.code,
+    documentDate: quote.document.documentDate || format(new Date(), "yyyy-MM-dd"),
+    validUntil: quote.document.validUntil,
+    clientCompany: quote.document.clientCompany || quote.clientCompany || quote.clientName,
+    clientAddress: quote.document.clientAddress,
+    clientBrn: quote.document.clientBrn,
+    clientVat: quote.document.clientVat,
+    paymentStatus: quote.document.paymentStatus || getDefaultPaymentStatus(documentType),
+    preparedBy: quote.document.preparedBy || "Tanvi",
+    currency: quote.document.currency || quote.currency || "Rs",
+    deliveryFee: quote.document.deliveryFee ? String(quote.document.deliveryFee) : "",
+    discount: quote.document.discount ? String(quote.document.discount) : "",
+    amountReceived: quote.document.amountReceived ? String(quote.document.amountReceived) : "",
+    notes: quote.document.notes || quote.notes,
+    terms: quote.document.terms || getDefaultTerms(documentType),
+    showLineItems: quote.document.showLineItems,
+    showTotals: quote.document.showTotals,
+    lines,
+  };
+}
 
 function formatDateTime(value: string | null) {
   if (!value) return "Not set";
@@ -579,6 +703,8 @@ export default function TanviDeskPage() {
   const [partnerReplyDrafts, setPartnerReplyDrafts] = useState<Record<string, string>>({});
   const [sendingPartnerReply, setSendingPartnerReply] = useState<string | null>(null);
   const [artworkDescriptionDrafts, setArtworkDescriptionDrafts] = useState<Record<string, string>>({});
+  const [documentStudioOpen, setDocumentStudioOpen] = useState(true);
+  const [documentDraft, setDocumentDraft] = useState<DocumentStudioDraft | null>(null);
 
   useEffect(() => {
     if (!themeReady || theme === "light") return;
@@ -658,6 +784,7 @@ export default function TanviDeskPage() {
     if (!selected) return;
     setVisibleFields(selected.partner.visibleFields);
     setPrintPlacement(selected.partner.printPlacement);
+    setDocumentDraft(buildDocumentDraftFromQuote(selected));
     setPartnerPriceDrafts(
       activePartners.reduce<Record<string, string>>((drafts, partner) => {
         const response = selected.partner.responses.find(
@@ -817,6 +944,63 @@ export default function TanviDeskPage() {
       ...current,
       [field]: value,
     }));
+  }
+
+  function updateDocumentDraft(field: DocumentStudioField, value: string) {
+    setDocumentDraft((current) => {
+      if (!current) return current;
+      if (field === "documentType") {
+        const documentType = normalizeDocumentType(value);
+        return {
+          ...current,
+          documentType,
+          paymentStatus: getDefaultPaymentStatus(documentType),
+          terms: current.terms || getDefaultTerms(documentType),
+        };
+      }
+      return {
+        ...current,
+        [field]: value,
+      };
+    });
+  }
+
+  function updateDocumentLine(lineId: string, field: keyof DocumentStudioLine, value: string | boolean) {
+    setDocumentDraft((current) =>
+      current
+        ? {
+            ...current,
+            lines: current.lines.map((line) =>
+              line.id === lineId ? { ...line, [field]: value } : line
+            ),
+          }
+        : current
+    );
+  }
+
+  function addDocumentLine() {
+    setDocumentDraft((current) =>
+      current
+        ? {
+            ...current,
+            lines: [...current.lines, createDocumentLine(current.lines.length + 1)],
+          }
+        : current
+    );
+  }
+
+  function removeDocumentLine(lineId: string) {
+    setDocumentDraft((current) =>
+      current
+        ? {
+            ...current,
+            lines:
+              current.lines.length > 1
+                ? current.lines.filter((line) => line.id !== lineId)
+                : current.lines,
+          }
+        : current
+    );
   }
 
   function updateWhatsappLine(
@@ -989,6 +1173,30 @@ export default function TanviDeskPage() {
         setSaving(null);
       }
     })();
+  }
+
+  async function saveDocumentStudio() {
+    if (!selected || !documentDraft) return;
+    setSaving("document-studio");
+    setNotice(null);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/tanvi/quotes/${encodeURIComponent(selected.id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentDetails: documentDraft }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.quote) {
+        throw new Error(data?.error || "Could not save document.");
+      }
+      replaceQuote(data.quote as TanviQuoteSummary);
+      setNotice(`${DOCUMENT_TYPE_LABELS[documentDraft.documentType]} saved for ${selected.clientName}.`);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Could not save document.");
+    } finally {
+      setSaving(null);
+    }
   }
 
   const pageClass = isDark
@@ -1245,6 +1453,29 @@ export default function TanviDeskPage() {
   const partnerAcceptedPercent = partnerVisibleTotal
     ? Math.round((partnerAcceptedTotal / partnerVisibleTotal) * 100)
     : 0;
+  const documentTotals = useMemo(() => {
+    if (!documentDraft) {
+      return { subtotal: 0, deliveryFee: 0, discount: 0, total: 0, amountReceived: 0, balance: 0 };
+    }
+    const subtotal = documentDraft.lines.reduce((sum, line) => {
+      if (!line.includeInTotals) return sum;
+      const quantity = Number(line.quantity) || 0;
+      const unitPrice = Number(line.unitPrice) || 0;
+      return sum + quantity * unitPrice;
+    }, 0);
+    const deliveryFee = Number(documentDraft.deliveryFee) || 0;
+    const discount = Number(documentDraft.discount) || 0;
+    const amountReceived = Number(documentDraft.amountReceived) || 0;
+    const total = Math.max(0, subtotal + deliveryFee - discount);
+    return {
+      subtotal,
+      deliveryFee,
+      discount,
+      total,
+      amountReceived,
+      balance: Math.max(0, total - amountReceived),
+    };
+  }, [documentDraft]);
 
   function getStepState(stepKey: TanviStepKey) {
     const index = TANVI_STEPS.findIndex((step) => step.key === stepKey);
@@ -1898,6 +2129,278 @@ export default function TanviDeskPage() {
                     </div>
                   ))}
                 </div>
+              </div>
+
+              <div className={`${panelClass} overflow-hidden`}>
+                <div className={`flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 sm:p-5 ${dividerClass}`}>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-orange-700 sm:text-xs sm:tracking-[0.16em]">
+                      Document Builder
+                    </p>
+                    <h3 className="mt-1 text-lg font-semibold tracking-tight sm:text-2xl">
+                      {documentDraft ? DOCUMENT_TYPE_LABELS[documentDraft.documentType] : "Document"} for {selected.clientName}
+                    </h3>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDocumentStudioOpen((current) => !current)}
+                      className={quietButtonClass}
+                    >
+                      {documentStudioOpen ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {documentStudioOpen ? "Hide builder" : "Show builder"}
+                    </button>
+                    <a
+                      href={`/admin/quotation-approval?quoteId=${encodeURIComponent(selected.id)}`}
+                      className={accentButtonClass}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Open Document Studio
+                    </a>
+                  </div>
+                </div>
+
+                {documentStudioOpen && documentDraft ? (
+                  <div className="grid gap-4 p-3 sm:p-5">
+                    <section className={`${elevatedCardClass} p-4`}>
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                            Document setup
+                          </p>
+                          <p className={`mt-1 text-sm ${mutedClass}`}>
+                            Choose quotation, invoice, partial receipt, or receipt.
+                          </p>
+                        </div>
+                        <select
+                          value={documentDraft.documentType}
+                          onChange={(event) => updateDocumentDraft("documentType", event.target.value)}
+                          className={`${fieldClass} w-full sm:w-56`}
+                        >
+                          {DOCUMENT_TYPE_OPTIONS.map((type) => (
+                            <option key={type} value={type}>
+                              {DOCUMENT_TYPE_LABELS[type]}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </section>
+
+                    <section className={`${elevatedCardClass} p-4`}>
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                            Line items
+                          </p>
+                          <p className={`mt-1 text-sm ${mutedClass}`}>
+                            Add products, quantities, and selling prices.
+                          </p>
+                        </div>
+                        <button type="button" onClick={addDocumentLine} className={quietButtonClass}>
+                          <Plus className="h-4 w-4" />
+                          Add item
+                        </button>
+                      </div>
+                      <div className="mt-4 space-y-3">
+                        {documentDraft.lines.map((line, index) => (
+                          <div key={line.id} className={`${subtleCardClass} grid gap-3 p-3 md:grid-cols-[minmax(0,1fr)_7rem_8rem_2.5rem]`}>
+                            <label className={`text-xs font-semibold uppercase tracking-[0.08em] ${mutedClass}`}>
+                              Item {index + 1}
+                              <input
+                                value={line.description}
+                                onChange={(event) => updateDocumentLine(line.id, "description", event.target.value)}
+                                placeholder="Product, size, colour, or print detail"
+                                className={`mt-2 w-full normal-case tracking-normal ${fieldClass}`}
+                              />
+                            </label>
+                            <label className={`text-xs font-semibold uppercase tracking-[0.08em] ${mutedClass}`}>
+                              Qty
+                              <input
+                                value={line.quantity}
+                                onChange={(event) => updateDocumentLine(line.id, "quantity", event.target.value)}
+                                inputMode="decimal"
+                                className={`mt-2 w-full normal-case tracking-normal ${fieldClass}`}
+                              />
+                            </label>
+                            <label className={`text-xs font-semibold uppercase tracking-[0.08em] ${mutedClass}`}>
+                              Unit price
+                              <input
+                                value={line.unitPrice}
+                                onChange={(event) => updateDocumentLine(line.id, "unitPrice", event.target.value)}
+                                inputMode="decimal"
+                                className={`mt-2 w-full normal-case tracking-normal ${fieldClass}`}
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => removeDocumentLine(line.id)}
+                              disabled={documentDraft.lines.length === 1}
+                              className={`${quietButtonClass} self-end px-2`}
+                              aria-label="Remove item"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+
+                    <section className={`${elevatedCardClass} p-4`}>
+                      <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                        Commercial details
+                      </p>
+                      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        {([
+                          ["documentNumber", "Document number"],
+                          ["documentDate", "Document date"],
+                          ["validUntil", "Valid until"],
+                          ["paymentStatus", "Payment status"],
+                          ["clientCompany", "Client company"],
+                          ["clientAddress", "Client address"],
+                          ["clientBrn", "Client BRN"],
+                          ["clientVat", "Client VAT"],
+                        ] as Array<[DocumentStudioField, string]>).map(([field, label]) => (
+                          <label key={field} className={`text-xs font-semibold uppercase tracking-[0.08em] ${mutedClass}`}>
+                            {label}
+                            <input
+                              value={documentDraft[field]}
+                              onChange={(event) => updateDocumentDraft(field, event.target.value)}
+                              type={field === "documentDate" || field === "validUntil" ? "date" : "text"}
+                              className={`mt-2 w-full normal-case tracking-normal ${fieldClass}`}
+                            />
+                          </label>
+                        ))}
+                      </div>
+                    </section>
+
+                    <section className={`${elevatedCardClass} p-4`}>
+                      <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                        Notes and terms
+                      </p>
+                      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                        <label className={`text-xs font-semibold uppercase tracking-[0.08em] ${mutedClass}`}>
+                          Notes to client
+                          <textarea
+                            value={documentDraft.notes}
+                            onChange={(event) => updateDocumentDraft("notes", event.target.value)}
+                            rows={4}
+                            className={`mt-2 w-full resize-none normal-case tracking-normal ${fieldClass}`}
+                          />
+                        </label>
+                        <label className={`text-xs font-semibold uppercase tracking-[0.08em] ${mutedClass}`}>
+                          Terms
+                          <textarea
+                            value={documentDraft.terms}
+                            onChange={(event) => updateDocumentDraft("terms", event.target.value)}
+                            rows={4}
+                            className={`mt-2 w-full resize-none normal-case tracking-normal ${fieldClass}`}
+                          />
+                        </label>
+                      </div>
+                    </section>
+
+                    <section className={`${elevatedCardClass} p-4`}>
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                          Totals
+                        </p>
+                        <div className="flex flex-wrap gap-3 text-xs font-semibold">
+                          <label className="inline-flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={documentDraft.showLineItems}
+                              onChange={(event) =>
+                                setDocumentDraft((current) =>
+                                  current ? { ...current, showLineItems: event.target.checked } : current
+                                )
+                              }
+                              className="h-4 w-4 rounded border-slate-300 accent-orange-600"
+                            />
+                            Show items
+                          </label>
+                          <label className="inline-flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={documentDraft.showTotals}
+                              onChange={(event) =>
+                                setDocumentDraft((current) =>
+                                  current ? { ...current, showTotals: event.target.checked } : current
+                                )
+                              }
+                              className="h-4 w-4 rounded border-slate-300 accent-orange-600"
+                            />
+                            Show totals
+                          </label>
+                        </div>
+                      </div>
+                      <div className="mt-4 grid gap-3 md:grid-cols-3">
+                        {([
+                          ["deliveryFee", "Delivery fee"],
+                          ["discount", "Discount"],
+                          ["amountReceived", "Amount received"],
+                        ] as Array<[DocumentStudioField, string]>).map(([field, label]) => (
+                          <label key={field} className={`text-xs font-semibold uppercase tracking-[0.08em] ${mutedClass}`}>
+                            {label}
+                            <input
+                              value={documentDraft[field]}
+                              onChange={(event) => updateDocumentDraft(field, event.target.value)}
+                              inputMode="decimal"
+                              className={`mt-2 w-full normal-case tracking-normal ${fieldClass}`}
+                            />
+                          </label>
+                        ))}
+                      </div>
+                      <div className="mt-4 grid gap-2 sm:grid-cols-4">
+                        {[
+                          ["Subtotal", documentTotals.subtotal],
+                          ["Total", documentTotals.total],
+                          ["Received", documentTotals.amountReceived],
+                          ["Balance", documentTotals.balance],
+                        ].map(([label, value]) => (
+                          <div key={label} className={`${subtleCardClass} p-3`}>
+                            <p className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${mutedClass}`}>
+                              {label}
+                            </p>
+                            <p className={`mt-1 text-lg font-semibold ${strongTextClass}`}>
+                              {formatMoney(value as number, documentDraft.currency)}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+
+                    <section className={`${elevatedCardClass} p-4`}>
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                          <p className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${mutedClass}`}>
+                            Workflow
+                          </p>
+                          <p className={`mt-1 text-sm ${mutedClass}`}>
+                            Save the document here, then use the full studio for PDF preview, download, send, and approval.
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={saveDocumentStudio}
+                            disabled={saving === "document-studio"}
+                            className={darkButtonClass}
+                          >
+                            <Save className="h-4 w-4" />
+                            {saving === "document-studio" ? "Saving..." : `Save ${DOCUMENT_TYPE_LABELS[documentDraft.documentType].toLowerCase()}`}
+                          </button>
+                          <a
+                            href={`/admin/quotation-approval?quoteId=${encodeURIComponent(selected.id)}`}
+                            className={accentButtonClass}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            Open Document Studio
+                          </a>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                ) : null}
               </div>
 
               <div className={`${panelClass} overflow-hidden`}>

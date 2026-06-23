@@ -68,6 +68,35 @@ type WhatsappLineDetails = {
   backLogoDescription: string;
 };
 
+type TanviDocumentLineDetails = {
+  description: string;
+  quantity: number | null;
+  unitPrice: number | null;
+  includeInTotals: boolean;
+};
+
+type TanviDocumentDetails = {
+  documentType: "quotation" | "invoice" | "partial_receipt" | "receipt";
+  documentNumber: string;
+  documentDate: string;
+  validUntil: string;
+  clientCompany: string;
+  clientAddress: string;
+  clientBrn: string;
+  clientVat: string;
+  paymentStatus: string;
+  preparedBy: string;
+  currency: string;
+  deliveryFee: number;
+  discount: number;
+  amountReceived: number;
+  notes: string;
+  terms: string;
+  showLineItems: boolean;
+  showTotals: boolean;
+  lines: TanviDocumentLineDetails[];
+};
+
 const TANVI_STEP_KEYS = new Set([
   "client_onboarding",
   "artwork",
@@ -126,6 +155,65 @@ function getWhatsappLineItems(value: unknown): WhatsappLineDetails[] {
       };
     })
     .filter((entry): entry is WhatsappLineDetails => Boolean(entry));
+}
+
+function normalizeDocumentType(value: unknown): TanviDocumentDetails["documentType"] {
+  if (value === "invoice" || value === "partial_receipt" || value === "receipt") return value;
+  return "quotation";
+}
+
+function safeMoney(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function getDocumentLineItems(value: unknown): TanviDocumentLineDetails[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((entry) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
+      const raw = entry as Record<string, unknown>;
+      const description = safeText(raw.description, 300);
+      const quantity = safePositiveNumber(raw.quantity);
+      const unitPrice = safePositiveNumber(raw.unitPrice);
+      if (!description && !quantity && !unitPrice) return null;
+      return {
+        description,
+        quantity,
+        unitPrice,
+        includeInTotals: raw.includeInTotals === undefined ? true : Boolean(raw.includeInTotals),
+      };
+    })
+    .filter((line): line is TanviDocumentLineDetails => Boolean(line));
+}
+
+function getDocumentDetails(value: unknown): TanviDocumentDetails | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  const lines = getDocumentLineItems(raw.lines);
+  if (!lines.length) return null;
+  return {
+    documentType: normalizeDocumentType(raw.documentType),
+    documentNumber: safeText(raw.documentNumber, 80),
+    documentDate: safeText(raw.documentDate, 40),
+    validUntil: safeText(raw.validUntil, 40),
+    clientCompany: safeText(raw.clientCompany, 160),
+    clientAddress: safeText(raw.clientAddress, 500),
+    clientBrn: safeText(raw.clientBrn, 80),
+    clientVat: safeText(raw.clientVat, 80),
+    paymentStatus: safeText(raw.paymentStatus, 80),
+    preparedBy: safeText(raw.preparedBy, 120),
+    currency: safeText(raw.currency, 12) || "Rs",
+    deliveryFee: safeMoney(raw.deliveryFee),
+    discount: safeMoney(raw.discount),
+    amountReceived: safeMoney(raw.amountReceived),
+    notes: safeText(raw.notes, 1000),
+    terms: safeText(raw.terms, 2000),
+    showLineItems: raw.showLineItems === undefined ? true : Boolean(raw.showLineItems),
+    showTotals: raw.showTotals === undefined ? true : Boolean(raw.showTotals),
+    lines,
+  };
 }
 
 function getLineSummary(line: WhatsappLineDetails, index: number) {
@@ -455,6 +543,7 @@ export async function PATCH(
     const partnerPriceDrafts = getPartnerPriceDrafts(body?.partnerPrices, activeIds);
     const stepCheckUpdates = getTanviStepCheckUpdates(body?.tanviStepChecks);
     const whatsappDetails = getWhatsappDetails(body?.whatsappDetails);
+    const documentDetails = getDocumentDetails(body?.documentDetails);
     const artworkDescriptionDrafts = getArtworkDescriptionDrafts(body?.artworkDescriptions);
     const uploadedWhatsappAttachments = await storeWhatsappAttachments(files, attachmentDrafts);
     const nextClientStatus =
@@ -593,6 +682,38 @@ export async function PATCH(
       updatePayload["quote.total"] = whatsappDetails.total || 0;
       updatePayload["quote.currency"] = "Rs";
       updatePayload["quote.lines"] = quoteLines;
+    }
+
+    if (documentDetails) {
+      const subtotal = documentDetails.lines.reduce((sum, line) => {
+        if (!line.includeInTotals) return sum;
+        return sum + (line.quantity || 0) * (line.unitPrice || 0);
+      }, 0);
+      const total = Math.max(0, subtotal + documentDetails.deliveryFee - documentDetails.discount);
+      updatePayload.name = documentDetails.clientCompany || currentData.name || "WhatsApp client";
+      updatePayload.notes = documentDetails.notes;
+      updatePayload.message = documentDetails.notes || currentData.message || "";
+      updatePayload["quote.documentType"] = documentDetails.documentType;
+      updatePayload["quote.documentNumber"] = documentDetails.documentNumber;
+      updatePayload["quote.documentDate"] = documentDetails.documentDate;
+      updatePayload["quote.validUntil"] = documentDetails.validUntil;
+      updatePayload["quote.clientCompany"] = documentDetails.clientCompany;
+      updatePayload["quote.clientAddress"] = documentDetails.clientAddress;
+      updatePayload["quote.clientBrn"] = documentDetails.clientBrn;
+      updatePayload["quote.clientVat"] = documentDetails.clientVat;
+      updatePayload["quote.paymentStatus"] = documentDetails.paymentStatus;
+      updatePayload["quote.preparedBy"] = documentDetails.preparedBy;
+      updatePayload["quote.currency"] = documentDetails.currency;
+      updatePayload["quote.deliveryFee"] = documentDetails.deliveryFee;
+      updatePayload["quote.discount"] = documentDetails.discount;
+      updatePayload["quote.amountReceived"] = documentDetails.amountReceived;
+      updatePayload["quote.notes"] = documentDetails.notes;
+      updatePayload["quote.terms"] = documentDetails.terms;
+      updatePayload["quote.showLineItems"] = documentDetails.showLineItems;
+      updatePayload["quote.showTotals"] = documentDetails.showTotals;
+      updatePayload["quote.subtotal"] = subtotal;
+      updatePayload["quote.total"] = total;
+      updatePayload["quote.lines"] = documentDetails.lines;
     }
 
     if (uploadedWhatsappAttachments.length) {
