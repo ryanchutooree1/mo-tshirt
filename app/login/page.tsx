@@ -85,7 +85,33 @@ function LoginInner() {
       }
 
       if (isManagerLoginPayload(data?.manager)) {
-        await signOutAdminFromFirebase().catch(() => null);
+        const sessionRes = await fetch("/api/admin/session", { cache: "no-store" });
+        const sessionData = await sessionRes.json().catch(() => ({}));
+        const session = sessionData?.session as AdminSessionPayload | undefined;
+        const requiresSharedStorageAuth =
+          sessionRes.ok &&
+          session &&
+          Array.isArray(session.allowedPages) &&
+          typeof session.isOwner === "boolean" &&
+          isFirebaseAdminAuthConfigured() &&
+          canUseSharedStorageAuth(session.allowedPages, {
+            isOwner: session.isOwner,
+          });
+
+        if (requiresSharedStorageAuth) {
+          try {
+            await signInAdminWithFirebase(password);
+          } catch {
+            await fetch("/api/logout", { method: "POST" }).catch(() => null);
+            setError(
+              "Tanvi login worked, but document access could not be prepared. Check Firebase admin authentication settings."
+            );
+            setSubmitting(false);
+            return;
+          }
+        } else {
+          await signOutAdminFromFirebase().catch(() => null);
+        }
         router.push(data.manager.path);
         return;
       }

@@ -11,6 +11,7 @@ import {
 import Link from "next/link";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { storage } from "@/lib/firebase";
+import { ensureAdminFirebaseSession } from "@/lib/firebase-admin-client-auth";
 import {
   addDoc,
   collection,
@@ -1289,6 +1290,7 @@ export default function QuotationApprovalPage() {
   const isDark = theme === "dark";
   const [quotes, setQuotes] = useState<QuoteRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [documentAuthReady, setDocumentAuthReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -1437,6 +1439,25 @@ export default function QuotationApprovalPage() {
   }, []);
 
   useEffect(() => {
+    let ignore = false;
+
+    (async () => {
+      try {
+        await ensureAdminFirebaseSession();
+      } catch {
+        // The Firestore listener below will surface a load error if auth is required.
+      } finally {
+        if (!ignore) setDocumentAuthReady(true);
+      }
+    })();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!documentAuthReady) return;
     const q = query(collection(db, "quotes"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(
       q,
@@ -1463,7 +1484,7 @@ export default function QuotationApprovalPage() {
       }
     );
     return () => unsub();
-  }, []);
+  }, [documentAuthReady]);
 
   useEffect(() => {
     if (!quotes.length) {

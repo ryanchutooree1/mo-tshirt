@@ -462,6 +462,12 @@ export function hasAdminPageAccess(
 
   const requiredPage = resolveAdminPagePath(pathname);
   if (!requiredPage) return false;
+  if (
+    requiredPage === "/admin/quotation-approval" &&
+    allowedPages.includes("/admin/tanvi")
+  ) {
+    return true;
+  }
   return allowedPages.includes(requiredPage);
 }
 
@@ -474,6 +480,12 @@ export function hasAdminApiAccess(
 
   const requiredPage = resolveAdminApiPermission(pathname);
   if (!requiredPage) return true;
+  if (
+    requiredPage === "/admin/quotation-approval" &&
+    allowedPages.includes("/admin/tanvi")
+  ) {
+    return true;
+  }
   return allowedPages.includes(requiredPage);
 }
 
@@ -482,6 +494,7 @@ export function canUseSharedStorageAuth(
   options?: { isOwner?: boolean }
 ) {
   if (options?.isOwner) return true;
+  if (allowedPages.includes("/admin/tanvi")) return true;
   return SHARED_FIREBASE_AUTH_PAGE_PATHS.some((pagePath) =>
     allowedPages.includes(pagePath)
   );
