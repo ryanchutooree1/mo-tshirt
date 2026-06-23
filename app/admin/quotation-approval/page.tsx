@@ -1813,10 +1813,14 @@ export default function QuotationApprovalPage() {
     );
   };
 
-  const saveDraft = async (nextStatus?: QuoteStatus) => {
-    if (!selected || !draft) return;
+  const saveDraft = async (
+    nextStatus?: QuoteStatus,
+    options: { showNotice?: boolean } = {}
+  ) => {
+    const showNotice = options.showNotice ?? true;
+    if (!selected || !draft) return false;
     setSaving(true);
-    setNotice(null);
+    if (showNotice) setNotice(null);
     try {
       const payload = buildStoredQuotePayload(draft);
       await updateDoc(doc(db, "quotes", selected.id), {
@@ -1827,9 +1831,11 @@ export default function QuotationApprovalPage() {
         quote: payload,
         updatedAt: serverTimestamp(),
       });
-      setNotice("Document saved.");
+      if (showNotice) setNotice("Document saved.");
+      return true;
     } catch {
       setNotice("Failed to save document.");
+      return false;
     } finally {
       setSaving(false);
     }
@@ -2283,15 +2289,16 @@ export default function QuotationApprovalPage() {
     return "Select Payment Status";
   };
 
-  const moveToOrders = async () => {
-    if (!selected || !draft) return;
+  const moveToOrders = async (options: { showNotice?: boolean } = {}) => {
+    const showNotice = options.showNotice ?? true;
+    if (!selected || !draft) return null;
     const draftValidation = validateDraftBeforeSend(draft);
     if (draftValidation) {
       setNotice(draftValidation);
-      return;
+      return null;
     }
     setMovingToOrders(true);
-    setNotice(null);
+    if (showNotice) setNotice(null);
     try {
       const payload = buildStoredQuotePayload(draft);
       const lineItems = payload.lines
@@ -2388,12 +2395,24 @@ export default function QuotationApprovalPage() {
         updatedAt: serverTimestamp(),
       });
 
-      setNotice(`Moved to Order Management. Order ID: ${transactionId}`);
+      if (showNotice) setNotice(`Moved to Order Management. Order ID: ${transactionId}`);
+      return transactionId;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to move to orders.";
       setNotice(message);
+      return null;
     } finally {
       setMovingToOrders(false);
+    }
+  };
+
+  const approveAndMoveToOrders = async () => {
+    if (!selected || !draft) return;
+    const saved = await saveDraft("approved", { showNotice: false });
+    if (!saved) return;
+    const transactionId = await moveToOrders({ showNotice: false });
+    if (transactionId) {
+      setNotice(`Approved and moved to Order Management. Order ID: ${transactionId}`);
     }
   };
 
@@ -4087,15 +4106,15 @@ export default function QuotationApprovalPage() {
                             <div className="mt-4 grid gap-2">
                               <button
                                 type="button"
-                                onClick={() => saveDraft("approved")}
-                                disabled={saving || quoteIsMarkedApproved}
+                                onClick={approveAndMoveToOrders}
+                                disabled={saving || movingToOrders || quoteIsMarkedApproved}
                                 className={primaryButtonClass}
                               >
                                 <FiCheckCircle className="h-4 w-4" />
                                 {quoteIsMarkedApproved
                                   ? "Already approved"
-                                  : saving
-                                    ? "Saving..."
+                                  : saving || movingToOrders
+                                    ? "Approving..."
                                     : "Mark approved"}
                               </button>
                               <button
@@ -4135,7 +4154,7 @@ export default function QuotationApprovalPage() {
                             </p>
                             <button
                               type="button"
-                              onClick={moveToOrders}
+                              onClick={() => moveToOrders()}
                               disabled={
                                 movingToOrders ||
                                 Boolean(moveToOrdersError) ||
