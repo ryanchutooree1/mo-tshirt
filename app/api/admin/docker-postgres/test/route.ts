@@ -4,8 +4,22 @@ import { isAdminRequest } from "@/lib/admin-request";
 
 export const runtime = "nodejs";
 
+const LOCAL_DOCKER_DATABASE_URL =
+  "postgresql://mo_tshirt:mo_tshirt_dev@localhost:54329/mo_tshirt_docker_test";
+
 function getDatabaseUrl() {
-  return process.env.POSTGRES_TEST_DATABASE_URL || process.env.DATABASE_URL || "";
+  return (
+    process.env.POSTGRES_TEST_DATABASE_URL ||
+    process.env.DATABASE_URL ||
+    (process.env.NODE_ENV === "production" ? "" : LOCAL_DOCKER_DATABASE_URL)
+  );
+}
+
+function getDatabaseUrlSource() {
+  if (process.env.POSTGRES_TEST_DATABASE_URL) return "POSTGRES_TEST_DATABASE_URL";
+  if (process.env.DATABASE_URL) return "DATABASE_URL";
+  if (process.env.NODE_ENV !== "production") return "LOCAL_DOCKER_DATABASE_URL";
+  return null;
 }
 
 function maskDatabaseUrl(value: string) {
@@ -33,11 +47,7 @@ export async function GET() {
   return NextResponse.json({
     configured: Boolean(databaseUrl),
     connection: maskDatabaseUrl(databaseUrl),
-    env: process.env.POSTGRES_TEST_DATABASE_URL
-      ? "POSTGRES_TEST_DATABASE_URL"
-      : process.env.DATABASE_URL
-        ? "DATABASE_URL"
-        : null,
+    env: getDatabaseUrlSource(),
   });
 }
 

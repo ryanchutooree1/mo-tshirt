@@ -91,8 +91,8 @@ export default function DockerPostgresAdminPage() {
             <div>
               <h2 className="text-lg font-semibold text-slate-950">Connection</h2>
               <p className="mt-1 text-sm text-slate-500">
-                Reads from <code className="font-mono">POSTGRES_TEST_DATABASE_URL</code>, then falls back to{" "}
-                <code className="font-mono">DATABASE_URL</code>.
+                Reads from <code className="font-mono">POSTGRES_TEST_DATABASE_URL</code>, then{" "}
+                <code className="font-mono">DATABASE_URL</code>, then the local Docker URL in development.
               </p>
             </div>
             <button
