@@ -1698,13 +1698,7 @@ export default function QuotationApprovalPage() {
     return ["Unpaid", "Partially paid", "Paid"];
   }, [draft]);
 
-  const documentTypeLabel = useMemo(() => {
-    if (!draft) return "";
-    if (draft.documentType === "quotation") return "Quotation";
-    if (draft.documentType === "invoice") return "Invoice";
-    if (draft.documentType === "receipt") return "Receipt";
-    return "Partial receipt";
-  }, [draft]);
+  const documentTypeLabel = draft ? DOC_TYPE_LABELS[draft.documentType] : "";
 
   const selectedStatus: QuoteStatus = (selected?.status || "new") as QuoteStatus;
   const selectedPrimaryStatus = useMemo(() => {
@@ -4076,7 +4070,7 @@ export default function QuotationApprovalPage() {
                               className={`mt-4 w-full ${secondaryButtonClass}`}
                             >
                               <FiEdit2 className="h-4 w-4" />
-                              {saving ? "Saving..." : "Save quotation"}
+                              {saving ? "Saving..." : `Save ${documentTypeLabel.toLowerCase()}`}
                             </button>
                           </div>
 
@@ -4730,7 +4724,7 @@ export default function QuotationApprovalPage() {
                   className={primaryButtonClass}
                 >
                   <FiEdit2 className="h-4 w-4" />
-                  {saving ? "Saving..." : "Save quotation"}
+                  {saving ? "Saving..." : `Save ${documentTypeLabel.toLowerCase()}`}
                 </button>
               </div>
             </div>
