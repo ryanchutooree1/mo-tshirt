@@ -13,6 +13,8 @@
     "start": "next start",
     "docker:postgres": "docker compose -f docker-compose.postgres.yml up -d",
     "docker:postgres:down": "docker compose -f docker-compose.postgres.yml down",
+    "docker:gemma": "docker compose -f docker-compose.gemma.yml up -d",
+    "docker:gemma:down": "docker compose -f docker-compose.gemma.yml down",
     "clean": "rm -rf .next",
     "lint": "eslint",
     "ggt:on": "zsh ./scripts/ggt-light-on.sh",

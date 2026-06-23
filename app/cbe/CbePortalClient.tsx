@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
+  Bot,
   CalendarDays,
   CheckCircle2,
   ClipboardList,
@@ -18,11 +19,13 @@ import {
   PanelLeftClose,
   Plus,
   RefreshCw,
+  Send,
   ShieldCheck,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 
-type PortalTab = "information" | "projects" | "storage";
+type PortalTab = "information" | "projects" | "storage" | "gemma";
 
 type InfoEntry = {
   id: string;
@@ -62,6 +65,21 @@ type PortalPayload = {
   projects: ProjectEntry[];
   storage: StorageSnapshot;
   error?: string;
+};
+
+type GemmaStatus = {
+  ok: boolean;
+  installed?: boolean;
+  model: string;
+  endpoint: string;
+  models?: string[];
+  error?: string | null;
+};
+
+type GemmaMessage = {
+  id: number;
+  role: "user" | "assistant";
+  content: string;
 };
 
 const statusStyles: Record<ProjectEntry["status"], string> = {
@@ -104,6 +122,10 @@ export default function CbePortalClient() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(true);
+  const [gemmaStatus, setGemmaStatus] = useState<GemmaStatus | null>(null);
+  const [gemmaPrompt, setGemmaPrompt] = useState("");
+  const [gemmaMessages, setGemmaMessages] = useState<GemmaMessage[]>([]);
+  const [gemmaLoading, setGemmaLoading] = useState(false);
   const [infoDraft, setInfoDraft] = useState(EMPTY_INFO_DRAFT);
   const [projectDraft, setProjectDraft] = useState(EMPTY_PROJECT_DRAFT);
 
@@ -141,7 +163,31 @@ export default function CbePortalClient() {
 
   useEffect(() => {
     void loadPortalData();
+    void loadGemmaStatus();
   }, []);
+
+  async function loadGemmaStatus() {
+    try {
+      const res = await fetch("/api/cbe-portal/gemma", { cache: "no-store" });
+      const data = (await res.json().catch(() => ({}))) as GemmaStatus;
+      setGemmaStatus({
+        ok: Boolean(data.ok),
+        installed: data.installed,
+        model: data.model || "gemma3:1b",
+        endpoint: data.endpoint || "http://localhost:11434",
+        models: data.models || [],
+        error: data.error || null,
+      });
+    } catch {
+      setGemmaStatus({
+        ok: false,
+        installed: false,
+        model: "gemma3:1b",
+        endpoint: "http://localhost:11434",
+        error: "Could not check Gemma status.",
+      });
+    }
+  }
 
   async function refreshStorage() {
     await loadPortalData();
@@ -260,6 +306,58 @@ export default function CbePortalClient() {
     }
   }
 
+  async function sendGemmaMessage() {
+    const prompt = gemmaPrompt.trim();
+    if (!prompt) return;
+
+    const userMessage: GemmaMessage = {
+      id: Date.now(),
+      role: "user",
+      content: prompt,
+    };
+    setGemmaMessages((current) => [...current, userMessage]);
+    setGemmaPrompt("");
+    setGemmaLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/cbe-portal/gemma", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        reply?: string;
+        error?: string;
+      };
+      if (!res.ok) throw new Error(data.error || "Gemma did not respond.");
+      setGemmaMessages((current) => [
+        ...current,
+        {
+          id: Date.now() + 1,
+          role: "assistant",
+          content: data.reply || "Gemma returned an empty response.",
+        },
+      ]);
+      await loadGemmaStatus();
+    } catch (sendError) {
+      setGemmaMessages((current) => [
+        ...current,
+        {
+          id: Date.now() + 1,
+          role: "assistant",
+          content:
+            sendError instanceof Error
+              ? sendError.message
+              : "Gemma/Ollama is not reachable.",
+        },
+      ]);
+      await loadGemmaStatus();
+    } finally {
+      setGemmaLoading(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f7f5ef] text-slate-950">
       <section className="border-b border-slate-200 bg-white">
@@ -330,6 +428,13 @@ export default function CbePortalClient() {
                 description="Capacity progress"
                 onClick={() => setActiveTab("storage")}
               />
+              <TabButton
+                active={activeTab === "gemma"}
+                icon={<Bot size={18} />}
+                label="Gemma AI"
+                description="Local Docker assistant"
+                onClick={() => setActiveTab("gemma")}
+              />
             </nav>
           </aside>
         ) : null}
@@ -390,6 +495,18 @@ export default function CbePortalClient() {
 
           {activeTab === "storage" ? (
             <StorageTab storage={storage} onRefresh={() => void refreshStorage()} />
+          ) : null}
+
+          {activeTab === "gemma" ? (
+            <GemmaTab
+              status={gemmaStatus}
+              messages={gemmaMessages}
+              prompt={gemmaPrompt}
+              loading={gemmaLoading}
+              onPromptChange={setGemmaPrompt}
+              onRefresh={() => void loadGemmaStatus()}
+              onSend={() => void sendGemmaMessage()}
+            />
           ) : null}
         </div>
       </section>
@@ -794,6 +911,129 @@ function StorageTab({
         ) : (
           <EmptyState icon={<Database size={20} />} text="Storage details are not loaded yet." />
         )}
+      </div>
+    </section>
+  );
+}
+
+function GemmaTab({
+  status,
+  messages,
+  prompt,
+  loading,
+  onPromptChange,
+  onRefresh,
+  onSend,
+}: {
+  status: GemmaStatus | null;
+  messages: GemmaMessage[];
+  prompt: string;
+  loading: boolean;
+  onPromptChange: (value: string) => void;
+  onRefresh: () => void;
+  onSend: () => void;
+}) {
+  return (
+    <section className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
+      <div className="rounded-lg border border-slate-200 bg-white p-5">
+        <div className="flex items-center gap-2">
+          <Bot className="text-teal-700" size={20} />
+          <h2 className="text-lg font-semibold">Gemma AI</h2>
+        </div>
+
+        <div className="mt-4 grid gap-3">
+          <div
+            className={`rounded-lg border p-4 ${
+              status?.ok
+                ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                : "border-amber-200 bg-amber-50 text-amber-900"
+            }`}
+          >
+            <p className="text-sm font-bold">
+              {status?.ok ? "Connected" : "Waiting for Docker Gemma"}
+            </p>
+            <dl className="mt-3 grid gap-2 text-xs font-semibold">
+              <div>
+                <dt className="text-slate-500">Model</dt>
+                <dd className="mt-1 font-mono">{status?.model || "gemma3:1b"}</dd>
+              </div>
+              <div>
+                <dt className="text-slate-500">Endpoint</dt>
+                <dd className="mt-1 break-all font-mono">{status?.endpoint || "http://localhost:11434"}</dd>
+              </div>
+            </dl>
+            {status?.error ? <p className="mt-3 text-xs font-bold">{status.error}</p> : null}
+          </div>
+
+          <button
+            type="button"
+            onClick={onRefresh}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          >
+            <RefreshCw size={17} />
+            Check connection
+          </button>
+
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-xs font-semibold leading-6 text-slate-600">
+            Run locally with Docker:
+            <code className="mt-2 block break-all rounded-lg bg-white p-3 font-mono text-slate-800">
+              npm run docker:gemma
+            </code>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-white p-5">
+        <div className="flex items-center gap-2">
+          <Sparkles className="text-teal-700" size={20} />
+          <h2 className="text-lg font-semibold">Ask Gemma</h2>
+        </div>
+
+        <div className="mt-4 grid min-h-[320px] gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+          {messages.length === 0 ? (
+            <EmptyState
+              icon={<Bot size={20} />}
+              text="Ask Gemma to summarize tasks, plan next steps, draft notes, or review project deadlines."
+            />
+          ) : null}
+
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`max-w-[86%] rounded-lg p-3 text-sm leading-6 ${
+                message.role === "user"
+                  ? "ml-auto bg-slate-950 text-white"
+                  : "mr-auto border border-slate-200 bg-white text-slate-700"
+              }`}
+            >
+              {message.content}
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+          <textarea
+            value={prompt}
+            rows={3}
+            placeholder="Example: Make a plan for the urgent tasks this week."
+            onChange={(event) => onPromptChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                onSend();
+              }
+            }}
+            className="resize-none rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+          />
+          <button
+            type="button"
+            onClick={onSend}
+            disabled={loading || !prompt.trim()}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
+          >
+            <Send size={18} />
+            {loading ? "Thinking..." : "Send"}
+          </button>
+        </div>
       </div>
     </section>
   );
