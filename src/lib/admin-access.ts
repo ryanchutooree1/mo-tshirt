@@ -43,6 +43,7 @@ export type AdminPagePath =
   | "/admin/his-dream-life"
   | "/admin/her-dream-life"
   | "/admin/our-dream"
+  | "/admin/couple-goals"
   | "/admin/settings";
 
 export type AdminPermissionGroup =
@@ -327,6 +328,12 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
     group: "Planning",
   },
   {
+    path: "/admin/couple-goals",
+    label: "Couple Goals",
+    description: "Shared availability, goals, little wins, and food planning.",
+    group: "Planning",
+  },
+  {
     path: "/admin/settings",
     label: "Settings",
     description: "Workspace controls for storage, admin access, and routing.",
@@ -393,6 +400,7 @@ export const DEFAULT_TOP_NAV_PATHS: AdminPagePath[] = [
   "/admin/his-dream-life",
   "/admin/her-dream-life",
   "/admin/our-dream",
+  "/admin/couple-goals",
 ];
 
 export const DEFAULT_MORE_NAV_PATHS: AdminPagePath[] = [

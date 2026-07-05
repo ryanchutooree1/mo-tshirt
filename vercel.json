@@ -3,6 +3,10 @@
     {
       "path": "/api/tuya/automations/tick",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/admin/couple-goals/food-email",
+      "schedule": "*/15 * * * *"
     }
   ]
 }
