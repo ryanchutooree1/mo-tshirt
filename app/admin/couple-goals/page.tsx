@@ -100,12 +100,6 @@ const ACTUAL_CALENDAR_ALIASES = [
   "Last = Third Shift",
   "Off duty = Rest Day",
 ];
-const ACTUAL_ALIAS_LABELS: Record<Exclude<ShiftKey, "m">, string> = {
-  first: "First",
-  second: "2nd",
-  third: "Last",
-  rest: "Off duty",
-};
 const ACTUAL_CALENDAR_IMPORT: Record<string, Exclude<ShiftKey, "m">> = {
   "2026-07-06": "third",
   "2026-07-07": "second",
@@ -522,6 +516,7 @@ export default function CoupleGoalsPage() {
   const [month, setMonth] = useState(initialDate.getMonth());
   const [year, setYear] = useState(initialDate.getFullYear());
   const [selectedKey, setSelectedKey] = useState(todayKey());
+  const [dayModalOpen, setDayModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [recipientDraft, setRecipientDraft] = useState("");
@@ -794,6 +789,11 @@ export default function CoupleGoalsPage() {
     setYear(next.getFullYear());
   }
 
+  function openDayDetail(dateKey: string) {
+    setSelectedKey(dateKey);
+    setDayModalOpen(true);
+  }
+
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
       {toast && (
@@ -882,7 +882,7 @@ export default function CoupleGoalsPage() {
           </button>
         </section>
 
-        <section className="grid gap-5 lg:grid-cols-[1.35fr_0.65fr]">
+        <section>
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
@@ -945,7 +945,7 @@ export default function CoupleGoalsPage() {
                 return (
                   <button
                     key={key}
-                    onClick={() => setSelectedKey(key)}
+                    onClick={() => openDayDetail(key)}
                     className={[
                       "min-h-32 rounded-xl border p-2 text-left transition hover:-translate-y-0.5 hover:shadow-md",
                       isSelected ? "border-slate-950 ring-2 ring-slate-950/10" : "border-slate-200",
@@ -972,89 +972,113 @@ export default function CoupleGoalsPage() {
               })}
             </div>
           </div>
-
-          <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Selected day</p>
-            <h3 className="mt-1 text-2xl font-black">
-              {selectedAnalysis.date.toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "short",
-                day: "numeric",
-              })}
-            </h3>
-            <div className="mt-4 space-y-3">
-              <DetailRow label="My working hours" value={selectedAnalysis.mineLabel} />
-              <DetailRow label="Her shift type" value={SHIFT_LABELS[selectedAnalysis.herShift]} />
-              <DetailRow label="Her working hours" value={selectedAnalysis.herLabel} />
-              <label className="block rounded-xl border border-slate-200 p-3 text-sm font-black">
-                Her shift override
-                <select
-                  value={data.herShiftOverrides[selectedAnalysis.key] || "pattern"}
-                  onChange={(event) =>
-                    setHerShiftOverride(
-                      selectedAnalysis.key,
-                      event.target.value as "pattern" | Exclude<ShiftKey, "m">
-                    )
-                  }
-                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold"
-                >
-                  <option value="pattern">Use rotation pattern</option>
-                  <option value="first">First Shift ({ACTUAL_ALIAS_LABELS.first})</option>
-                  <option value="second">Second Shift ({ACTUAL_ALIAS_LABELS.second})</option>
-                  <option value="third">Third Shift ({ACTUAL_ALIAS_LABELS.third})</option>
-                  <option value="rest">Rest Day ({ACTUAL_ALIAS_LABELS.rest})</option>
-                </select>
-              </label>
-              {selectedAnalysis.herShift === "m" && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-                  <p className="mb-2 text-sm font-black text-amber-900">Confirm M Shift</p>
-                  <div className="grid gap-2">
-                    {M_CHOICES.map((choice) => (
-                      <label key={choice} className="flex items-center gap-2 text-sm font-semibold text-amber-950">
-                        <input
-                          type="radio"
-                          checked={(data.mShiftOverrides[selectedAnalysis.key] || "not-confirmed") === choice}
-                          onChange={() => setMShift(selectedAnalysis.key, choice)}
-                        />
-                        {SHIFT_LABELS[choice]}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div>
-                <p className="mb-2 text-sm font-black">Shared available time slots</p>
-                {selectedAnalysis.mUnconfirmed ? (
-                  <p className="rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">
-                    Waiting for M shift confirmation before calculating shared free time.
-                  </p>
-                ) : selectedAnalysis.sharedFree.length ? (
-                  <div className="space-y-2">
-                    {selectedAnalysis.sharedFree.map((slot) => (
-                      <div key={slotLabel(slot)} className="flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2 text-sm">
-                        <span className="font-black text-emerald-900">{slotLabel(slot)}</span>
-                        <span className="font-semibold text-emerald-700">{durationLabel(slot)}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="rounded-xl bg-slate-100 p-3 text-sm font-semibold text-slate-600">No clean common slot found.</p>
-                )}
-              </div>
-              <label className="block text-sm font-black">
-                Notes
-                <textarea
-                  value={data.dayNotes[selectedAnalysis.key] || ""}
-                  onChange={(event) => updateDayNote(selectedAnalysis.key, event.target.value)}
-                  onBlur={() => persist(data, "Day notes saved")}
-                  rows={4}
-                  className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium"
-                  placeholder="Plans, reminders, date ideas, errands..."
-                />
-              </label>
-            </div>
-          </aside>
         </section>
+
+        {dayModalOpen && (
+          <div
+            className="fixed inset-0 z-40 flex items-end justify-center bg-slate-950/50 px-3 py-4 sm:items-center"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="couple-day-detail-title"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setDayModalOpen(false);
+            }}
+          >
+            <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl sm:p-5">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-400">Selected day</p>
+                  <h3 id="couple-day-detail-title" className="mt-1 text-2xl font-black">
+                    {selectedAnalysis.date.toLocaleDateString("en-US", {
+                      weekday: "long",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDayModalOpen(false)}
+                  className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-black text-slate-600 hover:bg-slate-50"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <DetailRow label="My working hours" value={selectedAnalysis.mineLabel} />
+                <DetailRow label="Her shift type" value={SHIFT_LABELS[selectedAnalysis.herShift]} />
+                <DetailRow label="Her working hours" value={selectedAnalysis.herLabel} />
+                <label className="block rounded-xl border border-slate-200 p-3 text-sm font-black">
+                  Her shift override
+                  <select
+                    value={data.herShiftOverrides[selectedAnalysis.key] || "pattern"}
+                    onChange={(event) =>
+                      setHerShiftOverride(
+                        selectedAnalysis.key,
+                        event.target.value as "pattern" | Exclude<ShiftKey, "m">
+                      )
+                    }
+                    className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold"
+                  >
+                    <option value="pattern">Use rotation pattern</option>
+                    <option value="first">First Shift</option>
+                    <option value="second">Second Shift</option>
+                    <option value="third">Third Shift</option>
+                    <option value="rest">Rest Day</option>
+                  </select>
+                </label>
+                {selectedAnalysis.herShift === "m" && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                    <p className="mb-2 text-sm font-black text-amber-900">Confirm M Shift</p>
+                    <div className="grid gap-2">
+                      {M_CHOICES.map((choice) => (
+                        <label key={choice} className="flex items-center gap-2 text-sm font-semibold text-amber-950">
+                          <input
+                            type="radio"
+                            checked={(data.mShiftOverrides[selectedAnalysis.key] || "not-confirmed") === choice}
+                            onChange={() => setMShift(selectedAnalysis.key, choice)}
+                          />
+                          {SHIFT_LABELS[choice]}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <p className="mb-2 text-sm font-black">Shared available time slots</p>
+                  {selectedAnalysis.mUnconfirmed ? (
+                    <p className="rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">
+                      Waiting for M shift confirmation before calculating shared free time.
+                    </p>
+                  ) : selectedAnalysis.sharedFree.length ? (
+                    <div className="space-y-2">
+                      {selectedAnalysis.sharedFree.map((slot) => (
+                        <div key={slotLabel(slot)} className="flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2 text-sm">
+                          <span className="font-black text-emerald-900">{slotLabel(slot)}</span>
+                          <span className="font-semibold text-emerald-700">{durationLabel(slot)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="rounded-xl bg-slate-100 p-3 text-sm font-semibold text-slate-600">No clean common slot found.</p>
+                  )}
+                </div>
+                <label className="block text-sm font-black">
+                  Notes
+                  <textarea
+                    value={data.dayNotes[selectedAnalysis.key] || ""}
+                    onChange={(event) => updateDayNote(selectedAnalysis.key, event.target.value)}
+                    onBlur={() => persist(data, "Day notes saved")}
+                    rows={4}
+                    className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium"
+                    placeholder="Plans, reminders, date ideas, errands..."
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
 
         <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
