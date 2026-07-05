@@ -49,6 +49,7 @@ type CoupleSettings = {
 
 type CoupleData = {
   settings: CoupleSettings;
+  herShiftOverrides: Record<string, Exclude<ShiftKey, "m">>;
   mShiftOverrides: Record<string, MShiftChoice>;
   dayNotes: Record<string, string>;
   goals: Goal[];
@@ -93,6 +94,46 @@ const WEEK_DAYS = [
 ] as const;
 const GOAL_STATUSES: GoalStatus[] = ["Not Started", "In Progress", "Completed"];
 const PATTERN: ShiftKey[] = ["first", "third", "second", "m", "first", "third", "second", "rest"];
+const ACTUAL_CALENDAR_ALIASES = [
+  "First = First Shift",
+  "2nd = Second Shift",
+  "Last = Third Shift",
+  "Off duty = Rest Day",
+];
+const ACTUAL_ALIAS_LABELS: Record<Exclude<ShiftKey, "m">, string> = {
+  first: "First",
+  second: "2nd",
+  third: "Last",
+  rest: "Off duty",
+};
+const ACTUAL_CALENDAR_IMPORT: Record<string, Exclude<ShiftKey, "m">> = {
+  "2026-07-06": "third",
+  "2026-07-07": "second",
+  "2026-07-08": "rest",
+  "2026-07-09": "first",
+  "2026-07-10": "third",
+  "2026-07-11": "third",
+  "2026-07-12": "rest",
+  "2026-07-13": "second",
+  "2026-07-14": "rest",
+  "2026-07-15": "first",
+  "2026-07-16": "third",
+  "2026-07-17": "second",
+  "2026-07-18": "rest",
+  "2026-07-19": "rest",
+  "2026-07-20": "first",
+  "2026-07-21": "third",
+  "2026-07-22": "rest",
+  "2026-07-23": "second",
+  "2026-07-24": "rest",
+  "2026-07-25": "first",
+  "2026-07-26": "third",
+  "2026-07-27": "rest",
+  "2026-07-28": "second",
+  "2026-07-29": "rest",
+  "2026-07-30": "rest",
+  "2026-07-31": "rest",
+};
 const SHIFT_LABELS: Record<ShiftKey | "not-confirmed", string> = {
   first: "First Shift",
   second: "Second Shift",
@@ -198,8 +239,13 @@ function getPatternShift(date: Date, rotationStartDate: string) {
   return PATTERN[index];
 }
 
+function getScheduledHerShift(date: Date, data: CoupleData): ShiftKey {
+  const key = formatDateKey(date);
+  return data.herShiftOverrides[key] || getPatternShift(date, data.settings.rotationStartDate);
+}
+
 function resolveHerShift(date: Date, data: CoupleData): ShiftKey | "not-confirmed" {
-  const shift = getPatternShift(date, data.settings.rotationStartDate);
+  const shift = getScheduledHerShift(date, data);
   if (shift !== "m") return shift;
   const override = data.mShiftOverrides[formatDateKey(date)] || "not-confirmed";
   return override === "not-confirmed" ? "not-confirmed" : override;
@@ -207,7 +253,7 @@ function resolveHerShift(date: Date, data: CoupleData): ShiftKey | "not-confirme
 
 function getHerBlocksForDay(date: Date, data: CoupleData): WorkBlock[] {
   const key = formatDateKey(date);
-  const shift = getPatternShift(date, data.settings.rotationStartDate);
+  const shift = getScheduledHerShift(date, data);
   const effective = resolveHerShift(date, data);
   const previousEffective = resolveHerShift(addDays(date, -1), data);
   const blocks: WorkBlock[] = [];
@@ -217,7 +263,7 @@ function getHerBlocksForDay(date: Date, data: CoupleData): WorkBlock[] {
       owner: "her",
       label: "Third Shift carryover",
       start: 0,
-      end: 7 * 60 + 15,
+      end: 7 * 60 + 30,
       overnight: true,
     });
   }
@@ -284,11 +330,17 @@ function calculateSharedFree(blocks: WorkBlock[], mUnconfirmed: boolean) {
   return free.filter((slot) => slot.end - slot.start >= 30);
 }
 
+function workBlockTimeLabel(block: WorkBlock) {
+  if (block.label === "Third Shift") return "23:15 - 07:30 next day";
+  if (block.label === "Third Shift carryover") return "00:00 - 07:30";
+  return slotLabel(block);
+}
+
 function analyzeDay(date: Date, data: CoupleData): DayAnalysis {
   const key = formatDateKey(date);
   const dayName = date.toLocaleDateString("en-US", { weekday: "long" });
   const mineBlocks = getMineBlocks(date);
-  const herShift = getPatternShift(date, data.settings.rotationStartDate);
+  const herShift = getScheduledHerShift(date, data);
   const effectiveHerShift = resolveHerShift(date, data);
   const herBlocks = getHerBlocksForDay(date, data);
   const mUnconfirmed = herShift === "m" && effectiveHerShift === "not-confirmed";
@@ -302,15 +354,13 @@ function analyzeDay(date: Date, data: CoupleData): DayAnalysis {
       : null;
   const restDay = mineBlocks.length === 0 && effectiveHerShift === "rest";
   const overnight = blocks.some((block) => block.overnight);
+  const herWorkLabels = herBlocks.map(
+    (block) => `${block.label}: ${workBlockTimeLabel(block)}`
+  );
   const herLabel =
     effectiveHerShift === "not-confirmed"
       ? "M Shift - pending confirmation"
-      : effectiveHerShift === "rest"
-        ? "Rest day"
-        : herBlocks
-            .filter((block) => block.start !== 0)
-            .map((block) => `${block.label}: ${slotLabel(block)}`)
-            .join(", ") || "Rest day";
+      : herWorkLabels.join(", ") || "Rest day";
 
   return {
     date,
@@ -332,11 +382,12 @@ function analyzeDay(date: Date, data: CoupleData): DayAnalysis {
 function defaultData(): CoupleData {
   return {
     settings: {
-      rotationStartDate: todayKey(),
+      rotationStartDate: "2026-07-06",
       sendTime: "07:00",
       emailEnabled: true,
       recipients: [],
     },
+    herShiftOverrides: ACTUAL_CALENDAR_IMPORT,
     mShiftOverrides: {},
     dayNotes: {},
     goals: [
@@ -397,6 +448,13 @@ function normalizeData(raw: unknown): CoupleData {
       input.mShiftOverrides && typeof input.mShiftOverrides === "object"
         ? (input.mShiftOverrides as Record<string, MShiftChoice>)
         : {},
+    herShiftOverrides:
+      input.herShiftOverrides && typeof input.herShiftOverrides === "object"
+        ? {
+            ...ACTUAL_CALENDAR_IMPORT,
+            ...(input.herShiftOverrides as Record<string, Exclude<ShiftKey, "m">>),
+          }
+        : ACTUAL_CALENDAR_IMPORT,
     dayNotes:
       input.dayNotes && typeof input.dayNotes === "object"
         ? Object.fromEntries(
@@ -556,6 +614,18 @@ export default function CoupleGoalsPage() {
     };
     setData(next);
     persist(next, "M shift updated");
+  }
+
+  function setHerShiftOverride(dateKey: string, value: "pattern" | Exclude<ShiftKey, "m">) {
+    const overrides = { ...data.herShiftOverrides };
+    if (value === "pattern") {
+      delete overrides[dateKey];
+    } else {
+      overrides[dateKey] = value;
+    }
+    const next = { ...data, herShiftOverrides: overrides };
+    setData(next);
+    persist(next, "Her shift updated");
   }
 
   function updateDayNote(dateKey: string, notes: string) {
@@ -796,6 +866,13 @@ export default function CoupleGoalsPage() {
               Morning food email enabled
             </label>
           </div>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold text-slate-500 md:col-span-2">
+            {ACTUAL_CALENDAR_ALIASES.map((alias) => (
+              <span key={alias} className="rounded-full bg-slate-100 px-2.5 py-1">
+                {alias}
+              </span>
+            ))}
+          </div>
           <button
             onClick={() => persist()}
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800"
@@ -909,6 +986,25 @@ export default function CoupleGoalsPage() {
               <DetailRow label="My working hours" value={selectedAnalysis.mineLabel} />
               <DetailRow label="Her shift type" value={SHIFT_LABELS[selectedAnalysis.herShift]} />
               <DetailRow label="Her working hours" value={selectedAnalysis.herLabel} />
+              <label className="block rounded-xl border border-slate-200 p-3 text-sm font-black">
+                Her shift override
+                <select
+                  value={data.herShiftOverrides[selectedAnalysis.key] || "pattern"}
+                  onChange={(event) =>
+                    setHerShiftOverride(
+                      selectedAnalysis.key,
+                      event.target.value as "pattern" | Exclude<ShiftKey, "m">
+                    )
+                  }
+                  className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold"
+                >
+                  <option value="pattern">Use rotation pattern</option>
+                  <option value="first">First Shift ({ACTUAL_ALIAS_LABELS.first})</option>
+                  <option value="second">Second Shift ({ACTUAL_ALIAS_LABELS.second})</option>
+                  <option value="third">Third Shift ({ACTUAL_ALIAS_LABELS.third})</option>
+                  <option value="rest">Rest Day ({ACTUAL_ALIAS_LABELS.rest})</option>
+                </select>
+              </label>
               {selectedAnalysis.herShift === "m" && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
                   <p className="mb-2 text-sm font-black text-amber-900">Confirm M Shift</p>
