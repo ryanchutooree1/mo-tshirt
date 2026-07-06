@@ -102,12 +102,7 @@ function LoginInner() {
           try {
             await signInAdminWithFirebase(password);
           } catch {
-            await fetch("/api/logout", { method: "POST" }).catch(() => null);
-            setError(
-              "Tanvi login worked, but document access could not be prepared. Check Firebase admin authentication settings."
-            );
-            setSubmitting(false);
-            return;
+            await signOutAdminFromFirebase().catch(() => null);
           }
         } else {
           await signOutAdminFromFirebase().catch(() => null);
