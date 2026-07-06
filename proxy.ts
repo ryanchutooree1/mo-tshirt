@@ -38,6 +38,30 @@ function isCbeHost(host: string | null) {
   return Boolean(host?.split(":")[0].toLowerCase() === "cbe.mo-tshirt.mu");
 }
 
+function readCronSecret() {
+  return String(process.env.CRON_SECRET || process.env.IOT_CRON_SECRET || "").trim();
+}
+
+function isCronAuthorized(req: NextRequest) {
+  const secret = readCronSecret();
+
+  if (!secret) {
+    return process.env.NODE_ENV !== "production";
+  }
+
+  if (req.headers.get("authorization") === `Bearer ${secret}`) return true;
+  if (req.headers.get("x-cron-secret") === secret) return true;
+  return false;
+}
+
+function isAuthorizedCoupleFoodCron(req: NextRequest) {
+  return (
+    req.method === "GET" &&
+    req.nextUrl.pathname === "/api/admin/couple-goals/food-email" &&
+    isCronAuthorized(req)
+  );
+}
+
 export async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
@@ -61,6 +85,10 @@ export async function proxy(req: NextRequest) {
     const response = NextResponse.next();
     for (const [header, value] of Object.entries(getRateLimitHeaders(rateLimit))) {
       response.headers.set(header, value);
+    }
+
+    if (isAuthorizedCoupleFoodCron(req)) {
+      return applySecurityHeaders(response);
     }
 
     const requiresAnyAdminSession =
