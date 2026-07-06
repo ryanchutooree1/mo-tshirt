@@ -4,6 +4,7 @@ export const PRODUCTION_MANAGER_PATH = "/admin/tanvi" satisfies AdminPagePath;
 export const PRODUCTION_MANAGER_ALLOWED_PAGES: AdminPagePath[] = [
   PRODUCTION_MANAGER_PATH,
   "/admin/quotation-approval",
+  "/admin/couple-goals",
 ];
 
 function getProductionManagerPassword() {
