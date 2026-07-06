@@ -79,6 +79,7 @@ type DayAnalysis = {
   restDay: boolean;
   overnight: boolean;
   mUnconfirmed: boolean;
+  postThirdRest: boolean;
 };
 
 const STORAGE_DOC = doc(db, "coupleGoals", "workspace");
@@ -102,18 +103,18 @@ const ACTUAL_CALENDAR_ALIASES = [
 ];
 const ACTUAL_CALENDAR_IMPORT: Record<string, Exclude<ShiftKey, "m">> = {
   "2026-07-06": "third",
-  "2026-07-07": "second",
+  "2026-07-07": "rest",
   "2026-07-08": "rest",
   "2026-07-09": "first",
   "2026-07-10": "third",
-  "2026-07-11": "third",
+  "2026-07-11": "rest",
   "2026-07-12": "rest",
   "2026-07-13": "second",
   "2026-07-14": "rest",
   "2026-07-15": "first",
   "2026-07-16": "third",
-  "2026-07-17": "second",
-  "2026-07-18": "rest",
+  "2026-07-17": "rest",
+  "2026-07-18": "second",
   "2026-07-19": "rest",
   "2026-07-20": "first",
   "2026-07-21": "third",
@@ -245,6 +246,10 @@ function resolveHerShift(date: Date, data: CoupleData): ShiftKey | "not-confirme
   return override === "not-confirmed" ? "not-confirmed" : override;
 }
 
+function isPostThirdRestDay(date: Date, data: CoupleData) {
+  return resolveHerShift(addDays(date, -1), data) === "third";
+}
+
 function getHerBlocksForDay(date: Date, data: CoupleData): WorkBlock[] {
   const key = formatDateKey(date);
   const shift = getScheduledHerShift(date, data);
@@ -257,9 +262,10 @@ function getHerBlocksForDay(date: Date, data: CoupleData): WorkBlock[] {
       owner: "her",
       label: "Third Shift carryover",
       start: 0,
-      end: 7 * 60 + 30,
+      end: 7 * 60 + 15,
       overnight: true,
     });
+    return blocks;
   }
 
   if (shift === "m" && effective === "not-confirmed") {
@@ -325,8 +331,8 @@ function calculateSharedFree(blocks: WorkBlock[], mUnconfirmed: boolean) {
 }
 
 function workBlockTimeLabel(block: WorkBlock) {
-  if (block.label === "Third Shift") return "23:15 - 07:30 next day";
-  if (block.label === "Third Shift carryover") return "00:00 - 07:30";
+  if (block.label === "Third Shift") return "23:15 - 07:15 next day";
+  if (block.label === "Third Shift carryover") return "00:00 - 07:15";
   return slotLabel(block);
 }
 
@@ -334,8 +340,9 @@ function analyzeDay(date: Date, data: CoupleData): DayAnalysis {
   const key = formatDateKey(date);
   const dayName = date.toLocaleDateString("en-US", { weekday: "long" });
   const mineBlocks = getMineBlocks(date);
-  const herShift = getScheduledHerShift(date, data);
-  const effectiveHerShift = resolveHerShift(date, data);
+  const postThirdRest = isPostThirdRestDay(date, data);
+  const herShift = postThirdRest ? "rest" : getScheduledHerShift(date, data);
+  const effectiveHerShift = postThirdRest ? "rest" : resolveHerShift(date, data);
   const herBlocks = getHerBlocksForDay(date, data);
   const mUnconfirmed = herShift === "m" && effectiveHerShift === "not-confirmed";
   const blocks = [...mineBlocks, ...herBlocks];
@@ -354,7 +361,9 @@ function analyzeDay(date: Date, data: CoupleData): DayAnalysis {
   const herLabel =
     effectiveHerShift === "not-confirmed"
       ? "M Shift - pending confirmation"
-      : herWorkLabels.join(", ") || "Rest day";
+      : postThirdRest && herWorkLabels.length
+        ? `${herWorkLabels.join(", ")}, off after 07:15`
+        : herWorkLabels.join(", ") || "Rest day";
 
   return {
     date,
@@ -370,6 +379,7 @@ function analyzeDay(date: Date, data: CoupleData): DayAnalysis {
     restDay,
     overnight,
     mUnconfirmed,
+    postThirdRest,
   };
 }
 
@@ -1012,7 +1022,11 @@ export default function CoupleGoalsPage() {
                 <label className="block rounded-xl border border-slate-200 p-3 text-sm font-black">
                   Her shift override
                   <select
-                    value={data.herShiftOverrides[selectedAnalysis.key] || "pattern"}
+                    value={
+                      selectedAnalysis.postThirdRest
+                        ? "rest"
+                        : data.herShiftOverrides[selectedAnalysis.key] || "pattern"
+                    }
                     onChange={(event) =>
                       setHerShiftOverride(
                         selectedAnalysis.key,
