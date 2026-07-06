@@ -530,6 +530,12 @@ const DOC_TYPE_LABELS: Record<DocumentType, string> = {
   partial_receipt: "Partial receipt",
   receipt: "Receipt",
 };
+const DOC_TYPE_PREFIXES: Record<DocumentType, string> = {
+  quotation: "Q",
+  invoice: "INV",
+  partial_receipt: "PR",
+  receipt: "R",
+};
 
 const DOC_TYPE_TONES: Record<DocumentType, string> = {
   quotation: "border-[#ffd9c2] bg-[#fff4ed] text-[#c2410c]",
@@ -541,6 +547,12 @@ const DOC_TYPE_TONES: Record<DocumentType, string> = {
 const QUICK_PRODUCT_LINES = ["T-Shirt", "Poloshirt", "Hoodie", "Cap"];
 
 const getQuoteDocumentType = (quote: QuoteRecord): DocumentType => quote.quote?.documentType || "quotation";
+
+const normalizeDocumentNumberForType = (value: string, documentType: DocumentType) => {
+  const cleanValue = value.trim();
+  const baseNumber = cleanValue.replace(/^(Q|INV|PR|R)-/i, "") || cleanValue;
+  return `${DOC_TYPE_PREFIXES[documentType]}-${baseNumber}`;
+};
 
 const getPrimaryStatusMeta = (status: QuoteStatus, docType: DocumentType) => {
   if (status === "sent") {
@@ -1672,6 +1684,18 @@ export default function QuotationApprovalPage() {
     const nextTerms = getDefaultTerms(draft.documentType);
     setDraft((prev) => (prev ? { ...prev, terms: nextTerms } : prev));
   }, [draft]);
+
+  function updateDraftDocumentType(documentType: DocumentType) {
+    setDraft((current) =>
+      current
+        ? {
+            ...current,
+            documentType,
+            documentNumber: normalizeDocumentNumberForType(current.documentNumber, documentType),
+          }
+        : current
+    );
+  }
 
   const filtered = useMemo(() => {
     return quotes.filter((quote) => {
@@ -3509,7 +3533,7 @@ export default function QuotationApprovalPage() {
                                 <select
                                   value={draft.documentType}
                                   onChange={(e) =>
-                                    setDraft({ ...draft, documentType: e.target.value as DocumentType })
+                                    updateDraftDocumentType(e.target.value as DocumentType)
                                   }
                                   className={fieldClass}
                                 >
@@ -4367,7 +4391,7 @@ export default function QuotationApprovalPage() {
                         <select
                           value={draft.documentType}
                           onChange={(e) =>
-                            setDraft({ ...draft, documentType: e.target.value as DocumentType })
+                            updateDraftDocumentType(e.target.value as DocumentType)
                           }
                           className={fieldClass}
                         >

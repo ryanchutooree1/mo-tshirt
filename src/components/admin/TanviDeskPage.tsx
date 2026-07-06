@@ -169,6 +169,12 @@ const DOCUMENT_TYPE_LABELS: Record<TanviDocumentType, string> = {
   partial_receipt: "Partial receipt",
   receipt: "Receipt",
 };
+const DOCUMENT_TYPE_PREFIXES: Record<TanviDocumentType, string> = {
+  quotation: "Q",
+  invoice: "INV",
+  partial_receipt: "PR",
+  receipt: "R",
+};
 const DOCUMENT_TYPE_OPTIONS: TanviDocumentType[] = [
   "quotation",
   "invoice",
@@ -256,6 +262,12 @@ function getDefaultPaymentStatus(documentType: TanviDocumentType) {
   if (documentType === "receipt") return "Paid";
   if (documentType === "partial_receipt") return "Partially paid";
   return "Quotation only";
+}
+
+function normalizeDocumentNumberForType(value: string, documentType: TanviDocumentType) {
+  const cleanValue = value.trim();
+  const baseNumber = cleanValue.replace(/^(Q|INV|PR|R)-/i, "") || cleanValue;
+  return `${DOCUMENT_TYPE_PREFIXES[documentType]}-${baseNumber}`;
 }
 
 function buildDocumentDraftFromQuote(quote: TanviQuoteSummary): DocumentStudioDraft {
@@ -954,6 +966,7 @@ export default function TanviDeskPage() {
         return {
           ...current,
           documentType,
+          documentNumber: normalizeDocumentNumberForType(current.documentNumber, documentType),
           paymentStatus: getDefaultPaymentStatus(documentType),
           terms: current.terms || getDefaultTerms(documentType),
         };
