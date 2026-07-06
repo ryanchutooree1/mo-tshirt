@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/admin/couple-goals/food-email",
-      "schedule": "0 3 * * *"
+      "schedule": "30 7 6 7 *"
     }
   ]
 }
