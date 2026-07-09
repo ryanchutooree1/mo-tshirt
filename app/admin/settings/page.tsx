@@ -7,6 +7,7 @@ import {
   Database,
   HardDrive,
   KeyRound,
+  Loader2,
   Mail,
   PencilLine,
   Plus,
@@ -862,6 +863,8 @@ export default function SettingsPage() {
               icon={<Database className="h-4 w-4" />}
               usage={firebaseUsage}
               loading={firebaseUsageLoading}
+              loadingLabel="Loading Firebase storage usage..."
+              loadingDetail="Counting files in documents and quotes."
               error={firebaseUsageError}
             />
             <StorageUsageCard
@@ -870,6 +873,8 @@ export default function SettingsPage() {
               icon={<HardDrive className="h-4 w-4" />}
               usage={hostingUsage}
               loading={hostingUsageLoading}
+              loadingLabel="Loading host storage usage..."
+              loadingDetail="Checking the current host footprint."
               error={hostingUsageError}
             />
           </div>
@@ -1473,6 +1478,8 @@ function StorageUsageCard({
   icon,
   usage,
   loading,
+  loadingLabel,
+  loadingDetail,
   error,
 }: {
   title: string;
@@ -1480,6 +1487,8 @@ function StorageUsageCard({
   icon: React.ReactNode;
   usage: UsageSnapshot | null;
   loading: boolean;
+  loadingLabel: string;
+  loadingDetail: string;
   error: string | null;
 }) {
   const usedBytes = usage?.usedBytes ?? 0;
@@ -1487,7 +1496,10 @@ function StorageUsageCard({
   const percentage = getUsagePercent(usedBytes, limitBytes);
 
   return (
-    <div className="rounded-[28px] border border-slate-200 bg-slate-50/80 p-5 sm:p-6">
+    <div
+      className="rounded-[28px] border border-slate-200 bg-slate-50/80 p-5 sm:p-6"
+      aria-busy={loading}
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
@@ -1503,9 +1515,25 @@ function StorageUsageCard({
       </div>
 
       {loading ? (
-        <div className="mt-6 space-y-3">
-          <div className="h-3 rounded-full bg-slate-200" />
-          <div className="h-3 w-2/3 rounded-full bg-slate-200" />
+        <div
+          className="mt-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
+          role="status"
+        >
+          <div className="flex items-start gap-3">
+            <Loader2 className="mt-0.5 h-4 w-4 animate-spin text-slate-500" />
+            <div>
+              <div className="text-sm font-semibold text-slate-800">
+                {loadingLabel}
+              </div>
+              <div className="mt-1 text-xs leading-5 text-slate-500">
+                {loadingDetail}
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 space-y-2">
+            <div className="h-3 animate-pulse rounded-full bg-slate-200" />
+            <div className="h-3 w-2/3 animate-pulse rounded-full bg-slate-200" />
+          </div>
         </div>
       ) : error ? (
         <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
