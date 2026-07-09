@@ -453,6 +453,7 @@ export function resolveAdminApiPermission(pathname: string) {
   if (pathname.startsWith("/api/admin/settings")) return "/admin/settings" as AdminPagePath;
   if (pathname.startsWith("/api/admin/partners")) return "/admin/partners" as AdminPagePath;
   if (pathname.startsWith("/api/admin/docker-postgres")) return "/admin/docker-postgres" as AdminPagePath;
+  if (pathname.startsWith("/api/admin/tracking")) return "/admin/tracking" as AdminPagePath;
   if (pathname.startsWith("/api/admin/ai-assistant")) return "/admin/ai-assistant" as AdminPagePath;
   if (pathname.startsWith("/api/admin/quotes")) return "/admin/quotation-approval" as AdminPagePath;
   if (pathname.startsWith("/api/admin/ready-made-uniforms")) return "/admin/ready-made-uniforms" as AdminPagePath;

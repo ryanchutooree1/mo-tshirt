@@ -39,6 +39,19 @@ type TrackingEventDoc = {
 
 type RangePreset = '7d' | '30d' | '90d';
 
+type GmailQuotationStats = {
+  configured: boolean;
+  range: {
+    totalMessages: number;
+    uniqueClients: number;
+    lastReceivedAt: string | null;
+  };
+  allTime: {
+    totalMessages: number;
+  };
+  truncated: boolean;
+};
+
 const EVENT_LABELS: Record<TrackingEventName, string> = {
   page_view: 'Page View',
   whatsapp_click: 'WhatsApp Click',
@@ -137,6 +150,13 @@ function pluralize(value: number, singular: string, plural = `${singular}s`) {
   return `${value} ${value === 1 ? singular : plural}`;
 }
 
+function formatDateTime(value: string | null) {
+  if (!value) return 'No recent Gmail quotation';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'No recent Gmail quotation';
+  return `Latest: ${format(date, 'd MMM yyyy HH:mm')}`;
+}
+
 function formatTrackingDetail(event: TrackingEventDoc) {
   const directDetail = String(
     event.params.location ||
@@ -206,6 +226,9 @@ export default function TrackingPage() {
   const [events, setEvents] = useState<TrackingEventDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [gmailStats, setGmailStats] = useState<GmailQuotationStats | null>(null);
+  const [gmailLoading, setGmailLoading] = useState(true);
+  const [gmailError, setGmailError] = useState<string | null>(null);
 
   const range = useMemo(() => getRange(preset), [preset]);
 
@@ -248,6 +271,47 @@ export default function TrackingPage() {
         }
       } finally {
         if (!cancelled) setLoading(false);
+      }
+    }
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [range.end, range.start]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      setGmailLoading(true);
+      setGmailError(null);
+
+      try {
+        const params = new URLSearchParams({
+          start: range.start.toISOString(),
+          end: range.end.toISOString(),
+        });
+        const response = await fetch(`/api/admin/tracking/gmail-quotations?${params.toString()}`, {
+          cache: 'no-store',
+        });
+        const body = await response.json();
+
+        if (!response.ok) {
+          throw new Error(body?.error || 'Failed to load Gmail quotation stats.');
+        }
+
+        if (!cancelled) {
+          setGmailStats(body as GmailQuotationStats);
+        }
+      } catch (nextError) {
+        console.error(nextError);
+        if (!cancelled) {
+          setGmailStats(null);
+          setGmailError(nextError instanceof Error ? nextError.message : 'Failed to load Gmail quotation stats.');
+        }
+      } finally {
+        if (!cancelled) setGmailLoading(false);
       }
     }
 
@@ -349,6 +413,34 @@ export default function TrackingPage() {
 
   const recentEvents = useMemo(() => events.slice(0, 25), [events]);
 
+  const gmailMetric = useMemo(() => {
+    if (gmailLoading) {
+      return {
+        value: '...',
+        helper: 'Refreshing Gmail quotation count',
+      };
+    }
+
+    if (gmailError) {
+      return {
+        value: 'Error',
+        helper: gmailError,
+      };
+    }
+
+    if (!gmailStats?.configured) {
+      return {
+        value: 'Setup',
+        helper: 'Add Gmail OAuth env vars to enable live counts',
+      };
+    }
+
+    return {
+      value: String(gmailStats.range.totalMessages),
+      helper: `${gmailStats.allTime.totalMessages} all-time · ${gmailStats.range.uniqueClients} unique clients`,
+    };
+  }, [gmailError, gmailLoading, gmailStats]);
+
   return (
     <main className="min-h-screen bg-white px-6 py-8 text-[#222222]">
       <div className="mx-auto max-w-7xl space-y-8">
@@ -397,12 +489,45 @@ export default function TrackingPage() {
           </div>
         ) : null}
 
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <MetricCard label="Page Views" value={String(metrics.pageViews)} helper={`${metrics.sessions} tracked sessions`} />
           <MetricCard label="WhatsApp Clicks" value={String(metrics.whatsappClicks)} helper={`${metrics.whatsappRate}% of page views`} />
           <MetricCard label="Quote Leads" value={String(metrics.quoteSubmits)} helper={`${metrics.quoteRate}% of page views`} />
           <MetricCard label="Shop Orders" value={String(metrics.shopOrders)} helper={`${metrics.serviceViews} service-page visits`} />
+          <MetricCard label="Gmail Quotations" value={gmailMetric.value} helper={gmailMetric.helper} />
         </section>
+
+        {gmailStats?.configured ? (
+          <section className="rounded-[32px] border border-[#ebebeb] bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#6a6a6a]">Gmail Intake</p>
+                <h2 className="mt-2 text-2xl font-semibold text-[#222222]">Website quotation emails received</h2>
+                <p className="mt-2 text-sm text-[#6a6a6a]">
+                  Counts Gmail messages matching the New Website Quotation notification subject each time this page loads.
+                </p>
+              </div>
+              <div className="grid gap-3 text-sm sm:grid-cols-3 lg:min-w-[520px]">
+                <div className="rounded-2xl border border-[#ebebeb] px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6a6a6a]">Selected Range</p>
+                  <p className="mt-2 text-2xl font-semibold text-[#222222]">{gmailStats.range.totalMessages}</p>
+                </div>
+                <div className="rounded-2xl border border-[#ebebeb] px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6a6a6a]">Unique Clients</p>
+                  <p className="mt-2 text-2xl font-semibold text-[#222222]">{gmailStats.range.uniqueClients}</p>
+                </div>
+                <div className="rounded-2xl border border-[#ebebeb] px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6a6a6a]">All-Time Emails</p>
+                  <p className="mt-2 text-2xl font-semibold text-[#222222]">{gmailStats.allTime.totalMessages}</p>
+                </div>
+              </div>
+            </div>
+            <p className="mt-4 text-xs text-[#6a6a6a]">
+              {formatDateTime(gmailStats.range.lastReceivedAt)}
+              {gmailStats.truncated ? ' · unique client count was calculated from the newest 1000 messages' : ''}
+            </p>
+          </section>
+        ) : null}
 
         <section className="grid gap-6 xl:grid-cols-[1.35fr_0.85fr]">
           <div className="rounded-[32px] border border-[#ebebeb] bg-white p-6 shadow-sm">
