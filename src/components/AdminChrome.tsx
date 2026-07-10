@@ -319,6 +319,10 @@ export default function AdminChrome({
     ? "border-rose-500/45 bg-rose-500/15 text-rose-200 hover:border-rose-400/60 hover:bg-rose-500/25"
     : "border-rose-200 bg-white text-rose-700 hover:border-rose-300 hover:bg-rose-50";
 
+  if (pathname === "/admin") {
+    return <div className="min-h-screen bg-[#f7f8fa] text-slate-950">{children}</div>;
+  }
+
   if (isPartnerDesk) {
     return <div className="min-h-screen bg-[#f6f8fb] text-slate-950">{children}</div>;
   }
