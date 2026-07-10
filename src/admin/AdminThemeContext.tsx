@@ -30,10 +30,21 @@ export function AdminThemeProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (!ready) return;
+    const previousColorScheme = document.documentElement.style.colorScheme;
+    const previousRootBackground = document.documentElement.style.backgroundColor;
+    const previousBodyBackground = document.body.style.backgroundColor;
     try {
       localStorage.setItem(STORAGE_KEY, theme);
     } catch {}
     document.documentElement.style.colorScheme = theme;
+    document.documentElement.style.backgroundColor = theme === "dark" ? "#050806" : "#ffffff";
+    document.body.style.backgroundColor = theme === "dark" ? "#050806" : "#ffffff";
+
+    return () => {
+      document.documentElement.style.colorScheme = previousColorScheme;
+      document.documentElement.style.backgroundColor = previousRootBackground;
+      document.body.style.backgroundColor = previousBodyBackground;
+    };
   }, [theme, ready]);
 
   const setTheme = (nextTheme: AdminTheme) => setThemeState(nextTheme);

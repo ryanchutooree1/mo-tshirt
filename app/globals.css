@@ -222,7 +222,7 @@ body {
   color: #f7fff3;
 }
 
-.admin-root.admin-dark :is(
+.admin-root.admin-dark .admin-page-shell :is(
     .bg-white,
     .bg-white\/90,
     .bg-white\/80,
@@ -382,10 +382,10 @@ body {
   border-color: rgb(245 158 11 / 0.34) !important;
 }
 
-.admin-root.admin-dark .shadow-sm,
-.admin-root.admin-dark .shadow,
-.admin-root.admin-dark .shadow-md,
-.admin-root.admin-dark .shadow-lg {
+.admin-root.admin-dark .admin-page-shell .shadow-sm,
+.admin-root.admin-dark .admin-page-shell .shadow,
+.admin-root.admin-dark .admin-page-shell .shadow-md,
+.admin-root.admin-dark .admin-page-shell .shadow-lg {
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.52), 0 0 22px rgba(89, 214, 46, 0.06) !important;
 }
 
@@ -634,5 +634,28 @@ body {
 
   .admin-root .admin-page-shell :is(.overflow-x-auto, .overflow-auto) > table {
     min-width: max-content;
+  }
+
+  .admin-dashboard-main {
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+  }
+}
+
+@media (max-width: 1023px) {
+  .admin-workspace-header {
+    height: calc(4rem + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+  }
+
+  .admin-workspace-sidebar {
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .admin-workspace-sidebar-brand {
+    height: calc(5.75rem + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
   }
 }

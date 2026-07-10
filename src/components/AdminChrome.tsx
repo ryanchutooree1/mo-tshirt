@@ -256,6 +256,35 @@ function getInitials(name: string) {
     .join("") || "RC";
 }
 
+function AdminAvatar({
+  name,
+  owner,
+  className,
+  sizes,
+}: {
+  name: string;
+  owner: boolean;
+  className: string;
+  sizes: string;
+}) {
+  return (
+    <span className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full ${className}`}>
+      {owner ? (
+        <Image
+          src="/ryan-chutooree.jpg"
+          alt=""
+          fill
+          sizes={sizes}
+          className="scale-[1.85] object-cover object-center"
+          style={{ transformOrigin: "50% 37%" }}
+        />
+      ) : (
+        getInitials(name)
+      )}
+    </span>
+  );
+}
+
 export default function AdminChrome({
   children,
   initialSession,
@@ -277,11 +306,13 @@ export default function AdminChrome({
   const [collapsed, setCollapsed] = useState(false);
   const [navQuery, setNavQuery] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(NAV_GROUPS.map((group) => [group.id, true]))
   );
   const searchRef = useRef<HTMLInputElement>(null);
   const mobilePanelRef = useRef<HTMLDivElement>(null);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     try {
@@ -289,6 +320,17 @@ export default function AdminChrome({
       const storedGroups = localStorage.getItem(SIDEBAR_GROUPS_KEY);
       if (storedGroups) setOpenGroups((current) => ({ ...current, ...JSON.parse(storedGroups) }));
     } catch {}
+  }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const sync = () => {
+      setIsDesktop(media.matches);
+      if (media.matches) setMobileOpen(false);
+    };
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
   }, []);
 
   useEffect(() => {
@@ -331,13 +373,18 @@ export default function AdminChrome({
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const panel = mobilePanelRef.current;
-    const focusable = panel?.querySelectorAll<HTMLElement>(
+    const menuButton = mobileMenuButtonRef.current;
+    const initialFocusable = panel?.querySelectorAll<HTMLElement>(
       'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
     );
-    focusable?.[0]?.focus();
+    initialFocusable?.[0]?.focus();
 
     const trapFocus = (event: KeyboardEvent) => {
-      if (event.key !== "Tab" || !focusable?.length) return;
+      if (event.key !== "Tab") return;
+      const focusable = panel?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (!focusable?.length) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       if (event.shiftKey && document.activeElement === first) {
@@ -352,6 +399,7 @@ export default function AdminChrome({
     return () => {
       document.body.style.overflow = previousOverflow;
       panel?.removeEventListener("keydown", trapFocus);
+      menuButton?.focus();
     };
   }, [mobileOpen]);
 
@@ -381,8 +429,10 @@ export default function AdminChrome({
     }).slice(0, 8);
   }, [navQuery, visiblePages]);
 
-  const displayName = session?.isOwner ? "Ryan Chutooree" : session?.displayName || "Ryan Chutooree";
+  const displayName = session?.isOwner ? "Ryan Chutooree" : session?.displayName || "Administrator";
   const displayEmail = session?.email || "Administrator · Mauritius";
+  const isOwnerProfile = session?.isOwner === true;
+  const firstName = displayName.split(/\s+/).filter(Boolean)[0] || "Admin";
 
   async function logout() {
     await Promise.allSettled([
@@ -404,11 +454,11 @@ export default function AdminChrome({
 
   const sidebar = (
     <aside
-      className={`flex h-full flex-col overflow-hidden border-r border-white/[0.07] bg-[#071015] text-white transition-[width] duration-300 ${
+      className={`admin-workspace-sidebar flex h-full flex-col overflow-hidden border-r border-white/[0.07] bg-[#071015] text-white transition-[width] duration-300 ${
         collapsed ? "lg:w-[84px]" : "lg:w-[272px]"
-      } w-[300px]`}
+      } w-[min(300px,calc(100vw-48px))] max-w-full`}
     >
-      <div className={`flex h-[92px] shrink-0 items-center border-b border-white/[0.07] ${collapsed ? "lg:justify-center lg:px-3" : "px-5"}`}>
+      <div className={`admin-workspace-sidebar-brand flex h-[92px] shrink-0 items-center border-b border-white/[0.07] ${collapsed ? "lg:justify-center lg:px-3" : "px-5"}`}>
         <Link href="/admin" className="flex min-w-0 items-center gap-3" aria-label="MO T-SHIRT admin dashboard">
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
             <Image src="/logo_transparent.png" alt="" width={80} height={80} className="h-9 w-9 object-contain" />
@@ -421,14 +471,14 @@ export default function AdminChrome({
         <button
           type="button"
           onClick={() => setMobileOpen(false)}
-          className="ml-auto rounded-lg p-2 text-white/60 hover:bg-white/10 hover:text-white lg:hidden"
+          className="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-white/60 hover:bg-white/10 hover:text-white lg:hidden"
           aria-label="Close navigation"
         >
           <X className="h-5 w-5" />
         </button>
       </div>
 
-      <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4 [scrollbar-color:rgba(255,255,255,0.18)_transparent]" aria-label="Administrator modules">
+      <nav className="min-h-0 flex-1 overscroll-contain overflow-y-auto px-3 py-4 touch-pan-y [-webkit-overflow-scrolling:touch] [scrollbar-color:rgba(255,255,255,0.18)_transparent]" aria-label="Administrator modules">
         <div className={`relative mb-3 ${collapsed ? "lg:hidden" : ""}`}>
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
           <input
@@ -436,7 +486,7 @@ export default function AdminChrome({
             onChange={(event) => setNavQuery(event.target.value)}
             placeholder="Find a module..."
             aria-label="Filter sidebar modules"
-            className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.055] pl-9 pr-3 text-xs text-white outline-none placeholder:text-white/30 focus:border-white/20"
+            className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.055] pl-9 pr-3 text-base text-white outline-none placeholder:text-white/40 focus:border-white/20 sm:text-xs"
           />
         </div>
         {NAV_GROUPS.map((group) => {
@@ -447,7 +497,7 @@ export default function AdminChrome({
               return `${pageLabel(path)} ${group.label} ${path}`.toLowerCase().includes(queryValue);
             });
             if (!items.length) return null;
-            const expanded = collapsed || Boolean(queryValue) ? true : openGroups[group.id] !== false;
+            const expanded = (collapsed && isDesktop) || Boolean(queryValue) ? true : openGroups[group.id] !== false;
             return (
               <div key={group.id} className="mb-2">
                 <button
@@ -472,6 +522,7 @@ export default function AdminChrome({
                           href={path}
                           title={collapsed ? pageLabel(path) : undefined}
                           aria-current={active ? "page" : undefined}
+                          onClick={() => setMobileOpen(false)}
                           className={`group flex min-h-11 items-center gap-3 rounded-xl px-3 text-[13px] font-medium transition ${
                             active
                               ? "bg-white text-[#0b1115] shadow-[0_8px_24px_rgba(0,0,0,0.22)]"
@@ -491,30 +542,27 @@ export default function AdminChrome({
           })}
       </nav>
 
-      <div className="shrink-0 border-t border-white/[0.07] p-3">
-        <button
-          type="button"
-          onClick={() => {
-            setProfileOpen((current) => !current);
-            setMobileOpen(false);
-          }}
-          className={`flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition hover:bg-white/[0.07] ${collapsed ? "lg:justify-center" : ""}`}
-          aria-expanded={profileOpen}
-        >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-[#071015]">{getInitials(displayName)}</span>
+      <div className="shrink-0 border-t border-white/[0.07] p-3 [padding-bottom:max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className={`flex w-full items-center gap-3 rounded-xl p-2.5 text-left ${collapsed ? "lg:justify-center" : ""}`}>
+          <AdminAvatar
+            name={displayName}
+            owner={isOwnerProfile}
+            sizes="36px"
+            className="h-9 w-9 bg-white text-xs font-bold text-[#071015] ring-1 ring-white/20"
+          />
           <span className={`min-w-0 flex-1 ${collapsed ? "lg:hidden" : ""}`}>
             <span className="block truncate text-xs font-semibold">{displayName}</span>
             <span className="mt-0.5 block truncate text-[10px] text-white/42">Mauritius administrator</span>
           </span>
           <ChevronRight className={`h-4 w-4 text-white/35 ${collapsed ? "lg:hidden" : ""}`} />
-        </button>
+        </div>
       </div>
     </aside>
   );
 
   return (
-    <div className={`flex min-h-screen w-full max-w-full overflow-x-hidden ${isDark ? "bg-[#050806] text-white" : "bg-[#f7f8fa] text-slate-950"}`}>
-      <div className="sticky top-0 hidden h-screen shrink-0 lg:block">{sidebar}</div>
+    <div className={`flex min-h-dvh w-full max-w-full overflow-x-hidden ${isDark ? "bg-[#050806] text-white" : "bg-[#f7f8fa] text-slate-950"}`}>
+      <div className="sticky top-0 hidden h-dvh shrink-0 lg:block">{sidebar}</div>
 
       {mobileOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Administrator navigation">
@@ -524,13 +572,14 @@ export default function AdminChrome({
       ) : null}
 
       <div className="min-w-0 flex-1">
-        <header className={`sticky top-0 z-40 flex h-16 items-center gap-3 border-b px-3 backdrop-blur-xl sm:px-5 ${
+        <header className={`admin-workspace-header sticky top-0 z-40 flex h-16 items-center gap-2 border-b px-3 backdrop-blur-xl sm:gap-3 sm:px-5 ${
           isDark ? "border-white/10 bg-[#080d0a]/92" : "border-slate-200/80 bg-white/92"
         }`}>
           <button
+            ref={mobileMenuButtonRef}
             type="button"
             onClick={() => setMobileOpen(true)}
-            className={`rounded-xl border p-2.5 lg:hidden ${isDark ? "border-white/10 bg-white/5" : "border-slate-200 bg-white"}`}
+            className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border lg:hidden ${isDark ? "border-white/10 bg-white/5" : "border-slate-200 bg-white"}`}
             aria-label="Open administrator navigation"
           >
             <Menu className="h-4 w-4" />
@@ -553,7 +602,7 @@ export default function AdminChrome({
             <div className="truncate text-sm font-bold tracking-[-0.02em]">{currentLabel}</div>
           </div>
 
-          <div className="relative mx-auto hidden w-full max-w-[560px] md:block">
+          <div className="relative mx-auto hidden min-w-0 max-w-[560px] flex-1 md:block">
             <Search className={`pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 ${isDark ? "text-white/35" : "text-slate-400"}`} />
             <input
               ref={searchRef}
@@ -596,13 +645,13 @@ export default function AdminChrome({
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-2">
-            <div className={`hidden items-center gap-2 rounded-full px-3 py-2 text-[11px] font-semibold sm:flex ${isDark ? "bg-white/7 text-white/75" : "bg-slate-100 text-slate-600"}`}>
+            <div className={`hidden items-center gap-2 rounded-full px-3 py-2 text-[11px] font-semibold xl:flex ${isDark ? "bg-white/7 text-white/75" : "bg-slate-100 text-slate-600"}`}>
               <span aria-hidden>🇲🇺</span> Mauritius
             </div>
             <button
               type="button"
               onClick={toggleTheme}
-              className={`rounded-full border p-2.5 transition ${isDark ? "border-white/10 bg-white/5 hover:bg-white/10" : "border-slate-200 bg-white hover:bg-slate-50"}`}
+              className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border transition ${isDark ? "border-white/10 bg-white/5 hover:bg-white/10" : "border-slate-200 bg-white hover:bg-slate-50"}`}
               aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
             >
               {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -610,12 +659,19 @@ export default function AdminChrome({
             <button
               type="button"
               onClick={() => setProfileOpen((current) => !current)}
-              className={`flex items-center gap-2 rounded-full border p-1.5 pr-2.5 transition ${isDark ? "border-white/10 bg-white/5 hover:bg-white/10" : "border-slate-200 bg-white hover:bg-slate-50"}`}
+              className={`flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full border p-1.5 pr-1.5 transition sm:pr-2.5 ${isDark ? "border-white/10 bg-white/5 hover:bg-white/10" : "border-slate-200 bg-white hover:bg-slate-50"}`}
               aria-expanded={profileOpen}
+              aria-haspopup="menu"
+              aria-label={`Open profile menu for ${displayName}`}
             >
-              <span className={`flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold ${isDark ? "bg-white text-[#071015]" : "bg-[#071015] text-white"}`}>{getInitials(displayName)}</span>
-              <span className="hidden text-xs font-semibold xl:block">Ryan</span>
-              <ChevronDown className="h-3.5 w-3.5 opacity-45" />
+              <AdminAvatar
+                name={displayName}
+                owner={isOwnerProfile}
+                sizes="28px"
+                className={`h-7 w-7 text-[10px] font-bold ${isDark ? "bg-white text-[#071015]" : "bg-[#071015] text-white"}`}
+              />
+              <span className="hidden text-xs font-semibold xl:block">{firstName}</span>
+              <ChevronDown className="hidden h-3.5 w-3.5 opacity-45 sm:block" />
             </button>
           </div>
         </header>
@@ -623,23 +679,33 @@ export default function AdminChrome({
         {profileOpen ? (
           <>
           <button type="button" className="fixed inset-0 z-40 cursor-default" onClick={() => setProfileOpen(false)} aria-label="Close profile menu" />
-          <div className={`fixed right-3 top-[72px] z-50 w-[290px] overflow-hidden rounded-2xl border shadow-[0_24px_80px_rgba(15,23,42,0.2)] sm:right-5 ${isDark ? "border-white/10 bg-[#101613]" : "border-slate-200 bg-white"}`}>
+          <div role="menu" aria-label="Profile actions" className={`fixed right-3 top-[calc(4.5rem+env(safe-area-inset-top))] z-50 max-h-[calc(100dvh-5.5rem)] w-[calc(100vw-1.5rem)] max-w-[320px] overflow-y-auto rounded-2xl border shadow-[0_24px_80px_rgba(15,23,42,0.2)] sm:right-5 ${isDark ? "border-white/10 bg-[#101613]" : "border-slate-200 bg-white"}`}>
             <div className={`border-b p-4 ${isDark ? "border-white/10" : "border-slate-100"}`}>
-              <div className="text-sm font-bold">Ryan Chutooree</div>
-              <div className={`mt-1 truncate text-[11px] ${isDark ? "text-white/42" : "text-slate-500"}`}>{displayEmail}</div>
-              <div className={`mt-3 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${isDark ? "bg-white/7 text-white/65" : "bg-slate-100 text-slate-600"}`}>{session?.isOwner === false ? "Team access" : "Owner · Mauritius"}</div>
+              <div className="flex items-center gap-3">
+                <AdminAvatar
+                  name={displayName}
+                  owner={isOwnerProfile}
+                  sizes="48px"
+                  className={`h-12 w-12 text-xs font-bold ${isDark ? "bg-white text-[#071015]" : "bg-[#071015] text-white"}`}
+                />
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-bold">{displayName}</div>
+                  <div className={`mt-1 truncate text-[11px] ${isDark ? "text-white/42" : "text-slate-500"}`}>{displayEmail}</div>
+                </div>
+              </div>
+              <div className={`mt-3 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${isDark ? "bg-white/7 text-white/65" : "bg-slate-100 text-slate-600"}`}>{isOwnerProfile ? "Owner · Mauritius" : "Team access"}</div>
             </div>
             <div className="p-2">
-              <Link href="/admin/settings" className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold ${isDark ? "hover:bg-white/7" : "hover:bg-slate-50"}`}><Settings className="h-4 w-4" /> Workspace settings</Link>
-              <Link href="/" className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold ${isDark ? "hover:bg-white/7" : "hover:bg-slate-50"}`}><ExternalLink className="h-4 w-4" /> Visit Mauritius store</Link>
-              <button type="button" onClick={logout} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-rose-600 ${isDark ? "hover:bg-rose-400/10" : "hover:bg-rose-50"}`}><LogOut className="h-4 w-4" /> Sign out</button>
+              {visiblePages.has("/admin/settings") ? <Link role="menuitem" href="/admin/settings" className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold ${isDark ? "hover:bg-white/7" : "hover:bg-slate-50"}`}><Settings className="h-4 w-4" /> Workspace settings</Link> : null}
+              <Link role="menuitem" href="/" className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold ${isDark ? "hover:bg-white/7" : "hover:bg-slate-50"}`}><ExternalLink className="h-4 w-4" /> Visit Mauritius store</Link>
+              <button role="menuitem" type="button" onClick={logout} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-rose-600 ${isDark ? "hover:bg-rose-400/10" : "hover:bg-rose-50"}`}><LogOut className="h-4 w-4" /> Sign out</button>
             </div>
           </div>
           </>
         ) : null}
 
         <div className="min-w-0">
-          <div className={`${pathname === "/admin" ? "" : "admin-page-shell admin-minimal p-3 sm:p-5 lg:p-6"} min-h-[calc(100vh-4rem)]`}>
+          <div className={`${pathname === "/admin" ? "" : "admin-page-shell admin-minimal p-3 sm:p-5 lg:p-6"} min-h-[calc(100dvh-4rem)]`}>
             {children}
           </div>
         </div>
