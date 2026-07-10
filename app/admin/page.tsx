@@ -6,7 +6,6 @@ import { Manrope, Space_Grotesk } from "next/font/google";
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
-  ArrowUpRight,
   Bot,
   BriefcaseBusiness,
   CheckCircle2,
@@ -15,12 +14,10 @@ import {
   FileStack,
   Gauge,
   Layers3,
-  Moon,
   NotebookPen,
   Package,
   Plus,
   Sparkles,
-  Sun,
   Target,
   Trash2,
   TriangleAlert,
@@ -189,9 +186,38 @@ function dayKey(value: Date) {
   return format(value, "yyyy-MM-dd");
 }
 
+function sumDigits(value: number) {
+  return String(value)
+    .split("")
+    .reduce((total, digit) => total + Number(digit), 0);
+}
+
+function reduceToMaster(value: number) {
+  let next = value;
+  while (next > 9 && next !== 11 && next !== 22 && next !== 33) {
+    next = sumDigits(next);
+  }
+  return next;
+}
+
+function calculateNumerology(date: Date) {
+  const dateDigits = format(date, "ddMMyyyy");
+  const dateTotal = dateDigits
+    .split("")
+    .reduce((total, digit) => total + Number(digit), 0);
+  const day = date.getDate();
+
+  return {
+    primary: reduceToMaster(dateTotal),
+    secondary: [2, 11, 20, 22, 33].includes(day)
+      ? day
+      : reduceToMaster(sumDigits(day)),
+  };
+}
+
 export default function OwnerDashboard() {
   const global = useAdminMetrics();
-  const { theme, toggleTheme } = useAdminTheme();
+  const { theme } = useAdminTheme();
   const isDark = theme === "dark";
   const cardBase = isDark
     ? "rounded-lg border border-[#17331b] bg-[#020604]/92 shadow-[inset_0_1px_0_rgba(124,255,69,0.08),0_18px_55px_rgba(0,0,0,0.58)]"
@@ -220,6 +246,13 @@ export default function OwnerDashboard() {
     const timer = setInterval(() => setNow(new Date()), 1_000);
     return () => clearInterval(timer);
   }, []);
+
+  const numerologyToday = useMemo(() => calculateNumerology(now), [now]);
+  const numerologyTomorrow = useMemo(() => {
+    const date = new Date(now);
+    date.setDate(date.getDate() + 1);
+    return { date, ...calculateNumerology(date) };
+  }, [now]);
 
   useEffect(() => {
     let cancelled = false;
@@ -837,41 +870,39 @@ export default function OwnerDashboard() {
               </h1>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href="/admin/pos"
-                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
-                  isDark
-                    ? "bg-white text-slate-950 hover:bg-slate-200"
-                    : "bg-slate-900 text-white hover:bg-slate-700"
-                }`}
-              >
-                POS
-                <ArrowUpRight className="h-4 w-4" />
-              </Link>
-              <Link
-                href="/admin/quotation-approval"
-                className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
-                  isDark
-                    ? "border-white/15 bg-white/5 text-slate-100 hover:bg-white/10"
-                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                Quotes
-                <ArrowUpRight className="h-4 w-4" />
-              </Link>
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
-                  isDark
-                    ? "border-white/15 bg-white/5 text-slate-100 hover:bg-white/10"
-                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                }`}
-              >
-                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                {theme === "dark" ? "Light" : "Dark"}
-              </button>
+            <div
+              className={`min-w-full rounded-xl border p-3 sm:min-w-[310px] ${
+                isDark
+                  ? "border-white/10 bg-white/[0.04]"
+                  : "border-slate-200 bg-slate-50"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <span className={`text-xs font-bold uppercase tracking-[0.18em] ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                  Numerology
+                </span>
+                <span className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
+                  {format(now, "dd/MM/yyyy")}
+                </span>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className={`rounded-lg border px-3 py-2 ${isDark ? "border-blue-400/20 bg-blue-400/10" : "border-blue-100 bg-white"}`}>
+                  <div className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${isDark ? "text-blue-200" : "text-blue-700"}`}>
+                    Today
+                  </div>
+                  <div className={`${displayFont.className} mt-1 text-lg font-semibold`}>
+                    {numerologyToday.primary} / {numerologyToday.secondary}
+                  </div>
+                </div>
+                <div className={`rounded-lg border px-3 py-2 ${isDark ? "border-emerald-400/20 bg-emerald-400/10" : "border-emerald-100 bg-white"}`}>
+                  <div className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${isDark ? "text-emerald-200" : "text-emerald-700"}`}>
+                    Tomorrow · {format(numerologyTomorrow.date, "dd/MM")}
+                  </div>
+                  <div className={`${displayFont.className} mt-1 text-lg font-semibold`}>
+                    {numerologyTomorrow.primary} / {numerologyTomorrow.secondary}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
