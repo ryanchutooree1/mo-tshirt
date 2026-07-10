@@ -30,6 +30,14 @@ const PAGE_DESCRIPTIONS = new Map(
   ADMIN_PAGE_OPTIONS.map((option) => [option.path, option.description])
 );
 const ALL_PAGE_PATHS_SET = new Set<AdminPagePath>(ALL_ADMIN_PAGE_PATHS);
+const DESKTOP_NAV_PATHS: AdminPagePath[] = [
+  "/admin",
+  "/admin/orders",
+  "/admin/pos",
+  "/admin/quotation-approval",
+  "/admin/clients",
+  "/admin/inventory",
+];
 
 function toPagePath(value: unknown) {
   const rawValue =
@@ -264,15 +272,9 @@ export default function AdminChrome({
   }, [open]);
 
   const rootClass = isDark ? "bg-[#010503] text-[#f7fff3]" : "bg-white text-[#222222]";
-  const topBarClass = isDark
-    ? "border-[#17331b] bg-black/88 shadow-[0_1px_0_rgba(89,214,46,0.28),0_18px_50px_rgba(0,0,0,0.55)]"
-    : "border-[#ebebeb] bg-white/92 shadow-[0_10px_30px_rgba(0,0,0,0.04)]";
-  const circleButtonClass = isDark
-    ? "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#285b25] bg-[#04100a] text-[#7cff45] transition hover:border-[#7cff45] hover:bg-[#07190d]"
-    : "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#ebebeb] bg-white text-[#222222] transition hover:border-[#d7d7d7] hover:bg-[#f7f7f7]";
-  const rolePillClass = isDark
-    ? "hidden shrink-0 items-center gap-2 rounded-full border border-[#285b25] bg-[#04100a] px-3 py-1.5 text-xs font-semibold text-[#9af45c] sm:inline-flex"
-    : "hidden shrink-0 items-center gap-2 rounded-full border border-[#ebebeb] bg-white px-3 py-1.5 text-xs text-[#6a6a6a] shadow-[0_4px_14px_rgba(0,0,0,0.04)] sm:inline-flex";
+  const topBarClass = "border-white/10 bg-[#080808]/95 shadow-[0_1px_0_rgba(255,255,255,0.03)]";
+  const circleButtonClass =
+    "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white transition hover:border-white/20 hover:bg-white/[0.12]";
   const drawerPanelClass = isDark
     ? "border-[#17331b] bg-[#020604] shadow-[24px_0_80px_rgba(0,0,0,0.72)]"
     : "border-[#ebebeb] bg-white shadow-[0_24px_60px_rgba(0,0,0,0.12)]";
@@ -323,84 +325,87 @@ export default function AdminChrome({
 
   return (
     <div className={`min-h-screen w-full max-w-full overflow-x-hidden transition-colors ${rootClass}`}>
-      {!isDark ? (
-        <>
-          <div
-            aria-hidden
-            className="pointer-events-none fixed inset-x-0 top-0 z-0 h-44 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0))]"
-          />
-        </>
-      ) : null}
       <div
         className={`sticky top-0 z-40 border-b backdrop-blur-xl transition-colors ${topBarClass}`}
       >
-        <div className="relative z-10 mx-auto flex w-full max-w-[1760px] min-w-0 items-center justify-between gap-2 px-3 py-2 sm:px-4 lg:px-6">
-          <div className="flex shrink-0 items-center gap-2">
+        <div className="relative z-10 mx-auto flex h-16 w-full max-w-[1760px] min-w-0 items-center gap-3 px-4 sm:h-[72px] sm:px-6 lg:px-8">
+          <Link
+            href="/admin"
+            className="flex shrink-0 items-center gap-2.5 text-white"
+            aria-label="MO Admin dashboard"
+          >
+            <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-white">
+              <Image
+                src="/logo_transparent.png"
+                alt=""
+                width={72}
+                height={72}
+                className="h-7 w-7 object-contain"
+                priority={false}
+              />
+            </span>
+            <span className="hidden text-sm font-semibold tracking-[-0.01em] sm:block">MO Admin</span>
+          </Link>
+
+          <nav className="mx-auto hidden min-w-0 items-center justify-center gap-7 xl:flex" aria-label="Primary admin navigation">
+            {DESKTOP_NAV_PATHS.filter((path) => visiblePages.has(path)).map((path) => {
+              const active = isNavPathActive(path, pathname);
+              return (
+                <Link
+                  key={path}
+                  href={path}
+                  aria-current={active ? "page" : undefined}
+                  className={`whitespace-nowrap text-sm font-medium tracking-[-0.01em] transition ${
+                    active ? "text-white" : "text-white/62 hover:text-white"
+                  }`}
+                >
+                  {getLabel(path)}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="ml-auto flex shrink-0 items-center gap-2 xl:ml-0">
+            <button
+              type="button"
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+              onClick={toggleTheme}
+              className="hidden h-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.09] px-5 text-sm font-medium text-white transition hover:bg-white/[0.14] sm:inline-flex"
+            >
+              {isDark ? "Light" : "Dark"}
+            </button>
             <button
               type="button"
               aria-label="Open menu"
               aria-expanded={open}
               onClick={() => setOpen((value) => !value)}
-              className={circleButtonClass}
+              className="hidden h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-[#111111] transition hover:bg-[#e9e9e9] sm:inline-flex"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
-                {open ? (
-                  <path
-                    fillRule="evenodd"
-                    d="M6.225 4.811a1 1 0 0 1 1.414 0L12 9.172l4.361-4.36a1 1 0 1 1 1.414 1.414L13.414 10.586l4.36 4.361a1 1 0 0 1-1.414 1.414L12 12l-4.361 4.361a1 1 0 1 1-1.414-1.414l4.36-4.361-4.36-4.361a1 1 0 0 1 0-1.414Z"
-                    clipRule="evenodd"
-                  />
-                ) : (
-                  <path
-                    fillRule="evenodd"
-                    d="M4.5 6.75A.75.75 0 0 1 5.25 6h13.5a.75.75 0 0 1 0 1.5H5.25A.75.75 0 0 1 4.5 6.75Zm0 5.25a.75.75 0 0 1 .75-.75h13.5a.75.75 0 0 1 0 1.5H5.25a.75.75 0 0 1-.75-.75Zm.75 4.5a.75.75 0 0 0 0 1.5h13.5a.75.75 0 0 0 0-1.5H5.25Z"
-                    clipRule="evenodd"
-                  />
-                )}
+              Menu
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden className="h-4 w-4">
+                <path d="m6 8 4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
+            <span className="max-w-[45vw] truncate text-sm font-medium text-white sm:hidden">{currentLabel}</span>
             <button
               type="button"
               aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
               onClick={toggleTheme}
-              className={circleButtonClass}
+              className={`sm:hidden ${circleButtonClass}`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
-                {isDark ? (
-                  <path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0-16a.75.75 0 0 1 .75.75V4a.75.75 0 0 1-1.5 0V2.75A.75.75 0 0 1 12 2Zm0 18a.75.75 0 0 1 .75.75V22a.75.75 0 0 1-1.5 0v-1.25A.75.75 0 0 1 12 20Zm10-8a.75.75 0 0 1-.75.75H20a.75.75 0 0 1 0-1.5h1.25A.75.75 0 0 1 22 12ZM4 12a.75.75 0 0 1-.75.75H2a.75.75 0 0 1 0-1.5h1.25A.75.75 0 0 1 4 12Zm14.364 6.364a.75.75 0 0 1 1.06 1.06l-.884.884a.75.75 0 1 1-1.06-1.06l.884-.884ZM6.52 6.52a.75.75 0 0 1 1.06 0l.884.884a.75.75 0 1 1-1.06 1.06L6.52 7.58a.75.75 0 0 1 0-1.06Zm12.944 0a.75.75 0 0 1 0 1.06l-.884.884a.75.75 0 1 1-1.06-1.06l.884-.884a.75.75 0 0 1 1.06 0ZM7.58 17.404a.75.75 0 0 1 0 1.06l-.884.884a.75.75 0 1 1-1.06-1.06l.884-.884a.75.75 0 0 1 1.06 0Z" />
-                ) : (
-                  <path d="M21 12.79A9 9 0 0 1 11.21 3a.75.75 0 0 0-.95-.73A10.5 10.5 0 1 0 21.73 13.74a.75.75 0 0 0-.73-.95Z" />
-                )}
+              <span aria-hidden>{isDark ? "☀" : "☾"}</span>
+            </button>
+            <button
+              type="button"
+              aria-label="Open menu"
+              aria-expanded={open}
+              onClick={() => setOpen((value) => !value)}
+              className={`sm:hidden ${circleButtonClass}`}
+            >
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden className="h-4 w-4">
+                <path d="M3.5 6h13M3.5 10h13M3.5 14h13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>
             </button>
-            <div className={rolePillClass}>
-              <span className={`h-2 w-2 rounded-full ${isDark ? "bg-[#7cff45] shadow-[0_0_12px_rgba(124,255,69,0.8)]" : "bg-[#ff6600]"}`} />
-              {session?.isOwner ? "Owner" : "Live"}
-            </div>
-          </div>
-
-          <div className="ml-auto flex min-w-0 items-center justify-end gap-2 sm:gap-3">
-            <div className="min-w-0 max-w-[62vw] text-right sm:max-w-none">
-              <div className={`truncate text-sm font-semibold ${isDark ? "text-[#f7fff3]" : "text-[#222222]"}`}>
-                {currentLabel}
-              </div>
-            </div>
-            <div
-              className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg ${
-                isDark
-                  ? "border border-[#285b25] bg-[#07190d]"
-                  : "border border-[#ebebeb] bg-white"
-              }`}
-            >
-              <Image
-                src="/logo_transparent.png"
-                alt="MO T-SHIRT"
-                width={96}
-                height={96}
-                className="h-7 w-7 object-contain"
-                priority={false}
-              />
-            </div>
           </div>
         </div>
       </div>
