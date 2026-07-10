@@ -3,13 +3,69 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { LucideIcon } from "lucide-react";
+import {
+  Activity,
+  BadgeCheck,
+  BadgeDollarSign,
+  Bot,
+  BriefcaseBusiness,
+  Building2,
+  Calculator,
+  ChevronDown,
+  ChevronRight,
+  CircleUserRound,
+  CreditCard,
+  Database,
+  Eraser,
+  ExternalLink,
+  FileSignature,
+  FolderArchive,
+  Gem,
+  Handshake,
+  Headphones,
+  Heart,
+  HeartHandshake,
+  Landmark,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  MonitorCog,
+  Moon,
+  Network,
+  NotebookPen,
+  PackageSearch,
+  Palette,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PenTool,
+  PiggyBank,
+  Printer,
+  RadioTower,
+  ReceiptText,
+  Scale,
+  ScanText,
+  Search,
+  Settings,
+  Shirt,
+  ShoppingBag,
+  ShoppingCart,
+  Store,
+  Sun,
+  Truck,
+  UserRoundCog,
+  Users,
+  UsersRound,
+  Warehouse,
+  Workflow,
+  X,
+  Zap,
+} from "lucide-react";
 import { useAdminTheme } from "@/admin/AdminThemeContext";
 import {
   ADMIN_PAGE_OPTIONS,
   ALL_ADMIN_PAGE_PATHS,
-  DEFAULT_MORE_NAV_PATHS,
-  DEFAULT_TOP_NAV_PATHS,
   type AdminPagePath,
 } from "@/lib/admin-access";
 import { signOutAdminFromFirebase } from "@/lib/firebase-admin-client-auth";
@@ -21,62 +77,159 @@ type AdminSessionSummary = {
   isOwner: boolean;
 };
 
-const NAV_STORAGE = "admin-nav-v2";
+type NavGroup = {
+  id: string;
+  label: string;
+  paths: AdminPagePath[];
+};
 
-const PAGE_LABELS = new Map(
-  ADMIN_PAGE_OPTIONS.map((option) => [option.path, option.label])
-);
-const PAGE_DESCRIPTIONS = new Map(
-  ADMIN_PAGE_OPTIONS.map((option) => [option.path, option.description])
-);
-const ALL_PAGE_PATHS_SET = new Set<AdminPagePath>(ALL_ADMIN_PAGE_PATHS);
-const DESKTOP_NAV_PATHS: AdminPagePath[] = [
-  "/admin",
-  "/admin/orders",
-  "/admin/pos",
-  "/admin/quotation-approval",
-  "/admin/clients",
-  "/admin/inventory",
+const SIDEBAR_COLLAPSED_KEY = "admin-sidebar-collapsed-v1";
+const SIDEBAR_GROUPS_KEY = "admin-sidebar-groups-v1";
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    id: "core",
+    label: "Core",
+    paths: ["/admin", "/admin/orders", "/admin/pos", "/admin/clients"],
+  },
+  {
+    id: "commerce",
+    label: "Commerce",
+    paths: [
+      "/admin/quotation-approval",
+      "/admin/contracts",
+      "/admin/shops",
+      "/admin/ready-made-uniforms",
+      "/admin/design-studio",
+      "/admin/background-remover",
+      "/admin/ai-assistant",
+    ],
+  },
+  {
+    id: "operations",
+    label: "Operations",
+    paths: [
+      "/admin/inventory",
+      "/admin/tanvi",
+      "/admin/partners",
+      "/admin/prescription-ocr",
+      "/admin/dms",
+      "/admin/iot",
+    ],
+  },
+  {
+    id: "departments",
+    label: "Departments",
+    paths: [
+      "/admin/management",
+      "/admin/sales",
+      "/admin/marketing",
+      "/admin/customer-service",
+      "/admin/design",
+      "/admin/production",
+      "/admin/purchasing",
+      "/admin/inventory-department",
+      "/admin/logistics",
+      "/admin/quality",
+      "/admin/finance",
+      "/admin/hr",
+      "/admin/technology",
+      "/admin/legal-compliance",
+    ],
+  },
+  {
+    id: "insights",
+    label: "Insights",
+    paths: [
+      "/admin/analytics",
+      "/admin/tracking",
+      "/admin/accounting",
+      "/admin/finance-freedom",
+      "/admin/business-value",
+      "/admin/automation",
+    ],
+  },
+  {
+    id: "planning",
+    label: "Planning",
+    paths: [
+      "/admin/business-os",
+      "/admin/business-notes",
+      "/admin/business-details",
+      "/admin/his-dream-life",
+      "/admin/her-dream-life",
+      "/admin/our-dream",
+      "/admin/couple-goals",
+    ],
+  },
+  {
+    id: "system",
+    label: "System",
+    paths: ["/admin/docker-postgres", "/admin/settings"],
+  },
 ];
 
-function toPagePath(value: unknown) {
-  const rawValue =
-    typeof value === "string"
-      ? value
-      : value && typeof value === "object" && "href" in value
-        ? value.href
-        : null;
+const LABEL_OVERRIDES: Partial<Record<AdminPagePath, string>> = {
+  "/admin/quotation-approval": "Quotes & Invoices",
+  "/admin/shops": "Products",
+  "/admin/ready-made-uniforms": "Uniforms",
+  "/admin/inventory": "Stock & Products",
+  "/admin/inventory-department": "Inventory Department",
+  "/admin/dms": "Documents",
+  "/admin/iot": "IoT Control",
+  "/admin/docker-postgres": "Database",
+};
 
-  if (typeof rawValue !== "string") return null;
-  if (!ALL_PAGE_PATHS_SET.has(rawValue as AdminPagePath)) return null;
-  return rawValue as AdminPagePath;
-}
+const PAGE_ICONS: Partial<Record<AdminPagePath, LucideIcon>> = {
+  "/admin": LayoutDashboard,
+  "/admin/orders": ShoppingBag,
+  "/admin/pos": CreditCard,
+  "/admin/clients": Users,
+  "/admin/quotation-approval": ReceiptText,
+  "/admin/contracts": FileSignature,
+  "/admin/shops": Store,
+  "/admin/ready-made-uniforms": Shirt,
+  "/admin/design-studio": Palette,
+  "/admin/background-remover": Eraser,
+  "/admin/ai-assistant": Bot,
+  "/admin/inventory": PackageSearch,
+  "/admin/tanvi": Workflow,
+  "/admin/partners": Handshake,
+  "/admin/prescription-ocr": ScanText,
+  "/admin/dms": FolderArchive,
+  "/admin/iot": RadioTower,
+  "/admin/management": BriefcaseBusiness,
+  "/admin/sales": BadgeDollarSign,
+  "/admin/marketing": Zap,
+  "/admin/customer-service": Headphones,
+  "/admin/design": PenTool,
+  "/admin/production": Printer,
+  "/admin/purchasing": ShoppingCart,
+  "/admin/inventory-department": Warehouse,
+  "/admin/logistics": Truck,
+  "/admin/quality": BadgeCheck,
+  "/admin/finance": Landmark,
+  "/admin/hr": UserRoundCog,
+  "/admin/technology": MonitorCog,
+  "/admin/legal-compliance": Scale,
+  "/admin/analytics": Activity,
+  "/admin/tracking": Search,
+  "/admin/accounting": Calculator,
+  "/admin/finance-freedom": PiggyBank,
+  "/admin/business-value": Gem,
+  "/admin/automation": Zap,
+  "/admin/business-os": Network,
+  "/admin/business-notes": NotebookPen,
+  "/admin/business-details": Building2,
+  "/admin/his-dream-life": CircleUserRound,
+  "/admin/her-dream-life": Heart,
+  "/admin/our-dream": UsersRound,
+  "/admin/couple-goals": HeartHandshake,
+  "/admin/docker-postgres": Database,
+  "/admin/settings": Settings,
+};
 
-function normalizeNavOrder(topRaw: unknown, moreRaw: unknown) {
-  const seen = new Set<AdminPagePath>();
-  const top: AdminPagePath[] = [];
-  const more: AdminPagePath[] = [];
-
-  const appendPath = (target: AdminPagePath[], value: unknown) => {
-    const path = toPagePath(value);
-    if (!path || seen.has(path)) return;
-    seen.add(path);
-    target.push(path);
-  };
-
-  if (Array.isArray(topRaw)) {
-    topRaw.forEach((entry) => appendPath(top, entry));
-  }
-
-  if (Array.isArray(moreRaw)) {
-    moreRaw.forEach((entry) => appendPath(more, entry));
-  }
-
-  DEFAULT_TOP_NAV_PATHS.forEach((path) => appendPath(top, path));
-  DEFAULT_MORE_NAV_PATHS.forEach((path) => appendPath(more, path));
-
-  return { top, more };
-}
+const OPTION_BY_PATH = new Map(ADMIN_PAGE_OPTIONS.map((option) => [option.path, option]));
 
 function isNavPathActive(path: AdminPagePath, pathname: string) {
   if (path === "/admin/iot" && pathname === "/iot") return true;
@@ -84,18 +237,31 @@ function isNavPathActive(path: AdminPagePath, pathname: string) {
   return pathname === path || pathname.startsWith(`${path}/`);
 }
 
-function getLabel(path: AdminPagePath) {
-  return PAGE_LABELS.get(path) || path;
+function pageLabel(path: AdminPagePath) {
+  return LABEL_OVERRIDES[path] || OPTION_BY_PATH.get(path)?.label || path;
 }
 
-function getDescription(path: AdminPagePath) {
-  return PAGE_DESCRIPTIONS.get(path) || "Open module";
+function activePagePath(pathname: string) {
+  return [...ALL_ADMIN_PAGE_PATHS]
+    .sort((left, right) => right.length - left.length)
+    .find((path) => isNavPathActive(path, pathname));
+}
+
+function getInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "RC";
 }
 
 export default function AdminChrome({
   children,
+  initialSession,
 }: {
   children: React.ReactNode;
+  initialSession: AdminSessionSummary | null;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -105,154 +271,118 @@ export default function AdminChrome({
     pathname === "/admin/yan_list" ||
     pathname === "/admin/shab_list" ||
     (pathname.startsWith("/admin/partners/") && pathname !== "/admin/partners");
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [hasLoadedNav, setHasLoadedNav] = useState(false);
-  const [topNav, setTopNav] = useState<AdminPagePath[]>(DEFAULT_TOP_NAV_PATHS);
-  const [moreNav, setMoreNav] = useState<AdminPagePath[]>(DEFAULT_MORE_NAV_PATHS);
-  const [session, setSession] = useState<AdminSessionSummary | null>(null);
+
+  const session = initialSession;
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [navQuery, setNavQuery] = useState("");
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(NAV_GROUPS.map((group) => [group.id, true]))
+  );
+  const searchRef = useRef<HTMLInputElement>(null);
+  const mobilePanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isPartnerDesk) {
-      setHasLoadedNav(true);
-      return;
-    }
-
     try {
-      const raw = localStorage.getItem(NAV_STORAGE);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        const normalized = normalizeNavOrder(parsed?.top, parsed?.more);
-        setTopNav(normalized.top);
-        setMoreNav(normalized.more);
-      } else {
-        const normalized = normalizeNavOrder(DEFAULT_TOP_NAV_PATHS, DEFAULT_MORE_NAV_PATHS);
-        setTopNav(normalized.top);
-        setMoreNav(normalized.more);
-      }
-    } catch {
-      const normalized = normalizeNavOrder(DEFAULT_TOP_NAV_PATHS, DEFAULT_MORE_NAV_PATHS);
-      setTopNav(normalized.top);
-      setMoreNav(normalized.more);
-    } finally {
-      setHasLoadedNav(true);
-    }
-  }, [isPartnerDesk]);
-
-  useEffect(() => {
-    if (isPartnerDesk) return;
-    if (!hasLoadedNav) return;
-    try {
-      localStorage.setItem(
-        NAV_STORAGE,
-        JSON.stringify({ top: topNav, more: moreNav })
-      );
+      setCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true");
+      const storedGroups = localStorage.getItem(SIDEBAR_GROUPS_KEY);
+      if (storedGroups) setOpenGroups((current) => ({ ...current, ...JSON.parse(storedGroups) }));
     } catch {}
-  }, [hasLoadedNav, isPartnerDesk, moreNav, topNav]);
+  }, []);
 
   useEffect(() => {
-    let ignore = false;
-
-    (async () => {
-      if (isPartnerDesk) return;
-
-      try {
-        const res = await fetch("/api/admin/session", { cache: "no-store" });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data?.session) return;
-
-        const nextSession = data.session as Partial<AdminSessionSummary>;
-        if (
-          ignore ||
-          !Array.isArray(nextSession.allowedPages) ||
-          typeof nextSession.displayName !== "string" ||
-          typeof nextSession.email !== "string" ||
-          typeof nextSession.isOwner !== "boolean"
-        ) {
-          return;
-        }
-
-        setSession({
-          displayName: nextSession.displayName,
-          email: nextSession.email,
-          allowedPages: nextSession.allowedPages as AdminPagePath[],
-          isOwner: nextSession.isOwner,
-        });
-      } catch {}
-    })();
-
-    return () => {
-      ignore = true;
-    };
-  }, [isPartnerDesk]);
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(collapsed));
+    } catch {}
+  }, [collapsed]);
 
   useEffect(() => {
-    if (session && !session.isOwner) {
-      setEditing(false);
-    }
-  }, [session]);
+    try {
+      localStorage.setItem(SIDEBAR_GROUPS_KEY, JSON.stringify(openGroups));
+    } catch {}
+  }, [openGroups]);
 
-  const canEditNavigation = session?.isOwner !== false;
-
-  const visiblePages = useMemo(() => {
-    if (!session || session.isOwner) {
-      return new Set<AdminPagePath>(ALL_ADMIN_PAGE_PATHS);
-    }
-    return new Set<AdminPagePath>(session.allowedPages);
-  }, [session]);
-
-  const visibleTopNav = useMemo(
-    () =>
-      topNav
-        .map((path, index) => ({ path, index }))
-        .filter((entry) => visiblePages.has(entry.path)),
-    [topNav, visiblePages]
-  );
-
-  const visibleMoreNav = useMemo(
-    () =>
-      moreNav
-        .map((path, index) => ({ path, index }))
-        .filter((entry) => visiblePages.has(entry.path)),
-    [moreNav, visiblePages]
-  );
-
-  const currentLabel = useMemo(() => {
-    const currentPath = ALL_ADMIN_PAGE_PATHS.find((path) =>
-      isNavPathActive(path, pathname)
-    );
-    return currentPath ? getLabel(currentPath) : "Admin";
+  useEffect(() => {
+    setMobileOpen(false);
+    setProfileOpen(false);
+    setNavQuery("");
   }, [pathname]);
 
-  function moveWithin(list: "top" | "more", index: number, delta: number) {
-    const setList = list === "top" ? setTopNav : setMoreNav;
-    setList((current) => {
-      const next = current.slice();
-      const newIndex = (index + delta + next.length) % next.length;
-      const [item] = next.splice(index, 1);
-      next.splice(newIndex, 0, item);
-      return next;
-    });
-  }
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchRef.current?.focus();
+      }
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+        setProfileOpen(false);
+        setNavQuery("");
+        searchRef.current?.blur();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
-  function moveBetween(list: "top" | "more", index: number) {
-    if (list === "top") {
-      setTopNav((currentTop) => {
-        const nextTop = currentTop.slice();
-        const [item] = nextTop.splice(index, 1);
-        setMoreNav((currentMore) => [...currentMore, item]);
-        return nextTop;
-      });
-      return;
-    }
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const panel = mobilePanelRef.current;
+    const focusable = panel?.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    focusable?.[0]?.focus();
 
-    setMoreNav((currentMore) => {
-      const nextMore = currentMore.slice();
-      const [item] = nextMore.splice(index, 1);
-      setTopNav((currentTop) => [...currentTop, item]);
-      return nextMore;
-    });
-  }
+    const trapFocus = (event: KeyboardEvent) => {
+      if (event.key !== "Tab" || !focusable?.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    panel?.addEventListener("keydown", trapFocus);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      panel?.removeEventListener("keydown", trapFocus);
+    };
+  }, [mobileOpen]);
+
+  const visiblePages = useMemo(() => {
+    if (!session) return new Set<AdminPagePath>();
+    if (session.isOwner) return new Set<AdminPagePath>(ALL_ADMIN_PAGE_PATHS);
+    const allowed = new Set<AdminPagePath>(session.allowedPages);
+    if (allowed.has("/admin/tanvi")) allowed.add("/admin/quotation-approval");
+    return allowed;
+  }, [session]);
+
+  const currentPath = activePagePath(pathname);
+  const currentLabel = currentPath ? pageLabel(currentPath) : "Admin";
+  const currentGroup = NAV_GROUPS.find((group) => currentPath && group.paths.includes(currentPath));
+
+  useEffect(() => {
+    if (!currentGroup) return;
+    setOpenGroups((current) => (current[currentGroup.id] ? current : { ...current, [currentGroup.id]: true }));
+  }, [currentGroup]);
+
+  const searchResults = useMemo(() => {
+    const queryValue = navQuery.trim().toLowerCase();
+    if (!queryValue) return [];
+    return ADMIN_PAGE_OPTIONS.filter((option) => {
+      if (!visiblePages.has(option.path)) return false;
+      return `${pageLabel(option.path)} ${option.group} ${option.path}`.toLowerCase().includes(queryValue);
+    }).slice(0, 8);
+  }, [navQuery, visiblePages]);
+
+  const displayName = session?.isOwner ? "Ryan Chutooree" : session?.displayName || "Ryan Chutooree";
+  const displayEmail = session?.email || "Administrator · Mauritius";
 
   async function logout() {
     await Promise.allSettled([
@@ -262,426 +392,258 @@ export default function AdminChrome({
     router.replace("/login");
   }
 
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open]);
-
-  const rootClass = isDark ? "bg-[#010503] text-[#f7fff3]" : "bg-white text-[#222222]";
-  const topBarClass = "border-white/10 bg-[#080808]/95 shadow-[0_1px_0_rgba(255,255,255,0.03)]";
-  const circleButtonClass =
-    "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white transition hover:border-white/20 hover:bg-white/[0.12]";
-  const drawerPanelClass = isDark
-    ? "border-[#17331b] bg-[#020604] shadow-[24px_0_80px_rgba(0,0,0,0.72)]"
-    : "border-[#ebebeb] bg-white shadow-[0_24px_60px_rgba(0,0,0,0.12)]";
-  const profileCardClass = isDark
-    ? "border-[#21491f] bg-[#04100a] shadow-[0_0_30px_rgba(89,214,46,0.08)]"
-    : "border-[#ebebeb] bg-white shadow-[0_10px_28px_rgba(0,0,0,0.06)]";
-  const subtleLabelClass = isDark ? "text-[#79d95a]" : "text-[#8a8a8a]";
-  const profileMetaClass = isDark ? "text-[#b7c6b3]" : "text-[#6a6a6a]";
-  const editButtonClass = (active: boolean) =>
-    active
-      ? isDark
-        ? "border-[#7cff45] bg-[#59d62e]/20 text-[#dfffca]"
-        : "border-[#222222] bg-[#222222] text-white shadow-[0_8px_20px_rgba(0,0,0,0.16)]"
-      : isDark
-        ? "border-[#21491f] bg-[#04100a] text-[#f7fff3] hover:border-[#7cff45] hover:bg-[#07190d]"
-        : "border-[#ebebeb] bg-white text-[#484848] hover:border-[#d7d7d7] hover:bg-[#f7f7f7]";
-  const themeButtonClass = isDark
-    ? "border-[#1f63ff]/55 bg-[#1f63ff]/14 text-[#b9d1ff] hover:border-[#1f63ff] hover:bg-[#1f63ff]/22"
-    : "border-[#ebebeb] bg-white text-[#484848] hover:border-[#d7d7d7] hover:bg-[#f7f7f7]";
-  const accessCardClass = isDark
-    ? "border-[#21491f] bg-black/45 text-[#b7c6b3]"
-    : "border-[#ebebeb] bg-white text-[#6a6a6a]";
-  const editRowClass = isDark
-    ? "border-[#21491f] bg-[#04100a]"
-    : "border-[#ebebeb] bg-white";
-  const editChipClass = isDark
-    ? "border-[#21491f] text-[#b7c6b3] hover:bg-[#07190d]"
-    : "border-[#ebebeb] text-[#6a6a6a] hover:bg-[#f7f7f7]";
-  const editLabelClass = isDark
-    ? "border-[#21491f] bg-black/35 text-[#f7fff3]"
-    : "border-[#ebebeb] bg-white text-[#222222]";
-  const navActiveClass = isDark
-    ? "border-[#7cff45]/70 bg-[#59d62e]/16 text-[#dfffca] shadow-[0_0_24px_rgba(89,214,46,0.18)]"
-    : "border-[#222222] bg-[#222222] text-white shadow-[0_10px_24px_rgba(0,0,0,0.12)]";
-  const navInactiveClass = isDark
-    ? "border-transparent text-[#e9f4e5] hover:border-[#21491f] hover:bg-[#07190d]"
-    : "border-transparent text-[#484848] hover:border-[#ebebeb] hover:bg-[#f7f7f7]";
-  const shellClass = isDark
-    ? "admin-page-shell admin-minimal relative min-h-screen max-w-full overflow-x-hidden bg-[#010503] p-3 text-[#f7fff3] transition-colors sm:p-4 lg:p-6"
-    : "admin-page-shell admin-minimal airbnb-admin-shell relative min-h-screen max-w-full overflow-x-hidden bg-transparent p-3 text-[#222222] transition-colors sm:p-4 lg:p-6";
-  const logoutButtonClass = isDark
-    ? "border-rose-500/45 bg-rose-500/15 text-rose-200 hover:border-rose-400/60 hover:bg-rose-500/25"
-    : "border-rose-200 bg-white text-rose-700 hover:border-rose-300 hover:bg-rose-50";
-
-  if (pathname === "/admin") {
-    return <div className="min-h-screen bg-[#f7f8fa] text-slate-950">{children}</div>;
+  function openSearchResult(path: AdminPagePath) {
+    setNavQuery("");
+    searchRef.current?.blur();
+    router.push(path);
   }
 
   if (isPartnerDesk) {
     return <div className="min-h-screen bg-[#f6f8fb] text-slate-950">{children}</div>;
   }
 
-  return (
-    <div className={`min-h-screen w-full max-w-full overflow-x-hidden transition-colors ${rootClass}`}>
-      <div
-        className={`sticky top-0 z-40 border-b backdrop-blur-xl transition-colors ${topBarClass}`}
-      >
-        <div className="relative z-10 mx-auto flex h-16 w-full max-w-[1760px] min-w-0 items-center gap-3 px-4 sm:h-[72px] sm:px-6 lg:px-8">
-          <Link
-            href="/admin"
-            className="flex shrink-0 items-center gap-2.5 text-white"
-            aria-label="MO Admin dashboard"
-          >
-            <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-white">
-              <Image
-                src="/logo_transparent.png"
-                alt=""
-                width={72}
-                height={72}
-                className="h-7 w-7 object-contain"
-                priority={false}
-              />
-            </span>
-            <span className="hidden text-sm font-semibold tracking-[-0.01em] sm:block">MO Admin</span>
-          </Link>
-
-          <nav className="mx-auto hidden min-w-0 items-center justify-center gap-7 xl:flex" aria-label="Primary admin navigation">
-            {DESKTOP_NAV_PATHS.filter((path) => visiblePages.has(path)).map((path) => {
-              const active = isNavPathActive(path, pathname);
-              return (
-                <Link
-                  key={path}
-                  href={path}
-                  aria-current={active ? "page" : undefined}
-                  className={`whitespace-nowrap text-sm font-medium tracking-[-0.01em] transition ${
-                    active ? "text-white" : "text-white/62 hover:text-white"
-                  }`}
-                >
-                  {getLabel(path)}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="ml-auto flex shrink-0 items-center gap-2 xl:ml-0">
-            <button
-              type="button"
-              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-              onClick={toggleTheme}
-              className="hidden h-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.09] px-5 text-sm font-medium text-white transition hover:bg-white/[0.14] sm:inline-flex"
-            >
-              {isDark ? "Light" : "Dark"}
-            </button>
-            <button
-              type="button"
-              aria-label="Open menu"
-              aria-expanded={open}
-              onClick={() => setOpen((value) => !value)}
-              className="hidden h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-[#111111] transition hover:bg-[#e9e9e9] sm:inline-flex"
-            >
-              Menu
-              <svg viewBox="0 0 20 20" fill="none" aria-hidden className="h-4 w-4">
-                <path d="m6 8 4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-            <span className="max-w-[45vw] truncate text-sm font-medium text-white sm:hidden">{currentLabel}</span>
-            <button
-              type="button"
-              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-              onClick={toggleTheme}
-              className={`sm:hidden ${circleButtonClass}`}
-            >
-              <span aria-hidden>{isDark ? "☀" : "☾"}</span>
-            </button>
-            <button
-              type="button"
-              aria-label="Open menu"
-              aria-expanded={open}
-              onClick={() => setOpen((value) => !value)}
-              className={`sm:hidden ${circleButtonClass}`}
-            >
-              <svg viewBox="0 0 20 20" fill="none" aria-hidden className="h-4 w-4">
-                <path d="M3.5 6h13M3.5 10h13M3.5 14h13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
-            </button>
-          </div>
-        </div>
+  const sidebar = (
+    <aside
+      className={`flex h-full flex-col overflow-hidden border-r border-white/[0.07] bg-[#071015] text-white transition-[width] duration-300 ${
+        collapsed ? "lg:w-[84px]" : "lg:w-[272px]"
+      } w-[300px]`}
+    >
+      <div className={`flex h-[92px] shrink-0 items-center border-b border-white/[0.07] ${collapsed ? "lg:justify-center lg:px-3" : "px-5"}`}>
+        <Link href="/admin" className="flex min-w-0 items-center gap-3" aria-label="MO T-SHIRT admin dashboard">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
+            <Image src="/logo_transparent.png" alt="" width={80} height={80} className="h-9 w-9 object-contain" />
+          </span>
+          <span className={`min-w-0 ${collapsed ? "lg:hidden" : ""}`}>
+            <span className="block truncate text-[21px] font-bold tracking-[-0.04em]">Mo T-Shirt</span>
+            <span className="mt-0.5 block truncate text-[11px] text-white/45">Wear Your Creativity</span>
+          </span>
+        </Link>
+        <button
+          type="button"
+          onClick={() => setMobileOpen(false)}
+          className="ml-auto rounded-lg p-2 text-white/60 hover:bg-white/10 hover:text-white lg:hidden"
+          aria-label="Close navigation"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
-      {open ? (
-        <div className="fixed inset-0 z-50">
-          <div
-            className={`absolute inset-0 ${isDark ? "bg-black/40" : "bg-black/18"} backdrop-blur-sm`}
-            style={{ animation: "fadeIn 0.2s ease-out both" }}
-            onClick={() => setOpen(false)}
+      <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4 [scrollbar-color:rgba(255,255,255,0.18)_transparent]" aria-label="Administrator modules">
+        <div className={`relative mb-3 ${collapsed ? "lg:hidden" : ""}`}>
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+          <input
+            value={navQuery}
+            onChange={(event) => setNavQuery(event.target.value)}
+            placeholder="Find a module..."
+            aria-label="Filter sidebar modules"
+            className="h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.055] pl-9 pr-3 text-xs text-white outline-none placeholder:text-white/30 focus:border-white/20"
           />
-          <div
-            className={`absolute inset-y-0 left-0 flex w-[min(20rem,calc(100vw-4rem))] flex-col rounded-r-[22px] border-r p-3 transition-colors sm:w-[22rem] sm:p-4 ${drawerPanelClass}`}
-            style={{ animation: "drawerIn 0.25s ease-out both" }}
-          >
-            <div
-              className={`relative overflow-hidden rounded-[20px] border p-3 transition-colors ${profileCardClass}`}
-            >
-              <div className="relative flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${profileMetaClass}`}>
-                    {session?.isOwner ? "Owner Session" : "Team Session"}
-                  </div>
-                  <div className={`mt-1.5 truncate text-base font-semibold ${isDark ? "text-[#f7fff3]" : "text-[#222222]"}`}>
-                    {session?.displayName || "Admin"}
-                  </div>
-                  <div className={`mt-1 truncate text-xs ${profileMetaClass}`}>
-                    {session?.email || "Loading access profile..."}
-                  </div>
-                </div>
-
-                {canEditNavigation ? (
-                  <div className="flex shrink-0 gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setOpen(false)}
-                      className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${editButtonClass(false)}`}
-                    >
-                      Close
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditing((value) => !value)}
-                      className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${editButtonClass(editing)}`}
-                    >
-                      {editing ? "Done" : "Edit"}
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setOpen(false)}
-                    className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${editButtonClass(false)}`}
-                  >
-                    Close
-                  </button>
-                )}
-              </div>
-
-              <div className="relative mt-3 grid gap-2">
+        </div>
+        {NAV_GROUPS.map((group) => {
+            const queryValue = navQuery.trim().toLowerCase();
+            const items = group.paths.filter((path) => {
+              if (!visiblePages.has(path)) return false;
+              if (!queryValue) return true;
+              return `${pageLabel(path)} ${group.label} ${path}`.toLowerCase().includes(queryValue);
+            });
+            if (!items.length) return null;
+            const expanded = collapsed || Boolean(queryValue) ? true : openGroups[group.id] !== false;
+            return (
+              <div key={group.id} className="mb-2">
                 <button
                   type="button"
-                  onClick={toggleTheme}
-                  className={`inline-flex items-center justify-center rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${themeButtonClass}`}
+                  onClick={() => setOpenGroups((current) => ({ ...current, [group.id]: !expanded }))}
+                  className={`flex w-full items-center justify-between px-3 py-2 text-left text-[10px] font-bold uppercase tracking-[0.16em] text-white/35 transition hover:text-white/65 ${
+                    collapsed ? "lg:hidden" : ""
+                  }`}
+                  aria-expanded={expanded}
                 >
-                  {isDark ? "Switch To Light Mode" : "Switch To Dark Mode"}
+                  {group.label}
+                  <ChevronDown className={`h-3.5 w-3.5 transition ${expanded ? "rotate-0" : "-rotate-90"}`} />
                 </button>
-
-                <div
-                  className={`rounded-[16px] border px-3 py-2 ${accessCardClass}`}
-                >
-                  <div className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${subtleLabelClass}`}>
-                    Access
-                  </div>
-                  <div className="mt-0.5 text-xs font-semibold text-inherit">
-                    {session?.isOwner
-                      ? "Full admin access"
-                      : `${session?.allowedPages.length || 0} page permissions assigned`}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <nav className="mt-3 flex-1 space-y-3 overflow-y-auto pr-1">
-              <div>
-                <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${subtleLabelClass}`}>
-                  Core
-                </div>
-                <div className="mt-2 space-y-1.5">
-                  {visibleTopNav.map(({ path, index }) => {
-                    const active = isNavPathActive(path, pathname);
-                    const label = getLabel(path);
-                    return editing ? (
-                      <div
-                        key={path}
-                        className={`flex items-center gap-2 rounded-2xl border px-2 py-2 ${editRowClass}`}
-                      >
-                        <button
-                          type="button"
-                          aria-label={`Move ${label} up`}
-                          onClick={() => moveWithin("top", index, -1)}
-                          className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${editChipClass}`}
-                        >
-                          Up
-                        </button>
-                        <button
-                          type="button"
-                          aria-label={`Move ${label} down`}
-                          onClick={() => moveWithin("top", index, 1)}
-                          className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${editChipClass}`}
-                        >
-                          Down
-                        </button>
-                        <button
-                          type="button"
-                          aria-label={`Move ${label} to more`}
-                          onClick={() => moveBetween("top", index)}
-                          className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${editChipClass}`}
-                        >
-                          Move
-                        </button>
-                        <span
-                          className={`flex-1 rounded-xl border px-3 py-2 text-sm font-semibold ${editLabelClass}`}
-                        >
-                          {label}
-                        </span>
-                      </div>
-                    ) : (
-                      <Link
-                        key={path}
-                        href={path}
-                        onClick={() => setOpen(false)}
-                        className={`group flex items-center justify-between rounded-xl border px-3 py-2 text-sm font-semibold transition ${
-                          active ? navActiveClass : navInactiveClass
-                        }`}
-                        title={getDescription(path)}
-                      >
-                        <span>{label}</span>
-                        <span
-                          className={`h-2 w-2 rounded-full ${
+                {expanded ? (
+                  <div className="space-y-1">
+                    {items.map((path) => {
+                      const active = isNavPathActive(path, pathname);
+                      const Icon = PAGE_ICONS[path] || ChevronRight;
+                      return (
+                        <Link
+                          key={path}
+                          href={path}
+                          title={collapsed ? pageLabel(path) : undefined}
+                          aria-current={active ? "page" : undefined}
+                          className={`group flex min-h-11 items-center gap-3 rounded-xl px-3 text-[13px] font-medium transition ${
                             active
-                              ? isDark
-                                ? "bg-[#7cff45] shadow-[0_0_10px_rgba(124,255,69,0.7)]"
-                                : "bg-[#ff6600]"
-                              : isDark
-                                ? "bg-[#2c6228] group-hover:bg-[#7cff45]"
-                                : "bg-[#d0d0d0] group-hover:bg-[#999999]"
-                          }`}
-                        />
-                      </Link>
-                    );
-                  })}
-                </div>
+                              ? "bg-white text-[#0b1115] shadow-[0_8px_24px_rgba(0,0,0,0.22)]"
+                              : "text-white/62 hover:bg-white/[0.07] hover:text-white"
+                          } ${collapsed ? "lg:justify-center lg:px-0" : ""}`}
+                        >
+                          <Icon className={`h-[18px] w-[18px] shrink-0 ${active ? "text-[#ff6400]" : "text-white/52 group-hover:text-white/85"}`} />
+                          <span className={`truncate ${collapsed ? "lg:hidden" : ""}`}>{pageLabel(path)}</span>
+                          {active ? <span className={`ml-auto h-1.5 w-1.5 rounded-full bg-[#ff6400] ${collapsed ? "lg:hidden" : ""}`} /> : null}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </div>
+            );
+          })}
+      </nav>
 
-              <div>
-                <div className={`text-[10px] font-semibold uppercase tracking-[0.22em] ${subtleLabelClass}`}>
-                  More
-                </div>
-                <div className="mt-2 space-y-1.5">
-                  {visibleMoreNav.map(({ path, index }) => {
-                    const active = isNavPathActive(path, pathname);
-                    const label = getLabel(path);
-                    return editing ? (
-                      <div
-                        key={path}
-                        className={`flex items-center gap-2 rounded-2xl border px-2 py-2 ${editRowClass}`}
-                      >
-                        <button
-                          type="button"
-                          aria-label={`Move ${label} up`}
-                          onClick={() => moveWithin("more", index, -1)}
-                          className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${editChipClass}`}
-                        >
-                          Up
-                        </button>
-                        <button
-                          type="button"
-                          aria-label={`Move ${label} down`}
-                          onClick={() => moveWithin("more", index, 1)}
-                          className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${editChipClass}`}
-                        >
-                          Down
-                        </button>
-                        <button
-                          type="button"
-                          aria-label={`Move ${label} to core`}
-                          onClick={() => moveBetween("more", index)}
-                          className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${editChipClass}`}
-                        >
-                          Move
-                        </button>
-                        <span
-                          className={`flex-1 rounded-xl border px-3 py-2 text-sm font-semibold ${editLabelClass}`}
-                        >
-                          {label}
-                        </span>
-                      </div>
-                    ) : (
-                      <Link
-                        key={path}
-                        href={path}
-                        onClick={() => setOpen(false)}
-                        className={`group flex items-center justify-between rounded-xl border px-3 py-2 text-sm font-semibold transition ${
-                          active ? navActiveClass : navInactiveClass
-                        }`}
-                        title={getDescription(path)}
-                      >
-                        <span>{label}</span>
-                        <span
-                          className={`h-2 w-2 rounded-full ${
-                            active
-                              ? isDark
-                                ? "bg-[#7cff45] shadow-[0_0_10px_rgba(124,255,69,0.7)]"
-                                : "bg-[#ff6600]"
-                              : isDark
-                                ? "bg-[#2c6228] group-hover:bg-[#7cff45]"
-                                : "bg-[#d0d0d0] group-hover:bg-[#999999]"
-                          }`}
-                        />
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            </nav>
+      <div className="shrink-0 border-t border-white/[0.07] p-3">
+        <button
+          type="button"
+          onClick={() => {
+            setProfileOpen((current) => !current);
+            setMobileOpen(false);
+          }}
+          className={`flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition hover:bg-white/[0.07] ${collapsed ? "lg:justify-center" : ""}`}
+          aria-expanded={profileOpen}
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-[#071015]">{getInitials(displayName)}</span>
+          <span className={`min-w-0 flex-1 ${collapsed ? "lg:hidden" : ""}`}>
+            <span className="block truncate text-xs font-semibold">{displayName}</span>
+            <span className="mt-0.5 block truncate text-[10px] text-white/42">Mauritius administrator</span>
+          </span>
+          <ChevronRight className={`h-4 w-4 text-white/35 ${collapsed ? "lg:hidden" : ""}`} />
+        </button>
+      </div>
+    </aside>
+  );
 
-            <div
-              className={`mt-3 border-t pt-3 ${isDark ? "border-[#21491f]" : "border-[#ebebeb]"}`}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  logout();
-                }}
-                className={`w-full rounded-full border px-4 py-1.5 text-xs font-semibold shadow-sm transition ${logoutButtonClass}`}
-              >
-                Logout
-              </button>
-            </div>
-          </div>
+  return (
+    <div className={`flex min-h-screen w-full max-w-full overflow-x-hidden ${isDark ? "bg-[#050806] text-white" : "bg-[#f7f8fa] text-slate-950"}`}>
+      <div className="sticky top-0 hidden h-screen shrink-0 lg:block">{sidebar}</div>
+
+      {mobileOpen ? (
+        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Administrator navigation">
+          <button type="button" className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={() => setMobileOpen(false)} aria-label="Close navigation overlay" />
+          <div ref={mobilePanelRef} className="absolute inset-y-0 left-0 shadow-[24px_0_80px_rgba(0,0,0,0.45)]">{sidebar}</div>
         </div>
       ) : null}
 
-      <main className="ml-0">
-        <div className={shellClass}>
-          <div className="relative z-10">{children}</div>
+      <div className="min-w-0 flex-1">
+        <header className={`sticky top-0 z-40 flex h-16 items-center gap-3 border-b px-3 backdrop-blur-xl sm:px-5 ${
+          isDark ? "border-white/10 bg-[#080d0a]/92" : "border-slate-200/80 bg-white/92"
+        }`}>
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className={`rounded-xl border p-2.5 lg:hidden ${isDark ? "border-white/10 bg-white/5" : "border-slate-200 bg-white"}`}
+            aria-label="Open administrator navigation"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
+          <div className="min-w-0 flex-1 sm:hidden">
+            <div className={`truncate text-[9px] font-bold uppercase tracking-[0.14em] ${isDark ? "text-white/35" : "text-slate-400"}`}>{currentGroup?.label || "Workspace"}</div>
+            <div className="truncate text-xs font-bold">{currentLabel}</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCollapsed((current) => !current)}
+            className={`hidden rounded-xl border p-2.5 transition lg:inline-flex ${isDark ? "border-white/10 bg-white/5 hover:bg-white/10" : "border-slate-200 bg-white hover:bg-slate-50"}`}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+          </button>
+
+          <div className="hidden min-w-0 sm:block lg:w-[220px]">
+            <div className={`truncate text-[10px] font-bold uppercase tracking-[0.16em] ${isDark ? "text-white/35" : "text-slate-400"}`}>{currentGroup?.label || "Workspace"}</div>
+            <div className="truncate text-sm font-bold tracking-[-0.02em]">{currentLabel}</div>
+          </div>
+
+          <div className="relative mx-auto hidden w-full max-w-[560px] md:block">
+            <Search className={`pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 ${isDark ? "text-white/35" : "text-slate-400"}`} />
+            <input
+              ref={searchRef}
+              value={navQuery}
+              onChange={(event) => setNavQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && searchResults[0]) openSearchResult(searchResults[0].path);
+              }}
+              placeholder="Search all administrator modules..."
+              aria-label="Search administrator modules"
+              className={`h-10 w-full rounded-xl border pl-10 pr-14 text-xs outline-none transition ${
+                isDark
+                  ? "border-white/10 bg-white/[0.055] text-white placeholder:text-white/30 focus:border-white/25"
+                  : "border-slate-200 bg-slate-50/70 text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:bg-white"
+              }`}
+            />
+            <kbd className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border px-1.5 py-0.5 text-[9px] ${isDark ? "border-white/10 text-white/35" : "border-slate-200 text-slate-400"}`}>⌘ K</kbd>
+            {navQuery.trim() ? (
+              <div className={`absolute inset-x-0 top-[calc(100%+8px)] overflow-hidden rounded-2xl border p-2 shadow-[0_24px_80px_rgba(15,23,42,0.18)] ${
+                isDark ? "border-white/10 bg-[#101613]" : "border-slate-200 bg-white"
+              }`}>
+                {searchResults.length ? searchResults.map((option) => {
+                  const Icon = PAGE_ICONS[option.path] || ChevronRight;
+                  const group = NAV_GROUPS.find((entry) => entry.paths.includes(option.path));
+                  return (
+                    <button
+                      key={option.path}
+                      type="button"
+                      onClick={() => openSearchResult(option.path)}
+                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${isDark ? "hover:bg-white/7" : "hover:bg-slate-50"}`}
+                    >
+                      <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${isDark ? "bg-white/7" : "bg-slate-100"}`}><Icon className="h-4 w-4" /></span>
+                      <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold">{pageLabel(option.path)}</span><span className={`block text-[10px] ${isDark ? "text-white/35" : "text-slate-400"}`}>{group?.label}</span></span>
+                      <ChevronRight className={`h-4 w-4 ${isDark ? "text-white/25" : "text-slate-300"}`} />
+                    </button>
+                  );
+                }) : <div className={`px-3 py-6 text-center text-xs ${isDark ? "text-white/40" : "text-slate-400"}`}>No administrator module found.</div>}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <div className={`hidden items-center gap-2 rounded-full px-3 py-2 text-[11px] font-semibold sm:flex ${isDark ? "bg-white/7 text-white/75" : "bg-slate-100 text-slate-600"}`}>
+              <span aria-hidden>🇲🇺</span> Mauritius
+            </div>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className={`rounded-full border p-2.5 transition ${isDark ? "border-white/10 bg-white/5 hover:bg-white/10" : "border-slate-200 bg-white hover:bg-slate-50"}`}
+              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setProfileOpen((current) => !current)}
+              className={`flex items-center gap-2 rounded-full border p-1.5 pr-2.5 transition ${isDark ? "border-white/10 bg-white/5 hover:bg-white/10" : "border-slate-200 bg-white hover:bg-slate-50"}`}
+              aria-expanded={profileOpen}
+            >
+              <span className={`flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold ${isDark ? "bg-white text-[#071015]" : "bg-[#071015] text-white"}`}>{getInitials(displayName)}</span>
+              <span className="hidden text-xs font-semibold xl:block">Ryan</span>
+              <ChevronDown className="h-3.5 w-3.5 opacity-45" />
+            </button>
+          </div>
+        </header>
+
+        {profileOpen ? (
+          <>
+          <button type="button" className="fixed inset-0 z-40 cursor-default" onClick={() => setProfileOpen(false)} aria-label="Close profile menu" />
+          <div className={`fixed right-3 top-[72px] z-50 w-[290px] overflow-hidden rounded-2xl border shadow-[0_24px_80px_rgba(15,23,42,0.2)] sm:right-5 ${isDark ? "border-white/10 bg-[#101613]" : "border-slate-200 bg-white"}`}>
+            <div className={`border-b p-4 ${isDark ? "border-white/10" : "border-slate-100"}`}>
+              <div className="text-sm font-bold">Ryan Chutooree</div>
+              <div className={`mt-1 truncate text-[11px] ${isDark ? "text-white/42" : "text-slate-500"}`}>{displayEmail}</div>
+              <div className={`mt-3 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${isDark ? "bg-white/7 text-white/65" : "bg-slate-100 text-slate-600"}`}>{session?.isOwner === false ? "Team access" : "Owner · Mauritius"}</div>
+            </div>
+            <div className="p-2">
+              <Link href="/admin/settings" className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold ${isDark ? "hover:bg-white/7" : "hover:bg-slate-50"}`}><Settings className="h-4 w-4" /> Workspace settings</Link>
+              <Link href="/" className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold ${isDark ? "hover:bg-white/7" : "hover:bg-slate-50"}`}><ExternalLink className="h-4 w-4" /> Visit Mauritius store</Link>
+              <button type="button" onClick={logout} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-rose-600 ${isDark ? "hover:bg-rose-400/10" : "hover:bg-rose-50"}`}><LogOut className="h-4 w-4" /> Sign out</button>
+            </div>
+          </div>
+          </>
+        ) : null}
+
+        <div className="min-w-0">
+          <div className={`${pathname === "/admin" ? "" : "admin-page-shell admin-minimal p-3 sm:p-5 lg:p-6"} min-h-[calc(100vh-4rem)]`}>
+            {children}
+          </div>
         </div>
-      </main>
-
-      <style jsx>{`
-        @keyframes drawerIn {
-          from {
-            opacity: 0;
-            transform: translateX(-12px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-      `}</style>
+      </div>
     </div>
   );
 }

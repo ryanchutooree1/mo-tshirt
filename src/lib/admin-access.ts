@@ -440,7 +440,11 @@ export function resolveAdminPagePath(pathname: string) {
   if (pathname === "/iot") return "/admin/iot" as AdminPagePath;
 
   for (const pagePath of ADMIN_PATHS_BY_LENGTH) {
-    if (pathname === pagePath || pathname.startsWith(`${pagePath}/`)) {
+    const matches =
+      pagePath === "/admin"
+        ? pathname === pagePath
+        : pathname === pagePath || pathname.startsWith(`${pagePath}/`);
+    if (matches) {
       return pagePath;
     }
   }

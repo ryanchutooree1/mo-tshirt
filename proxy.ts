@@ -31,7 +31,11 @@ function resolveApiRateLimit(pathname: string) {
 }
 
 function isPartnerDeskRoute(pathname: string) {
-  return pathname === "/admin/yan_list" || pathname === "/admin/shab_list";
+  return (
+    pathname === "/admin/yan_list" ||
+    pathname === "/admin/shab_list" ||
+    (pathname.startsWith("/admin/partners/") && pathname !== "/admin/partners")
+  );
 }
 
 function isCbeHost(host: string | null) {
@@ -124,10 +128,6 @@ export async function proxy(req: NextRequest) {
     url.pathname = "/";
     url.hash = "contact";
     return applySecurityHeaders(NextResponse.redirect(url, 308));
-  }
-
-  if (pathname === "/admin/prescription-ocr") {
-    return applySecurityHeaders(NextResponse.next());
   }
 
   if (isPartnerDeskRoute(pathname)) {

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import AdminChrome from "@/components/AdminChrome";
-import { AdminDataProvider } from "@/admin/AdminDataContext";
 import { AdminThemeProvider } from "@/admin/AdminThemeContext";
+import { getAdminRequestSession } from "@/lib/admin-request";
 
 export const metadata: Metadata = {
   robots: {
@@ -10,14 +10,22 @@ export const metadata: Metadata = {
   },
 };
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const session = await getAdminRequestSession();
+  const initialSession = session
+    ? {
+        displayName: session.isOwner ? "Ryan Chutooree" : session.displayName,
+        email: session.email,
+        allowedPages: session.allowedPages,
+        isOwner: session.isOwner,
+      }
+    : null;
+
   return (
-    <AdminDataProvider>
-      <AdminThemeProvider>
-        <div className="font-sans">
-          <AdminChrome>{children}</AdminChrome>
-        </div>
-      </AdminThemeProvider>
-    </AdminDataProvider>
+    <AdminThemeProvider>
+      <div className="font-sans">
+        <AdminChrome initialSession={initialSession}>{children}</AdminChrome>
+      </div>
+    </AdminThemeProvider>
   );
 }

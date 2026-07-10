@@ -11,11 +11,11 @@ type AdminThemeContextValue = {
   ready: boolean;
 };
 
-const STORAGE_KEY = "admin-theme-v1";
+const STORAGE_KEY = "admin-theme-v2";
 const AdminThemeCtx = createContext<AdminThemeContextValue | null>(null);
 
 export function AdminThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<AdminTheme>("dark");
+  const [theme, setThemeState] = useState<AdminTheme>("light");
   const [ready, setReady] = useState(false);
 
   useEffect(() => {

@@ -102,7 +102,7 @@ export async function POST(req: Request) {
     if (password === expected) {
       sessionToken = await createAdminSessionToken({
         userId: "owner",
-        displayName: "Owner",
+        displayName: "Ryan Chutooree",
         email: email || process.env.SMTP_USER || "owner@mo.local",
         allowedPages: getOwnerAllowedPages(),
         isOwner: true,

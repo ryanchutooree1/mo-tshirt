@@ -5,26 +5,12 @@ import Link from "next/link";
 import { Manrope } from "next/font/google";
 import { useEffect, useMemo, useState } from "react";
 import {
-  BarChart3,
-  Bell,
-  Boxes,
-  ChevronDown,
   CirclePercent,
-  ExternalLink,
-  FileStack,
   Globe2,
-  LayoutDashboard,
-  Menu,
-  MessageSquare,
-  PackageCheck,
-  Paintbrush,
   Printer,
-  Search,
-  Settings,
   ShoppingBag,
   TrendingUp,
   Truck,
-  Users,
 } from "lucide-react";
 import {
   collection,
@@ -167,26 +153,12 @@ function statusTone(status: string) {
   return "bg-amber-50 text-amber-700 ring-amber-600/10";
 }
 
-const navItems = [
-  { label: "Dashboard", href: "/admin", Icon: LayoutDashboard },
-  { label: "Orders", href: "/admin/orders", Icon: ShoppingBag },
-  { label: "Products", href: "/admin/shops", Icon: Boxes },
-  { label: "Custom Designs", href: "/admin/design-studio", Icon: Paintbrush },
-  { label: "Customers", href: "/admin/clients", Icon: Users },
-  { label: "Inventory", href: "/admin/inventory", Icon: PackageCheck },
-  { label: "Delivery", href: "/admin/logistics", Icon: Truck },
-  { label: "Production", href: "/admin/production", Icon: Printer },
-  { label: "Analytics", href: "/admin/analytics", Icon: BarChart3 },
-  { label: "Settings", href: "/admin/settings", Icon: Settings },
-];
-
 function Panel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return <section className={`rounded-xl border border-slate-200/80 bg-white shadow-[0_8px_24px_rgba(15,23,42,0.035)] ${className}`}>{children}</section>;
 }
 
 export default function AdminDashboard() {
   const [now, setNow] = useState(new Date());
-  const [searchTerm, setSearchTerm] = useState("");
   const [orders, setOrders] = useState<DashboardOrder[]>([]);
   const [products, setProducts] = useState<DashboardProduct[]>([]);
   const [events, setEvents] = useState<TrackingEvent[]>([]);
@@ -341,16 +313,6 @@ export default function AdminDashboard() {
     1,
     ...productionQueue.map((order) => order.lines.reduce((sum, line) => sum + line.quantity, 0))
   );
-  const filteredOrders = useMemo(() => {
-    const queryValue = searchTerm.trim().toLowerCase();
-    if (!queryValue) return orders;
-    return orders.filter((order) =>
-      [order.id, order.client, order.status, order.deliveryMethod, ...order.lines.map((line) => line.name)]
-        .join(" ")
-        .toLowerCase()
-        .includes(queryValue)
-    );
-  }, [orders, searchTerm]);
 
   const numerology = useMemo(() => calculateNumerology(now), [now]);
   const pieColors = ["#111827", "#374151", "#6b7280", "#9ca3af", "#d1d5db"];
@@ -373,88 +335,16 @@ export default function AdminDashboard() {
 
   return (
     <div className={`${font.className} min-h-screen bg-[#f7f8fa] text-slate-950`}>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[228px] flex-col bg-[#071015] text-white lg:flex">
-        <Link href="/admin" className="flex h-[84px] items-center gap-3 border-b border-white/5 px-5">
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white">
-            <Image src="/logo_transparent.png" alt="MO T-SHIRT" width={80} height={80} className="h-10 w-10 object-contain" />
-          </span>
-          <span>
-            <span className="block text-xl font-extrabold tracking-[-0.03em]">Mo T-Shirt</span>
-            <span className="block text-[10px] text-white/55">Wear Your Creativity</span>
-          </span>
-        </Link>
-
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-5" aria-label="Dashboard navigation">
-          {navItems.map(({ label, href, Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition ${
-                href === "/admin" ? "bg-white text-slate-950 shadow-sm" : "text-white/72 hover:bg-white/8 hover:text-white"
-              }`}
-            >
-              <Icon className="h-[18px] w-[18px]" />
-              {label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="m-4 rounded-xl border border-white/10 bg-white/[0.035] p-3">
-          <div className="relative h-24 overflow-hidden rounded-lg bg-white/5">
-            <Image src="/all_products.jpg" alt="MO T-SHIRT products in Mauritius" fill className="object-cover opacity-75" sizes="190px" />
-          </div>
-          <div className="mt-3 text-sm font-bold">Create. Print. Impress.</div>
-          <div className="mt-1 text-[11px] leading-4 text-white/55">Premium custom T-shirts, printed in Mauritius.</div>
-          <Link href="/" className="mt-3 flex items-center justify-center gap-2 rounded-lg border border-white/20 px-3 py-2 text-xs font-semibold hover:bg-white/10">
-            Visit Store <ExternalLink className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-      </aside>
-
-      <div className="min-h-screen lg:pl-[228px]">
-        <header className="sticky top-0 z-30 flex h-[64px] items-center gap-4 border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur-xl sm:px-6">
-          <Menu className="h-5 w-5 text-slate-700" />
-          <div className="relative hidden max-w-[520px] flex-1 sm:block">
-            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              aria-label="Search admin"
-              placeholder="Search orders, customers, products, designs..."
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-11 pr-4 text-xs outline-none transition placeholder:text-slate-400 focus:border-slate-400"
-            />
-          </div>
-          <div className="ml-auto flex items-center gap-3 sm:gap-5">
-            <div className="hidden items-center gap-2 border-r border-slate-200 pr-5 text-xs font-medium sm:flex">
-              <span className="text-lg" aria-hidden>🇲🇺</span> Mauritius
-            </div>
-            <div className="hidden items-center rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-semibold text-slate-600 md:flex">
-              Numerology {numerology.primary}/{numerology.secondary}
-            </div>
-            <button className="relative text-slate-700" aria-label="Notifications">
-              <Bell className="h-[18px] w-[18px]" />
-              {metrics.pending > 0 ? <span className="absolute -right-2 -top-2 min-w-4 rounded-full bg-rose-500 px-1 text-center text-[9px] font-bold leading-4 text-white">{Math.min(metrics.pending, 99)}</span> : null}
-            </button>
-            <MessageSquare className="hidden h-[18px] w-[18px] text-slate-700 sm:block" />
-            <div className="hidden h-8 w-px bg-slate-200 sm:block" />
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-950 text-[11px] font-bold text-white">RC</div>
-              <div className="hidden leading-tight xl:block">
-                <div className="text-xs font-bold">Ryan Chutooree</div>
-                <div className="text-[10px] text-slate-500">Administrator · Mauritius</div>
-              </div>
-              <ChevronDown className="hidden h-4 w-4 text-slate-400 xl:block" />
-            </div>
-          </div>
-        </header>
-
-        <main className="p-4 sm:p-6">
+      <main className="p-4 sm:p-6">
           <div className="mb-5 flex items-end justify-between gap-4">
             <div>
               <h1 className="text-xl font-extrabold tracking-[-0.03em]">Mauritius Business Dashboard</h1>
               <p className="mt-1 text-xs text-slate-500">Live operational data · {format(now, "EEEE, d MMMM yyyy")}</p>
             </div>
-            <span className="hidden text-[11px] text-slate-400 sm:block">Sources: transactions, inventory and website tracking</span>
+            <div className="hidden items-center gap-2 sm:flex">
+              <span className="rounded-full bg-white px-3 py-1.5 text-[10px] font-semibold text-slate-500 shadow-sm">Numerology {numerology.primary}/{numerology.secondary}</span>
+              <span className="text-[11px] text-slate-400">Live Firestore sources</span>
+            </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
@@ -554,7 +444,7 @@ export default function AdminDashboard() {
                     <tr>{["Order ID", "Customer", "Product", "Amount", "Status", "Delivery", "Date"].map((label) => <th key={label} className="px-3 py-2.5 font-semibold">{label}</th>)}</tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredOrders.slice(0, 6).map((order) => (
+                    {orders.slice(0, 6).map((order) => (
                       <tr key={order.id} className="hover:bg-slate-50/70">
                         <td className="px-3 py-3 font-bold text-blue-600">#{order.id.slice(0, 8).toUpperCase()}</td>
                         <td className="px-3 py-3 font-semibold">{order.client}</td>
@@ -620,8 +510,7 @@ export default function AdminDashboard() {
             <span>© {now.getFullYear()} Mo T-Shirt · Ryan Chutooree</span>
             <span>Made with ♥ in Mauritius</span>
           </footer>
-        </main>
-      </div>
+      </main>
     </div>
   );
 }
