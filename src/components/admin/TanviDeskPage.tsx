@@ -1543,7 +1543,6 @@ export default function TanviDeskPage() {
     stepKey,
     stepNumber,
     title,
-    description,
     badge,
   }: {
     stepKey: TanviStepKey;
@@ -1554,7 +1553,6 @@ export default function TanviDeskPage() {
   }) {
     const state = getStepState(stepKey);
     const headerTextClass = state.checked ? "text-violet-50" : strongTextClass;
-    const headerMutedClass = state.checked ? "text-violet-200/70" : mutedClass;
     return (
       <div
         className={`flex items-start justify-between gap-2 border-b p-3 sm:gap-4 sm:p-5 ${
@@ -1592,9 +1590,6 @@ export default function TanviDeskPage() {
             <h3 className={`mt-0.5 text-base font-semibold tracking-tight sm:mt-1 sm:text-xl ${headerTextClass}`}>
               {title}
             </h3>
-            <p className={`mt-1.5 hidden max-w-3xl text-sm leading-6 sm:mt-2 sm:block ${headerMutedClass}`}>
-              {description}
-            </p>
           </div>
         </div>
         <div className="flex shrink-0 items-start gap-2 sm:gap-3">

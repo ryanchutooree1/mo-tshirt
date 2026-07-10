@@ -221,9 +221,6 @@ export default function OwnerDashboard() {
     return () => clearInterval(timer);
   }, []);
 
-  const formattedDate = format(now, "dd/MM/yyyy");
-  const timeString = format(now, "HH:mm:ss");
-
   useEffect(() => {
     let cancelled = false;
 
@@ -625,49 +622,41 @@ export default function OwnerDashboard() {
 
   const quickActions: {
     label: string;
-    description: string;
     href: string;
     Icon: LucideIcon;
   }[] = [
     {
       label: "New Sale",
-      description: "Open POS and issue invoice",
       href: "/admin/pos",
       Icon: BriefcaseBusiness,
     },
     {
       label: "Approve Quote",
-      description: "Review and send quotation",
       href: "/admin/quotation-approval",
       Icon: FileStack,
     },
     {
       label: "Stock Control",
-      description: "Update low inventory lines",
       href: "/admin/inventory",
       Icon: Package,
     },
     {
       label: "Client CRM",
-      description: "Call priority clients",
       href: "/admin/clients",
       Icon: Target,
     },
     {
       label: "Sales AI",
-      description: "Test lead capture in admin",
       href: "/admin/ai-assistant",
       Icon: Sparkles,
     },
     {
       label: "Analytics",
-      description: "Inspect sales momentum",
       href: "/admin/analytics?preset=30d",
       Icon: Activity,
     },
     {
       label: "Accounting",
-      description: "Track cash and expenses",
       href: "/admin/accounting",
       Icon: Wallet,
     },
@@ -846,9 +835,6 @@ export default function OwnerDashboard() {
               >
                 Dashboard
               </h1>
-              <p className={`mt-2 text-sm ${isDark ? "text-slate-300" : "text-slate-600"}`}>
-                {formattedDate} at {timeString}. Focus on sales, quotes, orders, and stock.
-              </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -926,9 +912,6 @@ export default function OwnerDashboard() {
         <section className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
           <article className={`${cardBase} p-5`}>
             <h2 className={`${displayFont.className} text-xl font-semibold`}>Urgent</h2>
-            <p className={`mt-1 text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-              Open only what needs attention.
-            </p>
 
             <div className="mt-4 grid gap-2">
               {alerts.slice(0, 4).map((alert) => {
@@ -969,9 +952,6 @@ export default function OwnerDashboard() {
 
           <article className={`${cardBase} p-5`}>
             <h2 className={`${displayFont.className} text-xl font-semibold`}>Open</h2>
-            <p className={`mt-1 text-sm ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-              Most used admin tools.
-            </p>
 
             <div className="mt-4 grid gap-2">
               {quickActions.slice(0, 6).map((action) => (
@@ -994,12 +974,7 @@ export default function OwnerDashboard() {
                     >
                       <action.Icon className="h-4 w-4" />
                     </span>
-                    <span>
-                      <span className="block text-sm font-semibold">{action.label}</span>
-                      <span className={`text-xs ${isDark ? "text-slate-400" : "text-slate-500"}`}>
-                        {action.description}
-                      </span>
-                    </span>
+                    <span className="block text-sm font-semibold">{action.label}</span>
                   </div>
                 </Link>
               ))}

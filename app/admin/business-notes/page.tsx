@@ -251,7 +251,7 @@ export default function BusinessNotesPage() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-sky-600">Business Notes</p>
               <h1 className="mt-3 text-3xl sm:text-4xl font-semibold tracking-tight text-slate-900">
-                Capture ideas, principles, and breakthroughs.
+                Business Notes
               </h1>
               <p className="mt-2 text-sm text-slate-600">
                 Your private vault for insights from clients, production, and business videos. Everything stays organized,

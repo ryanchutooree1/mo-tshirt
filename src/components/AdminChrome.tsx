@@ -268,8 +268,8 @@ export default function AdminChrome({
     ? "border-[#17331b] bg-black/88 shadow-[0_1px_0_rgba(89,214,46,0.28),0_18px_50px_rgba(0,0,0,0.55)]"
     : "border-[#ebebeb] bg-white/92 shadow-[0_10px_30px_rgba(0,0,0,0.04)]";
   const circleButtonClass = isDark
-    ? "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#285b25] bg-[#04100a] text-[#7cff45] shadow-[0_0_22px_rgba(89,214,46,0.13)] transition hover:border-[#7cff45] hover:bg-[#07190d] sm:h-11 sm:w-11"
-    : "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#ebebeb] bg-white text-[#222222] shadow-[0_4px_14px_rgba(0,0,0,0.04)] transition hover:border-[#d7d7d7] hover:bg-[#f7f7f7] hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)] sm:h-11 sm:w-11";
+    ? "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#285b25] bg-[#04100a] text-[#7cff45] transition hover:border-[#7cff45] hover:bg-[#07190d]"
+    : "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#ebebeb] bg-white text-[#222222] transition hover:border-[#d7d7d7] hover:bg-[#f7f7f7]";
   const rolePillClass = isDark
     ? "hidden shrink-0 items-center gap-2 rounded-full border border-[#285b25] bg-[#04100a] px-3 py-1.5 text-xs font-semibold text-[#9af45c] sm:inline-flex"
     : "hidden shrink-0 items-center gap-2 rounded-full border border-[#ebebeb] bg-white px-3 py-1.5 text-xs text-[#6a6a6a] shadow-[0_4px_14px_rgba(0,0,0,0.04)] sm:inline-flex";
@@ -311,8 +311,8 @@ export default function AdminChrome({
     ? "border-transparent text-[#e9f4e5] hover:border-[#21491f] hover:bg-[#07190d]"
     : "border-transparent text-[#484848] hover:border-[#ebebeb] hover:bg-[#f7f7f7]";
   const shellClass = isDark
-    ? "admin-page-shell relative min-h-screen max-w-full overflow-x-hidden bg-[#010503] p-3 text-[#f7fff3] transition-colors sm:p-6 lg:p-8"
-    : "admin-page-shell airbnb-admin-shell relative min-h-screen max-w-full overflow-x-hidden bg-transparent p-3 text-[#222222] transition-colors sm:p-6 lg:p-8";
+    ? "admin-page-shell admin-minimal relative min-h-screen max-w-full overflow-x-hidden bg-[#010503] p-3 text-[#f7fff3] transition-colors sm:p-4 lg:p-6"
+    : "admin-page-shell admin-minimal airbnb-admin-shell relative min-h-screen max-w-full overflow-x-hidden bg-transparent p-3 text-[#222222] transition-colors sm:p-4 lg:p-6";
   const logoutButtonClass = isDark
     ? "border-rose-500/45 bg-rose-500/15 text-rose-200 hover:border-rose-400/60 hover:bg-rose-500/25"
     : "border-rose-200 bg-white text-rose-700 hover:border-rose-300 hover:bg-rose-50";
@@ -334,7 +334,7 @@ export default function AdminChrome({
       <div
         className={`sticky top-0 z-40 border-b backdrop-blur-xl transition-colors ${topBarClass}`}
       >
-        <div className="relative z-10 mx-auto flex w-full max-w-[1760px] min-w-0 items-center justify-between gap-2 px-3 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-8">
+        <div className="relative z-10 mx-auto flex w-full max-w-[1760px] min-w-0 items-center justify-between gap-2 px-3 py-2 sm:px-4 lg:px-6">
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
@@ -380,22 +380,16 @@ export default function AdminChrome({
           </div>
 
           <div className="ml-auto flex min-w-0 items-center justify-end gap-2 sm:gap-3">
-            <div className="min-w-0 max-w-[52vw] text-right sm:max-w-none">
-              <div className={`truncate text-[10px] font-semibold uppercase tracking-[0.22em] sm:text-[11px] sm:tracking-[0.28em] ${subtleLabelClass}`}>
-                MO Admin
-              </div>
+            <div className="min-w-0 max-w-[62vw] text-right sm:max-w-none">
               <div className={`truncate text-sm font-semibold ${isDark ? "text-[#f7fff3]" : "text-[#222222]"}`}>
                 {currentLabel}
               </div>
-              <div className={`hidden truncate text-xs sm:block ${profileMetaClass}`}>
-                Dream operating dashboard
-              </div>
             </div>
             <div
-              className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full sm:h-12 sm:w-12 ${
+              className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg ${
                 isDark
                   ? "border border-[#285b25] bg-[#07190d]"
-                  : "bg-white shadow-[0_12px_28px_rgba(0,0,0,0.14)]"
+                  : "border border-[#ebebeb] bg-white"
               }`}
             >
               <Image
@@ -403,7 +397,7 @@ export default function AdminChrome({
                 alt="MO T-SHIRT"
                 width={96}
                 height={96}
-                className="h-8 w-8 object-contain sm:h-10 sm:w-10"
+                className="h-7 w-7 object-contain"
                 priority={false}
               />
             </div>
@@ -654,19 +648,6 @@ export default function AdminChrome({
 
       <main className="ml-0">
         <div className={shellClass}>
-          {!isDark ? (
-            <>
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,0.92))]"
-              />
-            </>
-          ) : (
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(89,214,46,0.14),transparent_28%),radial-gradient(circle_at_88%_10%,rgba(31,99,255,0.16),transparent_28%),linear-gradient(rgba(124,255,69,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(124,255,69,0.035)_1px,transparent_1px)] bg-[size:auto,auto,36px_36px,36px_36px]"
-            />
-          )}
           <div className="relative z-10">{children}</div>
         </div>
       </main>

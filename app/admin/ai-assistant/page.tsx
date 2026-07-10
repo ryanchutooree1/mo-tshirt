@@ -856,7 +856,7 @@ export default function AdminAiAssistantPage() {
               </span>
               <p className="mt-6 text-xs font-semibold uppercase tracking-[0.38em] text-slate-500">MO T-SHIRT AI Lab</p>
               <h1 className="mt-4 max-w-3xl font-sans text-4xl font-semibold leading-[0.95] tracking-tight sm:text-5xl xl:text-[4.2rem]">
-                Train and test your in-house sales AI inside admin before any public launch.
+                AI Assistant
               </h1>
               <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
                 This page keeps your AI private while you validate order capture, submit sample leads, save knowledge, and approve or reject results for learning.

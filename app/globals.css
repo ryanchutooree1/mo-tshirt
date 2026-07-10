@@ -120,7 +120,28 @@ body {
 .admin-root.admin-light .admin-page-shell .shadow,
 .admin-root.admin-light .admin-page-shell .shadow-md,
 .admin-root.admin-light .admin-page-shell .shadow-lg {
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06) !important;
+  box-shadow: none !important;
+}
+
+/* Admin pages are intentionally terse: headings and actions stay, intro copy goes. */
+.admin-page-shell.admin-minimal h1 + p,
+.admin-page-shell.admin-minimal header > p,
+.admin-page-shell.admin-minimal .iot-subtitle,
+.admin-page-shell.admin-minimal .posperf-copy,
+.admin-page-shell.admin-minimal [data-admin-description] {
+  display: none !important;
+}
+
+.admin-page-shell.admin-minimal :is(.shadow-sm, .shadow, .shadow-md, .shadow-lg) {
+  box-shadow: none !important;
+}
+
+.admin-page-shell.admin-minimal :is(.iot-glow, .iot-grid-pattern, .posperf-grid, .posperf-glow) {
+  display: none !important;
+}
+
+.admin-page-shell.admin-minimal > div > :is(main, section, div) {
+  scroll-margin-top: 4rem;
 }
 
 .admin-root.admin-light .admin-page-shell > :not(.ceo-theme) [class*="blur-3xl"] {
