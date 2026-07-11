@@ -43,6 +43,7 @@ import {
   FiRefreshCw,
   FiSearch,
   FiSend,
+  FiStar,
   FiTrash2,
   FiXCircle,
   FiUpload,
@@ -83,6 +84,10 @@ import {
   type PrintPartnerId,
 } from "@/lib/partners";
 import { useAdminTheme } from "@/admin/AdminThemeContext";
+import {
+  canAutomaticallyRemoveBackground,
+  removeBackgroundAutomatically,
+} from "@/lib/automatic-background-removal";
 
 type QuoteStatus = "new" | "review" | "approved" | "sent";
 type EditableNumber = number | "";
@@ -141,6 +146,19 @@ type QuoteAttachment = {
   contentType?: string;
   size?: number | null;
   url?: string;
+  originalUrl?: string;
+  originalFilename?: string;
+  originalContentType?: string;
+  originalSize?: number | null;
+  backgroundRemovalMethod?: "already-transparent" | "solid-color" | "ai";
+  backgroundRemovedAt?: string;
+};
+
+type BackgroundRemovalJob = {
+  status: "processing" | "done" | "error";
+  progress: number;
+  label: string;
+  error?: string;
 };
 
 type QuotePartnerAssignment = {
@@ -349,9 +367,11 @@ const ATTACHMENT_PREVIEW_RETRY_DELAY_MS = 900;
 function QuoteAttachmentPreview({
   src,
   alt,
+  transparent = false,
 }: {
   src: string;
   alt: string;
+  transparent?: boolean;
 }) {
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [retryNonce, setRetryNonce] = useState(0);
@@ -393,7 +413,13 @@ function QuoteAttachmentPreview({
   }
 
   return (
-    <div className="relative mt-3 overflow-hidden rounded-[24px] border border-[#ebebeb] bg-white p-2.5 shadow-[0_4px_14px_rgba(0,0,0,0.04)]">
+    <div
+      className={`relative mt-3 overflow-hidden rounded-[24px] border border-[#ebebeb] p-2.5 shadow-[0_4px_14px_rgba(0,0,0,0.04)] ${
+        transparent
+          ? "bg-[linear-gradient(45deg,#e5e7eb_25%,transparent_25%),linear-gradient(-45deg,#e5e7eb_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#e5e7eb_75%),linear-gradient(-45deg,transparent_75%,#e5e7eb_75%)] bg-[length:20px_20px] bg-[position:0_0,0_10px,10px_-10px,-10px_0]"
+          : "bg-white"
+      }`}
+    >
       {status !== "ready" && (
         <div className="absolute inset-2 z-10 flex flex-col items-center justify-center gap-2 rounded-[18px] bg-white/92 text-[#717171] backdrop-blur-sm">
           {status === "loading" ? (
@@ -643,6 +669,17 @@ const getQuoteAttachmentDownloadHref = (attachment: QuoteAttachment, index: numb
   });
 
   return `/api/shops/download?${params.toString()}`;
+};
+
+const getBackgroundRemovalJobKey = (
+  quoteId: string,
+  attachment: QuoteAttachment,
+  index: number
+) => `${quoteId}:${index}:${attachment.originalUrl || attachment.url || attachment.filename || "artwork"}`;
+
+const getTransparentArtworkName = (filename: string | undefined, index: number) => {
+  const base = (filename || `artwork-${index + 1}`).replace(/\.[^.]+$/, "");
+  return `${base}-transparent.png`;
 };
 
 const getStorageUploadErrorMessage = (error: unknown) => {
@@ -1330,9 +1367,15 @@ export default function QuotationApprovalPage() {
     useState<PartnerVisibleField[]>(DEFAULT_PARTNER_VISIBLE_FIELDS);
   const [partnerPrintPlacement, setPartnerPrintPlacement] =
     useState<PartnerPrintPlacement>("not_set");
+  const [backgroundRemovalJobs, setBackgroundRemovalJobs] = useState<
+    Record<string, BackgroundRemovalJob>
+  >({});
+  const [backgroundRemovalRetryNonce, setBackgroundRemovalRetryNonce] = useState(0);
   const [logo, setLogo] = useState<LogoAsset | null>(null);
   const [requestedQuoteId, setRequestedQuoteId] = useState<string | null>(null);
   const prevDocumentTypeRef = useRef<DocumentType | null>(null);
+  const backgroundRemovalRunsRef = useRef(new Set<string>());
+  const backgroundRemovalAttemptsRef = useRef(new Set<string>());
 
   useEffect(() => {
     setRequestedQuoteId(new URLSearchParams(window.location.search).get("quoteId"));
@@ -1649,6 +1692,126 @@ export default function QuotationApprovalPage() {
   }, [selected, selectedDesignBrief]);
 
   const selectedAttachments = useMemo(() => getQuoteAttachments(selected), [selected]);
+
+  useEffect(() => {
+    if (!selected?.id || !selectedAttachments.length) return;
+    const quoteId = selected.id;
+    if (backgroundRemovalRunsRef.current.has(quoteId)) return;
+
+    const pendingAttachments = selectedAttachments
+      .map((attachment, index) => ({ attachment, index }))
+      .filter(({ attachment, index }) => {
+        if (!attachment.url || attachment.originalUrl) return false;
+        if (
+          !canAutomaticallyRemoveBackground({
+            name: attachment.filename || `artwork-${index + 1}`,
+            type: attachment.contentType || "",
+          })
+        ) {
+          return false;
+        }
+        const key = getBackgroundRemovalJobKey(quoteId, attachment, index);
+        return !backgroundRemovalAttemptsRef.current.has(key);
+      });
+
+    if (!pendingAttachments.length) return;
+    backgroundRemovalRunsRef.current.add(quoteId);
+    void backgroundRemovalRetryNonce;
+
+    void (async () => {
+      const workingAttachments = selectedAttachments.map((attachment) => ({ ...attachment }));
+
+      for (const { attachment, index } of pendingAttachments) {
+        const sourceUrl = attachment.url || "";
+        const jobKey = getBackgroundRemovalJobKey(quoteId, attachment, index);
+        backgroundRemovalAttemptsRef.current.add(jobKey);
+        setBackgroundRemovalJobs((current) => ({
+          ...current,
+          [jobKey]: { status: "processing", progress: 0.02, label: "Starting automatic cleanup" },
+        }));
+
+        try {
+          const response = await fetch(sourceUrl);
+          if (!response.ok) throw new Error("The original logo could not be downloaded.");
+          const sourceBlob = await response.blob();
+          const sourceName = attachment.filename || `artwork-${index + 1}`;
+          const sourceFile = new File([sourceBlob], sourceName, {
+            type: attachment.contentType || sourceBlob.type || "image/png",
+            lastModified: Date.now(),
+          });
+          const result = await removeBackgroundAutomatically(sourceFile, ({ progress, label }) => {
+            setBackgroundRemovalJobs((current) => ({
+              ...current,
+              [jobKey]: { status: "processing", progress, label },
+            }));
+          });
+
+          const transparentName = getTransparentArtworkName(sourceName, index);
+          const safeName = transparentName.replace(/[^a-z0-9._-]/gi, "_");
+          const uploadRef = ref(
+            storage,
+            `quotes/${quoteId}/background-removed/${Date.now()}-${index + 1}-${safeName}`
+          );
+          const snapshot = await uploadBytes(uploadRef, result.blob, {
+            contentType: "image/png",
+            customMetadata: {
+              source: "automatic-background-remover",
+              method: result.method,
+            },
+          });
+          const transparentUrl = await getDownloadURL(snapshot.ref);
+          workingAttachments[index] = {
+            ...attachment,
+            originalUrl: sourceUrl,
+            originalFilename: sourceName,
+            originalContentType: attachment.contentType || sourceBlob.type || "image/png",
+            originalSize: attachment.size ?? sourceBlob.size,
+            url: transparentUrl,
+            filename: transparentName,
+            contentType: "image/png",
+            size: result.blob.size,
+            backgroundRemovalMethod: result.method,
+            backgroundRemovedAt: new Date().toISOString(),
+          };
+          await updateDoc(doc(db, "quotes", quoteId), {
+            attachments: workingAttachments,
+            attachment: workingAttachments[0] || null,
+            updatedAt: serverTimestamp(),
+          });
+          setBackgroundRemovalJobs((current) => ({
+            ...current,
+            [jobKey]: { status: "done", progress: 1, label: "Transparent PNG ready" },
+          }));
+        } catch (reason) {
+          const message = reason instanceof Error ? reason.message : "Automatic cleanup failed.";
+          console.error("quotes:automatic-background-removal", reason);
+          setBackgroundRemovalJobs((current) => ({
+            ...current,
+            [jobKey]: {
+              status: "error",
+              progress: 0,
+              label: "Cleanup needs another try",
+              error: message,
+            },
+          }));
+        }
+      }
+    })().finally(() => {
+      backgroundRemovalRunsRef.current.delete(quoteId);
+    });
+  }, [backgroundRemovalRetryNonce, selected?.id, selectedAttachments]);
+
+  function retryAutomaticBackgroundRemoval(attachment: QuoteAttachment, index: number) {
+    if (!selected?.id) return;
+    const jobKey = getBackgroundRemovalJobKey(selected.id, attachment, index);
+    backgroundRemovalAttemptsRef.current.delete(jobKey);
+    setBackgroundRemovalJobs((current) => {
+      const next = { ...current };
+      delete next[jobKey];
+      return next;
+    });
+    setBackgroundRemovalRetryNonce((current) => current + 1);
+  }
 
   useEffect(() => {
     if (!selected) {
@@ -2337,7 +2500,11 @@ export default function QuotationApprovalPage() {
         attachment: nextAttachments[0] || null,
         updatedAt: serverTimestamp(),
       });
-      setNotice(uploadedAttachments.length > 1 ? "Files uploaded." : "Attachment uploaded.");
+      setNotice(
+        uploadedAttachments.length > 1
+          ? "Files uploaded. Transparent PNGs are being prepared automatically."
+          : "Attachment uploaded. A transparent PNG is being prepared automatically."
+      );
     } catch (error) {
       console.error("quotes:attachment-upload", error);
       setNotice(getStorageUploadErrorMessage(error));
@@ -3046,12 +3213,29 @@ export default function QuotationApprovalPage() {
                         {selectedAttachments.length ? (
                           selectedAttachments.map((attachment, index) => {
                             const attachmentIsImage = Boolean(
-                              attachment.contentType?.startsWith("image/")
+                              attachment.contentType?.startsWith("image/") ||
+                                attachment.originalContentType?.startsWith("image/")
                             );
                             const attachmentDownloadHref = getQuoteAttachmentDownloadHref(
                               attachment,
                               index
                             );
+                            const originalAttachmentUrl = attachment.originalUrl || attachment.url || "";
+                            const originalDownloadHref = getQuoteAttachmentDownloadHref(
+                              {
+                                ...attachment,
+                                url: originalAttachmentUrl,
+                                filename: attachment.originalFilename || attachment.filename,
+                              },
+                              index
+                            );
+                            const backgroundRemovalJobKey = getBackgroundRemovalJobKey(
+                              selected.id,
+                              attachment,
+                              index
+                            );
+                            const backgroundRemovalJob = backgroundRemovalJobs[backgroundRemovalJobKey];
+                            const hasTransparentArtwork = Boolean(attachment.originalUrl && attachment.url);
                             return (
                               <div
                                 key={`${attachment.url || attachment.filename || "attachment"}-${index}`}
@@ -3064,9 +3248,9 @@ export default function QuotationApprovalPage() {
                                     </p>
                                     <p
                                       className="mt-1 max-w-full truncate text-sm font-semibold text-[#222222]"
-                                      title={attachment.filename || "Attachment"}
+                                      title={attachment.originalFilename || attachment.filename || "Attachment"}
                                     >
-                                      {attachment.filename || "Attachment"}
+                                      {attachment.originalFilename || attachment.filename || "Attachment"}
                                     </p>
                                     {attachment.description ? (
                                       <p className="mt-1 break-words text-xs text-[#717171]">
@@ -3088,7 +3272,7 @@ export default function QuotationApprovalPage() {
                                         className={`${secondaryButtonClass} whitespace-nowrap px-3`}
                                       >
                                         <FiFileText className="h-3.5 w-3.5" />
-                                        Open file
+                                        {hasTransparentArtwork ? "Open transparent PNG" : "Open file"}
                                       </a>
                                       <a
                                         href={attachmentDownloadHref}
@@ -3102,10 +3286,106 @@ export default function QuotationApprovalPage() {
                                   ) : null}
                                 </div>
                                 {attachmentIsImage && attachment.url ? (
-                                  <QuoteAttachmentPreview
-                                    src={attachment.url}
-                                    alt={attachment.filename || "Attachment"}
-                                  />
+                                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                                    <div className="rounded-[22px] border border-[#e7e7e7] bg-white p-2.5">
+                                      <div className="flex items-center justify-between gap-2 px-1">
+                                        <div>
+                                          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#717171]">
+                                            Uploaded
+                                          </p>
+                                          <p className="mt-0.5 text-[11px] text-[#9a9a9a]">Source artwork</p>
+                                        </div>
+                                        {originalDownloadHref ? (
+                                          <a
+                                            href={originalDownloadHref}
+                                            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#717171] transition hover:border-[#c7c7c7]"
+                                            aria-label="Download original artwork"
+                                            title="Download original artwork"
+                                          >
+                                            <FiDownload className="h-3.5 w-3.5" />
+                                          </a>
+                                        ) : null}
+                                      </div>
+                                      <QuoteAttachmentPreview
+                                        src={originalAttachmentUrl}
+                                        alt={`${attachment.originalFilename || attachment.filename || "Attachment"} original`}
+                                      />
+                                    </div>
+
+                                    <div className="relative overflow-hidden rounded-[22px] border border-[#ccebd9] bg-[linear-gradient(145deg,#f4fbf7,#eef9f3)] p-2.5">
+                                      <div className="flex items-center justify-between gap-2 px-1">
+                                        <div>
+                                          <div className="flex items-center gap-1.5">
+                                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#1f7a4d] text-white">
+                                              <FiStar className="h-3 w-3" />
+                                            </span>
+                                            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#1f7a4d]">
+                                              Print-ready
+                                            </p>
+                                          </div>
+                                          <p className="mt-0.5 text-[11px] text-[#56806a]">
+                                            {hasTransparentArtwork
+                                              ? "Background removed automatically"
+                                              : backgroundRemovalJob?.label || "Automatic cleanup queued"}
+                                          </p>
+                                        </div>
+                                        {hasTransparentArtwork ? (
+                                          <a
+                                            href={attachmentDownloadHref}
+                                            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#1f7a4d] text-white shadow-sm transition hover:bg-[#17643e]"
+                                            aria-label="Download transparent PNG"
+                                            title="Download transparent PNG"
+                                          >
+                                            <FiDownload className="h-3.5 w-3.5" />
+                                          </a>
+                                        ) : null}
+                                      </div>
+
+                                      {hasTransparentArtwork ? (
+                                        <QuoteAttachmentPreview
+                                          src={attachment.url}
+                                          alt={`${attachment.filename || "Artwork"} with transparent background`}
+                                          transparent
+                                        />
+                                      ) : backgroundRemovalJob?.status === "error" ? (
+                                        <div className="mt-3 grid h-40 place-items-center rounded-[18px] border border-rose-200 bg-white/85 px-4 text-center">
+                                          <div>
+                                            <FiXCircle className="mx-auto h-5 w-5 text-rose-500" />
+                                            <p className="mt-2 text-xs font-semibold text-rose-700">
+                                              {backgroundRemovalJob.error || "Automatic cleanup failed."}
+                                            </p>
+                                            <button
+                                              type="button"
+                                              onClick={() => retryAutomaticBackgroundRemoval(attachment, index)}
+                                              className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50"
+                                            >
+                                              <FiRefreshCw className="h-3.5 w-3.5" />
+                                              Try again
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="mt-3 grid h-40 place-items-center overflow-hidden rounded-[18px] border border-emerald-100 bg-white/80 px-5 text-center">
+                                          <div className="w-full">
+                                            <span className="mx-auto inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-[#1f7a4d]">
+                                              <FiRefreshCw className="h-5 w-5 animate-spin" />
+                                            </span>
+                                            <p className="mt-2 text-xs font-semibold text-[#35684c]">
+                                              {backgroundRemovalJob?.label || "Preparing automatic cleanup"}
+                                            </p>
+                                            <div className="mx-auto mt-3 h-1.5 max-w-48 overflow-hidden rounded-full bg-emerald-100">
+                                              <div
+                                                className="h-full rounded-full bg-[linear-gradient(90deg,#1f7a4d,#45b979)] transition-[width] duration-300"
+                                                style={{
+                                                  width: `${Math.max(4, Math.round((backgroundRemovalJob?.progress || 0.03) * 100))}%`,
+                                                }}
+                                              />
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
                                 ) : !attachment.url ? (
                                   <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 text-xs font-semibold text-amber-800">
                                     Email-only artwork:{" "}

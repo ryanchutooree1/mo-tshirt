@@ -6,6 +6,10 @@ import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "r
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
 import { trackQuoteSubmit } from "@/lib/analytics";
+import {
+  canAutomaticallyRemoveBackground,
+  removeBackgroundAutomatically,
+} from "@/lib/automatic-background-removal";
 import { formatWholeMoney as formatDisplayWholeMoney } from "@/lib/money";
 import {
   PARTNER_PRINT_PLACEMENT_OPTIONS,
@@ -520,6 +524,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
   const [pendingArtworkPickerId, setPendingArtworkPickerId] = useState<number | null>(null);
   const [website, setWebsite] = useState("");
   const [loading, setLoading] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState("Sending…");
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
@@ -806,6 +811,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     }
 
     setLoading(true);
+    setSubmitStatus("Preparing your request…");
     setResult(null);
 
     const summaryMessage = form.notes.trim()
@@ -834,7 +840,32 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
     payload.append("deliveryPostCode", form.deliveryPostCode);
     payload.append("deliveryPhone", form.deliveryPhone);
 
-    const uploadedArtworkEntries = getArtworkUploadEntries(artworkItems);
+    const originalArtworkEntries = getArtworkUploadEntries(artworkItems);
+    const uploadedArtworkEntries = await Promise.all(
+      originalArtworkEntries.map(async (entry, index) => {
+        if (!canAutomaticallyRemoveBackground(entry.file)) return entry;
+        setSubmitStatus(
+          `Making logo ${index + 1} of ${originalArtworkEntries.length} transparent…`
+        );
+        try {
+          const result = await removeBackgroundAutomatically(entry.file, ({ label }) => {
+            setSubmitStatus(`${label}…`);
+          });
+          const baseName = entry.file.name.replace(/\.[^.]+$/, "") || `logo-${index + 1}`;
+          return {
+            ...entry,
+            file: new File([result.blob], `${baseName}-transparent.png`, {
+              type: "image/png",
+              lastModified: Date.now(),
+            }),
+          };
+        } catch (error) {
+          console.error("quote-form:automatic-background-removal", error);
+          return entry;
+        }
+      })
+    );
+    setSubmitStatus("Sending your request…");
     const uploadedArtworkItems = artworkItems.filter(hasArtworkFile);
     const firstFrontLogoDescription =
       artworkItems.find((item) => getArtworkSlots(item.printPlacement).includes("front") && item.frontLogoDescription.trim())
@@ -923,6 +954,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
       setResult({ ok: false, msg: "Network error. Please try again." });
     } finally {
       setLoading(false);
+      setSubmitStatus("Sending…");
     }
   }
 
@@ -1403,7 +1435,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
             disabled={loading || Boolean(emailError)}
             className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 px-6 py-3 text-sm font-semibold text-white shadow-[0_20px_38px_-18px_rgba(249,115,22,0.9)] transition hover:-translate-y-0.5 hover:from-orange-600 hover:via-amber-500 hover:to-orange-700 disabled:translate-y-0 disabled:opacity-60"
           >
-            {loading ? "Sending…" : "Get my quote"}
+            {loading ? submitStatus : "Get my quote"}
           </button>
           <TrackedWhatsAppLink
             href={getWhatsAppUrl("Hi! Can you quote me for custom shirts?")}
