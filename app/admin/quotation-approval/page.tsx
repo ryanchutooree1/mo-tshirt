@@ -1454,6 +1454,7 @@ export default function QuotationApprovalPage() {
   const [logo, setLogo] = useState<LogoAsset | null>(null);
   const [requestedQuoteId, setRequestedQuoteId] = useState<string | null>(null);
   const prevDocumentTypeRef = useRef<DocumentType | null>(null);
+  const quotationPreviewUrlRef = useRef<string | null>(null);
   const backgroundRemovalRunsRef = useRef(new Set<string>());
   const backgroundRemovalAttemptsRef = useRef(new Set<string>());
 
@@ -1903,22 +1904,35 @@ export default function QuotationApprovalPage() {
 
   useEffect(() => {
     if (!selected || !draft) {
+      if (quotationPreviewUrlRef.current) {
+        URL.revokeObjectURL(quotationPreviewUrlRef.current);
+        quotationPreviewUrlRef.current = null;
+      }
       setQuotationPreviewUrl(null);
       return;
     }
 
-    let objectUrl: string | null = null;
     const timer = window.setTimeout(() => {
       const previewDoc = buildPdfDoc(selected, draft, logo);
-      objectUrl = URL.createObjectURL(previewDoc.output("blob"));
-      setQuotationPreviewUrl(objectUrl);
+      const nextUrl = URL.createObjectURL(previewDoc.output("blob"));
+      const previousUrl = quotationPreviewUrlRef.current;
+      quotationPreviewUrlRef.current = nextUrl;
+      setQuotationPreviewUrl(nextUrl);
+      if (previousUrl) URL.revokeObjectURL(previousUrl);
     }, 180);
 
     return () => {
       window.clearTimeout(timer);
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [draft, logo, selected]);
+
+  useEffect(() => {
+    return () => {
+      if (quotationPreviewUrlRef.current) {
+        URL.revokeObjectURL(quotationPreviewUrlRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!selected) {
@@ -3291,6 +3305,7 @@ export default function QuotationApprovalPage() {
                       <div className="overflow-hidden rounded-[24px] border border-[#dedede] bg-[#e9ecef] shadow-[0_24px_70px_-36px_rgba(15,23,42,0.35)]">
                         {quotationPreviewUrl ? (
                           <iframe
+                            key={quotationPreviewUrl}
                             src={quotationPreviewUrl}
                             title={`Live ${DOC_TYPE_LABELS[draft.documentType]} PDF preview`}
                             className="h-[72vh] min-h-[680px] w-full bg-white sm:h-[820px]"
@@ -5009,7 +5024,7 @@ export default function QuotationApprovalPage() {
       {workflowStudioOpen && selected && draft ? (
         <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-slate-950/70 px-3 pb-4 pt-16 sm:px-4 sm:pt-20">
           <div
-            className={`flex max-h-[calc(100vh-5rem)] w-full max-w-6xl flex-col overflow-hidden rounded-[28px] border shadow-2xl ${
+            className={`flex max-h-[calc(100vh-5rem)] w-full max-w-[1600px] flex-col overflow-hidden rounded-[28px] border shadow-2xl ${
               isDark
                 ? "border-white/15 bg-slate-950 text-slate-100"
                 : "border-[#ebebeb] bg-white text-[#222222]"
@@ -5040,7 +5055,7 @@ export default function QuotationApprovalPage() {
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-              <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+              <div className="grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,0.75fr)_minmax(420px,1fr)]">
                 <div className="space-y-5">
                   <div className={`${softSurfaceClass} p-5`}>
                     <p className={labelClass}>Document setup</p>
@@ -5428,6 +5443,48 @@ export default function QuotationApprovalPage() {
                     </div>
                   </div>
                 </div>
+
+                <aside className="min-w-0 xl:sticky xl:top-0 xl:self-start">
+                  <div className={`${softSurfaceClass} overflow-hidden p-3`}>
+                    <div className="flex flex-wrap items-center justify-between gap-2 px-2 pb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className={labelClass}>Automatic quotation preview</p>
+                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-emerald-700">
+                            Live
+                          </span>
+                        </div>
+                        <p className={`mt-1 text-xs ${isDark ? "text-slate-400" : "text-[#717171]"}`}>
+                          Updates automatically while you type.
+                        </p>
+                      </div>
+                      {quotationMissingCount > 0 ? (
+                        <span className="rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-[10px] font-extrabold text-red-700">
+                          {quotationMissingCount} missing
+                        </span>
+                      ) : (
+                        <FiCheckCircle className="h-5 w-5 text-emerald-600" aria-label="Quotation complete" />
+                      )}
+                    </div>
+                    <div className="overflow-hidden rounded-[20px] border border-[#d7d7d7] bg-[#e9ecef]">
+                      {quotationPreviewUrl ? (
+                        <iframe
+                          key={`studio-${quotationPreviewUrl}`}
+                          src={quotationPreviewUrl}
+                          title={`Document Studio live ${DOC_TYPE_LABELS[draft.documentType]} PDF preview`}
+                          className="h-[calc(100vh-15rem)] min-h-[620px] w-full bg-white"
+                        />
+                      ) : (
+                        <div className="grid h-[calc(100vh-15rem)] min-h-[620px] place-items-center bg-white text-center text-[#717171]">
+                          <div>
+                            <FiRefreshCw className="mx-auto h-6 w-6 animate-spin text-[#ff6600]" />
+                            <p className="mt-3 text-xs font-semibold">Generating live PDF…</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </aside>
               </div>
             </div>
 
