@@ -1456,6 +1456,7 @@ export default function QuotationApprovalPage() {
   const [requestedQuoteId, setRequestedQuoteId] = useState<string | null>(null);
   const prevDocumentTypeRef = useRef<DocumentType | null>(null);
   const quotationPreviewUrlRef = useRef<string | null>(null);
+  const designLogoSectionRef = useRef<HTMLDivElement | null>(null);
   const backgroundRemovalRunsRef = useRef(new Set<string>());
   const backgroundRemovalAttemptsRef = useRef(new Set<string>());
 
@@ -1661,6 +1662,18 @@ export default function QuotationApprovalPage() {
 
   useEffect(() => {
     setWorkflowStudioOpen(false);
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const frame = window.requestAnimationFrame(() => {
+      designLogoSectionRef.current?.scrollIntoView({
+        behavior: "auto",
+        block: "start",
+        inline: "nearest",
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [selectedId]);
   const selectedPartnerIds =
     selected?.partner?.visibleTo?.length
@@ -3482,7 +3495,10 @@ export default function QuotationApprovalPage() {
                     </div>
                   </div>
 
-                  <div className="-order-3 grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+                  <div
+                    ref={designLogoSectionRef}
+                    className="-order-3 scroll-mt-24 grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]"
+                  >
                     <div className={`${surfaceClass} order-2 p-5`}>
                       <p className={labelClass}>Product details</p>
                       <div className="mt-4 space-y-3 text-sm leading-6 text-[#484848]">
