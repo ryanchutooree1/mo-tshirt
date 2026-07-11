@@ -1,15 +1,32 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { deleteDoc, doc } from "firebase/firestore";
-import { getAdminPasswordFromEnv, hasAdminSession } from "@/lib/admin-auth";
+import { getAdminPasswordFromEnv } from "@/lib/admin-auth";
+import { verifyManagedAdminCredentials } from "@/lib/admin-users";
+import { getAdminRequestSession } from "@/lib/admin-request";
 import { db } from "@/lib/firebase";
+import { verifyProductionManagerPassword } from "@/lib/production-manager-auth";
 
-async function isAdmin() {
-  return hasAdminSession(await cookies());
-}
+async function verifyCurrentAdminPassword(
+  session: NonNullable<Awaited<ReturnType<typeof getAdminRequestSession>>>,
+  password: string
+) {
+  if (session.isOwner) {
+    const expected = getAdminPasswordFromEnv();
+    if (!expected) {
+      throw new Error("Server is missing ADMIN_PASSWORD env.");
+    }
+    return password === expected;
+  }
 
-function getExpectedPassword() {
-  return getAdminPasswordFromEnv();
+  if (session.userId === "production-manager") {
+    return verifyProductionManagerPassword(password);
+  }
+
+  const managedAdmin = await verifyManagedAdminCredentials(
+    session.email,
+    password
+  );
+  return Boolean(managedAdmin);
 }
 
 export async function DELETE(
@@ -17,16 +34,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  if (!(await isAdmin())) {
+  const session = await getAdminRequestSession();
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
   if (!id) {
     return NextResponse.json({ error: "Missing id." }, { status: 400 });
-  }
-
-  const expected = getExpectedPassword();
-  if (!expected) {
-    return NextResponse.json({ error: "Server is missing ADMIN_PASSWORD env." }, { status: 500 });
   }
 
   const body = await req.json().catch(() => ({}));
@@ -35,8 +48,25 @@ export async function DELETE(
     return NextResponse.json({ error: "Password is required." }, { status: 400 });
   }
 
-  if (password !== expected) {
-    return NextResponse.json({ error: "Invalid password." }, { status: 401 });
+  if (password.length > 256) {
+    return NextResponse.json({ error: "Invalid password." }, { status: 400 });
+  }
+
+  try {
+    if (!(await verifyCurrentAdminPassword(session, password))) {
+      return NextResponse.json({ error: "Invalid administrator password." }, { status: 401 });
+    }
+  } catch (error) {
+    console.error("quotes:admin:verify-delete", error);
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error && error.message.includes("ADMIN_PASSWORD")
+            ? error.message
+            : "Could not verify administrator password.",
+      },
+      { status: 500 }
+    );
   }
 
   try {

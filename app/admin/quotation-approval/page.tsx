@@ -2451,7 +2451,7 @@ export default function QuotationApprovalPage() {
 
   const handleDeleteQuote = async () => {
     if (!selected) return;
-    const password = window.prompt("Enter your admin login password to delete this quotation.");
+    const password = window.prompt("Enter your own administrator login password to delete this quotation.");
     if (password === null) return;
     const cleanPassword = password.trim();
     if (!cleanPassword) {
