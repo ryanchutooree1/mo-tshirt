@@ -412,6 +412,12 @@ export default function SettingsPage() {
     [users]
   );
 
+  const managerNeedsFirebaseSetup = !productionManager.email.trim() ||
+    !managedUserEmailSet.has(productionManager.email.trim().toLowerCase());
+  const partnersNeedingFirebaseSetup = productionPartners.filter(
+    (partner) => !partner.email.trim() || !managedUserEmailSet.has(partner.email.trim().toLowerCase())
+  );
+
   const showCurrentAdminCard = useMemo(() => {
     if (!currentAdminSession?.email) return false;
     return !managedUserEmailSet.has(currentAdminSession.email.toLowerCase());
@@ -1210,12 +1216,12 @@ export default function SettingsPage() {
                     Authentication Directory
                   </div>
                   <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                    {users.length + productionPartners.length + 1}
+                    {users.length + partnersNeedingFirebaseSetup.length + (managerNeedsFirebaseSetup ? 1 : 0)}
                   </span>
                 </div>
               </div>
 
-              <div className="rounded-[28px] border border-slate-900 bg-slate-950 p-5 text-white shadow-sm">
+              {managerNeedsFirebaseSetup ? <div className="rounded-[28px] border border-slate-900 bg-slate-950 p-5 text-white shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="text-base font-semibold">{productionManager.name || "Tanvi"}</div>
@@ -1257,9 +1263,9 @@ export default function SettingsPage() {
                   {editingOperationalId === "manager" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <PencilLine className="h-3.5 w-3.5" />}
                   {editingOperationalId === "manager" ? "Save user" : "Edit user"}
                 </button>
-              </div>
+              </div> : null}
 
-              {productionPartners.map((partner) => (
+              {partnersNeedingFirebaseSetup.map((partner) => (
                 <div key={partner.id} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
@@ -1312,7 +1318,7 @@ export default function SettingsPage() {
                 </div>
               ))}
 
-              <button
+              {managerNeedsFirebaseSetup || partnersNeedingFirebaseSetup.length ? <button
                 type="button"
                 onClick={saveOperationalUsers}
                 disabled={operationalLoading || operationalSaving}
@@ -1320,7 +1326,7 @@ export default function SettingsPage() {
               >
                 {operationalSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                 {operationalSaving ? "Saving" : "Save operational users"}
-              </button>
+              </button> : null}
               {operationalError ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{operationalError}</div> : null}
               {operationalNotice ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{operationalNotice}</div> : null}
 

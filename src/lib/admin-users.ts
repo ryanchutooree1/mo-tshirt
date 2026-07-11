@@ -304,15 +304,10 @@ export async function ensureFirebaseAdminUser(input: {
   const existingSnap = await getDoc(ref);
   if (existingSnap.exists()) {
     const existing = normalizeRecord(existingSnap.data() as Partial<AdminUserRecord>, email);
-    const updated = await updateAdminUser({
-      email,
-      displayName: input.displayName,
-      allowedPages: input.allowedPages,
-      isActive: input.isActive,
-    });
-    return existing && resolveAuthProvider(existing) === "legacy"
+    if (!existing) throw new Error("Admin user record is invalid.");
+    return resolveAuthProvider(existing) === "legacy"
       ? sendAdminUserPasswordReset(email)
-      : updated;
+      : toSummary(existing);
   }
 
   const displayName = sanitizeDisplayName(input.displayName);
