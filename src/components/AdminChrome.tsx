@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
@@ -39,6 +39,7 @@ import {
   Palette,
   PanelLeftClose,
   PanelLeftOpen,
+  Pencil,
   PenTool,
   PiggyBank,
   Printer,
@@ -69,6 +70,11 @@ import {
   type AdminPagePath,
 } from "@/lib/admin-access";
 import { signOutAdminFromFirebase } from "@/lib/firebase-admin-client-auth";
+import AdminProfileEditor from "@/components/admin/AdminProfileEditor";
+import {
+  defaultAdminProfile,
+  type AdminProfile,
+} from "@/lib/admin-profile";
 
 type AdminSessionSummary = {
   displayName: string;
@@ -258,24 +264,39 @@ function getInitials(name: string) {
 
 function AdminAvatar({
   name,
-  owner,
+  src,
+  zoom,
+  offsetX,
+  offsetY,
   className,
   sizes,
 }: {
   name: string;
-  owner: boolean;
+  src: string | null;
+  zoom: number;
+  offsetX: number;
+  offsetY: number;
   className: string;
   sizes: string;
 }) {
+  const positionX = Math.min(100, Math.max(0, 50 - offsetX));
+  const positionY = Math.min(100, Math.max(0, 50 - offsetY));
+
   return (
     <span className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full ${className}`}>
-      {owner ? (
+      {src ? (
         <Image
-          src="/ryan-chutooree-avatar.jpg"
+          src={src}
           alt=""
           fill
           sizes={sizes}
           className="object-cover object-center"
+          unoptimized={src.startsWith("data:")}
+          style={{
+            objectPosition: `${positionX}% ${positionY}%`,
+            transform: `scale(${zoom})`,
+            transformOrigin: `${positionX}% ${positionY}%`,
+          }}
         />
       ) : (
         getInitials(name)
@@ -301,10 +322,24 @@ export default function AdminChrome({
     (pathname.startsWith("/admin/partners/") && pathname !== "/admin/partners");
 
   const session = initialSession;
+  const initialProfile = useMemo(
+    () => defaultAdminProfile({
+      displayName: session?.displayName || "Administrator",
+      isOwner: session?.isOwner === true,
+    }),
+    [session]
+  );
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [navQuery, setNavQuery] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
+  const [profileEditorOpen, setProfileEditorOpen] = useState(false);
+  const [profile, setProfile] = useState<AdminProfile>(initialProfile);
+  const [profileLoadState, setProfileLoadState] = useState<"loading" | "ready" | "error">(
+    session ? "loading" : "ready"
+  );
+  const [profileReloadKey, setProfileReloadKey] = useState(0);
+  const [profileNotice, setProfileNotice] = useState("");
   const [isDesktop, setIsDesktop] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(NAV_GROUPS.map((group) => [group.id, true]))
@@ -312,6 +347,48 @@ export default function AdminChrome({
   const searchRef = useRef<HTMLInputElement>(null);
   const mobilePanelRef = useRef<HTMLDivElement>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const profileMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const editProfileActionRef = useRef<HTMLButtonElement>(null);
+  const profileEditorOpenerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setProfile(initialProfile);
+    if (!session) {
+      setProfileLoadState("ready");
+      return;
+    }
+    setProfileLoadState("loading");
+    let ignore = false;
+    const controller = new AbortController();
+    void fetch("/api/admin/profile", { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok || !body?.profile) throw new Error(body?.error || "Could not load profile.");
+        if (ignore) return;
+        setProfile(body.profile as AdminProfile);
+        setProfileLoadState("ready");
+      })
+      .catch((error) => {
+        if (ignore || (error instanceof DOMException && error.name === "AbortError")) return;
+        setProfileLoadState("error");
+      });
+    return () => {
+      ignore = true;
+      controller.abort();
+    };
+  }, [initialProfile, profileReloadKey, session]);
+
+  useEffect(() => {
+    if (!profileNotice) return;
+    const timeout = window.setTimeout(() => setProfileNotice(""), 4_000);
+    return () => window.clearTimeout(timeout);
+  }, [profileNotice]);
+
+  useEffect(() => {
+    if (!profileOpen) return;
+    const frame = window.requestAnimationFrame(() => editProfileActionRef.current?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, [profileOpen]);
 
   useEffect(() => {
     try {
@@ -358,7 +435,10 @@ export default function AdminChrome({
       }
       if (event.key === "Escape") {
         setMobileOpen(false);
-        setProfileOpen(false);
+        setProfileOpen((current) => {
+          if (current) window.requestAnimationFrame(() => profileMenuButtonRef.current?.focus());
+          return false;
+        });
         setNavQuery("");
         searchRef.current?.blur();
       }
@@ -428,10 +508,43 @@ export default function AdminChrome({
     }).slice(0, 8);
   }, [navQuery, visiblePages]);
 
-  const displayName = session?.isOwner ? "Ryan Chutooree" : session?.displayName || "Administrator";
+  const displayName = profile.displayName;
   const displayEmail = session?.email || "Administrator · Mauritius";
   const isOwnerProfile = session?.isOwner === true;
+  const displayHeadline = profile.headline;
+  const displayLocation = profile.location;
+  const avatarSource = profile.avatarDataUrl || (isOwnerProfile ? "/ryan-chutooree-avatar.jpg" : null);
   const firstName = displayName.split(/\s+/).filter(Boolean)[0] || "Admin";
+  const profileSubtitle = [displayLocation, displayHeadline].filter(Boolean).join(" · ") || displayEmail;
+
+  const restoreProfileEditorFocus = useCallback(() => {
+    const opener = profileEditorOpenerRef.current;
+    const target = opener?.isConnected ? opener : profileMenuButtonRef.current;
+    window.requestAnimationFrame(() => target?.focus());
+    profileEditorOpenerRef.current = null;
+  }, []);
+
+  const closeProfileEditor = useCallback(() => {
+    setProfileEditorOpen(false);
+    restoreProfileEditorFocus();
+  }, [restoreProfileEditorFocus]);
+
+  const openProfileEditor = useCallback((opener: HTMLElement | null) => {
+    if (profileLoadState !== "ready") {
+      if (profileLoadState === "error") {
+        setProfileLoadState("loading");
+        setProfileReloadKey((current) => current + 1);
+        setProfileNotice("Profile could not load. Retrying now…");
+      } else {
+        setProfileNotice("Your profile is still loading…");
+      }
+      return;
+    }
+    profileEditorOpenerRef.current = opener;
+    setProfileOpen(false);
+    setMobileOpen(false);
+    setProfileEditorOpen(true);
+  }, [profileLoadState]);
 
   async function logout() {
     await Promise.allSettled([
@@ -542,19 +655,29 @@ export default function AdminChrome({
       </nav>
 
       <div className="shrink-0 border-t border-white/[0.07] p-3 [padding-bottom:max(0.75rem,env(safe-area-inset-bottom))]">
-        <div className={`flex w-full items-center gap-3 rounded-xl p-2.5 text-left ${collapsed ? "lg:justify-center" : ""}`}>
+        <button
+          type="button"
+          onClick={(event) => openProfileEditor(event.currentTarget)}
+          title={collapsed ? "Edit profile" : undefined}
+          aria-label={`Edit profile for ${displayName}`}
+          aria-disabled={profileLoadState === "loading"}
+          className={`group flex min-h-11 w-full items-center gap-3 rounded-xl p-2.5 text-left transition hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6400]/70 ${collapsed ? "lg:justify-center" : ""}`}
+        >
           <AdminAvatar
             name={displayName}
-            owner={isOwnerProfile}
+            src={avatarSource}
+            zoom={profile.avatarZoom}
+            offsetX={profile.avatarOffsetX}
+            offsetY={profile.avatarOffsetY}
             sizes="36px"
             className="h-9 w-9 bg-white text-xs font-bold text-[#071015] ring-1 ring-white/20"
           />
           <span className={`min-w-0 flex-1 ${collapsed ? "lg:hidden" : ""}`}>
             <span className="block truncate text-xs font-semibold">{displayName}</span>
-            <span className="mt-0.5 block truncate text-[10px] text-white/42">Mauritius administrator</span>
+            <span className="mt-0.5 block truncate text-[10px] text-white/42">{profileSubtitle}</span>
           </span>
-          <ChevronRight className={`h-4 w-4 text-white/35 ${collapsed ? "lg:hidden" : ""}`} />
-        </div>
+          <Pencil className={`h-3.5 w-3.5 text-white/35 transition group-hover:text-white/65 ${collapsed ? "lg:hidden" : ""}`} />
+        </button>
       </div>
     </aside>
   );
@@ -648,6 +771,7 @@ export default function AdminChrome({
               <span aria-hidden>🇲🇺</span> Mauritius
             </div>
             <button
+              ref={profileMenuButtonRef}
               type="button"
               onClick={toggleTheme}
               className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border transition ${isDark ? "border-white/10 bg-white/5 hover:bg-white/10" : "border-slate-200 bg-white hover:bg-slate-50"}`}
@@ -660,12 +784,14 @@ export default function AdminChrome({
               onClick={() => setProfileOpen((current) => !current)}
               className={`flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-full border p-1.5 pr-1.5 transition sm:pr-2.5 ${isDark ? "border-white/10 bg-white/5 hover:bg-white/10" : "border-slate-200 bg-white hover:bg-slate-50"}`}
               aria-expanded={profileOpen}
-              aria-haspopup="menu"
               aria-label={`Open profile menu for ${displayName}`}
             >
               <AdminAvatar
                 name={displayName}
-                owner={isOwnerProfile}
+                src={avatarSource}
+                zoom={profile.avatarZoom}
+                offsetX={profile.avatarOffsetX}
+                offsetY={profile.avatarOffsetY}
                 sizes="28px"
                 className={`h-7 w-7 text-[10px] font-bold ${isDark ? "bg-white text-[#071015]" : "bg-[#071015] text-white"}`}
               />
@@ -677,30 +803,58 @@ export default function AdminChrome({
 
         {profileOpen ? (
           <>
-          <button type="button" className="fixed inset-0 z-40 cursor-default" onClick={() => setProfileOpen(false)} aria-label="Close profile menu" />
-          <div role="menu" aria-label="Profile actions" className={`fixed right-3 top-[calc(4.5rem+env(safe-area-inset-top))] z-50 max-h-[calc(100dvh-5.5rem)] w-[calc(100vw-1.5rem)] max-w-[320px] overflow-y-auto rounded-2xl border shadow-[0_24px_80px_rgba(15,23,42,0.2)] sm:right-5 ${isDark ? "border-white/10 bg-[#101613]" : "border-slate-200 bg-white"}`}>
+          <button type="button" tabIndex={-1} className="fixed inset-0 z-40 cursor-default" onClick={() => {
+            setProfileOpen(false);
+            window.requestAnimationFrame(() => profileMenuButtonRef.current?.focus());
+          }} aria-label="Close profile menu" />
+          <div role="region" aria-label="Profile actions" className={`fixed right-3 top-[calc(4.5rem+env(safe-area-inset-top))] z-50 max-h-[calc(100dvh-5.5rem)] w-[calc(100vw-1.5rem)] max-w-[320px] overflow-y-auto rounded-2xl border shadow-[0_24px_80px_rgba(15,23,42,0.2)] sm:right-5 ${isDark ? "border-white/10 bg-[#101613]" : "border-slate-200 bg-white"}`}>
             <div className={`border-b p-4 ${isDark ? "border-white/10" : "border-slate-100"}`}>
               <div className="flex items-center gap-3">
                 <AdminAvatar
                   name={displayName}
-                  owner={isOwnerProfile}
+                  src={avatarSource}
+                  zoom={profile.avatarZoom}
+                  offsetX={profile.avatarOffsetX}
+                  offsetY={profile.avatarOffsetY}
                   sizes="48px"
                   className={`h-12 w-12 text-xs font-bold ${isDark ? "bg-white text-[#071015]" : "bg-[#071015] text-white"}`}
                 />
                 <div className="min-w-0">
                   <div className="truncate text-sm font-bold">{displayName}</div>
-                  <div className={`mt-1 truncate text-[11px] ${isDark ? "text-white/42" : "text-slate-500"}`}>{displayEmail}</div>
+                  {displayHeadline ? <div className={`mt-0.5 truncate text-[11px] ${isDark ? "text-white/52" : "text-slate-600"}`}>{displayHeadline}</div> : null}
+                  <div className={`mt-0.5 truncate text-[10px] ${isDark ? "text-white/35" : "text-slate-400"}`}>{displayEmail}</div>
                 </div>
               </div>
-              <div className={`mt-3 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${isDark ? "bg-white/7 text-white/65" : "bg-slate-100 text-slate-600"}`}>{isOwnerProfile ? "Owner · Mauritius" : "Team access"}</div>
+              <div className={`mt-3 inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${isDark ? "bg-white/7 text-white/65" : "bg-slate-100 text-slate-600"}`}>{isOwnerProfile ? `Owner · ${displayLocation || "Mauritius"}` : (displayLocation || "Team access")}</div>
             </div>
             <div className="p-2">
-              {visiblePages.has("/admin/settings") ? <Link role="menuitem" href="/admin/settings" className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold ${isDark ? "hover:bg-white/7" : "hover:bg-slate-50"}`}><Settings className="h-4 w-4" /> Workspace settings</Link> : null}
-              <Link role="menuitem" href="/" className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold ${isDark ? "hover:bg-white/7" : "hover:bg-slate-50"}`}><ExternalLink className="h-4 w-4" /> Visit Mauritius store</Link>
-              <button role="menuitem" type="button" onClick={logout} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-rose-600 ${isDark ? "hover:bg-rose-400/10" : "hover:bg-rose-50"}`}><LogOut className="h-4 w-4" /> Sign out</button>
+              <button ref={editProfileActionRef} type="button" onClick={(event) => openProfileEditor(event.currentTarget)} aria-disabled={profileLoadState === "loading"} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold ${isDark ? "hover:bg-white/7" : "hover:bg-slate-50"}`}><Pencil className="h-4 w-4" /> {profileLoadState === "ready" ? "Edit profile" : profileLoadState === "error" ? "Retry profile" : "Loading profile…"}</button>
+              {visiblePages.has("/admin/settings") ? <Link href="/admin/settings" className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold ${isDark ? "hover:bg-white/7" : "hover:bg-slate-50"}`}><Settings className="h-4 w-4" /> Workspace settings</Link> : null}
+              <Link href="/" className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold ${isDark ? "hover:bg-white/7" : "hover:bg-slate-50"}`}><ExternalLink className="h-4 w-4" /> Visit Mauritius store</Link>
+              <button type="button" onClick={logout} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-rose-600 ${isDark ? "hover:bg-rose-400/10" : "hover:bg-rose-50"}`}><LogOut className="h-4 w-4" /> Sign out</button>
             </div>
           </div>
           </>
+        ) : null}
+
+        <AdminProfileEditor
+          open={profileEditorOpen}
+          profile={profile}
+          email={displayEmail}
+          fallbackAvatarUrl={isOwnerProfile ? "/ryan-chutooree-avatar.jpg" : null}
+          onClose={closeProfileEditor}
+          onSaved={(savedProfile) => {
+            setProfile(savedProfile);
+            setProfileOpen(false);
+            setProfileNotice("Profile updated successfully.");
+            closeProfileEditor();
+          }}
+        />
+
+        {profileNotice ? (
+          <div role="status" aria-live="polite" className={`fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-[90] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-2xl border px-4 py-3 text-center text-xs font-semibold shadow-[0_18px_60px_rgba(0,0,0,0.22)] sm:left-auto sm:right-5 sm:w-auto sm:translate-x-0 ${isDark ? "border-white/10 bg-[#142019] text-white" : "border-slate-200 bg-white text-slate-800"}`}>
+            {profileNotice}
+          </div>
         ) : null}
 
         <div className="min-w-0">
