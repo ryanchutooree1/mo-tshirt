@@ -193,6 +193,7 @@ export default function SettingsPage() {
   const [operationalSaving, setOperationalSaving] = useState(false);
   const [operationalNotice, setOperationalNotice] = useState<string | null>(null);
   const [operationalError, setOperationalError] = useState<string | null>(null);
+  const [editingOperationalId, setEditingOperationalId] = useState<string | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -733,6 +734,7 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error(typeof data?.error === "string" ? data.error : "Failed to update operational users.");
       if (data?.manager) setProductionManager(data.manager as ProductionManager);
       if (Array.isArray(data?.partners)) setProductionPartners(data.partners);
+      setEditingOperationalId(null);
       setOperationalNotice("Operational users updated");
       window.setTimeout(() => setOperationalNotice(null), 2400);
     } catch (error) {
@@ -1209,18 +1211,40 @@ export default function SettingsPage() {
                   </div>
                   <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Active</span>
                 </div>
-                <input
-                  type="email"
-                  value={productionManager.email}
-                  onChange={(event) => setProductionManager((current) => ({ ...current, email: event.target.value }))}
-                  placeholder="Add email address"
-                  className="mt-4 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-white/30"
-                />
+                {editingOperationalId === "manager" ? (
+                  <div className="mt-4 space-y-2">
+                    <input
+                      type="text"
+                      value={productionManager.name}
+                      onChange={(event) => setProductionManager((current) => ({ ...current, name: event.target.value }))}
+                      placeholder="Full name"
+                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-white/30"
+                    />
+                    <input
+                      type="email"
+                      value={productionManager.email}
+                      onChange={(event) => setProductionManager((current) => ({ ...current, email: event.target.value }))}
+                      placeholder="Add email address"
+                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-white/30"
+                    />
+                  </div>
+                ) : (
+                  <div className="mt-4 text-sm text-slate-400">{productionManager.email || "No email added"}</div>
+                )}
                 <div className="mt-3 flex flex-wrap gap-2">
                   {['Production Workspace', 'Quotes & Invoices', 'Couple Goals'].map((access) => (
                     <span key={access} className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold text-slate-300">{access}</span>
                   ))}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => editingOperationalId === "manager" ? void saveOperationalUsers() : setEditingOperationalId("manager")}
+                  disabled={operationalSaving}
+                  className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-white/10"
+                >
+                  {editingOperationalId === "manager" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <PencilLine className="h-3.5 w-3.5" />}
+                  {editingOperationalId === "manager" ? "Save user" : "Edit user"}
+                </button>
               </div>
 
               {productionPartners.map((partner) => (
@@ -1235,18 +1259,44 @@ export default function SettingsPage() {
                     </div>
                     <span className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wider ${partner.active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{partner.active ? 'Active' : 'Paused'}</span>
                   </div>
-                  <input
-                    type="email"
-                    value={partner.email}
-                    onChange={(event) => setProductionPartners((current) => current.map((entry) => entry.id === partner.id ? { ...entry, email: event.target.value, emails: event.target.value.trim() ? [event.target.value.trim()] : [] } : entry))}
-                    placeholder="Add email address"
-                    className="mt-4 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-400"
-                  />
+                  {editingOperationalId === partner.id ? (
+                    <div className="mt-4 space-y-2">
+                      <input
+                        type="text"
+                        value={partner.name}
+                        onChange={(event) => setProductionPartners((current) => current.map((entry) => entry.id === partner.id ? { ...entry, name: event.target.value } : entry))}
+                        placeholder="Full name"
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-400"
+                      />
+                      <input
+                        type="email"
+                        value={partner.email}
+                        onChange={(event) => setProductionPartners((current) => current.map((entry) => entry.id === partner.id ? { ...entry, email: event.target.value, emails: event.target.value.trim() ? [event.target.value.trim()] : [] } : entry))}
+                        placeholder="Add email address"
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-400"
+                      />
+                      <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                        <input type="checkbox" checked={partner.active} onChange={(event) => setProductionPartners((current) => current.map((entry) => entry.id === partner.id ? { ...entry, active: event.target.checked } : entry))} className="h-4 w-4 rounded border-slate-300" />
+                        Active account
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="mt-4 text-sm text-slate-500">{partner.email || "No email added"}</div>
+                  )}
                   <div className="mt-3 flex flex-wrap gap-2">
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-600">Production Workspace</span>
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-600">Assigned orders only</span>
                     {partner.hasPassword ? <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-semibold text-blue-700">Login ready</span> : null}
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => editingOperationalId === partner.id ? void saveOperationalUsers() : setEditingOperationalId(partner.id)}
+                    disabled={operationalSaving}
+                    className="mt-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600 transition hover:border-slate-400 hover:bg-slate-50"
+                  >
+                    {editingOperationalId === partner.id ? <CheckCircle2 className="h-3.5 w-3.5" /> : <PencilLine className="h-3.5 w-3.5" />}
+                    {editingOperationalId === partner.id ? "Save user" : "Edit user"}
+                  </button>
                 </div>
               ))}
 
