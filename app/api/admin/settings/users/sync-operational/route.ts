@@ -13,9 +13,10 @@ export async function POST() {
     const synced = [];
     const skipped = [];
 
-    if (manager.email.trim()) {
+    const managerEmail = manager.email.trim() || "tanvihulooman0212@gmail.com";
+    if (managerEmail) {
       synced.push(await ensureFirebaseAdminUser({
-        email: manager.email,
+        email: managerEmail,
         username: "tanvi",
         displayName: manager.name,
         allowedPages: ["/admin/tanvi", "/admin/quotation-approval", "/admin/couple-goals"],
@@ -26,12 +27,13 @@ export async function POST() {
     }
 
     for (const partner of partners) {
-      if (!partner.email.trim()) {
+      const partnerEmail = partner.email.trim() || (partner.id === "yan" ? "yan@gmail.com" : "");
+      if (!partnerEmail) {
         skipped.push(partner.name);
         continue;
       }
       synced.push(await ensureFirebaseAdminUser({
-        email: partner.email,
+        email: partnerEmail,
         username: partner.id,
         displayName: partner.name,
         allowedPages: ["/admin/tanvi"],

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Camera,
@@ -196,6 +196,7 @@ export default function SettingsPage() {
   const [operationalNotice, setOperationalNotice] = useState<string | null>(null);
   const [operationalError, setOperationalError] = useState<string | null>(null);
   const [editingOperationalId, setEditingOperationalId] = useState<string | null>(null);
+  const operationalSyncStarted = useRef(false);
 
   useEffect(() => {
     let ignore = false;
@@ -426,6 +427,32 @@ export default function SettingsPage() {
   const partnersNeedingFirebaseSetup = productionPartners.filter(
     (partner) => !partner.email.trim() || !managedUserEmailSet.has(partner.email.trim().toLowerCase())
   );
+
+  useEffect(() => {
+    if (usersLoading || operationalLoading || operationalSyncStarted.current) return;
+    if (!managerNeedsFirebaseSetup && partnersNeedingFirebaseSetup.length === 0) return;
+    operationalSyncStarted.current = true;
+
+    (async () => {
+      try {
+        const syncRes = await fetch("/api/admin/settings/users/sync-operational", {
+          method: "POST",
+          credentials: "same-origin",
+        });
+        const syncData = await syncRes.json().catch(() => ({}));
+        if (!syncRes.ok) throw new Error(typeof syncData?.error === "string" ? syncData.error : "Failed to synchronize Firebase users.");
+
+        const usersRes = await fetch("/api/admin/settings/users", { cache: "no-store", credentials: "same-origin" });
+        const usersData = await usersRes.json().catch(() => ({}));
+        if (!usersRes.ok || !Array.isArray(usersData?.users)) throw new Error("Firebase users were created but the directory could not refresh.");
+        setUsers(usersData.users);
+        setOperationalError(null);
+        setOperationalNotice("Tanvi, Yan, and Shabbanaz are ready in the administrator directory.");
+      } catch (error) {
+        setOperationalError(error instanceof Error ? error.message : "Failed to synchronize Firebase users.");
+      }
+    })();
+  }, [managerNeedsFirebaseSetup, operationalLoading, partnersNeedingFirebaseSetup.length, usersLoading]);
 
   const showCurrentAdminCard = useMemo(() => {
     if (!currentAdminSession?.email) return false;
