@@ -513,7 +513,7 @@ export default function AdminChrome({
   const isOwnerProfile = session?.isOwner === true;
   const displayHeadline = profile.headline;
   const displayLocation = profile.location;
-  const avatarSource = profile.avatarDataUrl || (isOwnerProfile ? "/ryan-chutooree-avatar.jpg" : null);
+  const avatarSource = profile.avatarDataUrl || (isOwnerProfile ? "/ryan-chutooree.jpg" : null);
   const firstName = displayName.split(/\s+/).filter(Boolean)[0] || "Admin";
   const profileSubtitle = [displayLocation, displayHeadline].filter(Boolean).join(" · ") || displayEmail;
 
@@ -841,7 +841,7 @@ export default function AdminChrome({
           open={profileEditorOpen}
           profile={profile}
           email={displayEmail}
-          fallbackAvatarUrl={isOwnerProfile ? "/ryan-chutooree-avatar.jpg" : null}
+          fallbackAvatarUrl={isOwnerProfile ? "/ryan-chutooree.jpg" : null}
           onClose={closeProfileEditor}
           onSaved={(savedProfile) => {
             setProfile(savedProfile);
