@@ -579,7 +579,7 @@ export default function AdminChrome({
       <div className={`admin-workspace-sidebar-brand flex h-[92px] shrink-0 items-center border-b border-white/[0.07] ${collapsed ? "lg:justify-center lg:px-3" : "px-5"}`}>
         <Link href="/admin" className="flex min-w-0 items-center gap-3" aria-label="MO T-SHIRT admin dashboard">
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
-            <Image src="/logo_transparent.png" alt="" width={80} height={80} className="h-9 w-9 object-contain" />
+            <Image src="/logo_transparent.png" alt="" width={1291} height={435} className="h-auto w-10 object-contain" />
           </span>
           <span className={`min-w-0 ${collapsed ? "lg:hidden" : ""}`}>
             <span className="block truncate text-[21px] font-bold tracking-[-0.04em]">Mo T-Shirt</span>
@@ -689,8 +689,8 @@ export default function AdminChrome({
   );
 
   return (
-    <div className={`flex min-h-dvh w-full max-w-full overflow-x-hidden ${isDark ? "bg-[#050806] text-white" : "bg-[#f7f8fa] text-slate-950"}`}>
-      <div className="sticky top-0 hidden h-dvh shrink-0 lg:block">{sidebar}</div>
+    <div className={`flex min-h-dvh w-full max-w-full overflow-x-clip ${isDark ? "bg-[#050806] text-white" : "bg-[#f7f8fa] text-slate-950"}`}>
+      <div className="sticky top-0 hidden h-dvh shrink-0 self-start lg:block">{sidebar}</div>
 
       {mobileOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Administrator navigation">
