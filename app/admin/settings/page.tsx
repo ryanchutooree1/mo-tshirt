@@ -30,6 +30,7 @@ import {
 
 type AdminUserSummary = {
   email: string;
+  username: string;
   displayName: string;
   authProvider: "firebase" | "legacy";
   firebaseUid: string | null;
@@ -51,6 +52,7 @@ type AdminSessionSummary = {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const EMPTY_USER_DRAFT = {
   email: "",
+  username: "",
   displayName: "",
   password: "",
   allowedPages: ["/admin"] as AdminPagePath[],
@@ -355,8 +357,15 @@ export default function SettingsPage() {
           throw new Error(typeof data?.error === "string" ? data.error : "Failed to load operational users.");
         }
         if (!ignore) {
-          if (data?.manager) setProductionManager(data.manager as ProductionManager);
-          setProductionPartners(Array.isArray(data?.partners) ? data.partners : []);
+          if (data?.manager) setProductionManager({
+            ...(data.manager as ProductionManager),
+            email: data.manager.email?.trim() || "tanvihulooman0212@gmail.com",
+          });
+          setProductionPartners(Array.isArray(data?.partners) ? data.partners.map((partner: PrintPartner) =>
+            partner.id === "yan" && !partner.email.trim()
+              ? { ...partner, email: "yan@gmail.com", emails: ["yan@gmail.com"] }
+              : partner
+          ) : []);
           setOperationalError(null);
         }
       } catch (error) {
@@ -554,6 +563,7 @@ export default function SettingsPage() {
     setEditingUserEmail(user.email);
     setUserDraft({
       email: user.email,
+      username: user.username,
       displayName: user.displayName,
       password: "",
       allowedPages: user.allowedPages,
@@ -577,6 +587,11 @@ export default function SettingsPage() {
 
     if (!userDraft.displayName.trim()) {
       setUserError("Enter a display name.");
+      return;
+    }
+
+    if (!/^[a-z0-9][a-z0-9._-]{2,31}$/.test(userDraft.username.trim().toLowerCase())) {
+      setUserError("Username must be 3–32 characters using letters, numbers, dots, dashes, or underscores.");
       return;
     }
 
@@ -611,6 +626,7 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
+          username: userDraft.username.trim().toLowerCase(),
           displayName: userDraft.displayName,
           password: userDraft.password,
           allowedPages: userDraft.allowedPages,
@@ -1051,6 +1067,20 @@ export default function SettingsPage() {
                   />
                 </label>
                 <label className="grid gap-2 text-xs font-semibold text-slate-600">
+                  Username
+                  <input
+                    value={userDraft.username}
+                    onChange={(e) => {
+                      setUserDraft((current) => ({ ...current, username: e.target.value.toLowerCase() }));
+                      setUserError(null);
+                      setUserSaved(false);
+                    }}
+                    placeholder="e.g. tanvi"
+                    autoComplete="username"
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                  />
+                </label>
+                <label className="grid gap-2 text-xs font-semibold text-slate-600">
                   Email
                   <input
                     value={userDraft.email}
@@ -1412,6 +1442,7 @@ export default function SettingsPage() {
                             {user.displayName}
                           </div>
                           <div className="truncate text-sm text-slate-500">{user.email}</div>
+                          <div className="mt-1 truncate text-xs font-semibold text-slate-400">@{user.username}</div>
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-2">

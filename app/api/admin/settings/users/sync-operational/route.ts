@@ -16,6 +16,7 @@ export async function POST() {
     if (manager.email.trim()) {
       synced.push(await ensureFirebaseAdminUser({
         email: manager.email,
+        username: "tanvi",
         displayName: manager.name,
         allowedPages: ["/admin/tanvi", "/admin/quotation-approval", "/admin/couple-goals"],
         isActive: true,
@@ -31,6 +32,7 @@ export async function POST() {
       }
       synced.push(await ensureFirebaseAdminUser({
         email: partner.email,
+        username: partner.id,
         displayName: partner.name,
         allowedPages: ["/admin/tanvi"],
         isActive: partner.active,

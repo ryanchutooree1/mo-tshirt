@@ -12,7 +12,7 @@ export type ProductionManager = {
 
 export const DEFAULT_PRODUCTION_MANAGER: ProductionManager = {
   name: "Tanvi",
-  email: "",
+  email: "tanvihulooman0212@gmail.com",
 };
 
 export type PrintPartner = {
@@ -42,8 +42,8 @@ export const DEFAULT_PRINT_PARTNERS: PrintPartner[] = [
       bankAccountNumber: "000449132366",
       juiceNumber: "57934043",
     },
-    email: "",
-    emails: [],
+    email: "yan@gmail.com",
+    emails: ["yan@gmail.com"],
     emailNotificationsEnabled: false,
     supportsLogoPrintPlacements: false,
     hasPassword: true,

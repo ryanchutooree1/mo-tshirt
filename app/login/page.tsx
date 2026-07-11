@@ -70,6 +70,7 @@ function LoginInner() {
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json().catch(() => ({}));
+      const firebaseLoginEmail = typeof data?.email === "string" ? data.email : email;
       if (!res.ok) {
         setError(data?.error || "Login failed. Try again.");
         setSubmitting(false);
@@ -126,14 +127,14 @@ function LoginInner() {
       }
 
       const requiresSharedStorageAuth =
-        isFirebaseAdminAuthConfigured(email) &&
+        isFirebaseAdminAuthConfigured(firebaseLoginEmail) &&
         canUseSharedStorageAuth(session.allowedPages, {
           isOwner: session.isOwner,
         });
 
       if (requiresSharedStorageAuth) {
         try {
-          await signInAdminWithFirebase(email, password);
+          await signInAdminWithFirebase(firebaseLoginEmail, password);
         } catch {
           await fetch("/api/logout", { method: "POST" }).catch(() => null);
           setError(
@@ -179,19 +180,19 @@ function LoginInner() {
             <form onSubmit={onSubmit} className="mt-8 space-y-6" aria-describedby={error ? "login-error" : undefined}>
               <div>
                 <label htmlFor="email" className="text-sm font-medium text-neutral-800">
-                  Email
+                  Username or email
                 </label>
                 <input
                   id="email"
-                  type="email"
+                  type="text"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="mt-2 w-full rounded-2xl border border-[#EAEAEA] bg-white px-4 py-3 text-sm text-black shadow-sm focus:border-black focus:outline-none focus:ring-2 focus:ring-black/5"
-                  placeholder="team@mo-tshirt.mu"
+                  placeholder="tanvi or team@mo-tshirt.mu"
                   autoComplete="username"
                 />
                 <p className="mt-2 text-xs text-neutral-500">
-                  Optional for owner and partner login. Required for employee accounts.
+                  Use the username assigned by the administrator or your Firebase email.
                 </p>
               </div>
               <div>

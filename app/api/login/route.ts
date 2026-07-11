@@ -37,7 +37,8 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const email = String(body?.email ?? "").trim().toLowerCase();
+    const identifier = String(body?.email ?? "").trim().toLowerCase();
+    const email = identifier;
     const password = String(body?.password ?? "");
     const expected = getAdminPasswordFromEnv();
 
@@ -98,6 +99,7 @@ export async function POST(req: Request) {
     }
 
     let sessionToken: string | null = null;
+    let firebaseEmail = identifier.includes("@") ? identifier : "";
 
     if (password === expected) {
       sessionToken = await createAdminSessionToken({
@@ -108,13 +110,14 @@ export async function POST(req: Request) {
         isOwner: true,
       });
     } else {
-      const managedUser = email
-        ? await verifyManagedAdminCredentials(email, password)
+      const managedUser = identifier
+        ? await verifyManagedAdminCredentials(identifier, password)
         : null;
 
       if (!managedUser) {
-        return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
+        return NextResponse.json({ error: "Invalid username, email, or password." }, { status: 401 });
       }
+      firebaseEmail = managedUser.email;
 
       sessionToken = await createAdminSessionToken({
         userId: managedUser.email,
@@ -132,7 +135,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const res = NextResponse.json({ ok: true });
+    const res = NextResponse.json({ ok: true, email: firebaseEmail || undefined });
     applyAdminSessionCookie(res, sessionToken);
     clearPartnerSessionCookie(res);
     return res;

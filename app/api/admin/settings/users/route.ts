@@ -43,6 +43,7 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const user = await createAdminUser({
       email: String(body?.email ?? ""),
+      username: String(body?.username ?? ""),
       displayName: String(body?.displayName ?? ""),
       password: String(body?.password ?? ""),
       allowedPages: body?.allowedPages,
@@ -69,6 +70,7 @@ export async function PATCH(req: Request) {
     const body = await req.json().catch(() => ({}));
     const user = await updateAdminUser({
       email: String(body?.email ?? ""),
+      username: typeof body?.username === "string" ? body.username : undefined,
       displayName:
         typeof body?.displayName === "string" ? body.displayName : undefined,
       password: typeof body?.password === "string" ? body.password : undefined,

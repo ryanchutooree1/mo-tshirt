@@ -30,6 +30,7 @@ export type AdminAuthProvider = "firebase" | "legacy";
 
 type AdminUserRecord = {
   email: string;
+  username: string;
   displayName: string;
   passwordHash: string;
   passwordSalt: string;
@@ -43,6 +44,7 @@ type AdminUserRecord = {
 
 export type AdminUserSummary = {
   email: string;
+  username: string;
   displayName: string;
   authProvider: AdminAuthProvider;
   firebaseUid: string | null;
@@ -127,6 +129,26 @@ function normalizeFirebaseUid(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+function defaultUsername(email: string) {
+  const candidate = email.split("@")[0].toLowerCase().replace(/[^a-z0-9._-]/g, "").slice(0, 32);
+  return candidate.length >= 3 ? candidate : `user${candidate}`.slice(0, 32);
+}
+
+function sanitizeUsername(value: unknown, email: string) {
+  const username = (typeof value === "string" ? value : defaultUsername(email)).trim().toLowerCase();
+  if (!/^[a-z0-9][a-z0-9._-]{2,31}$/.test(username)) {
+    throw new Error("Username must be 3–32 characters using letters, numbers, dots, dashes, or underscores.");
+  }
+  return username;
+}
+
+async function assertUsernameAvailable(username: string, exceptEmail?: string) {
+  const users = await listAdminUsers();
+  if (users.some((user) => user.username === username && user.email !== exceptEmail)) {
+    throw new Error("This username is already in use.");
+  }
+}
+
 function normalizeRecord(
   record: Partial<AdminUserRecord>,
   fallbackEmail?: string
@@ -138,6 +160,7 @@ function normalizeRecord(
 
   return {
     email,
+    username: sanitizeUsername(record.username, email),
     displayName:
       typeof record.displayName === "string" ? sanitizeDisplayName(record.displayName) : "Admin User",
     passwordHash: typeof record.passwordHash === "string" ? record.passwordHash : "",
@@ -154,6 +177,7 @@ function normalizeRecord(
 function toSummary(record: AdminUserRecord) {
   return {
     email: record.email,
+    username: record.username,
     displayName: record.displayName,
     authProvider: record.authProvider,
     firebaseUid: record.firebaseUid,
@@ -238,6 +262,7 @@ export async function listAdminUsers() {
 
 export async function createAdminUser(input: {
   email: string;
+  username?: string;
   displayName: string;
   password: string;
   allowedPages: unknown;
@@ -258,6 +283,8 @@ export async function createAdminUser(input: {
   }
 
   const now = Date.now();
+  const username = sanitizeUsername(input.username, email);
+  await assertUsernameAvailable(username);
   const allowedPages = sanitizeAllowedPages(input.allowedPages);
   const displayName = sanitizeDisplayName(input.displayName);
   const firebaseIdentity = await attachFirebaseAuthIdentity({
@@ -268,6 +295,7 @@ export async function createAdminUser(input: {
 
   await setDoc(ref, {
     email,
+    username,
     displayName,
     passwordHash: "",
     passwordSalt: "",
@@ -281,6 +309,7 @@ export async function createAdminUser(input: {
 
   return {
     email,
+    username,
     displayName,
     authProvider: firebaseIdentity.authProvider,
     firebaseUid: firebaseIdentity.firebaseUid,
@@ -293,6 +322,7 @@ export async function createAdminUser(input: {
 
 export async function ensureFirebaseAdminUser(input: {
   email: string;
+  username?: string;
   displayName: string;
   allowedPages: unknown;
   isActive?: boolean;
@@ -311,6 +341,8 @@ export async function ensureFirebaseAdminUser(input: {
   }
 
   const displayName = sanitizeDisplayName(input.displayName);
+  const username = sanitizeUsername(input.username, email);
+  await assertUsernameAvailable(username);
   let firebaseUid: string | null = null;
   try {
     const created = await createFirebaseEmailPasswordUser({
@@ -326,6 +358,7 @@ export async function ensureFirebaseAdminUser(input: {
   const now = Date.now();
   const record: AdminUserRecord = {
     email,
+    username,
     displayName,
     passwordHash: "",
     passwordSalt: "",
@@ -343,6 +376,7 @@ export async function ensureFirebaseAdminUser(input: {
 
 export async function updateAdminUser(input: {
   email: string;
+  username?: string;
   displayName?: string;
   password?: string;
   allowedPages?: unknown;
@@ -369,6 +403,8 @@ export async function updateAdminUser(input: {
   }
 
   const updatedAt = Date.now();
+  const username = input.username === undefined ? existing.username : sanitizeUsername(input.username, email);
+  await assertUsernameAvailable(username, email);
   const nextDisplayName =
     typeof input.displayName === "string"
       ? sanitizeDisplayName(input.displayName)
@@ -399,6 +435,7 @@ export async function updateAdminUser(input: {
 
   const nextRecord: AdminUserRecord = {
     email,
+    username,
     displayName: nextDisplayName,
     passwordHash,
     passwordSalt,
@@ -418,9 +455,15 @@ export async function updateAdminUser(input: {
   return toSummary(nextRecord);
 }
 
-export async function verifyManagedAdminCredentials(emailInput: string, password: string) {
-  const email = normalizeAdminUserEmail(emailInput);
-  if (!isValidAdminUserEmail(email)) return null;
+export async function verifyManagedAdminCredentials(identifierInput: string, password: string) {
+  const identifier = identifierInput.trim().toLowerCase();
+  let email = normalizeAdminUserEmail(identifier);
+  if (!isValidAdminUserEmail(email)) {
+    if (!/^[a-z0-9][a-z0-9._-]{2,31}$/.test(identifier)) return null;
+    const matched = (await listAdminUsers()).find((user) => user.username === identifier);
+    if (!matched) return null;
+    email = matched.email;
+  }
 
   const snap = await getDoc(getUserRef(email));
   if (!snap.exists()) return null;
