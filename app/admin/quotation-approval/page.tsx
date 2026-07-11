@@ -273,17 +273,14 @@ function AutoFitInput({
 function QuotationPreviewValue({
   value,
   missingLabel = "MISSING — ASK CLIENT",
-  className = "",
 }: {
   value: string | number | null | undefined;
   missingLabel?: string;
-  className?: string;
 }) {
   const displayValue = typeof value === "string" ? value.trim() : value;
   const missing = displayValue === "" || displayValue === null || displayValue === undefined;
-
   return (
-    <span className={`${missing ? "font-extrabold text-red-600" : "text-[#222222]"} ${className}`}>
+    <span className={missing ? "font-extrabold text-red-600" : "text-[#222222]"}>
       {missing ? missingLabel : displayValue}
     </span>
   );
@@ -1071,6 +1068,14 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
     if (lower.includes("paid")) return { r: 22, g: 163, b: 74 };
     return { r: 100, g: 100, b: 100 };
   };
+  const setMissingPdfStyle = () => {
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(220, 38, 38);
+  };
+  const restorePdfBodyStyle = () => {
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+  };
 
   // Top bar
   doc.setFillColor(accent.r, accent.g, accent.b);
@@ -1121,18 +1126,24 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   doc.setTextColor(100);
   const rightLine = 13;
   let rightInfoY = rightHeaderY + 18;
-  doc.text(`No ${draft.documentNumber || quote.id}`, pageWidth - margin, rightInfoY, {
+  if (!draft.documentNumber.trim()) setMissingPdfStyle();
+  doc.text(`No ${draft.documentNumber.trim() || "MISSING NUMBER"}`, pageWidth - margin, rightInfoY, {
     align: "right",
   });
+  restorePdfBodyStyle();
   rightInfoY += rightLine;
-  doc.text(`Date ${format(parsedDate, "dd/MM/yyyy")}`, pageWidth - margin, rightInfoY, {
+  if (!draft.documentDate.trim()) setMissingPdfStyle();
+  doc.text(`Date ${draft.documentDate.trim() ? format(parsedDate, "dd/MM/yyyy") : "MISSING DATE"}`, pageWidth - margin, rightInfoY, {
     align: "right",
   });
+  restorePdfBodyStyle();
   rightInfoY += rightLine;
   if (draft.documentType === "quotation") {
-    doc.text(`Valid until ${format(validUntilSafe, "dd/MM/yyyy")}`, pageWidth - margin, rightInfoY, {
+    if (!draft.validUntil.trim()) setMissingPdfStyle();
+    doc.text(`Valid until ${draft.validUntil.trim() ? format(validUntilSafe, "dd/MM/yyyy") : "MISSING VALIDITY"}`, pageWidth - margin, rightInfoY, {
       align: "right",
     });
+    restorePdfBodyStyle();
     rightInfoY += rightLine;
   }
   const statusColor = statusTone(normalizedStatus);
@@ -1147,21 +1158,18 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   doc.text(statusValueText, statusStartX + statusLabelWidth, rightInfoY);
   doc.setTextColor(100);
   rightInfoY += rightLine;
-  doc.text(`Prepared by: ${draft.preparedBy || DEFAULT_PREPARED_BY}`, pageWidth - margin, rightInfoY, {
+  if (!draft.preparedBy.trim()) setMissingPdfStyle();
+  doc.text(`Prepared by: ${draft.preparedBy.trim() || "MISSING PREPARER"}`, pageWidth - margin, rightInfoY, {
     align: "right",
   });
+  restorePdfBodyStyle();
 
   // Client section
   let y = 176;
-  const clientName = draft.clientCompany || quote.name || "Client";
-  const contactName = (draft.contactName || quote.name || "").trim();
-  const clientPhone = (draft.contactPhone || quote.phone || "").trim();
-  const clientEmail = (draft.contactEmail || quote.email || "").trim();
-  const clientContactLines = [
-    contactName && contactName !== clientName ? `Attn: ${contactName}` : "",
-    clientPhone ? `Phone: ${clientPhone}` : "",
-    clientEmail ? `Email: ${clientEmail}` : "",
-  ].filter(Boolean);
+  const clientName = draft.clientCompany.trim();
+  const contactName = draft.contactName.trim();
+  const clientPhone = draft.contactPhone.trim();
+  const clientEmail = draft.contactEmail.trim();
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(accent.r, accent.g, accent.b);
@@ -1169,38 +1177,36 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   y += 22;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(15);
-  doc.setTextColor(20);
-  doc.text(clientName, margin, y);
+  if (clientName) {
+    doc.setTextColor(20);
+    doc.text(clientName, margin, y);
+  } else {
+    setMissingPdfStyle();
+    doc.setFontSize(15);
+    doc.text("MISSING COMPANY / CLIENT", margin, y);
+  }
   y += 18;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(11);
-  if (clientContactLines.length) {
-    doc.text(clientContactLines, margin, y);
-    y += clientContactLines.length * 14;
-  }
+  const drawClientLine = (label: string, value: string, missingLabel: string) => {
+    if (value) {
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(20);
+      doc.text(`${label}: ${value}`, margin, y);
+    } else {
+      setMissingPdfStyle();
+      doc.setFontSize(11);
+      doc.text(`${label}: ${missingLabel}`, margin, y);
+    }
+    y += 14;
+  };
+  drawClientLine("Contact", contactName, "MISSING CONTACT NAME");
+  drawClientLine("Phone", clientPhone, "MISSING PHONE");
+  drawClientLine("Email", clientEmail, "MISSING EMAIL");
   const clientAddress = (draft.clientAddress || "").trim();
-  if (clientAddress) {
-    doc.setFont("helvetica", "bold");
-    doc.text("Address:", margin, y);
-    doc.setFont("helvetica", "normal");
-    const addressLines = doc.splitTextToSize(clientAddress, contentWidth - 140);
-    doc.text(addressLines, margin + 55, y);
-    y += addressLines.length * 14;
-  }
-  if (draft.clientBrn) {
-    doc.setFont("helvetica", "bold");
-    doc.text("BRN:", margin, y);
-    doc.setFont("helvetica", "normal");
-    doc.text(draft.clientBrn, margin + 35, y);
-    y += 16;
-  }
-  if (draft.clientVat) {
-    doc.setFont("helvetica", "bold");
-    doc.text("VAT:", margin, y);
-    doc.setFont("helvetica", "normal");
-    doc.text(draft.clientVat, margin + 35, y);
-    y += 16;
-  }
+  drawClientLine("Address", clientAddress, "MISSING CLIENT ADDRESS");
+  drawClientLine("BRN", draft.clientBrn.trim(), "MISSING BRN");
+  drawClientLine("VAT", draft.clientVat.trim(), "MISSING VAT");
 
   y += 10;
   doc.setDrawColor(120);
@@ -1226,17 +1232,57 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   doc.setFont("helvetica", "normal");
   doc.setTextColor(30);
   let rowY = y;
+  if (!lineTotals.length) {
+    doc.setFillColor(254, 242, 242);
+    doc.rect(margin, rowY - 12, contentWidth, 30, "F");
+    setMissingPdfStyle();
+    doc.text("MISSING - ADD AT LEAST ONE PRODUCT LINE", margin + 6, rowY);
+    rowY += 36;
+  }
   lineTotals.forEach((line) => {
-    const descriptionLines = doc.splitTextToSize(line.description || "Item", descWidth);
+    const hasDescription = Boolean(line.description.trim());
+    const quantity = safeNumber(line.quantity, 0);
+    const unitPrice = safeNumber(line.unitPrice, 0);
+    const descriptionLines = doc.splitTextToSize(
+      hasDescription ? line.description : "MISSING ITEM DESCRIPTION",
+      descWidth
+    );
     const rowHeight = Math.max(30, descriptionLines.length * 14 + 12);
     doc.setFillColor(245, 245, 245);
     doc.rect(margin, rowY - 12, contentWidth, rowHeight, "F");
+    if (hasDescription) {
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(30);
+    } else {
+      setMissingPdfStyle();
+    }
     doc.text(descriptionLines, margin + 6, rowY);
     if (showLineItems) {
-      doc.text(String(safeNumber(line.quantity, 0)), colQtyX, rowY, { align: "right" });
-      doc.text(formatMoney(safeNumber(line.unitPrice, 0), draft.currency), colUnitX, rowY, { align: "right" });
+      if (quantity > 0) {
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(30);
+        doc.text(String(quantity), colQtyX, rowY, { align: "right" });
+      } else {
+        setMissingPdfStyle();
+        doc.text("MISSING QTY", colQtyX, rowY, { align: "right" });
+      }
+      if (unitPrice > 0) {
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(30);
+        doc.text(formatMoney(unitPrice, draft.currency), colUnitX, rowY, { align: "right" });
+      } else {
+        setMissingPdfStyle();
+        doc.text("MISSING PRICE", colUnitX, rowY, { align: "right" });
+      }
     }
-    doc.text(formatMoney(line.lineTotal, draft.currency), colTotalX, rowY, { align: "right" });
+    if (quantity > 0 && unitPrice > 0) {
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(30);
+      doc.text(formatMoney(line.lineTotal, draft.currency), colTotalX, rowY, { align: "right" });
+    } else {
+      setMissingPdfStyle();
+      doc.text("INCOMPLETE", colTotalX, rowY, { align: "right" });
+    }
     rowY += rowHeight + 6;
   });
 
@@ -1266,9 +1312,9 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
     y += showSubtotal || deliveryFee > 0 || discount > 0 ? 22 : 0;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(13);
-    doc.setTextColor(20);
+    doc.setTextColor(grandTotal > 0 ? 20 : 220, grandTotal > 0 ? 20 : 38, grandTotal > 0 ? 20 : 38);
     doc.text("Grand Total", totalsLabelRightX, y, { align: "right" });
-    doc.text(formatMoney(grandTotal, draft.currency), colTotalX, y, { align: "right" });
+    doc.text(grandTotal > 0 ? formatMoney(grandTotal, draft.currency) : "MISSING PRICES", colTotalX, y, { align: "right" });
     doc.setFontSize(10);
   } else {
     doc.setFont("helvetica", "italic");
@@ -1314,9 +1360,17 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   doc.text("TERMS AND CONDITIONS", margin + 6, y + 12);
 
   y += 30;
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(40);
-  const splitTerms = doc.splitTextToSize(draft.terms || getDefaultTerms(draft.documentType), contentWidth - 12);
+  const hasTerms = Boolean(draft.terms.trim());
+  if (hasTerms) {
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(40);
+  } else {
+    setMissingPdfStyle();
+  }
+  const splitTerms = doc.splitTextToSize(
+    hasTerms ? draft.terms : "MISSING TERMS AND CONDITIONS",
+    contentWidth - 12
+  );
   const termsLines = Array.isArray(splitTerms) ? splitTerms : [splitTerms];
   termsLines.forEach((line: string, idx: number) => {
     doc.text(line, margin + 6, y + idx * 13);
@@ -1365,6 +1419,7 @@ export default function QuotationApprovalPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | "all">("all");
   const [draft, setDraft] = useState<QuoteDraft | null>(null);
+  const [quotationPreviewUrl, setQuotationPreviewUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [statusSaving, setStatusSaving] = useState(false);
   const [clientStatusSaving, setClientStatusSaving] = useState(false);
@@ -1839,6 +1894,25 @@ export default function QuotationApprovalPage() {
     }
     setDraft(buildDraftFromQuote(selected));
   }, [selected]);
+
+  useEffect(() => {
+    if (!selected || !draft) {
+      setQuotationPreviewUrl(null);
+      return;
+    }
+
+    let objectUrl: string | null = null;
+    const timer = window.setTimeout(() => {
+      const previewDoc = buildPdfDoc(selected, draft, logo);
+      objectUrl = URL.createObjectURL(previewDoc.output("blob"));
+      setQuotationPreviewUrl(objectUrl);
+    }, 180);
+
+    return () => {
+      window.clearTimeout(timer);
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [draft, logo, selected]);
 
   useEffect(() => {
     if (!selected) {
@@ -3210,7 +3284,24 @@ export default function QuotationApprovalPage() {
                         )}
                       </div>
 
-                      <div className="mx-auto overflow-hidden rounded-[24px] border border-[#dedede] bg-white text-[#222222] shadow-[0_24px_70px_-36px_rgba(15,23,42,0.35)]">
+                      <div className="overflow-hidden rounded-[24px] border border-[#dedede] bg-[#e9ecef] shadow-[0_24px_70px_-36px_rgba(15,23,42,0.35)]">
+                        {quotationPreviewUrl ? (
+                          <iframe
+                            src={quotationPreviewUrl}
+                            title={`Live ${DOC_TYPE_LABELS[draft.documentType]} PDF preview`}
+                            className="h-[72vh] min-h-[680px] w-full bg-white sm:h-[820px]"
+                          />
+                        ) : (
+                          <div className="grid min-h-[680px] place-items-center bg-white text-center text-[#717171]">
+                            <div>
+                              <FiRefreshCw className="mx-auto h-6 w-6 animate-spin text-[#ff6600]" />
+                              <p className="mt-3 text-sm font-semibold">Generating existing quotation PDF…</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="hidden mx-auto overflow-hidden rounded-[24px] border border-[#dedede] bg-white text-[#222222] shadow-[0_24px_70px_-36px_rgba(15,23,42,0.35)]">
                         <div className="h-2 bg-[linear-gradient(90deg,#ff6600,#f59e0b,#ff6600)]" />
                         <div className="p-5 sm:p-7">
                           <div className="flex flex-col gap-5 border-b border-[#e8e8e8] pb-5 sm:flex-row sm:items-start sm:justify-between">
