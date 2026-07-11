@@ -271,12 +271,11 @@ function AdminAvatar({
     <span className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full ${className}`}>
       {owner ? (
         <Image
-          src="/ryan-chutooree.jpg"
+          src="/ryan-chutooree-avatar.jpg"
           alt=""
           fill
           sizes={sizes}
-          className="scale-[1.85] object-cover object-center"
-          style={{ transformOrigin: "50% 37%" }}
+          className="object-cover object-center"
         />
       ) : (
         getInitials(name)
