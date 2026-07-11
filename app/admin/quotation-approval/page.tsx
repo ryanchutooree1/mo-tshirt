@@ -270,6 +270,25 @@ function AutoFitInput({
   return <input {...props} ref={inputRef} value={value} style={mergedStyle} />;
 }
 
+function QuotationPreviewValue({
+  value,
+  missingLabel = "MISSING — ASK CLIENT",
+  className = "",
+}: {
+  value: string | number | null | undefined;
+  missingLabel?: string;
+  className?: string;
+}) {
+  const displayValue = typeof value === "string" ? value.trim() : value;
+  const missing = displayValue === "" || displayValue === null || displayValue === undefined;
+
+  return (
+    <span className={`${missing ? "font-extrabold text-red-600" : "text-[#222222]"} ${className}`}>
+      {missing ? missingLabel : displayValue}
+    </span>
+  );
+}
+
 function joinDisplayNames(names: string[]) {
   if (names.length <= 1) return names[0] || "";
   if (names.length === 2) return `${names[0]} and ${names[1]}`;
@@ -1908,6 +1927,32 @@ export default function QuotationApprovalPage() {
     };
   }, [draft]);
 
+  const quotationMissingCount = useMemo(() => {
+    if (!draft) return 0;
+    const missingTextFields = [
+      draft.contactName,
+      draft.contactEmail,
+      draft.contactPhone,
+      draft.clientCompany,
+      draft.clientAddress,
+      draft.clientBrn,
+      draft.clientVat,
+      draft.documentNumber,
+      draft.documentDate,
+      draft.validUntil,
+      draft.preparedBy,
+    ].filter((value) => !value.trim()).length;
+    const missingLineFields = draft.lines.reduce((count, line) => {
+      return (
+        count +
+        (line.description.trim() ? 0 : 1) +
+        (safeNumber(line.quantity, 0) > 0 ? 0 : 1) +
+        (safeNumber(line.unitPrice, 0) > 0 ? 0 : 1)
+      );
+    }, 0);
+    return missingTextFields + missingLineFields + (draft.lines.length ? 0 : 1);
+  }, [draft]);
+
   const paymentStatusOptions = useMemo(() => {
     if (!draft) return [];
     if (draft.documentType === "quotation") return ["Quotation only"];
@@ -3133,6 +3178,178 @@ export default function QuotationApprovalPage() {
                           </button>
                         </div>
                       </details>
+                    </div>
+
+                    <div className="mt-6 border-t border-[#ebebeb] pt-6">
+                      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className={labelClass}>Automatic quotation preview</p>
+                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-700">
+                              Live
+                            </span>
+                          </div>
+                          <p className={`mt-1 text-xs ${isDark ? "text-white/50" : "text-[#717171]"}`}>
+                            This preview updates instantly as you fill in the quotation.
+                          </p>
+                        </div>
+                        {quotationMissingCount > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => setWorkflowStudioOpen(true)}
+                            className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-2 text-xs font-extrabold text-red-700 transition hover:bg-red-100"
+                          >
+                            <FiEdit2 className="h-3.5 w-3.5" />
+                            {quotationMissingCount} missing field{quotationMissingCount === 1 ? "" : "s"} — fill now
+                          </button>
+                        ) : (
+                          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
+                            <FiCheckCircle className="h-3.5 w-3.5" />
+                            Complete and ready
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mx-auto overflow-hidden rounded-[24px] border border-[#dedede] bg-white text-[#222222] shadow-[0_24px_70px_-36px_rgba(15,23,42,0.35)]">
+                        <div className="h-2 bg-[linear-gradient(90deg,#ff6600,#f59e0b,#ff6600)]" />
+                        <div className="p-5 sm:p-7">
+                          <div className="flex flex-col gap-5 border-b border-[#e8e8e8] pb-5 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                              <p className="text-xl font-black tracking-[-0.04em] text-[#191919]">MO T-SHIRT</p>
+                              <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.22em] text-[#ff6600]">
+                                Business printing
+                              </p>
+                              <p className="mt-3 text-xs leading-5 text-[#717171]">
+                                {BUSINESS_INFO.addressLines.join(", ")}
+                                <br />
+                                {BUSINESS_INFO.phone} · BRN {BUSINESS_INFO.brn}
+                              </p>
+                            </div>
+                            <div className="text-left sm:text-right">
+                              <p className="text-2xl font-light uppercase tracking-[0.16em] text-[#333333]">
+                                {DOC_TYPE_LABELS[draft.documentType]}
+                              </p>
+                              <p className="mt-2 text-xs font-semibold text-[#717171]">
+                                No. <QuotationPreviewValue value={draft.documentNumber} missingLabel="MISSING NUMBER" />
+                              </p>
+                              <p className="mt-1 text-xs text-[#717171]">
+                                Date: <QuotationPreviewValue value={draft.documentDate} missingLabel="MISSING DATE" />
+                              </p>
+                              <p className="mt-1 text-xs text-[#717171]">
+                                Valid until: <QuotationPreviewValue value={draft.validUntil} missingLabel="MISSING VALIDITY" />
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="grid gap-5 border-b border-[#e8e8e8] py-5 md:grid-cols-2">
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#9a9a9a]">Quotation for</p>
+                              <p className="mt-2 text-base font-bold">
+                                <QuotationPreviewValue value={draft.clientCompany} missingLabel="MISSING COMPANY / CLIENT" />
+                              </p>
+                              <div className="mt-2 space-y-1 text-xs leading-5 text-[#555555]">
+                                <p><QuotationPreviewValue value={draft.contactName} missingLabel="MISSING CONTACT NAME" /></p>
+                                <p><QuotationPreviewValue value={draft.clientAddress} missingLabel="MISSING CLIENT ADDRESS" /></p>
+                                <p>Email: <QuotationPreviewValue value={draft.contactEmail} missingLabel="MISSING EMAIL" /></p>
+                                <p>Phone: <QuotationPreviewValue value={draft.contactPhone} missingLabel="MISSING PHONE" /></p>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 md:text-right">
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#9a9a9a]">Client BRN</p>
+                                <p className="mt-1 text-xs"><QuotationPreviewValue value={draft.clientBrn} missingLabel="MISSING BRN" /></p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#9a9a9a]">Client VAT</p>
+                                <p className="mt-1 text-xs"><QuotationPreviewValue value={draft.clientVat} missingLabel="MISSING VAT" /></p>
+                              </div>
+                              <div className="col-span-2">
+                                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#9a9a9a]">Prepared by</p>
+                                <p className="mt-1 text-xs"><QuotationPreviewValue value={draft.preparedBy} missingLabel="MISSING PREPARER" /></p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="overflow-x-auto py-5">
+                            <table className="w-full min-w-[560px] border-collapse text-left text-xs">
+                              <thead>
+                                <tr className="border-b-2 border-[#222222]">
+                                  <th className="pb-2 pr-3 font-bold uppercase tracking-[0.12em]">Description</th>
+                                  <th className="w-20 px-3 pb-2 text-center font-bold uppercase tracking-[0.12em]">Qty</th>
+                                  <th className="w-28 px-3 pb-2 text-right font-bold uppercase tracking-[0.12em]">Unit price</th>
+                                  <th className="w-28 pb-2 pl-3 text-right font-bold uppercase tracking-[0.12em]">Amount</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {draft.lines.length ? (
+                                  draft.lines.map((line, index) => {
+                                    const quantity = safeNumber(line.quantity, 0);
+                                    const unitPrice = safeNumber(line.unitPrice, 0);
+                                    return (
+                                      <tr key={`${line.description}-${index}`} className="border-b border-[#ececec] align-top">
+                                        <td className="py-3 pr-3 font-semibold">
+                                          <QuotationPreviewValue value={line.description} missingLabel="MISSING ITEM DESCRIPTION" />
+                                        </td>
+                                        <td className="px-3 py-3 text-center">
+                                          <QuotationPreviewValue value={quantity > 0 ? quantity : null} missingLabel="MISSING QTY" />
+                                        </td>
+                                        <td className="px-3 py-3 text-right">
+                                          <QuotationPreviewValue
+                                            value={unitPrice > 0 ? formatMoney(unitPrice, draft.currency) : null}
+                                            missingLabel="MISSING PRICE"
+                                          />
+                                        </td>
+                                        <td className="py-3 pl-3 text-right font-bold">
+                                          <QuotationPreviewValue
+                                            value={quantity > 0 && unitPrice > 0 ? formatMoney(quantity * unitPrice, draft.currency) : null}
+                                            missingLabel="INCOMPLETE"
+                                          />
+                                        </td>
+                                      </tr>
+                                    );
+                                  })
+                                ) : (
+                                  <tr>
+                                    <td colSpan={4} className="py-6 text-center font-extrabold text-red-600">
+                                      MISSING — ADD AT LEAST ONE PRODUCT LINE
+                                    </td>
+                                  </tr>
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          <div className="ml-auto w-full max-w-sm border-t-2 border-[#222222] pt-3 text-xs">
+                            <div className="flex justify-between gap-4 py-1.5">
+                              <span className="text-[#717171]">Subtotal</span>
+                              <span className="font-semibold">{formatMoney(totals.subtotal, draft.currency)}</span>
+                            </div>
+                            {totals.deliveryFee > 0 ? (
+                              <div className="flex justify-between gap-4 py-1.5">
+                                <span className="text-[#717171]">Delivery</span>
+                                <span className="font-semibold">{formatMoney(totals.deliveryFee, draft.currency)}</span>
+                              </div>
+                            ) : null}
+                            {totals.discount > 0 ? (
+                              <div className="flex justify-between gap-4 py-1.5">
+                                <span className="text-[#717171]">Discount</span>
+                                <span className="font-semibold">− {formatMoney(totals.discount, draft.currency)}</span>
+                              </div>
+                            ) : null}
+                            <div className="mt-2 flex justify-between gap-4 border-t border-[#d7d7d7] py-3 text-base font-black">
+                              <span>Total</span>
+                              <span className={totals.total > 0 ? "text-[#222222]" : "text-red-600"}>
+                                {totals.total > 0 ? formatMoney(totals.total, draft.currency) : "MISSING PRICES"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="mt-5 rounded-2xl bg-[#f7f7f7] px-4 py-3 text-[11px] leading-5 text-[#626262]">
+                            <span className="font-bold text-[#333333]">Terms: </span>
+                            <QuotationPreviewValue value={draft.terms} missingLabel="MISSING TERMS AND CONDITIONS" />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
