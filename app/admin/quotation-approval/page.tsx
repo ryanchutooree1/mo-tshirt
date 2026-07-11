@@ -2771,7 +2771,7 @@ export default function QuotationApprovalPage() {
 
             <section className={`${mobilePanel === "quote" ? "block" : "hidden"} min-w-0 space-y-6 lg:block`}>
               {selected && draft ? (
-                <>
+                <div className="flex flex-col gap-6">
                   <button
                     type="button"
                     onClick={() => setMobilePanel("inbox")}
@@ -2780,7 +2780,7 @@ export default function QuotationApprovalPage() {
                     <FiChevronLeft className="h-4 w-4" />
                     Back to inbox
                   </button>
-                  <div className={`${surfaceClass} overflow-hidden`}>
+                  <div className={`${surfaceClass} -order-2 overflow-hidden`}>
                     <div className="grid min-w-0 gap-6 px-4 py-5 sm:px-8 sm:py-6 lg:grid-cols-[minmax(0,1fr)_320px]">
                       <div className="min-w-0">
                         <p className={`text-[11px] font-semibold uppercase tracking-[0.24em] ${isDark ? "text-white/40" : "text-[#717171]"}`}>
@@ -2850,7 +2850,7 @@ export default function QuotationApprovalPage() {
                     </div>
                   </div>
 
-                  <div className={`${surfaceClass} p-5 sm:p-6`}>
+                  <div className={`${surfaceClass} -order-1 p-5 sm:p-6`}>
                     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
                       <div className="min-w-0">
                         <p className={labelClass}>Do this next</p>
@@ -2969,9 +2969,9 @@ export default function QuotationApprovalPage() {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 xl:grid-cols-4">
-                    <div className={`${surfaceClass} p-5 xl:col-span-1`}>
-                      <p className={labelClass}>Request</p>
+                  <div className="-order-3 grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
+                    <div className={`${surfaceClass} order-2 p-5`}>
+                      <p className={labelClass}>Product details</p>
                       <div className="mt-4 space-y-3 text-sm leading-6 text-[#484848]">
                         <p>
                           <span className="font-semibold text-[#222222]">Product</span>
@@ -3015,9 +3015,9 @@ export default function QuotationApprovalPage() {
                       </div>
                     </div>
 
-                    <div className={`${surfaceClass} p-5 xl:col-span-1`}>
+                    <div className={`${surfaceClass} order-1 p-5`}>
                       <div className="flex min-w-0 flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <p className={labelClass}>Artwork</p>
+                        <p className={labelClass}>Design / Logo</p>
                         <label
                           className={`inline-flex w-full max-w-full items-center justify-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-semibold transition sm:w-auto ${
                             uploadingAttachment
@@ -3125,7 +3125,7 @@ export default function QuotationApprovalPage() {
                       </div>
                     </div>
 
-                    <div className={`${surfaceClass} p-5 xl:col-span-1`}>
+                    <div className="hidden">
                       <p className={labelClass}>Delivery</p>
                       <div className="mt-4 space-y-4 text-sm leading-6 text-[#484848]">
                         <div>
@@ -3153,7 +3153,7 @@ export default function QuotationApprovalPage() {
                       </div>
                     </div>
 
-                    <div className={`${surfaceClass} p-5 xl:col-span-1`}>
+                    <div className="hidden">
                       <p className={labelClass}>Timeline</p>
                       <div className="mt-4 space-y-4">
                         <div className="rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] px-4 py-3">
@@ -4338,7 +4338,7 @@ export default function QuotationApprovalPage() {
                       </div>
                     </div>
                   </div>
-                </>
+                </div>
               ) : (
                 <div className={`${surfaceClass} px-6 py-16 text-center`}>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#717171]">
