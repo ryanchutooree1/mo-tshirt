@@ -573,10 +573,10 @@ export default function AdminChrome({
   const sidebar = (
     <aside
       className={`admin-workspace-sidebar flex h-full flex-col overflow-hidden border-r border-white/[0.07] bg-[#071015] text-white transition-[width] duration-300 ${
-        collapsed ? "lg:w-[84px]" : "lg:w-[272px]"
+        collapsed ? "lg:w-[68px]" : "lg:w-[272px]"
       } w-[min(300px,calc(100vw-48px))] max-w-full`}
     >
-      <div className={`admin-workspace-sidebar-brand flex h-[92px] shrink-0 items-center border-b border-white/[0.07] ${collapsed ? "lg:justify-center lg:px-3" : "px-5"}`}>
+      <div className={`admin-workspace-sidebar-brand flex h-[92px] shrink-0 items-center border-b border-white/[0.07] px-5 ${collapsed ? "lg:justify-center lg:px-2" : ""}`}>
         <Link href="/admin" className="flex min-w-0 items-center gap-3" aria-label="MO T-SHIRT admin dashboard">
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
             <Image src="/logo_transparent.png" alt="" width={1291} height={435} className="h-auto w-10 object-contain" />
@@ -596,7 +596,7 @@ export default function AdminChrome({
         </button>
       </div>
 
-      <nav className="min-h-0 flex-1 overscroll-contain overflow-y-auto px-3 py-4 touch-pan-y [-webkit-overflow-scrolling:touch] [scrollbar-color:rgba(255,255,255,0.18)_transparent]" aria-label="Administrator modules">
+      <nav className={`min-h-0 flex-1 overscroll-contain overflow-y-auto px-3 py-4 touch-pan-y [-webkit-overflow-scrolling:touch] [scrollbar-color:rgba(255,255,255,0.18)_transparent] ${collapsed ? "lg:px-2" : ""}`} aria-label="Administrator modules">
         <div className={`relative mb-3 ${collapsed ? "lg:hidden" : ""}`}>
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
           <input
@@ -660,14 +660,14 @@ export default function AdminChrome({
           })}
       </nav>
 
-      <div className="shrink-0 border-t border-white/[0.07] p-3 [padding-bottom:max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className={`shrink-0 border-t border-white/[0.07] p-3 [padding-bottom:max(0.75rem,env(safe-area-inset-bottom))] ${collapsed ? "lg:px-2 lg:pt-2" : ""}`}>
         <button
           type="button"
           onClick={(event) => openProfileEditor(event.currentTarget)}
           title={collapsed ? "Edit profile" : undefined}
           aria-label={`Edit profile for ${displayName}`}
           aria-disabled={profileLoadState === "loading"}
-          className={`group flex min-h-11 w-full items-center gap-3 rounded-xl p-2.5 text-left transition hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6400]/70 ${collapsed ? "lg:justify-center" : ""}`}
+          className={`group flex min-h-11 w-full items-center gap-3 rounded-xl p-2.5 text-left transition hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6400]/70 ${collapsed ? "lg:justify-center lg:p-1" : ""}`}
         >
           <AdminAvatar
             name={displayName}
