@@ -311,16 +311,16 @@ export default function PartnerProductionPage({
   const themeVars = useMemo(
     () =>
       ({
-        "--partner-bg": isDark ? "#020617" : "#f4f7fb",
-        "--partner-card": isDark ? "#0f172a" : "#ffffff",
-        "--partner-soft": isDark ? "#111c2f" : "#f8fafc",
-        "--partner-hover": isDark ? "#17243a" : "#eef4fb",
-        "--partner-border": isDark ? "#243249" : "#d9e2ee",
-        "--partner-text": isDark ? "#e5e7eb" : "#0f172a",
-        "--partner-muted": isDark ? "#94a3b8" : "#64748b",
-        "--partner-faint": isDark ? "#64748b" : "#94a3b8",
-        "--partner-accent": isDark ? "#0e7490" : "#155e75",
-        "--partner-accent-soft": isDark ? "#12364a" : "#e0f2fe",
+        "--partner-bg": isDark ? "#050806" : "#f7f8fa",
+        "--partner-card": isDark ? "#101613" : "#ffffff",
+        "--partner-soft": isDark ? "#0b120e" : "#f8fafc",
+        "--partner-hover": isDark ? "#19231d" : "#f1f5f9",
+        "--partner-border": isDark ? "rgba(255,255,255,0.10)" : "#e2e8f0",
+        "--partner-text": isDark ? "#f8fafc" : "#0f172a",
+        "--partner-muted": isDark ? "#9ca3af" : "#64748b",
+        "--partner-faint": isDark ? "#667069" : "#94a3b8",
+        "--partner-accent": "#ff6400",
+        "--partner-accent-soft": isDark ? "#3a1b08" : "#fff1e8",
         "--partner-accent-text": "#ffffff",
         "--partner-success-bg": isDark ? "#052e26" : "#ecfdf5",
         "--partner-success-border": isDark ? "#0f766e" : "#a7f3d0",
@@ -335,8 +335,8 @@ export default function PartnerProductionPage({
         "--partner-info-border": isDark ? "#0369a1" : "#bfdbfe",
         "--partner-info-text": isDark ? "#bae6fd" : "#1e3a8a",
         "--partner-shadow": isDark
-          ? "0 18px 50px rgba(0,0,0,0.28)"
-          : "0 18px 45px rgba(15,23,42,0.08)",
+          ? "0 18px 55px rgba(0,0,0,0.30)"
+          : "0 18px 45px rgba(15,23,42,0.07)",
         colorScheme: theme,
       }) as CSSProperties,
     [isDark, theme]
@@ -351,7 +351,7 @@ export default function PartnerProductionPage({
   const secondaryButtonClass =
     "inline-flex items-center justify-center gap-2 rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] px-4 py-2.5 text-sm font-semibold text-[color:var(--partner-text)] transition hover:bg-[var(--partner-hover)] disabled:opacity-60";
   const inputClass =
-    "w-full rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] px-4 py-3 text-base text-[color:var(--partner-text)] outline-none transition placeholder:text-[color:var(--partner-faint)] focus:border-[color:var(--partner-accent)] focus:ring-4 focus:ring-cyan-500/10 sm:text-sm";
+    "w-full rounded-xl border border-[color:var(--partner-border)] bg-[var(--partner-card)] px-4 py-3 text-base text-[color:var(--partner-text)] outline-none transition placeholder:text-[color:var(--partner-faint)] focus:border-[color:var(--partner-accent)] focus:ring-4 focus:ring-orange-500/10 sm:text-sm";
   const fieldLabelClass =
     "text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--partner-muted)] sm:text-xs sm:tracking-[0.18em]";
   const sectionLabelClass =
@@ -712,13 +712,13 @@ export default function PartnerProductionPage({
             <section className="py-6 sm:py-8">
               <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold text-[color:var(--partner-muted)] ${softSurfaceClass}`}>
                 <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                MO T-SHIRT partner production
+                {partner.name} · Assigned access
               </div>
               <h1 className="mt-5 max-w-3xl text-3xl font-semibold tracking-tight text-[color:var(--partner-text)] sm:mt-6 sm:text-6xl">
-                {partner.name} production desk
+                Production Workspace
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-6 text-[color:var(--partner-muted)] sm:mt-5 sm:text-base sm:leading-7">
-                Orders assigned by {managerName} appear here with only the production details they choose to share.
+                Sign in to see only the orders, production details, and actions assigned to {partner.name}.
               </p>
               {productionRulesCard ? (
                 <div className="mt-5 max-w-2xl sm:mt-6">{productionRulesCard}</div>
@@ -753,7 +753,7 @@ export default function PartnerProductionPage({
               <h2 className="mt-8 text-2xl font-semibold tracking-tight">Enter password</h2>
               <form onSubmit={login} className="mt-6 space-y-4">
                 <label className={`block ${fieldLabelClass}`}>
-                  Partner password
+                  Workspace password
                   <input
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
@@ -787,9 +787,18 @@ export default function PartnerProductionPage({
 
   return (
     <main style={themeVars} className={shellClass}>
-      <header className="border-b border-[color:var(--partner-border)] bg-[var(--partner-card)]">
+      <header className="sticky top-0 z-30 border-b border-[color:var(--partner-border)] bg-[var(--partner-card)]/95 backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1500px] flex-col gap-4 px-3 py-4 sm:gap-5 sm:px-6 sm:py-5 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div>
+            <div className="mb-3 flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white p-1.5 shadow-sm">
+                <Image src="/logo_transparent.png" alt="MO T-SHIRT" width={80} height={32} className="h-auto w-full" />
+              </span>
+              <div>
+                <div className="text-sm font-bold tracking-tight text-[color:var(--partner-text)]">Mo T-Shirt</div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--partner-muted)]">Production Workspace</div>
+              </div>
+            </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold text-[color:var(--partner-text)] ${softSurfaceClass}`}>
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />

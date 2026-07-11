@@ -252,6 +252,7 @@ function pageHref(path: AdminPagePath) {
 }
 
 function activePagePath(pathname: string) {
+  if (pathname === "/admin/workspace") return "/admin/tanvi" as AdminPagePath;
   return [...ALL_ADMIN_PAGE_PATHS]
     .sort((left, right) => right.length - left.length)
     .find((path) => isNavPathActive(path, pathname));
@@ -321,7 +322,7 @@ export default function AdminChrome({
   const { theme, toggleTheme } = useAdminTheme();
   const isDark = theme === "dark";
   const isPartnerDesk =
-    pathname === "/admin/workspace" ||
+    (pathname === "/admin/workspace" && !initialSession) ||
     pathname === "/admin/yan_list" ||
     pathname === "/admin/shab_list" ||
     (pathname.startsWith("/admin/partners/") && pathname !== "/admin/partners");
@@ -863,7 +864,7 @@ export default function AdminChrome({
         ) : null}
 
         <div className="min-w-0">
-          <div className={`${pathname === "/admin" ? "" : "admin-page-shell admin-minimal p-3 sm:p-5 lg:p-6"} min-h-[calc(100dvh-4rem)]`}>
+          <div className={`${pathname === "/admin" || pathname === "/admin/workspace" ? "" : "admin-page-shell admin-minimal p-3 sm:p-5 lg:p-6"} min-h-[calc(100dvh-4rem)]`}>
             {children}
           </div>
         </div>
