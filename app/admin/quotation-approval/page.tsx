@@ -31,6 +31,7 @@ import { addDays, format, formatDistanceToNow } from "date-fns";
 import { jsPDF } from "jspdf";
 import {
   FiChevronLeft,
+  FiChevronDown,
   FiCheckCircle,
   FiClock,
   FiDownload,
@@ -2482,20 +2483,20 @@ export default function QuotationApprovalPage() {
   };
 
   const surfaceClass = isDark
-    ? "min-w-0 max-w-full rounded-3xl border border-white/10 bg-white/[0.06] shadow-[0_22px_60px_rgba(5,12,24,0.45)] backdrop-blur-xl"
-    : "min-w-0 max-w-full rounded-[32px] border border-[#ebebeb] bg-white shadow-[0_8px_28px_rgba(0,0,0,0.08)]";
+    ? "min-w-0 max-w-full rounded-2xl border border-white/10 bg-[#101613] shadow-[0_22px_60px_rgba(0,0,0,0.32)]"
+    : "min-w-0 max-w-full rounded-2xl border border-slate-200 bg-white shadow-[0_16px_45px_rgba(15,23,42,0.07)]";
   const softSurfaceClass = isDark
-    ? "min-w-0 max-w-full rounded-2xl border border-white/20 bg-black/20"
-    : "min-w-0 max-w-full rounded-[28px] border border-[#ebebeb] bg-[#f7f7f7]";
+    ? "min-w-0 max-w-full rounded-2xl border border-white/10 bg-white/[0.04]"
+    : "min-w-0 max-w-full rounded-2xl border border-slate-200 bg-slate-50";
   const fieldClass =
     `mt-2 w-full rounded-2xl border px-4 py-3 text-sm outline-none transition ${
       isDark
-        ? "border-white/15 bg-slate-950/70 text-slate-100 placeholder:text-slate-500 focus:border-cyan-300/60 focus:ring-4 focus:ring-cyan-300/10"
+        ? "border-white/10 bg-black/20 text-slate-100 placeholder:text-slate-500 focus:border-orange-400/70 focus:ring-4 focus:ring-orange-400/10"
         : "border-[#dddddd] bg-white text-[#222222] placeholder:text-[#b0b0b0] focus:border-[#ff6600] focus:ring-4 focus:ring-[#ff6600]/10"
     }`;
   const textAreaClass = `${fieldClass} min-h-[120px] resize-y`;
   const labelClass = `text-[11px] font-semibold uppercase tracking-[0.18em] ${
-    isDark ? "text-cyan-200/75" : "text-[#717171]"
+    isDark ? "text-white/50" : "text-[#717171]"
   }`;
   const secondaryButtonClass = `inline-flex max-w-full min-w-0 items-center justify-center gap-2 rounded-full border px-4 py-2.5 text-center text-xs font-semibold transition disabled:cursor-not-allowed ${
     isDark
@@ -2509,7 +2510,7 @@ export default function QuotationApprovalPage() {
   }`;
   const primaryButtonClass = `inline-flex max-w-full min-w-0 items-center justify-center gap-2 rounded-full px-4 py-2.5 text-center text-xs font-semibold transition disabled:cursor-not-allowed disabled:text-white disabled:shadow-none ${
     isDark
-      ? "border border-cyan-300/30 bg-cyan-300/15 text-cyan-100 shadow-[0_14px_34px_rgba(34,211,238,0.12)] hover:bg-cyan-300/25 disabled:bg-slate-700"
+      ? "border border-orange-400/30 bg-orange-500 text-white shadow-[0_14px_34px_rgba(255,100,0,0.18)] hover:bg-orange-400 disabled:bg-slate-700"
       : "bg-[linear-gradient(135deg,#ff6600,#ea580c)] text-white shadow-[0_10px_24px_rgba(255,102,0,0.24)] hover:shadow-[0_14px_28px_rgba(255,102,0,0.32)] disabled:bg-[#ffd3b3]"
   }`;
   const mobilePanelButtonClass = (active: boolean) =>
@@ -2526,17 +2527,18 @@ export default function QuotationApprovalPage() {
   return (
     <div
       className={`quotation-approval-page relative min-h-screen max-w-full overflow-x-hidden ${
-        isDark ? "ceo-theme bg-slate-950 text-white" : "bg-white text-[#222222]"
+        isDark ? "ceo-theme bg-[#050806] text-white" : "bg-[#f7f8fa] text-[#222222]"
       }`}
     >
       <div className="relative max-w-full overflow-x-hidden">
         <div className="relative mx-auto w-full max-w-[1500px] px-0 py-2 sm:px-6 sm:py-6 lg:px-8">
-          <header className={`${surfaceClass} relative overflow-hidden px-4 py-5 sm:px-6`}>
-            <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+          <header className={`${surfaceClass} relative overflow-hidden px-5 py-6 sm:px-7 sm:py-7`}>
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ff6400] to-transparent" />
+            <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
               <div>
                 <p
                   className={`text-xs font-semibold uppercase tracking-[0.28em] ${
-                    isDark ? "text-cyan-200/80" : "text-[#717171]"
+                    isDark ? "text-orange-300/80" : "text-[#717171]"
                   }`}
                 >
                   Quotations
@@ -2546,16 +2548,13 @@ export default function QuotationApprovalPage() {
                     isDark ? "text-white" : "text-slate-900"
                   }`}
                 >
-                  Simple quote desk
+                  Quotes & invoices
                 </h1>
-                <p className={`mt-3 max-w-2xl text-sm sm:text-base ${isDark ? "text-slate-200/90" : "text-slate-700"}`}>
-                  Pick a request, check the main details, then send it or move it to orders.
-                </p>
-                <div className="mt-5 flex flex-wrap gap-2">
+                <div className="mt-4 flex flex-wrap gap-2">
                   <span
                     className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${
                       isDark
-                        ? "border-cyan-300/35 bg-cyan-300/15 text-cyan-100"
+                        ? "border-orange-400/25 bg-orange-400/10 text-orange-200"
                         : "border-[#ffd9c2] bg-[#fff4ed] text-[#c2410c]"
                     }`}
                   >
@@ -2617,16 +2616,16 @@ export default function QuotationApprovalPage() {
             </div>
           </div>
 
-          <div className="mt-4 grid min-w-0 gap-4 sm:mt-6 sm:gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <div className="mt-4 grid min-w-0 gap-4 sm:mt-5 lg:grid-cols-[300px_minmax(0,1fr)]">
             <aside
               className={`${mobilePanel === "inbox" ? "block" : "hidden"} ${surfaceClass} h-fit min-w-0 max-w-full overflow-hidden p-3 sm:p-4 lg:sticky lg:top-24 lg:block`}
             >
-              <div className="flex items-center gap-3 rounded-[24px] border border-[#ebebeb] bg-white px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-                <FiSearch className="h-4 w-4 text-[#717171]" />
+              <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${isDark ? "border-white/10 bg-black/20" : "border-slate-200 bg-white"}`}>
+                <FiSearch className={`h-4 w-4 ${isDark ? "text-white/35" : "text-[#717171]"}`} />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-transparent text-sm text-[#222222] outline-none placeholder:text-[#b0b0b0]"
+                  className={`w-full bg-transparent text-sm outline-none ${isDark ? "text-white placeholder:text-white/30" : "text-[#222222] placeholder:text-[#b0b0b0]"}`}
                   placeholder="Search by name, email, phone..."
                 />
               </div>
@@ -2647,8 +2646,12 @@ export default function QuotationApprovalPage() {
                       onClick={() => setStatusFilter(filter.key)}
                       className={`rounded-2xl border px-3 py-2.5 text-left transition ${
                         active
-                          ? "border-[#ffd9c2] bg-[#fff4ed] text-[#c2410c]"
-                          : "border-[#ebebeb] bg-[#f7f7f7] text-[#6a6a6a] hover:border-[#c7c7c7]"
+                          ? isDark
+                            ? "border-orange-400/30 bg-orange-400/10 text-orange-200"
+                            : "border-[#ffd9c2] bg-[#fff4ed] text-[#c2410c]"
+                          : isDark
+                            ? "border-white/10 bg-white/[0.04] text-white/55 hover:bg-white/[0.08]"
+                            : "border-[#ebebeb] bg-[#f7f7f7] text-[#6a6a6a] hover:border-[#c7c7c7]"
                       }`}
                     >
                       <div>{filter.label}</div>
@@ -2708,8 +2711,12 @@ export default function QuotationApprovalPage() {
                       }}
                       className={`w-full overflow-hidden rounded-[26px] border px-4 py-4 text-left transition ${
                         selectedTone
-                          ? "border-[#ffb37a] bg-white shadow-[0_18px_36px_-30px_rgba(255,102,0,0.28)]"
-                          : "border-[#ebebeb] bg-white hover:border-[#cfcfcf] hover:shadow-[0_10px_24px_rgba(0,0,0,0.06)]"
+                          ? isDark
+                            ? "border-orange-400/45 bg-orange-400/[0.08] shadow-[0_18px_36px_-30px_rgba(255,102,0,0.35)]"
+                            : "border-[#ffb37a] bg-white shadow-[0_18px_36px_-30px_rgba(255,102,0,0.28)]"
+                          : isDark
+                            ? "border-white/10 bg-white/[0.035] hover:border-white/20 hover:bg-white/[0.06]"
+                            : "border-[#ebebeb] bg-white hover:border-[#cfcfcf] hover:shadow-[0_10px_24px_rgba(0,0,0,0.06)]"
                       }`}
                     >
                       <div className="flex items-start gap-3">
@@ -2717,7 +2724,7 @@ export default function QuotationApprovalPage() {
                           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold ${
                             selectedTone
                               ? "bg-[#ff6600] text-white"
-                              : "bg-[#f7f7f7] text-[#484848]"
+                              : isDark ? "bg-white/10 text-white/70" : "bg-[#f7f7f7] text-[#484848]"
                           }`}
                         >
                           {initials || "Q"}
@@ -2725,10 +2732,10 @@ export default function QuotationApprovalPage() {
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-[#222222]">
+                              <p className={`truncate text-sm font-semibold ${isDark ? "text-white" : "text-[#222222]"}`}>
                                 {quote.name || "Unnamed client"}
                               </p>
-                              <p className="truncate text-xs text-[#717171]">
+                              <p className={`truncate text-xs ${isDark ? "text-white/45" : "text-[#717171]"}`}>
                                 {quote.email || "No email"}
                               </p>
                             </div>
@@ -2736,11 +2743,11 @@ export default function QuotationApprovalPage() {
                               {primaryStatus.label}
                             </span>
                           </div>
-                          <p className="mt-2 text-xs leading-5 text-[#6a6a6a]">
+                          <p className={`mt-2 text-xs leading-5 ${isDark ? "text-white/55" : "text-[#6a6a6a]"}`}>
                             {garmentPreview || "No product line yet"}
                             {totalPieces > 0 ? ` • ${totalPieces} pc${totalPieces > 1 ? "s" : ""}` : ""}
                           </p>
-                          <div className="mt-3 flex items-center justify-between gap-3 text-[11px] text-[#717171]">
+                          <div className={`mt-3 flex items-center justify-between gap-3 text-[11px] ${isDark ? "text-white/35" : "text-[#717171]"}`}>
                             <span className="min-w-0 truncate">{quote.source || "Website"}</span>
                             <span>
                               {quote.createdAt
@@ -2776,26 +2783,26 @@ export default function QuotationApprovalPage() {
                   <div className={`${surfaceClass} overflow-hidden`}>
                     <div className="grid min-w-0 gap-6 px-4 py-5 sm:px-8 sm:py-6 lg:grid-cols-[minmax(0,1fr)_320px]">
                       <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#717171]">
+                        <p className={`text-[11px] font-semibold uppercase tracking-[0.24em] ${isDark ? "text-white/40" : "text-[#717171]"}`}>
                           Client Overview
                         </p>
-                        <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-[#222222] sm:text-3xl">
+                        <h2 className={`mt-3 text-2xl font-semibold tracking-[-0.03em] sm:text-3xl ${isDark ? "text-white" : "text-[#222222]"}`}>
                           {draft.contactName || selected.name || "Walk-in client"}
                         </h2>
                         <div className="mt-4 flex min-w-0 flex-wrap gap-2">
-                          <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1.5 text-xs text-[#484848]">
+                          <span className={`inline-flex max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${isDark ? "border-white/10 bg-white/[0.05] text-white/65" : "border-[#ebebeb] bg-[#f7f7f7] text-[#484848]"}`}>
                             <FiMail className="h-3.5 w-3.5 text-[#ff6600]" />
                             <span className="min-w-0 truncate">{draft.contactEmail || "No email yet"}</span>
                           </span>
-                          <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1.5 text-xs text-[#484848]">
+                          <span className={`inline-flex max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${isDark ? "border-white/10 bg-white/[0.05] text-white/65" : "border-[#ebebeb] bg-[#f7f7f7] text-[#484848]"}`}>
                             <FiPhone className="h-3.5 w-3.5 text-[#ff6600]" />
                             <span className="min-w-0 truncate">{draft.contactPhone || "No phone yet"}</span>
                           </span>
-                          <span className="max-w-full rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1.5 text-xs text-[#484848]">
+                          <span className={`max-w-full rounded-full border px-3 py-1.5 text-xs ${isDark ? "border-white/10 bg-white/[0.05] text-white/65" : "border-[#ebebeb] bg-[#f7f7f7] text-[#484848]"}`}>
                             Source: {selected.source || "Website"}
                           </span>
                           {selected.delivery ? (
-                            <span className="max-w-full rounded-full border border-[#ebebeb] bg-[#f7f7f7] px-3 py-1.5 text-xs text-[#484848]">
+                            <span className={`max-w-full rounded-full border px-3 py-1.5 text-xs ${isDark ? "border-white/10 bg-white/[0.05] text-white/65" : "border-[#ebebeb] bg-[#f7f7f7] text-[#484848]"}`}>
                               Delivery: {selected.delivery}
                             </span>
                           ) : null}
@@ -2822,19 +2829,19 @@ export default function QuotationApprovalPage() {
                         </div>
 
                         <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                          <div className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3">
+                          <div className={`rounded-xl border px-4 py-3 ${isDark ? "border-white/10 bg-black/20" : "border-[#ebebeb] bg-white"}`}>
                             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
                               Quote number
                             </div>
-                            <div className="mt-1 text-sm font-semibold text-[#222222]">
+                            <div className={`mt-1 text-sm font-semibold ${isDark ? "text-white" : "text-[#222222]"}`}>
                               {draft.documentNumber}
                             </div>
                           </div>
-                          <div className="rounded-2xl border border-[#ebebeb] bg-white px-4 py-3">
+                          <div className={`rounded-xl border px-4 py-3 ${isDark ? "border-white/10 bg-black/20" : "border-[#ebebeb] bg-white"}`}>
                             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
                               Order sync
                             </div>
-                            <div className="mt-1 text-sm font-semibold text-[#222222]">
+                            <div className={`mt-1 text-sm font-semibold ${isDark ? "text-white" : "text-[#222222]"}`}>
                               {selected.orderTransactionId || "Not in orders yet"}
                             </div>
                           </div>
@@ -2848,7 +2855,7 @@ export default function QuotationApprovalPage() {
                       <div className="min-w-0">
                         <p className={labelClass}>Do this next</p>
                         <div className="mt-2 flex flex-wrap items-center gap-3">
-                          <h3 className="text-2xl font-semibold tracking-[-0.02em] text-[#222222]">
+                          <h3 className={`text-2xl font-semibold tracking-[-0.02em] ${isDark ? "text-white" : "text-[#222222]"}`}>
                             {simpleNextAction}
                           </h3>
                           <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${selectedPrimaryStatus?.tone || STATUS_TONES.new}`}>
@@ -2867,11 +2874,11 @@ export default function QuotationApprovalPage() {
                         ) : null}
                       </div>
 
-                      <div className="rounded-[24px] border border-[#ffd9c2] bg-[#fff4ed] px-5 py-4">
+                      <div className={`rounded-2xl border px-5 py-4 ${isDark ? "border-orange-400/25 bg-orange-400/10" : "border-[#ffd9c2] bg-[#fff4ed]"}`}>
                         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#c2410c]">
                           Current total
                         </div>
-                        <div className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-[#222222]">
+                        <div className={`mt-2 text-3xl font-semibold tracking-[-0.03em] ${isDark ? "text-white" : "text-[#222222]"}`}>
                           {formatMoney(totals.total, draft.currency)}
                         </div>
                         <div className="mt-1 text-xs font-semibold text-[#9a4b13]">
@@ -2880,7 +2887,7 @@ export default function QuotationApprovalPage() {
                       </div>
                     </div>
 
-                    <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
+                    <div className="mt-5 grid gap-2 sm:grid-cols-3">
                       <button
                         type="button"
                         onClick={() => setWorkflowStudioOpen(true)}
@@ -2888,14 +2895,6 @@ export default function QuotationApprovalPage() {
                       >
                         <FiFileText className="h-4 w-4" />
                         Edit quote
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleViewPdf}
-                        className={secondaryButtonClass}
-                      >
-                        <FiFileText className="h-4 w-4" />
-                        View PDF
                       </button>
                       <button
                         type="button"
@@ -2924,33 +2923,49 @@ export default function QuotationApprovalPage() {
                         <FiCheckCircle className="h-4 w-4" />
                         {quoteIsMarkedApproved ? "Approved" : "Approve + order"}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => moveToOrders()}
-                        disabled={
-                          movingToOrders ||
-                          Boolean(moveToOrdersError) ||
-                          !quoteIsMarkedApproved
-                        }
-                        title={moveToOrdersTitle}
-                        className={secondaryButtonClass}
-                      >
-                        <FiCheckCircle className="h-4 w-4" />
-                        {movingToOrders
-                          ? "Moving..."
-                          : quoteInOrders
-                            ? "Sync order"
-                            : "Move order"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateSelectedStatus("review", "Marked as read.")}
-                        disabled={statusSaving || (selected.status || "new") !== "new"}
-                        className={secondaryButtonClass}
-                      >
-                        <FiClock className="h-4 w-4" />
-                        {statusSaving ? "Updating..." : "Mark read"}
-                      </button>
+                      <details className="group sm:col-span-3">
+                        <summary className={`${secondaryButtonClass} w-full cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
+                          More actions
+                          <FiChevronDown className="h-4 w-4 transition group-open:rotate-180" />
+                        </summary>
+                        <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                          <button
+                            type="button"
+                            onClick={handleViewPdf}
+                            className={secondaryButtonClass}
+                          >
+                            <FiFileText className="h-4 w-4" />
+                            View PDF
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveToOrders()}
+                            disabled={
+                              movingToOrders ||
+                              Boolean(moveToOrdersError) ||
+                              !quoteIsMarkedApproved
+                            }
+                            title={moveToOrdersTitle}
+                            className={secondaryButtonClass}
+                          >
+                            <FiCheckCircle className="h-4 w-4" />
+                            {movingToOrders
+                              ? "Moving..."
+                              : quoteInOrders
+                                ? "Sync order"
+                                : "Move order"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateSelectedStatus("review", "Marked as read.")}
+                            disabled={statusSaving || (selected.status || "new") !== "new"}
+                            className={secondaryButtonClass}
+                          >
+                            <FiClock className="h-4 w-4" />
+                            {statusSaving ? "Updating..." : "Mark read"}
+                          </button>
+                        </div>
+                      </details>
                     </div>
                   </div>
 
