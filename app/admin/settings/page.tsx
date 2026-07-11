@@ -734,8 +734,20 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error(typeof data?.error === "string" ? data.error : "Failed to update operational users.");
       if (data?.manager) setProductionManager(data.manager as ProductionManager);
       if (Array.isArray(data?.partners)) setProductionPartners(data.partners);
+
+      const syncRes = await fetch("/api/admin/settings/users/sync-operational", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      const syncData = await syncRes.json().catch(() => ({}));
+      if (!syncRes.ok) throw new Error(typeof syncData?.error === "string" ? syncData.error : "Users were saved, but Firebase synchronization failed.");
+
+      const usersRes = await fetch("/api/admin/settings/users", { cache: "no-store", credentials: "same-origin" });
+      const usersData = await usersRes.json().catch(() => ({}));
+      if (usersRes.ok && Array.isArray(usersData?.users)) setUsers(usersData.users);
       setEditingOperationalId(null);
-      setOperationalNotice("Operational users updated");
+      const skipped = Array.isArray(syncData?.skipped) ? syncData.skipped : [];
+      setOperationalNotice(skipped.length ? `Saved to Firebase. Add an email for ${skipped.join(", ")}.` : "All operational users are stored in Firebase.");
       window.setTimeout(() => setOperationalNotice(null), 2400);
     } catch (error) {
       setOperationalError(error instanceof Error ? error.message : "Failed to update operational users.");

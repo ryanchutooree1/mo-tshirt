@@ -291,6 +291,61 @@ export async function createAdminUser(input: {
   } satisfies AdminUserSummary;
 }
 
+export async function ensureFirebaseAdminUser(input: {
+  email: string;
+  displayName: string;
+  allowedPages: unknown;
+  isActive?: boolean;
+}) {
+  const email = normalizeAdminUserEmail(input.email);
+  if (!isValidAdminUserEmail(email)) throw new Error("Enter a valid email address.");
+
+  const ref = getUserRef(email);
+  const existingSnap = await getDoc(ref);
+  if (existingSnap.exists()) {
+    const existing = normalizeRecord(existingSnap.data() as Partial<AdminUserRecord>, email);
+    const updated = await updateAdminUser({
+      email,
+      displayName: input.displayName,
+      allowedPages: input.allowedPages,
+      isActive: input.isActive,
+    });
+    return existing && resolveAuthProvider(existing) === "legacy"
+      ? sendAdminUserPasswordReset(email)
+      : updated;
+  }
+
+  const displayName = sanitizeDisplayName(input.displayName);
+  let firebaseUid: string | null = null;
+  try {
+    const created = await createFirebaseEmailPasswordUser({
+      email,
+      password: createTemporaryFirebasePassword(),
+      displayName,
+    });
+    firebaseUid = created.localId;
+  } catch (error) {
+    if (!isFirebaseAuthAdminError(error, "EMAIL_EXISTS")) throw error;
+  }
+
+  const now = Date.now();
+  const record: AdminUserRecord = {
+    email,
+    displayName,
+    passwordHash: "",
+    passwordSalt: "",
+    authProvider: "firebase",
+    firebaseUid,
+    allowedPages: sanitizeAllowedPages(input.allowedPages),
+    isActive: input.isActive !== false,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await setDoc(ref, record);
+  await sendFirebasePasswordResetEmail(email);
+  return toSummary(record);
+}
+
 export async function updateAdminUser(input: {
   email: string;
   displayName?: string;
