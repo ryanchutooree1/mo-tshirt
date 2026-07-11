@@ -65,11 +65,13 @@ Set the admin password in `.env.local`:
 ADMIN_PASSWORD=your-strong-password
 ```
 
-To secure Firebase Storage, also create a Firebase Authentication email/password admin user that uses the same password as `ADMIN_PASSWORD`, then set:
+To secure Firebase Storage, create a Firebase Authentication email/password owner user for `motshirtmauritius@gmail.com`. If the owner uses another email, set:
 
 ```
 NEXT_PUBLIC_FIREBASE_ADMIN_EMAIL=admin@example.com
 ```
+
+The owner signs into Firebase with that account; managed employees use their own Firebase Authentication credentials. Do not store plain-text user passwords in the application database.
 
 Deploy the Storage rules in [`storage.rules`](/Users/ryanchutooree/mo-t-shirt/storage.rules) after that setup. See [`docs/firebase-storage-security.md`](/Users/ryanchutooree/mo-t-shirt/docs/firebase-storage-security.md) for the exact flow.
 

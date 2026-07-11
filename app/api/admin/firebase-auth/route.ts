@@ -16,12 +16,12 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
-  const email = process.env.NEXT_PUBLIC_FIREBASE_ADMIN_EMAIL?.trim() || "";
-  const password = process.env.FIREBASE_ADMIN_AUTH_PASSWORD?.trim() || "";
+  const email =
+    process.env.NEXT_PUBLIC_FIREBASE_ADMIN_EMAIL?.trim() ||
+    "motshirtmauritius@gmail.com";
 
   return NextResponse.json({
-    configured: Boolean(email && password),
+    configured: Boolean(email),
     email,
-    password,
   });
 }

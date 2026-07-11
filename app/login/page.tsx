@@ -91,14 +91,14 @@ function LoginInner() {
           session &&
           Array.isArray(session.allowedPages) &&
           typeof session.isOwner === "boolean" &&
-          isFirebaseAdminAuthConfigured() &&
+          isFirebaseAdminAuthConfigured(email) &&
           canUseSharedStorageAuth(session.allowedPages, {
             isOwner: session.isOwner,
           });
 
         if (requiresSharedStorageAuth) {
           try {
-            await signInAdminWithFirebase(password);
+            await signInAdminWithFirebase(email, password);
           } catch {
             await signOutAdminFromFirebase().catch(() => null);
           }
@@ -126,18 +126,18 @@ function LoginInner() {
       }
 
       const requiresSharedStorageAuth =
-        isFirebaseAdminAuthConfigured() &&
+        isFirebaseAdminAuthConfigured(email) &&
         canUseSharedStorageAuth(session.allowedPages, {
           isOwner: session.isOwner,
         });
 
       if (requiresSharedStorageAuth) {
         try {
-          await signInAdminWithFirebase(password);
+          await signInAdminWithFirebase(email, password);
         } catch {
           await fetch("/api/logout", { method: "POST" }).catch(() => null);
           setError(
-            "Admin login worked, but Firebase storage sign-in failed. Set NEXT_PUBLIC_FIREBASE_ADMIN_EMAIL and FIREBASE_ADMIN_AUTH_PASSWORD for shared admin storage access."
+            "Admin login worked, but Firebase sign-in failed. Use the email and password of a Firebase Authentication user. For owner login without an email, set NEXT_PUBLIC_FIREBASE_ADMIN_EMAIL and use that Firebase user's password."
           );
           setSubmitting(false);
           return;

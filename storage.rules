@@ -2,8 +2,21 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email == "motshirtmauritius@gmail.com";
+    }
+
+    function isManagedAdmin() {
+      return request.auth != null
+        && request.auth.token.email != null
+        && firestore.exists(/databases/(default)/documents/adminUsers/$(request.auth.token.email))
+        && firestore.get(/databases/(default)/documents/adminUsers/$(request.auth.token.email)).data.isActive == true
+        && firestore.get(/databases/(default)/documents/adminUsers/$(request.auth.token.email)).data.firebaseUid == request.auth.uid;
+    }
+
     function isSignedInAdmin() {
-      return request.auth != null;
+      return isOwner() || isManagedAdmin();
     }
 
     // Admin DMS and generated invoices live under documents/.
