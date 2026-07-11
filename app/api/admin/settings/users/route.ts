@@ -5,6 +5,8 @@ import {
   listAdminUsers,
   updateAdminUser,
 } from "@/lib/admin-users";
+import { defaultAdminProfile, normalizeAdminProfile } from "@/lib/admin-profile";
+import { getStoredAdminProfiles } from "@/lib/admin-profile-store";
 
 export async function GET() {
   if (!(await isAdminRequest("/api/admin/settings/users"))) {
@@ -13,7 +15,16 @@ export async function GET() {
 
   try {
     const users = await listAdminUsers();
-    return NextResponse.json({ users });
+    const profiles = await getStoredAdminProfiles(users.map((user) => user.email));
+    return NextResponse.json({
+      users: users.map((user) => ({
+        ...user,
+        profile: normalizeAdminProfile(
+          profiles[user.email],
+          defaultAdminProfile({ displayName: user.displayName, isOwner: false })
+        ),
+      })),
+    });
   } catch (error) {
     console.error("admin-settings-users:get", error);
     return NextResponse.json(

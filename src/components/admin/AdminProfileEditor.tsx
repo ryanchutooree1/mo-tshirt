@@ -18,6 +18,7 @@ type AdminProfileEditorProps = {
   profile: AdminProfile;
   email: string;
   fallbackAvatarUrl: string | null;
+  onSaveRequest?: (profile: AdminProfile) => Promise<AdminProfile>;
   onClose: () => void;
   onSaved: (profile: AdminProfile) => void;
 };
@@ -115,6 +116,7 @@ export default function AdminProfileEditor({
   profile,
   email,
   fallbackAvatarUrl,
+  onSaveRequest,
   onClose,
   onSaved,
 }: AdminProfileEditorProps) {
@@ -317,6 +319,11 @@ export default function AdminProfileEditor({
       controller.abort();
     }, 30_000);
     try {
+      if (onSaveRequest) {
+        const savedProfile = await onSaveRequest(draft);
+        onSaved(savedProfile);
+        return;
+      }
       const response = await fetch("/api/admin/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

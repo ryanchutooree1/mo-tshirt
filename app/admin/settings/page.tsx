@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Camera,
   CheckCircle2,
   Database,
   HardDrive,
@@ -28,6 +29,11 @@ import {
   isFirebaseAdminAuthConfigured,
 } from "@/lib/firebase-admin-client-auth";
 import UnsavedChangesGuard from "@/components/admin/UnsavedChangesGuard";
+import AdminProfileEditor from "@/components/admin/AdminProfileEditor";
+import {
+  defaultAdminProfile,
+  type AdminProfile,
+} from "@/lib/admin-profile";
 
 type AdminUserSummary = {
   email: string;
@@ -38,6 +44,7 @@ type AdminUserSummary = {
   isActive: boolean;
   createdAt: number;
   updatedAt: number;
+  profile: AdminProfile;
 };
 
 type AdminSessionSummary = {
@@ -138,6 +145,39 @@ function getInitials(displayName: string, email: string) {
   return email.slice(0, 2).toUpperCase();
 }
 
+function SettingsUserAvatar({
+  profile,
+  displayName,
+  email,
+  className = "h-12 w-12 rounded-2xl",
+}: {
+  profile?: AdminProfile;
+  displayName: string;
+  email: string;
+  className?: string;
+}) {
+  const positionX = Math.min(100, Math.max(0, 50 - (profile?.avatarOffsetX || 0)));
+  const positionY = Math.min(100, Math.max(0, 50 - (profile?.avatarOffsetY || 0)));
+
+  return (
+    <div className={`relative flex shrink-0 items-center justify-center overflow-hidden bg-slate-100 text-sm font-semibold text-slate-700 ${className}`}>
+      {profile?.avatarDataUrl ? (
+        <div
+          className="absolute inset-0 bg-cover bg-no-repeat"
+          style={{
+            backgroundImage: `url(${profile.avatarDataUrl})`,
+            backgroundPosition: `${positionX}% ${positionY}%`,
+            transform: `scale(${profile.avatarZoom})`,
+            transformOrigin: `${positionX}% ${positionY}%`,
+          }}
+        />
+      ) : (
+        getInitials(displayName, email)
+      )}
+    </div>
+  );
+}
+
 function toBytesFromGb(value: string | undefined, fallbackGb: number) {
   const parsed = Number(value);
   const gb = Number.isFinite(parsed) && parsed > 0 ? parsed : fallbackGb;
@@ -209,6 +249,10 @@ export default function SettingsPage() {
   const [userSaved, setUserSaved] = useState(false);
   const [editingUserEmail, setEditingUserEmail] = useState<string | null>(null);
   const [userDraft, setUserDraft] = useState(EMPTY_USER_DRAFT);
+  const [userProfileDraft, setUserProfileDraft] = useState<AdminProfile>(() =>
+    defaultAdminProfile({ displayName: "Administrator", isOwner: false })
+  );
+  const [userProfileEditorOpen, setUserProfileEditorOpen] = useState(false);
   const [currentAdminSession, setCurrentAdminSession] = useState<AdminSessionSummary | null>(null);
   const [sharedFirebaseAdminEmail, setSharedFirebaseAdminEmail] = useState<string | null>(null);
   const [resettingUserEmail, setResettingUserEmail] = useState<string | null>(null);
@@ -629,6 +673,8 @@ export default function SettingsPage() {
   const resetUserDraft = (options?: { preserveSaved?: boolean }) => {
     setEditingUserEmail(null);
     setUserDraft(EMPTY_USER_DRAFT);
+    setUserProfileDraft(defaultAdminProfile({ displayName: "Administrator", isOwner: false }));
+    setUserProfileEditorOpen(false);
     setUserError(null);
     if (!options?.preserveSaved) {
       setUserSaved(false);
@@ -658,6 +704,9 @@ export default function SettingsPage() {
       allowedPages: user.allowedPages,
       isActive: user.isActive,
     });
+    setUserProfileDraft(
+      user.profile || defaultAdminProfile({ displayName: user.displayName, isOwner: false })
+    );
     setUserError(null);
     setUserSaved(false);
     setResetError(null);
@@ -732,14 +781,36 @@ export default function SettingsPage() {
         throw new Error("Server returned an invalid admin user.");
       }
 
+      const profilePayload: AdminProfile = {
+        ...userProfileDraft,
+        displayName: userDraft.displayName.trim(),
+      };
+      const profileRes = await fetch(
+        `/api/admin/profile?userId=${encodeURIComponent(user.email)}`,
+        {
+          method: "PUT",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(profilePayload),
+        }
+      );
+      const profileData = await profileRes.json().catch(() => ({}));
+      const savedProfile = profileRes.ok && profileData?.profile
+        ? profileData.profile as AdminProfile
+        : profilePayload;
+      const enrichedUser = { ...user, profile: savedProfile };
+
       setUsers((current) => {
         const others = current.filter((entry) => entry.email !== user.email);
-        return [...others, user].sort((left, right) => left.createdAt - right.createdAt);
+        return [...others, enrichedUser].sort((left, right) => left.createdAt - right.createdAt);
       });
       setUserSaved(true);
       setResetError(null);
       setResetNotice(null);
       resetUserDraft({ preserveSaved: true });
+      if (!profileRes.ok) {
+        setUserError(profileData?.error || "User access was saved, but the profile picture could not be updated.");
+      }
     } catch (error) {
       setUserError(
         error instanceof Error ? error.message : "Failed to save admin user."
@@ -1095,6 +1166,27 @@ export default function SettingsPage() {
                 ) : null}
               </div>
 
+              <div className="mt-5 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center">
+                <SettingsUserAvatar
+                  profile={userProfileDraft}
+                  displayName={userProfileDraft.displayName || userDraft.displayName || "Administrator"}
+                  email={userDraft.email || "admin@mo-tshirt.mu"}
+                  className="h-20 w-20 rounded-full ring-1 ring-slate-200"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold text-slate-900">Profile picture</div>
+                  <div className="mt-1 text-xs text-slate-500">Upload, zoom, and reposition the administrator photo.</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setUserProfileEditorOpen(true)}
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-xs font-semibold uppercase tracking-[0.16em] text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                >
+                  <Camera className="h-4 w-4" />
+                  Edit profile
+                </button>
+              </div>
+
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <label className="grid gap-2 text-xs font-semibold text-slate-600">
                   Full name
@@ -1102,6 +1194,7 @@ export default function SettingsPage() {
                     value={userDraft.displayName}
                     onChange={(e) => {
                       setUserDraft((current) => ({ ...current, displayName: e.target.value }));
+                      setUserProfileDraft((current) => ({ ...current, displayName: e.target.value }));
                       setUserError(null);
                       setUserSaved(false);
                     }}
@@ -1362,9 +1455,11 @@ export default function SettingsPage() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-sm font-semibold text-slate-700">
-                          {getInitials(user.displayName, user.email)}
-                        </div>
+                        <SettingsUserAvatar
+                          profile={user.profile}
+                          displayName={user.displayName}
+                          email={user.email}
+                        />
                         <div className="min-w-0">
                           <div className="truncate text-base font-semibold text-slate-900">
                             {user.displayName}
@@ -1438,7 +1533,7 @@ export default function SettingsPage() {
                           className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
                         >
                           <PencilLine className="h-3.5 w-3.5" />
-                          Edit access
+                          Edit user
                         </button>
                       </div>
                     </div>
@@ -1461,6 +1556,21 @@ export default function SettingsPage() {
           </div>
         </section>
       </div>
+      <AdminProfileEditor
+        open={userProfileEditorOpen}
+        profile={userProfileDraft}
+        email={userDraft.email || "Email added when the user is saved"}
+        fallbackAvatarUrl={null}
+        onSaveRequest={async (profile) => profile}
+        onClose={() => setUserProfileEditorOpen(false)}
+        onSaved={(profile) => {
+          setUserProfileDraft(profile);
+          setUserDraft((current) => ({ ...current, displayName: profile.displayName }));
+          setUserProfileEditorOpen(false);
+          setUserError(null);
+          setUserSaved(false);
+        }}
+      />
       <UnsavedChangesGuard
         active={notificationHasChanges}
         isSaving={notificationSaving}

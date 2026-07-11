@@ -105,6 +105,57 @@ export async function getStoredAdminProfile(userId: string) {
   });
 }
 
+export async function getStoredAdminProfiles(userIds: string[]) {
+  const uniqueUserIds = [...new Set(userIds.filter(Boolean))];
+  if (!uniqueUserIds.length) return {} as Record<string, AdminProfile>;
+
+  return withProfileClient(async (client) => {
+    const result = await client.query<{
+      user_id: string;
+      display_name: string;
+      headline: string;
+      location: string;
+      bio: string;
+      avatar_data_url: string | null;
+      avatar_zoom: number;
+      avatar_offset_x: number;
+      avatar_offset_y: number;
+    }>(
+      `
+        select
+          user_id,
+          display_name,
+          headline,
+          location,
+          bio,
+          avatar_data_url,
+          avatar_zoom,
+          avatar_offset_x,
+          avatar_offset_y
+        from admin_profiles
+        where user_id = any($1::text[])
+      `,
+      [uniqueUserIds]
+    );
+
+    return Object.fromEntries(
+      result.rows.map((row) => [
+        row.user_id,
+        {
+          displayName: row.display_name,
+          headline: row.headline,
+          location: row.location,
+          bio: row.bio,
+          avatarDataUrl: row.avatar_data_url,
+          avatarZoom: Number(row.avatar_zoom),
+          avatarOffsetX: Number(row.avatar_offset_x),
+          avatarOffsetY: Number(row.avatar_offset_y),
+        } satisfies AdminProfile,
+      ])
+    );
+  });
+}
+
 export async function saveStoredAdminProfile(userId: string, profile: AdminProfile) {
   return withProfileClient(async (client) => {
     await client.query(

@@ -141,19 +141,34 @@ async function readLimitedRequestText(request: Request, maxBytes: number) {
   return Buffer.concat(chunks, totalBytes).toString("utf8");
 }
 
-export async function GET() {
+function requestedProfileUserId(request: Request, sessionUserId: string, canManageProfiles: boolean) {
+  const requested = new URL(request.url).searchParams.get("userId")?.trim() || sessionUserId;
+  if (!requested || requested.length > 254 || /[\s/]/.test(requested)) return null;
+  if (requested !== sessionUserId && !canManageProfiles) return null;
+  return requested;
+}
+
+export async function GET(request: Request) {
   const session = await getAdminRequestSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
+  const targetUserId = requestedProfileUserId(
+    request,
+    session.userId,
+    session.isOwner || session.allowedPages.includes("/admin/settings")
+  );
+  if (!targetUserId) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+  }
 
   const fallback = defaultAdminProfile({
-    displayName: session.displayName,
-    isOwner: session.isOwner,
+    displayName: targetUserId === session.userId ? session.displayName : "Administrator",
+    isOwner: targetUserId === session.userId && session.isOwner,
   });
 
   try {
-    const storedProfile = await getStoredAdminProfile(session.userId);
+    const storedProfile = await getStoredAdminProfile(targetUserId);
     const profile = storedProfile
       ? normalizeAdminProfile(storedProfile, fallback)
       : fallback;
@@ -178,6 +193,14 @@ export async function PUT(request: Request) {
   const session = await getAdminRequestSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  const targetUserId = requestedProfileUserId(
+    request,
+    session.userId,
+    session.isOwner || session.allowedPages.includes("/admin/settings")
+  );
+  if (!targetUserId) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
   const rawBody = await readLimitedRequestText(request, MAX_PROFILE_REQUEST_BYTES);
@@ -225,7 +248,7 @@ export async function PUT(request: Request) {
   const profile = normalizeAdminProfile({ ...record, avatarDataUrl }, fallback);
 
   try {
-    await saveStoredAdminProfile(session.userId, profile);
+    await saveStoredAdminProfile(targetUserId, profile);
     return NextResponse.json({ profile });
   } catch (error) {
     console.error("admin-profile:put", error);
