@@ -102,6 +102,9 @@ export async function POST(req: Request) {
     let firebaseEmail = identifier.includes("@") ? identifier : "";
 
     if (password === expected) {
+      firebaseEmail =
+        process.env.NEXT_PUBLIC_FIREBASE_ADMIN_EMAIL?.trim().toLowerCase() ||
+        "motshirtmauritius@gmail.com";
       sessionToken = await createAdminSessionToken({
         userId: "owner",
         displayName: "Ryan Chutooree",

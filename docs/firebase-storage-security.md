@@ -24,7 +24,7 @@ The login page will:
 
 That Firebase Auth session is what lets the admin pages access Firebase Storage after the bucket is no longer public. The server never returns a shared Firebase password to the browser.
 
-The Storage rules allow the owner email `motshirtmauritius@gmail.com` and active managed admins whose Firebase UID matches their `adminUsers` document. If the owner email changes, update it in `storage.rules` before deployment.
+The Storage rules allow the workspace owner's stable Firebase UID and active managed admins whose Firebase UID matches their `adminUsers` document. Changing the owner's email therefore does not remove Storage access. If the Firebase owner account itself is replaced, update the owner UID in `storage.rules` before deployment.
 
 ## Deploy
 

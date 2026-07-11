@@ -4,7 +4,9 @@ service firebase.storage {
   match /b/{bucket}/o {
     function isOwner() {
       return request.auth != null
-        && request.auth.token.email == "motshirtmauritius@gmail.com";
+        // Stable Firebase Auth UID for the workspace owner. Unlike an email,
+        // this does not change when the owner's login address is updated.
+        && request.auth.uid == "ayRVDn07T1M9HZMBdy23phVHK4p2";
     }
 
     function isManagedAdmin() {
