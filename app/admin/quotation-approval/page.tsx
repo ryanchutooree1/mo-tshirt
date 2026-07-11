@@ -1200,13 +1200,19 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
     }
     y += 14;
   };
+  const drawOptionalClientLine = (label: string, value: string, emptyLabel: string) => {
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(value ? 20 : 100);
+    doc.text(`${label}: ${value || emptyLabel}`, margin, y);
+    y += 14;
+  };
   drawClientLine("Contact", contactName, "MISSING CONTACT NAME");
   drawClientLine("Phone", clientPhone, "MISSING PHONE");
   drawClientLine("Email", clientEmail, "MISSING EMAIL");
   const clientAddress = (draft.clientAddress || "").trim();
   drawClientLine("Address", clientAddress, "MISSING CLIENT ADDRESS");
-  drawClientLine("BRN", draft.clientBrn.trim(), "MISSING BRN");
-  drawClientLine("VAT", draft.clientVat.trim(), "MISSING VAT");
+  drawOptionalClientLine("BRN", draft.clientBrn.trim(), "Missing BRN");
+  drawOptionalClientLine("VAT", draft.clientVat.trim(), "Missing VAT");
 
   y += 10;
   doc.setDrawColor(120);
@@ -2009,8 +2015,6 @@ export default function QuotationApprovalPage() {
       draft.contactPhone,
       draft.clientCompany,
       draft.clientAddress,
-      draft.clientBrn,
-      draft.clientVat,
       draft.documentNumber,
       draft.documentDate,
       draft.validUntil,
@@ -3348,11 +3352,15 @@ export default function QuotationApprovalPage() {
                             <div className="grid grid-cols-2 gap-3 md:text-right">
                               <div>
                                 <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#9a9a9a]">Client BRN</p>
-                                <p className="mt-1 text-xs"><QuotationPreviewValue value={draft.clientBrn} missingLabel="MISSING BRN" /></p>
+                                <p className={`mt-1 text-xs ${draft.clientBrn.trim() ? "text-[#222222]" : "text-[#717171]"}`}>
+                                  {draft.clientBrn.trim() || "Missing BRN"}
+                                </p>
                               </div>
                               <div>
                                 <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#9a9a9a]">Client VAT</p>
-                                <p className="mt-1 text-xs"><QuotationPreviewValue value={draft.clientVat} missingLabel="MISSING VAT" /></p>
+                                <p className={`mt-1 text-xs ${draft.clientVat.trim() ? "text-[#222222]" : "text-[#717171]"}`}>
+                                  {draft.clientVat.trim() || "Missing VAT"}
+                                </p>
                               </div>
                               <div className="col-span-2">
                                 <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#9a9a9a]">Prepared by</p>
