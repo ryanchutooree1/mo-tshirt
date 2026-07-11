@@ -1200,19 +1200,20 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
     }
     y += 14;
   };
-  const drawOptionalClientLine = (label: string, value: string, emptyLabel: string) => {
+  const drawOptionalClientLine = (label: string, value: string) => {
+    if (!value) return;
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(value ? 20 : 100);
-    doc.text(`${label}: ${value || emptyLabel}`, margin, y);
+    doc.setTextColor(20);
+    doc.text(`${label}: ${value}`, margin, y);
     y += 14;
   };
   drawClientLine("Contact", contactName, "MISSING CONTACT NAME");
   drawClientLine("Phone", clientPhone, "MISSING PHONE");
   drawClientLine("Email", clientEmail, "MISSING EMAIL");
   const clientAddress = (draft.clientAddress || "").trim();
-  drawClientLine("Address", clientAddress, "MISSING CLIENT ADDRESS");
-  drawOptionalClientLine("BRN", draft.clientBrn.trim(), "Missing BRN");
-  drawOptionalClientLine("VAT", draft.clientVat.trim(), "Missing VAT");
+  drawOptionalClientLine("Address", clientAddress);
+  drawOptionalClientLine("BRN", draft.clientBrn.trim());
+  drawOptionalClientLine("VAT", draft.clientVat.trim());
 
   y += 10;
   doc.setDrawColor(120);
@@ -2021,29 +2022,37 @@ export default function QuotationApprovalPage() {
     };
   }, [draft]);
 
-  const quotationMissingCount = useMemo(() => {
-    if (!draft) return 0;
-    const missingTextFields = [
-      draft.contactName,
-      draft.contactEmail,
-      draft.contactPhone,
-      draft.clientCompany,
-      draft.clientAddress,
-      draft.documentNumber,
-      draft.documentDate,
-      draft.validUntil,
-      draft.preparedBy,
-    ].filter((value) => !value.trim()).length;
-    const missingLineFields = draft.lines.reduce((count, line) => {
-      return (
-        count +
-        (line.description.trim() ? 0 : 1) +
-        (safeNumber(line.quantity, 0) > 0 ? 0 : 1) +
-        (safeNumber(line.unitPrice, 0) > 0 ? 0 : 1)
-      );
-    }, 0);
-    return missingTextFields + missingLineFields + (draft.lines.length ? 0 : 1);
+  const quotationMissingFields = useMemo(() => {
+    if (!draft) return [] as string[];
+    const missing: string[] = [];
+    const requireText = (value: string, label: string) => {
+      if (!value.trim()) missing.push(label);
+    };
+    requireText(draft.contactName, "Client contact name");
+    requireText(draft.contactEmail, "Client email");
+    requireText(draft.contactPhone, "Client phone");
+    requireText(draft.clientCompany, "Client / company name");
+    requireText(draft.documentNumber, "Quotation number");
+    requireText(draft.documentDate, "Quotation date");
+    if (draft.documentType === "quotation") {
+      requireText(draft.validUntil, "Valid-until date");
+    }
+    requireText(draft.preparedBy, "Prepared by");
+    requireText(draft.terms, "Terms and payment details");
+
+    if (!draft.lines.length) {
+      missing.push("At least one line item");
+    } else {
+      draft.lines.forEach((line, index) => {
+        const lineNumber = index + 1;
+        if (!line.description.trim()) missing.push(`Line ${lineNumber} description`);
+        if (safeNumber(line.quantity, 0) <= 0) missing.push(`Line ${lineNumber} quantity`);
+        if (safeNumber(line.unitPrice, 0) <= 0) missing.push(`Line ${lineNumber} unit price`);
+      });
+    }
+    return missing;
   }, [draft]);
+  const quotationMissingCount = quotationMissingFields.length;
 
   const paymentStatusOptions = useMemo(() => {
     if (!draft) return [];
@@ -3284,6 +3293,12 @@ export default function QuotationApprovalPage() {
                           <p className={`mt-1 text-xs ${isDark ? "text-white/50" : "text-[#717171]"}`}>
                             This preview updates instantly as you fill in the quotation.
                           </p>
+                          {quotationMissingFields.length ? (
+                            <div className="mt-2 max-w-2xl rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] leading-5 text-red-700">
+                              <span className="font-extrabold">Missing information: </span>
+                              {quotationMissingFields.join(" • ")}
+                            </div>
+                          ) : null}
                         </div>
                         {quotationMissingCount > 0 ? (
                           <button
@@ -5457,6 +5472,12 @@ export default function QuotationApprovalPage() {
                         <p className={`mt-1 text-xs ${isDark ? "text-slate-400" : "text-[#717171]"}`}>
                           Updates automatically while you type.
                         </p>
+                        {quotationMissingFields.length ? (
+                          <div className="mt-2 rounded-xl border border-red-200 bg-red-50 px-2.5 py-2 text-[10px] leading-4 text-red-700">
+                            <span className="font-extrabold">Missing information: </span>
+                            {quotationMissingFields.join(" • ")}
+                          </div>
+                        ) : null}
                       </div>
                       {quotationMissingCount > 0 ? (
                         <span className="rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-[10px] font-extrabold text-red-700">
