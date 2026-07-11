@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   Camera,
   CheckCircle2,
-  Database,
-  HardDrive,
   KeyRound,
   Loader2,
   Mail,
@@ -17,17 +15,12 @@ import {
   UserCog,
   Users,
 } from "lucide-react";
-import { getMetadata, list, ref as storageRef } from "firebase/storage";
 import {
   ADMIN_PAGE_GROUPS,
   ADMIN_PAGE_OPTIONS,
   type AdminPagePath,
 } from "@/lib/admin-access";
-import { storage } from "@/lib/firebase";
-import {
-  ensureAdminFirebaseSession,
-  isFirebaseAdminAuthConfigured,
-} from "@/lib/firebase-admin-client-auth";
+import type { PrintPartner, ProductionManager } from "@/lib/partners";
 import UnsavedChangesGuard from "@/components/admin/UnsavedChangesGuard";
 import AdminProfileEditor from "@/components/admin/AdminProfileEditor";
 import {
@@ -56,16 +49,6 @@ type AdminSessionSummary = {
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const DEFAULT_FIREBASE_STORAGE_LIMIT_GB = 5;
-
-type UsageSnapshot = {
-  usedBytes: number;
-  limitBytes: number;
-  note: string;
-  provider: string;
-  isEstimate?: boolean;
-};
-
 const EMPTY_USER_DRAFT = {
   email: "",
   displayName: "",
@@ -178,60 +161,6 @@ function SettingsUserAvatar({
   );
 }
 
-function toBytesFromGb(value: string | undefined, fallbackGb: number) {
-  const parsed = Number(value);
-  const gb = Number.isFinite(parsed) && parsed > 0 ? parsed : fallbackGb;
-  return Math.round(gb * 1024 * 1024 * 1024);
-}
-
-function formatStorageBytes(value: number) {
-  if (!Number.isFinite(value) || value <= 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const exponent = Math.min(
-    Math.floor(Math.log(value) / Math.log(1024)),
-    units.length - 1
-  );
-  const sized = value / Math.pow(1024, exponent);
-  return `${sized.toFixed(exponent === 0 ? 0 : exponent === 1 ? 1 : 2)} ${units[exponent]}`;
-}
-
-function getUsagePercent(usedBytes: number, limitBytes: number) {
-  if (!Number.isFinite(usedBytes) || !Number.isFinite(limitBytes) || limitBytes <= 0) {
-    return 0;
-  }
-  return Math.max(0, Math.min(100, (usedBytes / limitBytes) * 100));
-}
-
-async function sumStoragePrefix(path: string): Promise<number> {
-  async function walk(folderPath: string, pageToken?: string): Promise<number> {
-    const page = await list(storageRef(storage, folderPath), {
-      maxResults: 1000,
-      pageToken,
-    });
-
-    const metadata = await Promise.all(
-      page.items.map((item) => getMetadata(item).catch(() => null))
-    );
-    const fileBytes = metadata.reduce(
-      (total, item) => total + (typeof item?.size === "number" ? item.size : 0),
-      0
-    );
-    const nestedBytes = await Promise.all(
-      page.prefixes.map((prefix) => walk(prefix.fullPath))
-    );
-    const currentTotal =
-      fileBytes + nestedBytes.reduce((total, value) => total + value, 0);
-
-    if (!page.nextPageToken) {
-      return currentTotal;
-    }
-
-    return currentTotal + (await walk(folderPath, page.nextPageToken));
-  }
-
-  return walk(path);
-}
-
 export default function SettingsPage() {
   const router = useRouter();
   const [notificationRecipients, setNotificationRecipients] = useState<string[]>([]);
@@ -258,12 +187,12 @@ export default function SettingsPage() {
   const [resettingUserEmail, setResettingUserEmail] = useState<string | null>(null);
   const [resetNotice, setResetNotice] = useState<string | null>(null);
   const [resetError, setResetError] = useState<string | null>(null);
-  const [firebaseUsage, setFirebaseUsage] = useState<UsageSnapshot | null>(null);
-  const [firebaseUsageLoading, setFirebaseUsageLoading] = useState(true);
-  const [firebaseUsageError, setFirebaseUsageError] = useState<string | null>(null);
-  const [hostingUsage, setHostingUsage] = useState<UsageSnapshot | null>(null);
-  const [hostingUsageLoading, setHostingUsageLoading] = useState(true);
-  const [hostingUsageError, setHostingUsageError] = useState<string | null>(null);
+  const [productionManager, setProductionManager] = useState<ProductionManager>({ name: "Tanvi", email: "" });
+  const [productionPartners, setProductionPartners] = useState<PrintPartner[]>([]);
+  const [operationalLoading, setOperationalLoading] = useState(true);
+  const [operationalSaving, setOperationalSaving] = useState(false);
+  const [operationalNotice, setOperationalNotice] = useState<string | null>(null);
+  const [operationalError, setOperationalError] = useState<string | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -414,108 +343,27 @@ export default function SettingsPage() {
   useEffect(() => {
     let ignore = false;
 
-    const firebaseLimitBytes = toBytesFromGb(
-      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_LIMIT_GB,
-      DEFAULT_FIREBASE_STORAGE_LIMIT_GB
-    );
-
     (async () => {
-      setFirebaseUsageLoading(true);
-      setFirebaseUsageError(null);
-
       try {
-        if (!isFirebaseAdminAuthConfigured()) {
-          throw new Error("Firebase storage admin auth is not configured.");
-        }
-
-        const hasFirebaseSession = await ensureAdminFirebaseSession();
-        if (!hasFirebaseSession) {
-          throw new Error("Firebase storage session is unavailable.");
-        }
-        const [documentsBytes, quotesBytes] = await Promise.all([
-          sumStoragePrefix("documents"),
-          sumStoragePrefix("quotes"),
-        ]);
-
-        if (!ignore) {
-          setFirebaseUsage({
-            usedBytes: documentsBytes + quotesBytes,
-            limitBytes: firebaseLimitBytes,
-            provider: "Firebase Storage",
-            note: "Counts files stored in the documents and quotes folders.",
-          });
-        }
-      } catch (error) {
-        if (!ignore) {
-          setFirebaseUsageError(
-            error instanceof Error
-              ? error.message
-              : "Failed to load Firebase storage usage."
-          );
-        }
-      } finally {
-        if (!ignore) {
-          setFirebaseUsageLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let ignore = false;
-
-    (async () => {
-      setHostingUsageLoading(true);
-      setHostingUsageError(null);
-
-      try {
-        const res = await fetch("/api/admin/settings/storage", {
+        const res = await fetch("/api/admin/partners", {
           cache: "no-store",
           credentials: "same-origin",
         });
         const data = await res.json().catch(() => ({}));
-
         if (!res.ok) {
-          throw new Error(
-            typeof data?.error === "string"
-              ? data.error
-              : "Failed to load host storage usage."
-          );
+          throw new Error(typeof data?.error === "string" ? data.error : "Failed to load operational users.");
         }
-
         if (!ignore) {
-          setHostingUsage({
-            usedBytes:
-              typeof data?.usedBytes === "number" ? data.usedBytes : 0,
-            limitBytes:
-              typeof data?.limitBytes === "number" ? data.limitBytes : 0,
-            provider:
-              typeof data?.provider === "string"
-                ? data.provider
-                : "MO T-SHIRT Host",
-            note:
-              typeof data?.note === "string"
-                ? data.note
-                : "Estimated from the current host footprint.",
-            isEstimate: Boolean(data?.isEstimate),
-          });
+          if (data?.manager) setProductionManager(data.manager as ProductionManager);
+          setProductionPartners(Array.isArray(data?.partners) ? data.partners : []);
+          setOperationalError(null);
         }
       } catch (error) {
         if (!ignore) {
-          setHostingUsageError(
-            error instanceof Error
-              ? error.message
-              : "Failed to load host storage usage."
-          );
+          setOperationalError(error instanceof Error ? error.message : "Failed to load operational users.");
         }
       } finally {
-        if (!ignore) {
-          setHostingUsageLoading(false);
-        }
+        if (!ignore) setOperationalLoading(false);
       }
     })();
 
@@ -870,6 +718,30 @@ export default function SettingsPage() {
     }
   };
 
+  const saveOperationalUsers = async () => {
+    setOperationalSaving(true);
+    setOperationalError(null);
+    setOperationalNotice(null);
+    try {
+      const res = await fetch("/api/admin/partners", {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ manager: productionManager, partners: productionPartners }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof data?.error === "string" ? data.error : "Failed to update operational users.");
+      if (data?.manager) setProductionManager(data.manager as ProductionManager);
+      if (Array.isArray(data?.partners)) setProductionPartners(data.partners);
+      setOperationalNotice("Operational users updated");
+      window.setTimeout(() => setOperationalNotice(null), 2400);
+    } catch (error) {
+      setOperationalError(error instanceof Error ? error.message : "Failed to update operational users.");
+    } finally {
+      setOperationalSaving(false);
+    }
+  };
+
   const panelClass = "rounded-[32px] border border-slate-200 bg-white shadow-sm";
 
   return (
@@ -885,10 +757,6 @@ export default function SettingsPage() {
               <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">
                 Workspace settings
               </h1>
-              <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-                Use this page as the main control room for storage, quotation routing,
-                Firebase admin authentication, and page access across the MO T-SHIRT workspace.
-              </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
@@ -910,46 +778,6 @@ export default function SettingsPage() {
             </div>
           </div>
         </header>
-
-        <section className={`${panelClass} p-6 sm:p-8`}>
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-700">
-                <HardDrive className="h-3.5 w-3.5" />
-                Storage Overview
-              </div>
-              <h2 className="mt-4 text-xl font-semibold text-slate-900">
-                Storage usage
-              </h2>
-              <p className="mt-2 max-w-3xl text-sm text-slate-600">
-                Track how much Firebase bucket space and MO T-SHIRT host footprint are currently in use.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-4 xl:grid-cols-2">
-            <StorageUsageCard
-              title="Firebase Storage"
-              subtitle="Documents and quotation attachments"
-              icon={<Database className="h-4 w-4" />}
-              usage={firebaseUsage}
-              loading={firebaseUsageLoading}
-              loadingLabel="Loading Firebase storage usage..."
-              loadingDetail="Counting files in documents and quotes."
-              error={firebaseUsageError}
-            />
-            <StorageUsageCard
-              title={hostingUsage?.provider || "MO T-SHIRT Host"}
-              subtitle="Current host footprint"
-              icon={<HardDrive className="h-4 w-4" />}
-              usage={hostingUsage}
-              loading={hostingUsageLoading}
-              loadingLabel="Loading host storage usage..."
-              loadingDetail="Checking the current host footprint."
-              error={hostingUsageError}
-            />
-          </div>
-        </section>
 
         <section className={`${panelClass} overflow-hidden`}>
           <div className="grid lg:grid-cols-[minmax(0,1.2fr)_360px]">
@@ -1288,13 +1116,13 @@ export default function SettingsPage() {
                     <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
                       {group}
                     </div>
-                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <div className="mt-3 grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
                       {items.map((item) => {
                         const checked = userDraft.allowedPages.includes(item.path);
                         return (
                           <label
                             key={item.path}
-                            className={`flex cursor-pointer items-start gap-3 rounded-2xl border px-4 py-4 transition ${
+                            className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-3 transition ${
                               checked
                                 ? "border-slate-900 bg-slate-900 text-white"
                                 : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
@@ -1304,14 +1132,9 @@ export default function SettingsPage() {
                               type="checkbox"
                               checked={checked}
                               onChange={() => toggleUserPage(item.path)}
-                              className="mt-1 h-4 w-4 rounded border-slate-300"
+                              className="h-4 w-4 rounded border-slate-300"
                             />
-                            <div className="min-w-0">
-                              <div className="text-sm font-semibold">{item.label}</div>
-                              <div className={`mt-1 text-xs leading-5 ${checked ? "text-slate-300" : "text-slate-500"}`}>
-                                {item.description}
-                              </div>
-                            </div>
+                            <div className="min-w-0 truncate text-sm font-semibold">{item.label}</div>
                           </label>
                         );
                       })}
@@ -1368,13 +1191,76 @@ export default function SettingsPage() {
 
             <aside className="space-y-4">
               <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
-                  Authentication Directory
-                </div>
-                <div className="mt-3 text-sm text-slate-600">
-                  This list shows the workspace owner, the shared Firebase admin account, and any managed admin users. Password resets are sent through Firebase Auth while page access stays controlled here.
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">
+                    Authentication Directory
+                  </div>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                    {users.length + productionPartners.length + 1}
+                  </span>
                 </div>
               </div>
+
+              <div className="rounded-[28px] border border-slate-900 bg-slate-950 p-5 text-white shadow-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-base font-semibold">{productionManager.name || "Tanvi"}</div>
+                    <div className="mt-1 text-xs text-slate-400">Production manager</div>
+                  </div>
+                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Active</span>
+                </div>
+                <input
+                  type="email"
+                  value={productionManager.email}
+                  onChange={(event) => setProductionManager((current) => ({ ...current, email: event.target.value }))}
+                  placeholder="Add email address"
+                  className="mt-4 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-white/30"
+                />
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {['Production Workspace', 'Quotes & Invoices', 'Couple Goals'].map((access) => (
+                    <span key={access} className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold text-slate-300">{access}</span>
+                  ))}
+                </div>
+              </div>
+
+              {productionPartners.map((partner) => (
+                <div key={partner.id} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-sm font-semibold text-white">{getInitials(partner.name, partner.email || partner.id)}</div>
+                      <div className="min-w-0">
+                        <div className="truncate text-base font-semibold text-slate-900">{partner.name}</div>
+                        <div className="text-xs text-slate-500">Production partner</div>
+                      </div>
+                    </div>
+                    <span className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wider ${partner.active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>{partner.active ? 'Active' : 'Paused'}</span>
+                  </div>
+                  <input
+                    type="email"
+                    value={partner.email}
+                    onChange={(event) => setProductionPartners((current) => current.map((entry) => entry.id === partner.id ? { ...entry, email: event.target.value, emails: event.target.value.trim() ? [event.target.value.trim()] : [] } : entry))}
+                    placeholder="Add email address"
+                    className="mt-4 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-400"
+                  />
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-600">Production Workspace</span>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-600">Assigned orders only</span>
+                    {partner.hasPassword ? <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-semibold text-blue-700">Login ready</span> : null}
+                  </div>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={saveOperationalUsers}
+                disabled={operationalLoading || operationalSaving}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-500"
+              >
+                {operationalSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                {operationalSaving ? "Saving" : "Save operational users"}
+              </button>
+              {operationalError ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{operationalError}</div> : null}
+              {operationalNotice ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{operationalNotice}</div> : null}
 
               {showCurrentAdminCard ? (
                 <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
@@ -1403,10 +1289,6 @@ export default function SettingsPage() {
                         Owner Account
                       </span>
                     </div>
-                  </div>
-
-                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                    This is the current workspace owner session. Owner access stays unrestricted across all admin pages.
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-2">
@@ -1441,9 +1323,6 @@ export default function SettingsPage() {
                     </span>
                   </div>
 
-                  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                    This shared Firebase account is used for connected storage and admin authentication tasks across the workspace.
-                  </div>
                 </div>
               ) : null}
 
@@ -1579,102 +1458,5 @@ export default function SettingsPage() {
         message="You changed the quotation email recipients. Save them before opening another admin page, or leave without saving."
       />
     </main>
-  );
-}
-
-function StorageUsageCard({
-  title,
-  subtitle,
-  icon,
-  usage,
-  loading,
-  loadingLabel,
-  loadingDetail,
-  error,
-}: {
-  title: string;
-  subtitle: string;
-  icon: React.ReactNode;
-  usage: UsageSnapshot | null;
-  loading: boolean;
-  loadingLabel: string;
-  loadingDetail: string;
-  error: string | null;
-}) {
-  const usedBytes = usage?.usedBytes ?? 0;
-  const limitBytes = usage?.limitBytes ?? 0;
-  const percentage = getUsagePercent(usedBytes, limitBytes);
-
-  return (
-    <div
-      className="rounded-[28px] border border-slate-200 bg-slate-50/80 p-5 sm:p-6"
-      aria-busy={loading}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-            {title}
-          </div>
-          <div className="mt-1 text-base font-semibold text-slate-900">
-            {subtitle}
-          </div>
-        </div>
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm">
-          {icon}
-        </div>
-      </div>
-
-      {loading ? (
-        <div
-          className="mt-6 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm"
-          role="status"
-        >
-          <div className="flex items-start gap-3">
-            <Loader2 className="mt-0.5 h-4 w-4 animate-spin text-slate-500" />
-            <div>
-              <div className="text-sm font-semibold text-slate-800">
-                {loadingLabel}
-              </div>
-              <div className="mt-1 text-xs leading-5 text-slate-500">
-                {loadingDetail}
-              </div>
-            </div>
-          </div>
-          <div className="mt-4 space-y-2">
-            <div className="h-3 animate-pulse rounded-full bg-slate-200" />
-            <div className="h-3 w-2/3 animate-pulse rounded-full bg-slate-200" />
-          </div>
-        </div>
-      ) : error ? (
-        <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {error}
-        </div>
-      ) : usage ? (
-        <>
-          <div className="mt-6 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <div className="text-3xl font-semibold tracking-tight text-slate-900">
-                {percentage.toFixed(1)}%
-              </div>
-              <div className="mt-1 text-sm text-slate-500">
-                {formatStorageBytes(usedBytes)} used of {formatStorageBytes(limitBytes)}
-              </div>
-            </div>
-            <div className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
-              {usage.isEstimate ? "Estimate" : "Live"}
-            </div>
-          </div>
-
-          <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-200">
-            <div
-              className="h-full rounded-full bg-slate-900 transition-all"
-              style={{ width: `${percentage}%` }}
-            />
-          </div>
-
-          <p className="mt-3 text-sm text-slate-500">{usage.note}</p>
-        </>
-      ) : null}
-    </div>
   );
 }

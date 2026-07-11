@@ -6,6 +6,7 @@ export const runtime = "nodejs";
 
 const LOCAL_DOCKER_DATABASE_URL =
   "postgresql://mo_tshirt:mo_tshirt_dev@localhost:54329/mo_tshirt_docker_test";
+const DEFAULT_POSTGRES_STORAGE_LIMIT_MB = 512;
 
 function getDatabaseUrl() {
   return (
@@ -44,11 +45,53 @@ export async function GET() {
   }
 
   const databaseUrl = getDatabaseUrl();
-  return NextResponse.json({
+  const baseStatus = {
     configured: Boolean(databaseUrl),
     connection: maskDatabaseUrl(databaseUrl),
     env: getDatabaseUrlSource(),
+  };
+  if (!databaseUrl) return NextResponse.json(baseStatus);
+
+  const configuredLimitMb = Number(process.env.POSTGRES_STORAGE_LIMIT_MB);
+  const limitBytes = Math.round(
+    (Number.isFinite(configuredLimitMb) && configuredLimitMb > 0
+      ? configuredLimitMb
+      : DEFAULT_POSTGRES_STORAGE_LIMIT_MB) * 1024 * 1024
+  );
+  const client = new Client({
+    connectionString: databaseUrl,
+    connectionTimeoutMillis: 15_000,
+    statement_timeout: 12_000,
   });
+
+  try {
+    await client.connect();
+    const result = await client.query<{
+      database_name: string;
+      used_bytes: string;
+    }>(`
+      select
+        current_database() as database_name,
+        pg_database_size(current_database())::text as used_bytes
+    `);
+    const row = result.rows[0];
+    return NextResponse.json({
+      ...baseStatus,
+      storage: {
+        databaseName: row?.database_name || "PostgreSQL",
+        usedBytes: Number(row?.used_bytes || 0),
+        limitBytes,
+        isEstimate: !process.env.POSTGRES_STORAGE_LIMIT_MB,
+      },
+    });
+  } catch (error) {
+    return NextResponse.json({
+      ...baseStatus,
+      storageError: error instanceof Error ? error.message : "Could not read PostgreSQL storage.",
+    });
+  } finally {
+    await client.end().catch(() => null);
+  }
 }
 
 export async function POST() {
