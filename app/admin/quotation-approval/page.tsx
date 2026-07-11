@@ -3616,7 +3616,7 @@ export default function QuotationApprovalPage() {
                             const hasTransparentArtwork = Boolean(attachment.originalUrl && attachment.url);
                             return (
                               <div
-                                key={`${attachment.url || attachment.filename || "attachment"}-${index}`}
+                                key={`${attachment.originalUrl || attachment.url || attachment.originalFilename || attachment.filename || "attachment"}-${index}`}
                                 className="min-w-0 overflow-hidden rounded-[22px] border border-[#ebebeb] bg-[#f7f7f7] p-3.5"
                               >
                                 <div className="grid min-w-0 gap-3">
