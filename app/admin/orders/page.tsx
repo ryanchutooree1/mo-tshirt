@@ -2839,6 +2839,8 @@ function OrdersPageInner() {
                           Email
                           <AutoFitInput
                             value={docDraft.clientEmail}
+                            minFontSize={9}
+                            maxFontSize={12}
                             onChange={(e) =>
                               setDocDraft((prev) => (prev ? { ...prev, clientEmail: e.target.value } : prev))
                             }

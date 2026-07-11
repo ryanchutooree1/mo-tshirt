@@ -3738,6 +3738,8 @@ export default function QuotationApprovalPage() {
                                   <AutoFitInput
                                     type="email"
                                     value={draft.contactEmail}
+                                    minFontSize={9}
+                                    maxFontSize={12}
                                     onChange={(e) =>
                                       setDraft({ ...draft, contactEmail: e.target.value })
                                     }
@@ -4715,6 +4717,8 @@ export default function QuotationApprovalPage() {
                           <AutoFitInput
                             type="email"
                             value={draft.contactEmail}
+                            minFontSize={9}
+                            maxFontSize={12}
                             onChange={(e) => setDraft({ ...draft, contactEmail: e.target.value })}
                             className={fieldClass}
                             placeholder="client@email.com"
