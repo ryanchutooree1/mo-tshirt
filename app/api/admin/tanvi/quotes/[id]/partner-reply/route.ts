@@ -67,7 +67,7 @@ function buildReplyEmail({
   managerName: string;
   message: string;
 }) {
-  const adminUrl = `${SITE_URL}/admin/tanvi`;
+  const adminUrl = `${SITE_URL}/admin/workspace`;
   const subject = `Tanvi reply for ${quoteCode}`;
   const rows = [
     ["Quote", quoteCode],

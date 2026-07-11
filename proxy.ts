@@ -32,6 +32,7 @@ function resolveApiRateLimit(pathname: string) {
 
 function isPartnerDeskRoute(pathname: string) {
   return (
+    pathname === "/admin/workspace" ||
     pathname === "/admin/yan_list" ||
     pathname === "/admin/shab_list" ||
     (pathname.startsWith("/admin/partners/") && pathname !== "/admin/partners")

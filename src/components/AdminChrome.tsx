@@ -247,6 +247,10 @@ function pageLabel(path: AdminPagePath) {
   return LABEL_OVERRIDES[path] || OPTION_BY_PATH.get(path)?.label || path;
 }
 
+function pageHref(path: AdminPagePath) {
+  return path === "/admin/tanvi" ? "/admin/workspace" : path;
+}
+
 function activePagePath(pathname: string) {
   return [...ALL_ADMIN_PAGE_PATHS]
     .sort((left, right) => right.length - left.length)
@@ -317,6 +321,7 @@ export default function AdminChrome({
   const { theme, toggleTheme } = useAdminTheme();
   const isDark = theme === "dark";
   const isPartnerDesk =
+    pathname === "/admin/workspace" ||
     pathname === "/admin/yan_list" ||
     pathname === "/admin/shab_list" ||
     (pathname.startsWith("/admin/partners/") && pathname !== "/admin/partners");
@@ -557,7 +562,7 @@ export default function AdminChrome({
   function openSearchResult(path: AdminPagePath) {
     setNavQuery("");
     searchRef.current?.blur();
-    router.push(path);
+    router.push(pageHref(path));
   }
 
   if (isPartnerDesk) {
@@ -631,7 +636,7 @@ export default function AdminChrome({
                       return (
                         <Link
                           key={path}
-                          href={path}
+                          href={pageHref(path)}
                           title={collapsed ? pageLabel(path) : undefined}
                           aria-current={active ? "page" : undefined}
                           onClick={() => setMobileOpen(false)}

@@ -33,7 +33,7 @@ export const DEFAULT_PRINT_PARTNERS: PrintPartner[] = [
   {
     id: "yan",
     name: "Yan",
-    path: "/admin/yan_list",
+    path: "/admin/workspace?partner=yan",
     active: true,
     productionNotes: [],
     paymentDetails: {
@@ -51,7 +51,7 @@ export const DEFAULT_PRINT_PARTNERS: PrintPartner[] = [
   {
     id: "shabanaz",
     name: "Shabbanaz",
-    path: "/admin/shab_list",
+    path: "/admin/workspace?partner=shabanaz",
     active: true,
     productionNotes: [
       "Accepts DTF Printing and Serigraphy Printing orders.",
@@ -365,9 +365,7 @@ export function isPrintPartnerId(value: unknown): value is PrintPartnerId {
 }
 
 export function getPrintPartnerPath(partnerId: PrintPartnerId) {
-  if (partnerId === "yan") return "/admin/yan_list";
-  if (partnerId === "shabanaz") return "/admin/shab_list";
-  return `/admin/partners/${partnerId}`;
+  return `/admin/workspace?partner=${encodeURIComponent(partnerId)}`;
 }
 
 export function formatPartnerNameFromId(partnerId: PrintPartnerId) {

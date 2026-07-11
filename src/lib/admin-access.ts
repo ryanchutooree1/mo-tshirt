@@ -113,8 +113,8 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
   },
   {
     path: "/admin/tanvi",
-    label: "Tanvi Desk",
-    description: "Production manager routing, blockers, and partner follow-up.",
+    label: "Production Workspace",
+    description: "Role-based routing, production work, and partner follow-up.",
     group: "Operations",
   },
   {

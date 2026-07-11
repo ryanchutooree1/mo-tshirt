@@ -1629,10 +1629,10 @@ export default function TanviDeskPage() {
           <div className="grid gap-3 p-3 sm:p-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(24rem,1fr)] lg:p-5">
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-700">
-                Tanvi Desk
+                Production Workspace · Manager access
               </p>
               <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
-                Orders and follow-up
+                Orders, routing and follow-up
               </h1>
               <div className="mt-3 grid gap-2">
                 <button

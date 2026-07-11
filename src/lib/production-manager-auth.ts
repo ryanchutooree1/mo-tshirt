@@ -1,8 +1,8 @@
 import type { AdminPagePath } from "@/lib/admin-access";
 
-export const PRODUCTION_MANAGER_PATH = "/admin/tanvi" satisfies AdminPagePath;
+export const PRODUCTION_MANAGER_PATH = "/admin/workspace" as const;
 export const PRODUCTION_MANAGER_ALLOWED_PAGES: AdminPagePath[] = [
-  PRODUCTION_MANAGER_PATH,
+  "/admin/tanvi",
   "/admin/quotation-approval",
   "/admin/couple-goals",
 ];

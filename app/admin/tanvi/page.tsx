@@ -1,5 +1,5 @@
-import TanviDeskPage from "@/components/admin/TanviDeskPage";
+import { redirect } from "next/navigation";
 
 export default function TanviAdminPage() {
-  return <TanviDeskPage />;
+  redirect("/admin/workspace");
 }

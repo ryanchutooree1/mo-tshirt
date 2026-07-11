@@ -27,7 +27,7 @@ type PartnerLoginPayload = {
 
 type ManagerLoginPayload = {
   displayName: string;
-  path: "/admin/tanvi";
+  path: "/admin/workspace";
 };
 
 function isPartnerLoginPayload(value: unknown): value is PartnerLoginPayload {
@@ -38,9 +38,7 @@ function isPartnerLoginPayload(value: unknown): value is PartnerLoginPayload {
     typeof candidate.partnerId === "string" &&
     typeof candidate.displayName === "string" &&
     typeof candidate.path === "string" &&
-    (candidate.path === "/admin/yan_list" ||
-      candidate.path === "/admin/shab_list" ||
-      candidate.path.startsWith("/admin/partners/"))
+    candidate.path.startsWith("/admin/workspace")
   );
 }
 
@@ -48,7 +46,7 @@ function isManagerLoginPayload(value: unknown): value is ManagerLoginPayload {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<ManagerLoginPayload>;
 
-  return candidate.path === "/admin/tanvi" && typeof candidate.displayName === "string";
+  return candidate.path === "/admin/workspace" && typeof candidate.displayName === "string";
 }
 
 function LoginInner() {
