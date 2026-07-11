@@ -3294,6 +3294,22 @@ export default function QuotationApprovalPage() {
                       </details>
                     </div>
 
+                    <div className="mt-4 border-t border-red-100 pt-4">
+                      <button
+                        type="button"
+                        onClick={handleDeleteQuote}
+                        disabled={deletingQuote}
+                        className={`inline-flex w-full items-center justify-center gap-2 rounded-full border px-4 py-2.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                          isDark
+                            ? "border-rose-300/45 bg-rose-500/15 text-rose-100 hover:bg-rose-500/25"
+                            : "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                        }`}
+                      >
+                        <FiTrash2 className="h-4 w-4" />
+                        {deletingQuote ? "Deleting..." : "Delete quotation"}
+                      </button>
+                    </div>
+
                     <div className="mt-6 border-t border-[#ebebeb] pt-6">
                       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
@@ -4953,19 +4969,6 @@ export default function QuotationApprovalPage() {
                           <Link href="/admin/orders" className={secondaryButtonClass}>
                             Open order management
                           </Link>
-                          <button
-                            type="button"
-                            onClick={handleDeleteQuote}
-                            disabled={deletingQuote}
-                            className={`inline-flex items-center justify-center gap-2 rounded-full border px-4 py-2.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                              isDark
-                                ? "border-rose-300/45 bg-rose-500/15 !text-rose-100 hover:bg-rose-500/25"
-                                : "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-                            }`}
-                          >
-                            <FiTrash2 className="h-4 w-4" />
-                            {deletingQuote ? "Deleting..." : "Delete quotation"}
-                          </button>
                         </div>
 
                         {sendValidationError ? (
