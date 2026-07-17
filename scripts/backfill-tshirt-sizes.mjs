@@ -210,7 +210,10 @@ async function run() {
   };
 
   const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+  const db = getFirestore(
+    app,
+    process.env.NEXT_PUBLIC_FIREBASE_DATABASE_ID?.trim() || "(default)",
+  );
 
   const snap = await getDocs(collection(db, "shops"));
   const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));

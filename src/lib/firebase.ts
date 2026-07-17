@@ -26,8 +26,10 @@ const firebaseConfig = {
 
 // Prevent re-initialization during hot reload
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const firestoreDatabaseId =
+  process.env.NEXT_PUBLIC_FIREBASE_DATABASE_ID?.trim() || "(default)";
 
 // Export Firebase services
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = getFirestore(app, firestoreDatabaseId);
 export const storage = getStorage(app);

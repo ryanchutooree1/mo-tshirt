@@ -339,7 +339,10 @@ async function run() {
   };
 
   const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+  const db = getFirestore(
+    app,
+    process.env.NEXT_PUBLIC_FIREBASE_DATABASE_ID?.trim() || "(default)",
+  );
 
   const plans = [
     ["products", normalizeProductsDoc],
