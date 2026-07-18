@@ -38,7 +38,6 @@ import { jsPDF } from "jspdf";
 import {
   FiChevronLeft,
   FiChevronRight,
-  FiChevronDown,
   FiCheckCircle,
   FiClock,
   FiDownload,
@@ -174,6 +173,11 @@ type ClientResponseHistoryEntry = {
     contentType?: string;
     size?: number;
   };
+};
+
+type QuotationMissingField = {
+  label: string;
+  target: string;
 };
 
 type BackgroundRemovalJob = {
@@ -373,6 +377,7 @@ type QuoteRecord = {
   clientDecisionComment?: string;
   clientDecisionAtIso?: string;
   clientResponseHistory?: ClientResponseHistoryEntry[];
+  sentAt?: Date | null;
   paymentEvidence?: {
     uploadId?: string;
     url?: string;
@@ -1588,6 +1593,7 @@ export default function QuotationApprovalPage() {
     useState<ProductionManager>(DEFAULT_PRODUCTION_MANAGER);
   const [printPartners, setPrintPartners] = useState<PrintPartner[]>(PRINT_PARTNERS);
   const [workflowStudioOpen, setWorkflowStudioOpen] = useState(false);
+  const [pendingMissingField, setPendingMissingField] = useState<string | null>(null);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("inbox");
   const [inboxCollapsed, setInboxCollapsed] = useState(false);
   const [partnerVisibleFields, setPartnerVisibleFields] =
@@ -1622,6 +1628,28 @@ export default function QuotationApprovalPage() {
       return nextValue;
     });
   };
+
+  const openWorkflowStudioAt = (target?: string) => {
+    setPendingMissingField(target || null);
+    setWorkflowStudioOpen(true);
+  };
+
+  useEffect(() => {
+    if (!workflowStudioOpen || !pendingMissingField) return;
+    const timer = window.setTimeout(() => {
+      const targets = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          `[data-quotation-field="${pendingMissingField}"]`
+        )
+      );
+      const target = targets.find((element) => element.getClientRects().length > 0);
+      if (!target) return;
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      target.focus({ preventScroll: true });
+      setPendingMissingField(null);
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [pendingMissingField, workflowStudioOpen]);
 
   useEffect(() => {
     let ignore = false;
@@ -1767,6 +1795,7 @@ export default function QuotationApprovalPage() {
             id: docSnap.id,
             ...data,
             movedToOrdersAt: parseTimestamp(data.movedToOrdersAt),
+            sentAt: parseTimestamp(data.sentAt),
             partner: parseQuotePartnerAssignment(data.partner),
             createdAt: parseTimestamp(data.createdAt),
             updatedAt: parseTimestamp(data.updatedAt),
@@ -2276,31 +2305,46 @@ export default function QuotationApprovalPage() {
   }, [draft]);
 
   const quotationMissingFields = useMemo(() => {
-    if (!draft) return [] as string[];
-    const missing: string[] = [];
-    const requireText = (value: string, label: string) => {
-      if (!value.trim()) missing.push(label);
+    if (!draft) return [] as QuotationMissingField[];
+    const missing: QuotationMissingField[] = [];
+    const requireText = (value: string, label: string, target: string) => {
+      if (!value.trim()) missing.push({ label, target });
     };
-    requireText(draft.contactName, "Client contact name");
-    requireText(draft.contactEmail, "Client email");
-    requireText(draft.contactPhone, "Client phone");
-    requireText(draft.clientCompany, "Client / company name");
-    requireText(draft.documentNumber, "Quotation number");
-    requireText(draft.documentDate, "Quotation date");
+    requireText(draft.contactName, "Client contact name", "contact-name");
+    requireText(draft.contactEmail, "Client email", "contact-email");
+    requireText(draft.contactPhone, "Client phone", "contact-phone");
+    requireText(draft.clientCompany, "Client / company name", "client-company");
+    requireText(draft.documentNumber, "Quotation number", "document-number");
+    requireText(draft.documentDate, "Quotation date", "document-date");
     if (draft.documentType === "quotation") {
-      requireText(draft.validUntil, "Valid-until date");
+      requireText(draft.validUntil, "Valid-until date", "valid-until");
     }
-    requireText(draft.preparedBy, "Prepared by");
-    requireText(draft.terms, "Terms and payment details");
+    requireText(draft.preparedBy, "Prepared by", "prepared-by");
+    requireText(draft.terms, "Terms and payment details", "terms");
 
     if (!draft.lines.length) {
-      missing.push("At least one line item");
+      missing.push({ label: "At least one line item", target: "add-line-item" });
     } else {
       draft.lines.forEach((line, index) => {
         const lineNumber = index + 1;
-        if (!line.description.trim()) missing.push(`Line ${lineNumber} description`);
-        if (safeNumber(line.quantity, 0) <= 0) missing.push(`Line ${lineNumber} quantity`);
-        if (safeNumber(line.unitPrice, 0) <= 0) missing.push(`Line ${lineNumber} unit price`);
+        if (!line.description.trim()) {
+          missing.push({
+            label: `Line ${lineNumber} description`,
+            target: `line-${index}-description`,
+          });
+        }
+        if (safeNumber(line.quantity, 0) <= 0) {
+          missing.push({
+            label: `Line ${lineNumber} quantity`,
+            target: `line-${index}-quantity`,
+          });
+        }
+        if (safeNumber(line.unitPrice, 0) <= 0) {
+          missing.push({
+            label: `Line ${lineNumber} unit price`,
+            target: `line-${index}-unit-price`,
+          });
+        }
       });
     }
     return missing;
@@ -2332,6 +2376,72 @@ export default function QuotationApprovalPage() {
     () => comparePaymentAmount(selected?.paymentEvidence?.assessment?.amount, totals.total),
     [selected?.paymentEvidence?.assessment?.amount, totals.total]
   );
+  const clientWorkflowStatus = useMemo(() => {
+    const responseDate = parseTimestamp(selected?.clientDecisionAtIso);
+    const formattedResponseDate = responseDate
+      ? format(responseDate, "dd MMM yyyy, HH:mm")
+      : "";
+    const formattedSentDate = selected?.sentAt
+      ? format(selected.sentAt, "dd MMM yyyy, HH:mm")
+      : "";
+
+    if (selected?.clientDecision === "accepted") {
+      return {
+        label: "Client accepted",
+        detail: formattedResponseDate
+          ? `Accepted on ${formattedResponseDate}.`
+          : "The client accepted this quotation.",
+        tone: "border-emerald-200 bg-emerald-50 text-emerald-800",
+        state: "accepted" as const,
+      };
+    }
+    if (selected?.clientDecision === "changes_requested") {
+      return {
+        label: "Changes requested",
+        detail: selected.clientDecisionComment || (formattedResponseDate
+          ? `Client responded on ${formattedResponseDate}.`
+          : "The client asked for changes."),
+        tone: "border-amber-200 bg-amber-50 text-amber-800",
+        state: "changes" as const,
+      };
+    }
+    if (selected?.clientDecision === "rejected") {
+      return {
+        label: "Client rejected",
+        detail: selected.clientDecisionComment || (formattedResponseDate
+          ? `Client responded on ${formattedResponseDate}.`
+          : "The client rejected this quotation."),
+        tone: "border-red-200 bg-red-50 text-red-800",
+        state: "rejected" as const,
+      };
+    }
+    if (selectedStatus === "sent") {
+      return {
+        label: "Sent · waiting for client",
+        detail: formattedSentDate
+          ? `Sent to ${draft?.contactEmail || selected?.email || "the client"} on ${formattedSentDate}.`
+          : `Sent to ${draft?.contactEmail || selected?.email || "the client"}; no response yet.`,
+        tone: "border-blue-200 bg-blue-50 text-blue-800",
+        state: "waiting" as const,
+      };
+    }
+    if (selectedStatus === "approved") {
+      return {
+        label: "Approved internally · not sent",
+        detail: "The team approved this quotation, but it has not been sent to the client.",
+        tone: "border-violet-200 bg-violet-50 text-violet-800",
+        state: "approved" as const,
+      };
+    }
+    return {
+      label: "Not sent to client",
+      detail: selectedStatus === "review"
+        ? "The request was reviewed. Complete the quotation and send it when ready."
+        : "This is a new request. Complete the missing information before sending.",
+      tone: "border-slate-200 bg-slate-50 text-slate-700",
+      state: "not_sent" as const,
+    };
+  }, [draft?.contactEmail, selected, selectedStatus]);
 
   const sendValidationError = useMemo(
     () => (draft ? validateDraftBeforeSend(draft) : "Select a quotation first."),
@@ -2348,6 +2458,12 @@ export default function QuotationApprovalPage() {
       : "Complete Step 2 first (Mark approved or Send to client).";
   const simpleNextAction = !selected
     ? "Choose a quotation"
+    : selected.clientDecision === "changes_requested"
+      ? "Review client changes"
+      : selected.clientDecision === "rejected"
+        ? "Review client response"
+        : selectedStatus === "sent" && !selected.clientDecision
+          ? "Waiting for client"
     : selectedStatus === "new"
       ? "Read the request"
       : sendValidationError
@@ -3661,9 +3777,59 @@ export default function QuotationApprovalPage() {
                             {selectedPrimaryStatus?.label || STATUS_LABELS.new}
                           </span>
                         </div>
-                        {sendValidationError ? (
-                          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-                            {sendValidationError}
+                        <div className={`mt-4 rounded-2xl border px-4 py-3 ${clientWorkflowStatus.tone}`}>
+                          <div className="flex items-start gap-3">
+                            {clientWorkflowStatus.state === "accepted" ? (
+                              <FiCheckCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                            ) : clientWorkflowStatus.state === "rejected" ? (
+                              <FiXCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                            ) : (
+                              <FiClock className="mt-0.5 h-5 w-5 shrink-0" />
+                            )}
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold">{clientWorkflowStatus.label}</p>
+                              <p className="mt-0.5 text-xs leading-5 opacity-80">
+                                {clientWorkflowStatus.detail}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        {quotationMissingCount > 0 ? (
+                          <div className={`mt-3 rounded-2xl border p-4 ${
+                            isDark
+                              ? "border-amber-300/25 bg-amber-300/10 text-amber-100"
+                              : "border-amber-200 bg-amber-50 text-amber-900"
+                          }`}>
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div>
+                                <p className="text-sm font-bold">
+                                  {quotationMissingCount} detail{quotationMissingCount === 1 ? "" : "s"} needed
+                                </p>
+                                <p className="mt-0.5 text-xs opacity-75">
+                                  Click a field below to open it in Document Studio.
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => openWorkflowStudioAt(quotationMissingFields[0]?.target)}
+                                className="inline-flex items-center gap-2 rounded-full border border-current/20 bg-white/70 px-3 py-2 text-xs font-bold transition hover:bg-white"
+                              >
+                                <FiEdit2 className="h-3.5 w-3.5" />
+                                Fill missing info
+                              </button>
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {quotationMissingFields.map((field) => (
+                                <button
+                                  key={field.target}
+                                  type="button"
+                                  onClick={() => openWorkflowStudioAt(field.target)}
+                                  className="rounded-full border border-current/20 bg-white/70 px-3 py-1.5 text-left text-xs font-semibold transition hover:bg-white"
+                                >
+                                  {field.label}
+                                </button>
+                              ))}
+                            </div>
                           </div>
                         ) : null}
                         {notice ? (
@@ -3686,10 +3852,10 @@ export default function QuotationApprovalPage() {
                       </div>
                     </div>
 
-                    <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                    <div className="mt-5 flex flex-wrap items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => setWorkflowStudioOpen(true)}
+                        onClick={() => openWorkflowStudioAt()}
                         className={darkButtonClass}
                       >
                         <FiFileText className="h-4 w-4" />
@@ -3711,7 +3877,11 @@ export default function QuotationApprovalPage() {
                         className={primaryButtonClass}
                       >
                         <FiSend className="h-4 w-4" />
-                        {sending ? "Sending..." : "Send"}
+                        {sending
+                          ? "Sending..."
+                          : quoteHasBeenSent || selected.clientDecision
+                            ? "Resend quotation"
+                            : "Send quotation"}
                       </button>
                       <button
                         type="button"
@@ -3722,57 +3892,49 @@ export default function QuotationApprovalPage() {
                         <FiCheckCircle className="h-4 w-4" />
                         {quoteIsMarkedApproved ? "Approved" : "Approve + order"}
                       </button>
-                      <details className="group sm:col-span-3">
-                        <summary className={`${secondaryButtonClass} w-full cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
-                          More actions
-                          <FiChevronDown className="h-4 w-4 transition group-open:rotate-180" />
-                        </summary>
-                        <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                          <button
-                            type="button"
-                            onClick={handleViewPdf}
-                            className={secondaryButtonClass}
-                          >
-                            <FiFileText className="h-4 w-4" />
-                            View PDF
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => moveToOrders()}
-                            disabled={
-                              movingToOrders ||
-                              Boolean(moveToOrdersError) ||
-                              !quoteIsMarkedApproved
-                            }
-                            title={moveToOrdersTitle}
-                            className={secondaryButtonClass}
-                          >
-                            <FiCheckCircle className="h-4 w-4" />
-                            {movingToOrders
-                              ? "Moving..."
-                              : quoteInOrders
-                                ? "Sync order"
-                                : "Move order"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => updateSelectedStatus("review", "Marked as read.")}
-                            disabled={statusSaving || (selected.status || "new") !== "new"}
-                            className={secondaryButtonClass}
-                          >
-                            <FiClock className="h-4 w-4" />
-                            {statusSaving ? "Updating..." : "Mark read"}
-                          </button>
-                        </div>
-                      </details>
+                      <button
+                        type="button"
+                        onClick={handleViewPdf}
+                        className={secondaryButtonClass}
+                      >
+                        <FiFileText className="h-4 w-4" />
+                        View PDF
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveToOrders()}
+                        disabled={
+                          movingToOrders ||
+                          Boolean(moveToOrdersError) ||
+                          !quoteIsMarkedApproved
+                        }
+                        title={moveToOrdersTitle}
+                        className={secondaryButtonClass}
+                      >
+                        <FiCheckCircle className="h-4 w-4" />
+                        {movingToOrders
+                          ? "Moving..."
+                          : quoteInOrders
+                            ? "Sync order"
+                            : "Move order"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateSelectedStatus("review", "Marked as read.")}
+                        disabled={statusSaving || (selected.status || "new") !== "new"}
+                        className={secondaryButtonClass}
+                      >
+                        <FiClock className="h-4 w-4" />
+                        {statusSaving ? "Updating..." : "Mark read"}
+                      </button>
                     </div>
 
-                    <div className="mt-4 border-t border-red-100 pt-4">
+                    <div className="mt-4 flex justify-end border-t border-red-100 pt-4">
                       <button
                         type="button"
                         onClick={handleDeleteQuote}
                         disabled={deletingQuote}
-                        className={`inline-flex w-full items-center justify-center gap-2 rounded-full border px-4 py-2.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                        className={`inline-flex items-center justify-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
                           isDark
                             ? "border-rose-300/45 bg-rose-500/15 text-rose-100 hover:bg-rose-500/25"
                             : "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
@@ -3798,14 +3960,14 @@ export default function QuotationApprovalPage() {
                           {quotationMissingFields.length ? (
                             <div className="mt-2 max-w-2xl rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] leading-5 text-red-700">
                               <span className="font-extrabold">Missing information: </span>
-                              {quotationMissingFields.join(" • ")}
+                              {quotationMissingFields.map((field) => field.label).join(" • ")}
                             </div>
                           ) : null}
                         </div>
                         {quotationMissingCount > 0 ? (
                           <button
                             type="button"
-                            onClick={() => setWorkflowStudioOpen(true)}
+                            onClick={() => openWorkflowStudioAt(quotationMissingFields[0]?.target)}
                             className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-2 text-xs font-extrabold text-red-700 transition hover:bg-red-100"
                           >
                             <FiEdit2 className="h-3.5 w-3.5" />
@@ -5585,6 +5747,7 @@ export default function QuotationApprovalPage() {
                       <label className={labelClass}>
                         Number
                         <input
+                          data-quotation-field="document-number"
                           value={draft.documentNumber}
                           onChange={(e) => setDraft({ ...draft, documentNumber: e.target.value })}
                           className={fieldClass}
@@ -5594,6 +5757,7 @@ export default function QuotationApprovalPage() {
                       <label className={labelClass}>
                         Date
                         <input
+                          data-quotation-field="document-date"
                           type="date"
                           value={draft.documentDate}
                           onChange={(e) => setDraft({ ...draft, documentDate: e.target.value })}
@@ -5617,6 +5781,7 @@ export default function QuotationApprovalPage() {
                       <label className={labelClass}>
                         Prepared by
                         <input
+                          data-quotation-field="prepared-by"
                           value={draft.preparedBy}
                           onChange={(e) => setDraft({ ...draft, preparedBy: e.target.value })}
                           className={fieldClass}
@@ -5627,6 +5792,7 @@ export default function QuotationApprovalPage() {
                         <label className={labelClass}>
                           Valid until
                           <input
+                            data-quotation-field="valid-until"
                             type="date"
                             value={draft.validUntil}
                             onChange={(e) => setDraft({ ...draft, validUntil: e.target.value })}
@@ -5704,6 +5870,7 @@ export default function QuotationApprovalPage() {
                       </div>
                       <button
                         type="button"
+                        data-quotation-field="add-line-item"
                         onClick={() => addDraftLine("Product / Size")}
                         className={secondaryButtonClass}
                       >
@@ -5724,6 +5891,7 @@ export default function QuotationApprovalPage() {
                             <label className={`${labelClass} md:hidden`}>
                               Description
                               <input
+                                data-quotation-field={`line-${index}-description`}
                                 value={line.description}
                                 onChange={(e) =>
                                   updateDraftLine(index, { description: e.target.value })
@@ -5733,6 +5901,7 @@ export default function QuotationApprovalPage() {
                               />
                             </label>
                             <input
+                              data-quotation-field={`line-${index}-description`}
                               value={line.description}
                               onChange={(e) =>
                                 updateDraftLine(index, { description: e.target.value })
@@ -5744,6 +5913,7 @@ export default function QuotationApprovalPage() {
                             <label className={`${labelClass} md:hidden`}>
                               Qty
                               <input
+                                data-quotation-field={`line-${index}-quantity`}
                                 type="number"
                                 min={0}
                                 value={line.quantity}
@@ -5756,6 +5926,7 @@ export default function QuotationApprovalPage() {
                               />
                             </label>
                             <input
+                              data-quotation-field={`line-${index}-quantity`}
                               type="number"
                               min={0}
                               value={line.quantity}
@@ -5771,6 +5942,7 @@ export default function QuotationApprovalPage() {
                             <label className={`${labelClass} md:hidden`}>
                               Unit price
                               <input
+                                data-quotation-field={`line-${index}-unit-price`}
                                 type="number"
                                 min={0}
                                 value={line.unitPrice}
@@ -5783,6 +5955,7 @@ export default function QuotationApprovalPage() {
                               />
                             </label>
                             <input
+                              data-quotation-field={`line-${index}-unit-price`}
                               type="number"
                               min={0}
                               value={line.unitPrice}
@@ -5823,6 +5996,7 @@ export default function QuotationApprovalPage() {
                       <label className={labelClass}>
                         Client contact name
                         <AutoFitInput
+                          data-quotation-field="contact-name"
                           value={draft.contactName}
                           onChange={(e) => setDraft({ ...draft, contactName: e.target.value })}
                           className={fieldClass}
@@ -5833,6 +6007,7 @@ export default function QuotationApprovalPage() {
                         <label className={labelClass}>
                           Client email
                           <AutoFitInput
+                            data-quotation-field="contact-email"
                             type="email"
                             value={draft.contactEmail}
                             minFontSize={9}
@@ -5845,6 +6020,7 @@ export default function QuotationApprovalPage() {
                         <label className={labelClass}>
                           Phone / WhatsApp
                           <AutoFitInput
+                            data-quotation-field="contact-phone"
                             value={draft.contactPhone}
                             onChange={(e) => setDraft({ ...draft, contactPhone: e.target.value })}
                             className={fieldClass}
@@ -5855,6 +6031,7 @@ export default function QuotationApprovalPage() {
                       <label className={labelClass}>
                         Client / Company name
                         <AutoFitInput
+                          data-quotation-field="client-company"
                           value={draft.clientCompany}
                           onChange={(e) => setDraft({ ...draft, clientCompany: e.target.value })}
                           className={fieldClass}
@@ -5941,6 +6118,7 @@ export default function QuotationApprovalPage() {
                       <label className={labelClass}>
                         Terms and payment details
                         <textarea
+                          data-quotation-field="terms"
                           value={draft.terms}
                           onChange={(e) => setDraft({ ...draft, terms: e.target.value })}
                           rows={6}
@@ -5967,7 +6145,7 @@ export default function QuotationApprovalPage() {
                         {quotationMissingFields.length ? (
                           <div className="mt-2 rounded-xl border border-red-200 bg-red-50 px-2.5 py-2 text-[10px] leading-4 text-red-700">
                             <span className="font-extrabold">Missing information: </span>
-                            {quotationMissingFields.join(" • ")}
+                            {quotationMissingFields.map((field) => field.label).join(" • ")}
                           </div>
                         ) : null}
                       </div>
