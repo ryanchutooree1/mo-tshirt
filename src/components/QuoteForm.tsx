@@ -2,7 +2,14 @@
 
 import Image from "next/image";
 import { Check, ChevronDown, FileText, UploadCloud } from "lucide-react";
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type CSSProperties,
+  type FormEvent,
+} from "react";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
 import { trackQuoteSubmit } from "@/lib/analytics";
@@ -194,6 +201,11 @@ function formatColorOptionLabel(color: string) {
     return `${color} (Faster)`;
   }
   return color;
+}
+
+function getAdaptiveControlWidth(label: string, minCharacters: number, maxCharacters: number) {
+  const contentLength = Array.from(label.trim()).length + 5;
+  return `${Math.min(maxCharacters, Math.max(minCharacters, contentLength))}ch`;
 }
 
 function getColorSwatch(color: string) {
@@ -1158,8 +1170,15 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                     ) : null}
                   </div>
 
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                    <div>
+                  <div className="mt-3 flex flex-wrap items-end gap-3">
+                    <div
+                      className="w-full sm:w-[var(--field-width)]"
+                      style={
+                        {
+                          "--field-width": getAdaptiveControlWidth(line.garment, 13, 24),
+                        } as CSSProperties
+                      }
+                    >
                       <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Product</label>
                       <select
                         value={line.garment}
@@ -1183,7 +1202,18 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                         ))}
                       </select>
                     </div>
-                    <div>
+                    <div
+                      className="w-full sm:w-[var(--field-width)]"
+                      style={
+                        {
+                          "--field-width": getAdaptiveControlWidth(
+                            line.color ? formatColorOptionLabel(line.color) : colorPlaceholder,
+                            14,
+                            25
+                          ),
+                        } as CSSProperties
+                      }
+                    >
                       <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Colour</label>
                       <ColorSelect
                         value={line.color}
@@ -1196,7 +1226,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                         }}
                       />
                     </div>
-                    <div>
+                    <div className="w-[5.5rem] shrink-0">
                       <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Size</label>
                       <select
                         value={line.size}
@@ -1213,7 +1243,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                         ))}
                       </select>
                     </div>
-                    <div>
+                    <div className="w-[5.5rem] shrink-0">
                       <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Qty</label>
                       <input
                         type="number"
@@ -1228,7 +1258,20 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                         placeholder="2"
                       />
                     </div>
-                    <div>
+                    <div
+                      className="w-full sm:w-[var(--field-width)]"
+                      style={
+                        {
+                          "--field-width": getAdaptiveControlWidth(
+                            quotePrintPlacementOptions.find(
+                              (option) => option.value === item.printPlacement
+                            )?.label || "Print side",
+                            17,
+                            40
+                          ),
+                        } as CSSProperties
+                      }
+                    >
                       <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Print side</label>
                       <select
                         value={item.printPlacement}
