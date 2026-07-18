@@ -30,6 +30,7 @@ import { db } from "@/lib/firebase";
 import { formatMoney as formatDisplayMoney } from "@/lib/money";
 import {
   assessPaymentEvidence,
+  comparePaymentAmount,
   type PaymentEvidenceAssessment,
 } from "@/lib/payment-evidence";
 import { addDays, format, formatDistanceToNow } from "date-fns";
@@ -654,6 +655,24 @@ const getPrimaryStatusMeta = (status: QuoteStatus, docType: DocumentType) => {
 
 const getPaymentStatusMeta = (quote: QuoteRecord) => {
   const evidence = quote.paymentEvidence;
+  const amountComparison = comparePaymentAmount(
+    evidence?.assessment?.amount,
+    quote.quote?.total
+  );
+  if (amountComparison.status === "overpaid") {
+    return {
+      label: `Payment is greater by Rs ${(amountComparison.difference || 0).toLocaleString("en-MU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      shortLabel: "Overpaid",
+      tone: "border-red-200 bg-red-50 text-red-700",
+    };
+  }
+  if (amountComparison.status === "underpaid") {
+    return {
+      label: `Payment is less by Rs ${Math.abs(amountComparison.difference || 0).toLocaleString("en-MU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      shortLabel: "Underpaid",
+      tone: "border-red-200 bg-red-50 text-red-700",
+    };
+  }
   if (evidence?.verificationStatus === "confirmed") {
     return {
       label: "Payment confirmed",
@@ -2279,6 +2298,10 @@ export default function QuotationApprovalPage() {
     () => (selected ? getPaymentStatusMeta(selected) : null),
     [selected]
   );
+  const selectedPaymentComparison = useMemo(
+    () => comparePaymentAmount(selected?.paymentEvidence?.assessment?.amount, totals.total),
+    [selected?.paymentEvidence?.assessment?.amount, totals.total]
+  );
 
   const sendValidationError = useMemo(
     () => (draft ? validateDraftBeforeSend(draft) : "Select a quotation first."),
@@ -3410,9 +3433,9 @@ export default function QuotationApprovalPage() {
                               <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${selectedPaymentStatus?.tone || "border-[#e3e3e3] bg-[#f7f7f7] text-[#666666]"}`}>
                                 {selectedPaymentStatus?.label || "Payment not requested"}
                               </span>
-                              {selected.paymentEvidence?.assessment?.amount ? (
+                              {selectedPaymentComparison.detectedAmount !== null ? (
                                 <span className={`text-xs font-semibold ${isDark ? "text-white/60" : "text-[#5f5f5f]"}`}>
-                                  OCR amount: Rs {selected.paymentEvidence.assessment.amount.toLocaleString("en-MU")}
+                                  OCR amount: {formatMoney(selectedPaymentComparison.detectedAmount, draft.currency)}
                                 </span>
                               ) : null}
                             </div>
@@ -3468,9 +3491,33 @@ export default function QuotationApprovalPage() {
                                       : "Queued for admin check"}
                               </span>
                               {selected.paymentEvidence.ocrStatus === "complete" && typeof selected.paymentEvidence.assessment?.confidence === "number" ? <span>Confidence: {selected.paymentEvidence.assessment.confidence}%</span> : null}
-                              {selected.paymentEvidence.ocrStatus === "complete" && typeof selected.paymentEvidence.assessment?.amount === "number" ? <span>Detected: Rs {selected.paymentEvidence.assessment.amount.toLocaleString("en-MU")}</span> : null}
+                              {selected.paymentEvidence.ocrStatus === "complete" && selectedPaymentComparison.detectedAmount !== null ? <span>Detected: {formatMoney(selectedPaymentComparison.detectedAmount, draft.currency)}</span> : null}
                               {selected.paymentEvidence.ocrStatus === "complete" && selected.paymentEvidence.assessment?.reference ? <span>Ref: {selected.paymentEvidence.assessment.reference}</span> : null}
                             </div>
+                            {selected.paymentEvidence.ocrStatus === "complete" ? (
+                              <div className={`mt-3 rounded-xl border px-3 py-2.5 ${
+                                selectedPaymentComparison.status === "match"
+                                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                  : selectedPaymentComparison.status === "unavailable"
+                                    ? "border-slate-200 bg-slate-50 text-slate-700"
+                                    : "border-red-200 bg-red-50 text-red-800"
+                              }`}>
+                                <p className="text-xs font-bold">
+                                  {selectedPaymentComparison.status === "match"
+                                    ? "Amount matches the quotation."
+                                    : selectedPaymentComparison.status === "overpaid"
+                                      ? `Amount does not match — client paid ${formatMoney(selectedPaymentComparison.difference || 0, draft.currency)} more.`
+                                      : selectedPaymentComparison.status === "underpaid"
+                                        ? `Amount does not match — client paid ${formatMoney(Math.abs(selectedPaymentComparison.difference || 0), draft.currency)} less.`
+                                        : "Amount comparison unavailable — review the screenshot manually."}
+                                </p>
+                                {selectedPaymentComparison.expectedAmount !== null && selectedPaymentComparison.detectedAmount !== null ? (
+                                  <p className="mt-1 text-[11px] opacity-80">
+                                    Quotation: {formatMoney(selectedPaymentComparison.expectedAmount, draft.currency)} · OCR payment: {formatMoney(selectedPaymentComparison.detectedAmount, draft.currency)}
+                                  </p>
+                                ) : null}
+                              </div>
+                            ) : null}
                             {selected.paymentEvidence.ocrStatus === "error" ? (
                               <p className="mt-2 text-xs text-red-600">{selected.paymentEvidence.ocrError || "The OCR check could not read this screenshot."}</p>
                             ) : null}

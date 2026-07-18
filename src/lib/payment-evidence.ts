@@ -9,6 +9,41 @@ export type PaymentEvidenceAssessment = {
   signals: string[];
 };
 
+export type PaymentAmountComparison = {
+  status: "match" | "overpaid" | "underpaid" | "unavailable";
+  expectedAmount: number | null;
+  detectedAmount: number | null;
+  difference: number | null;
+};
+
+export function roundCurrencyAmount(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.round((Math.abs(parsed) + Number.EPSILON) * 100) / 100 : null;
+}
+
+export function comparePaymentAmount(
+  detectedValue: unknown,
+  expectedValue: unknown,
+  tolerance = 0.01
+): PaymentAmountComparison {
+  const detectedAmount = roundCurrencyAmount(detectedValue);
+  const expectedAmount = roundCurrencyAmount(expectedValue);
+  if (detectedAmount === null || expectedAmount === null || expectedAmount <= 0) {
+    return { status: "unavailable", expectedAmount, detectedAmount, difference: null };
+  }
+
+  const difference = roundCurrencyAmount(detectedAmount - expectedAmount) ?? 0;
+  if (Math.abs(detectedAmount - expectedAmount) <= tolerance) {
+    return { status: "match", expectedAmount, detectedAmount, difference: 0 };
+  }
+  return {
+    status: detectedAmount > expectedAmount ? "overpaid" : "underpaid",
+    expectedAmount,
+    detectedAmount,
+    difference,
+  };
+}
+
 function firstMatch(text: string, patterns: RegExp[]) {
   for (const pattern of patterns) {
     const match = text.match(pattern);
@@ -19,14 +54,36 @@ function firstMatch(text: string, patterns: RegExp[]) {
 
 function extractAmount(text: string) {
   const raw = firstMatch(text, [
-    /(?:amount|montant|total|mur|rs\.?)\s*[:\-]?\s*(?:mur|rs\.?)?\s*([\d][\d\s,.]*)/i,
-    /(?:mur|rs\.?)\s*([\d][\d\s,.]*)/i,
+    /(?:amount|montant|total)\s*[:\-]?\s*(?:mur|rs\.?)?\s*[-+]?([\d][\d,.]*)/i,
+    /(?:mur|rs\.?)\s*[:\-]?\s*[-+]?([\d][\d,.]*)/i,
   ]);
   if (!raw) return null;
 
-  const normalized = raw.replace(/\s/g, "").replace(/,(?=\d{3}(?:\D|$))/g, "").replace(",", ".");
-  const value = Number.parseFloat(normalized);
-  return Number.isFinite(value) && value > 0 ? value : null;
+  const compact = raw.replace(/[^\d,.]/g, "");
+  const lastComma = compact.lastIndexOf(",");
+  const lastDot = compact.lastIndexOf(".");
+  let normalized = compact;
+
+  if (lastComma >= 0 && lastDot >= 0) {
+    const decimalSeparator = lastComma > lastDot ? "," : ".";
+    const thousandsSeparator = decimalSeparator === "," ? "." : ",";
+    normalized = compact.split(thousandsSeparator).join("");
+    if (decimalSeparator === ",") normalized = normalized.replace(",", ".");
+  } else {
+    const separator = lastComma >= 0 ? "," : lastDot >= 0 ? "." : "";
+    if (separator) {
+      const parts = compact.split(separator);
+      const fraction = parts.at(-1) || "";
+      const integer = parts.slice(0, -1).join("");
+      const looksLikeThousands = parts.length === 2 && integer.length <= 3 && fraction.length === 3;
+      normalized = looksLikeThousands
+        ? `${integer}${fraction}`
+        : `${integer}.${fraction}`;
+    }
+  }
+
+  const value = roundCurrencyAmount(Number.parseFloat(normalized));
+  return value !== null && value > 0 ? value : null;
 }
 
 export function assessPaymentEvidence(rawText: string): PaymentEvidenceAssessment {
