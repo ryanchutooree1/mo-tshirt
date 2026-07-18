@@ -160,6 +160,21 @@ type QuoteAttachment = {
   backgroundRemovedAt?: string;
 };
 
+type ClientResponseHistoryEntry = {
+  id?: string;
+  action?: "accept" | "changes" | "reject";
+  decision?: "accepted" | "changes_requested" | "rejected";
+  comment?: string;
+  submittedAtIso?: string;
+  paymentEvidence?: {
+    uploadId?: string;
+    url?: string;
+    filename?: string;
+    contentType?: string;
+    size?: number;
+  };
+};
+
 type BackgroundRemovalJob = {
   status: "processing" | "done" | "error";
   progress: number;
@@ -356,6 +371,7 @@ type QuoteRecord = {
   clientDecision?: "accepted" | "changes_requested" | "rejected";
   clientDecisionComment?: string;
   clientDecisionAtIso?: string;
+  clientResponseHistory?: ClientResponseHistoryEntry[];
   paymentEvidence?: {
     uploadId?: string;
     url?: string;
@@ -3473,6 +3489,52 @@ export default function QuotationApprovalPage() {
                           {selected.clientDecision === "accepted" ? "Accepted" : selected.clientDecision === "changes_requested" ? "Action needed" : "Rejected"}
                         </span>
                       </div>
+
+                      {selected.clientResponseHistory?.length ? (
+                        <div className={`mt-5 rounded-2xl border p-4 ${isDark ? "border-white/10 bg-white/[0.04]" : "border-[#ebebeb] bg-[#f8f8f7]"}`}>
+                          <p className={`text-sm font-semibold ${isDark ? "text-white" : "text-[#222222]"}`}>Response history</p>
+                          <p className={`mt-1 text-xs ${isDark ? "text-white/50" : "text-[#717171]"}`}>
+                            New client actions and payment proofs are added here without replacing previous submissions.
+                          </p>
+                          <div className="mt-3 space-y-2.5">
+                            {[...selected.clientResponseHistory].reverse().map((entry, index) => {
+                              const responseDate = parseTimestamp(entry.submittedAtIso);
+                              const responseLabel = entry.action === "accept"
+                                ? "Accepted quotation"
+                                : entry.action === "changes"
+                                  ? "Requested changes"
+                                  : "Rejected quotation";
+                              return (
+                                <div key={entry.id || `${entry.action || "response"}-${entry.submittedAtIso || index}`} className={`rounded-xl border px-3.5 py-3 ${isDark ? "border-white/10 bg-black/15" : "border-[#e8e8e8] bg-white"}`}>
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                                      entry.action === "accept"
+                                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                        : entry.action === "changes"
+                                          ? "border-amber-200 bg-amber-50 text-amber-700"
+                                          : "border-red-200 bg-red-50 text-red-700"
+                                    }`}>
+                                      {responseLabel}
+                                    </span>
+                                    <span className={`text-[11px] ${isDark ? "text-white/45" : "text-[#8a8a8a]"}`}>
+                                      {responseDate ? format(responseDate, "dd MMM yyyy, HH:mm") : "Previous response"}
+                                    </span>
+                                  </div>
+                                  {entry.comment ? (
+                                    <p className={`mt-2 whitespace-pre-wrap text-xs leading-5 ${isDark ? "text-white/60" : "text-[#5f5f5f]"}`}>{entry.comment}</p>
+                                  ) : null}
+                                  {entry.paymentEvidence?.url ? (
+                                    <a href={entry.paymentEvidence.url} target="_blank" rel="noreferrer" className={`${secondaryButtonClass} mt-2.5`}>
+                                      <FiFileText className="h-4 w-4" />
+                                      View {entry.paymentEvidence.filename || "payment screenshot"}
+                                    </a>
+                                  ) : null}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
 
                       {selected.paymentEvidence ? (
                         <div className={`mt-5 grid gap-4 rounded-2xl border p-4 lg:grid-cols-[minmax(0,1fr)_auto] ${isDark ? "border-white/10 bg-white/[0.04]" : "border-[#ebebeb] bg-[#f8f8f7]"}`}>

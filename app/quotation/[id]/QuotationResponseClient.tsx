@@ -2,8 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { CheckCircle2, FileImage, LoaderCircle, MessageSquareText, XCircle } from "lucide-react";
+import { CheckCircle2, FileImage, History, LoaderCircle, MessageSquareText, XCircle } from "lucide-react";
 import type { QuoteResponseAction } from "@/lib/quote-response-links";
+
+type QuoteResponseHistoryEntry = {
+  id: string;
+  action: QuoteResponseAction;
+  comment: string;
+  submittedAtIso: string;
+  paymentEvidence?: {
+    url: string;
+    filename: string;
+  };
+};
 
 type QuoteSummary = {
   clientName: string;
@@ -12,6 +23,7 @@ type QuoteSummary = {
   total: number | null;
   amountReceived: number;
   currentDecision: string;
+  responseHistory: QuoteResponseHistoryEntry[];
 };
 
 type Props = {
@@ -92,6 +104,7 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Could not save your response.");
+      if (body.quote) setQuote(body.quote);
       setSuccess(body.message || (action === "changes" ? "Your change request was sent." : "Your response was saved."));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Could not save your response.");
@@ -111,9 +124,16 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
     <main className="min-h-screen bg-[#f5f3ef] px-4 py-10 text-[#171717] sm:py-16">
       <div className="mx-auto max-w-xl overflow-hidden rounded-3xl bg-white shadow-[0_20px_70px_rgba(40,30,15,0.12)]">
         <header className="border-b border-black/8 px-6 py-5 sm:px-9">
-          <div className="flex items-center gap-3">
-            <Image src="/icon.png" alt="MO T-SHIRT" width={44} height={44} className="h-11 w-11 rounded-xl object-cover" />
-            <div><p className="text-sm font-bold tracking-wide">MO T-SHIRT</p><p className="text-xs text-black/55">Quotation response</p></div>
+          <div>
+            <Image
+              src="/logo_transparent.png"
+              alt="MO T-SHIRT Business Printing"
+              width={230}
+              height={78}
+              priority
+              className="h-12 w-auto sm:h-14"
+            />
+            <p className="mt-1 text-xs font-medium text-black/55">Quotation response</p>
           </div>
         </header>
 
@@ -128,9 +148,59 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
             <div><p className="text-black/45">{action === "accept" ? "Balance to pay" : "Total"}</p><p className="mt-1 font-semibold">{balance === null ? "See attached PDF" : `${quote.currency} ${balance.toLocaleString("en-MU", { minimumFractionDigits: 2 })}`}</p></div>
           </div>
 
+          {quote.responseHistory.length ? (
+            <section className="mb-7 rounded-2xl border border-black/10 p-4 sm:p-5">
+              <div className="flex items-center gap-2">
+                <History className="h-4 w-4 text-black/45" />
+                <h2 className="text-sm font-bold">Previous responses and uploads</h2>
+              </div>
+              <p className="mt-1 text-xs leading-5 text-black/50">
+                All three quotation links share this history. Your newest response becomes the current one without deleting earlier actions.
+              </p>
+              <div className="mt-4 space-y-3">
+                {[...quote.responseHistory].reverse().map((entry, index) => {
+                  const entryCopy = ACTION_COPY[entry.action];
+                  const EntryIcon = entryCopy.icon;
+                  return (
+                    <div key={entry.id || `${entry.action}-${entry.submittedAtIso}-${index}`} className="rounded-xl bg-[#f7f7f5] p-3.5">
+                      <div className="flex items-start gap-3">
+                        <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${entryCopy.tone}`}>
+                          <EntryIcon className="h-4 w-4" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center justify-between gap-1.5">
+                            <p className="text-sm font-semibold">{entryCopy.title}</p>
+                            <p className="text-[11px] text-black/45">
+                              {formatResponseDate(entry.submittedAtIso)}
+                            </p>
+                          </div>
+                          {entry.comment ? <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-black/60">{entry.comment}</p> : null}
+                          {entry.paymentEvidence?.url ? (
+                            <a
+                              href={entry.paymentEvidence.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-black underline decoration-black/25 underline-offset-4"
+                            >
+                              <FileImage className="h-3.5 w-3.5" />
+                              View {entry.paymentEvidence.filename || "payment screenshot"}
+                            </a>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
+
           {success ? (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-900">
               <div className="flex gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" /><div><p className="font-semibold">Response received</p><p className="mt-1 text-sm leading-6">{success}</p></div></div>
+              <button type="button" onClick={() => setSuccess("")} className="mt-4 rounded-lg border border-emerald-300 bg-white px-3 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100">
+                Submit another {action === "accept" ? "payment screenshot" : "response"}
+              </button>
             </div>
           ) : (
             <form onSubmit={submit} className="space-y-5">
@@ -160,6 +230,16 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
       </div>
     </main>
   );
+}
+
+function formatResponseDate(value: string) {
+  if (!value) return "Previous response";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Previous response";
+  return new Intl.DateTimeFormat("en-MU", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }
 
 function CenteredMessage({ icon, text }: { icon: React.ReactNode; text: string }) {
