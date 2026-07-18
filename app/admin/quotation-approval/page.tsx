@@ -37,6 +37,7 @@ import { addDays, format, formatDistanceToNow } from "date-fns";
 import { jsPDF } from "jspdf";
 import {
   FiChevronLeft,
+  FiChevronRight,
   FiChevronDown,
   FiCheckCircle,
   FiClock,
@@ -1588,6 +1589,7 @@ export default function QuotationApprovalPage() {
   const [printPartners, setPrintPartners] = useState<PrintPartner[]>(PRINT_PARTNERS);
   const [workflowStudioOpen, setWorkflowStudioOpen] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("inbox");
+  const [inboxCollapsed, setInboxCollapsed] = useState(false);
   const [partnerVisibleFields, setPartnerVisibleFields] =
     useState<PartnerVisibleField[]>(DEFAULT_PARTNER_VISIBLE_FIELDS);
   const [partnerPrintPlacement, setPartnerPrintPlacement] =
@@ -1608,6 +1610,18 @@ export default function QuotationApprovalPage() {
   useEffect(() => {
     setRequestedQuoteId(new URLSearchParams(window.location.search).get("quoteId"));
   }, []);
+
+  useEffect(() => {
+    setInboxCollapsed(window.localStorage.getItem("quotation-inbox-collapsed") === "true");
+  }, []);
+
+  const toggleInboxCollapsed = () => {
+    setInboxCollapsed((collapsed) => {
+      const nextValue = !collapsed;
+      window.localStorage.setItem("quotation-inbox-collapsed", String(nextValue));
+      return nextValue;
+    });
+  };
 
   useEffect(() => {
     let ignore = false;
@@ -3208,9 +3222,18 @@ export default function QuotationApprovalPage() {
             </div>
           </div>
 
-          <div className="mt-4 grid min-w-0 gap-4 sm:mt-5 lg:grid-cols-[300px_minmax(0,1fr)]">
+          <div
+            className={`mt-4 grid min-w-0 gap-4 sm:mt-5 ${
+              inboxCollapsed
+                ? "lg:grid-cols-1"
+                : "lg:grid-cols-[300px_minmax(0,1fr)]"
+            }`}
+          >
             <aside
-              className={`${mobilePanel === "inbox" ? "block" : "hidden"} ${surfaceClass} h-fit min-w-0 max-w-full overflow-hidden p-3 sm:p-4 lg:sticky lg:top-24 lg:block`}
+              id="quotation-client-inbox"
+              className={`${mobilePanel === "inbox" ? "block" : "hidden"} ${surfaceClass} h-fit min-w-0 max-w-full overflow-hidden p-3 sm:p-4 lg:sticky lg:top-24 ${
+                inboxCollapsed ? "lg:hidden" : "lg:block"
+              }`}
             >
               <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${isDark ? "border-white/10 bg-black/20" : "border-slate-200 bg-white"}`}>
                 <FiSearch className={`h-4 w-4 ${isDark ? "text-white/35" : "text-[#717171]"}`} />
@@ -3365,7 +3388,23 @@ export default function QuotationApprovalPage() {
               </div>
             </aside>
 
-            <section className={`${mobilePanel === "quote" ? "block" : "hidden"} min-w-0 space-y-6 lg:block`}>
+            <section className={`${mobilePanel === "quote" ? "block" : "hidden"} min-w-0 space-y-4 lg:block`}>
+              <div className="hidden lg:flex">
+                <button
+                  type="button"
+                  onClick={toggleInboxCollapsed}
+                  aria-expanded={!inboxCollapsed}
+                  aria-controls="quotation-client-inbox"
+                  className={secondaryButtonClass}
+                >
+                  {inboxCollapsed ? (
+                    <FiChevronRight className="h-4 w-4" />
+                  ) : (
+                    <FiChevronLeft className="h-4 w-4" />
+                  )}
+                  {inboxCollapsed ? "Show client list" : "Hide client list"}
+                </button>
+              </div>
               {selected && draft ? (
                 <div className="flex flex-col gap-6">
                   <button
