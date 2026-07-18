@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { assessPaymentEvidence } from "@/lib/payment-evidence";
 import {
   isQuoteResponseAction,
   verifyQuoteResponseLink,
@@ -157,8 +156,6 @@ async function acceptWithPaymentEvidence({
     return json({ error: "Please upload a JPG, PNG or WebP screenshot." }, 400);
   }
 
-  const ocrText = cleanString(form.get("ocrText"), 12_000);
-  const assessment = assessPaymentEvidence(ocrText);
   const upload = await storePublicUploadBuffer({
     buffer: Buffer.from(await file.arrayBuffer()),
     filename: file.name,
@@ -184,8 +181,7 @@ async function acceptWithPaymentEvidence({
       contentType: upload.contentType,
       size: upload.size,
       submittedAtIso,
-      ocrText,
-      assessment,
+      ocrStatus: "pending",
       verificationStatus: "pending_manual_confirmation",
     },
     updatedAt: serverTimestamp(),
@@ -194,9 +190,6 @@ async function acceptWithPaymentEvidence({
   return json({
     ok: true,
     decision: "accepted",
-    assessment,
-    message: assessment.verdict === "likely_payment"
-      ? "Your quotation and payment evidence were received. We will confirm the bank transaction."
-      : "Your quotation was accepted. Your payment screenshot was received for manual review.",
+    message: "Your quotation was accepted and your payment screenshot was submitted. MO T-SHIRT will now check it.",
   }, 200);
 }

@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { CheckCircle2, FileImage, LoaderCircle, MessageSquareText, XCircle } from "lucide-react";
-import type { PaymentEvidenceAssessment } from "@/lib/payment-evidence";
 import type { QuoteResponseAction } from "@/lib/quote-response-links";
 
 type QuoteSummary = {
@@ -47,10 +46,8 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
   const [quote, setQuote] = useState<QuoteSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [ocrProgress, setOcrProgress] = useState(0);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [assessment, setAssessment] = useState<PaymentEvidenceAssessment | null>(null);
   const actionCopy = action ? ACTION_COPY[action] : null;
 
   const apiUrl = useMemo(() => {
@@ -77,7 +74,6 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
     setSubmitting(true);
     setError("");
     setSuccess("");
-    setAssessment(null);
 
     try {
       const form = new FormData(event.currentTarget);
@@ -88,22 +84,6 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
       if (action === "accept") {
         const file = form.get("paymentScreenshot");
         if (!(file instanceof File) || !file.size) throw new Error("Please select your payment screenshot.");
-        setOcrProgress(0.05);
-        const { createWorker } = await import("tesseract.js");
-        const worker = await createWorker("eng", 1, {
-          logger: (message) => {
-            if (message.status === "recognizing text") setOcrProgress(Math.max(0.1, message.progress || 0));
-          },
-        });
-        let ocrText = "";
-        try {
-          const result = await worker.recognize(file);
-          ocrText = result.data.text || "";
-        } finally {
-          await worker.terminate();
-        }
-        form.set("ocrText", ocrText);
-        setOcrProgress(1);
       }
 
       const response = await fetch(`/api/quotes/${encodeURIComponent(quoteId)}/respond`, {
@@ -112,7 +92,6 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "Could not save your response.");
-      if (body.assessment) setAssessment(body.assessment);
       setSuccess(body.message || (action === "changes" ? "Your change request was sent." : "Your response was saved."));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Could not save your response.");
@@ -152,7 +131,6 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
           {success ? (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-900">
               <div className="flex gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" /><div><p className="font-semibold">Response received</p><p className="mt-1 text-sm leading-6">{success}</p></div></div>
-              {assessment && <AssessmentSummary assessment={assessment} />}
             </div>
           ) : (
             <form onSubmit={submit} className="space-y-5">
@@ -171,23 +149,17 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
               )}
 
               {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
-              {submitting && action === "accept" && <p className="text-center text-xs text-black/50">Reading screenshot locally… {Math.round(ocrProgress * 100)}%</p>}
               <button type="submit" disabled={submitting} className="flex w-full items-center justify-center gap-2 rounded-xl bg-black px-5 py-3.5 text-sm font-bold text-white transition hover:bg-black/85 disabled:cursor-wait disabled:opacity-55">
                 {submitting && <LoaderCircle className="h-4 w-4 animate-spin" />}
                 {submitting ? "Submitting…" : action === "accept" ? "Accept and send payment proof" : action === "changes" ? "Send change request" : "Reject quotation"}
               </button>
-              {action === "accept" && <p className="text-center text-xs leading-5 text-black/45">The free OCR check reads the image for payment details. Final payment confirmation happens after MO T-SHIRT matches it with the bank transaction.</p>}
+              {action === "accept" && <p className="text-center text-xs leading-5 text-black/45">Submit your screenshot only. MO T-SHIRT will check the payment details in the admin system.</p>}
             </form>
           )}
         </section>
       </div>
     </main>
   );
-}
-
-function AssessmentSummary({ assessment }: { assessment: PaymentEvidenceAssessment }) {
-  const label = assessment.verdict === "likely_payment" ? "Payment details detected" : "Screenshot needs manual review";
-  return <div className="mt-4 border-t border-emerald-200 pt-3 text-xs"><p className="font-semibold">{label}</p>{assessment.amount !== null && <p className="mt-1">Detected amount: Rs {assessment.amount.toLocaleString("en-MU")}</p>}{assessment.reference && <p className="mt-1">Reference: {assessment.reference}</p>}</div>;
 }
 
 function CenteredMessage({ icon, text }: { icon: React.ReactNode; text: string }) {

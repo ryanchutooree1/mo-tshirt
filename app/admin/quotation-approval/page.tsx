@@ -27,6 +27,10 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { formatMoney as formatDisplayMoney } from "@/lib/money";
+import {
+  assessPaymentEvidence,
+  type PaymentEvidenceAssessment,
+} from "@/lib/payment-evidence";
 import { addDays, format, formatDistanceToNow } from "date-fns";
 import { jsPDF } from "jspdf";
 import {
@@ -351,17 +355,16 @@ type QuoteRecord = {
   clientDecisionComment?: string;
   clientDecisionAtIso?: string;
   paymentEvidence?: {
+    uploadId?: string;
     url?: string;
     filename?: string;
+    contentType?: string;
+    ocrStatus?: "pending" | "processing" | "complete" | "error";
+    ocrError?: string;
+    ocrText?: string;
     verificationStatus?: "pending_manual_confirmation" | "confirmed";
     submittedAtIso?: string;
-    assessment?: {
-      verdict?: "likely_payment" | "needs_review" | "not_payment";
-      confidence?: number;
-      amount?: number | null;
-      reference?: string;
-      date?: string;
-    };
+    assessment?: PaymentEvidenceAssessment;
   };
   orderTransactionId?: string;
   movedToOrdersAt?: Date | null;
@@ -1446,6 +1449,8 @@ export default function QuotationApprovalPage() {
   const [saving, setSaving] = useState(false);
   const [statusSaving, setStatusSaving] = useState(false);
   const [paymentVerificationSaving, setPaymentVerificationSaving] = useState(false);
+  const [paymentOcrProgress, setPaymentOcrProgress] = useState<number | null>(null);
+  const [paymentOcrRetryNonce, setPaymentOcrRetryNonce] = useState(0);
   const [clientStatusSaving, setClientStatusSaving] = useState(false);
   const [creatingQuote, setCreatingQuote] = useState(false);
   const [deletingQuote, setDeletingQuote] = useState(false);
@@ -1476,6 +1481,7 @@ export default function QuotationApprovalPage() {
   const designLogoSectionRef = useRef<HTMLDivElement | null>(null);
   const backgroundRemovalRunsRef = useRef(new Set<string>());
   const backgroundRemovalAttemptsRef = useRef(new Set<string>());
+  const paymentOcrRunsRef = useRef(new Set<string>());
 
   useEffect(() => {
     setRequestedQuoteId(new URLSearchParams(window.location.search).get("quoteId"));
@@ -1804,6 +1810,87 @@ export default function QuotationApprovalPage() {
   }, [selected, selectedDesignBrief]);
 
   const selectedAttachments = useMemo(() => getQuoteAttachments(selected), [selected]);
+
+  useEffect(() => {
+    const evidence = selected?.paymentEvidence;
+    if (!selected?.id || !evidence?.url || evidence.ocrStatus === "complete") return;
+
+    const quoteId = selected.id;
+    const runKey = `${quoteId}:${evidence.uploadId || evidence.url}:${paymentOcrRetryNonce}`;
+    if (paymentOcrRunsRef.current.has(runKey)) return;
+    paymentOcrRunsRef.current.add(runKey);
+    setPaymentOcrProgress(0.02);
+
+    void (async () => {
+      let worker: Awaited<ReturnType<(typeof import("tesseract.js"))["createWorker"]>> | null = null;
+      try {
+        await updateDoc(doc(db, "quotes", quoteId), {
+          "paymentEvidence.ocrStatus": "processing",
+          "paymentEvidence.ocrError": "",
+          updatedAt: serverTimestamp(),
+        });
+
+        const response = await fetch(evidence.url!);
+        if (!response.ok) throw new Error("The payment screenshot could not be downloaded.");
+        const screenshot = await response.blob();
+        const { createWorker } = await import("tesseract.js");
+        worker = await createWorker("eng", 1, {
+          logger: (message) => {
+            if (message.status === "recognizing text") {
+              setPaymentOcrProgress(Math.max(0.1, message.progress || 0));
+            }
+          },
+        });
+        const result = await worker.recognize(screenshot);
+        const ocrText = (result.data.text || "").trim().slice(0, 12_000);
+        const assessment = assessPaymentEvidence(ocrText);
+
+        await updateDoc(doc(db, "quotes", quoteId), {
+          "paymentEvidence.ocrStatus": "complete",
+          "paymentEvidence.ocrError": "",
+          "paymentEvidence.ocrText": ocrText,
+          "paymentEvidence.assessment": assessment,
+          "paymentEvidence.ocrCheckedAt": serverTimestamp(),
+          "paymentEvidence.ocrCheckedAtIso": new Date().toISOString(),
+          updatedAt: serverTimestamp(),
+        });
+        setPaymentOcrProgress(1);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "The OCR payment check failed.";
+        console.error("quotes:payment-ocr", error);
+        try {
+          await updateDoc(doc(db, "quotes", quoteId), {
+            "paymentEvidence.ocrStatus": "error",
+            "paymentEvidence.ocrError": message,
+            updatedAt: serverTimestamp(),
+          });
+        } catch (updateError) {
+          console.error("quotes:payment-ocr-status", updateError);
+        }
+      } finally {
+        await worker?.terminate();
+        setPaymentOcrProgress(null);
+      }
+    })();
+  }, [
+    paymentOcrRetryNonce,
+    selected?.id,
+    selected?.paymentEvidence,
+  ]);
+
+  const retryPaymentOcr = async () => {
+    if (!selected?.paymentEvidence) return;
+    try {
+      await updateDoc(doc(db, "quotes", selected.id), {
+        "paymentEvidence.ocrStatus": "pending",
+        "paymentEvidence.ocrError": "",
+        updatedAt: serverTimestamp(),
+      });
+      setPaymentOcrRetryNonce((current) => current + 1);
+    } catch {
+      setNotice("Could not restart the OCR payment check.");
+    }
+  };
 
   useEffect(() => {
     if (!selected?.id || !selectedAttachments.length) return;
@@ -3259,11 +3346,24 @@ export default function QuotationApprovalPage() {
                           <div>
                             <p className={`text-sm font-semibold ${isDark ? "text-white" : "text-[#222222]"}`}>Payment screenshot check</p>
                             <div className={`mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs ${isDark ? "text-white/55" : "text-[#666666]"}`}>
-                              <span>OCR: {selected.paymentEvidence.assessment?.verdict === "likely_payment" ? "Payment details detected" : "Manual review needed"}</span>
-                              {typeof selected.paymentEvidence.assessment?.confidence === "number" ? <span>Confidence: {selected.paymentEvidence.assessment.confidence}%</span> : null}
-                              {typeof selected.paymentEvidence.assessment?.amount === "number" ? <span>Detected: Rs {selected.paymentEvidence.assessment.amount.toLocaleString("en-MU")}</span> : null}
-                              {selected.paymentEvidence.assessment?.reference ? <span>Ref: {selected.paymentEvidence.assessment.reference}</span> : null}
+                              <span>
+                                OCR: {selected.paymentEvidence.ocrStatus === "complete"
+                                  ? selected.paymentEvidence.assessment?.verdict === "likely_payment"
+                                    ? "Payment details detected"
+                                    : "Manual review needed"
+                                  : selected.paymentEvidence.ocrStatus === "error"
+                                    ? "Check failed"
+                                    : selected.paymentEvidence.ocrStatus === "processing"
+                                      ? `Checking in admin${paymentOcrProgress !== null ? ` (${Math.round(paymentOcrProgress * 100)}%)` : "…"}`
+                                      : "Queued for admin check"}
+                              </span>
+                              {selected.paymentEvidence.ocrStatus === "complete" && typeof selected.paymentEvidence.assessment?.confidence === "number" ? <span>Confidence: {selected.paymentEvidence.assessment.confidence}%</span> : null}
+                              {selected.paymentEvidence.ocrStatus === "complete" && typeof selected.paymentEvidence.assessment?.amount === "number" ? <span>Detected: Rs {selected.paymentEvidence.assessment.amount.toLocaleString("en-MU")}</span> : null}
+                              {selected.paymentEvidence.ocrStatus === "complete" && selected.paymentEvidence.assessment?.reference ? <span>Ref: {selected.paymentEvidence.assessment.reference}</span> : null}
                             </div>
+                            {selected.paymentEvidence.ocrStatus === "error" ? (
+                              <p className="mt-2 text-xs text-red-600">{selected.paymentEvidence.ocrError || "The OCR check could not read this screenshot."}</p>
+                            ) : null}
                             <p className={`mt-3 text-xs font-semibold ${selected.paymentEvidence.verificationStatus === "confirmed" ? "text-emerald-600" : "text-amber-600"}`}>
                               {selected.paymentEvidence.verificationStatus === "confirmed" ? "Bank payment confirmed" : "Waiting for bank confirmation"}
                             </p>
@@ -3273,6 +3373,11 @@ export default function QuotationApprovalPage() {
                               <a href={selected.paymentEvidence.url} target="_blank" rel="noreferrer" className={secondaryButtonClass}>
                                 <FiFileText className="h-4 w-4" /> View screenshot
                               </a>
+                            ) : null}
+                            {selected.paymentEvidence.ocrStatus === "error" ? (
+                              <button type="button" onClick={retryPaymentOcr} className={secondaryButtonClass}>
+                                <FiRefreshCw className="h-4 w-4" /> Retry OCR
+                              </button>
                             ) : null}
                             {selected.paymentEvidence.verificationStatus !== "confirmed" ? (
                               <button type="button" onClick={confirmSelectedPaymentEvidence} disabled={paymentVerificationSaving} className={primaryButtonClass}>
