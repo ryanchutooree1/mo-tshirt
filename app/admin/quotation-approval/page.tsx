@@ -6190,35 +6190,27 @@ export default function QuotationApprovalPage() {
                             isDark ? "border-white/10 bg-black/20" : "border-[#ebebeb] bg-white"
                           }`}
                         >
-                          <div className="grid gap-3 md:grid-cols-[minmax(0,1.45fr)_86px_minmax(0,0.8fr)_106px_44px] md:items-center">
-                            <label className={`${labelClass} md:hidden`}>
-                              Description
-                              <input
-                                data-quotation-field={`line-${index}-description`}
-                                value={line.description}
-                                onChange={(e) =>
-                                  updateDraftLine(index, { description: e.target.value })
-                                }
-                                className={fieldClass}
-                                placeholder="Product / size / print"
-                              />
-                            </label>
+                          <label className={labelClass}>
+                            Description
                             <input
                               data-quotation-field={`line-${index}-description`}
                               value={line.description}
                               onChange={(e) =>
                                 updateDraftLine(index, { description: e.target.value })
                               }
-                              className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff6600] focus:ring-4 focus:ring-[#ff6600]/10 md:block"
+                              className={fieldClass}
                               placeholder="Product / size / print"
-                              aria-label="Line item description"
                             />
-                            <label className={`${labelClass} md:hidden`}>
-                              Qty
+                          </label>
+
+                          <div className="mt-4 flex flex-wrap items-end gap-3">
+                            <label className={`${labelClass} w-24 shrink-0`}>
+                              Quantity
                               <input
                                 data-quotation-field={`line-${index}-quantity`}
                                 type="number"
                                 min={0}
+                                step={1}
                                 value={line.quantity}
                                 onChange={(e) =>
                                   updateDraftLine(index, {
@@ -6226,61 +6218,43 @@ export default function QuotationApprovalPage() {
                                   })
                                 }
                                 className={fieldClass}
+                                placeholder="Qty"
                               />
                             </label>
-                            <input
-                              data-quotation-field={`line-${index}-quantity`}
-                              type="number"
-                              min={0}
-                              value={line.quantity}
-                              onChange={(e) =>
-                                updateDraftLine(index, {
-                                  quantity: parseEditableNumber(e.target.value),
-                                })
-                              }
-                              className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff6600] focus:ring-4 focus:ring-[#ff6600]/10 md:block"
-                              placeholder="Qty"
-                              aria-label="Quantity"
-                            />
-                            <label className={`${labelClass} md:hidden`}>
-                              Unit price
+
+                            <label className={`${labelClass} min-w-[170px] flex-[1_1_190px]`}>
+                              Unit price ({draft.currency})
                               <input
                                 data-quotation-field={`line-${index}-unit-price`}
                                 type="number"
+                                inputMode="decimal"
                                 min={0}
+                                step="0.01"
                                 value={line.unitPrice}
                                 onChange={(e) =>
                                   updateDraftLine(index, {
                                     unitPrice: parseEditableNumber(e.target.value),
                                   })
                                 }
-                                className={fieldClass}
+                                className={`${fieldClass} text-base font-semibold`}
+                                placeholder="Enter price"
                               />
                             </label>
-                            <input
-                              data-quotation-field={`line-${index}-unit-price`}
-                              type="number"
-                              min={0}
-                              value={line.unitPrice}
-                              onChange={(e) =>
-                                updateDraftLine(index, {
-                                  unitPrice: parseEditableNumber(e.target.value),
-                                })
-                              }
-                              className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff6600] focus:ring-4 focus:ring-[#ff6600]/10 md:block"
-                              placeholder="Unit price"
-                              aria-label="Unit price"
-                            />
-                            <div className="min-w-0 rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] px-4 py-3 text-right text-sm font-semibold text-[#222222]">
-                              {formatMoney(
-                                safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0),
-                                draft.currency
-                              )}
+
+                            <div className="min-w-[150px] flex-[1_1_170px]">
+                              <p className={labelClass}>Line total</p>
+                              <div className="mt-2 rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] px-4 py-3 text-right text-base font-semibold text-[#222222]">
+                                {formatMoney(
+                                  safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0),
+                                  draft.currency
+                                )}
+                              </div>
                             </div>
+
                             <button
                               type="button"
                               onClick={() => removeDraftLine(index)}
-                              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#ebebeb] bg-white text-[#717171] transition hover:border-[#ffd9c2] hover:bg-[#fff4ed] hover:text-[#c2410c]"
+                              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#ebebeb] bg-white text-[#717171] transition hover:border-[#ffd9c2] hover:bg-[#fff4ed] hover:text-[#c2410c]"
                               aria-label="Remove line item"
                             >
                               <FiXCircle className="h-4 w-4" />
