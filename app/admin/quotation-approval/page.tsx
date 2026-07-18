@@ -15,6 +15,7 @@ import { storage } from "@/lib/firebase";
 import { ensureAdminFirebaseSession } from "@/lib/firebase-admin-client-auth";
 import {
   addDoc,
+  arrayUnion,
   collection,
   doc,
   getDocs,
@@ -389,6 +390,32 @@ type QuoteRecord = {
     verificationStatus?: "pending_manual_confirmation" | "confirmed";
     submittedAtIso?: string;
     assessment?: PaymentEvidenceAssessment;
+  };
+  paymentReceipt?: {
+    receiptId?: string;
+    documentType?: "receipt";
+    documentNumber?: string;
+    documentDate?: string;
+    clientCompany?: string;
+    clientAddress?: string;
+    clientBrn?: string;
+    clientVat?: string;
+    paymentStatus?: "Paid";
+    preparedBy?: string;
+    showLineItems?: boolean;
+    showTotals?: boolean;
+    currency?: string;
+    lines?: QuoteLine[];
+    deliveryFee?: number;
+    discount?: number;
+    amountReceived?: number;
+    notes?: string;
+    validUntil?: string;
+    subtotal?: number;
+    total?: number;
+    terms?: string;
+    generatedAtIso?: string;
+    sourcePaymentEvidenceUploadId?: string;
   };
   orderTransactionId?: string;
   movedToOrdersAt?: Date | null;
@@ -1612,6 +1639,7 @@ export default function QuotationApprovalPage() {
   const backgroundRemovalRunsRef = useRef(new Set<string>());
   const backgroundRemovalAttemptsRef = useRef(new Set<string>());
   const paymentOcrRunsRef = useRef(new Set<string>());
+  const automaticReceiptRunsRef = useRef(new Set<string>());
 
   useEffect(() => {
     setRequestedQuoteId(new URLSearchParams(window.location.search).get("quoteId"));
@@ -2376,6 +2404,17 @@ export default function QuotationApprovalPage() {
     () => comparePaymentAmount(selected?.paymentEvidence?.assessment?.amount, totals.total),
     [selected?.paymentEvidence?.assessment?.amount, totals.total]
   );
+  const paymentReceiptDraft = useMemo(() => {
+    if (!selected?.paymentReceipt) return null;
+    return buildDraftFromQuote({
+      ...selected,
+      quote: {
+        ...selected.paymentReceipt,
+        documentType: "receipt",
+        paymentStatus: "Paid",
+      },
+    });
+  }, [selected]);
   const clientWorkflowStatus = useMemo(() => {
     const responseDate = parseTimestamp(selected?.clientDecisionAtIso);
     const formattedResponseDate = responseDate
@@ -2474,7 +2513,7 @@ export default function QuotationApprovalPage() {
             ? "Order is ready"
             : "Move to orders";
 
-  const buildStoredQuotePayload = (baseDraft: QuoteDraft) => {
+  const buildStoredQuotePayload = useCallback((baseDraft: QuoteDraft) => {
     const pricing = getDraftPricingSummary(baseDraft);
     return {
       documentType: baseDraft.documentType,
@@ -2504,7 +2543,70 @@ export default function QuotationApprovalPage() {
       subtotal: pricing.subtotal,
       total: pricing.total,
     };
-  };
+  }, []);
+
+  const buildPaidReceiptRecord = useCallback((
+    baseDraft: QuoteDraft,
+    generatedAtIso: string,
+    sourcePaymentEvidenceUploadId: string
+  ) => {
+    const receiptDraft: QuoteDraft = {
+      ...baseDraft,
+      documentType: "receipt",
+      documentNumber: normalizeDocumentNumberForType(baseDraft.documentNumber, "receipt"),
+      documentDate: format(new Date(generatedAtIso), "yyyy-MM-dd"),
+      paymentStatus: "Paid",
+      amountReceived: getDraftPricingSummary(baseDraft).total,
+      terms: getDefaultTerms("receipt"),
+    };
+    return {
+      receiptId: crypto.randomUUID(),
+      ...buildStoredQuotePayload(receiptDraft),
+      documentType: "receipt" as const,
+      paymentStatus: "Paid" as const,
+      generatedAtIso,
+      sourcePaymentEvidenceUploadId,
+    };
+  }, [buildStoredQuotePayload]);
+
+  useEffect(() => {
+    if (
+      !selected ||
+      selected.paymentEvidence?.verificationStatus !== "confirmed" ||
+      selected.paymentReceipt
+    ) {
+      return;
+    }
+
+    const runKey = `${selected.id}:${selected.paymentEvidence.uploadId || "confirmed-payment"}`;
+    if (automaticReceiptRunsRef.current.has(runKey)) return;
+    automaticReceiptRunsRef.current.add(runKey);
+
+    const generatedAtIso = new Date().toISOString();
+    const receiptRecord = buildPaidReceiptRecord(
+      buildDraftFromQuote(selected),
+      generatedAtIso,
+      selected.paymentEvidence.uploadId || ""
+    );
+    let active = true;
+
+    void updateDoc(doc(db, "quotes", selected.id), {
+      paymentReceipt: receiptRecord,
+      paymentReceiptHistory: arrayUnion(receiptRecord),
+      updatedAt: serverTimestamp(),
+    })
+      .then(() => {
+        if (active) setNotice("A paid receipt was generated for the confirmed payment.");
+      })
+      .catch(() => {
+        automaticReceiptRunsRef.current.delete(runKey);
+        if (active) setNotice("The payment is confirmed, but the receipt could not be generated.");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [buildPaidReceiptRecord, selected]);
 
   useEffect(() => {
     if (!draft || !paymentStatusOptions.length) return;
@@ -2611,17 +2713,25 @@ export default function QuotationApprovalPage() {
   };
 
   const confirmSelectedPaymentEvidence = async () => {
-    if (!selected?.paymentEvidence) return;
+    if (!selected?.paymentEvidence || !draft) return;
     setPaymentVerificationSaving(true);
     setNotice(null);
     try {
+      const confirmedAtIso = new Date().toISOString();
+      const receiptRecord = buildPaidReceiptRecord(
+        draft,
+        confirmedAtIso,
+        selected.paymentEvidence.uploadId || ""
+      );
       await updateDoc(doc(db, "quotes", selected.id), {
         "paymentEvidence.verificationStatus": "confirmed",
         "paymentEvidence.confirmedAt": serverTimestamp(),
-        "paymentEvidence.confirmedAtIso": new Date().toISOString(),
+        "paymentEvidence.confirmedAtIso": confirmedAtIso,
+        paymentReceipt: receiptRecord,
+        paymentReceiptHistory: arrayUnion(receiptRecord),
         updatedAt: serverTimestamp(),
       });
-      setNotice("Payment evidence marked as confirmed.");
+      setNotice("Bank payment confirmed. A paid receipt was generated automatically.");
     } catch {
       setNotice("Failed to confirm payment evidence.");
     } finally {
@@ -2960,6 +3070,19 @@ export default function QuotationApprovalPage() {
     if (!selected || !draft) return;
     const doc = buildPdfDoc(selected, draft, logo);
     const url = doc.output("bloburl");
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleDownloadPaymentReceipt = () => {
+    if (!selected || !paymentReceiptDraft) return;
+    const receiptPdf = buildPdfDoc(selected, paymentReceiptDraft, logo);
+    receiptPdf.save(`${paymentReceiptDraft.documentNumber || `receipt-${selected.id}`}.pdf`);
+  };
+
+  const handleViewPaymentReceipt = () => {
+    if (!selected || !paymentReceiptDraft) return;
+    const receiptPdf = buildPdfDoc(selected, paymentReceiptDraft, logo);
+    const url = receiptPdf.output("bloburl");
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
@@ -3759,6 +3882,37 @@ export default function QuotationApprovalPage() {
                                 {paymentVerificationSaving ? "Confirming…" : "Confirm bank payment"}
                               </button>
                             ) : null}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {selected.paymentEvidence?.verificationStatus === "confirmed" && paymentReceiptDraft ? (
+                        <div className={`mt-5 rounded-2xl border p-4 sm:p-5 ${isDark ? "border-emerald-300/25 bg-emerald-300/10" : "border-emerald-200 bg-emerald-50"}`}>
+                          <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div>
+                              <p className={`text-[11px] font-bold uppercase tracking-[0.18em] ${isDark ? "text-emerald-200" : "text-emerald-700"}`}>
+                                Receipt generated automatically
+                              </p>
+                              <h4 className={`mt-1.5 text-lg font-semibold ${isDark ? "text-white" : "text-[#222222]"}`}>
+                                {paymentReceiptDraft.documentNumber || "Paid receipt"}
+                              </h4>
+                              <p className={`mt-1 text-xs ${isDark ? "text-white/55" : "text-[#5f6f65]"}`}>
+                                {selected.paymentReceipt?.generatedAtIso
+                                  ? `Generated ${format(parseTimestamp(selected.paymentReceipt.generatedAtIso) || new Date(), "dd MMM yyyy, HH:mm")}`
+                                  : "Generated when the bank payment was confirmed."}
+                              </p>
+                            </div>
+                            <span className="rounded-full border border-emerald-300 bg-white px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.12em] text-emerald-700">
+                              Paid
+                            </span>
+                          </div>
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            <button type="button" onClick={handleViewPaymentReceipt} className={secondaryButtonClass}>
+                              <FiFileText className="h-4 w-4" /> View receipt
+                            </button>
+                            <button type="button" onClick={handleDownloadPaymentReceipt} className={secondaryButtonClass}>
+                              <FiDownload className="h-4 w-4" /> Download receipt
+                            </button>
                           </div>
                         </div>
                       ) : null}
