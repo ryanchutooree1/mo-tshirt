@@ -72,7 +72,7 @@ export default function ServiceLandingPage({ page }: ServiceLandingPageProps) {
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-6 py-3 sm:h-20 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:py-0">
           <Link href="/" className="flex items-center gap-3" aria-label="MO T-SHIRT Home">
             <Image
-              src="/logo_transparent.png"
+              src="/logo_transparent.webp"
               alt="MO T-SHIRT logo"
               width={150}
               height={60}

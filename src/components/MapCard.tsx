@@ -83,7 +83,7 @@ export default function MapCard() {
       <div className="rounded-2xl overflow-hidden shadow-sm">
         <div className="aspect-square w-full">
           <LoadingImage
-            src="/on_mauritius_map.png"
+            src="/on_mauritius_map.webp"
             alt="MO T-SHIRT on Mauritius map"
             className="h-full w-full object-cover"
             wrapperClassName="h-full w-full"

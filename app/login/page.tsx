@@ -173,7 +173,7 @@ function LoginInner() {
         <div className="mx-auto flex max-w-xl flex-col items-center gap-10">
           <div className="w-full rounded-[32px] border border-[#EAEAEA] bg-white p-10 shadow-sm">
             <div className="flex flex-col items-center text-center">
-              <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={120} height={48} className="h-12 w-auto" />
+              <Image src="/logo_transparent.webp" alt="MO T-SHIRT logo" width={120} height={48} className="h-12 w-auto" />
               <h1 className="mt-6 text-2xl font-semibold tracking-tight">Admin Access</h1>
             </div>
 

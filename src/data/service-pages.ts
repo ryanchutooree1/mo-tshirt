@@ -42,7 +42,7 @@ export const servicePages: ServicePageContent[] = [
       "MO T-SHIRT helps businesses, teams, and events move from artwork to finished tees fast. We guide the print method, confirm sizing, and deliver island-wide.",
     eyebrow: "Commercial printing",
     summary: "Custom tees for staff, campaigns, merch, and events with fast local turnaround.",
-    heroImage: "/work/work-01.JPG",
+    heroImage: "/work/work-01.webp",
     badges: ["Business uniforms", "Event merch", "Island-wide delivery"],
     intro: [
       "If you need custom T-shirts in Mauritius, the main decision is not just the shirt. It is the right print method, the right garment weight, and the right timeline for the job you are actually running.",
@@ -95,7 +95,7 @@ export const servicePages: ServicePageContent[] = [
       "For customer-facing teams, polos need to feel sharper than standard tees. We help businesses choose the right fabric, logo size, and print method so the final uniform looks consistent across the whole team.",
     eyebrow: "Uniform systems",
     summary: "Professional polo shirts for teams that need a cleaner and more durable uniform look.",
-    heroImage: "/work/work-02.JPG",
+    heroImage: "/work/work-02.webp",
     badges: ["Team uniforms", "Customer-facing staff", "Logo placement advice"],
     intro: [
       "Polo uniforms are usually chosen when the brand needs something more structured than a T-shirt. Restaurants, sales teams, front-desk staff, and service businesses often need that extra polish.",
@@ -148,7 +148,7 @@ export const servicePages: ServicePageContent[] = [
       "Hoodies carry larger graphics well and feel closer to merch than standard uniforms. We help you choose placements and print methods that suit thicker garments and higher perceived value.",
     eyebrow: "Premium merch",
     summary: "Custom hoodies for clubs, leavers, branded merch, and premium staff kits.",
-    heroImage: "/work/work-08.JPG",
+    heroImage: "/work/work-08.webp",
     badges: ["Club merch", "Leavers", "Front and back prints"],
     intro: [
       "Hoodies usually need more planning than T-shirts because the garment cost is higher and customers expect a cleaner finish. That makes the artwork, placement, and quantity decision more important.",
@@ -201,7 +201,7 @@ export const servicePages: ServicePageContent[] = [
       "Event jobs are usually deadline-led. We focus on what matters most: fast approval, clear size breakdowns, and a print method that can actually meet the timeline you have.",
     eyebrow: "Deadline-driven jobs",
     summary: "Printed shirts for activations, schools, volunteer teams, and branded events with time pressure.",
-    heroImage: "/work/work-03.JPG",
+    heroImage: "/work/work-03.webp",
     badges: ["Volunteer kits", "School events", "Brand activations"],
     intro: [
       "Event shirt orders are rarely only about the shirts. They are tied to launch dates, staff arrival, venue setup, and sponsor visibility. That means the quoting and approval flow needs to stay simple.",
@@ -254,7 +254,7 @@ export const servicePages: ServicePageContent[] = [
       "When the artwork has color blends, shading, or detail that would be awkward for simple vinyl, DTF becomes the cleaner option. It is especially useful for smaller runs with complex graphics.",
     eyebrow: "Detail-friendly printing",
     summary: "Best for detailed, full-color artwork and smaller runs where screen setup is not ideal.",
-    heroImage: "/work/work-04.JPG",
+    heroImage: "/work/work-04.webp",
     badges: ["Full color logos", "Complex artwork", "Smaller runs"],
     intro: [
       "DTF printing is a strong choice when the design is too detailed for simple cut vinyl and the order size does not justify classic screen print setup. It gives businesses more freedom with logos and brand graphics.",
@@ -307,7 +307,7 @@ export const servicePages: ServicePageContent[] = [
       "When the order size is higher and the design is relatively simple, screen print is usually the strongest value. It gives a sharp finish and makes the most sense for repeat team or event orders, especially when the same design is repeated across the run.",
     eyebrow: "Bulk-value printing",
     summary: "Best for larger quantities, simpler artwork, and orders that need repeatability.",
-    heroImage: "/work/work-05.JPG",
+    heroImage: "/work/work-05.webp",
     badges: ["Bulk orders", "Simple logos", "Repeat uniforms"],
     intro: [
       "Screen printing makes the most sense when quantity is high enough to spread the setup across the run. That is why it is often the best option for team uniforms, campaign tees, and large event orders.",
@@ -365,7 +365,7 @@ export const servicePages: ServicePageContent[] = [
       "Urgent printing only works well when the brief stays simple and communication stays fast. We can handle rush jobs when slots are open, but they need ready artwork, quick approvals, and realistic expectations.",
     eyebrow: "Urgent production",
     summary: "Fast-turnaround printing for urgent business, team, and event orders when capacity allows.",
-    heroImage: "/work/work-06.JPG",
+    heroImage: "/work/work-06.webp",
     badges: ["48h rush slots", "WhatsApp-first", "Ready artwork helps"],
     intro: [
       "Rush printing is not just normal printing with less time. It is a different workflow. The art file, quantity, garment availability, and print method all need to support the timeline from the start.",

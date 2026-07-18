@@ -11,13 +11,13 @@ export function getWhatsAppUrl(message: string = WHATSAPP_TEXT, phone: string = 
 
 // Gallery images (put placeholders in /public/work)
 export const workImages: string[] = [
-  "/work/work-01.JPG",
-  "/work/work-02.JPG",
-  "/work/work-03.JPG",
-  "/work/work-04.JPG",
-  "/work/work-05.JPG",
-  "/work/work-06.JPG",
-  "/work/work-07.JPG",
-  "/work/work-08.JPG",
-  "/work/work-09.JPG",
+  "/work/work-01.webp",
+  "/work/work-02.webp",
+  "/work/work-03.webp",
+  "/work/work-04.webp",
+  "/work/work-05.webp",
+  "/work/work-06.webp",
+  "/work/work-07.webp",
+  "/work/work-08.webp",
+  "/work/work-09.webp",
 ];

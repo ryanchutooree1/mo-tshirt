@@ -43,7 +43,7 @@ export default function ReadyMadeUniformsClient({ uniforms }: Props) {
       <header className="sticky top-0 z-40 border-b border-[#EAEAEA] bg-white/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-3 sm:h-20 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-0">
           <Link href="/" className="flex items-center justify-center sm:justify-start" aria-label="MO T-SHIRT Home">
-            <img src="/logo_transparent.png" alt="MO T-SHIRT logo" className="h-9 w-auto sm:h-12" />
+            <img src="/logo_transparent.webp" alt="MO T-SHIRT logo" className="h-9 w-auto sm:h-12" />
           </Link>
 
           <nav className="flex w-full max-w-full items-center gap-2 overflow-x-auto text-sm font-semibold text-neutral-600 sm:w-auto sm:justify-end sm:gap-4 sm:overflow-visible">

@@ -134,7 +134,7 @@ export default function HomePage() {
       <header className="sticky top-0 z-40 border-b border-[#EAEAEA] bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:h-20 sm:gap-4 sm:px-6">
           <Link href="#top" className="flex shrink-0 items-center" aria-label="MO T-SHIRT Home">
-            <Image src="/logo_transparent.png" alt="MO T-SHIRT logo" width={150} height={60} priority className="h-8 w-auto sm:h-12" />
+            <Image src="/logo_transparent.webp" alt="MO T-SHIRT logo" width={150} height={60} priority className="h-8 w-auto sm:h-12" />
           </Link>
 
           <details className="group relative sm:hidden">
@@ -254,12 +254,13 @@ export default function HomePage() {
                 height={628}
                 className="h-auto w-full rounded-[32px] border border-[#EAEAEA] object-cover shadow-sm"
                 priority
+                sizes="(max-width: 1024px) calc(100vw - 48px), 1024px"
               />
             </div>
             <div className="mt-6 w-full max-w-5xl">
               <div className="grid gap-6 sm:grid-cols-2">
                 <ZoomableImage
-                  src="/T-Shirt%20Measurement.png"
+                  src="/T-Shirt%20Measurement.webp"
                   alt="T-shirt measurement guide"
                   width={1400}
                   height={900}
@@ -268,7 +269,7 @@ export default function HomePage() {
                   imageClassName="cursor-zoom-in"
                 />
                 <ZoomableImage
-                  src="/Kids%20T-Shirt%20Measurement.png"
+                  src="/Kids%20T-Shirt%20Measurement.webp"
                   alt="Kids T-shirt measurement guide"
                   width={1400}
                   height={900}
@@ -280,11 +281,12 @@ export default function HomePage() {
             </div>
             <div className="mt-6 w-full max-w-5xl lg:max-w-6xl">
               <Image
-                src="/how_to_order.png"
+                src="/how_to_order.webp"
                 alt="How to order custom printed products"
                 width={1600}
                 height={628}
                 className="h-auto w-full rounded-[32px] border border-[#EAEAEA] object-cover shadow-sm"
+                sizes="(max-width: 1024px) calc(100vw - 48px), 1024px"
               />
             </div>
           </div>
@@ -320,21 +322,23 @@ export default function HomePage() {
             <div className="relative w-full max-w-3xl rounded-[28px] border border-[#EAEAEA] bg-white px-6 py-6 text-left shadow-sm">
               <div className="absolute right-5 top-5">
                 <Image
-                  src="/Postofficelogo.png"
+                  src="/Postofficelogo.webp"
                   alt="Mauritius Post logo"
                   width={104}
                   height={104}
                   className="h-16 w-16 object-contain"
+                  sizes="64px"
                 />
               </div>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                 <div className="flex-shrink-0">
                   <Image
-                    src="/Postman.png"
+                    src="/Postman.webp"
                     alt="Mauritius Post delivery"
                     width={384}
                     height={384}
                     className="h-80 w-80 object-contain"
+                    sizes="320px"
                   />
                 </div>
                 <div className="flex-1">
@@ -407,7 +411,7 @@ export default function HomePage() {
                 </div>
                 <div className="mt-4 px-6 pb-6">
                   <Image
-                    src="/boss_imagine.png"
+                    src="/boss_imagine.webp"
                     alt="MO T-SHIRT team"
                     width={1024}
                     height={1536}

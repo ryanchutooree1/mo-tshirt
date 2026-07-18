@@ -1,15 +1,14 @@
 "use client";
 
 import { useMemo } from "react";
+import Image from "next/image";
 import { workImages } from "@/data/work";
-import LoadingImage from "@/components/LoadingImage";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
 import "swiper/css";
 
 export default function Gallery() {
   const images = useMemo(() => workImages, []);
-  const fallbackSrc = "/all_products.jpg";
 
   return (
     <Swiper
@@ -29,15 +28,13 @@ export default function Gallery() {
       {images.map((src, idx) => (
         <SwiperSlide key={idx} className="px-1 sm:px-0">
           <div className="relative h-[620px] sm:h-[680px] lg:h-[740px] w-full overflow-hidden rounded-3xl border border-[#EAEAEA] bg-white shadow-sm">
-            <LoadingImage
+            <Image
               src={src}
               alt={`T-shirt printing in Mauritius example ${idx + 1}`}
+              fill
+              sizes="(max-width: 767px) calc(100vw - 56px), (max-width: 1023px) calc(50vw - 48px), 370px"
               loading="lazy"
-              decoding="async"
               className="h-full w-full object-cover"
-              wrapperClassName="h-full w-full"
-              fallbackSrc={fallbackSrc}
-              statusText="Loading image..."
             />
           </div>
         </SwiperSlide>

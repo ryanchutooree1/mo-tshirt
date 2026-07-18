@@ -39,7 +39,7 @@ export default function Header() {
         <div className="col-span-6 md:col-span-3 flex items-center">
           <Link href="/" className="flex items-center gap-2 shrink-0" aria-label="MO T-SHIRT Home">
             <Image
-              src="/logo_transparent.png"
+              src="/logo_transparent.webp"
               alt="MO T-SHIRT logo"
               width={300}
               height={90}

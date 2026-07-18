@@ -579,7 +579,7 @@ export default function AdminChrome({
       <div className={`admin-workspace-sidebar-brand flex h-[92px] shrink-0 items-center border-b border-white/[0.07] px-5 ${collapsed ? "lg:justify-center lg:px-2" : ""}`}>
         <Link href="/admin" className="flex min-w-0 items-center gap-3" aria-label="MO T-SHIRT admin dashboard">
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
-            <Image src="/logo_transparent.png" alt="" width={1291} height={435} className="h-auto w-10 object-contain" />
+            <Image src="/logo_transparent.webp" alt="" width={1291} height={435} className="h-auto w-10 object-contain" />
           </span>
           <span className={`min-w-0 ${collapsed ? "lg:hidden" : ""}`}>
             <span className="block truncate text-[21px] font-bold tracking-[-0.04em]">Mo T-Shirt</span>

@@ -126,7 +126,7 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
         <header className="border-b border-black/8 px-6 py-5 sm:px-9">
           <div>
             <Image
-              src="/logo_transparent.png"
+              src="/logo_transparent.webp"
               alt="MO T-SHIRT Business Printing"
               width={230}
               height={78}

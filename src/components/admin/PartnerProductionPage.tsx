@@ -740,7 +740,7 @@ export default function PartnerProductionPage({
             <section className={`${surfaceClass} p-5 sm:p-8`}>
               <div className="flex items-center justify-between gap-4">
                 <Image
-                  src="/logo_transparent.png"
+                  src="/logo_transparent.webp"
                   alt="MO T-SHIRT"
                   width={130}
                   height={52}
@@ -792,7 +792,7 @@ export default function PartnerProductionPage({
           <div>
             <div className="mb-3 flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white p-1.5 shadow-sm">
-                <Image src="/logo_transparent.png" alt="MO T-SHIRT" width={80} height={32} className="h-auto w-full" />
+                <Image src="/logo_transparent.webp" alt="MO T-SHIRT" width={80} height={32} className="h-auto w-full" />
               </span>
               <div>
                 <div className="text-sm font-bold tracking-tight text-[color:var(--partner-text)]">Mo T-Shirt</div>
