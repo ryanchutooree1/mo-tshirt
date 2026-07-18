@@ -378,6 +378,7 @@ type QuoteRecord = {
   clientDecisionComment?: string;
   clientDecisionAtIso?: string;
   clientResponseHistory?: ClientResponseHistoryEntry[];
+  clientResponseResolvedIds?: string[];
   sentAt?: Date | null;
   paymentEvidence?: {
     uploadId?: string;
@@ -1604,6 +1605,7 @@ export default function QuotationApprovalPage() {
   const [saving, setSaving] = useState(false);
   const [statusSaving, setStatusSaving] = useState(false);
   const [paymentVerificationSaving, setPaymentVerificationSaving] = useState(false);
+  const [resolvingClientResponseId, setResolvingClientResponseId] = useState<string | null>(null);
   const [paymentOcrProgress, setPaymentOcrProgress] = useState<number | null>(null);
   const [paymentOcrRetryNonce, setPaymentOcrRetryNonce] = useState(0);
   const [clientStatusSaving, setClientStatusSaving] = useState(false);
@@ -2404,6 +2406,22 @@ export default function QuotationApprovalPage() {
     () => comparePaymentAmount(selected?.paymentEvidence?.assessment?.amount, totals.total),
     [selected?.paymentEvidence?.assessment?.amount, totals.total]
   );
+  const persistedPaymentComparison = useMemo(
+    () => comparePaymentAmount(selected?.paymentEvidence?.assessment?.amount, selected?.quote?.total),
+    [selected?.paymentEvidence?.assessment?.amount, selected?.quote?.total]
+  );
+  const pendingClientChange = useMemo(() => {
+    const resolvedIds = new Set(selected?.clientResponseResolvedIds || []);
+    return [...(selected?.clientResponseHistory || [])]
+      .reverse()
+      .find((entry) => entry.action === "changes" && (!entry.id || !resolvedIds.has(entry.id))) || null;
+  }, [selected?.clientResponseHistory, selected?.clientResponseResolvedIds]);
+  const paymentActionNeeded = Boolean(
+    selected?.paymentEvidence &&
+      (selected.paymentEvidence.verificationStatus !== "confirmed" ||
+        persistedPaymentComparison.status !== "match")
+  );
+  const requiredClientActionCount = Number(Boolean(pendingClientChange)) + Number(paymentActionNeeded);
   const paymentReceiptDraft = useMemo(() => {
     if (!selected?.paymentReceipt) return null;
     return buildDraftFromQuote({
@@ -2435,6 +2453,14 @@ export default function QuotationApprovalPage() {
       };
     }
     if (selected?.clientDecision === "changes_requested") {
+      if (!pendingClientChange) {
+        return {
+          label: "Client changes handled",
+          detail: "The requested update was completed. Review and send the revised quotation when ready.",
+          tone: "border-emerald-200 bg-emerald-50 text-emerald-800",
+          state: "accepted" as const,
+        };
+      }
       return {
         label: "Changes requested",
         detail: selected.clientDecisionComment || (formattedResponseDate
@@ -2480,7 +2506,7 @@ export default function QuotationApprovalPage() {
       tone: "border-slate-200 bg-slate-50 text-slate-700",
       state: "not_sent" as const,
     };
-  }, [draft?.contactEmail, selected, selectedStatus]);
+  }, [draft?.contactEmail, pendingClientChange, selected, selectedStatus]);
 
   const sendValidationError = useMemo(
     () => (draft ? validateDraftBeforeSend(draft) : "Select a quotation first."),
@@ -2497,8 +2523,10 @@ export default function QuotationApprovalPage() {
       : "Complete Step 2 first (Mark approved or Send to client).";
   const simpleNextAction = !selected
     ? "Choose a quotation"
+    : requiredClientActionCount > 0
+      ? `Resolve ${requiredClientActionCount} client action${requiredClientActionCount === 1 ? "" : "s"}`
     : selected.clientDecision === "changes_requested"
-      ? "Review client changes"
+      ? "Send revised quotation"
       : selected.clientDecision === "rejected"
         ? "Review client response"
         : selectedStatus === "sent" && !selected.clientDecision
@@ -2570,15 +2598,15 @@ export default function QuotationApprovalPage() {
   }, [buildStoredQuotePayload]);
 
   useEffect(() => {
-    if (
-      !selected ||
-      selected.paymentEvidence?.verificationStatus !== "confirmed" ||
-      selected.paymentReceipt
-    ) {
+    if (!selected || selected.paymentEvidence?.verificationStatus !== "confirmed") {
       return;
     }
 
-    const runKey = `${selected.id}:${selected.paymentEvidence.uploadId || "confirmed-payment"}`;
+    const quoteTotal = safeNumber(selected.quote?.total, 0);
+    const receiptTotal = safeNumber(selected.paymentReceipt?.total, 0);
+    if (selected.paymentReceipt && Math.abs(quoteTotal - receiptTotal) < 0.01) return;
+
+    const runKey = `${selected.id}:${selected.paymentEvidence.uploadId || "confirmed-payment"}:${quoteTotal.toFixed(2)}`;
     if (automaticReceiptRunsRef.current.has(runKey)) return;
     automaticReceiptRunsRef.current.add(runKey);
 
@@ -2736,6 +2764,25 @@ export default function QuotationApprovalPage() {
       setNotice("Failed to confirm payment evidence.");
     } finally {
       setPaymentVerificationSaving(false);
+    }
+  };
+
+  const resolveClientChangeRequest = async (entryId: string | undefined) => {
+    if (!selected || !entryId) return;
+    setResolvingClientResponseId(entryId);
+    setNotice(null);
+    try {
+      await updateDoc(doc(db, "quotes", selected.id), {
+        clientResponseResolvedIds: arrayUnion(entryId),
+        clientChangeResolvedAt: serverTimestamp(),
+        clientChangeResolvedAtIso: new Date().toISOString(),
+        updatedAt: serverTimestamp(),
+      });
+      setNotice("Client change request marked as completed.");
+    } catch {
+      setNotice("Could not mark the client change request as completed.");
+    } finally {
+      setResolvingClientResponseId(null);
     }
   };
 
@@ -3748,7 +3795,9 @@ export default function QuotationApprovalPage() {
                             {selected.clientDecision === "accepted"
                               ? "Quotation accepted"
                               : selected.clientDecision === "changes_requested"
-                                ? "Changes requested"
+                                ? pendingClientChange
+                                  ? "Changes requested"
+                                  : "Changes handled"
                                 : "Quotation rejected"}
                           </h3>
                           {selected.clientDecisionComment ? (
@@ -3758,15 +3807,115 @@ export default function QuotationApprovalPage() {
                           ) : null}
                         </div>
                         <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
-                          selected.clientDecision === "accepted"
+                          requiredClientActionCount > 0
+                            ? "border-amber-200 bg-amber-50 text-amber-700"
+                            : selected.clientDecision === "accepted"
                             ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                             : selected.clientDecision === "changes_requested"
                               ? "border-amber-200 bg-amber-50 text-amber-700"
                               : "border-red-200 bg-red-50 text-red-700"
                         }`}>
-                          {selected.clientDecision === "accepted" ? "Accepted" : selected.clientDecision === "changes_requested" ? "Action needed" : "Rejected"}
+                          {requiredClientActionCount > 0
+                            ? `${requiredClientActionCount} action${requiredClientActionCount === 1 ? "" : "s"} needed`
+                            : selected.clientDecision === "accepted"
+                              ? "Accepted"
+                              : selected.clientDecision === "changes_requested"
+                                ? "Changes handled"
+                                : "Rejected"}
                         </span>
                       </div>
+
+                      {requiredClientActionCount > 0 ? (
+                        <section className={`mt-5 rounded-2xl border p-4 sm:p-5 ${isDark ? "border-amber-300/25 bg-amber-300/10" : "border-amber-200 bg-amber-50/70"}`}>
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <p className={`text-[11px] font-bold uppercase tracking-[0.18em] ${isDark ? "text-amber-200" : "text-amber-700"}`}>
+                                Action center
+                              </p>
+                              <h4 className={`mt-1.5 text-lg font-semibold ${isDark ? "text-white" : "text-[#222222]"}`}>
+                                Complete {requiredClientActionCount} client task{requiredClientActionCount === 1 ? "" : "s"}
+                              </h4>
+                              <p className={`mt-1 text-xs leading-5 ${isDark ? "text-white/55" : "text-[#6a6256]"}`}>
+                                Work through these cards in order. Each one disappears when it is resolved.
+                              </p>
+                            </div>
+                            <span className="inline-flex h-9 min-w-9 items-center justify-center rounded-full bg-amber-500 px-3 text-sm font-extrabold text-white shadow-sm">
+                              {requiredClientActionCount}
+                            </span>
+                          </div>
+
+                          <div className={`mt-4 grid gap-3 ${requiredClientActionCount > 1 ? "xl:grid-cols-2" : ""}`}>
+                            {pendingClientChange ? (
+                              <article className={`rounded-2xl border p-4 ${isDark ? "border-white/10 bg-black/20" : "border-white bg-white shadow-sm"}`}>
+                                <div className="flex items-start gap-3">
+                                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-extrabold text-amber-800">1</span>
+                                  <div className="min-w-0">
+                                    <p className={`text-sm font-bold ${isDark ? "text-white" : "text-[#222222]"}`}>Apply the requested change</p>
+                                    <p className={`mt-1 whitespace-pre-wrap text-xs leading-5 ${isDark ? "text-white/60" : "text-[#5f5f5f]"}`}>
+                                      {pendingClientChange.comment || "Review the client’s requested quotation changes."}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                  <button type="button" onClick={() => openWorkflowStudioAt("line-0-unit-price")} className={primaryButtonClass}>
+                                    <FiEdit2 className="h-4 w-4" /> Edit quotation
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => resolveClientChangeRequest(pendingClientChange.id)}
+                                    disabled={!pendingClientChange.id || resolvingClientResponseId === pendingClientChange.id}
+                                    className={secondaryButtonClass}
+                                  >
+                                    <FiCheckCircle className="h-4 w-4" />
+                                    {resolvingClientResponseId === pendingClientChange.id ? "Saving…" : "Mark completed"}
+                                  </button>
+                                </div>
+                              </article>
+                            ) : null}
+
+                            {paymentActionNeeded ? (
+                              <article className={`rounded-2xl border p-4 ${isDark ? "border-white/10 bg-black/20" : "border-white bg-white shadow-sm"}`}>
+                                <div className="flex items-start gap-3">
+                                  <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-extrabold ${persistedPaymentComparison.status === "match" ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-700"}`}>
+                                    {pendingClientChange ? 2 : 1}
+                                  </span>
+                                  <div className="min-w-0">
+                                    <p className={`text-sm font-bold ${isDark ? "text-white" : "text-[#222222]"}`}>
+                                      {persistedPaymentComparison.status === "match" ? "Confirm the bank payment" : "Resolve the payment amount"}
+                                    </p>
+                                    <p className={`mt-1 text-xs leading-5 ${isDark ? "text-white/60" : "text-[#5f5f5f]"}`}>
+                                      {persistedPaymentComparison.expectedAmount !== null && persistedPaymentComparison.detectedAmount !== null
+                                        ? `Saved quotation: ${formatMoney(persistedPaymentComparison.expectedAmount, draft.currency)} · Screenshot: ${formatMoney(persistedPaymentComparison.detectedAmount, draft.currency)}`
+                                        : "Review the payment screenshot and confirm the amount manually."}
+                                    </p>
+                                    {selected.paymentEvidence?.verificationStatus === "confirmed" && persistedPaymentComparison.status !== "match" ? (
+                                      <p className="mt-1 text-[11px] font-semibold text-red-600">The bank payment is confirmed, but the saved quotation still needs correction.</p>
+                                    ) : null}
+                                  </div>
+                                </div>
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                  {persistedPaymentComparison.status !== "match" ? (
+                                    <button type="button" onClick={() => openWorkflowStudioAt("line-0-unit-price")} className={primaryButtonClass}>
+                                      <FiEdit2 className="h-4 w-4" /> Correct quotation
+                                    </button>
+                                  ) : null}
+                                  {selected.paymentEvidence?.url ? (
+                                    <a href={selected.paymentEvidence.url} target="_blank" rel="noreferrer" className={secondaryButtonClass}>
+                                      <FiFileText className="h-4 w-4" /> View screenshot
+                                    </a>
+                                  ) : null}
+                                  {selected.paymentEvidence?.verificationStatus !== "confirmed" && (persistedPaymentComparison.status === "match" || persistedPaymentComparison.status === "unavailable") ? (
+                                    <button type="button" onClick={confirmSelectedPaymentEvidence} disabled={paymentVerificationSaving} className={primaryButtonClass}>
+                                      <FiCheckCircle className="h-4 w-4" />
+                                      {paymentVerificationSaving ? "Confirming…" : "Confirm payment"}
+                                    </button>
+                                  ) : null}
+                                </div>
+                              </article>
+                            ) : null}
+                          </div>
+                        </section>
+                      ) : null}
 
                       {selected.clientResponseHistory?.length ? (
                         <div className={`mt-5 rounded-2xl border p-4 ${isDark ? "border-white/10 bg-white/[0.04]" : "border-[#ebebeb] bg-[#f8f8f7]"}`}>
