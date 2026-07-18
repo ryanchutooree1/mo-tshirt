@@ -2631,35 +2631,48 @@ export default function QuotationApprovalPage() {
     setSending(true);
     setNotice(null);
     try {
-      const pdfDoc = buildPdfDoc(selected, draft, logo);
-      const pdfDataUri = pdfDoc.output("datauristring");
+      let pdfBlob: Blob;
+      try {
+        const pdfDoc = buildPdfDoc(selected, draft, logo);
+        pdfBlob = pdfDoc.output("blob");
+      } catch (error) {
+        console.warn("quotes:send:pdf-logo-fallback", error);
+        const fallbackPdfDoc = buildPdfDoc(selected, draft, null);
+        pdfBlob = fallbackPdfDoc.output("blob");
+      }
       const clientName = draft.contactName.trim() || selected.name || "there";
       const documentLabel = DOC_TYPE_LABELS[draft.documentType].toLowerCase();
-      const payload = {
-        quoteId: selected.id,
-        to: recipientEmail,
-        clientName: draft.contactName.trim(),
-        clientEmail: draft.contactEmail.trim(),
-        clientPhone: draft.contactPhone.trim(),
-        subject: `Your ${documentLabel} from MO T-SHIRT`,
-        message: draft.notes?.trim()
+      const payload = new FormData();
+      payload.set("quoteId", selected.id);
+      payload.set("to", recipientEmail);
+      payload.set("clientName", draft.contactName.trim());
+      payload.set("clientEmail", draft.contactEmail.trim());
+      payload.set("clientPhone", draft.contactPhone.trim());
+      payload.set("subject", `Your ${documentLabel} from MO T-SHIRT`);
+      payload.set(
+        "message",
+        draft.notes?.trim()
           ? `Hi ${clientName},\n\nPlease find your ${documentLabel} attached.\n\n${draft.notes}\n\nBest regards,\nMo T-Shirt Team`
-          : `Hi ${clientName},\n\nPlease find your ${documentLabel} attached.\n\nBest regards,\nMo T-Shirt Team`,
-        pdfBase64: pdfDataUri,
-        quote: buildStoredQuotePayload(draft),
-      };
+          : `Hi ${clientName},\n\nPlease find your ${documentLabel} attached.\n\nBest regards,\nMo T-Shirt Team`
+      );
+      payload.set("quote", JSON.stringify(buildStoredQuotePayload(draft)));
+      payload.set("pdf", pdfBlob, `${draft.documentNumber || selected.id}.pdf`);
 
       const res = await fetch("/api/admin/quotes/send", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: payload,
       });
+      const response = await res.json().catch(() => ({})) as { error?: string; warning?: string };
       if (!res.ok) {
-        throw new Error("Failed to send");
+        if (res.status === 401) {
+          throw new Error("Your admin session expired. Please sign in again, then press Send.");
+        }
+        throw new Error(response.error || "The quotation could not be sent. Please try again.");
       }
-      setNotice(`${DOC_TYPE_LABELS[draft.documentType]} sent to client.`);
-    } catch {
-      setNotice(`Could not send ${DOC_TYPE_LABELS[draft.documentType].toLowerCase()}.`);
+      setNotice(response.warning || `${DOC_TYPE_LABELS[draft.documentType]} sent to ${recipientEmail}.`);
+    } catch (error) {
+      console.error("quotes:send:client", error);
+      setNotice(error instanceof Error ? error.message : `Could not send ${DOC_TYPE_LABELS[draft.documentType].toLowerCase()}.`);
     } finally {
       setSending(false);
     }
