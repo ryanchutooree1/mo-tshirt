@@ -2723,6 +2723,13 @@ export default function QuotationApprovalPage() {
     }
   };
 
+  const saveDraftAndCloseStudio = async () => {
+    const saved = await saveDraft();
+    if (!saved) return;
+    setWorkflowStudioOpen(false);
+    setPendingMissingField(null);
+  };
+
   const updateSelectedStatus = async (nextStatus: QuoteStatus, successNotice: string) => {
     if (!selected) return;
     setStatusSaving(true);
@@ -6478,7 +6485,7 @@ export default function QuotationApprovalPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => saveDraft()}
+                  onClick={saveDraftAndCloseStudio}
                   disabled={saving}
                   className={primaryButtonClass}
                 >
