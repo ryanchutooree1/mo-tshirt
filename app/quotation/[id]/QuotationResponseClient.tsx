@@ -219,7 +219,15 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
               )}
 
               {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
-              <button type="submit" disabled={submitting} className="flex w-full items-center justify-center gap-2 rounded-xl bg-black px-5 py-3.5 text-sm font-bold text-white transition hover:bg-black/85 disabled:cursor-wait disabled:opacity-55">
+              <button
+                type="submit"
+                disabled={submitting}
+                className={`flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold text-white transition focus-visible:outline-none focus-visible:ring-4 disabled:cursor-wait disabled:opacity-55 ${
+                  action === "reject"
+                    ? "bg-red-600 hover:bg-red-700 focus-visible:ring-red-200"
+                    : "bg-black hover:bg-black/85 focus-visible:ring-black/20"
+                }`}
+              >
                 {submitting && <LoaderCircle className="h-4 w-4 animate-spin" />}
                 {submitting ? "Submitting…" : action === "accept" ? "Accept and send payment proof" : action === "changes" ? "Send change request" : "Reject quotation"}
               </button>
