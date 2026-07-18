@@ -412,9 +412,9 @@ export default function HomePage() {
                 <div className="mt-4 px-6 pb-6">
                   <Image
                     src="/boss_imagine.webp"
-                    alt="MO T-SHIRT team"
-                    width={1024}
-                    height={1536}
+                    alt="Business owner imagining his team in branded company shirts"
+                    width={1122}
+                    height={1402}
                     className="block h-auto w-full object-contain"
                     sizes="(max-width: 1024px) 100vw, 40vw"
                   />
