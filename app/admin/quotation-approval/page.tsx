@@ -3,6 +3,7 @@
 import {
   type CSSProperties,
   type InputHTMLAttributes,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -398,6 +399,7 @@ type QuoteRecord = {
 
 const ATTACHMENT_PREVIEW_RETRY_LIMIT = 2;
 const ATTACHMENT_PREVIEW_RETRY_DELAY_MS = 900;
+const ATTACHMENT_PREVIEW_LOAD_TIMEOUT_MS = 8_000;
 
 function QuoteAttachmentPreview({
   src,
@@ -410,13 +412,35 @@ function QuoteAttachmentPreview({
 }) {
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [retryNonce, setRetryNonce] = useState(0);
+  const imageRef = useRef<HTMLImageElement | null>(null);
   const retryAttemptsRef = useRef(0);
   const retryTimerRef = useRef<number | null>(null);
+
+  const clearRetryTimer = useCallback(() => {
+    if (retryTimerRef.current !== null) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+  }, []);
+
+  const handleError = useCallback(() => {
+    clearRetryTimer();
+    const nextAttempt = retryAttemptsRef.current + 1;
+    if (nextAttempt > ATTACHMENT_PREVIEW_RETRY_LIMIT) {
+      setStatus("error");
+      return;
+    }
+
+    retryAttemptsRef.current = nextAttempt;
+    setStatus("loading");
+    retryTimerRef.current = window.setTimeout(() => {
+      setRetryNonce((current) => current + 1);
+    }, ATTACHMENT_PREVIEW_RETRY_DELAY_MS * nextAttempt);
+  }, [clearRetryTimer]);
 
   useEffect(() => {
     retryAttemptsRef.current = 0;
     setRetryNonce(0);
-    setStatus("loading");
     return () => {
       if (retryTimerRef.current !== null) {
         window.clearTimeout(retryTimerRef.current);
@@ -424,28 +448,27 @@ function QuoteAttachmentPreview({
     };
   }, [src]);
 
-  function clearRetryTimer() {
-    if (retryTimerRef.current !== null) {
-      window.clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
-    }
-  }
-
-  function handleError() {
-    const nextAttempt = retryAttemptsRef.current + 1;
-    if (nextAttempt > ATTACHMENT_PREVIEW_RETRY_LIMIT) {
-      clearRetryTimer();
-      setStatus("error");
-      return;
-    }
-
-    retryAttemptsRef.current = nextAttempt;
-    setStatus("loading");
+  useEffect(() => {
     clearRetryTimer();
-    retryTimerRef.current = window.setTimeout(() => {
-      setRetryNonce((current) => current + 1);
-    }, ATTACHMENT_PREVIEW_RETRY_DELAY_MS * nextAttempt);
-  }
+
+    const image = imageRef.current;
+    if (image?.complete) {
+      if (image.naturalWidth > 0) {
+        setStatus("ready");
+      } else {
+        handleError();
+      }
+      return clearRetryTimer;
+    }
+
+    setStatus("loading");
+    retryTimerRef.current = window.setTimeout(
+      handleError,
+      ATTACHMENT_PREVIEW_LOAD_TIMEOUT_MS
+    );
+
+    return clearRetryTimer;
+  }, [clearRetryTimer, handleError, retryNonce, src]);
 
   return (
     <div
@@ -469,13 +492,13 @@ function QuoteAttachmentPreview({
       )}
       { }
       <img
+        ref={imageRef}
         key={`${src}-${retryNonce}`}
         src={src}
         alt={alt}
         className={`h-40 w-full rounded-xl object-contain transition-opacity duration-200 ${
           status === "ready" ? "opacity-100" : "opacity-0"
         }`}
-        loading="lazy"
         onLoad={() => {
           clearRetryTimer();
           setStatus("ready");
