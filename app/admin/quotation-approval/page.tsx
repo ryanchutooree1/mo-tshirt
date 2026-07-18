@@ -347,6 +347,22 @@ type QuoteRecord = {
   attachment?: QuoteAttachment | null;
   attachments?: QuoteAttachment[];
   status?: QuoteStatus;
+  clientDecision?: "accepted" | "changes_requested" | "rejected";
+  clientDecisionComment?: string;
+  clientDecisionAtIso?: string;
+  paymentEvidence?: {
+    url?: string;
+    filename?: string;
+    verificationStatus?: "pending_manual_confirmation" | "confirmed";
+    submittedAtIso?: string;
+    assessment?: {
+      verdict?: "likely_payment" | "needs_review" | "not_payment";
+      confidence?: number;
+      amount?: number | null;
+      reference?: string;
+      date?: string;
+    };
+  };
   orderTransactionId?: string;
   movedToOrdersAt?: Date | null;
   partner?: QuotePartnerAssignment | null;
@@ -1429,6 +1445,7 @@ export default function QuotationApprovalPage() {
   const [quotationPreviewUrl, setQuotationPreviewUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [statusSaving, setStatusSaving] = useState(false);
+  const [paymentVerificationSaving, setPaymentVerificationSaving] = useState(false);
   const [clientStatusSaving, setClientStatusSaving] = useState(false);
   const [creatingQuote, setCreatingQuote] = useState(false);
   const [deletingQuote, setDeletingQuote] = useState(false);
@@ -2243,6 +2260,25 @@ export default function QuotationApprovalPage() {
       setNotice("Failed to update status.");
     } finally {
       setStatusSaving(false);
+    }
+  };
+
+  const confirmSelectedPaymentEvidence = async () => {
+    if (!selected?.paymentEvidence) return;
+    setPaymentVerificationSaving(true);
+    setNotice(null);
+    try {
+      await updateDoc(doc(db, "quotes", selected.id), {
+        "paymentEvidence.verificationStatus": "confirmed",
+        "paymentEvidence.confirmedAt": serverTimestamp(),
+        "paymentEvidence.confirmedAtIso": new Date().toISOString(),
+        updatedAt: serverTimestamp(),
+      });
+      setNotice("Payment evidence marked as confirmed.");
+    } catch {
+      setNotice("Failed to confirm payment evidence.");
+    } finally {
+      setPaymentVerificationSaving(false);
     }
   };
 
@@ -3175,6 +3211,67 @@ export default function QuotationApprovalPage() {
                       </div>
                     </div>
                   </div>
+
+                  {selected.clientDecision ? (
+                    <div className={`${surfaceClass} p-5 sm:p-6`}>
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                          <p className={labelClass}>Client response</p>
+                          <h3 className={`mt-2 text-xl font-semibold ${isDark ? "text-white" : "text-[#222222]"}`}>
+                            {selected.clientDecision === "accepted"
+                              ? "Quotation accepted"
+                              : selected.clientDecision === "changes_requested"
+                                ? "Changes requested"
+                                : "Quotation rejected"}
+                          </h3>
+                          {selected.clientDecisionComment ? (
+                            <p className={`mt-2 max-w-2xl whitespace-pre-wrap text-sm leading-6 ${isDark ? "text-white/60" : "text-[#5f5f5f]"}`}>
+                              {selected.clientDecisionComment}
+                            </p>
+                          ) : null}
+                        </div>
+                        <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                          selected.clientDecision === "accepted"
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : selected.clientDecision === "changes_requested"
+                              ? "border-amber-200 bg-amber-50 text-amber-700"
+                              : "border-red-200 bg-red-50 text-red-700"
+                        }`}>
+                          {selected.clientDecision === "accepted" ? "Accepted" : selected.clientDecision === "changes_requested" ? "Action needed" : "Rejected"}
+                        </span>
+                      </div>
+
+                      {selected.paymentEvidence ? (
+                        <div className={`mt-5 grid gap-4 rounded-2xl border p-4 lg:grid-cols-[minmax(0,1fr)_auto] ${isDark ? "border-white/10 bg-white/[0.04]" : "border-[#ebebeb] bg-[#f8f8f7]"}`}>
+                          <div>
+                            <p className={`text-sm font-semibold ${isDark ? "text-white" : "text-[#222222]"}`}>Payment screenshot check</p>
+                            <div className={`mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs ${isDark ? "text-white/55" : "text-[#666666]"}`}>
+                              <span>OCR: {selected.paymentEvidence.assessment?.verdict === "likely_payment" ? "Payment details detected" : "Manual review needed"}</span>
+                              {typeof selected.paymentEvidence.assessment?.confidence === "number" ? <span>Confidence: {selected.paymentEvidence.assessment.confidence}%</span> : null}
+                              {typeof selected.paymentEvidence.assessment?.amount === "number" ? <span>Detected: Rs {selected.paymentEvidence.assessment.amount.toLocaleString("en-MU")}</span> : null}
+                              {selected.paymentEvidence.assessment?.reference ? <span>Ref: {selected.paymentEvidence.assessment.reference}</span> : null}
+                            </div>
+                            <p className={`mt-3 text-xs font-semibold ${selected.paymentEvidence.verificationStatus === "confirmed" ? "text-emerald-600" : "text-amber-600"}`}>
+                              {selected.paymentEvidence.verificationStatus === "confirmed" ? "Bank payment confirmed" : "Waiting for bank confirmation"}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {selected.paymentEvidence.url ? (
+                              <a href={selected.paymentEvidence.url} target="_blank" rel="noreferrer" className={secondaryButtonClass}>
+                                <FiFileText className="h-4 w-4" /> View screenshot
+                              </a>
+                            ) : null}
+                            {selected.paymentEvidence.verificationStatus !== "confirmed" ? (
+                              <button type="button" onClick={confirmSelectedPaymentEvidence} disabled={paymentVerificationSaving} className={primaryButtonClass}>
+                                <FiCheckCircle className="h-4 w-4" />
+                                {paymentVerificationSaving ? "Confirming…" : "Confirm bank payment"}
+                              </button>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
 
                   <div className={`${surfaceClass} -order-1 p-5 sm:p-6`}>
                     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">

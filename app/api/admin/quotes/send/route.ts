@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { hasAdminSession } from "@/lib/admin-auth";
 import { db } from "@/lib/firebase";
+import { buildQuoteResponseUrl } from "@/lib/quote-response-links";
 
 type SendPayload = {
   quoteId: string;
@@ -69,6 +70,19 @@ function parsePdfBase64(input: string) {
   return Buffer.from(input, "base64");
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function responseButton(label: string, url: string, background: string) {
+  return `<a href="${escapeHtml(url)}" style="display:inline-block;margin:6px 8px 6px 0;padding:12px 18px;border-radius:9px;background:${background};color:#fff;text-decoration:none;font-weight:700;">${label}</a>`;
+}
+
 export async function POST(req: Request) {
   if (!(await hasAdminSession(await cookies()))) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
@@ -112,14 +126,33 @@ export async function POST(req: Request) {
     const message =
       payload.message ||
       `Hi! Please find your ${documentLabel} attached.\n\nBest regards,\nMo T-Shirt Team`;
+    const responseLinks = documentType === "quotation"
+      ? {
+          accept: buildQuoteResponseUrl(payload.quoteId, "accept"),
+          changes: buildQuoteResponseUrl(payload.quoteId, "changes"),
+          reject: buildQuoteResponseUrl(payload.quoteId, "reject"),
+        }
+      : null;
+    const responseButtons = responseLinks
+      ? `<div style="margin-top:22px;padding:18px;border-radius:12px;background:#f6f7f8;">
+  <p style="margin:0 0 10px;font-weight:700;">Please respond to this quotation:</p>
+  ${responseButton("Accept quotation", responseLinks.accept, "#16803c")}
+  ${responseButton("Request changes", responseLinks.changes, "#c56a00")}
+  ${responseButton("Reject quotation", responseLinks.reject, "#a62929")}
+</div>`
+      : "";
+    const plainTextMessage = responseLinks
+      ? `${message}\n\nAccept quotation: ${responseLinks.accept}\nRequest changes: ${responseLinks.changes}\nReject quotation: ${responseLinks.reject}`
+      : message;
 
     const mailOptions: Record<string, unknown> = {
       from,
       to: payload.to,
       subject,
-      text: message,
-      html: `<div style="font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#111;">
-  <p>${message.replace(/\n/g, "<br/>")}</p>
+      text: plainTextMessage,
+      html: `<div style="font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#111;line-height:1.5;">
+  <p>${escapeHtml(message).replace(/\n/g, "<br/>")}</p>
+  ${responseButtons}
 </div>`,
       attachments: [
         {
@@ -146,6 +179,7 @@ export async function POST(req: Request) {
       ...(cleanClientPhone ? { phone: cleanClientPhone } : {}),
       lastEmailTo: payload.to,
       lastEmailSubject: subject,
+      ...(responseLinks ? { clientResponseLinksSentAt: serverTimestamp() } : {}),
     });
 
     return NextResponse.json({ ok: true }, { status: 200 });
