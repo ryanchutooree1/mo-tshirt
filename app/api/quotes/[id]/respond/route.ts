@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { arrayUnion, doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
   isQuoteResponseAction,
@@ -22,6 +22,76 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 function cleanString(value: unknown, maxLength = 4_000) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+}
+
+function cleanPaymentEvidence(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  const url = cleanString(raw.url, 2_000);
+  if (!url) return null;
+  return {
+    uploadId: cleanString(raw.uploadId, 200),
+    url,
+    filename: cleanString(raw.filename, 300) || "Payment screenshot",
+    contentType: cleanString(raw.contentType, 100),
+    size: Number.isFinite(Number(raw.size)) ? Number(raw.size) : 0,
+  };
+}
+
+function getStoredResponseHistory(data: Record<string, unknown>) {
+  return Array.isArray(data.clientResponseHistory)
+    ? data.clientResponseHistory.filter(
+        (entry): entry is Record<string, unknown> => Boolean(entry && typeof entry === "object" && !Array.isArray(entry))
+      )
+    : [];
+}
+
+function getLegacyResponseEntry(data: Record<string, unknown>) {
+  const decision = cleanString(data.clientDecision, 40);
+  const action: QuoteResponseAction | null = decision === "accepted"
+    ? "accept"
+    : decision === "changes_requested"
+      ? "changes"
+      : decision === "rejected"
+        ? "reject"
+        : null;
+  if (!action) return null;
+
+  const submittedAtIso = cleanString(data.clientDecisionAtIso, 50);
+  const paymentEvidence = action === "accept" ? cleanPaymentEvidence(data.paymentEvidence) : null;
+  return {
+    id: `legacy-${submittedAtIso || action}`,
+    action,
+    decision,
+    comment: cleanString(data.clientDecisionComment),
+    submittedAtIso,
+    ...(paymentEvidence ? { paymentEvidence } : {}),
+  };
+}
+
+function getHistoryEntriesToAppend(data: Record<string, unknown>, entry: Record<string, unknown>) {
+  if (getStoredResponseHistory(data).length) return [entry];
+  const legacyEntry = getLegacyResponseEntry(data);
+  return legacyEntry ? [legacyEntry, entry] : [entry];
+}
+
+function publicResponseHistory(data: Record<string, unknown>) {
+  const stored = getStoredResponseHistory(data);
+  const entries = stored.length ? stored : [getLegacyResponseEntry(data)].filter(Boolean);
+
+  return entries.slice(-50).flatMap((entry) => {
+    if (!entry) return [];
+    const action = cleanString(entry.action, 20);
+    if (!isQuoteResponseAction(action)) return [];
+    const paymentEvidence = action === "accept" ? cleanPaymentEvidence(entry.paymentEvidence) : null;
+    return [{
+      id: cleanString(entry.id, 200) || `${action}-${cleanString(entry.submittedAtIso, 50)}`,
+      action,
+      comment: cleanString(entry.comment),
+      submittedAtIso: cleanString(entry.submittedAtIso, 50),
+      ...(paymentEvidence ? { paymentEvidence } : {}),
+    }];
+  });
 }
 
 function isValidRequest(input: {
@@ -52,6 +122,7 @@ function publicQuoteSummary(data: Record<string, unknown>) {
     total: Number.isFinite(total) ? total : null,
     amountReceived: Number.isFinite(amountReceived) ? amountReceived : 0,
     currentDecision: cleanString(data.clientDecision, 40),
+    responseHistory: publicResponseHistory(data),
   };
 }
 
@@ -108,6 +179,7 @@ export async function POST(req: Request, context: RouteContext) {
     const quoteRef = doc(db, "quotes", id);
     const quoteSnapshot = await getDoc(quoteRef);
     if (!quoteSnapshot.exists()) return json({ error: "Quotation not found." }, 404);
+    const quoteData = quoteSnapshot.data() as Record<string, unknown>;
 
     if (action === "changes" || action === "reject") {
       const comment = cleanString(form.get("comment"));
@@ -116,18 +188,39 @@ export async function POST(req: Request, context: RouteContext) {
       }
 
       const decision = action === "changes" ? "changes_requested" : "rejected";
+      const submittedAtIso = new Date().toISOString();
+      const historyEntry = {
+        id: crypto.randomUUID(),
+        action,
+        decision,
+        comment,
+        submittedAtIso,
+      };
       await updateDoc(quoteRef, {
         clientDecision: decision,
         clientDecisionComment: comment,
         clientDecisionAt: serverTimestamp(),
-        clientDecisionAtIso: new Date().toISOString(),
+        clientDecisionAtIso: submittedAtIso,
+        clientResponseHistory: arrayUnion(...getHistoryEntriesToAppend(quoteData, historyEntry)),
         updatedAt: serverTimestamp(),
       });
 
-      return json({ ok: true, decision }, 200);
+      const updatedData = {
+        ...quoteData,
+        clientDecision: decision,
+        clientDecisionComment: comment,
+        clientDecisionAtIso: submittedAtIso,
+        clientResponseHistory: [...getStoredResponseHistory(quoteData), ...getHistoryEntriesToAppend(quoteData, historyEntry)],
+      };
+      return json({
+        ok: true,
+        decision,
+        message: action === "changes" ? "Your change request was sent." : "Your response was saved.",
+        quote: publicQuoteSummary(updatedData),
+      }, 200);
     }
 
-    return await acceptWithPaymentEvidence({ form, quoteId: id, quoteRef, json });
+    return await acceptWithPaymentEvidence({ form, quoteId: id, quoteRef, quoteData, json });
   } catch (error) {
     console.error("quotes:respond:post", error);
     return json({ error: "Could not save your response. Please try again." }, 500);
@@ -138,11 +231,13 @@ async function acceptWithPaymentEvidence({
   form,
   quoteId,
   quoteRef,
+  quoteData,
   json,
 }: {
   form: FormData;
   quoteId: string;
   quoteRef: ReturnType<typeof doc>;
+  quoteData: Record<string, unknown>;
   json: (body: Record<string, unknown>, status: number) => NextResponse;
 }) {
   const file = form.get("paymentScreenshot");
@@ -168,28 +263,49 @@ async function acceptWithPaymentEvidence({
   });
 
   const submittedAtIso = new Date().toISOString();
+  const paymentEvidence = {
+    uploadId: upload.uploadId,
+    url: upload.url,
+    filename: upload.filename,
+    contentType: upload.contentType,
+    size: upload.size,
+    submittedAtIso,
+    ocrStatus: "pending",
+    verificationStatus: "pending_manual_confirmation",
+  };
+  const historyEntry = {
+    id: crypto.randomUUID(),
+    action: "accept",
+    decision: "accepted",
+    comment: "",
+    submittedAtIso,
+    paymentEvidence: cleanPaymentEvidence(paymentEvidence),
+  };
   await updateDoc(quoteRef, {
     status: "approved",
     clientDecision: "accepted",
     clientDecisionComment: "",
     clientDecisionAt: serverTimestamp(),
     clientDecisionAtIso: submittedAtIso,
-    paymentEvidence: {
-      uploadId: upload.uploadId,
-      url: upload.url,
-      filename: upload.filename,
-      contentType: upload.contentType,
-      size: upload.size,
-      submittedAtIso,
-      ocrStatus: "pending",
-      verificationStatus: "pending_manual_confirmation",
-    },
+    paymentEvidence,
+    clientResponseHistory: arrayUnion(...getHistoryEntriesToAppend(quoteData, historyEntry)),
     updatedAt: serverTimestamp(),
   });
+
+  const updatedData = {
+    ...quoteData,
+    status: "approved",
+    clientDecision: "accepted",
+    clientDecisionComment: "",
+    clientDecisionAtIso: submittedAtIso,
+    paymentEvidence,
+    clientResponseHistory: [...getStoredResponseHistory(quoteData), ...getHistoryEntriesToAppend(quoteData, historyEntry)],
+  };
 
   return json({
     ok: true,
     decision: "accepted",
     message: "Your quotation was accepted and your payment screenshot was submitted. MO T-SHIRT will now check it.",
+    quote: publicQuoteSummary(updatedData),
   }, 200);
 }
