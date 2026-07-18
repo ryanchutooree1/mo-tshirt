@@ -629,6 +629,70 @@ const getPrimaryStatusMeta = (status: QuoteStatus, docType: DocumentType) => {
   };
 };
 
+const getPaymentStatusMeta = (quote: QuoteRecord) => {
+  const evidence = quote.paymentEvidence;
+  if (evidence?.verificationStatus === "confirmed") {
+    return {
+      label: "Payment confirmed",
+      shortLabel: "Paid",
+      tone: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    };
+  }
+  if (evidence) {
+    if (evidence.ocrStatus === "processing" || evidence.ocrStatus === "pending") {
+      return {
+        label: "Payment proof · OCR checking",
+        shortLabel: "OCR checking",
+        tone: "border-blue-200 bg-blue-50 text-blue-700",
+      };
+    }
+    if (evidence.ocrStatus === "error") {
+      return {
+        label: "Payment proof needs review",
+        shortLabel: "Review proof",
+        tone: "border-red-200 bg-red-50 text-red-700",
+      };
+    }
+    if (evidence.ocrStatus === "complete") {
+      return {
+        label: evidence.assessment?.verdict === "likely_payment"
+          ? "Payment proof received · verify bank"
+          : "Payment proof needs manual review",
+        shortLabel: evidence.assessment?.verdict === "likely_payment" ? "Verify bank" : "Review proof",
+        tone: "border-amber-200 bg-amber-50 text-amber-700",
+      };
+    }
+    return {
+      label: "Payment proof submitted",
+      shortLabel: "Proof submitted",
+      tone: "border-blue-200 bg-blue-50 text-blue-700",
+    };
+  }
+
+  const storedPaymentStatus = quote.quote?.paymentStatus?.trim() || "";
+  if (/paid/i.test(storedPaymentStatus) && !/unpaid/i.test(storedPaymentStatus)) {
+    return {
+      label: storedPaymentStatus,
+      shortLabel: storedPaymentStatus,
+      tone: /partial/i.test(storedPaymentStatus)
+        ? "border-amber-200 bg-amber-50 text-amber-700"
+        : "border-emerald-200 bg-emerald-50 text-emerald-700",
+    };
+  }
+  if (quote.status === "sent" || quote.clientDecision === "accepted") {
+    return {
+      label: "Awaiting payment proof",
+      shortLabel: "Awaiting payment",
+      tone: "border-amber-200 bg-amber-50 text-amber-700",
+    };
+  }
+  return {
+    label: "Payment not requested",
+    shortLabel: "Not requested",
+    tone: "border-[#e3e3e3] bg-[#f7f7f7] text-[#666666]",
+  };
+};
+
 const safeNumber = (value: unknown, fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -2188,6 +2252,10 @@ export default function QuotationApprovalPage() {
     const activeType = selectedStatus === "sent" ? persistedType : draft?.documentType || persistedType;
     return getPrimaryStatusMeta(selectedStatus, activeType);
   }, [selected, selectedStatus, draft?.documentType]);
+  const selectedPaymentStatus = useMemo(
+    () => (selected ? getPaymentStatusMeta(selected) : null),
+    [selected]
+  );
 
   const sendValidationError = useMemo(
     () => (draft ? validateDraftBeforeSend(draft) : "Select a quotation first."),
@@ -3146,6 +3214,7 @@ export default function QuotationApprovalPage() {
                   const status = quote.status || "new";
                   const docType = getQuoteDocumentType(quote);
                   const primaryStatus = getPrimaryStatusMeta(status, docType);
+                  const paymentStatus = getPaymentStatusMeta(quote);
                   const selectedTone = selectedId === quote.id;
                   const totalPieces = (quote.garments || []).reduce(
                     (sum, entry) => sum + safeNumber(entry.quantity, 0),
@@ -3209,6 +3278,9 @@ export default function QuotationApprovalPage() {
                             {garmentPreview || "No product line yet"}
                             {totalPieces > 0 ? ` • ${totalPieces} pc${totalPieces > 1 ? "s" : ""}` : ""}
                           </p>
+                          <span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${paymentStatus.tone}`}>
+                            Payment: {paymentStatus.shortLabel}
+                          </span>
                           <div className={`mt-3 flex items-center justify-between gap-3 text-[11px] ${isDark ? "text-white/35" : "text-[#717171]"}`}>
                             <span className="min-w-0 truncate">{quote.source || "Website"}</span>
                             <span>
@@ -3305,6 +3377,21 @@ export default function QuotationApprovalPage() {
                             </div>
                             <div className={`mt-1 text-sm font-semibold ${isDark ? "text-white" : "text-[#222222]"}`}>
                               {selected.orderTransactionId || "Not in orders yet"}
+                            </div>
+                          </div>
+                          <div className={`rounded-xl border px-4 py-3 sm:col-span-2 ${isDark ? "border-white/10 bg-black/20" : "border-[#ebebeb] bg-white"}`}>
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#717171]">
+                              Payment status
+                            </div>
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${selectedPaymentStatus?.tone || "border-[#e3e3e3] bg-[#f7f7f7] text-[#666666]"}`}>
+                                {selectedPaymentStatus?.label || "Payment not requested"}
+                              </span>
+                              {selected.paymentEvidence?.assessment?.amount ? (
+                                <span className={`text-xs font-semibold ${isDark ? "text-white/60" : "text-[#5f5f5f]"}`}>
+                                  OCR amount: Rs {selected.paymentEvidence.assessment.amount.toLocaleString("en-MU")}
+                                </span>
+                              ) : null}
                             </div>
                           </div>
                         </div>
