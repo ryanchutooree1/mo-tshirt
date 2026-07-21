@@ -6672,7 +6672,7 @@ export default function QuotationApprovalPage() {
                             />
                           </label>
 
-                          <div className="mt-4 grid grid-cols-[96px_minmax(0,1fr)_44px] items-start gap-3 sm:grid-cols-[96px_minmax(190px,1fr)_minmax(150px,0.8fr)_44px]">
+                          <div className="mt-4 grid min-w-0 grid-cols-[96px_minmax(0,1fr)_44px] items-start gap-3">
                             <label className={`${labelClass} min-w-0`}>
                               Quantity
                               <input
@@ -6691,7 +6691,7 @@ export default function QuotationApprovalPage() {
                               />
                             </label>
 
-                            <label className={`${labelClass} col-span-2 min-w-0 sm:col-span-1`}>
+                            <label className={`${labelClass} col-span-2 min-w-0`}>
                               Unit price ({draft.currency})
                               <input
                                 data-quotation-field={`line-${index}-unit-price`}
@@ -6707,9 +6707,9 @@ export default function QuotationApprovalPage() {
                               <PriceProvenanceLabel line={line} />
                             </label>
 
-                            <div className="col-span-2 min-w-0 sm:col-span-1">
+                            <div className="col-span-2 min-w-0">
                               <p className={labelClass}>Line total</p>
-                              <div className="mt-2 rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] px-4 py-3 text-right text-base font-semibold text-[#222222]">
+                              <div className="mt-2 min-w-0 overflow-hidden rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] px-4 py-3 text-right text-base font-semibold text-[#222222]">
                                 {formatMoney(
                                   safeNumber(line.quantity, 0) * safeNumber(line.unitPrice, 0),
                                   draft.currency
