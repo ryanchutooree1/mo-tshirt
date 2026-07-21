@@ -186,7 +186,7 @@ function UniformCard({ uniform }: { uniform: ReadyMadeUniformItem }) {
                 key={`${image}-${index}`}
                 type="button"
                 onClick={() => setSelectedImage(image)}
-                className={`h-14 w-14 overflow-hidden rounded-xl border bg-neutral-100 ${
+                className={`relative h-14 w-14 overflow-hidden rounded-xl border bg-neutral-100 ${
                   selectedImage === image ? "border-black" : "border-neutral-200"
                 }`}
                 aria-label={`Show ${uniform.title} image ${index + 1}`}
