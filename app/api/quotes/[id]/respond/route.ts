@@ -156,7 +156,18 @@ export async function GET(req: Request, context: RouteContext) {
     if (!snapshot.exists()) {
       return NextResponse.json({ error: "Quotation not found." }, { status: 404 });
     }
-    return NextResponse.json({ quote: publicQuoteSummary(snapshot.data()) });
+    const quote = publicQuoteSummary(snapshot.data());
+    const documentParams = new URLSearchParams({ action, expires, token });
+    return NextResponse.json({
+      quote: {
+        ...quote,
+        quotationDocument: quote.quotationDocument || {
+          url: `/api/quotes/${encodeURIComponent(id)}/document?${documentParams}`,
+          filename: `${quote.documentNumber || "Quotation"}.pdf`,
+          contentType: "application/pdf",
+        },
+      },
+    });
   } catch (error) {
     console.error("quotes:respond:get", error);
     return NextResponse.json({ error: "Could not load this quotation." }, { status: 500 });
