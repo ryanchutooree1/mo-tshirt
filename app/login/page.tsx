@@ -56,7 +56,11 @@ function LoginInner() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const next = params.get("next") || "/admin";
+  const requestedNext = params.get("next") || "";
+  const next =
+    requestedNext.startsWith("/admin") && !requestedNext.startsWith("//")
+      ? requestedNext
+      : "/admin";
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -106,7 +110,7 @@ function LoginInner() {
         } else {
           await signOutAdminFromFirebase().catch(() => null);
         }
-        router.push(data.manager.path);
+        router.push(next.startsWith("/admin/quotation-approval") ? next : data.manager.path);
         return;
       }
 

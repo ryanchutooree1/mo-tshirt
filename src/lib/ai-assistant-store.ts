@@ -44,6 +44,8 @@ import {
   buildAutomaticQuotePricing,
   getAssistantPrintPlacement,
 } from "@/lib/quote-auto-pricing";
+import { getQuotationNotificationRecipients } from "@/lib/quotation-notification-settings";
+import { SITE_URL } from "@/lib/seo";
 
 const COLLECTIONS = {
   sessions: "aiAssistantSessions",
@@ -912,6 +914,75 @@ function buildQuotePayloadFromAssistantLead(
   };
 }
 
+function escapeEmailHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+async function sendAssistantQuotationReviewEmail(
+  quoteId: string,
+  sourceLabel: string,
+  lead: AssistantLead
+) {
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (!host || !user || !pass) return;
+
+  const adminQuotationUrl = `${SITE_URL}/admin/quotation-approval?quoteId=${encodeURIComponent(quoteId)}`;
+  const clientName = lead.clientName || "New client";
+  const garmentSummary = formatAssistantGarmentSummary(lead);
+  const subject = `New ${sourceLabel} quotation from ${clientName}`;
+  const text = [
+    `New ${sourceLabel} quotation`,
+    `Client: ${clientName}`,
+    `Garments: ${garmentSummary}`,
+    lead.printType ? `Print method: ${formatAssistantPrintMethod(lead.printType)}` : "",
+    "",
+    "Open quotation:",
+    adminQuotationUrl,
+  ].filter((line) => line !== "").join("\n");
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:620px;">
+  <div style="font-size:22px;font-weight:800;margin-bottom:6px;">New ${escapeEmailHtml(sourceLabel)} quotation</div>
+  <div style="font-size:16px;font-weight:700;margin-bottom:16px;">${escapeEmailHtml(clientName)}</div>
+  <div style="padding:16px;border:1px solid #e5e7eb;border-radius:14px;background:#fafafa;line-height:1.55;">
+    <div><strong>Garments:</strong> ${escapeEmailHtml(garmentSummary)}</div>
+    ${lead.printType ? `<div><strong>Print method:</strong> ${escapeEmailHtml(formatAssistantPrintMethod(lead.printType))}</div>` : ""}
+  </div>
+  <div style="margin:20px 0;padding:18px;border-radius:16px;background:#fff4ed;border:1px solid #fed7aa;">
+    <div style="margin-bottom:12px;font-size:16px;font-weight:800;">Ready for your review</div>
+    <div style="margin-bottom:16px;color:#57534e;line-height:1.5;">Sign in securely to review the price, change it, approve the quotation, or continue the workflow.</div>
+    <a href="${escapeEmailHtml(adminQuotationUrl)}" style="display:inline-block;padding:12px 20px;border-radius:999px;background:#ff6600;color:#fff;text-decoration:none;font-weight:800;">Open quotation</a>
+  </div>
+</div>`;
+
+  try {
+    // @ts-expect-error nodemailer may not be installed in every local environment.
+    const nodemailer = await import("nodemailer");
+    const transporter = nodemailer.createTransport({
+      host,
+      port: Number(process.env.SMTP_PORT || 465),
+      secure: String(process.env.SMTP_SECURE || "true") === "true",
+      auth: { user, pass },
+    });
+    const recipients = await getQuotationNotificationRecipients();
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || user,
+      to: recipients.length ? recipients.join(", ") : user,
+      replyTo: lead.email || undefined,
+      subject,
+      text,
+      html,
+    });
+  } catch (error) {
+    console.error("ai-assistant:quotation-review-email", error);
+  }
+}
+
 async function getTrainingSnapshotInternal() {
   const snap = await getDoc(doc(db, COLLECTIONS.modelState, MODEL_STATE_KEY));
   if (!snap.exists()) return null;
@@ -1154,6 +1225,11 @@ export async function submitAssistantLeadFromSession(sessionId: string): Promise
             },
             { merge: true }
           ),
+          sendAssistantQuotationReviewEmail(
+            quoteId,
+            getAssistantLeadSource(cleanedSessionId),
+            existingLead.lead
+          ),
         ]);
       }
       return {
@@ -1189,6 +1265,11 @@ export async function submitAssistantLeadFromSession(sessionId: string): Promise
         updatedAtIso: nowIso,
       },
       { merge: true }
+    ),
+    sendAssistantQuotationReviewEmail(
+      quoteRef.id,
+      getAssistantLeadSource(cleanedSessionId),
+      session.lead
     ),
   ]);
 

@@ -15,6 +15,7 @@ import {
 import { getQuotationNotificationRecipients } from "@/lib/quotation-notification-settings";
 import { storePublicUploadBuffer } from "@/lib/public-upload-store";
 import { buildAutomaticQuotePricing } from "@/lib/quote-auto-pricing";
+import { SITE_URL } from "@/lib/seo";
 
 type ParsedPayload = {
   name: string;
@@ -602,6 +603,12 @@ export async function POST(req: Request) {
       `  Post code: ${formatValue(deliveryPostCode)}`,
       `  Phone: ${formatValue(deliveryPhone)}`
     );
+    const adminQuotationUrl = quoteId
+      ? `${SITE_URL}/admin/quotation-approval?quoteId=${encodeURIComponent(quoteId)}`
+      : "";
+    if (adminQuotationUrl) {
+      textLines.push("", "Review this quotation:", adminQuotationUrl);
+    }
     const text = textLines.join("\n");
 
     const contactRows: [string, unknown][] = [
@@ -652,12 +659,20 @@ export async function POST(req: Request) {
         : "",
       renderSection("Delivery Info", deliveryRows),
     ].join("");
+    const reviewCtaHtml = adminQuotationUrl
+      ? `<div style="margin:22px 0 4px;padding:18px;border-radius:16px;background:#fff4ed;border:1px solid #fed7aa;">
+  <div style="margin:0 0 12px;font-size:16px;font-weight:800;color:#111;">Ready for your review</div>
+  <div style="margin:0 0 16px;color:#57534e;line-height:1.5;">Sign in securely to review the automatic price, change it, approve the quotation, or continue the workflow.</div>
+  <a href="${escapeHtml(adminQuotationUrl)}" style="display:inline-block;padding:12px 20px;border-radius:999px;background:#ff6600;color:#fff;text-decoration:none;font-weight:800;">Open quotation</a>
+</div>`
+      : "";
     const html = `<div style="font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#111;">
   <div style="margin:0 0 6px; font-size:20px; font-weight:800;">New Quotation Request</div>
   <div style="margin:0 0 14px; font-size:16px; font-weight:700; color:#111;">Source: ${escapeHtml(sourceValue)}</div>
   <table cellpadding="0" cellspacing="0" style="border-collapse:collapse; width:100%; max-width:520px;">
     ${htmlRows}
   </table>
+  ${reviewCtaHtml}
 </div>`;
 
     if (host && user && pass) {
