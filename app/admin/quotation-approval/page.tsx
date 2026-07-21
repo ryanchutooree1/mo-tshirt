@@ -4045,13 +4045,13 @@ export default function QuotationApprovalPage() {
             </aside>
 
             <section className={`${mobilePanel === "quote" ? "block" : "hidden"} min-w-0 space-y-4 lg:block`}>
-              <div className="hidden lg:flex">
+              <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center">
                 <button
                   type="button"
                   onClick={toggleInboxCollapsed}
                   aria-expanded={!inboxCollapsed}
                   aria-controls="quotation-client-inbox"
-                  className={secondaryButtonClass}
+                  className={`${secondaryButtonClass} hidden lg:inline-flex`}
                 >
                   {inboxCollapsed ? (
                     <FiChevronRight className="h-4 w-4" />
@@ -4060,6 +4060,69 @@ export default function QuotationApprovalPage() {
                   )}
                   {inboxCollapsed ? "Show client list" : "Hide client list"}
                 </button>
+                {selected && draft ? (
+                  <div
+                    className={`flex min-w-0 flex-1 flex-col gap-3 rounded-2xl border px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${
+                      isDark ? "border-white/10 bg-white/[0.04]" : "border-[#e4e4e4] bg-white"
+                    }`}
+                  >
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <label
+                        htmlFor="quotation-completion-days"
+                        className={`mr-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${
+                          isDark ? "text-white/50" : "text-[#717171]"
+                        }`}
+                      >
+                        Order completion time
+                      </label>
+                      <input
+                        id="quotation-completion-days"
+                        type="number"
+                        min={1}
+                        max={3650}
+                        step={1}
+                        inputMode="numeric"
+                        value={completionDaysInput}
+                        onChange={(event) => setCompletionDaysInput(event.target.value)}
+                        className={`w-20 rounded-xl border px-3 py-2 text-sm font-semibold outline-none transition ${
+                          isDark
+                            ? "border-white/15 bg-black/20 text-white focus:border-orange-400/70"
+                            : "border-[#d7d7d7] bg-white text-[#222222] focus:border-[#ff6600]"
+                        }`}
+                      />
+                      <span className={`text-sm ${isDark ? "text-white/55" : "text-[#6a6a6a]"}`}>
+                        day{Number(completionDaysInput) === 1 ? "" : "s"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={saveCompletionEstimate}
+                        disabled={completionDaysSaving}
+                        className={primaryButtonClass}
+                      >
+                        {completionDaysSaving ? "Saving..." : "Update days"}
+                      </button>
+                    </div>
+                    <div className={`shrink-0 text-xs leading-5 sm:text-right ${isDark ? "text-white/45" : "text-[#717171]"}`}>
+                      {selected.completionEstimate ? (
+                        <>
+                          <p className={`font-semibold ${isDark ? "text-white/75" : "text-[#484848]"}`}>
+                            Changed by {selected.completionEstimate.changedByName}
+                          </p>
+                          <p>
+                            {format(new Date(selected.completionEstimate.changedAtIso), "d MMM yyyy, HH:mm")}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className={`font-semibold ${isDark ? "text-white/75" : "text-[#484848]"}`}>
+                            Default estimate
+                          </p>
+                          <p>3 days · not changed yet</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
               </div>
               {selected && draft ? (
                 <div className="flex flex-col gap-6">
@@ -4861,73 +4924,7 @@ export default function QuotationApprovalPage() {
                     className="-order-3 scroll-mt-24 grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]"
                   >
                     <div className={`${surfaceClass} order-2 p-5`}>
-                      <div
-                        className={`rounded-2xl border p-4 ${
-                          isDark ? "border-white/10 bg-white/[0.04]" : "border-[#ebebeb] bg-[#f7f7f7]"
-                        }`}
-                      >
-                        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(180px,auto)] sm:items-end">
-                          <div>
-                            <label
-                              htmlFor="quotation-completion-days"
-                              className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${
-                                isDark ? "text-white/50" : "text-[#717171]"
-                              }`}
-                            >
-                              Order completion time
-                            </label>
-                            <div className="mt-2 flex flex-wrap items-center gap-2">
-                              <input
-                                id="quotation-completion-days"
-                                type="number"
-                                min={1}
-                                max={3650}
-                                step={1}
-                                inputMode="numeric"
-                                value={completionDaysInput}
-                                onChange={(event) => setCompletionDaysInput(event.target.value)}
-                                className={`w-24 rounded-xl border px-3 py-2 text-sm font-semibold outline-none transition ${
-                                  isDark
-                                    ? "border-white/15 bg-black/20 text-white focus:border-orange-400/70"
-                                    : "border-[#d7d7d7] bg-white text-[#222222] focus:border-[#ff6600]"
-                                }`}
-                              />
-                              <span className={`text-sm ${isDark ? "text-white/55" : "text-[#6a6a6a]"}`}>
-                                day{Number(completionDaysInput) === 1 ? "" : "s"}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={saveCompletionEstimate}
-                                disabled={completionDaysSaving}
-                                className={primaryButtonClass}
-                              >
-                                {completionDaysSaving ? "Saving..." : "Update days"}
-                              </button>
-                            </div>
-                          </div>
-                          <div className={`text-xs leading-5 sm:text-right ${isDark ? "text-white/45" : "text-[#717171]"}`}>
-                            {selected.completionEstimate ? (
-                              <>
-                                <p className={`font-semibold ${isDark ? "text-white/75" : "text-[#484848]"}`}>
-                                  Changed by {selected.completionEstimate.changedByName}
-                                </p>
-                                <p>
-                                  {format(new Date(selected.completionEstimate.changedAtIso), "d MMM yyyy, HH:mm")}
-                                </p>
-                              </>
-                            ) : (
-                              <>
-                                <p className={`font-semibold ${isDark ? "text-white/75" : "text-[#484848]"}`}>
-                                  Default estimate
-                                </p>
-                                <p>3 days · not changed yet</p>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <p className={`${labelClass} mt-5`}>Product details</p>
+                      <p className={labelClass}>Product details</p>
                       <div className="mt-4 space-y-3 text-sm leading-6 text-[#484848]">
                         <p>
                           <span className="font-semibold text-[#222222]">Product</span>
