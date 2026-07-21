@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { CheckCircle2, FileImage, History, LoaderCircle, MessageSquareText, XCircle } from "lucide-react";
+import { CheckCircle2, FileImage, FileText, History, LoaderCircle, MessageSquareText, X, XCircle } from "lucide-react";
 import type { QuoteResponseAction } from "@/lib/quote-response-links";
 
 type QuoteResponseHistoryEntry = {
@@ -13,7 +13,14 @@ type QuoteResponseHistoryEntry = {
   paymentEvidence?: {
     url: string;
     filename: string;
+    contentType?: string;
   };
+};
+
+type AttachmentPreview = {
+  url: string;
+  filename: string;
+  kind: "image" | "pdf";
 };
 
 type QuoteSummary = {
@@ -24,6 +31,11 @@ type QuoteSummary = {
   amountReceived: number;
   currentDecision: string;
   responseHistory: QuoteResponseHistoryEntry[];
+  quotationDocument?: {
+    url: string;
+    filename: string;
+    contentType: string;
+  };
 };
 
 type Props = {
@@ -60,6 +72,7 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [attachmentPreview, setAttachmentPreview] = useState<AttachmentPreview | null>(null);
   const actionCopy = action ? ACTION_COPY[action] : null;
 
   const apiUrl = useMemo(() => {
@@ -143,6 +156,26 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
           <h1 className="text-3xl font-bold tracking-tight">{actionCopy.title}</h1>
           <p className="mt-2 text-sm leading-6 text-black/60">{actionCopy.description}</p>
 
+          {quote.quotationDocument?.url ? (
+            <button
+              type="button"
+              onClick={() => setAttachmentPreview({
+                url: quote.quotationDocument!.url,
+                filename: quote.quotationDocument!.filename,
+                kind: "pdf",
+              })}
+              className="mt-6 flex w-full items-center gap-3 rounded-2xl border border-black/10 bg-[#f7f7f5] p-4 text-left transition hover:border-black/25 hover:bg-[#f1f1ee] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-black/10"
+            >
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-black shadow-sm">
+                <FileText className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-medium text-black/50">Attached quotation</span>
+                <span className="mt-0.5 block truncate text-sm font-bold">View {quote.quotationDocument.filename}</span>
+              </span>
+            </button>
+          ) : null}
+
           <div className="my-7 grid grid-cols-2 gap-3 rounded-2xl bg-[#f7f7f5] p-4 text-sm">
             <div><p className="text-black/45">Quotation</p><p className="mt-1 font-semibold">{quote.documentNumber || quoteId.slice(-8).toUpperCase()}</p></div>
             <div><p className="text-black/45">{action === "accept" ? "Balance to pay" : "Total"}</p><p className="mt-1 font-semibold">{balance === null ? "See attached PDF" : `${quote.currency} ${balance.toLocaleString("en-MU", { minimumFractionDigits: 2 })}`}</p></div>
@@ -176,15 +209,18 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
                           </div>
                           {entry.comment ? <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-black/60">{entry.comment}</p> : null}
                           {entry.paymentEvidence?.url ? (
-                            <a
-                              href={entry.paymentEvidence.url}
-                              target="_blank"
-                              rel="noreferrer"
+                            <button
+                              type="button"
+                              onClick={() => setAttachmentPreview({
+                                url: entry.paymentEvidence!.url,
+                                filename: entry.paymentEvidence!.filename || "Payment screenshot",
+                                kind: "image",
+                              })}
                               className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-black underline decoration-black/25 underline-offset-4"
                             >
                               <FileImage className="h-3.5 w-3.5" />
                               View {entry.paymentEvidence.filename || "payment screenshot"}
-                            </a>
+                            </button>
                           ) : null}
                         </div>
                       </div>
@@ -236,7 +272,55 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
           )}
         </section>
       </div>
+      {attachmentPreview ? (
+        <AttachmentPreviewDialog
+          attachment={attachmentPreview}
+          onClose={() => setAttachmentPreview(null)}
+        />
+      ) : null}
     </main>
+  );
+}
+
+function AttachmentPreviewDialog({
+  attachment,
+  onClose,
+}: {
+  attachment: AttachmentPreview;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6" role="dialog" aria-modal="true" aria-label={`Preview ${attachment.filename}`}>
+      <button type="button" onClick={onClose} className="absolute inset-0 bg-black/70 backdrop-blur-sm" aria-label="Close attachment preview" />
+      <div className="relative flex h-[min(90vh,900px)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between gap-4 border-b border-black/10 px-4 py-3 sm:px-5">
+          <p className="min-w-0 truncate text-sm font-bold">{attachment.filename}</p>
+          <button type="button" onClick={onClose} autoFocus className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black text-white transition hover:bg-black/75" aria-label="Close preview">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="relative min-h-0 flex-1 bg-[#efefec]">
+          {attachment.kind === "pdf" ? (
+            <iframe src={attachment.url} title={attachment.filename} className="h-full w-full border-0" />
+          ) : (
+            <Image src={attachment.url} alt={attachment.filename} fill unoptimized sizes="100vw" className="object-contain p-2 sm:p-4" />
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 

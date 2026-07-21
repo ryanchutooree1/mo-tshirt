@@ -4,6 +4,7 @@ import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { hasAdminSession } from "@/lib/admin-auth";
 import { db } from "@/lib/firebase";
 import { buildQuoteResponseUrl } from "@/lib/quote-response-links";
+import { storePublicUploadBuffer } from "@/lib/public-upload-store";
 
 type SendPayload = {
   quoteId: string;
@@ -208,6 +209,19 @@ export async function POST(req: Request) {
     const plainTextMessage = responseLinks
       ? `${message}\n\nAccept quotation: ${responseLinks.accept}\nRequest changes: ${responseLinks.changes}\nReject quotation: ${responseLinks.reject}`
       : message;
+    const pdfFilename = `${documentSlug}-${payload.quoteId}.pdf`;
+    const quotationDocument = responseLinks
+      ? await storePublicUploadBuffer({
+          buffer,
+          filename: pdfFilename,
+          contentType: "application/pdf",
+          size: buffer.byteLength,
+          sessionId: payload.quoteId,
+          sessionPrefix: "quotation-document",
+          source: "quotation-response-document",
+          maxUploadBytes: 10 * 1024 * 1024,
+        })
+      : null;
 
     const mailOptions: Record<string, unknown> = {
       from,
@@ -220,7 +234,7 @@ export async function POST(req: Request) {
 </div>`,
       attachments: [
         {
-          filename: `${documentSlug}-${payload.quoteId}.pdf`,
+          filename: pdfFilename,
           content: buffer,
           contentType: "application/pdf",
         },
@@ -256,6 +270,7 @@ export async function POST(req: Request) {
         ...(cleanClientPhone ? { phone: cleanClientPhone } : {}),
         lastEmailTo: payload.to,
         lastEmailSubject: subject,
+        ...(quotationDocument ? { quotationDocument } : {}),
         ...(responseLinks ? { clientResponseLinksSentAt: serverTimestamp() } : {}),
       });
     } catch (error) {

@@ -38,6 +38,18 @@ function cleanPaymentEvidence(value: unknown) {
   };
 }
 
+function cleanQuotationDocument(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  const url = cleanString(raw.url, 2_000);
+  if (!url) return null;
+  return {
+    url,
+    filename: cleanString(raw.filename, 300) || "Quotation.pdf",
+    contentType: "application/pdf",
+  };
+}
+
 function getStoredResponseHistory(data: Record<string, unknown>) {
   return Array.isArray(data.clientResponseHistory)
     ? data.clientResponseHistory.filter(
@@ -114,6 +126,7 @@ function publicQuoteSummary(data: Record<string, unknown>) {
     : {};
   const total = Number(quote.total);
   const amountReceived = Number(quote.amountReceived);
+  const quotationDocument = cleanQuotationDocument(data.quotationDocument);
 
   return {
     clientName: cleanString(data.name, 120),
@@ -123,6 +136,7 @@ function publicQuoteSummary(data: Record<string, unknown>) {
     amountReceived: Number.isFinite(amountReceived) ? amountReceived : 0,
     currentDecision: cleanString(data.clientDecision, 40),
     responseHistory: publicResponseHistory(data),
+    ...(quotationDocument ? { quotationDocument } : {}),
   };
 }
 
