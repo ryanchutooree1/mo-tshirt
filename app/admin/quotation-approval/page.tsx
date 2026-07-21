@@ -1622,7 +1622,6 @@ export default function QuotationApprovalPage() {
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | "all">("all");
   const [draft, setDraft] = useState<QuoteDraft | null>(null);
   const [quotationPreviewUrl, setQuotationPreviewUrl] = useState<string | null>(null);
-  const [quotationPreviewOpen, setQuotationPreviewOpen] = useState(false);
   const [paymentReceiptPreviewOpen, setPaymentReceiptPreviewOpen] = useState(false);
   const [paymentReceiptPreviewUrl, setPaymentReceiptPreviewUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -2459,7 +2458,6 @@ export default function QuotationApprovalPage() {
   }, [selected]);
 
   useEffect(() => {
-    setQuotationPreviewOpen(false);
     setPaymentReceiptPreviewOpen(false);
   }, [selectedId]);
 
@@ -4357,62 +4355,43 @@ export default function QuotationApprovalPage() {
                             </div>
                           ) : null}
                         </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          {quotationMissingCount > 0 ? (
-                            <button
-                              type="button"
-                              onClick={() => openWorkflowStudioAt(quotationMissingFields[0]?.target)}
-                              className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-2 text-xs font-extrabold text-red-700 transition hover:bg-red-100"
-                            >
-                              <FiEdit2 className="h-3.5 w-3.5" />
-                              {quotationMissingCount} missing field{quotationMissingCount === 1 ? "" : "s"} — fill now
-                            </button>
-                          ) : (
-                            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
-                              <FiCheckCircle className="h-3.5 w-3.5" />
-                              Complete and ready
-                            </span>
-                          )}
+                        {quotationMissingCount > 0 ? (
                           <button
                             type="button"
-                            onClick={() => setQuotationPreviewOpen((isOpen) => !isOpen)}
-                            aria-expanded={quotationPreviewOpen}
-                            aria-controls="automatic-quotation-preview"
-                            className={secondaryButtonClass}
+                            onClick={() => openWorkflowStudioAt(quotationMissingFields[0]?.target)}
+                            className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-2 text-xs font-extrabold text-red-700 transition hover:bg-red-100"
                           >
-                            <FiFileText className="h-4 w-4" />
-                            View Quotation
-                            {quotationPreviewOpen ? (
-                              <FiChevronUp className="h-4 w-4" aria-hidden="true" />
-                            ) : (
-                              <FiChevronDown className="h-4 w-4" aria-hidden="true" />
-                            )}
+                            <FiEdit2 className="h-3.5 w-3.5" />
+                            {quotationMissingCount} missing field{quotationMissingCount === 1 ? "" : "s"} — fill now
                           </button>
-                        </div>
+                        ) : (
+                          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
+                            <FiCheckCircle className="h-3.5 w-3.5" />
+                            Complete and ready
+                          </span>
+                        )}
                       </div>
 
-                      {quotationPreviewOpen ? (
-                        <div
-                          id="automatic-quotation-preview"
-                          className="overflow-hidden rounded-[24px] border border-[#dedede] bg-[#e9ecef] shadow-[0_24px_70px_-36px_rgba(15,23,42,0.35)]"
-                        >
-                          {quotationPreviewUrl ? (
-                            <iframe
-                              key={quotationPreviewUrl}
-                              src={quotationPreviewUrl}
-                              title={`Live ${DOC_TYPE_LABELS[draft.documentType]} PDF preview`}
-                              className="h-[72vh] min-h-[680px] w-full bg-white sm:h-[820px]"
-                            />
-                          ) : (
-                            <div className="grid min-h-[680px] place-items-center bg-white text-center text-[#717171]">
-                              <div>
-                                <FiRefreshCw className="mx-auto h-6 w-6 animate-spin text-[#ff6600]" />
-                                <p className="mt-3 text-sm font-semibold">Generating existing quotation PDF…</p>
-                              </div>
+                      <div
+                        aria-label="Live quotation PDF preview"
+                        className="overflow-hidden rounded-[24px] border border-[#dedede] bg-[#e9ecef] shadow-[0_24px_70px_-36px_rgba(15,23,42,0.35)]"
+                      >
+                        {quotationPreviewUrl ? (
+                          <iframe
+                            key={quotationPreviewUrl}
+                            src={quotationPreviewUrl}
+                            title={`Live ${DOC_TYPE_LABELS[draft.documentType]} PDF preview`}
+                            className="h-[72vh] min-h-[680px] w-full bg-white sm:h-[820px]"
+                          />
+                        ) : (
+                          <div className="grid min-h-[680px] place-items-center bg-white text-center text-[#717171]">
+                            <div>
+                              <FiRefreshCw className="mx-auto h-6 w-6 animate-spin text-[#ff6600]" />
+                              <p className="mt-3 text-sm font-semibold">Generating existing quotation PDF…</p>
                             </div>
-                          )}
-                        </div>
-                      ) : null}
+                          </div>
+                        )}
+                      </div>
 
                       <div className="hidden mx-auto overflow-hidden rounded-[24px] border border-[#dedede] bg-white text-[#222222] shadow-[0_24px_70px_-36px_rgba(15,23,42,0.35)]">
                         <div className="h-2 bg-[linear-gradient(90deg,#ff6600,#f59e0b,#ff6600)]" />
