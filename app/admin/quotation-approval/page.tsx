@@ -1094,25 +1094,44 @@ const formatMoney = (value: number, currency = "Rs") => {
 const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
   const fallbackDate = quote.createdAt ? format(quote.createdAt, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
   const fallbackNumber = `Q-${quote.id.slice(-5).toUpperCase()}`;
+  const designBrief = parseDesignBrief(quote.designBrief);
+  const savedPrintPlacement = normalizePartnerPrintPlacement(quote.partner?.printPlacement);
+  const inferredPrintPlacement = inferPartnerPrintPlacementFromText(
+    [
+      quote.notes || "",
+      quote.message || "",
+      ...(quote.quote?.lines || []).map((line) => line.description || ""),
+    ].join(" "),
+    {
+      front: Boolean(designBrief?.frontLogo || designBrief?.frontText),
+      back: Boolean(designBrief?.backLogo || designBrief?.backText),
+    }
+  );
+  const automaticPricing = buildAutomaticQuotePricing({
+    garments: quote.garments,
+    printMethod: quote.printMethod,
+    designBrief: quote.designBrief,
+    delivery: quote.delivery,
+    fallbackPrintPlacement:
+      savedPrintPlacement !== "not_set" ? savedPrintPlacement : inferredPrintPlacement,
+  });
   if (quote.quote) {
-    const storedLines: QuoteLine[] = (quote.quote.lines || []).map((line) => ({
-      description: line.description || "",
+    const storedLines: QuoteLine[] = (quote.quote.lines || []).map((line, index) => {
+      const storedAmount = safeNumber(line.unitPrice, 0);
+      const automaticAmount = safeNumber(automaticPricing.lines[index]?.unitPrice, 0);
+      return {
+        description: line.description || automaticPricing.lines[index]?.description || "",
+        quantity: safeNumber(line.quantity, 0),
+        unitPrice: storedAmount > 0 ? storedAmount : automaticAmount > 0 ? automaticAmount : "",
+        includeInTotals: true,
+      };
+    });
+    const fallbackLines: QuoteLine[] = automaticPricing.lines.map((line) => ({
+      description: line.description || formatQuoteGarmentDescription({}),
       quantity: safeNumber(line.quantity, 0),
-      unitPrice: (() => {
-        const amount = safeNumber(line.unitPrice, 0);
-        return amount > 0 ? amount : "";
-      })(),
+      unitPrice: safeNumber(line.unitPrice, 0) > 0 ? safeNumber(line.unitPrice, 0) : "",
       includeInTotals: true,
     }));
-    const fallbackLines: QuoteLine[] =
-      quote.garments?.map((entry) => {
-        return {
-          description: formatQuoteGarmentDescription(entry),
-          quantity: safeNumber(entry.quantity, 0),
-          unitPrice: "",
-          includeInTotals: true,
-        };
-      }) || [];
     const documentType = quote.quote.documentType || "quotation";
     const documentDate = quote.quote.documentDate || fallbackDate;
     const validUntilFallback = format(addDays(new Date(documentDate), 7), "yyyy-MM-dd");
@@ -1151,12 +1170,6 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
   }
 
   const validUntilFallback = format(addDays(new Date(fallbackDate), 7), "yyyy-MM-dd");
-  const automaticPricing = buildAutomaticQuotePricing({
-    garments: quote.garments,
-    printMethod: quote.printMethod,
-    designBrief: quote.designBrief,
-    delivery: quote.delivery,
-  });
   const fromGarments: QuoteLine[] = automaticPricing.lines.map((line) => ({
     description: line.description || formatQuoteGarmentDescription({}),
     quantity: safeNumber(line.quantity, 0),

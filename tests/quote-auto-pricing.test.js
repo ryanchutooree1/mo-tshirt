@@ -67,6 +67,18 @@ test("leaves unsupported products and placements for manual review", () => {
   assert.equal(result.deliveryFee, 0);
 });
 
+test("backfills an older request with no saved size from its known placement", () => {
+  const result = buildAutomaticQuotePricing({
+    garments: [{ garment: "T-Shirt", quantity: 21 }],
+    printMethod: "DTF Printing",
+    fallbackPrintPlacement: "small_front_only",
+  });
+
+  assert.equal(result.lines[0].unitPrice, 290);
+  assert.equal(result.subtotal, 6090);
+  assert.equal(result.requiresReview, false);
+});
+
 test("uses the configured delivery fees", () => {
   assert.equal(getAutomaticDeliveryFee("Surinam Pickup (Free)"), 0);
   assert.equal(getAutomaticDeliveryFee("Post Office Postage Delivery (Rs 100)"), 100);

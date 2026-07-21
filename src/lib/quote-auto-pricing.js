@@ -109,7 +109,9 @@ function findArtworkForGarment(garment, artworkItems) {
 
 function getAutomaticUnitPrice({ garment, printMethod, printPlacement }) {
   const itemType = normalizeItemType(garment?.garment);
-  const sizeBand = normalizeSizeBand(garment?.size);
+  // Older website requests did not always store a size. The existing price book
+  // uses XS-XL as its normal/default band, so use that band for those records.
+  const sizeBand = normalizeSizeBand(garment?.size) || "XS-XL";
   const method = normalizeMethod(printMethod);
   const printOption = PRINT_PLACEMENT_TO_OPTION[clean(printPlacement)];
   if (!itemType || !sizeBand || !method || !printOption) return null;
@@ -125,12 +127,18 @@ function getAutomaticDeliveryFee(delivery) {
   return 0;
 }
 
-function buildAutomaticQuotePricing({ garments, printMethod, designBrief, delivery } = {}) {
+function buildAutomaticQuotePricing({
+  garments,
+  printMethod,
+  designBrief,
+  delivery,
+  fallbackPrintPlacement,
+} = {}) {
   const garmentLines = Array.isArray(garments) ? garments : [];
   const artworkItems = getArtworkItems(designBrief);
   const lines = garmentLines.map((garment) => {
     const artwork = findArtworkForGarment(garment, artworkItems);
-    const printPlacement = clean(artwork?.printPlacement);
+    const printPlacement = clean(artwork?.printPlacement) || clean(fallbackPrintPlacement);
     const placementLabel = PRINT_PLACEMENT_LABELS[printPlacement];
     const unitPrice = getAutomaticUnitPrice({ garment, printMethod, printPlacement });
     const description = [
