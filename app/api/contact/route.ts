@@ -344,7 +344,9 @@ export async function POST(req: Request) {
       return json({ error: "Attachments are too large. Keep the total under 15MB." }, 400);
     }
 
-    const emailAttachments: { filename: string; content: Buffer; contentType?: string }[] = [];
+    // Keep review emails limited to the exact files supplied by the client.
+    // Print-ready/background-removed derivatives belong in the admin workspace only.
+    const originalEmailAttachments: { filename: string; content: Buffer; contentType?: string }[] = [];
     const acceptedFiles: { file: File; buffer: Buffer }[] = [];
 
     for (const currentFile of requestFiles) {
@@ -358,7 +360,7 @@ export async function POST(req: Request) {
       }
       const buffer = Buffer.from(await currentFile.arrayBuffer());
       acceptedFiles.push({ file: currentFile, buffer });
-      emailAttachments.push({
+      originalEmailAttachments.push({
         filename: currentFile.name || "attachment",
         content: buffer,
         contentType: currentFile.type || undefined,
@@ -698,8 +700,8 @@ export async function POST(req: Request) {
         if (safeEmail) {
           mailOptions.replyTo = safeEmail;
         }
-        if (emailAttachments.length) {
-          mailOptions.attachments = emailAttachments;
+        if (originalEmailAttachments.length) {
+          mailOptions.attachments = originalEmailAttachments;
         }
         await transporter.sendMail(mailOptions);
         return json({ message: "Thanks! We received your message.", quoteId }, 200);

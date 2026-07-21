@@ -937,11 +937,35 @@ async function sendAssistantQuotationReviewEmail(
   const clientName = lead.clientName || "New client";
   const garmentSummary = formatAssistantGarmentSummary(lead);
   const subject = `New ${sourceLabel} quotation from ${clientName}`;
+  let originalLogoAttachment:
+    | { filename: string; content: Buffer; contentType?: string }
+    | undefined;
+  if (lead.logoAttachment?.url) {
+    try {
+      const originalLogoUrl = new URL(lead.logoAttachment.url, SITE_URL);
+      const response = await fetch(originalLogoUrl);
+      if (response.ok) {
+        const content = Buffer.from(await response.arrayBuffer());
+        if (content.byteLength <= 5 * 1024 * 1024) {
+          originalLogoAttachment = {
+            filename: lead.logoAttachment.name || "original-logo",
+            content,
+            ...(lead.logoAttachment.contentType
+              ? { contentType: lead.logoAttachment.contentType }
+              : {}),
+          };
+        }
+      }
+    } catch (error) {
+      console.warn("ai-assistant:original-logo-email-attachment", error);
+    }
+  }
   const text = [
     `New ${sourceLabel} quotation`,
     `Client: ${clientName}`,
     `Garments: ${garmentSummary}`,
     lead.printType ? `Print method: ${formatAssistantPrintMethod(lead.printType)}` : "",
+    originalLogoAttachment ? "Original client logo: attached" : "",
     "",
     "Open quotation:",
     adminQuotationUrl,
@@ -952,6 +976,7 @@ async function sendAssistantQuotationReviewEmail(
   <div style="padding:16px;border:1px solid #e5e7eb;border-radius:14px;background:#fafafa;line-height:1.55;">
     <div><strong>Garments:</strong> ${escapeEmailHtml(garmentSummary)}</div>
     ${lead.printType ? `<div><strong>Print method:</strong> ${escapeEmailHtml(formatAssistantPrintMethod(lead.printType))}</div>` : ""}
+    ${originalLogoAttachment ? `<div><strong>Original client logo:</strong> attached</div>` : ""}
   </div>
   <div style="margin:20px 0;padding:18px;border-radius:16px;background:#fff4ed;border:1px solid #fed7aa;">
     <div style="margin-bottom:12px;font-size:16px;font-weight:800;">Ready for your review</div>
@@ -977,6 +1002,7 @@ async function sendAssistantQuotationReviewEmail(
       subject,
       text,
       html,
+      attachments: originalLogoAttachment ? [originalLogoAttachment] : undefined,
     });
   } catch (error) {
     console.error("ai-assistant:quotation-review-email", error);
