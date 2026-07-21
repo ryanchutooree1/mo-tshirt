@@ -5056,36 +5056,39 @@ export default function QuotationApprovalPage() {
                                     ) : null}
                                   </div>
                                   {attachment.url ? (
-                                    <div className="grid w-full grid-cols-[minmax(0,1fr)_2.5rem] items-center gap-2">
+                                    <div className="grid w-full gap-2 sm:grid-cols-2">
                                       <a
-                                        href={attachment.url}
+                                        href={originalAttachmentUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className={`${secondaryButtonClass} whitespace-nowrap px-3`}
                                       >
                                         <FiFileText className="h-3.5 w-3.5" />
-                                        {hasTransparentArtwork ? "Open transparent PNG" : "Open file"}
+                                        Open original
                                       </a>
-                                      <a
-                                        href={attachmentDownloadHref}
-                                        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#dddddd] bg-white text-[#484848] transition hover:border-[#c7c7c7] hover:bg-[#f7f7f7]"
-                                        aria-label={`Download ${attachment.filename || "attachment"}`}
-                                        title="Download file"
-                                      >
-                                        <FiDownload className="h-4 w-4" />
-                                      </a>
+                                      {hasTransparentArtwork ? (
+                                        <a
+                                          href={attachment.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className={`${secondaryButtonClass} whitespace-nowrap px-3`}
+                                        >
+                                          <FiStar className="h-3.5 w-3.5" />
+                                          Open processed
+                                        </a>
+                                      ) : null}
                                     </div>
                                   ) : null}
                                 </div>
                                 {attachmentIsImage && attachment.url ? (
-                                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                                  <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-3">
                                     <div className="rounded-[22px] border border-[#e7e7e7] bg-white p-2.5">
                                       <div className="flex items-center justify-between gap-2 px-1">
                                         <div>
                                           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#717171]">
-                                            Uploaded
+                                            1 · Original logo
                                           </p>
-                                          <p className="mt-0.5 text-[11px] text-[#9a9a9a]">Source artwork</p>
+                                          <p className="mt-0.5 text-[11px] text-[#9a9a9a]">Client upload</p>
                                         </div>
                                         {originalDownloadHref ? (
                                           <a
@@ -5112,7 +5115,7 @@ export default function QuotationApprovalPage() {
                                               <FiStar className="h-3 w-3" />
                                             </span>
                                             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#1f7a4d]">
-                                              Print-ready
+                                              2 · Processed logo
                                             </p>
                                           </div>
                                           <p className="mt-0.5 text-[11px] text-[#56806a]">
