@@ -68,6 +68,8 @@ const EVENT_COLORS: Record<TrackingEventName, string> = {
   shop_order_submit: '#7c3aed',
 };
 
+const RECENT_EVENTS_PAGE_SIZE = 25;
+
 function getRange(preset: RangePreset) {
   const end = new Date();
   const days = preset === '7d' ? 7 : preset === '30d' ? 30 : 90;
@@ -229,6 +231,7 @@ export default function TrackingPage() {
   const [gmailStats, setGmailStats] = useState<GmailQuotationStats | null>(null);
   const [gmailLoading, setGmailLoading] = useState(true);
   const [gmailError, setGmailError] = useState<string | null>(null);
+  const [visibleEventCount, setVisibleEventCount] = useState(RECENT_EVENTS_PAGE_SIZE);
 
   const range = useMemo(() => getRange(preset), [preset]);
 
@@ -238,6 +241,7 @@ export default function TrackingPage() {
     async function run() {
       setLoading(true);
       setError(null);
+      setVisibleEventCount(RECENT_EVENTS_PAGE_SIZE);
 
       try {
         const trackingQuery = query(
@@ -411,7 +415,11 @@ export default function TrackingPage() {
     [events]
   );
 
-  const recentEvents = useMemo(() => events.slice(0, 25), [events]);
+  const recentEvents = useMemo(
+    () => events.slice(0, visibleEventCount),
+    [events, visibleEventCount]
+  );
+  const remainingEventCount = Math.max(0, events.length - recentEvents.length);
 
   const gmailMetric = useMemo(() => {
     if (gmailLoading) {
@@ -668,6 +676,20 @@ export default function TrackingPage() {
               )}
             </div>
           </div>
+          {remainingEventCount > 0 ? (
+            <div className="mt-5 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setVisibleEventCount((count) => count + RECENT_EVENTS_PAGE_SIZE)}
+                className="inline-flex items-center justify-center rounded-full border border-[#dddddd] bg-white px-6 py-3 text-sm font-semibold text-[#222222] transition hover:border-[#bdbdbd] hover:bg-[#f7f7f7] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#ff6600]/20"
+              >
+                Load more
+                <span className="ml-2 text-xs font-normal text-[#6a6a6a]">
+                  {remainingEventCount} remaining
+                </span>
+              </button>
+            </div>
+          ) : null}
         </section>
       </div>
     </main>
