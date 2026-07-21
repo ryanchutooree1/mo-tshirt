@@ -112,3 +112,18 @@ test("prices an older MO AI order using reviewed defaults", () => {
   assert.equal(result.total, 640);
   assert.equal(result.requiresReview, false);
 });
+
+test("prices a website quotation when the saved print method is missing", () => {
+  const result = buildAutomaticQuotePricing({
+    garments: [{ garment: "T-Shirt", color: "Black", size: "M", quantity: 2 }],
+    printMethod: "",
+    designBrief: { artwork: [{ printPlacement: "small_front_only" }] },
+  });
+
+  assert.equal(result.lines[0].unitPrice, 290);
+  assert.equal(result.total, 580);
+  assert.equal(
+    result.lines[0].description,
+    "T-Shirt (Black / M) — DTF — Small Front Printing only"
+  );
+});

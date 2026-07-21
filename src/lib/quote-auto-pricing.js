@@ -170,18 +170,21 @@ function buildAutomaticQuotePricing({
     const artwork = findArtworkForGarment(garment, artworkItems);
     const printPlacement = clean(artwork?.printPlacement) || clean(fallbackPrintPlacement);
     const placementLabel = PRINT_PLACEMENT_LABELS[printPlacement];
-    const effectivePrintMethod = normalizeMethod(printMethod) ? printMethod : fallbackPrintMethod;
+    const effectivePrintMethod = normalizeMethod(printMethod)
+      ? printMethod
+      : fallbackPrintMethod || "DTF";
     const unitPrice = getAutomaticUnitPrice({
       garment,
       printMethod: effectivePrintMethod,
       printPlacement,
     });
-    const description = [
-      formatGarmentDescription(garment),
-      placementLabel
-        ? `${normalizeMethod(effectivePrintMethod) || clean(effectivePrintMethod)} — ${placementLabel}`
-        : "",
+    const pricingDescription = [
+      normalizeMethod(effectivePrintMethod) || clean(effectivePrintMethod),
+      placementLabel,
     ]
+      .filter(Boolean)
+      .join(" — ");
+    const description = [formatGarmentDescription(garment), pricingDescription]
       .filter(Boolean)
       .join(" — ");
 
