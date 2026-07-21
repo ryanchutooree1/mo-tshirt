@@ -4,7 +4,13 @@ import Link from "next/link";
 import { getWhatsAppUrl, CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL } from "@/data/work";
 import { READY_MADE_UNIFORMS_PATH } from "@/data/ready-made-uniforms";
 import { buildPageMetadata } from "@/lib/seo";
-import { HiOutlineCheckBadge, HiOutlineBolt, HiOutlineGlobeAlt, HiOutlineSparkles } from "react-icons/hi2";
+import {
+  HiOutlineCheckBadge,
+  HiOutlineBolt,
+  HiOutlineGlobeAlt,
+  HiOutlineShoppingBag,
+  HiOutlineSparkles,
+} from "react-icons/hi2";
 import Gallery from "@/components/Gallery";
 import HomeAiOrder from "@/components/HomeAiOrder";
 import MapCard from "@/components/MapCard";
@@ -204,7 +210,7 @@ export default function HomePage() {
                   <a
                     key={link.label}
                     href={link.href}
-                    className={`inline-flex items-center justify-center whitespace-nowrap rounded-full leading-none transition ${
+                    className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full leading-none transition ${
                       link.buttonTone === "orange"
                         ? "min-h-10 border-transparent bg-[#FF6600] px-5 py-2 text-sm text-white shadow-sm hover:bg-orange-600"
                         : link.buttonTone === "rainbow"
@@ -212,6 +218,9 @@ export default function HomePage() {
                           : "text-black/70 hover:text-black"
                     }`}
                   >
+                    {link.label === "Plain Shops" ? (
+                      <HiOutlineShoppingBag className="h-4 w-4" aria-hidden="true" />
+                    ) : null}
                     {link.label}
                   </a>
                 )
@@ -226,13 +235,6 @@ export default function HomePage() {
         {/* Hero */}
         <section id="hero" className="flex min-h-[80vh] items-center justify-center px-6 pt-14 pb-12 sm:pt-20 sm:pb-20">
           <div className="mx-auto flex w-full max-w-5xl flex-col items-center text-center">
-            <a
-              href={READY_MADE_UNIFORMS_PATH}
-              className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-neutral-700 transition hover:border-black hover:bg-white hover:text-black"
-            >
-              Ready-Made Uniform Designs
-              <span aria-hidden="true">↓</span>
-            </a>
             <h1 className="text-4xl font-semibold tracking-tight text-black sm:text-5xl">
               Trying to be #1 in Mauritius.
             </h1>
