@@ -337,6 +337,7 @@ export default function AdminChrome({
   );
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [focusedQuoteReview, setFocusedQuoteReview] = useState(false);
   const [navQuery, setNavQuery] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
@@ -403,6 +404,17 @@ export default function AdminChrome({
       if (storedGroups) setOpenGroups((current) => ({ ...current, ...JSON.parse(storedGroups) }));
     } catch {}
   }, []);
+
+  useEffect(() => {
+    const syncFocusedQuoteReview = () => {
+      const quoteId = new URLSearchParams(window.location.search).get("quoteId");
+      setFocusedQuoteReview(pathname === "/admin/quotation-approval" && Boolean(quoteId));
+    };
+
+    syncFocusedQuoteReview();
+    window.addEventListener("popstate", syncFocusedQuoteReview);
+    return () => window.removeEventListener("popstate", syncFocusedQuoteReview);
+  }, [pathname]);
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 1024px)");
@@ -570,18 +582,20 @@ export default function AdminChrome({
     return <div className="min-h-screen bg-[#f6f8fb] text-slate-950">{children}</div>;
   }
 
+  const sidebarCollapsed = collapsed || focusedQuoteReview;
+
   const sidebar = (
     <aside
       className={`admin-workspace-sidebar flex h-full flex-col overflow-hidden border-r border-white/[0.07] bg-[#071015] text-white transition-[width] duration-300 ${
-        collapsed ? "lg:w-[68px]" : "lg:w-[272px]"
+        sidebarCollapsed ? "lg:w-[68px]" : "lg:w-[272px]"
       } w-[min(300px,calc(100vw-48px))] max-w-full`}
     >
-      <div className={`admin-workspace-sidebar-brand flex h-[92px] shrink-0 items-center border-b border-white/[0.07] px-5 ${collapsed ? "lg:justify-center lg:px-2" : ""}`}>
+      <div className={`admin-workspace-sidebar-brand flex h-[92px] shrink-0 items-center border-b border-white/[0.07] px-5 ${sidebarCollapsed ? "lg:justify-center lg:px-2" : ""}`}>
         <Link href="/admin" className="flex min-w-0 items-center gap-3" aria-label="MO T-SHIRT admin dashboard">
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
             <Image src="/logo_transparent.webp" alt="" width={1291} height={435} className="h-auto w-10 object-contain" />
           </span>
-          <span className={`min-w-0 ${collapsed ? "lg:hidden" : ""}`}>
+          <span className={`min-w-0 ${sidebarCollapsed ? "lg:hidden" : ""}`}>
             <span className="block truncate text-[21px] font-bold tracking-[-0.04em]">Mo T-Shirt</span>
             <span className="mt-0.5 block truncate text-[11px] text-white/45">Wear Your Creativity</span>
           </span>
@@ -596,8 +610,8 @@ export default function AdminChrome({
         </button>
       </div>
 
-      <nav className={`min-h-0 flex-1 overscroll-contain overflow-y-auto px-3 py-4 touch-pan-y [-webkit-overflow-scrolling:touch] [scrollbar-color:rgba(255,255,255,0.18)_transparent] ${collapsed ? "lg:px-2" : ""}`} aria-label="Administrator modules">
-        <div className={`relative mb-3 ${collapsed ? "lg:hidden" : ""}`}>
+      <nav className={`min-h-0 flex-1 overscroll-contain overflow-y-auto px-3 py-4 touch-pan-y [-webkit-overflow-scrolling:touch] [scrollbar-color:rgba(255,255,255,0.18)_transparent] ${sidebarCollapsed ? "lg:px-2" : ""}`} aria-label="Administrator modules">
+        <div className={`relative mb-3 ${sidebarCollapsed ? "lg:hidden" : ""}`}>
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
           <input
             value={navQuery}
@@ -615,14 +629,14 @@ export default function AdminChrome({
               return `${pageLabel(path)} ${group.label} ${path}`.toLowerCase().includes(queryValue);
             });
             if (!items.length) return null;
-            const expanded = (collapsed && isDesktop) || Boolean(queryValue) ? true : openGroups[group.id] !== false;
+            const expanded = (sidebarCollapsed && isDesktop) || Boolean(queryValue) ? true : openGroups[group.id] !== false;
             return (
               <div key={group.id} className="mb-2">
                 <button
                   type="button"
                   onClick={() => setOpenGroups((current) => ({ ...current, [group.id]: !expanded }))}
                   className={`flex w-full items-center justify-between px-3 py-2 text-left text-[10px] font-bold uppercase tracking-[0.16em] text-white/35 transition hover:text-white/65 ${
-                    collapsed ? "lg:hidden" : ""
+                    sidebarCollapsed ? "lg:hidden" : ""
                   }`}
                   aria-expanded={expanded}
                 >
@@ -638,18 +652,18 @@ export default function AdminChrome({
                         <Link
                           key={path}
                           href={pageHref(path)}
-                          title={collapsed ? pageLabel(path) : undefined}
+                          title={sidebarCollapsed ? pageLabel(path) : undefined}
                           aria-current={active ? "page" : undefined}
                           onClick={() => setMobileOpen(false)}
                           className={`group flex min-h-11 items-center gap-3 rounded-xl px-3 text-[13px] font-medium transition ${
                             active
                               ? "bg-white text-[#0b1115] shadow-[0_8px_24px_rgba(0,0,0,0.22)]"
                               : "text-white/62 hover:bg-white/[0.07] hover:text-white"
-                          } ${collapsed ? "lg:justify-center lg:px-0" : ""}`}
+                          } ${sidebarCollapsed ? "lg:justify-center lg:px-0" : ""}`}
                         >
                           <Icon className={`h-[18px] w-[18px] shrink-0 ${active ? "text-[#ff6400]" : "text-white/52 group-hover:text-white/85"}`} />
-                          <span className={`truncate ${collapsed ? "lg:hidden" : ""}`}>{pageLabel(path)}</span>
-                          {active ? <span className={`ml-auto h-1.5 w-1.5 rounded-full bg-[#ff6400] ${collapsed ? "lg:hidden" : ""}`} /> : null}
+                          <span className={`truncate ${sidebarCollapsed ? "lg:hidden" : ""}`}>{pageLabel(path)}</span>
+                          {active ? <span className={`ml-auto h-1.5 w-1.5 rounded-full bg-[#ff6400] ${sidebarCollapsed ? "lg:hidden" : ""}`} /> : null}
                         </Link>
                       );
                     })}
@@ -660,14 +674,14 @@ export default function AdminChrome({
           })}
       </nav>
 
-      <div className={`shrink-0 border-t border-white/[0.07] p-3 [padding-bottom:max(0.75rem,env(safe-area-inset-bottom))] ${collapsed ? "lg:px-2 lg:pt-2" : ""}`}>
+      <div className={`shrink-0 border-t border-white/[0.07] p-3 [padding-bottom:max(0.75rem,env(safe-area-inset-bottom))] ${sidebarCollapsed ? "lg:px-2 lg:pt-2" : ""}`}>
         <button
           type="button"
           onClick={(event) => openProfileEditor(event.currentTarget)}
-          title={collapsed ? "Edit profile" : undefined}
+          title={sidebarCollapsed ? "Edit profile" : undefined}
           aria-label={`Edit profile for ${displayName}`}
           aria-disabled={profileLoadState === "loading"}
-          className={`group flex min-h-11 w-full items-center gap-3 rounded-xl p-2.5 text-left transition hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6400]/70 ${collapsed ? "lg:justify-center lg:p-1" : ""}`}
+          className={`group flex min-h-11 w-full items-center gap-3 rounded-xl p-2.5 text-left transition hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6400]/70 ${sidebarCollapsed ? "lg:justify-center lg:p-1" : ""}`}
         >
           <AdminAvatar
             name={displayName}
@@ -678,11 +692,11 @@ export default function AdminChrome({
             sizes="36px"
             className="h-9 w-9 bg-white text-xs font-bold text-[#071015] ring-1 ring-white/20"
           />
-          <span className={`min-w-0 flex-1 ${collapsed ? "lg:hidden" : ""}`}>
+          <span className={`min-w-0 flex-1 ${sidebarCollapsed ? "lg:hidden" : ""}`}>
             <span className="block truncate text-xs font-semibold">{displayName}</span>
             <span className="mt-0.5 block truncate text-[10px] text-white/42">{profileSubtitle}</span>
           </span>
-          <Pencil className={`h-3.5 w-3.5 text-white/35 transition group-hover:text-white/65 ${collapsed ? "lg:hidden" : ""}`} />
+          <Pencil className={`h-3.5 w-3.5 text-white/35 transition group-hover:text-white/65 ${sidebarCollapsed ? "lg:hidden" : ""}`} />
         </button>
       </div>
     </aside>
@@ -718,11 +732,17 @@ export default function AdminChrome({
           </div>
           <button
             type="button"
-            onClick={() => setCollapsed((current) => !current)}
+            onClick={() => {
+              if (focusedQuoteReview) {
+                setFocusedQuoteReview(false);
+                return;
+              }
+              setCollapsed((current) => !current);
+            }}
             className={`hidden rounded-xl border p-2.5 transition lg:inline-flex ${isDark ? "border-white/10 bg-white/5 hover:bg-white/10" : "border-slate-200 bg-white hover:bg-slate-50"}`}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+            {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
           </button>
 
           <div className="hidden min-w-0 sm:block lg:w-[220px]">
