@@ -823,6 +823,134 @@ const safeNumber = (value: unknown, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const QUOTATION_ARCHIVE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+
+type QuotationAgeGroup = {
+  monthsAgo: number;
+  quotes: QuoteRecord[];
+};
+
+const groupQuotationsByAge = (quotes: QuoteRecord[], referenceTime: number) => {
+  const recent: QuoteRecord[] = [];
+  const olderByMonth = new Map<number, QuoteRecord[]>();
+
+  quotes.forEach((quote) => {
+    if (!quote.createdAt) {
+      recent.push(quote);
+      return;
+    }
+
+    const age = Math.max(0, referenceTime - quote.createdAt.getTime());
+    const monthsAgo = Math.floor(age / QUOTATION_ARCHIVE_MONTH_MS);
+    if (monthsAgo < 1) {
+      recent.push(quote);
+      return;
+    }
+
+    const group = olderByMonth.get(monthsAgo) || [];
+    group.push(quote);
+    olderByMonth.set(monthsAgo, group);
+  });
+
+  const older: QuotationAgeGroup[] = Array.from(olderByMonth, ([monthsAgo, groupedQuotes]) => ({
+    monthsAgo,
+    quotes: groupedQuotes,
+  })).sort((a, b) => a.monthsAgo - b.monthsAgo);
+
+  return { recent, older };
+};
+
+function QuotationInboxCard({
+  quote,
+  selected,
+  isDark,
+  onSelect,
+}: {
+  quote: QuoteRecord;
+  selected: boolean;
+  isDark: boolean;
+  onSelect: () => void;
+}) {
+  const status = quote.status || "new";
+  const docType = getQuoteDocumentType(quote);
+  const primaryStatus = getPrimaryStatusMeta(status, docType);
+  const paymentStatus = getPaymentStatusMeta(quote);
+  const totalPieces = (quote.garments || []).reduce(
+    (sum, entry) => sum + safeNumber(entry.quantity, 0),
+    0
+  );
+  const garmentPreview = (quote.garments || [])
+    .filter((entry) => safeNumber(entry.quantity, 0) > 0)
+    .slice(0, 2)
+    .map((entry) => formatQuoteGarmentDescription(entry))
+    .join(", ");
+  const initials = (quote.name || quote.email || "Q")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`w-full overflow-hidden rounded-[26px] border px-4 py-4 text-left transition ${
+        selected
+          ? isDark
+            ? "border-orange-400/45 bg-orange-400/[0.08] shadow-[0_18px_36px_-30px_rgba(255,102,0,0.35)]"
+            : "border-[#ffb37a] bg-white shadow-[0_18px_36px_-30px_rgba(255,102,0,0.28)]"
+          : isDark
+            ? "border-white/10 bg-white/[0.035] hover:border-white/20 hover:bg-white/[0.06]"
+            : "border-[#ebebeb] bg-white hover:border-[#cfcfcf] hover:shadow-[0_10px_24px_rgba(0,0,0,0.06)]"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold ${
+            selected
+              ? "bg-[#ff6600] text-white"
+              : isDark ? "bg-white/10 text-white/70" : "bg-[#f7f7f7] text-[#484848]"
+          }`}
+        >
+          {initials || "Q"}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+            <div className="min-w-0">
+              <p className={`truncate text-sm font-semibold ${isDark ? "text-white" : "text-[#222222]"}`}>
+                {quote.name || "Unnamed client"}
+              </p>
+              <p className={`truncate text-xs ${isDark ? "text-white/45" : "text-[#717171]"}`}>
+                {quote.email || "No email"}
+              </p>
+            </div>
+            <span className={`shrink-0 self-start whitespace-nowrap rounded-full border px-2.5 py-1 text-[10px] font-semibold ${primaryStatus.tone}`}>
+              {primaryStatus.label}
+            </span>
+          </div>
+          <p className={`mt-2 text-xs leading-5 ${isDark ? "text-white/55" : "text-[#6a6a6a]"}`}>
+            {garmentPreview || "No product line yet"}
+            {totalPieces > 0 ? ` • ${totalPieces} pc${totalPieces > 1 ? "s" : ""}` : ""}
+          </p>
+          <QuoteActivityStatus quote={quote} />
+          <span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${paymentStatus.tone}`}>
+            Payment: {paymentStatus.shortLabel}
+          </span>
+          <div className={`mt-3 flex items-center justify-between gap-3 text-[11px] ${isDark ? "text-white/35" : "text-[#717171]"}`}>
+            <span className="min-w-0 truncate">{quote.source || "Website"}</span>
+            <span>
+              {quote.createdAt
+                ? formatDistanceToNow(quote.createdAt, { addSuffix: true })
+                : "—"}
+            </span>
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
 const parseEditableNumber = (value: string, fallback = 0): EditableNumber =>
   value === "" ? "" : safeNumber(value, fallback);
 
@@ -1705,6 +1833,7 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
 export default function QuotationApprovalPage() {
   const { theme } = useAdminTheme();
   const isDark = theme === "dark";
+  const [quotationAgeReference] = useState(() => Date.now());
   const [quotes, setQuotes] = useState<QuoteRecord[]>([]);
   const [currentAdmin, setCurrentAdmin] = useState<AdminSessionSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -2440,6 +2569,11 @@ export default function QuotationApprovalPage() {
       );
     });
   }, [quotes, search, statusFilter]);
+
+  const groupedInboxQuotes = useMemo(
+    () => groupQuotationsByAge(filtered, quotationAgeReference),
+    [filtered, quotationAgeReference]
+  );
 
   const stats = useMemo(() => {
     const base = { total: quotes.length, new: 0, review: 0, approved: 0, sent: 0 };
@@ -3796,91 +3930,58 @@ export default function QuotationApprovalPage() {
               ) : null}
 
               <div className="mt-4 space-y-3">
-                {filtered.map((quote) => {
-                  const status = quote.status || "new";
-                  const docType = getQuoteDocumentType(quote);
-                  const primaryStatus = getPrimaryStatusMeta(status, docType);
-                  const paymentStatus = getPaymentStatusMeta(quote);
-                  const selectedTone = selectedId === quote.id;
-                  const totalPieces = (quote.garments || []).reduce(
-                    (sum, entry) => sum + safeNumber(entry.quantity, 0),
-                    0
-                  );
-                  const garmentPreview = (quote.garments || [])
-                    .filter((entry) => safeNumber(entry.quantity, 0) > 0)
-                    .slice(0, 2)
-                    .map((entry) => formatQuoteGarmentDescription(entry))
-                    .join(", ");
-                  const initials = (quote.name || quote.email || "Q")
-                    .split(/\s+/)
-                    .filter(Boolean)
-                    .slice(0, 2)
-                    .map((part) => part[0]?.toUpperCase() || "")
-                    .join("");
+                {groupedInboxQuotes.recent.map((quote) => (
+                  <QuotationInboxCard
+                    key={quote.id}
+                    quote={quote}
+                    selected={selectedId === quote.id}
+                    isDark={isDark}
+                    onSelect={() => {
+                      setSelectedId(quote.id);
+                      setMobilePanel("quote");
+                    }}
+                  />
+                ))}
 
-                  return (
-                    <button
-                      key={quote.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedId(quote.id);
-                        setMobilePanel("quote");
-                      }}
-                      className={`w-full overflow-hidden rounded-[26px] border px-4 py-4 text-left transition ${
-                        selectedTone
-                          ? isDark
-                            ? "border-orange-400/45 bg-orange-400/[0.08] shadow-[0_18px_36px_-30px_rgba(255,102,0,0.35)]"
-                            : "border-[#ffb37a] bg-white shadow-[0_18px_36px_-30px_rgba(255,102,0,0.28)]"
-                          : isDark
-                            ? "border-white/10 bg-white/[0.035] hover:border-white/20 hover:bg-white/[0.06]"
-                            : "border-[#ebebeb] bg-white hover:border-[#cfcfcf] hover:shadow-[0_10px_24px_rgba(0,0,0,0.06)]"
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-semibold ${
-                            selectedTone
-                              ? "bg-[#ff6600] text-white"
-                              : isDark ? "bg-white/10 text-white/70" : "bg-[#f7f7f7] text-[#484848]"
-                          }`}
-                        >
-                          {initials || "Q"}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                            <div className="min-w-0">
-                              <p className={`truncate text-sm font-semibold ${isDark ? "text-white" : "text-[#222222]"}`}>
-                                {quote.name || "Unnamed client"}
-                              </p>
-                              <p className={`truncate text-xs ${isDark ? "text-white/45" : "text-[#717171]"}`}>
-                                {quote.email || "No email"}
-                              </p>
-                            </div>
-                            <span className={`shrink-0 self-start whitespace-nowrap rounded-full border px-2.5 py-1 text-[10px] font-semibold ${primaryStatus.tone}`}>
-                              {primaryStatus.label}
-                            </span>
-                          </div>
-                          <p className={`mt-2 text-xs leading-5 ${isDark ? "text-white/55" : "text-[#6a6a6a]"}`}>
-                            {garmentPreview || "No product line yet"}
-                            {totalPieces > 0 ? ` • ${totalPieces} pc${totalPieces > 1 ? "s" : ""}` : ""}
-                          </p>
-                          <QuoteActivityStatus quote={quote} />
-                          <span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${paymentStatus.tone}`}>
-                            Payment: {paymentStatus.shortLabel}
-                          </span>
-                          <div className={`mt-3 flex items-center justify-between gap-3 text-[11px] ${isDark ? "text-white/35" : "text-[#717171]"}`}>
-                            <span className="min-w-0 truncate">{quote.source || "Website"}</span>
-                            <span>
-                              {quote.createdAt
-                                ? formatDistanceToNow(quote.createdAt, { addSuffix: true })
-                                : "—"}
-                            </span>
-                          </div>
-                        </div>
+                {groupedInboxQuotes.older.map(({ monthsAgo, quotes: groupedQuotes }) => (
+                  <details
+                    key={monthsAgo}
+                    className={`group rounded-[22px] border p-3 ${
+                      isDark ? "border-white/10 bg-white/[0.025]" : "border-[#e6e6e6] bg-[#fafafa]"
+                    }`}
+                  >
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-2 py-1.5 marker:hidden">
+                      <div className="min-w-0">
+                        <p className={`text-xs font-semibold ${isDark ? "text-white/75" : "text-[#484848]"}`}>
+                          {monthsAgo} month{monthsAgo === 1 ? "" : "s"} ago
+                        </p>
+                        <p className={`mt-0.5 text-[11px] ${isDark ? "text-white/40" : "text-[#717171]"}`}>
+                          {groupedQuotes.length} quotation{groupedQuotes.length === 1 ? "" : "s"}
+                        </p>
                       </div>
-                    </button>
-                  );
-                })}
+                      <FiChevronDown
+                        aria-hidden="true"
+                        className={`h-4 w-4 shrink-0 transition-transform group-open:rotate-180 ${
+                          isDark ? "text-white/55" : "text-[#717171]"
+                        }`}
+                      />
+                    </summary>
+                    <div className="mt-3 space-y-3">
+                      {groupedQuotes.map((quote) => (
+                        <QuotationInboxCard
+                          key={quote.id}
+                          quote={quote}
+                          selected={selectedId === quote.id}
+                          isDark={isDark}
+                          onSelect={() => {
+                            setSelectedId(quote.id);
+                            setMobilePanel("quote");
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </details>
+                ))}
 
                 {!filtered.length && !loading ? (
                   <div className="rounded-[26px] border border-dashed border-[#d9d9d9] bg-[#f7f7f7] px-5 py-10 text-center text-sm text-[#717171]">
