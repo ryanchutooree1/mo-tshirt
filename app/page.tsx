@@ -107,12 +107,6 @@ const faqLd = {
 function ActionButtons() {
   return (
     <div className="mt-8 mx-auto flex w-full max-w-2xl flex-wrap items-center justify-center gap-3">
-      <a
-        href={READY_MADE_UNIFORMS_PATH}
-        className="inline-flex items-center justify-center rounded-full border border-black bg-white px-6 py-3 text-sm font-medium text-black transition hover:bg-black hover:text-white"
-      >
-        Ready-Made Uniform Designs
-      </a>
       <TrackedWhatsAppLink
         href={getWhatsAppUrl()}
         trackingLocation="home_hero"
