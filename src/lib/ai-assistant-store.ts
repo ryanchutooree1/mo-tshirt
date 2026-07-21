@@ -40,6 +40,10 @@ import {
   type AssistantTrainingSnapshot,
   type AssistantTurnDebug,
 } from "@/lib/ai-assistant";
+import {
+  buildAutomaticQuotePricing,
+  getAssistantPrintPlacement,
+} from "@/lib/quote-auto-pricing";
 
 const COLLECTIONS = {
   sessions: "aiAssistantSessions",
@@ -796,6 +800,21 @@ function buildQuotePayloadFromAssistantLead(
       ];
 
   const printSummary = formatWebsitePrintMethod(lead.printType);
+  const inferredPrintPlacement = getAssistantPrintPlacement({
+    positions: lead.printPositions,
+    sizes: lead.printSizes,
+  });
+  const automaticPrintPlacement = inferredPrintPlacement || "large_front_only";
+  const automaticPrintMethod =
+    lead.printType === "not sure" ? "1. DTF Printing (Price $$$)" : printSummary;
+  const automaticPricing = buildAutomaticQuotePricing({
+    garments,
+    printMethod: automaticPrintMethod,
+    designBrief: { printPlacement: automaticPrintPlacement },
+    delivery: formatWebsiteDeliveryMethod(lead.deliveryMethod),
+    fallbackPrintPlacement: automaticPrintPlacement,
+    fallbackPrintMethod: "DTF",
+  });
   const designPrintSummary = [
     formatAssistantPrintMethod(lead.printType),
     lead.printPositions.length ? `Placement: ${lead.printPositions.join(", ")}` : "",
@@ -839,6 +858,49 @@ function buildQuotePayloadFromAssistantLead(
       delivery: formatWebsiteDeliveryMethod(lead.deliveryMethod),
       deadline: lead.deadline || "",
       clientNotes: lead.notes || "",
+      printPlacement: automaticPrintPlacement,
+      artwork: garments.map((line) => ({
+        product: line.garment,
+        color: line.color,
+        size: line.size,
+        quantity: line.quantity,
+        printPlacement: automaticPrintPlacement,
+      })),
+    },
+    quote: {
+      documentType: "quotation",
+      paymentStatus: "Quotation only",
+      preparedBy: "MO AI",
+      showLineItems: true,
+      showTotals: true,
+      currency: "Rs",
+      lines: automaticPricing.lines.map((line) => ({
+        description: line.description,
+        quantity: line.quantity,
+        unitPrice: line.unitPrice,
+        includeInTotals: true,
+        ...(line.unitPrice > 0
+          ? {
+              priceSource: "automatic",
+              priceSetByName: "MO AI pricing",
+              priceSetAtIso: nowIso,
+            }
+          : {}),
+      })),
+      deliveryFee: automaticPricing.deliveryFee,
+      discount: 0,
+      amountReceived: 0,
+      subtotal: automaticPricing.subtotal,
+      total: automaticPricing.total,
+    },
+    automaticPricing: {
+      pricedLineCount: automaticPricing.pricedLineCount,
+      lineCount: automaticPricing.lines.length,
+      requiresReview:
+        automaticPricing.requiresReview || lead.printType === "not sure" || !inferredPrintPlacement,
+      source: "mo-ai-order",
+      assumedPrintMethod: lead.printType === "not sure",
+      assumedPrintPlacement: !inferredPrintPlacement,
     },
     status: "new",
     aiAssistantLeadId: leadId,

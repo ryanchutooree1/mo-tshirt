@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
   buildAutomaticQuotePricing,
+  getAssistantPrintPlacement,
   getAutomaticDeliveryFee,
   getAutomaticUnitPrice,
 } = require("../src/lib/quote-auto-pricing");
@@ -83,4 +84,31 @@ test("uses the configured delivery fees", () => {
   assert.equal(getAutomaticDeliveryFee("Surinam Pickup (Free)"), 0);
   assert.equal(getAutomaticDeliveryFee("Post Office Postage Delivery (Rs 100)"), 100);
   assert.equal(getAutomaticDeliveryFee("Post Office Express Delivery (Rs 150)"), 150);
+});
+
+test("maps MO AI print selections to quotation placement codes", () => {
+  assert.equal(
+    getAssistantPrintPlacement({ positions: ["front left chest"], sizes: ["small 9x9"] }),
+    "small_front_only"
+  );
+  assert.equal(
+    getAssistantPrintPlacement({
+      positions: ["front center", "back"],
+      sizes: ["small 9x9", "large 22x22"],
+    }),
+    "small_front_large_back"
+  );
+});
+
+test("prices an older MO AI order using reviewed defaults", () => {
+  const result = buildAutomaticQuotePricing({
+    garments: [{ garment: "T-Shirt", color: "Black", size: "L", quantity: 2 }],
+    printMethod: "Not sure",
+    fallbackPrintMethod: "DTF",
+    fallbackPrintPlacement: "large_front_only",
+  });
+
+  assert.equal(result.lines[0].unitPrice, 320);
+  assert.equal(result.total, 640);
+  assert.equal(result.requiresReview, false);
 });

@@ -1171,7 +1171,14 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
     designBrief: quote.designBrief,
     delivery: quote.delivery,
     fallbackPrintPlacement:
-      savedPrintPlacement !== "not_set" ? savedPrintPlacement : inferredPrintPlacement,
+      savedPrintPlacement !== "not_set"
+        ? savedPrintPlacement
+        : inferredPrintPlacement !== "not_set"
+          ? inferredPrintPlacement
+          : quote.source === "MO AI Order"
+            ? "large_front_only"
+            : "not_set",
+    fallbackPrintMethod: quote.source === "MO AI Order" ? "DTF" : undefined,
   });
   if (quote.quote) {
     const storedLines: QuoteLine[] = (quote.quote.lines || []).map((line, index) => {

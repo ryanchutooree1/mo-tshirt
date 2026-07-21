@@ -70,9 +70,38 @@ function formatGarmentDescription(entry) {
 
 function getArtworkItems(designBrief) {
   if (!designBrief || typeof designBrief !== "object" || Array.isArray(designBrief)) return [];
-  return Array.isArray(designBrief.artwork)
+  const artwork = Array.isArray(designBrief.artwork)
     ? designBrief.artwork.filter((entry) => entry && typeof entry === "object" && !Array.isArray(entry))
     : [];
+  if (artwork.length) return artwork;
+  return clean(designBrief.printPlacement)
+    ? [{ printPlacement: clean(designBrief.printPlacement) }]
+    : [];
+}
+
+function getAssistantPrintPlacement({ positions, sizes } = {}) {
+  const positionList = Array.isArray(positions) ? positions.map(normalizeKey) : [];
+  const sizeList = Array.isArray(sizes) ? sizes.map(normalizeKey) : [];
+  const hasSmall = sizeList.some((value) => value.includes("small") || value.includes("9x9"));
+  const hasLarge = sizeList.some((value) => value.includes("large") || value.includes("22x22"));
+  const hasSmallFront = positionList.some((value) =>
+    value.includes("left chest") || value.includes("small front") || value.includes("front left")
+  );
+  const hasFront = hasSmallFront || positionList.some((value) => value.includes("front"));
+  const hasBack = positionList.some((value) => value.includes("back") || value.includes("rear"));
+  const hasSleeve = positionList.some((value) => value.includes("sleeve") || value.includes("arm"));
+
+  if (hasFront && hasBack) {
+    if (hasSmallFront || (hasSmall && hasLarge)) return "small_front_large_back";
+    if (hasSmall && !hasLarge) return "small_front_back";
+    return "front_back";
+  }
+  if (hasSmallFront || (hasFront && hasSmall && !hasLarge)) return "small_front_only";
+  if (hasFront) return "large_front_only";
+  if (hasBack && hasSmall && !hasLarge) return "small_back_only";
+  if (hasBack) return "back_only";
+  if (hasSleeve) return "sleeve_only";
+  return null;
 }
 
 function artworkMatchScore(garment, artwork) {
@@ -133,6 +162,7 @@ function buildAutomaticQuotePricing({
   designBrief,
   delivery,
   fallbackPrintPlacement,
+  fallbackPrintMethod,
 } = {}) {
   const garmentLines = Array.isArray(garments) ? garments : [];
   const artworkItems = getArtworkItems(designBrief);
@@ -140,10 +170,17 @@ function buildAutomaticQuotePricing({
     const artwork = findArtworkForGarment(garment, artworkItems);
     const printPlacement = clean(artwork?.printPlacement) || clean(fallbackPrintPlacement);
     const placementLabel = PRINT_PLACEMENT_LABELS[printPlacement];
-    const unitPrice = getAutomaticUnitPrice({ garment, printMethod, printPlacement });
+    const effectivePrintMethod = normalizeMethod(printMethod) ? printMethod : fallbackPrintMethod;
+    const unitPrice = getAutomaticUnitPrice({
+      garment,
+      printMethod: effectivePrintMethod,
+      printPlacement,
+    });
     const description = [
       formatGarmentDescription(garment),
-      placementLabel ? `${normalizeMethod(printMethod) || clean(printMethod)} — ${placementLabel}` : "",
+      placementLabel
+        ? `${normalizeMethod(effectivePrintMethod) || clean(effectivePrintMethod)} — ${placementLabel}`
+        : "",
     ]
       .filter(Boolean)
       .join(" — ");
@@ -177,6 +214,7 @@ function buildAutomaticQuotePricing({
 module.exports = {
   PRINT_PLACEMENT_TO_OPTION,
   buildAutomaticQuotePricing,
+  getAssistantPrintPlacement,
   getAutomaticDeliveryFee,
   getAutomaticUnitPrice,
   normalizeItemType,
