@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { CheckCircle2, FileImage, FileText, History, LoaderCircle, MessageSquareText, X, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronDown, FileImage, FileText, History, LoaderCircle, MessageSquareText, X, XCircle } from "lucide-react";
 import type { QuoteResponseAction } from "@/lib/quote-response-links";
 
 type QuoteResponseHistoryEntry = {
@@ -72,6 +72,7 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [quotationOpen, setQuotationOpen] = useState(false);
   const [attachmentPreview, setAttachmentPreview] = useState<AttachmentPreview | null>(null);
   const actionCopy = action ? ACTION_COPY[action] : null;
 
@@ -154,26 +155,37 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
           <div className={`mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl ${actionCopy.tone}`}><Icon className="h-6 w-6" /></div>
           <p className="mb-1 text-sm text-black/55">Hello {quote.clientName || "there"}</p>
           <h1 className="text-3xl font-bold tracking-tight">{actionCopy.title}</h1>
-          <p className="mt-2 text-sm leading-6 text-black/60">{actionCopy.description}</p>
-
-          {quote.quotationDocument?.url ? (
-            <section className="mt-6 overflow-hidden rounded-2xl border border-black/10 bg-[#f7f7f5]">
-              <div className="flex items-center gap-2 border-b border-black/10 px-4 py-3">
-                <FileText className="h-4 w-4" />
-                <h2 className="min-w-0 truncate text-sm font-bold">Quotation PDF · {quote.quotationDocument.filename}</h2>
-              </div>
-              <iframe
-                src={quote.quotationDocument.url}
-                title={`Quotation PDF ${quote.quotationDocument.filename}`}
-                className="h-[520px] w-full border-0 bg-white"
-              />
-            </section>
-          ) : null}
 
           <div className="my-7 grid grid-cols-2 gap-3 rounded-2xl bg-[#f7f7f5] p-4 text-sm">
             <div><p className="text-black/45">Quotation</p><p className="mt-1 font-semibold">{quote.documentNumber || quoteId.slice(-8).toUpperCase()}</p></div>
             <div><p className="text-black/45">{action === "accept" ? "Balance to pay" : "Total"}</p><p className="mt-1 font-semibold">{balance === null ? "See attached PDF" : `${quote.currency} ${balance.toLocaleString("en-MU", { minimumFractionDigits: 2 })}`}</p></div>
           </div>
+
+          {quote.quotationDocument?.url ? (
+            <section className="mb-7 overflow-hidden rounded-2xl border border-black/10 bg-[#f7f7f5]">
+              <button
+                type="button"
+                onClick={() => setQuotationOpen((open) => !open)}
+                aria-expanded={quotationOpen}
+                aria-controls="quotation-pdf-preview"
+                className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-black/[0.03] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-black/10"
+              >
+                <FileText className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 flex-1 truncate text-sm font-bold">Quotation PDF · {quote.quotationDocument.filename}</span>
+                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white shadow-sm" aria-hidden="true">
+                  <ChevronDown className={`h-4 w-4 transition-transform ${quotationOpen ? "rotate-180" : ""}`} />
+                </span>
+              </button>
+              {quotationOpen ? (
+                <iframe
+                  id="quotation-pdf-preview"
+                  src={quote.quotationDocument.url}
+                  title={`Quotation PDF ${quote.quotationDocument.filename}`}
+                  className="h-[520px] w-full border-0 border-t border-black/10 bg-white"
+                />
+              ) : null}
+            </section>
+          ) : null}
 
           {quote.responseHistory.length ? (
             <section className="mb-7 rounded-2xl border border-black/10 p-4 sm:p-5">
@@ -236,6 +248,8 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
               </div>
             </section>
           ) : null}
+
+          <p className="mb-5 text-sm leading-6 text-black/60">{actionCopy.description}</p>
 
           {success ? (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-900">
