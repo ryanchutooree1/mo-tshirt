@@ -6548,7 +6548,7 @@ export default function QuotationApprovalPage() {
                             isDark ? "border-white/10 bg-black/20" : "border-[#ebebeb] bg-white"
                           }`}
                         >
-                          <label className={labelClass}>
+                          <label className={`${labelClass} block min-w-0`}>
                             Description
                             <input
                               data-quotation-field={`line-${index}-description`}
@@ -6556,13 +6556,13 @@ export default function QuotationApprovalPage() {
                               onChange={(e) =>
                                 updateDraftLine(index, { description: e.target.value })
                               }
-                              className={fieldClass}
+                              className={`${fieldClass} min-w-0`}
                               placeholder="Product / size / print"
                             />
                           </label>
 
-                          <div className="mt-4 flex flex-wrap items-end gap-3">
-                            <label className={`${labelClass} w-24 shrink-0`}>
+                          <div className="mt-4 grid grid-cols-[96px_minmax(0,1fr)_44px] items-start gap-3 sm:grid-cols-[96px_minmax(190px,1fr)_minmax(150px,0.8fr)_44px]">
+                            <label className={`${labelClass} min-w-0`}>
                               Quantity
                               <input
                                 data-quotation-field={`line-${index}-quantity`}
@@ -6580,7 +6580,7 @@ export default function QuotationApprovalPage() {
                               />
                             </label>
 
-                            <label className={`${labelClass} min-w-[170px] flex-[1_1_190px]`}>
+                            <label className={`${labelClass} col-span-2 min-w-0 sm:col-span-1`}>
                               Unit price ({draft.currency})
                               <input
                                 data-quotation-field={`line-${index}-unit-price`}
@@ -6596,7 +6596,7 @@ export default function QuotationApprovalPage() {
                               <PriceProvenanceLabel line={line} />
                             </label>
 
-                            <div className="min-w-[150px] flex-[1_1_170px]">
+                            <div className="col-span-2 min-w-0 sm:col-span-1">
                               <p className={labelClass}>Line total</p>
                               <div className="mt-2 rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] px-4 py-3 text-right text-base font-semibold text-[#222222]">
                                 {formatMoney(
@@ -6609,7 +6609,7 @@ export default function QuotationApprovalPage() {
                             <button
                               type="button"
                               onClick={() => removeDraftLine(index)}
-                              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#ebebeb] bg-white text-[#717171] transition hover:border-[#ffd9c2] hover:bg-[#fff4ed] hover:text-[#c2410c]"
+                              className="inline-flex h-11 w-11 self-end items-center justify-center rounded-full border border-[#ebebeb] bg-white text-[#717171] transition hover:border-[#ffd9c2] hover:bg-[#fff4ed] hover:text-[#c2410c]"
                               aria-label="Remove line item"
                             >
                               <FiXCircle className="h-4 w-4" />
