@@ -33,8 +33,6 @@ function UniformImage({
   alt: string;
   sizes: string;
 }) {
-  const [unoptimized, setUnoptimized] = useState(false);
-
   return (
     <Image
       src={src}
@@ -43,8 +41,6 @@ function UniformImage({
       sizes={sizes}
       loading="lazy"
       className="object-contain"
-      unoptimized={unoptimized}
-      onError={() => setUnoptimized(true)}
     />
   );
 }
