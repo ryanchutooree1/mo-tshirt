@@ -2667,6 +2667,47 @@ export default function QuotationApprovalPage() {
     };
   }, [draft]);
 
+  const profitSummary = useMemo(() => {
+    if (!selected || !draft) return null;
+    const savedPrintPlacement = normalizePartnerPrintPlacement(selected.partner?.printPlacement);
+    const automaticPricing = buildAutomaticQuotePricing({
+      garments: selected.garments,
+      printMethod: selected.printMethod,
+      designBrief: selected.designBrief,
+      delivery: selected.delivery,
+      fallbackPrintPlacement:
+        savedPrintPlacement !== "not_set"
+          ? savedPrintPlacement
+          : selectedInferredPrintPlacement !== "not_set"
+            ? selectedInferredPrintPlacement
+            : selected.source === "MO AI Order"
+              ? "large_front_only"
+              : "not_set",
+      fallbackPrintMethod: selected.source === "MO AI Order" ? "DTF" : undefined,
+    });
+    const includedLines = draft.lines
+      .map((line, index) => ({ line, index }))
+      .filter(({ line }) => line.includeInTotals && safeNumber(line.quantity, 0) > 0);
+    if (!includedLines.length) return null;
+
+    let revenue = 0;
+    let cost = 0;
+    for (const { line, index } of includedLines) {
+      const quantity = safeNumber(line.quantity, 0);
+      const unitCost = safeNumber(automaticPricing.lines[index]?.unitCost, 0);
+      if (unitCost <= 0) return null;
+      revenue += quantity * safeNumber(line.unitPrice, 0);
+      cost += quantity * unitCost;
+    }
+
+    const profit = revenue - cost - totals.discount;
+    const netRevenue = Math.max(0, revenue - totals.discount);
+    return {
+      profit,
+      margin: netRevenue > 0 ? (profit / netRevenue) * 100 : 0,
+    };
+  }, [draft, selected, selectedInferredPrintPlacement, totals.discount]);
+
   const quotationMissingFields = useMemo(() => {
     if (!draft) return [] as QuotationMissingField[];
     const missing: QuotationMissingField[] = [];
@@ -4625,6 +4666,19 @@ export default function QuotationApprovalPage() {
                         <div className="mt-1 text-xs font-semibold text-[#9a4b13]">
                           {totals.lineCount} line{totals.lineCount === 1 ? "" : "s"} in {draft.documentNumber}
                         </div>
+                        {profitSummary ? (
+                          <div className={`mt-4 border-t pt-3 ${isDark ? "border-emerald-300/20" : "border-emerald-200"}`}>
+                            <div className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${isDark ? "text-emerald-300" : "text-emerald-700"}`}>
+                              Profit
+                            </div>
+                            <div className={`mt-1 text-2xl font-semibold tracking-[-0.03em] ${isDark ? "text-emerald-300" : "text-emerald-700"}`}>
+                              {formatMoney(profitSummary.profit, draft.currency)}
+                            </div>
+                            <div className={`mt-1 text-xs font-semibold ${isDark ? "text-emerald-300/75" : "text-emerald-700/75"}`}>
+                              {profitSummary.margin.toFixed(1)}% estimated margin
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
 

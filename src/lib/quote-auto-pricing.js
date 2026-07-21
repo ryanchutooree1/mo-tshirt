@@ -1,4 +1,4 @@
-const { getPriceBookPrice } = require("./pricing");
+const { computeQuote, getBlankInfo, getPriceBookPrice } = require("./pricing");
 
 const PRINT_PLACEMENT_TO_OPTION = {
   small_front_only: "FRONT_SMALL",
@@ -155,6 +155,30 @@ function getAutomaticUnitPrice({ garment, printMethod, printPlacement }) {
   return Number.isFinite(unitPrice) && unitPrice > 0 ? unitPrice : null;
 }
 
+function getAutomaticUnitCost({ garment, printMethod, printPlacement }) {
+  const itemType = normalizeItemType(garment?.garment);
+  const sizeBand = normalizeSizeBand(garment?.size) || "XS-XL";
+  const method = normalizeMethod(printMethod);
+  const printOption = PRINT_PLACEMENT_TO_OPTION[clean(printPlacement)];
+  if (!itemType || !sizeBand || !method || !printOption) return null;
+
+  const colorFamily = normalizeKey(garment?.color) === "red" ? "Red" : "Standard";
+  const blankInfo = getBlankInfo(itemType, colorFamily, sizeBand);
+  if (!blankInfo && method !== "DTF") return null;
+
+  const pricing = computeQuote({
+    qty: garment?.quantity,
+    itemType,
+    sizeBand,
+    method,
+    printOption,
+    blankCost: blankInfo?.cost || 0,
+  });
+  return Number.isFinite(pricing.unitCost) && pricing.unitCost > 0
+    ? pricing.unitCost
+    : null;
+}
+
 function getAutomaticDeliveryFee(delivery) {
   const value = normalizeKey(delivery);
   if (value.includes("express")) return 150;
@@ -184,6 +208,11 @@ function buildAutomaticQuotePricing({
       printMethod: effectivePrintMethod,
       printPlacement,
     });
+    const unitCost = getAutomaticUnitCost({
+      garment,
+      printMethod: effectivePrintMethod,
+      printPlacement,
+    });
     const pricingDescription = [
       normalizeMethod(effectivePrintMethod) || clean(effectivePrintMethod),
       placementLabel,
@@ -200,6 +229,9 @@ function buildAutomaticQuotePricing({
       unitPrice: unitPrice || 0,
       includeInTotals: true,
       automaticPrice: unitPrice,
+      unitCost,
+      unitProfit:
+        unitPrice && unitCost ? unitPrice - unitCost : null,
       printPlacement: printPlacement || null,
     };
   });
@@ -225,6 +257,7 @@ module.exports = {
   buildAutomaticQuotePricing,
   getAssistantPrintPlacement,
   getAutomaticDeliveryFee,
+  getAutomaticUnitCost,
   getAutomaticUnitPrice,
   normalizeItemType,
   normalizeMethod,

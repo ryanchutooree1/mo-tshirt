@@ -27,6 +27,8 @@ test("prices a website DTF placement and includes it in the quotation line", () 
   });
 
   assert.equal(result.lines[0].unitPrice, 565);
+  assert.equal(result.lines[0].unitCost, 350);
+  assert.equal(result.lines[0].unitProfit, 215);
   assert.match(result.lines[0].description, /Small Front and Large Back Printing/);
   assert.equal(result.subtotal, 6780);
   assert.equal(result.deliveryFee, 150);
@@ -80,6 +82,7 @@ test("leaves unsupported products and placements for manual review", () => {
   });
 
   assert.equal(result.lines[0].unitPrice, 0);
+  assert.equal(result.lines[0].unitCost, null);
   assert.equal(result.requiresReview, true);
   assert.equal(result.deliveryFee, 0);
 });
