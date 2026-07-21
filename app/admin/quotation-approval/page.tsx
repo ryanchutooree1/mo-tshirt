@@ -826,13 +826,15 @@ const safeNumber = (value: unknown, fallback = 0) => {
 const QUOTATION_ARCHIVE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 
 type QuotationAgeGroup = {
-  monthsAgo: number;
+  key: string;
+  label: string;
+  sortOrder: number;
   quotes: QuoteRecord[];
 };
 
 const groupQuotationsByAge = (quotes: QuoteRecord[], referenceTime: number) => {
   const recent: QuoteRecord[] = [];
-  const olderByMonth = new Map<number, QuoteRecord[]>();
+  const olderGroups = new Map<string, QuotationAgeGroup>();
 
   quotes.forEach((quote) => {
     if (!quote.createdAt) {
@@ -847,15 +849,21 @@ const groupQuotationsByAge = (quotes: QuoteRecord[], referenceTime: number) => {
       return;
     }
 
-    const group = olderByMonth.get(monthsAgo) || [];
-    group.push(quote);
-    olderByMonth.set(monthsAgo, group);
+    const isYearGroup = monthsAgo >= 12;
+    const periodValue = isYearGroup ? Math.floor(monthsAgo / 12) : monthsAgo;
+    const period = isYearGroup ? "year" : "month";
+    const key = `${period}-${periodValue}`;
+    const group = olderGroups.get(key) || {
+      key,
+      label: `${periodValue} ${period}${periodValue === 1 ? "" : "s"} ago`,
+      sortOrder: isYearGroup ? periodValue * 12 : periodValue,
+      quotes: [],
+    };
+    group.quotes.push(quote);
+    olderGroups.set(key, group);
   });
 
-  const older: QuotationAgeGroup[] = Array.from(olderByMonth, ([monthsAgo, groupedQuotes]) => ({
-    monthsAgo,
-    quotes: groupedQuotes,
-  })).sort((a, b) => a.monthsAgo - b.monthsAgo);
+  const older = Array.from(olderGroups.values()).sort((a, b) => a.sortOrder - b.sortOrder);
 
   return { recent, older };
 };
@@ -3943,9 +3951,9 @@ export default function QuotationApprovalPage() {
                   />
                 ))}
 
-                {groupedInboxQuotes.older.map(({ monthsAgo, quotes: groupedQuotes }) => (
+                {groupedInboxQuotes.older.map(({ key, label, quotes: groupedQuotes }) => (
                   <details
-                    key={monthsAgo}
+                    key={key}
                     className={`group rounded-[22px] border p-3 ${
                       isDark ? "border-white/10 bg-white/[0.025]" : "border-[#e6e6e6] bg-[#fafafa]"
                     }`}
@@ -3953,7 +3961,7 @@ export default function QuotationApprovalPage() {
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-2 py-1.5 marker:hidden">
                       <div className="min-w-0">
                         <p className={`text-xs font-semibold ${isDark ? "text-white/75" : "text-[#484848]"}`}>
-                          {monthsAgo} month{monthsAgo === 1 ? "" : "s"} ago
+                          {label}
                         </p>
                         <p className={`mt-0.5 text-[11px] ${isDark ? "text-white/40" : "text-[#717171]"}`}>
                           {groupedQuotes.length} quotation{groupedQuotes.length === 1 ? "" : "s"}
