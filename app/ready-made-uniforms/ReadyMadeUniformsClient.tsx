@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import { FiSearch } from "react-icons/fi";
-import LoadingImage from "@/components/LoadingImage";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
 import type { ReadyMadeUniformItem } from "@/lib/ready-made-uniforms-store";
@@ -22,6 +22,31 @@ function matchesTeam(uniform: ReadyMadeUniformItem, team: string) {
   if (team === "All styles") return true;
   const text = `${uniform.code} ${uniform.title} ${uniform.audience} ${uniform.description} ${uniform.features.join(" ")}`.toLowerCase();
   return text.includes(team.toLowerCase());
+}
+
+function UniformImage({
+  src,
+  alt,
+  sizes,
+}: {
+  src: string;
+  alt: string;
+  sizes: string;
+}) {
+  const [unoptimized, setUnoptimized] = useState(false);
+
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      fill
+      sizes={sizes}
+      loading="lazy"
+      className="object-contain"
+      unoptimized={unoptimized}
+      onError={() => setUnoptimized(true)}
+    />
+  );
 }
 
 export default function ReadyMadeUniformsClient({ uniforms }: Props) {
@@ -43,7 +68,15 @@ export default function ReadyMadeUniformsClient({ uniforms }: Props) {
       <header className="sticky top-0 z-40 border-b border-[#EAEAEA] bg-white/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-3 sm:h-20 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-0">
           <Link href="/" className="flex items-center justify-center sm:justify-start" aria-label="MO T-SHIRT Home">
-            <img src="/logo_transparent.webp" alt="MO T-SHIRT logo" className="h-9 w-auto sm:h-12" />
+            <Image
+              src="/logo_transparent.webp"
+              alt="MO T-SHIRT logo"
+              width={150}
+              height={51}
+              priority
+              sizes="(max-width: 640px) 107px, 143px"
+              className="h-9 w-auto sm:h-12"
+            />
           </Link>
 
           <nav className="flex w-full max-w-full items-center gap-2 overflow-x-auto text-sm font-semibold text-neutral-600 sm:w-auto sm:justify-end sm:gap-4 sm:overflow-visible">
@@ -134,16 +167,11 @@ function UniformCard({ uniform }: { uniform: ReadyMadeUniformItem }) {
   return (
     <article className="overflow-hidden rounded-[2rem] border border-black/10 bg-white shadow-sm">
       <div className="relative aspect-square overflow-hidden bg-white">
-        <LoadingImage
+        <UniformImage
+          key={selectedImage}
           src={selectedImage}
           alt={`${uniform.title} ${uniform.code}`}
-          className="h-full w-full object-contain"
-          wrapperClassName="h-full w-full"
-          loading="lazy"
-          decoding="async"
-          delayMs={150}
-          statusText="Loading image..."
-          errorText="Image unavailable"
+          sizes="(max-width: 767px) calc(100vw - 32px), (max-width: 1279px) calc(50vw - 36px), 370px"
         />
         <div className="absolute left-4 top-4 flex flex-wrap gap-2">
           <span className="rounded-full bg-black px-3 py-1.5 text-xs font-bold text-white shadow-sm">{uniform.code}</span>
@@ -167,16 +195,10 @@ function UniformCard({ uniform }: { uniform: ReadyMadeUniformItem }) {
                 }`}
                 aria-label={`Show ${uniform.title} image ${index + 1}`}
               >
-                <LoadingImage
+                <UniformImage
                   src={image}
                   alt=""
-                  className="h-full w-full object-contain"
-                  wrapperClassName="h-full w-full"
-                  loading="lazy"
-                  decoding="async"
-                  delayMs={150}
-                  statusText="Loading..."
-                  errorText="Unavailable"
+                  sizes="56px"
                 />
               </button>
             ))}
