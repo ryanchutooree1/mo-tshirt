@@ -102,12 +102,34 @@ import {
 
 type QuoteStatus = "new" | "review" | "approved" | "sent";
 type EditableNumber = number | "";
+type PriceSource = "automatic" | "manual";
+
+type PriceAuditEntry = {
+  lineIndex: number;
+  description: string;
+  previousValue: number;
+  value: number;
+  source: PriceSource;
+  setById?: string;
+  setByName: string;
+  changedAtIso: string;
+};
+
+type AdminSessionSummary = {
+  userId: string;
+  displayName: string;
+  email: string;
+};
 
 type QuoteLine = {
   description: string;
   quantity: EditableNumber;
   unitPrice: EditableNumber;
   includeInTotals: boolean;
+  priceSource?: PriceSource;
+  priceSetById?: string;
+  priceSetByName?: string;
+  priceSetAtIso?: string;
 };
 
 type DocumentType = "quotation" | "invoice" | "receipt" | "partial_receipt";
@@ -450,6 +472,13 @@ type QuoteRecord = {
     total?: number;
     terms?: string;
   };
+  automaticPricing?: {
+    pricedLineCount?: number;
+    lineCount?: number;
+    requiresReview?: boolean;
+    source?: string;
+  };
+  priceAuditHistory?: PriceAuditEntry[];
 };
 
 const ATTACHMENT_PREVIEW_RETRY_LIMIT = 2;
@@ -1091,6 +1120,35 @@ const formatMoney = (value: number, currency = "Rs") => {
   return formatDisplayMoney(value, currency);
 };
 
+const getPriceSource = (value: unknown): PriceSource | undefined =>
+  value === "automatic" || value === "manual" ? value : undefined;
+
+function PriceProvenanceLabel({ line }: { line: QuoteLine }) {
+  const unitPrice = safeNumber(line.unitPrice, 0);
+  if (unitPrice <= 0) {
+    return <span className="mt-1 block text-[10px] font-semibold text-red-600">Price not set</span>;
+  }
+
+  const automatic = line.priceSource === "automatic";
+  const actor = line.priceSetByName?.trim() || (automatic ? "Website pricing" : "Team member");
+  const changedAt = parseTimestamp(line.priceSetAtIso);
+  const dateLabel = changedAt ? format(changedAt, "dd MMM yyyy, HH:mm") : "";
+  const label = automatic ? "Auto-priced" : `Set by ${actor}`;
+
+  return (
+    <span
+      className={`mt-1 inline-flex max-w-full items-center rounded-full border px-2 py-1 text-[10px] font-bold leading-none ${
+        automatic
+          ? "border-blue-200 bg-blue-50 text-blue-700"
+          : "border-amber-200 bg-amber-50 text-amber-800"
+      }`}
+      title={dateLabel ? `${label} · ${dateLabel}` : label}
+    >
+      {label}{dateLabel ? ` · ${dateLabel}` : ""}
+    </span>
+  );
+}
+
 const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
   const fallbackDate = quote.createdAt ? format(quote.createdAt, "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd");
   const fallbackNumber = `Q-${quote.id.slice(-5).toUpperCase()}`;
@@ -1119,11 +1177,32 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
     const storedLines: QuoteLine[] = (quote.quote.lines || []).map((line, index) => {
       const storedAmount = safeNumber(line.unitPrice, 0);
       const automaticAmount = safeNumber(automaticPricing.lines[index]?.unitPrice, 0);
+      const resolvedAmount = storedAmount > 0 ? storedAmount : automaticAmount;
+      const savedSource = getPriceSource(line.priceSource);
+      const matchesAutomaticPrice =
+        resolvedAmount > 0 && automaticAmount > 0 && Math.abs(resolvedAmount - automaticAmount) < 0.01;
+      const priceSource =
+        savedSource ||
+        (storedAmount <= 0 || (quote.automaticPricing?.source && matchesAutomaticPrice)
+          ? "automatic"
+          : resolvedAmount > 0
+            ? "manual"
+            : undefined);
       return {
         description: line.description || automaticPricing.lines[index]?.description || "",
         quantity: safeNumber(line.quantity, 0),
-        unitPrice: storedAmount > 0 ? storedAmount : automaticAmount > 0 ? automaticAmount : "",
+        unitPrice: resolvedAmount > 0 ? resolvedAmount : "",
         includeInTotals: true,
+        ...(priceSource ? { priceSource } : {}),
+        ...(line.priceSetById ? { priceSetById: line.priceSetById } : {}),
+        ...(line.priceSetByName
+          ? { priceSetByName: line.priceSetByName }
+          : priceSource === "automatic"
+            ? { priceSetByName: "Website pricing" }
+            : priceSource === "manual"
+              ? { priceSetByName: quote.quote?.preparedBy || "Team member" }
+              : {}),
+        ...(line.priceSetAtIso ? { priceSetAtIso: line.priceSetAtIso } : {}),
       };
     });
     const fallbackLines: QuoteLine[] = automaticPricing.lines.map((line) => ({
@@ -1131,6 +1210,9 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
       quantity: safeNumber(line.quantity, 0),
       unitPrice: safeNumber(line.unitPrice, 0) > 0 ? safeNumber(line.unitPrice, 0) : "",
       includeInTotals: true,
+      ...(safeNumber(line.unitPrice, 0) > 0
+        ? { priceSource: "automatic" as const, priceSetByName: "Website pricing" }
+        : {}),
     }));
     const documentType = quote.quote.documentType || "quotation";
     const documentDate = quote.quote.documentDate || fallbackDate;
@@ -1175,6 +1257,9 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
     quantity: safeNumber(line.quantity, 0),
     unitPrice: safeNumber(line.unitPrice, 0) > 0 ? safeNumber(line.unitPrice, 0) : "",
     includeInTotals: true,
+    ...(safeNumber(line.unitPrice, 0) > 0
+      ? { priceSource: "automatic" as const, priceSetByName: "Website pricing" }
+      : {}),
   }));
 
   const lines: QuoteLine[] = fromGarments.length
@@ -1614,6 +1699,7 @@ export default function QuotationApprovalPage() {
   const { theme } = useAdminTheme();
   const isDark = theme === "dark";
   const [quotes, setQuotes] = useState<QuoteRecord[]>([]);
+  const [currentAdmin, setCurrentAdmin] = useState<AdminSessionSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [documentAuthReady, setDocumentAuthReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1668,6 +1754,30 @@ export default function QuotationApprovalPage() {
 
   useEffect(() => {
     setRequestedQuoteId(new URLSearchParams(window.location.search).get("quoteId"));
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/admin/session", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const body = await response.json().catch(() => null);
+        return body?.session || null;
+      })
+      .then((session) => {
+        if (!active || !session) return;
+        setCurrentAdmin({
+          userId: String(session.userId || ""),
+          displayName: String(session.displayName || "Administrator"),
+          email: String(session.email || ""),
+        });
+      })
+      .catch(() => {
+        // The page remains usable if the display identity cannot be loaded.
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -2610,6 +2720,10 @@ export default function QuotationApprovalPage() {
         quantity: safeNumber(line.quantity, 0),
         unitPrice: safeNumber(line.unitPrice, 0),
         includeInTotals: true,
+        ...(line.priceSource ? { priceSource: line.priceSource } : {}),
+        ...(line.priceSetById ? { priceSetById: line.priceSetById } : {}),
+        ...(line.priceSetByName ? { priceSetByName: line.priceSetByName } : {}),
+        ...(line.priceSetAtIso ? { priceSetAtIso: line.priceSetAtIso } : {}),
       })),
       deliveryFee: safeNumber(baseDraft.deliveryFee, 0),
       discount: safeNumber(baseDraft.discount, 0),
@@ -2720,6 +2834,17 @@ export default function QuotationApprovalPage() {
     });
   };
 
+  const updateDraftUnitPrice = (index: number, rawValue: string) => {
+    if (!draft) return;
+    updateDraftLine(index, {
+      unitPrice: parseEditableNumber(rawValue),
+      priceSource: "manual",
+      ...(currentAdmin?.userId ? { priceSetById: currentAdmin.userId } : {}),
+      priceSetByName: currentAdmin?.displayName || draft.preparedBy || "Administrator",
+      priceSetAtIso: new Date().toISOString(),
+    });
+  };
+
   const addDraftLine = (description = "Product / Size") => {
     if (!draft) return;
     setDraft((prev) =>
@@ -2754,14 +2879,44 @@ export default function QuotationApprovalPage() {
     if (showNotice) setNotice(null);
     try {
       const payload = buildStoredQuotePayload(draft);
-      await updateDoc(doc(db, "quotes", selected.id), {
+      const changedAtIso = new Date().toISOString();
+      const previousLines = selected.quote?.lines || [];
+      const priceAuditEntries: PriceAuditEntry[] = draft.lines.flatMap((line, index) => {
+        const previousValue = safeNumber(previousLines[index]?.unitPrice, 0);
+        const value = safeNumber(line.unitPrice, 0);
+        if (Math.abs(previousValue - value) < 0.01) return [];
+
+        const source = line.priceSource || "manual";
+        const setByName =
+          line.priceSetByName ||
+          (source === "automatic"
+            ? "Website pricing"
+            : currentAdmin?.displayName || draft.preparedBy || "Administrator");
+        return [{
+          lineIndex: index,
+          description: line.description,
+          previousValue,
+          value,
+          source,
+          ...(line.priceSetById || currentAdmin?.userId
+            ? { setById: line.priceSetById || currentAdmin?.userId }
+            : {}),
+          setByName,
+          changedAtIso: line.priceSetAtIso || changedAtIso,
+        }];
+      });
+      const updatePayload: Record<string, unknown> = {
         status: nextStatus || selected.status || "review",
         name: draft.contactName.trim() || "Walk-in client",
         email: draft.contactEmail.trim(),
         phone: draft.contactPhone.trim(),
         quote: payload,
         updatedAt: serverTimestamp(),
-      });
+      };
+      if (priceAuditEntries.length) {
+        updatePayload.priceAuditHistory = arrayUnion(...priceAuditEntries);
+      }
+      await updateDoc(doc(db, "quotes", selected.id), updatePayload);
       if (showNotice) setNotice("Document saved.");
       return true;
     } catch {
@@ -5587,27 +5742,23 @@ export default function QuotationApprovalPage() {
                                       type="number"
                                       min={0}
                                       value={line.unitPrice}
-                                      onChange={(e) =>
-                                        updateDraftLine(index, {
-                                          unitPrice: parseEditableNumber(e.target.value),
-                                        })
-                                      }
+                                      onChange={(e) => updateDraftUnitPrice(index, e.target.value)}
                                       className={fieldClass}
                                     />
+                                    <PriceProvenanceLabel line={line} />
                                   </label>
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    value={line.unitPrice}
-                                    onChange={(e) =>
-                                      updateDraftLine(index, {
-                                        unitPrice: parseEditableNumber(e.target.value),
-                                      })
-                                    }
-                                    className="hidden min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff6600] focus:ring-4 focus:ring-[#ff6600]/10 md:block"
-                                    placeholder="Unit price"
-                                    aria-label="Unit price"
-                                  />
+                                  <div className="hidden min-w-0 md:block">
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      value={line.unitPrice}
+                                      onChange={(e) => updateDraftUnitPrice(index, e.target.value)}
+                                      className="w-full min-w-0 rounded-2xl border border-[#dddddd] bg-[#f7f7f7] px-4 py-3 text-right text-sm text-[#222222] outline-none transition placeholder:text-[#b0b0b0] focus:border-[#ff6600] focus:ring-4 focus:ring-[#ff6600]/10"
+                                      placeholder="Unit price"
+                                      aria-label="Unit price"
+                                    />
+                                    <PriceProvenanceLabel line={line} />
+                                  </div>
                                   <div className="min-w-0 rounded-2xl border border-[#ebebeb] bg-[#f7f7f7] px-4 py-3 text-right text-sm font-semibold text-[#222222]">
                                     {formatMoney(
                                       safeNumber(line.quantity, 0) *
@@ -6322,14 +6473,11 @@ export default function QuotationApprovalPage() {
                                 min={0}
                                 step="0.01"
                                 value={line.unitPrice}
-                                onChange={(e) =>
-                                  updateDraftLine(index, {
-                                    unitPrice: parseEditableNumber(e.target.value),
-                                  })
-                                }
+                                onChange={(e) => updateDraftUnitPrice(index, e.target.value)}
                                 className={`${fieldClass} text-base font-semibold`}
                                 placeholder="Enter price"
                               />
+                              <PriceProvenanceLabel line={line} />
                             </label>
 
                             <div className="min-w-[150px] flex-[1_1_170px]">

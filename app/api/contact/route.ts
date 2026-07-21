@@ -412,6 +412,7 @@ export async function POST(req: Request) {
       designBrief: parsedDesignBrief,
       delivery,
     });
+    const automaticPriceSetAtIso = new Date().toISOString();
     const parsedAttachments = parseAttachmentList(attachments);
     if (parsedAttachments.length > MAX_EMAIL_ATTACHMENT_COUNT) {
       return json({ error: "Too many artwork attachments." }, 400);
@@ -542,6 +543,13 @@ export async function POST(req: Request) {
             quantity: line.quantity,
             unitPrice: line.unitPrice,
             includeInTotals: true,
+            ...(line.unitPrice > 0
+              ? {
+                  priceSource: "automatic",
+                  priceSetByName: "Website pricing",
+                  priceSetAtIso: automaticPriceSetAtIso,
+                }
+              : {}),
           })),
           deliveryFee: automaticPricing.deliveryFee,
           discount: 0,
