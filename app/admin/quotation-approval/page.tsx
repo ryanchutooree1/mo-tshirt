@@ -1328,8 +1328,14 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
     const storedLines: QuoteLine[] = (quote.quote.lines || []).map((line, index) => {
       const storedAmount = safeNumber(line.unitPrice, 0);
       const automaticAmount = safeNumber(automaticPricing.lines[index]?.unitPrice, 0);
-      const resolvedAmount = storedAmount > 0 ? storedAmount : automaticAmount;
       const savedSource = getPriceSource(line.priceSource);
+      const shouldRefreshAutomaticPrice =
+        savedSource === "automatic" && automaticAmount > 0;
+      const resolvedAmount = shouldRefreshAutomaticPrice
+        ? automaticAmount
+        : storedAmount > 0
+          ? storedAmount
+          : automaticAmount;
       const matchesAutomaticPrice =
         resolvedAmount > 0 && automaticAmount > 0 && Math.abs(resolvedAmount - automaticAmount) < 0.01;
       const priceSource =
