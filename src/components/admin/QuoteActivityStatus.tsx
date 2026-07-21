@@ -71,9 +71,11 @@ export default function QuoteActivityStatus({ quote }: { quote: QuoteActivityRec
   const items = getActivityItems(quote);
   if (!items.length) {
     return (
-      <p className="mt-2 text-[10px] font-medium text-[#8a8a8a]">
-        Activity: Waiting for admin review
-      </p>
+      <div className="mt-2 flex">
+        <span className="inline-flex whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[9px] font-semibold leading-none text-slate-500">
+          Waiting for admin review
+        </span>
+      </div>
     );
   }
 
@@ -82,7 +84,7 @@ export default function QuoteActivityStatus({ quote }: { quote: QuoteActivityRec
       {items.map((item) => (
         <span
           key={item.label}
-          className={`inline-flex rounded-full border px-2 py-1 text-[9px] font-semibold leading-none ${item.tone}`}
+          className={`inline-flex whitespace-nowrap rounded-full border px-2 py-1 text-[9px] font-semibold leading-none ${item.tone}`}
         >
           {item.label}
         </span>

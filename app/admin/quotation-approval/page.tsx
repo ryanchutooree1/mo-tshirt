@@ -3431,7 +3431,7 @@ export default function QuotationApprovalPage() {
       }`}
     >
       <div className="relative max-w-full overflow-x-hidden">
-        <div className="relative mx-auto w-full max-w-[1500px] px-0 py-2 sm:px-6 sm:py-6 lg:px-8">
+        <div className="relative mx-auto w-full max-w-[1500px] px-0 py-2 sm:py-4">
           <header className={`${surfaceClass} relative overflow-hidden px-5 py-6 sm:px-7 sm:py-7`}>
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ff6400] to-transparent" />
             <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
@@ -3520,7 +3520,7 @@ export default function QuotationApprovalPage() {
             className={`mt-4 grid min-w-0 gap-4 sm:mt-5 ${
               inboxCollapsed
                 ? "lg:grid-cols-1"
-                : "lg:grid-cols-[300px_minmax(0,1fr)]"
+                : "lg:grid-cols-[320px_minmax(0,1fr)]"
             }`}
           >
             <aside
@@ -3649,7 +3649,7 @@ export default function QuotationApprovalPage() {
                                 {quote.email || "No email"}
                               </p>
                             </div>
-                            <span className={`self-start rounded-full border px-2.5 py-1 text-[10px] font-semibold ${primaryStatus.tone}`}>
+                            <span className={`shrink-0 self-start whitespace-nowrap rounded-full border px-2.5 py-1 text-[10px] font-semibold ${primaryStatus.tone}`}>
                               {primaryStatus.label}
                             </span>
                           </div>
