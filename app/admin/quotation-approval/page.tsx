@@ -187,6 +187,13 @@ type QuoteAttachment = {
   backgroundRemovedAt?: string;
 };
 
+type QuoteCompletionEstimate = {
+  days: number;
+  changedById?: string;
+  changedByName: string;
+  changedAtIso: string;
+};
+
 type ClientResponseHistoryEntry = {
   id?: string;
   action?: "accept" | "changes" | "reject";
@@ -447,6 +454,7 @@ type QuoteRecord = {
   orderTransactionId?: string;
   movedToOrdersAt?: Date | null;
   partner?: QuotePartnerAssignment | null;
+  completionEstimate?: QuoteCompletionEstimate;
   createdAt?: Date | null;
   updatedAt?: Date | null;
   quote?: {
@@ -1877,6 +1885,8 @@ export default function QuotationApprovalPage() {
   const [pendingMissingField, setPendingMissingField] = useState<string | null>(null);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("inbox");
   const [inboxCollapsed, setInboxCollapsed] = useState(false);
+  const [completionDaysInput, setCompletionDaysInput] = useState("3");
+  const [completionDaysSaving, setCompletionDaysSaving] = useState(false);
   const [partnerVisibleFields, setPartnerVisibleFields] =
     useState<PartnerVisibleField[]>(DEFAULT_PARTNER_VISIBLE_FIELDS);
   const [partnerPrintPlacement, setPartnerPrintPlacement] =
@@ -2160,6 +2170,10 @@ export default function QuotationApprovalPage() {
   }, [selectedId]);
 
   useEffect(() => {
+    setCompletionDaysInput(String(selected?.completionEstimate?.days || 3));
+  }, [selected?.completionEstimate?.days, selectedId]);
+
+  useEffect(() => {
     if (!selectedId) return;
     const frame = window.requestAnimationFrame(() => {
       designLogoSectionRef.current?.scrollIntoView({
@@ -2361,6 +2375,37 @@ export default function QuotationApprovalPage() {
       setPaymentOcrRetryNonce((current) => current + 1);
     } catch {
       setNotice("Could not restart the OCR payment check.");
+    }
+  };
+
+  const saveCompletionEstimate = async () => {
+    if (!selected) return;
+    const parsedDays = Number(completionDaysInput);
+    if (!Number.isInteger(parsedDays) || parsedDays < 1 || parsedDays > 3650) {
+      setNotice("Completion time must be a whole number between 1 and 3650 days.");
+      return;
+    }
+
+    setCompletionDaysSaving(true);
+    setNotice(null);
+    try {
+      const changedAtIso = new Date().toISOString();
+      const changedByName = currentAdmin?.displayName || draft?.preparedBy || "Administrator";
+      const completionEstimate: QuoteCompletionEstimate = {
+        days: parsedDays,
+        ...(currentAdmin?.userId ? { changedById: currentAdmin.userId } : {}),
+        changedByName,
+        changedAtIso,
+      };
+      await updateDoc(doc(db, "quotes", selected.id), {
+        completionEstimate,
+        updatedAt: serverTimestamp(),
+      });
+      setNotice(`Completion time updated to ${parsedDays} day${parsedDays === 1 ? "" : "s"}.`);
+    } catch {
+      setNotice("Failed to update the completion time.");
+    } finally {
+      setCompletionDaysSaving(false);
     }
   };
 
@@ -4816,7 +4861,73 @@ export default function QuotationApprovalPage() {
                     className="-order-3 scroll-mt-24 grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]"
                   >
                     <div className={`${surfaceClass} order-2 p-5`}>
-                      <p className={labelClass}>Product details</p>
+                      <div
+                        className={`rounded-2xl border p-4 ${
+                          isDark ? "border-white/10 bg-white/[0.04]" : "border-[#ebebeb] bg-[#f7f7f7]"
+                        }`}
+                      >
+                        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(180px,auto)] sm:items-end">
+                          <div>
+                            <label
+                              htmlFor="quotation-completion-days"
+                              className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${
+                                isDark ? "text-white/50" : "text-[#717171]"
+                              }`}
+                            >
+                              Order completion time
+                            </label>
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <input
+                                id="quotation-completion-days"
+                                type="number"
+                                min={1}
+                                max={3650}
+                                step={1}
+                                inputMode="numeric"
+                                value={completionDaysInput}
+                                onChange={(event) => setCompletionDaysInput(event.target.value)}
+                                className={`w-24 rounded-xl border px-3 py-2 text-sm font-semibold outline-none transition ${
+                                  isDark
+                                    ? "border-white/15 bg-black/20 text-white focus:border-orange-400/70"
+                                    : "border-[#d7d7d7] bg-white text-[#222222] focus:border-[#ff6600]"
+                                }`}
+                              />
+                              <span className={`text-sm ${isDark ? "text-white/55" : "text-[#6a6a6a]"}`}>
+                                day{Number(completionDaysInput) === 1 ? "" : "s"}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={saveCompletionEstimate}
+                                disabled={completionDaysSaving}
+                                className={primaryButtonClass}
+                              >
+                                {completionDaysSaving ? "Saving..." : "Update days"}
+                              </button>
+                            </div>
+                          </div>
+                          <div className={`text-xs leading-5 sm:text-right ${isDark ? "text-white/45" : "text-[#717171]"}`}>
+                            {selected.completionEstimate ? (
+                              <>
+                                <p className={`font-semibold ${isDark ? "text-white/75" : "text-[#484848]"}`}>
+                                  Changed by {selected.completionEstimate.changedByName}
+                                </p>
+                                <p>
+                                  {format(new Date(selected.completionEstimate.changedAtIso), "d MMM yyyy, HH:mm")}
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <p className={`font-semibold ${isDark ? "text-white/75" : "text-[#484848]"}`}>
+                                  Default estimate
+                                </p>
+                                <p>3 days · not changed yet</p>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className={`${labelClass} mt-5`}>Product details</p>
                       <div className="mt-4 space-y-3 text-sm leading-6 text-[#484848]">
                         <p>
                           <span className="font-semibold text-[#222222]">Product</span>
