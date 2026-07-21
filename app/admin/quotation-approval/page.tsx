@@ -91,6 +91,7 @@ import {
   type PrintPartnerId,
 } from "@/lib/partners";
 import { useAdminTheme } from "@/admin/AdminThemeContext";
+import QuoteActivityStatus from "@/components/admin/QuoteActivityStatus";
 import {
   canAutomaticallyRemoveBackground,
   removeBackgroundAutomatically,
@@ -3656,6 +3657,7 @@ export default function QuotationApprovalPage() {
                             {garmentPreview || "No product line yet"}
                             {totalPieces > 0 ? ` • ${totalPieces} pc${totalPieces > 1 ? "s" : ""}` : ""}
                           </p>
+                          <QuoteActivityStatus quote={quote} />
                           <span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${paymentStatus.tone}`}>
                             Payment: {paymentStatus.shortLabel}
                           </span>
