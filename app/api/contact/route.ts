@@ -14,6 +14,7 @@ import {
 } from "@/lib/request-safety";
 import { getQuotationNotificationRecipients } from "@/lib/quotation-notification-settings";
 import { storePublicUploadBuffer } from "@/lib/public-upload-store";
+import { buildAutomaticQuotePricing } from "@/lib/quote-auto-pricing";
 
 type ParsedPayload = {
   name: string;
@@ -402,6 +403,15 @@ export async function POST(req: Request) {
     const garmentsSummary = parsedGarments.length
       ? parsedGarments.map(formatGarmentLine).join(", ")
       : formatGarmentLine({ garment, color, size, quantity });
+    const quoteGarments = parsedGarments.length
+      ? parsedGarments
+      : [{ garment, color, size, quantity }];
+    const automaticPricing = buildAutomaticQuotePricing({
+      garments: quoteGarments,
+      printMethod,
+      designBrief: parsedDesignBrief,
+      delivery,
+    });
     const parsedAttachments = parseAttachmentList(attachments);
     if (parsedAttachments.length > MAX_EMAIL_ATTACHMENT_COUNT) {
       return json({ error: "Too many artwork attachments." }, 400);
@@ -520,6 +530,31 @@ export async function POST(req: Request) {
         designBrief: parsedDesignBrief,
         attachments: storedAttachments,
         attachment: storedAttachments[0] || null,
+        quote: {
+          documentType: "quotation",
+          paymentStatus: "Quotation only",
+          preparedBy: "MO T-SHIRT",
+          showLineItems: true,
+          showTotals: true,
+          currency: "Rs",
+          lines: automaticPricing.lines.map((line) => ({
+            description: line.description,
+            quantity: line.quantity,
+            unitPrice: line.unitPrice,
+            includeInTotals: true,
+          })),
+          deliveryFee: automaticPricing.deliveryFee,
+          discount: 0,
+          amountReceived: 0,
+          subtotal: automaticPricing.subtotal,
+          total: automaticPricing.total,
+        },
+        automaticPricing: {
+          pricedLineCount: automaticPricing.pricedLineCount,
+          lineCount: automaticPricing.lines.length,
+          requiresReview: automaticPricing.requiresReview,
+          source: "website-print-placement",
+        },
         status: "new",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),

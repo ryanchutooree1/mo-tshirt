@@ -37,8 +37,10 @@ import {
 import { addDays, format, formatDistanceToNow } from "date-fns";
 import { jsPDF } from "jspdf";
 import {
+  FiChevronDown,
   FiChevronLeft,
   FiChevronRight,
+  FiChevronUp,
   FiCheckCircle,
   FiClock,
   FiDownload,
@@ -62,6 +64,7 @@ import {
   sortQuoteColors,
   type QuoteGarmentLine as QuoteGarmentRequestLine,
 } from "@/lib/shops";
+import { buildAutomaticQuotePricing } from "@/lib/quote-auto-pricing";
 import {
   DEFAULT_PRODUCTION_MANAGER,
   DEFAULT_PARTNER_VISIBLE_FIELDS,
@@ -1148,15 +1151,18 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
   }
 
   const validUntilFallback = format(addDays(new Date(fallbackDate), 7), "yyyy-MM-dd");
-  const fromGarments: QuoteLine[] =
-    quote.garments?.map((entry) => {
-      return {
-        description: formatQuoteGarmentDescription(entry),
-        quantity: safeNumber(entry.quantity, 0),
-        unitPrice: "",
-        includeInTotals: true,
-      };
-    }) || [];
+  const automaticPricing = buildAutomaticQuotePricing({
+    garments: quote.garments,
+    printMethod: quote.printMethod,
+    designBrief: quote.designBrief,
+    delivery: quote.delivery,
+  });
+  const fromGarments: QuoteLine[] = automaticPricing.lines.map((line) => ({
+    description: line.description || formatQuoteGarmentDescription({}),
+    quantity: safeNumber(line.quantity, 0),
+    unitPrice: safeNumber(line.unitPrice, 0) > 0 ? safeNumber(line.unitPrice, 0) : "",
+    includeInTotals: true,
+  }));
 
   const lines: QuoteLine[] = fromGarments.length
     ? fromGarments
@@ -1186,7 +1192,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
     showTotals: true,
     currency: "Rs",
     lines,
-    deliveryFee: quote.delivery?.includes("Post Office") ? 100 : 0,
+    deliveryFee: automaticPricing.deliveryFee,
     discount: 0,
     amountReceived: 0,
     notes: "",
@@ -1603,6 +1609,9 @@ export default function QuotationApprovalPage() {
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | "all">("all");
   const [draft, setDraft] = useState<QuoteDraft | null>(null);
   const [quotationPreviewUrl, setQuotationPreviewUrl] = useState<string | null>(null);
+  const [quotationPreviewOpen, setQuotationPreviewOpen] = useState(false);
+  const [paymentReceiptPreviewOpen, setPaymentReceiptPreviewOpen] = useState(false);
+  const [paymentReceiptPreviewUrl, setPaymentReceiptPreviewUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [statusSaving, setStatusSaving] = useState(false);
   const [paymentVerificationSaving, setPaymentVerificationSaving] = useState(false);
@@ -1638,6 +1647,7 @@ export default function QuotationApprovalPage() {
   const [requestedQuoteId, setRequestedQuoteId] = useState<string | null>(null);
   const prevDocumentTypeRef = useRef<DocumentType | null>(null);
   const quotationPreviewUrlRef = useRef<string | null>(null);
+  const paymentReceiptPreviewUrlRef = useRef<string | null>(null);
   const designLogoSectionRef = useRef<HTMLDivElement | null>(null);
   const backgroundRemovalRunsRef = useRef(new Set<string>());
   const backgroundRemovalAttemptsRef = useRef(new Set<string>());
@@ -2434,6 +2444,33 @@ export default function QuotationApprovalPage() {
       },
     });
   }, [selected]);
+
+  useEffect(() => {
+    setQuotationPreviewOpen(false);
+    setPaymentReceiptPreviewOpen(false);
+  }, [selectedId]);
+
+  useEffect(() => {
+    if (paymentReceiptPreviewUrlRef.current) {
+      URL.revokeObjectURL(paymentReceiptPreviewUrlRef.current);
+      paymentReceiptPreviewUrlRef.current = null;
+    }
+    setPaymentReceiptPreviewUrl(null);
+
+    if (!paymentReceiptPreviewOpen || !selected || !paymentReceiptDraft) return;
+
+    const receiptPdf = buildPdfDoc(selected, paymentReceiptDraft, logo);
+    const nextUrl = URL.createObjectURL(receiptPdf.output("blob"));
+    paymentReceiptPreviewUrlRef.current = nextUrl;
+    setPaymentReceiptPreviewUrl(nextUrl);
+
+    return () => {
+      URL.revokeObjectURL(nextUrl);
+      if (paymentReceiptPreviewUrlRef.current === nextUrl) {
+        paymentReceiptPreviewUrlRef.current = null;
+      }
+    };
+  }, [logo, paymentReceiptDraft, paymentReceiptPreviewOpen, selected]);
   const clientWorkflowStatus = useMemo(() => {
     const responseDate = parseTimestamp(selected?.clientDecisionAtIso);
     const formattedResponseDate = responseDate
@@ -3135,10 +3172,7 @@ export default function QuotationApprovalPage() {
   };
 
   const handleViewPaymentReceipt = () => {
-    if (!selected || !paymentReceiptDraft) return;
-    const receiptPdf = buildPdfDoc(selected, paymentReceiptDraft, logo);
-    const url = receiptPdf.output("bloburl");
-    window.open(url, "_blank", "noopener,noreferrer");
+    setPaymentReceiptPreviewOpen((isOpen) => !isOpen);
   };
 
   const handleSend = async () => {
@@ -4065,13 +4099,47 @@ export default function QuotationApprovalPage() {
                             </span>
                           </div>
                           <div className="mt-4 flex flex-wrap gap-2">
-                            <button type="button" onClick={handleViewPaymentReceipt} className={secondaryButtonClass}>
-                              <FiFileText className="h-4 w-4" /> View receipt
+                            <button
+                              type="button"
+                              onClick={handleViewPaymentReceipt}
+                              aria-expanded={paymentReceiptPreviewOpen}
+                              aria-controls="payment-receipt-preview"
+                              className={secondaryButtonClass}
+                            >
+                              <FiFileText className="h-4 w-4" />
+                              View Receipt
+                              {paymentReceiptPreviewOpen ? (
+                                <FiChevronUp className="h-4 w-4" aria-hidden="true" />
+                              ) : (
+                                <FiChevronDown className="h-4 w-4" aria-hidden="true" />
+                              )}
                             </button>
                             <button type="button" onClick={handleDownloadPaymentReceipt} className={secondaryButtonClass}>
                               <FiDownload className="h-4 w-4" /> Download receipt
                             </button>
                           </div>
+                          {paymentReceiptPreviewOpen ? (
+                            <div
+                              id="payment-receipt-preview"
+                              className="mt-4 overflow-hidden rounded-[20px] border border-emerald-200 bg-[#e9ecef]"
+                            >
+                              {paymentReceiptPreviewUrl ? (
+                                <iframe
+                                  key={paymentReceiptPreviewUrl}
+                                  src={paymentReceiptPreviewUrl}
+                                  title={`Receipt ${paymentReceiptDraft.documentNumber || selected.id}`}
+                                  className="h-[72vh] min-h-[680px] w-full bg-white sm:h-[820px]"
+                                />
+                              ) : (
+                                <div className="grid min-h-48 place-items-center bg-white text-center text-[#717171]">
+                                  <div>
+                                    <FiRefreshCw className="mx-auto h-6 w-6 animate-spin text-emerald-600" />
+                                    <p className="mt-3 text-sm font-semibold">Generating receipt preview…</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : null}
                         </div>
                       ) : null}
                     </div>
@@ -4276,40 +4344,62 @@ export default function QuotationApprovalPage() {
                             </div>
                           ) : null}
                         </div>
-                        {quotationMissingCount > 0 ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          {quotationMissingCount > 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => openWorkflowStudioAt(quotationMissingFields[0]?.target)}
+                              className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-2 text-xs font-extrabold text-red-700 transition hover:bg-red-100"
+                            >
+                              <FiEdit2 className="h-3.5 w-3.5" />
+                              {quotationMissingCount} missing field{quotationMissingCount === 1 ? "" : "s"} — fill now
+                            </button>
+                          ) : (
+                            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
+                              <FiCheckCircle className="h-3.5 w-3.5" />
+                              Complete and ready
+                            </span>
+                          )}
                           <button
                             type="button"
-                            onClick={() => openWorkflowStudioAt(quotationMissingFields[0]?.target)}
-                            className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-2 text-xs font-extrabold text-red-700 transition hover:bg-red-100"
+                            onClick={() => setQuotationPreviewOpen((isOpen) => !isOpen)}
+                            aria-expanded={quotationPreviewOpen}
+                            aria-controls="automatic-quotation-preview"
+                            className={secondaryButtonClass}
                           >
-                            <FiEdit2 className="h-3.5 w-3.5" />
-                            {quotationMissingCount} missing field{quotationMissingCount === 1 ? "" : "s"} — fill now
+                            <FiFileText className="h-4 w-4" />
+                            View Quotation
+                            {quotationPreviewOpen ? (
+                              <FiChevronUp className="h-4 w-4" aria-hidden="true" />
+                            ) : (
+                              <FiChevronDown className="h-4 w-4" aria-hidden="true" />
+                            )}
                           </button>
-                        ) : (
-                          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
-                            <FiCheckCircle className="h-3.5 w-3.5" />
-                            Complete and ready
-                          </span>
-                        )}
+                        </div>
                       </div>
 
-                      <div className="overflow-hidden rounded-[24px] border border-[#dedede] bg-[#e9ecef] shadow-[0_24px_70px_-36px_rgba(15,23,42,0.35)]">
-                        {quotationPreviewUrl ? (
-                          <iframe
-                            key={quotationPreviewUrl}
-                            src={quotationPreviewUrl}
-                            title={`Live ${DOC_TYPE_LABELS[draft.documentType]} PDF preview`}
-                            className="h-[72vh] min-h-[680px] w-full bg-white sm:h-[820px]"
-                          />
-                        ) : (
-                          <div className="grid min-h-[680px] place-items-center bg-white text-center text-[#717171]">
-                            <div>
-                              <FiRefreshCw className="mx-auto h-6 w-6 animate-spin text-[#ff6600]" />
-                              <p className="mt-3 text-sm font-semibold">Generating existing quotation PDF…</p>
+                      {quotationPreviewOpen ? (
+                        <div
+                          id="automatic-quotation-preview"
+                          className="overflow-hidden rounded-[24px] border border-[#dedede] bg-[#e9ecef] shadow-[0_24px_70px_-36px_rgba(15,23,42,0.35)]"
+                        >
+                          {quotationPreviewUrl ? (
+                            <iframe
+                              key={quotationPreviewUrl}
+                              src={quotationPreviewUrl}
+                              title={`Live ${DOC_TYPE_LABELS[draft.documentType]} PDF preview`}
+                              className="h-[72vh] min-h-[680px] w-full bg-white sm:h-[820px]"
+                            />
+                          ) : (
+                            <div className="grid min-h-[680px] place-items-center bg-white text-center text-[#717171]">
+                              <div>
+                                <FiRefreshCw className="mx-auto h-6 w-6 animate-spin text-[#ff6600]" />
+                                <p className="mt-3 text-sm font-semibold">Generating existing quotation PDF…</p>
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </div>
+                          )}
+                        </div>
+                      ) : null}
 
                       <div className="hidden mx-auto overflow-hidden rounded-[24px] border border-[#dedede] bg-white text-[#222222] shadow-[0_24px_70px_-36px_rgba(15,23,42,0.35)]">
                         <div className="h-2 bg-[linear-gradient(90deg,#ff6600,#f59e0b,#ff6600)]" />
