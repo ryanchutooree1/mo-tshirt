@@ -210,21 +210,21 @@ const defaultForecastVolumes = methodProfiles.reduce((acc, method) => {
 }, {} as ForecastVolumes);
 
 const pricingOptions: PricingOption[] = [
-  { id: "dtf-normal-front-small", methodId: "dtf", group: "Normal XS-XL", type: "Front small", price: 350, cost: 300 },
-  { id: "dtf-normal-front-large", methodId: "dtf", group: "Normal XS-XL", type: "Front large", price: 400, cost: 300 },
-  { id: "dtf-normal-small-large-back", methodId: "dtf", group: "Normal XS-XL", type: "Small Front + Large Back", price: 450, cost: 350 },
-  { id: "dtf-normal-large-large-back", methodId: "dtf", group: "Normal XS-XL", type: "Large Front + Large Back", price: 500, cost: 350 },
-  { id: "dtf-large-front-only", methodId: "dtf", group: "Large 2XL-3XL", type: "Front only", price: 500, cost: 450 },
-  { id: "dtf-large-front-back", methodId: "dtf", group: "Large 2XL-3XL", type: "Front + Back", price: 650, cost: 575 },
-  { id: "serie-normal-front-only", methodId: "serie", group: "Normal XS-XL", type: "Front only", price: 300, cost: 100 },
-  { id: "serie-normal-front-back", methodId: "serie", group: "Normal XS-XL", type: "Front + Back", price: 380, cost: 200 },
-  { id: "serie-large-front-only", methodId: "serie", group: "Large 2XL-3XL", type: "Front only", price: 420, cost: 325 },
-  { id: "serie-large-front-back", methodId: "serie", group: "Large 2XL-3XL", type: "Front + Back", price: 550, cost: 425 },
-  { id: "vinyl-normal-small", methodId: "vinyl", group: "Normal XS-XL", type: "Small", price: 300, cost: 45, estimated: true },
-  { id: "vinyl-normal-medium", methodId: "vinyl", group: "Normal XS-XL", type: "Medium", price: 350, cost: 90, estimated: true },
-  { id: "vinyl-normal-large", methodId: "vinyl", group: "Normal XS-XL", type: "Large", price: 380, cost: 140, estimated: true },
-  { id: "vinyl-large-small", methodId: "vinyl", group: "Large 2XL-3XL", type: "Small", price: 380, cost: 60, estimated: true },
-  { id: "vinyl-large-large", methodId: "vinyl", group: "Large 2XL-3XL", type: "Large", price: 450, cost: 160, estimated: true },
+  { id: "dtf-normal-front-small", methodId: "dtf", group: "Normal XS-XL", type: "Front small", price: 450, cost: 300 },
+  { id: "dtf-normal-front-large", methodId: "dtf", group: "Normal XS-XL", type: "Front large", price: 525, cost: 300 },
+  { id: "dtf-normal-small-large-back", methodId: "dtf", group: "Normal XS-XL", type: "Small Front + Large Back", price: 625, cost: 350 },
+  { id: "dtf-normal-large-large-back", methodId: "dtf", group: "Normal XS-XL", type: "Large Front + Large Back", price: 675, cost: 350 },
+  { id: "dtf-large-front-only", methodId: "dtf", group: "Large 2XL-3XL", type: "Front only", price: 625, cost: 450 },
+  { id: "dtf-large-front-back", methodId: "dtf", group: "Large 2XL-3XL", type: "Front + Back", price: 775, cost: 575 },
+  { id: "serie-normal-front-only", methodId: "serie", group: "Normal XS-XL", type: "Front only", price: 390, cost: 100 },
+  { id: "serie-normal-front-back", methodId: "serie", group: "Normal XS-XL", type: "Front + Back", price: 615, cost: 200 },
+  { id: "serie-large-front-only", methodId: "serie", group: "Large 2XL-3XL", type: "Front only", price: 565, cost: 325 },
+  { id: "serie-large-front-back", methodId: "serie", group: "Large 2XL-3XL", type: "Front + Back", price: 715, cost: 425 },
+  { id: "vinyl-normal-small", methodId: "vinyl", group: "Normal XS-XL", type: "Small", price: 420, cost: 45, estimated: true },
+  { id: "vinyl-normal-medium", methodId: "vinyl", group: "Normal XS-XL", type: "Medium", price: 460, cost: 90, estimated: true },
+  { id: "vinyl-normal-large", methodId: "vinyl", group: "Normal XS-XL", type: "Large", price: 495, cost: 140, estimated: true },
+  { id: "vinyl-large-small", methodId: "vinyl", group: "Large 2XL-3XL", type: "Small", price: 520, cost: 60, estimated: true },
+  { id: "vinyl-large-large", methodId: "vinyl", group: "Large 2XL-3XL", type: "Large", price: 595, cost: 160, estimated: true },
 ];
 
 const printRules = [

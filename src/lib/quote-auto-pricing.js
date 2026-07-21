@@ -145,7 +145,13 @@ function getAutomaticUnitPrice({ garment, printMethod, printPlacement }) {
   const printOption = PRINT_PLACEMENT_TO_OPTION[clean(printPlacement)];
   if (!itemType || !sizeBand || !method || !printOption) return null;
 
-  const unitPrice = getPriceBookPrice({ itemType, sizeBand, method, printOption });
+  const unitPrice = getPriceBookPrice({
+    itemType,
+    sizeBand,
+    method,
+    printOption,
+    quantity: garment?.quantity,
+  });
   return Number.isFinite(unitPrice) && unitPrice > 0 ? unitPrice : null;
 }
 

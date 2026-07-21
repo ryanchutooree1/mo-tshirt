@@ -26,25 +26,25 @@ test("prices a website DTF placement and includes it in the quotation line", () 
     delivery: "Post Office Express Delivery (Rs 150)",
   });
 
-  assert.equal(result.lines[0].unitPrice, 360);
+  assert.equal(result.lines[0].unitPrice, 565);
   assert.match(result.lines[0].description, /Small Front and Large Back Printing/);
-  assert.equal(result.subtotal, 4320);
+  assert.equal(result.subtotal, 6780);
   assert.equal(result.deliveryFee, 150);
-  assert.equal(result.total, 4470);
+  assert.equal(result.total, 6930);
   assert.equal(result.requiresReview, false);
 });
 
 test("supports all standard front and back placement combinations", () => {
   const base = { garment: "Poloshirt", size: "2XL" };
   const cases = [
-    ["small_front_only", 410],
-    ["small_back_only", 410],
-    ["large_front_only", 440],
-    ["back_only", 440],
-    ["small_front_back", 450],
-    ["small_front_large_back", 480],
-    ["large_front_small_back", 480],
-    ["front_back", 500],
+    ["small_front_only", 700],
+    ["small_back_only", 700],
+    ["large_front_only", 775],
+    ["back_only", 775],
+    ["small_front_back", 825],
+    ["small_front_large_back", 875],
+    ["large_front_small_back", 875],
+    ["front_back", 925],
   ];
 
   cases.forEach(([printPlacement, expected]) => {
@@ -53,6 +53,22 @@ test("supports all standard front and back placement combinations", () => {
       expected
     );
   });
+});
+
+test("applies competitive quantity discounts without using bulk pricing for short runs", () => {
+  const garment = { garment: "T-Shirt", size: "M" };
+  const priceFor = (quantity) =>
+    getAutomaticUnitPrice({
+      garment: { ...garment, quantity },
+      printMethod: "DTF",
+      printPlacement: "small_front_only",
+    });
+
+  assert.equal(priceFor(2), 450);
+  assert.equal(priceFor(8), 430);
+  assert.equal(priceFor(20), 405);
+  assert.equal(priceFor(40), 385);
+  assert.equal(priceFor(60), 360);
 });
 
 test("leaves unsupported products and placements for manual review", () => {
@@ -75,8 +91,8 @@ test("backfills an older request with no saved size from its known placement", (
     fallbackPrintPlacement: "small_front_only",
   });
 
-  assert.equal(result.lines[0].unitPrice, 290);
-  assert.equal(result.subtotal, 6090);
+  assert.equal(result.lines[0].unitPrice, 405);
+  assert.equal(result.subtotal, 8505);
   assert.equal(result.requiresReview, false);
 });
 
@@ -108,8 +124,8 @@ test("prices an older MO AI order using reviewed defaults", () => {
     fallbackPrintPlacement: "large_front_only",
   });
 
-  assert.equal(result.lines[0].unitPrice, 320);
-  assert.equal(result.total, 640);
+  assert.equal(result.lines[0].unitPrice, 525);
+  assert.equal(result.total, 1050);
   assert.equal(result.requiresReview, false);
 });
 
@@ -120,8 +136,8 @@ test("prices a website quotation when the saved print method is missing", () => 
     designBrief: { artwork: [{ printPlacement: "small_front_only" }] },
   });
 
-  assert.equal(result.lines[0].unitPrice, 290);
-  assert.equal(result.total, 580);
+  assert.equal(result.lines[0].unitPrice, 450);
+  assert.equal(result.total, 900);
   assert.equal(
     result.lines[0].description,
     "T-Shirt (Black / M) — DTF — Small Front Printing only"

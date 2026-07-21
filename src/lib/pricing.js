@@ -81,20 +81,30 @@ const METHOD_KEYS = {
   DTF: "DTF",
 };
 
+// Mauritius market positioning reviewed in July 2026. These are retail prices
+// for short-run custom work; quantity factors below keep larger jobs competitive.
 const PRICE_BOOK_BASE = {
-  TSHIRT: { Kids: 190, XS_XL: 230, "2XL": 270, "3XL_4XL": 310 },
-  POLO: { Kids: 260, XS_XL: 310, "2XL": 350, "3XL_4XL": 390 },
+  TSHIRT: { Kids: 350, XS_XL: 390, "2XL": 460, "3XL_4XL": 520 },
+  POLO: { Kids: 525, XS_XL: 590, "2XL": 640, "3XL_4XL": 740 },
 };
 
-const METHOD_ADD = { SCREEN: 0, VINYL: 40, DTF: 60 };
+const METHOD_ADD = { SCREEN: 0, VINYL: 30, DTF: 60 };
 const PRINT_OPTION_ADD = {
   FRONT_SMALL: 0,
-  FRONT_LARGE: 30,
-  FRONT_SMALL_BACK_SMALL: 40,
-  FRONT_SMALL_BACK_LARGE: 70,
-  FRONT_LARGE_BACK_SMALL: 70,
-  FRONT_LARGE_BACK_LARGE: 90,
+  FRONT_LARGE: 75,
+  FRONT_SMALL_BACK_SMALL: 125,
+  FRONT_SMALL_BACK_LARGE: 175,
+  FRONT_LARGE_BACK_SMALL: 175,
+  FRONT_LARGE_BACK_LARGE: 225,
 };
+
+const QUANTITY_PRICE_FACTORS = [
+  { min: 50, factor: 0.8 },
+  { min: 30, factor: 0.85 },
+  { min: 10, factor: 0.9 },
+  { min: 5, factor: 0.95 },
+  { min: 1, factor: 1 },
+];
 
 const PRICE_BOOK = (() => {
   const book = {};
@@ -142,15 +152,21 @@ function getVinylCosts({ rollPrice = VINYL_ROLL_PRICE, wasteFactor = VINYL_WASTE
   return { rollArea, costPerCm2, small, large };
 }
 
-function getPriceBookPrice({ itemType, sizeBand, method, printOption } = {}) {
+function getPriceBookPrice({ itemType, sizeBand, method, printOption, quantity = 1 } = {}) {
   const itemKey = ITEM_TYPE_KEYS[itemType] || ITEM_TYPE_KEYS[`${itemType}`] || "TSHIRT";
   const sizeKey = SIZE_BAND_KEYS[sizeBand] || SIZE_BAND_KEYS[`${sizeBand}`] || "XS_XL";
   const methodKey = METHOD_KEYS[method] || METHOD_KEYS[`${method}`] || "SCREEN";
   const printKey = printOption || "FRONT_SMALL";
-  return (
+  const retailPrice = (
     PRICE_BOOK?.[itemKey]?.[sizeKey]?.[methodKey]?.[printKey] ||
     0
   );
+  if (!retailPrice) return 0;
+
+  const qty = Math.max(1, Number(quantity) || 1);
+  const quantityFactor =
+    QUANTITY_PRICE_FACTORS.find((tier) => qty >= tier.min)?.factor || 1;
+  return roundUpToNearest5(retailPrice * quantityFactor);
 }
 
 function computeQuote(input) {
@@ -173,6 +189,7 @@ function computeQuote(input) {
       sizeBand: input.sizeBand || input.blankSizeBand,
       method,
       printOption: input.printOption || "FRONT_SMALL",
+      quantity: qty,
     });
   const handlingFeePerUnit = Number(input.handlingFeePerUnit) || 0;
   const overheadPerOrder = Number(input.overheadPerOrder) || 0;
@@ -319,6 +336,7 @@ module.exports = {
   VINYL_LABOR_LARGE_PER_UNIT,
   DTF_PACKAGE_FRONT,
   DTF_PACKAGE_FRONT_BACK,
+  QUANTITY_PRICE_FACTORS,
   roundUpToNearest5,
   getPrintOptionConfig,
   getBlankOptions,
