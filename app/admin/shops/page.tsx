@@ -615,11 +615,7 @@ export default function AdminShopsPage() {
       const result = await uploadFileAndGetUrl(selectedImageView);
       if (result.url) {
         const viewLabel = SHOP_IMAGE_VIEWS.find((view) => view.key === selectedImageView)?.label || "Photo";
-        setNotice(
-          result.warning
-            ? `${viewLabel} photo uploaded, but its studio copy still needs preparation. Save the item, then use Prepare studio images.`
-            : `${viewLabel} photo and transparent studio copy uploaded. Save the item to apply them.`
-        );
+        setNotice(`${viewLabel} photo uploaded. Save the item, then convert it to transparent when ready.`);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Upload failed. Use an image URL instead.");
@@ -667,26 +663,11 @@ export default function AdminShopsPage() {
 
     const url = await uploadImageFile(file);
     updateFormImageUrl(view, url);
-    let studioUrl = "";
-    let warning: string | undefined;
-
-    if (view === "front" || view === "back") {
-      try {
-        setStudioProgress(`Preparing ${view} photo for Design Studio`);
-        const studioFile = await prepareStudioImageFile(file, view, setStudioProgress);
-        setStudioProgress(`Saving transparent ${view} studio image`);
-        studioUrl = await uploadImageFile(studioFile);
-        const studioField = getStudioImageField(view);
-        setForm((prev) => ({ ...prev, [studioField]: studioUrl }));
-      } catch (error) {
-        console.error("studio image preparation error", error);
-        warning = error instanceof Error ? error.message : "Studio image preparation failed.";
-      }
-    }
+    const studioUrl = "";
 
     setImageFiles((prev) => ({ ...prev, [view]: null }));
     if (photoInputRef.current) photoInputRef.current.value = "";
-    return { url, studioUrl, warning };
+    return { url, studioUrl };
   }
 
   async function uploadPendingImageFiles() {
@@ -697,18 +678,15 @@ export default function AdminShopsPage() {
       studioFront: form.studioPhotoUrl,
       studioBack: form.studioBackPhotoUrl,
     };
-    const warnings: string[] = [];
-
     for (const view of SHOP_IMAGE_VIEWS) {
       if (!imageFiles[view.key]) continue;
       const result = await uploadFileAndGetUrl(view.key);
       uploaded[view.key] = result.url;
       if (view.key === "front") uploaded.studioFront = result.studioUrl;
       if (view.key === "back") uploaded.studioBack = result.studioUrl;
-      if (result.warning) warnings.push(result.warning);
     }
 
-    return { uploaded, warnings };
+    return uploaded;
   }
 
   async function saveItem(e: React.FormEvent) {
@@ -720,7 +698,7 @@ export default function AdminShopsPage() {
 
     try {
       const wasEditing = Boolean(editingId);
-      const { uploaded: imageUrls, warnings: studioWarnings } = await uploadPendingImageFiles();
+      const imageUrls = await uploadPendingImageFiles();
       const sizePrices =
         form.pricingMode === "single"
           ? (() => {
@@ -797,11 +775,7 @@ export default function AdminShopsPage() {
       if (!res.ok) throw new Error(data?.error || "Failed to save item.");
       await refresh();
       closeComposer();
-      setNotice(
-        studioWarnings.length
-          ? `${wasEditing ? "Item updated" : "Item created"}. ${studioWarnings.length} studio image${studioWarnings.length === 1 ? "" : "s"} still need preparation.`
-          : `${wasEditing ? "Item updated" : "Item created"} with transparent Design Studio images.`
-      );
+      setNotice(`${wasEditing ? "Item updated" : "Item created"}. Convert its Design Studio photos to transparent when ready.`);
     } catch (err: any) {
       setError(err?.message || "Failed to save item.");
     } finally {
