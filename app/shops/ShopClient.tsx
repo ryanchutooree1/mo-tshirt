@@ -9,6 +9,7 @@ import { READY_MADE_UNIFORMS_PATH } from "@/data/ready-made-uniforms";
 import { getWhatsAppUrl } from "@/data/work";
 import { trackShopOrderSubmit, trackWhatsAppClick } from "@/lib/analytics";
 import { formatMoney as formatDisplayMoney, formatWholeMoney as formatDisplayWholeMoney } from "@/lib/money";
+import type { ReadyMadeUniformItem } from "@/lib/ready-made-uniforms-store";
 import {
   buildShopWhatsAppMessageForLines,
   formatSizeLabel,
@@ -33,8 +34,6 @@ const DELIVERY_METHODS = [
   { value: "Post Office Express Delivery", label: `Post Office Express Delivery (${formatDisplayWholeMoney(150)})`, fee: 150 },
   { value: "Delivery (Need to arrange first)", label: "Delivery (Need to arrange first)", fee: 0 },
 ] as const;
-
-const UNIFORM_AUDIENCES = ["Staff", "Security", "Restaurant", "Sport teams"] as const;
 
 const money = (value: number) => formatDisplayMoney(value);
 const IMAGE_RETRY_LIMIT = 2;
@@ -269,7 +268,7 @@ function ProductThumbnailRail({
   );
 }
 
-export default function ShopClient({ uniformDesignCount }: { uniformDesignCount: number }) {
+export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformItem[] }) {
   const [items, setItems] = useState<ShopItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -658,7 +657,7 @@ export default function ShopClient({ uniformDesignCount }: { uniformDesignCount:
                     <FiLayers className="h-5 w-5" aria-hidden="true" />
                   </span>
                   <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white backdrop-blur">
-                    {uniformDesignCount} collections
+                    {uniforms.length} collections
                   </span>
                 </div>
 
@@ -959,70 +958,99 @@ export default function ShopClient({ uniformDesignCount }: { uniformDesignCount:
             )}
           </div>
 
-          <aside className="hidden xl:self-stretch xl:block" aria-label="Uniform designs">
-            <Link
-              href={READY_MADE_UNIFORMS_PATH}
-              className="group sticky top-24 block overflow-hidden rounded-[30px] border border-[#ff8a3d] bg-[linear-gradient(155deg,#ff5d00_0%,#ff7600_48%,#ff9f32_100%)] p-5 text-white shadow-[0_26px_70px_-38px_rgba(255,102,0,0.95)] transition duration-300 hover:-translate-y-1 hover:brightness-105"
-            >
-              <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full border-[42px] border-white/10" />
-              <div className="pointer-events-none absolute -bottom-24 -left-16 h-56 w-56 rounded-full bg-fuchsia-500/25 blur-3xl" />
-
-              <div className="relative flex items-start justify-between gap-3">
-                <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#e65500] shadow-sm">
-                  <FiLayers className="h-5 w-5" aria-hidden="true" />
-                </span>
-                <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.15em] backdrop-blur">
-                  {uniformDesignCount} collections
-                </span>
+          <aside className="min-w-0" aria-label="Uniform products">
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#e65500]">Uniform Shop</p>
+                <h2 className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-neutral-950">Uniform products</h2>
               </div>
+              <Link
+                href={READY_MADE_UNIFORMS_PATH}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-semibold text-[#d94f00] transition hover:border-orange-300 hover:bg-orange-100"
+              >
+                View all
+                <FiArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </Link>
+            </div>
 
-              <div className="relative mt-5 h-64 overflow-hidden rounded-[24px] border border-white/20 bg-black/10">
-                <Image
-                  src="/mockups/tshirt-front.png"
-                  alt="Ready-made T-shirt uniform"
-                  width={320}
-                  height={360}
-                  className="absolute -bottom-9 -left-14 h-56 w-auto -rotate-6 object-contain drop-shadow-2xl transition-transform duration-500 group-hover:-translate-y-1"
-                />
-                <Image
-                  src="/mockups/polo-front.png"
-                  alt="Ready-made polo uniform"
-                  width={320}
-                  height={360}
-                  className="absolute -bottom-5 left-1/2 z-10 h-64 w-auto -translate-x-1/2 object-contain drop-shadow-2xl transition-transform duration-500 group-hover:-translate-y-1"
-                />
-                <Image
-                  src="/mockups/hoodie-front.png"
-                  alt="Ready-made hoodie uniform"
-                  width={320}
-                  height={360}
-                  className="absolute -bottom-9 -right-16 h-56 w-auto rotate-6 object-contain drop-shadow-2xl transition-transform duration-500 group-hover:-translate-y-1"
-                />
+            <section className="mt-4 grid gap-6 sm:grid-cols-2 xl:grid-cols-1" aria-label="Ready-made uniform products">
+              {uniforms.map((uniform) => {
+                const gallery = [uniform.imageSrc, ...(uniform.imageGallery || [])].filter(Boolean);
+
+                return (
+                  <article
+                    key={uniform.id}
+                    className="group overflow-hidden rounded-[28px] border border-orange-100 bg-white shadow-[0_18px_50px_-38px_rgba(194,65,12,0.55)] transition duration-300 hover:-translate-y-1 hover:border-orange-200 hover:shadow-[0_24px_60px_-36px_rgba(194,65,12,0.7)]"
+                  >
+                    <Link
+                      href={READY_MADE_UNIFORMS_PATH}
+                      className="relative block aspect-square overflow-hidden bg-[radial-gradient(circle_at_top,#fff7ed_0%,#ffffff_65%)]"
+                      aria-label={`View ${uniform.code} ${uniform.title}`}
+                    >
+                      <div className="absolute inset-x-0 top-0 z-10 h-1.5 bg-[linear-gradient(90deg,#ff5d00,#ff9f32)]" />
+                      <Image
+                        src={uniform.imageSrc}
+                        alt={`${uniform.title} ${uniform.code}`}
+                        fill
+                        sizes="(max-width: 639px) calc(100vw - 32px), (max-width: 1279px) calc(50vw - 36px), 360px"
+                        loading="lazy"
+                        className="object-contain p-5 transition duration-500 group-hover:scale-[1.03]"
+                      />
+                      <span className="absolute left-4 top-4 z-10 rounded-full bg-black px-3 py-1.5 text-[11px] font-bold tracking-[0.08em] text-white shadow-sm">
+                        {uniform.code}
+                      </span>
+                      {gallery.length > 1 && (
+                        <span className="absolute bottom-4 right-4 z-10 rounded-full border border-white/80 bg-white/90 px-3 py-1.5 text-[10px] font-bold text-neutral-700 shadow-sm backdrop-blur">
+                          {gallery.length} photos
+                        </span>
+                      )}
+                    </Link>
+
+                    <div className="p-5">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#e65500]">Ready-made uniform</p>
+                      <h3 className="mt-2 text-xl font-semibold tracking-[-0.025em] text-neutral-950">{uniform.title}</h3>
+                      <p className="mt-1 text-sm leading-5 text-neutral-500">{uniform.audience}</p>
+
+                      <ul className="mt-4 grid gap-2 text-xs font-medium text-neutral-700">
+                        {uniform.features.slice(0, 3).map((feature) => (
+                          <li key={feature} className="flex items-start gap-2">
+                            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#FF6600]" aria-hidden="true" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      <div className="mt-5 grid gap-2">
+                        <TrackedWhatsAppLink
+                          href={getWhatsAppUrl(uniform.message)}
+                          trackingLocation={`shop_uniform_${uniform.code.toLowerCase()}`}
+                          trackingSource="shop"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center rounded-full bg-[#FF6600] px-4 py-3 text-sm font-semibold text-white transition hover:bg-orange-600"
+                        >
+                          Order {uniform.code}
+                        </TrackedWhatsAppLink>
+                        <Link
+                          href={READY_MADE_UNIFORMS_PATH}
+                          className="inline-flex items-center justify-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-800 transition hover:border-neutral-400 hover:text-black"
+                        >
+                          View design details
+                          <FiArrowRight className="h-4 w-4" aria-hidden="true" />
+                        </Link>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </section>
+
+            {!uniforms.length && (
+              <div className="mt-4 rounded-[28px] border border-dashed border-orange-200 bg-orange-50/60 px-6 py-12 text-center">
+                <FiLayers className="mx-auto h-6 w-6 text-orange-500" aria-hidden="true" />
+                <p className="mt-3 text-sm font-semibold text-neutral-800">Uniform products are being updated.</p>
               </div>
-
-              <div className="relative mt-6">
-                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/70">Uniform Designs</p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">A professional look, ready to customize</h2>
-                <p className="mt-3 text-sm leading-6 text-white/82">
-                  Choose a proven style, add your logo, approve the mockup, and reorder it anytime.
-                </p>
-
-                <div className="mt-5 grid grid-cols-2 gap-2 text-[11px] font-semibold">
-                  {UNIFORM_AUDIENCES.map((label) => (
-                    <span key={label} className="rounded-full border border-white/25 bg-white/10 px-3 py-2 text-center backdrop-blur">
-                      {label}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="mt-6 flex items-center justify-between gap-3 border-t border-white/25 pt-5 text-sm font-semibold">
-                  <span>Explore uniform designs</span>
-                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#e65500] shadow-sm">
-                    <FiArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
-                  </span>
-                </div>
-              </div>
-            </Link>
+            )}
           </aside>
         </div>
       </main>
