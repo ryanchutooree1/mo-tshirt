@@ -642,6 +642,41 @@ body {
   }
 }
 
+/* The design studio intentionally keeps the bright storefront canvas in either admin theme. */
+.admin-root.admin-dark .premium-studio {
+  color-scheme: light;
+  background: #f5f5f2 !important;
+  color: #1b1b18 !important;
+}
+
+.admin-root.admin-dark .premium-studio .studio-field,
+.premium-studio .studio-field {
+  width: 100%;
+  min-height: 2.75rem;
+  border: 1px solid #deded8 !important;
+  border-radius: 0.75rem;
+  background: #ffffff !important;
+  padding-inline: 0.875rem;
+  color: #1b1b18 !important;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.premium-studio .studio-field:focus {
+  border-color: #ff5a0a !important;
+  box-shadow: 0 0 0 4px rgb(255 90 10 / 0.1) !important;
+}
+
+.admin-root.admin-dark .premium-studio .studio-field::placeholder {
+  color: #a4a39d !important;
+}
+
+.admin-root.admin-dark .premium-studio :is(.studio-primary, .studio-dark, .studio-success),
+.premium-studio :is(.studio-primary, .studio-dark, .studio-success) {
+  color: #ffffff !important;
+}
+
 @media (max-width: 1023px) {
   .admin-workspace-header {
     height: calc(4rem + env(safe-area-inset-top));

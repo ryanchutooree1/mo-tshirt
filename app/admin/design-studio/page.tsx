@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Sora } from "next/font/google";
-import DesignStudioClient from "@/components/DesignStudioClient";
+import PremiumDesignStudioClient from "@/components/PremiumDesignStudioClient";
 
 const sora = Sora({
   subsets: ["latin"],
@@ -30,8 +30,8 @@ export const metadata: Metadata = {
 
 export default function AdminDesignStudioPage() {
   return (
-    <main className={`${sora.variable} ${plusJakartaSans.variable}`}>
-      <DesignStudioClient mode="admin" />
+    <main className={`ceo-theme ${sora.variable} ${plusJakartaSans.variable}`}>
+      <PremiumDesignStudioClient />
     </main>
   );
 }
