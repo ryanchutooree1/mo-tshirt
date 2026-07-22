@@ -12,23 +12,27 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
+  Copy,
   Crosshair,
   Focus,
   ImagePlus,
   Layers3,
   Loader2,
   Magnet,
+  Maximize2,
   MessageCircle,
   Move,
   PackageCheck,
   Palette,
   RotateCcw,
+  RotateCw,
   Send,
   Shirt,
   Sparkles,
   Trash2,
   Type as TypeIcon,
   UploadCloud,
+  X,
   ZoomIn,
 } from "lucide-react";
 import {
@@ -126,7 +130,7 @@ export default function PremiumDesignStudioClient() {
   const [rush, setRush] = useState(false);
   const [previewZoom, setPreviewZoom] = useState(100);
   const [snap, setSnap] = useState(true);
-  const [selectedLayer, setSelectedLayer] = useState<Layer>("artwork");
+  const [selectedLayer, setSelectedLayer] = useState<Layer | null>(null);
   const [artworkFiles, setArtworkFiles] = useState<Record<Side, File | null>>({ front: null, back: null });
   const [artworkUrls, setArtworkUrls] = useState<Record<Side, string | null>>({ front: null, back: null });
   const [delivery, setDelivery] = useState(DELIVERY_OPTIONS[0]);
@@ -136,7 +140,10 @@ export default function PremiumDesignStudioClient() {
   const artworkInput = useRef<HTMLInputElement | null>(null);
   const uploadTarget = useRef<Side>("front");
   const canvasRef = useRef<HTMLDivElement | null>(null);
+  const artworkFrameRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ pointerId: number; layer: Layer; startX: number; startY: number; originX: number; originY: number } | null>(null);
+  const artworkTransformRef = useRef<{ pointerId: number; kind: "rotate" | "scale"; startAngle: number; startDistance: number; originRotate: number; originScale: number; changed: boolean } | null>(null);
+  const skipArtworkTransformClick = useRef(false);
 
   const product = PRODUCTS.find((item) => item.id === productId) ?? PRODUCTS[0];
   const color = COLORS.find((item) => item.id === colorId) ?? COLORS[0];
@@ -167,6 +174,11 @@ export default function PremiumDesignStudioClient() {
     setDesigns((current) => ({ ...current, [side]: { ...current[side], text: { ...current[side].text, ...patch } } }));
   }
 
+  function changeSide(side: Side) {
+    setActiveSide(side);
+    setSelectedLayer(null);
+  }
+
   function openArtworkPicker(side: Side) {
     uploadTarget.current = side;
     artworkInput.current?.click();
@@ -182,8 +194,7 @@ export default function PremiumDesignStudioClient() {
     setArtworkFiles((current) => ({ ...current, [side]: file }));
     setArtworkUrls((current) => ({ ...current, [side]: nextUrl }));
     setResult(null);
-    setActiveSide(side);
-    setSelectedLayer("artwork");
+    changeSide(side);
     patchArtwork({ enabled: true, x: 0, y: -8, scale: 34, rotate: 0 }, side);
   }
 
@@ -196,6 +207,17 @@ export default function PremiumDesignStudioClient() {
     setArtworkUrls((current) => ({ ...current, [side]: null }));
     setArtworkFiles((current) => ({ ...current, [side]: null }));
     patchArtwork({ enabled: false }, side);
+    if (side === activeSide) setSelectedLayer(null);
+  }
+
+  function copyArtworkToOppositeSide() {
+    const file = artworkFiles[activeSide];
+    if (!file) return;
+    const targetSide: Side = activeSide === "front" ? "back" : "front";
+    const nextUrl = URL.createObjectURL(file);
+    setArtworkFiles((current) => ({ ...current, [targetSide]: file }));
+    setArtworkUrls((current) => ({ ...current, [targetSide]: nextUrl }));
+    setDesigns((current) => ({ ...current, [targetSide]: { ...current[targetSide], artwork: { ...current[activeSide].artwork, enabled: true } } }));
   }
 
   function placeLayer(layer: Layer, x: number, y: number) {
@@ -207,6 +229,7 @@ export default function PremiumDesignStudioClient() {
 
   function beginDrag(layer: Layer) {
     return (event: ReactPointerEvent<HTMLDivElement>) => {
+      event.stopPropagation();
       const target = layer === "artwork" ? activeDesign.artwork : activeDesign.text;
       dragRef.current = { pointerId: event.pointerId, layer, startX: event.clientX, startY: event.clientY, originX: target.x, originY: target.y };
       setSelectedLayer(layer);
@@ -225,6 +248,59 @@ export default function PremiumDesignStudioClient() {
     if (dragRef.current?.pointerId !== event.pointerId) return;
     dragRef.current = null;
     if (canvasRef.current?.hasPointerCapture(event.pointerId)) canvasRef.current.releasePointerCapture(event.pointerId);
+  }
+
+  function beginArtworkTransform(kind: "rotate" | "scale") {
+    return (event: ReactPointerEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const bounds = artworkFrameRef.current?.getBoundingClientRect();
+      if (!bounds) return;
+      const centreX = bounds.left + bounds.width / 2;
+      const centreY = bounds.top + bounds.height / 2;
+      const offsetX = event.clientX - centreX;
+      const offsetY = event.clientY - centreY;
+      artworkTransformRef.current = { pointerId: event.pointerId, kind, startAngle: Math.atan2(offsetY, offsetX), startDistance: Math.hypot(offsetX, offsetY), originRotate: activeDesign.artwork.rotate, originScale: activeDesign.artwork.scale, changed: false };
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setSelectedLayer("artwork");
+    };
+  }
+
+  function moveArtworkTransform(event: ReactPointerEvent<HTMLButtonElement>) {
+    const transform = artworkTransformRef.current;
+    const bounds = artworkFrameRef.current?.getBoundingClientRect();
+    if (!transform || !bounds || transform.pointerId !== event.pointerId) return;
+    const offsetX = event.clientX - (bounds.left + bounds.width / 2);
+    const offsetY = event.clientY - (bounds.top + bounds.height / 2);
+    if (transform.kind === "rotate") {
+      const angle = Math.atan2(offsetY, offsetX);
+      const delta = ((angle - transform.startAngle) * 180) / Math.PI;
+      transform.changed ||= Math.abs(delta) > 1;
+      patchArtwork({ rotate: clamp(Math.round(transform.originRotate + delta), -180, 180) });
+    } else {
+      const distance = Math.hypot(offsetX, offsetY);
+      const ratio = transform.startDistance > 0 ? distance / transform.startDistance : 1;
+      transform.changed ||= Math.abs(ratio - 1) > 0.02;
+      patchArtwork({ scale: clamp(Math.round(transform.originScale * ratio), 20, 78) });
+    }
+  }
+
+  function endArtworkTransform(event: ReactPointerEvent<HTMLButtonElement>) {
+    const transform = artworkTransformRef.current;
+    if (!transform || transform.pointerId !== event.pointerId) return;
+    skipArtworkTransformClick.current = transform.changed;
+    if (transform.changed) setTimeout(() => { skipArtworkTransformClick.current = false; }, 0);
+    artworkTransformRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  }
+
+  function activateArtworkTransform(kind: "rotate" | "scale") {
+    if (skipArtworkTransformClick.current) {
+      skipArtworkTransformClick.current = false;
+      return;
+    }
+    if (kind === "rotate") patchArtwork({ rotate: activeDesign.artwork.rotate >= 165 ? -180 : activeDesign.artwork.rotate + 15 });
+    else patchArtwork({ scale: activeDesign.artwork.scale >= 78 ? 20 : Math.min(78, activeDesign.artwork.scale + 8) });
   }
 
   const summary = `Hi MO T-SHIRT, I would like a quote.\nProduct: ${product.label}\nColour: ${color.label}\nPrint: ${method.label}\nArtwork: ${artworkSides}\nSizes: ${selectedSizes}\nQuantity: ${totalQty}\nEstimate: ${formatMoney(totalPrice)}`;
@@ -303,13 +379,13 @@ export default function PremiumDesignStudioClient() {
 
           <form onSubmit={submitQuote} className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(330px,.8fr)]">
             <section className="overflow-hidden rounded-[26px] border border-[#dfded8] bg-[#fff] shadow-[0_18px_55px_rgba(32,30,24,0.07)]">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ecebe6] px-4 py-3.5 sm:px-5"><div><p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#99978f]">Live preview</p><h2 className="mt-0.5 text-lg font-bold tracking-[-0.025em]">{product.label} · {activeSide}</h2></div><div className="flex items-center gap-1.5">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => setActiveSide(side)} className={`rounded-xl px-4 py-2 text-xs font-bold capitalize ${activeSide === side ? "studio-primary bg-[#ff5a0a] !text-white" : "bg-[#f4f3ef] text-[#686761]"}`}>{side}</button>)}<button type="button" onClick={() => { setDesigns({ front: createDesign(), back: createDesign() }); setSelectedLayer("artwork"); }} className="ml-1 flex h-9 w-9 items-center justify-center rounded-xl border border-[#e1e0da] text-[#66655f]" aria-label="Reset design"><RotateCcw className="h-4 w-4" /></button></div></div>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ecebe6] px-4 py-3.5 sm:px-5"><div><p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#99978f]">Live preview</p><h2 className="mt-0.5 text-lg font-bold tracking-[-0.025em]">{product.label} · {activeSide}</h2></div><div className="flex items-center gap-1.5">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-xl px-4 py-2 text-xs font-bold capitalize ${activeSide === side ? "studio-primary bg-[#ff5a0a] !text-white" : "bg-[#f4f3ef] text-[#686761]"}`}>{side}</button>)}<button type="button" onClick={() => { setDesigns({ front: createDesign(), back: createDesign() }); setSelectedLayer(null); }} className="ml-1 flex h-9 w-9 items-center justify-center rounded-xl border border-[#e1e0da] text-[#66655f]" aria-label="Reset design"><RotateCcw className="h-4 w-4" /></button></div></div>
               <div className="bg-[radial-gradient(circle_at_50%_0%,#ffffff_0%,#f5f3ed_55%,#eeece5_100%)] p-3 sm:p-6">
-                <div ref={canvasRef} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className="relative mx-auto aspect-[4/5] w-full max-w-[550px] overflow-hidden rounded-[24px] border border-[#fff] bg-[#fff]/30" style={{ touchAction: "none" }}>
+                <div ref={canvasRef} onPointerDown={() => setSelectedLayer(null)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className="relative mx-auto aspect-[4/5] w-full max-w-[550px] overflow-hidden rounded-[24px] border border-[#fff] bg-[#fff]/30" style={{ touchAction: "none" }}>
                   <div className="pointer-events-none absolute inset-0 z-10"><div className="relative h-full w-full origin-center transition duration-200" style={{ transform: `scale(${previewZoom / 100})` }}><Image src={product.image} alt={`Realistic ${product.label} preview`} fill priority sizes="(min-width: 1024px) 550px, 92vw" className="object-contain drop-shadow-[0_26px_28px_rgba(15,23,42,.22)]" /></div></div>
                   <div className="absolute z-30" style={{ left: `${printZone.left}%`, top: `${printZone.top}%`, width: `${printZone.width}%`, height: `${printZone.height}%` }}>
                     {activeDesign.text.enabled && activeDesign.text.value.trim() ? <div onPointerDown={beginDrag("text")} className={`absolute left-1/2 top-1/2 cursor-grab select-none rounded px-1 active:cursor-grabbing ${selectedLayer === "text" ? "ring-2 ring-[#2f80ed] ring-offset-1" : ""}`} style={{ transform: `translate(calc(-50% + ${activeDesign.text.x}%),calc(-50% + ${activeDesign.text.y}%)) rotate(${activeDesign.text.rotate}deg)`, color: activeDesign.text.color, fontFamily: activeDesign.text.font, fontSize: `${activeDesign.text.size}px`, fontWeight: 800, lineHeight: 1, whiteSpace: "nowrap", textShadow: "0 2px 8px rgba(0,0,0,.24)" }}>{activeDesign.text.value}</div> : null}
-                    {activeDesign.artwork.enabled && activeArtworkUrl ? <div onPointerDown={beginDrag("artwork")} className={`absolute left-1/2 top-1/2 cursor-grab select-none active:cursor-grabbing ${selectedLayer === "artwork" ? "ring-2 ring-[#2f80ed] ring-offset-1" : ""}`} style={{ width: `${activeDesign.artwork.scale}%`, aspectRatio: "1/1", transform: `translate(calc(-50% + ${activeDesign.artwork.x}%),calc(-50% + ${activeDesign.artwork.y}%)) rotate(${activeDesign.artwork.rotate}deg)` }}><img src={activeArtworkUrl} alt={`${activeSide} artwork on garment`} className="pointer-events-none h-full w-full object-contain" /></div> : null}
+                    {activeDesign.artwork.enabled && activeArtworkUrl ? <div ref={artworkFrameRef} onPointerDown={beginDrag("artwork")} className="absolute left-1/2 top-1/2 cursor-grab select-none active:cursor-grabbing" style={{ width: `${activeDesign.artwork.scale}%`, aspectRatio: "1/1", transform: `translate(calc(-50% + ${activeDesign.artwork.x}%),calc(-50% + ${activeDesign.artwork.y}%))` }}><div className={`relative h-full w-full ${selectedLayer === "artwork" ? "outline outline-2 outline-[#2947d3] outline-offset-1" : ""}`} style={{ transform: `rotate(${activeDesign.artwork.rotate}deg)` }}><img src={activeArtworkUrl} alt={`${activeSide} artwork on garment`} className="pointer-events-none h-full w-full object-contain" /></div>{selectedLayer === "artwork" ? <><button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => clearArtwork(activeSide)} className="absolute -left-5 -top-5 z-20 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-[#f2d2cd] bg-white text-[#e53b2f] shadow-[0_6px_18px_rgba(22,26,35,.22)]" aria-label={`Remove ${activeSide} artwork`} title="Remove artwork"><X className="h-5 w-5" /></button><button type="button" onPointerDown={beginArtworkTransform("rotate")} onPointerMove={moveArtworkTransform} onPointerUp={endArtworkTransform} onPointerCancel={endArtworkTransform} onClick={() => activateArtworkTransform("rotate")} className="absolute -right-5 -top-5 z-20 flex h-9 w-9 touch-none cursor-grab items-center justify-center rounded-full border border-[#dce1fb] bg-white text-[#2947d3] shadow-[0_6px_18px_rgba(22,26,35,.22)] active:cursor-grabbing" aria-label="Rotate artwork" title="Drag to rotate"><RotateCw className="h-5 w-5" /></button><button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={copyArtworkToOppositeSide} className="absolute -bottom-5 -left-5 z-20 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-[#dce1fb] bg-white text-[#2947d3] shadow-[0_6px_18px_rgba(22,26,35,.22)]" aria-label={`Copy artwork to ${activeSide === "front" ? "back" : "front"}`} title={`Copy to ${activeSide === "front" ? "back" : "front"}`}><Copy className="h-4.5 w-4.5" /></button><button type="button" onPointerDown={beginArtworkTransform("scale")} onPointerMove={moveArtworkTransform} onPointerUp={endArtworkTransform} onPointerCancel={endArtworkTransform} onClick={() => activateArtworkTransform("scale")} className="absolute -bottom-5 -right-5 z-20 flex h-9 w-9 touch-none cursor-nwse-resize items-center justify-center rounded-full border border-[#dce1fb] bg-white text-[#2947d3] shadow-[0_6px_18px_rgba(22,26,35,.22)]" aria-label="Resize artwork" title="Drag to resize"><Maximize2 className="h-5 w-5" /></button></> : null}</div> : null}
                   </div>
                 </div>
               </div>
@@ -323,11 +399,11 @@ export default function PremiumDesignStudioClient() {
 
                 {step === 2 ? <div className="space-y-6"><div><Label>Garment colour</Label><div className="mt-3 grid grid-cols-4 gap-2.5">{COLORS.map((swatch) => <button key={swatch.id} type="button" onClick={() => setColorId(swatch.id)} className={`relative aspect-square rounded-2xl border-2 p-1.5 ${swatch.id === colorId ? "border-[#ff5a0a]" : "border-[#e4e3de]"}`} title={swatch.label} aria-label={`Choose ${swatch.label}`}><span className="block h-full rounded-xl border border-black/10" style={{ backgroundColor: swatch.hex }} />{swatch.id === colorId ? <Check className={`absolute inset-0 m-auto h-4 w-4 ${swatch.id === "white" ? "text-[#222]" : "!text-white"}`} /> : null}</button>)}</div><p className="mt-2 text-xs font-semibold text-[#77766f]">{color.label}</p></div><div><div className="flex justify-between"><Label>Size quantities</Label><span className="studio-dark rounded-full bg-[#171714] px-2.5 py-1 text-[9px] font-bold !text-white">{totalQty} total</span></div><div className="mt-3 grid grid-cols-4 gap-2">{SIZES.map((size) => <label key={size} className={`rounded-xl border p-2 text-center ${sizes[size] ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e4e3de]"}`}><span className="block text-[10px] font-extrabold">{size}</span><input inputMode="numeric" value={sizes[size] || ""} onChange={(event) => { const value = event.target.value; if (/^\d*$/.test(value)) setSizes((current) => ({ ...current, [size]: Number(value) || 0 })); }} className="studio-field mt-1 h-8 w-full rounded-lg bg-[#fff] text-center text-xs font-bold outline-none" placeholder="0" aria-label={`${size} quantity`} /></label>)}</div></div><label className="flex items-center justify-between rounded-2xl border border-[#e4e3de] p-4"><span><span className="block text-sm font-bold">Rush production</span><span className="mt-1 block text-xs text-[#85847d]">Adds 12% to your estimate</span></span><input type="checkbox" checked={rush} onChange={(event) => setRush(event.target.checked)} className="h-5 w-5 accent-[#ff5a0a]" /></label></div> : null}
 
-                {step === 3 ? <div className="space-y-6"><div><Label>Print side</Label><div className="mt-3 grid grid-cols-2 gap-3">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => setActiveSide(side)} className={`rounded-2xl border p-4 text-left ${activeSide === side ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e4e3de]"}`}><div className="flex justify-between"><Layers3 className="h-5 w-5 text-[#ff5a0a]" />{activeSide === side ? <CheckCircle2 className="h-5 w-5 text-[#ff5a0a]" /> : null}</div><p className="mt-5 text-sm font-extrabold capitalize">{side}</p><p className="mt-1 text-xs text-[#85847d]">Design the {side} side.</p></button>)}</div></div><div><Label>Print method</Label><div className="mt-3 space-y-2.5">{METHODS.map((option) => <label key={option.id} className={`flex cursor-pointer gap-3 rounded-2xl border p-3.5 ${methodId === option.id ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e4e3de]"}`}><input type="radio" name="method" checked={methodId === option.id} onChange={() => setMethodId(option.id)} className="mt-1 accent-[#ff5a0a]" /><span><span className="block text-sm font-bold">{option.label}</span><span className="mt-1 block text-xs leading-5 text-[#85847d]">{option.note}</span></span></label>)}</div></div></div> : null}
+                {step === 3 ? <div className="space-y-6"><div><Label>Print side</Label><div className="mt-3 grid grid-cols-2 gap-3">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-2xl border p-4 text-left ${activeSide === side ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e4e3de]"}`}><div className="flex justify-between"><Layers3 className="h-5 w-5 text-[#ff5a0a]" />{activeSide === side ? <CheckCircle2 className="h-5 w-5 text-[#ff5a0a]" /> : null}</div><p className="mt-5 text-sm font-extrabold capitalize">{side}</p><p className="mt-1 text-xs text-[#85847d]">Design the {side} side.</p></button>)}</div></div><div><Label>Print method</Label><div className="mt-3 space-y-2.5">{METHODS.map((option) => <label key={option.id} className={`flex cursor-pointer gap-3 rounded-2xl border p-3.5 ${methodId === option.id ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e4e3de]"}`}><input type="radio" name="method" checked={methodId === option.id} onChange={() => setMethodId(option.id)} className="mt-1 accent-[#ff5a0a]" /><span><span className="block text-sm font-bold">{option.label}</span><span className="mt-1 block text-xs leading-5 text-[#85847d]">{option.note}</span></span></label>)}</div></div></div> : null}
 
-                {step === 4 ? <div className="space-y-4"><div className="rounded-2xl border border-[#ffd8c4] bg-[linear-gradient(135deg,#fff8f3_0%,#fff_100%)] p-4"><div className="flex gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ff5a0a] text-white"><Layers3 className="h-5 w-5" /></span><div><p className="text-sm font-extrabold">One file for each print side</p><p className="mt-1 text-xs leading-5 text-[#7d6b62]">Upload separate artwork for the front and back. You can add either side or both.</p></div></div></div><input ref={artworkInput} type="file" accept=".png,.jpg,.jpeg,.webp,.svg" onClick={(event) => { event.currentTarget.value = ""; }} onChange={handleArtwork} className="hidden" />{(["front", "back"] as Side[]).map((side) => <ArtworkUploadSlot key={side} side={side} file={artworkFiles[side]} url={artworkUrls[side]} active={activeSide === side} onChoose={() => openArtworkPicker(side)} onDrop={(file) => chooseArtwork(file, side)} onRemove={() => clearArtwork(side)} onPosition={() => { setActiveSide(side); setSelectedLayer("artwork"); setStep(5); }} />)}<div className="flex items-center justify-center gap-2 text-[9px] font-bold uppercase tracking-[0.1em] text-[#8d8b84]"><BadgeCheck className="h-4 w-4 text-[#16a462]" />PNG, JPG, WEBP or SVG · 5MB per file</div>{result && !result.ok ? <p className="rounded-xl bg-[#fff1f1] p-3 text-xs text-[#b91c1c]">{result.text}</p> : null}</div> : null}
+                {step === 4 ? <div className="space-y-4"><div className="rounded-2xl border border-[#ffd8c4] bg-[linear-gradient(135deg,#fff8f3_0%,#fff_100%)] p-4"><div className="flex gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ff5a0a] text-white"><Layers3 className="h-5 w-5" /></span><div><p className="text-sm font-extrabold">One file for each print side</p><p className="mt-1 text-xs leading-5 text-[#7d6b62]">Upload separate artwork for the front and back. You can add either side or both.</p></div></div></div><input ref={artworkInput} type="file" accept=".png,.jpg,.jpeg,.webp,.svg" onClick={(event) => { event.currentTarget.value = ""; }} onChange={handleArtwork} className="hidden" />{(["front", "back"] as Side[]).map((side) => <ArtworkUploadSlot key={side} side={side} file={artworkFiles[side]} url={artworkUrls[side]} active={activeSide === side} onChoose={() => openArtworkPicker(side)} onDrop={(file) => chooseArtwork(file, side)} onRemove={() => clearArtwork(side)} onPosition={() => { changeSide(side); setStep(5); }} />)}<div className="flex items-center justify-center gap-2 text-[9px] font-bold uppercase tracking-[0.1em] text-[#8d8b84]"><BadgeCheck className="h-4 w-4 text-[#16a462]" />PNG, JPG, WEBP or SVG · 5MB per file</div>{result && !result.ok ? <p className="rounded-xl bg-[#fff1f1] p-3 text-xs text-[#b91c1c]">{result.text}</p> : null}</div> : null}
 
-                {step === 5 ? <div className="space-y-4"><div><Label>Artwork side</Label><div className="mt-2 grid grid-cols-2 gap-2">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => setActiveSide(side)} className={`rounded-2xl border p-3 text-left transition ${activeSide === side ? "border-[#ff5a0a] bg-[#fff8f3] ring-2 ring-[#ff5a0a]/10" : "border-[#e2e1dc] bg-white"}`}><span className="flex items-center justify-between"><span className="text-xs font-extrabold capitalize">{side}</span>{artworkUrls[side] ? <CheckCircle2 className="h-4 w-4 text-[#16a462]" /> : <span className="h-2 w-2 rounded-full bg-[#d5d3cc]" />}</span><span className="mt-1 block text-[9px] font-bold uppercase tracking-[0.08em] text-[#96948c]">{artworkUrls[side] ? "Artwork ready" : "No artwork"}</span></button>)}</div></div>{activeArtworkUrl ? <><div className="flex items-center gap-3 rounded-2xl border border-[#c9ead8] bg-[#f4fbf7] p-3"><span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm"><img src={activeArtworkUrl} alt={`${activeSide} artwork preview`} className="h-full w-full object-contain" /></span><span className="min-w-0 flex-1"><span className="block text-[9px] font-bold uppercase tracking-[0.1em] text-[#168455]">Editing {activeSide}</span><span className="mt-1 block truncate text-xs font-bold">{artworkFiles[activeSide]?.name}</span></span></div><div className="grid grid-cols-3 gap-2"><PresetButton icon={<Crosshair />} label="Left chest" onClick={() => patchArtwork({ x: -22, y: -20 })} /><PresetButton icon={<Focus />} label="Centre" onClick={() => patchArtwork({ x: 0, y: 0 })} /><PresetButton icon={<Move />} label="Lower" onClick={() => patchArtwork({ x: 0, y: 22 })} /></div><RangeControl icon={<ZoomIn />} label="Artwork size" value={activeDesign.artwork.scale} min={20} max={78} suffix="%" onChange={(value) => patchArtwork({ scale: value })} /><RangeControl icon={<Move />} label="Horizontal" value={activeDesign.artwork.x} min={-42} max={42} onChange={(value) => patchArtwork({ x: value })} /><RangeControl icon={<Move className="rotate-90" />} label="Vertical" value={activeDesign.artwork.y} min={-42} max={42} onChange={(value) => patchArtwork({ y: value })} /><RangeControl icon={<RotateCcw />} label="Rotation" value={activeDesign.artwork.rotate} min={-180} max={180} suffix="°" onChange={(value) => patchArtwork({ rotate: value })} /><button type="button" onClick={() => setSnap((current) => !current)} className={`flex w-full items-center justify-between rounded-2xl border p-4 ${snap ? "border-[#bfe9d4] bg-[#f1fbf6]" : "border-[#e2e1dc]"}`}><span className="flex items-center gap-2 text-sm font-bold"><Magnet className="h-4 w-4 text-[#16a462]" />Snap to centre</span><span className={`rounded-full px-2 py-1 text-[9px] font-bold ${snap ? "studio-success bg-[#16a462] !text-white" : "bg-[#efeee9]"}`}>{snap ? "ON" : "OFF"}</span></button></> : <div className="flex min-h-64 flex-col items-center justify-center rounded-[22px] border-2 border-dashed border-[#ddd9d1] bg-[#fafaf7] p-6 text-center"><span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-[#ff5a0a] shadow-[0_8px_25px_rgba(35,32,24,.08)]"><ImagePlus className="h-6 w-6" /></span><p className="mt-4 text-sm font-extrabold">No {activeSide} artwork yet</p><p className="mt-1 max-w-[250px] text-xs leading-5 text-[#85847d]">Upload an image for this side before positioning it, or continue to add text only.</p><button type="button" onClick={() => setStep(4)} className="studio-primary mt-4 inline-flex items-center gap-2 rounded-xl bg-[#ff5a0a] px-4 py-2.5 text-xs font-bold !text-white"><UploadCloud className="h-4 w-4" />Go to uploads</button></div>}</div> : null}
+                {step === 5 ? <div className="space-y-4"><div><Label>Artwork side</Label><div className="mt-2 grid grid-cols-2 gap-2">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-2xl border p-3 text-left transition ${activeSide === side ? "border-[#ff5a0a] bg-[#fff8f3] ring-2 ring-[#ff5a0a]/10" : "border-[#e2e1dc] bg-white"}`}><span className="flex items-center justify-between"><span className="text-xs font-extrabold capitalize">{side}</span>{artworkUrls[side] ? <CheckCircle2 className="h-4 w-4 text-[#16a462]" /> : <span className="h-2 w-2 rounded-full bg-[#d5d3cc]" />}</span><span className="mt-1 block text-[9px] font-bold uppercase tracking-[0.08em] text-[#96948c]">{artworkUrls[side] ? "Artwork ready" : "No artwork"}</span></button>)}</div></div>{activeArtworkUrl ? <><div className="flex items-center gap-3 rounded-2xl border border-[#c9ead8] bg-[#f4fbf7] p-3"><span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm"><img src={activeArtworkUrl} alt={`${activeSide} artwork preview`} className="h-full w-full object-contain" /></span><span className="min-w-0 flex-1"><span className="block text-[9px] font-bold uppercase tracking-[0.1em] text-[#168455]">Editing {activeSide}</span><span className="mt-1 block truncate text-xs font-bold">{artworkFiles[activeSide]?.name}</span></span></div><div className="grid grid-cols-3 gap-2"><PresetButton icon={<Crosshair />} label="Left chest" onClick={() => patchArtwork({ x: -22, y: -20 })} /><PresetButton icon={<Focus />} label="Centre" onClick={() => patchArtwork({ x: 0, y: 0 })} /><PresetButton icon={<Move />} label="Lower" onClick={() => patchArtwork({ x: 0, y: 22 })} /></div><RangeControl icon={<ZoomIn />} label="Artwork size" value={activeDesign.artwork.scale} min={20} max={78} suffix="%" onChange={(value) => patchArtwork({ scale: value })} /><RangeControl icon={<Move />} label="Horizontal" value={activeDesign.artwork.x} min={-42} max={42} onChange={(value) => patchArtwork({ x: value })} /><RangeControl icon={<Move className="rotate-90" />} label="Vertical" value={activeDesign.artwork.y} min={-42} max={42} onChange={(value) => patchArtwork({ y: value })} /><RangeControl icon={<RotateCcw />} label="Rotation" value={activeDesign.artwork.rotate} min={-180} max={180} suffix="°" onChange={(value) => patchArtwork({ rotate: value })} /><button type="button" onClick={() => setSnap((current) => !current)} className={`flex w-full items-center justify-between rounded-2xl border p-4 ${snap ? "border-[#bfe9d4] bg-[#f1fbf6]" : "border-[#e2e1dc]"}`}><span className="flex items-center gap-2 text-sm font-bold"><Magnet className="h-4 w-4 text-[#16a462]" />Snap to centre</span><span className={`rounded-full px-2 py-1 text-[9px] font-bold ${snap ? "studio-success bg-[#16a462] !text-white" : "bg-[#efeee9]"}`}>{snap ? "ON" : "OFF"}</span></button></> : <div className="flex min-h-64 flex-col items-center justify-center rounded-[22px] border-2 border-dashed border-[#ddd9d1] bg-[#fafaf7] p-6 text-center"><span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-[#ff5a0a] shadow-[0_8px_25px_rgba(35,32,24,.08)]"><ImagePlus className="h-6 w-6" /></span><p className="mt-4 text-sm font-extrabold">No {activeSide} artwork yet</p><p className="mt-1 max-w-[250px] text-xs leading-5 text-[#85847d]">Upload an image for this side before positioning it, or continue to add text only.</p><button type="button" onClick={() => setStep(4)} className="studio-primary mt-4 inline-flex items-center gap-2 rounded-xl bg-[#ff5a0a] px-4 py-2.5 text-xs font-bold !text-white"><UploadCloud className="h-4 w-4" />Go to uploads</button></div>}</div> : null}
 
                 {step === 6 ? <div className="space-y-5"><label className="flex items-center justify-between rounded-2xl border border-[#e2e1dc] p-4"><span className="flex items-center gap-2 text-sm font-bold"><TypeIcon className="h-4 w-4 text-[#ff5a0a]" />Custom text</span><input type="checkbox" checked={activeDesign.text.enabled} onChange={(event) => patchText({ enabled: event.target.checked })} className="h-5 w-5 accent-[#ff5a0a]" /></label><Field label="Your text"><input value={activeDesign.text.value} onChange={(event) => patchText({ value: event.target.value, enabled: true })} className="studio-field" placeholder="e.g. Team Mauritius" /></Field><div className="grid grid-cols-[1fr_72px] gap-3"><Field label="Font"><select value={activeDesign.text.font} onChange={(event) => patchText({ font: event.target.value })} className="studio-field"><option value="Arial, sans-serif">Modern sans</option><option value="Impact, sans-serif">Impact</option><option value="Georgia, serif">Classic serif</option><option value="cursive">Signature</option></select></Field><Field label="Colour"><input type="color" value={activeDesign.text.color} onChange={(event) => patchText({ color: event.target.value })} className="studio-field p-1.5" /></Field></div><RangeControl icon={<TypeIcon />} label="Text size" value={activeDesign.text.size} min={18} max={72} onChange={(value) => patchText({ size: value })} /><RangeControl icon={<RotateCcw />} label="Rotation" value={activeDesign.text.rotate} min={-180} max={180} suffix="°" onChange={(value) => patchText({ rotate: value })} /><div className="grid grid-cols-3 gap-2"><PresetButton icon={<Crosshair />} label="Left chest" onClick={() => patchText({ x: -20, y: -18 })} /><PresetButton icon={<Focus />} label="Centre" onClick={() => patchText({ x: 0, y: 0 })} /><PresetButton icon={<Move />} label="Lower" onClick={() => patchText({ x: 0, y: 24 })} /></div></div> : null}
 
