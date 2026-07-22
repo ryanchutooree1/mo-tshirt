@@ -4,7 +4,7 @@ import { addDoc, collection, getDocs, orderBy, query, serverTimestamp } from "fi
 import { hasAdminSession } from "@/lib/admin-auth";
 import { db } from "@/lib/firebase";
 import { parseShopPayload } from "@/lib/shops-api";
-import { normalizeSizeLabel, sortSizes, sortSizePrices, toNumber, type ShopItem } from "@/lib/shops";
+import { normalizeSizeLabel, sortShopItems, sortSizes, sortSizePrices, toNumber, type ShopItem } from "@/lib/shops";
 
 async function isAdmin() {
   return hasAdminSession(await cookies());
@@ -78,8 +78,7 @@ export async function GET() {
 
   try {
     const snap = await getDocs(query(collection(db, "shops"), orderBy("createdAt", "desc")));
-    const items = snap.docs.map((doc) => mapDoc(doc.id, doc.data()));
-    items.sort((a, b) => (b.position || 0) - (a.position || 0));
+    const items = sortShopItems(snap.docs.map((doc) => mapDoc(doc.id, doc.data())));
     return NextResponse.json({ items });
   } catch (error) {
     console.error("shops:admin:get", error);

@@ -13,6 +13,7 @@ import {
   isOneSizeLabel,
   normalizeList,
   SIZE_ORDER,
+  sortShopItems,
   sortQuoteColors,
   type ShopImageViewKey,
   type ShopItem,
@@ -347,8 +348,7 @@ export default function AdminShopsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to load shops.");
       const list: ShopItem[] = Array.isArray(data?.items) ? data.items : [];
-      list.sort((a, b) => (b.position || 0) - (a.position || 0));
-      setItems(list);
+      setItems(sortShopItems(list));
       setError(null);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load shops.");
