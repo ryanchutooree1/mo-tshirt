@@ -22,6 +22,9 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
+    // Product images are optimized once during upload, so serve them directly
+    // instead of creating billable Vercel transformations on every new size.
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",

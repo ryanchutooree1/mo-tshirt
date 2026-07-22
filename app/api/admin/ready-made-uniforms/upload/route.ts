@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import { doc, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
-import sharp from "sharp";
 import { isAdminRequest } from "@/lib/admin-request";
 import { db } from "@/lib/firebase";
+import { prepareProductImage } from "@/lib/prepare-product-image";
 
 const MAX_UPLOAD_BYTES = 6 * 1024 * 1024;
 const UPLOAD_CHUNK_SIZE = 700_000;
-const MAX_STORED_IMAGE_DIMENSION = 1600;
 const ALLOWED_IMAGE_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -30,45 +29,6 @@ function chunkString(value: string, size: number) {
     chunks.push(value.slice(index, index + size));
   }
   return chunks;
-}
-
-async function prepareStoredImage(file: File) {
-  const original = Buffer.from(await file.arrayBuffer());
-  const optimizableTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
-
-  if (!optimizableTypes.has(file.type)) {
-    return {
-      buffer: original,
-      contentType: cleanString(file.type) || "application/octet-stream",
-      filename: cleanString(file.name) || "uniform-image",
-    };
-  }
-
-  const optimized = await sharp(original)
-    .rotate()
-    .resize({
-      width: MAX_STORED_IMAGE_DIMENSION,
-      height: MAX_STORED_IMAGE_DIMENSION,
-      fit: "inside",
-      withoutEnlargement: true,
-    })
-    .webp({ quality: 82, alphaQuality: 90, effort: 4 })
-    .toBuffer();
-
-  if (optimized.byteLength >= original.byteLength) {
-    return {
-      buffer: original,
-      contentType: cleanString(file.type) || "application/octet-stream",
-      filename: cleanString(file.name) || "uniform-image",
-    };
-  }
-
-  const baseName = (cleanString(file.name) || "uniform-image").replace(/\.[^.]+$/, "");
-  return {
-    buffer: optimized,
-    contentType: "image/webp",
-    filename: `${baseName}.webp`,
-  };
 }
 
 export async function POST(req: Request) {
@@ -100,7 +60,7 @@ export async function POST(req: Request) {
     }
 
     const uploadId = createUploadId();
-    const prepared = await prepareStoredImage(file);
+    const prepared = await prepareProductImage(file);
     const base64 = prepared.buffer.toString("base64");
     const chunks = chunkString(base64, UPLOAD_CHUNK_SIZE);
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { doc, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
 import { isAdminRequest } from "@/lib/admin-request";
 import { db } from "@/lib/firebase";
+import { prepareProductImage } from "@/lib/prepare-product-image";
 
 const MAX_UPLOAD_BYTES = 6 * 1024 * 1024;
 const UPLOAD_CHUNK_SIZE = 700_000;
@@ -56,14 +57,15 @@ export async function POST(req: Request) {
     }
 
     const uploadId = createUploadId();
-    const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+    const prepared = await prepareProductImage(file);
+    const base64 = prepared.buffer.toString("base64");
     const chunks = chunkString(base64, UPLOAD_CHUNK_SIZE);
 
     await setDoc(doc(db, "shopUploads", uploadId), {
       uploadId,
-      filename: cleanString(file.name) || "shop-image",
-      contentType: cleanString(file.type) || "application/octet-stream",
-      size: typeof file.size === "number" ? file.size : null,
+      filename: prepared.filename,
+      contentType: prepared.contentType,
+      size: prepared.buffer.byteLength,
       chunkCount: chunks.length,
       createdAt: serverTimestamp(),
       createdAtIso: new Date().toISOString(),
