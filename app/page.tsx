@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { getWhatsAppUrl, CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL } from "@/data/work";
-import { READY_MADE_UNIFORMS_PATH } from "@/data/ready-made-uniforms";
 import { buildPageMetadata } from "@/lib/seo";
 import {
   HiOutlineCheckBadge,
@@ -32,7 +31,6 @@ export const metadata: Metadata = buildPageMetadata({
 
 const navLinks = [
   { label: "Home", href: "#top" },
-  { label: "Uniform Designs", href: READY_MADE_UNIFORMS_PATH },
   { label: "Quote Form", href: "#contact", buttonTone: "orange" as const },
   { label: "MO AI Order", href: "#mo-ai-order", buttonTone: "rainbow" as const },
   { label: "Shop", href: "/shop" },

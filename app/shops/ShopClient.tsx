@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FiDownload, FiEdit3 } from "react-icons/fi";
+import { FiArrowDown, FiArrowRight, FiDownload, FiEdit3, FiLayers, FiShoppingBag } from "react-icons/fi";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
+import { READY_MADE_UNIFORMS_PATH } from "@/data/ready-made-uniforms";
 import { getWhatsAppUrl } from "@/data/work";
 import { trackShopOrderSubmit, trackWhatsAppClick } from "@/lib/analytics";
 import { formatMoney as formatDisplayMoney, formatWholeMoney as formatDisplayWholeMoney } from "@/lib/money";
@@ -266,7 +267,7 @@ function ProductThumbnailRail({
   );
 }
 
-export default function ShopClient() {
+export default function ShopClient({ uniformDesignCount }: { uniformDesignCount: number }) {
   const [items, setItems] = useState<ShopItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -599,8 +600,106 @@ export default function ShopClient() {
         </div>
         </header>
 
-        <main className="relative z-10 mx-auto w-full max-w-6xl px-6 py-14">
-        <div className="space-y-8">
+        <main className="relative z-10 mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+          <section
+            aria-labelledby="shop-hub-title"
+            className="relative isolate overflow-hidden rounded-[36px] bg-[#111111] px-5 py-7 text-white shadow-[0_30px_90px_-46px_rgba(0,0,0,0.72)] sm:px-8 sm:py-10 lg:px-10"
+          >
+            <div className="pointer-events-none absolute -left-20 -top-24 -z-10 h-72 w-72 rounded-full bg-[#ff6600]/35 blur-3xl" />
+            <div className="pointer-events-none absolute -right-24 bottom-[-10rem] -z-10 h-80 w-80 rounded-full bg-fuchsia-500/20 blur-3xl" />
+
+            <div className="max-w-3xl">
+              <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#ff9a57]">
+                MO T-SHIRT Shop
+              </p>
+              <h1 id="shop-hub-title" className="mt-3 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl lg:text-5xl">
+                One shop. Two ways to get your team ready.
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm leading-6 text-white/62 sm:text-base">
+                Buy plain apparel immediately or start from a proven uniform design and customize it with your logo.
+              </p>
+            </div>
+
+            <div className="mt-8 grid gap-4 lg:grid-cols-2">
+              <a
+                href="#plain-apparel"
+                className="group relative overflow-hidden rounded-[28px] border border-white/15 bg-white p-5 text-neutral-950 shadow-[0_18px_50px_-35px_rgba(0,0,0,0.75)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_-30px_rgba(0,0,0,0.85)] sm:p-6"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-950 text-white">
+                    <FiShoppingBag className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <span className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-500">
+                    Ready to order
+                  </span>
+                </div>
+                <div className="mt-8">
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#d45400]">Plain Apparel</p>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">Choose products, colours and sizes</h2>
+                  <p className="mt-3 max-w-md text-sm leading-6 text-neutral-600">
+                    Browse {items.length ? `${items.length} live products` : "our live catalog"} with current prices, availability, and fast WhatsApp ordering.
+                  </p>
+                </div>
+                <div className="mt-7 flex items-center justify-between gap-4 border-t border-neutral-200 pt-4 text-sm font-semibold">
+                  <span>Browse plain apparel</span>
+                  <FiArrowDown className="h-4 w-4 transition-transform group-hover:translate-y-1" aria-hidden="true" />
+                </div>
+              </a>
+
+              <Link
+                href={READY_MADE_UNIFORMS_PATH}
+                className="group relative overflow-hidden rounded-[28px] border border-[#ff8a3d] bg-[linear-gradient(135deg,#ff6600_0%,#ff7a00_48%,#ff9c32_100%)] p-5 text-white shadow-[0_24px_70px_-36px_rgba(255,102,0,0.9)] transition duration-300 hover:-translate-y-1 hover:brightness-105 sm:p-6"
+              >
+                <div className="pointer-events-none absolute -right-12 -top-16 h-52 w-52 rounded-full border-[38px] border-white/10" />
+                <div className="flex items-start justify-between gap-4">
+                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#e65500] shadow-sm">
+                    <FiLayers className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-white backdrop-blur">
+                    {uniformDesignCount} collections
+                  </span>
+                </div>
+
+                <div className="relative mt-4 h-36 overflow-hidden rounded-[22px] border border-white/20 bg-black/10 sm:h-40">
+                  <Image
+                    src="/mockups/tshirt-front.png"
+                    alt="Ready-made T-shirt uniform design"
+                    width={320}
+                    height={360}
+                    className="absolute -bottom-12 -left-6 h-44 w-auto -rotate-6 object-contain drop-shadow-2xl transition-transform duration-500 group-hover:-translate-y-1 group-hover:-rotate-3"
+                  />
+                  <Image
+                    src="/mockups/polo-front.png"
+                    alt="Ready-made polo uniform design"
+                    width={320}
+                    height={360}
+                    className="absolute -bottom-10 left-1/2 z-10 h-48 w-auto -translate-x-1/2 object-contain drop-shadow-2xl transition-transform duration-500 group-hover:-translate-y-1"
+                  />
+                  <Image
+                    src="/mockups/hoodie-front.png"
+                    alt="Ready-made hoodie uniform design"
+                    width={320}
+                    height={360}
+                    className="absolute -bottom-12 -right-8 h-44 w-auto rotate-6 object-contain drop-shadow-2xl transition-transform duration-500 group-hover:-translate-y-1 group-hover:rotate-3"
+                  />
+                </div>
+
+                <div className="mt-5">
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/75">Uniform Designs</p>
+                  <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">Start with a professional team look</h2>
+                  <p className="mt-3 text-sm leading-6 text-white/82">
+                    Pick a proven style for staff, security, restaurants, sports teams, NGOs, and corporate crews.
+                  </p>
+                </div>
+                <div className="mt-7 flex items-center justify-between gap-4 border-t border-white/25 pt-4 text-sm font-semibold">
+                  <span>Explore uniform designs</span>
+                  <FiArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                </div>
+              </Link>
+            </div>
+          </section>
+
+          <div id="plain-apparel" className="mt-10 scroll-mt-28 space-y-8">
             <section className="flex flex-col gap-4 rounded-[28px] border border-neutral-200 bg-white/80 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
               <div>
                 <p className="text-sm font-medium text-neutral-800">Filters</p>
