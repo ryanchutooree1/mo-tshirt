@@ -64,9 +64,9 @@ type SideDesign = {
 };
 
 const PRODUCTS = [
-  { id: "tshirt" as const, label: "T-Shirt", base: 230, min: 10, lead: "5–7 working days", image: "/design-studio/tshirt-realistic.png" },
-  { id: "polo" as const, label: "Polo Shirt", base: 310, min: 10, lead: "6–8 working days", image: "/design-studio/polo-realistic.png" },
-  { id: "hoodie" as const, label: "Hoodie", base: 690, min: 8, lead: "7–10 working days", image: "/design-studio/hoodie-realistic.png" },
+  { id: "tshirt" as const, label: "T-Shirt", base: 230, min: 10, lead: "5–7 working days", image: "/design-studio/tshirt-realistic.png", backImage: "/design-studio/tshirt-realistic-back.png" },
+  { id: "polo" as const, label: "Polo Shirt", base: 310, min: 10, lead: "6–8 working days", image: "/design-studio/polo-realistic.png", backImage: "/design-studio/polo-realistic-back.png" },
+  { id: "hoodie" as const, label: "Hoodie", base: 690, min: 8, lead: "7–10 working days", image: "/design-studio/hoodie-realistic.png", backImage: "/design-studio/hoodie-realistic-back.png" },
 ];
 
 const COLORS = [
@@ -155,6 +155,7 @@ export default function PremiumDesignStudioClient() {
   const skipArtworkTransformClick = useRef(false);
 
   const product = PRODUCTS.find((item) => item.id === productId) ?? PRODUCTS[0];
+  const productPreviewImage = activeSide === "back" ? product.backImage : product.image;
   const color = COLORS.find((item) => item.id === colorId) ?? COLORS[0];
   const method = METHODS.find((item) => item.id === methodId) ?? METHODS[0];
   const activeDesign = designs[activeSide];
@@ -424,7 +425,7 @@ export default function PremiumDesignStudioClient() {
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ecebe6] px-4 py-3.5 sm:px-5"><div><p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#99978f]">Live preview</p><h2 className="mt-0.5 text-lg font-bold tracking-[-0.025em]">{product.label} · {activeSide}</h2></div><div className="flex items-center gap-1.5">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-xl px-4 py-2 text-xs font-bold capitalize ${activeSide === side ? "studio-primary bg-[#ff5a0a] !text-white" : "bg-[#f4f3ef] text-[#686761]"}`}>{side}</button>)}<button type="button" onClick={() => { setDesigns({ front: createDesign(), back: createDesign() }); setSelectedLayer(null); setSelectedArtworkCopyId(null); }} className="ml-1 flex h-9 w-9 items-center justify-center rounded-xl border border-[#e1e0da] text-[#66655f]" aria-label="Reset design"><RotateCcw className="h-4 w-4" /></button></div></div>
               <div className="bg-[radial-gradient(circle_at_50%_0%,#ffffff_0%,#f5f3ed_55%,#eeece5_100%)] p-3 sm:p-6">
                 <div ref={canvasRef} onPointerDown={() => setSelectedLayer(null)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className="relative mx-auto aspect-[4/5] w-full max-w-[550px] overflow-hidden rounded-[24px] border border-[#fff] bg-[#fff]/30" style={{ touchAction: "none" }}>
-                  <div className="pointer-events-none absolute inset-0 z-10"><div className="relative h-full w-full origin-center transition duration-200" style={{ transform: `scale(${previewZoom / 100})` }}><Image src={product.image} alt={`Realistic ${product.label} preview`} fill priority sizes="(min-width: 1024px) 550px, 92vw" className="object-contain drop-shadow-[0_26px_28px_rgba(15,23,42,.22)]" /></div></div>
+                  <div className="pointer-events-none absolute inset-0 z-10"><div className="relative h-full w-full origin-center transition duration-200" style={{ transform: `scale(${previewZoom / 100})` }}><Image src={productPreviewImage} alt={`Realistic ${product.label} ${activeSide} preview`} fill priority sizes="(min-width: 1024px) 550px, 92vw" className="object-contain drop-shadow-[0_26px_28px_rgba(15,23,42,.22)]" /></div></div>
                   <div ref={printZoneRef} className="absolute z-30" style={{ left: `${printZone.left}%`, top: `${printZone.top}%`, width: `${printZone.width}%`, height: `${printZone.height}%` }}>
                     {activeDesign.text.enabled && activeDesign.text.value.trim() ? <div onPointerDown={beginDrag("text")} className={`absolute cursor-grab select-none rounded px-1 active:cursor-grabbing ${selectedLayer === "text" ? "ring-2 ring-[#2f80ed] ring-offset-1" : ""}`} style={{ left: `${50 + activeDesign.text.x}%`, top: `${50 + activeDesign.text.y}%`, transform: `translate(-50%,-50%) rotate(${activeDesign.text.rotate}deg)`, color: activeDesign.text.color, fontFamily: activeDesign.text.font, fontSize: `${activeDesign.text.size}px`, fontWeight: 800, lineHeight: 1, whiteSpace: "nowrap", textShadow: "0 2px 8px rgba(0,0,0,.24)" }}>{activeDesign.text.value}</div> : null}
                     {activeArtworkUrl ? activeArtworkLayers.map((artwork) => {
