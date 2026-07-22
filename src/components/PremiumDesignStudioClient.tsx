@@ -33,7 +33,6 @@ import {
 } from "lucide-react";
 import {
   useEffect,
-  useId,
   useMemo,
   useRef,
   useState,
@@ -98,12 +97,6 @@ const DELIVERY_OPTIONS = [
   "Post Office Express Delivery (Rs 150)",
   "Delivery (Need to arrange first)",
 ];
-
-const GARMENT_PATHS: Record<ProductId, string> = {
-  tshirt: "M118 236L204 168Q250 132 320 132Q390 132 436 168L522 236L556 332L514 356L482 302L468 700H172L158 302L126 356L84 332L118 236Z",
-  polo: "M126 246L212 176Q262 138 320 138Q378 138 428 176L514 246L548 338L506 362L476 316L462 700H178L164 316L134 362L92 338L126 246Z",
-  hoodie: "M140 258L218 188Q252 156 320 156Q388 156 422 188L500 258L548 334L512 360L488 326L468 700H172L152 326L128 360L92 334L140 258Z",
-};
 
 const PRINT_ZONES: Record<ProductId, { left: number; top: number; width: number; height: number }> = {
   tshirt: { left: 28, top: 27, width: 44, height: 45 },
@@ -313,12 +306,10 @@ export default function PremiumDesignStudioClient() {
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ecebe6] px-4 py-3.5 sm:px-5"><div><p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#99978f]">Live preview</p><h2 className="mt-0.5 text-lg font-bold tracking-[-0.025em]">{product.label} · {activeSide}</h2></div><div className="flex items-center gap-1.5">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => setActiveSide(side)} className={`rounded-xl px-4 py-2 text-xs font-bold capitalize ${activeSide === side ? "studio-primary bg-[#ff5a0a] !text-white" : "bg-[#f4f3ef] text-[#686761]"}`}>{side}</button>)}<button type="button" onClick={() => { setDesigns({ front: createDesign(), back: createDesign() }); setSelectedLayer("artwork"); }} className="ml-1 flex h-9 w-9 items-center justify-center rounded-xl border border-[#e1e0da] text-[#66655f]" aria-label="Reset design"><RotateCcw className="h-4 w-4" /></button></div></div>
               <div className="bg-[radial-gradient(circle_at_50%_0%,#ffffff_0%,#f5f3ed_55%,#eeece5_100%)] p-3 sm:p-6">
                 <div ref={canvasRef} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className="relative mx-auto aspect-[4/5] w-full max-w-[550px] overflow-hidden rounded-[24px] border border-[#fff] bg-[#fff]/30" style={{ touchAction: "none" }}>
-                  <div className="pointer-events-none absolute inset-[4%] z-10"><div className="h-full w-full origin-center transition duration-200" style={{ transform: `scale(${previewZoom / 100})` }}><Garment productId={product.id} side={activeSide} colorHex={color.hex} /></div></div>
-                  <div className="absolute z-30 rounded-lg border border-dashed border-[#ff5a0a]/65" style={{ left: `${printZone.left}%`, top: `${printZone.top}%`, width: `${printZone.width}%`, height: `${printZone.height}%` }}>
-                    <div className="pointer-events-none absolute inset-0 opacity-45"><div className="absolute left-1/2 top-0 h-full border-l border-dashed border-[#ff5a0a]" /><div className="absolute left-0 top-1/2 w-full border-t border-dashed border-[#ff5a0a]" /></div>
+                  <div className="pointer-events-none absolute inset-0 z-10"><div className="relative h-full w-full origin-center transition duration-200" style={{ transform: `scale(${previewZoom / 100})` }}><Image src={product.image} alt={`Realistic ${product.label} preview`} fill priority sizes="(min-width: 1024px) 550px, 92vw" className="object-contain drop-shadow-[0_26px_28px_rgba(15,23,42,.22)]" /></div></div>
+                  <div className="absolute z-30" style={{ left: `${printZone.left}%`, top: `${printZone.top}%`, width: `${printZone.width}%`, height: `${printZone.height}%` }}>
                     {activeDesign.text.enabled && activeDesign.text.value.trim() ? <div onPointerDown={beginDrag("text")} className={`absolute left-1/2 top-1/2 cursor-grab select-none rounded px-1 active:cursor-grabbing ${selectedLayer === "text" ? "ring-2 ring-[#2f80ed] ring-offset-1" : ""}`} style={{ transform: `translate(calc(-50% + ${activeDesign.text.x}%),calc(-50% + ${activeDesign.text.y}%)) rotate(${activeDesign.text.rotate}deg)`, color: activeDesign.text.color, fontFamily: activeDesign.text.font, fontSize: `${activeDesign.text.size}px`, fontWeight: 800, lineHeight: 1, whiteSpace: "nowrap", textShadow: "0 2px 8px rgba(0,0,0,.24)" }}>{activeDesign.text.value}</div> : null}
                     {activeDesign.artwork.enabled && activeArtworkUrl ? <div onPointerDown={beginDrag("artwork")} className={`absolute left-1/2 top-1/2 cursor-grab select-none active:cursor-grabbing ${selectedLayer === "artwork" ? "ring-2 ring-[#2f80ed] ring-offset-1" : ""}`} style={{ width: `${activeDesign.artwork.scale}%`, aspectRatio: "1/1", transform: `translate(calc(-50% + ${activeDesign.artwork.x}%),calc(-50% + ${activeDesign.artwork.y}%)) rotate(${activeDesign.artwork.rotate}deg)` }}><img src={activeArtworkUrl} alt={`${activeSide} artwork on garment`} className="pointer-events-none h-full w-full object-contain" /></div> : null}
-                    {!activeArtworkUrl && !activeDesign.text.value.trim() ? <div className="pointer-events-none absolute inset-0 flex items-center justify-center"><span className="rounded-full bg-[#fff]/90 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-[#9a6e58] shadow-sm">Your {activeSide} design area</span></div> : null}
                   </div>
                 </div>
               </div>
@@ -380,12 +371,4 @@ function ArtworkUploadSlot({ side, file, url, active, onChoose, onDrop, onRemove
       {file && url ? <div className="p-3.5"><div className="flex items-center gap-3"><span className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#e6e5df] bg-[radial-gradient(circle_at_50%_35%,#fff_0%,#f0efeb_100%)] p-2"><img src={url} alt={`${title} artwork preview`} className="h-full w-full object-contain" /></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-extrabold">{file.name}</p><p className="mt-1 text-[10px] text-[#86847d]">{(file.size / 1024 / 1024).toFixed(2)} MB · Uploaded separately</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={onChoose} className="rounded-lg border border-[#dcdbd5] bg-white px-3 py-2 text-[10px] font-bold hover:border-[#ff9c6c]">Replace</button><button type="button" onClick={onRemove} className="flex items-center gap-1 rounded-lg border border-[#f0d5d5] bg-[#fffafa] px-3 py-2 text-[10px] font-bold text-[#b94343]"><Trash2 className="h-3.5 w-3.5" />Remove</button></div></div></div><button type="button" onClick={onPosition} className="mt-3 flex w-full items-center justify-between rounded-xl bg-[#181815] px-4 py-3 text-xs font-bold text-white"><span>Position {title.toLowerCase()} artwork</span><ArrowRight className="h-4 w-4" /></button></div> : <button type="button" onClick={onChoose} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const droppedFile = event.dataTransfer.files?.[0]; if (droppedFile) onDrop(droppedFile); }} className="group flex min-h-36 w-full flex-col items-center justify-center p-5 text-center outline-none focus-visible:ring-2 focus-visible:ring-[#ff5a0a] focus-visible:ring-inset"><span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f5f4f0] text-[#ff5a0a] transition group-hover:bg-[#fff0e8]"><UploadCloud className="h-5 w-5" /></span><span className="mt-3 text-xs font-extrabold">Choose {title.toLowerCase()} artwork</span><span className="mt-1 text-[10px] text-[#8a8982]">Browse or drag and drop here</span></button>}
     </section>
   );
-}
-
-function Garment({ productId, colorHex, side }: { productId: ProductId; colorHex: string; side: Side }) {
-  const instanceId = useId().replace(/:/g, "");
-  const id = `premium-garment-${productId}-${side}-${instanceId}`;
-  const light = colorHex === "#fafafa";
-  const line = light ? "#d6dbe4" : "rgba(255,255,255,.2)";
-  return <svg viewBox="0 0 640 760" className="pointer-events-none h-full w-full drop-shadow-[0_26px_28px_rgba(15,23,42,.24)]"><defs><linearGradient id={id} x1="0" y1="0" x2="1" y2="1"><stop stopColor={light ? "#fff" : colorHex} /><stop offset="1" stopColor={light ? "#e9edf2" : "#080c12"} /></linearGradient></defs><path d={GARMENT_PATHS[productId]} fill={`url(#${id})`} stroke={light ? "#d1d5db" : "#080c12"} strokeWidth="7" /><path d="M198 182Q320 244 442 182" fill="none" stroke={line} strokeWidth="8" strokeLinecap="round" /><path d="M178 694H462" fill="none" stroke={line} strokeWidth="6" />{productId === "tshirt" ? <path d="M254 170Q320 126 386 170" fill="none" stroke={line} strokeWidth="11" strokeLinecap="round" /> : null}{productId === "polo" ? <><path d="M278 172L320 238L362 172" fill={light ? "#e5e7eb" : "#080c12"} /><path d="M320 226V332" stroke={line} strokeWidth="6" /></> : null}{productId === "hoodie" ? <><path d="M218 188Q250 112 320 112Q390 112 422 188L388 250H252Z" fill={light ? "#e5e7eb" : "#080c12"} /><path d="M243 512H397Q414 512 414 530V602Q414 618 397 618H243Q226 618 226 602V530Q226 512 243 512Z" fill="none" stroke={line} strokeWidth="5" /></> : null}{side === "back" && productId !== "hoodie" ? <path d="M196 252Q320 286 444 252" fill="none" stroke={line} strokeWidth="6" /> : null}</svg>;
 }
