@@ -34,6 +34,8 @@ const DELIVERY_METHODS = [
   { value: "Delivery (Need to arrange first)", label: "Delivery (Need to arrange first)", fee: 0 },
 ] as const;
 
+const UNIFORM_AUDIENCES = ["Staff", "Security", "Restaurant", "Sport teams"] as const;
+
 const money = (value: number) => formatDisplayMoney(value);
 const IMAGE_RETRY_LIMIT = 2;
 const IMAGE_RETRY_DELAY_MS = 900;
@@ -560,7 +562,7 @@ export default function ShopClient({ uniformDesignCount }: { uniformDesignCount:
 
   return (
     <div className="min-h-screen bg-[#f7f7fb] text-neutral-900">
-      <div className="relative overflow-hidden">
+      <div className="relative overflow-x-clip">
         <div className="pointer-events-none absolute -left-32 top-[-12rem] h-72 w-72 rounded-full bg-slate-200/70 blur-3xl" />
         <div className="pointer-events-none absolute right-[-6rem] top-12 h-80 w-80 rounded-full bg-zinc-200/60 blur-3xl" />
         <div className="pointer-events-none absolute bottom-[-8rem] left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-slate-100/70 blur-3xl" />
@@ -761,8 +763,20 @@ export default function ShopClient({ uniformDesignCount }: { uniformDesignCount:
             )}
         </div>
 
-        <section className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((item) => {
+        <div className="mt-10 grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] xl:items-start">
+          <div className="min-w-0">
+            <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#d45400]">Plain Shop</p>
+                <h2 className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-neutral-950">Plain apparel catalog</h2>
+              </div>
+              <span className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-600 shadow-sm">
+                {filtered.length} products
+              </span>
+            </div>
+
+            <section className="grid gap-6 sm:grid-cols-2" aria-label="Plain apparel products">
+              {filtered.map((item) => {
             const sizes = getSizes(item);
             const sizePrices = getSizePrices(item);
             const isOneSizeItem =
@@ -935,14 +949,82 @@ export default function ShopClient({ uniformDesignCount }: { uniformDesignCount:
                 </div>
               </article>
             );
-          })}
-        </section>
+              })}
+            </section>
 
-        {!filtered.length && !error && (
-          <div className="mt-12 rounded-[24px] border border-neutral-200 bg-neutral-50 px-6 py-10 text-center text-sm text-neutral-600">
-            No items match those filters yet.
+            {!filtered.length && !error && (
+              <div className="mt-12 rounded-[24px] border border-neutral-200 bg-neutral-50 px-6 py-10 text-center text-sm text-neutral-600">
+                No items match those filters yet.
+              </div>
+            )}
           </div>
-        )}
+
+          <aside className="hidden xl:self-stretch xl:block" aria-label="Uniform designs">
+            <Link
+              href={READY_MADE_UNIFORMS_PATH}
+              className="group sticky top-24 block overflow-hidden rounded-[30px] border border-[#ff8a3d] bg-[linear-gradient(155deg,#ff5d00_0%,#ff7600_48%,#ff9f32_100%)] p-5 text-white shadow-[0_26px_70px_-38px_rgba(255,102,0,0.95)] transition duration-300 hover:-translate-y-1 hover:brightness-105"
+            >
+              <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full border-[42px] border-white/10" />
+              <div className="pointer-events-none absolute -bottom-24 -left-16 h-56 w-56 rounded-full bg-fuchsia-500/25 blur-3xl" />
+
+              <div className="relative flex items-start justify-between gap-3">
+                <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#e65500] shadow-sm">
+                  <FiLayers className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <span className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.15em] backdrop-blur">
+                  {uniformDesignCount} collections
+                </span>
+              </div>
+
+              <div className="relative mt-5 h-64 overflow-hidden rounded-[24px] border border-white/20 bg-black/10">
+                <Image
+                  src="/mockups/tshirt-front.png"
+                  alt="Ready-made T-shirt uniform"
+                  width={320}
+                  height={360}
+                  className="absolute -bottom-9 -left-14 h-56 w-auto -rotate-6 object-contain drop-shadow-2xl transition-transform duration-500 group-hover:-translate-y-1"
+                />
+                <Image
+                  src="/mockups/polo-front.png"
+                  alt="Ready-made polo uniform"
+                  width={320}
+                  height={360}
+                  className="absolute -bottom-5 left-1/2 z-10 h-64 w-auto -translate-x-1/2 object-contain drop-shadow-2xl transition-transform duration-500 group-hover:-translate-y-1"
+                />
+                <Image
+                  src="/mockups/hoodie-front.png"
+                  alt="Ready-made hoodie uniform"
+                  width={320}
+                  height={360}
+                  className="absolute -bottom-9 -right-16 h-56 w-auto rotate-6 object-contain drop-shadow-2xl transition-transform duration-500 group-hover:-translate-y-1"
+                />
+              </div>
+
+              <div className="relative mt-6">
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/70">Uniform Designs</p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">A professional look, ready to customize</h2>
+                <p className="mt-3 text-sm leading-6 text-white/82">
+                  Choose a proven style, add your logo, approve the mockup, and reorder it anytime.
+                </p>
+
+                <div className="mt-5 grid grid-cols-2 gap-2 text-[11px] font-semibold">
+                  {UNIFORM_AUDIENCES.map((label) => (
+                    <span key={label} className="rounded-full border border-white/25 bg-white/10 px-3 py-2 text-center backdrop-blur">
+                      {label}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="mt-6 flex items-center justify-between gap-3 border-t border-white/25 pt-5 text-sm font-semibold">
+                  <span>Explore uniform designs</span>
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#e65500] shadow-sm">
+                    <FiArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                  </span>
+                </div>
+              </div>
+            </Link>
+          </aside>
+        </div>
       </main>
 
       <button
