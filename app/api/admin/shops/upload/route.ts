@@ -88,6 +88,9 @@ export async function POST(req: Request) {
       ok: true,
       uploadId,
       url: `/api/shops/uploads/${encodeURIComponent(uploadId)}`,
+      thumbnailDataUrl: thumbnail
+        ? `data:${thumbnail.contentType};base64,${thumbnail.buffer.toString("base64")}`
+        : null,
     });
   } catch (error) {
     console.error("shops:admin:upload", error);

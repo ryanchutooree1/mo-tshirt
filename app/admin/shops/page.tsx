@@ -287,6 +287,7 @@ export default function AdminShopsPage() {
   const [showActiveOnly, setShowActiveOnly] = useState(false);
   const [showInStockOnly, setShowInStockOnly] = useState(false);
   const [catalogImageSelections, setCatalogImageSelections] = useState<Record<string, ShopImageViewKey>>({});
+  const [catalogThumbnailOverrides, setCatalogThumbnailOverrides] = useState<Record<string, string>>({});
 
   const [imageFiles, setImageFiles] = useState<ImageFileState>(() => buildEmptyImageFiles());
   const [previewUrls, setPreviewUrls] = useState<Record<ShopImageViewKey, string>>({
@@ -641,12 +642,19 @@ export default function AdminShopsPage() {
         method: "POST",
         body,
       });
-      const data = (await res.json().catch(() => ({}))) as { error?: string; url?: string };
+      const data = (await res.json().catch(() => ({}))) as { error?: string; url?: string; thumbnailDataUrl?: string | null };
       if (!res.ok || !data?.url) {
         throw new Error(data?.error || "Photo upload failed. Paste an image URL instead.");
       }
 
-      return data.url;
+      const uploadedUrl = data.url;
+      const thumbnailDataUrl = data.thumbnailDataUrl;
+      if (thumbnailDataUrl) {
+        setCatalogThumbnailOverrides((current) => ({ ...current, [uploadedUrl]: thumbnailDataUrl }));
+      }
+      void fetch(getCatalogThumbnailUrl(uploadedUrl), { cache: "force-cache" }).catch(() => undefined);
+
+      return uploadedUrl;
     } catch (err) {
       console.error("upload error", err);
       if (err instanceof Error) throw err;
@@ -1180,7 +1188,7 @@ export default function AdminShopsPage() {
                         <div className="relative aspect-square overflow-hidden rounded-[1.4rem] border border-slate-200 bg-white p-3 shadow-sm">
                           {coverImageUrl ? (
                             <AsyncCatalogImage
-                              src={getCatalogThumbnailUrl(coverImageUrl)}
+                              src={catalogThumbnailOverrides[coverImageUrl] || getCatalogThumbnailUrl(coverImageUrl)}
                               alt={`${item.title}${selectedCatalogView ? ` ${selectedCatalogView.label.toLowerCase()} view` : ""}`}
                               className="h-full w-full object-cover object-center"
                               fallback={<span className="px-3 leading-tight">Image unavailable</span>}
@@ -1210,7 +1218,7 @@ export default function AdminShopsPage() {
                                   }`}
                                 >
                                   <AsyncCatalogImage
-                                    src={getCatalogThumbnailUrl(view.url || "")}
+                                    src={catalogThumbnailOverrides[view.url || ""] || getCatalogThumbnailUrl(view.url || "")}
                                     alt={`${item.title} ${view.label.toLowerCase()} thumbnail`}
                                     className="h-full w-full object-contain object-center p-0.5"
                                   />
