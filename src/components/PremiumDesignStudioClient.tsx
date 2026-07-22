@@ -63,11 +63,14 @@ type StudioStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 type Layer = "artwork" | "text";
 type ArtworkPlacement = { enabled: boolean; x: number; y: number; scale: number; rotate: number };
 type ArtworkCopy = ArtworkPlacement & { id: number };
+type TextPlacement = { enabled: boolean; value: string; color: string; size: number; rotate: number; x: number; y: number; font: string };
+type TextCopy = TextPlacement & { id: number };
 
 type SideDesign = {
   artwork: ArtworkPlacement;
   artworkCopies: ArtworkCopy[];
-  text: { enabled: boolean; value: string; color: string; size: number; rotate: number; x: number; y: number; font: string };
+  text: TextPlacement;
+  textCopies: TextCopy[];
 };
 
 const PRODUCTS = [
@@ -109,6 +112,9 @@ const LAYER_Y_LIMIT = 80;
 const ARTWORK_SCALE_MIN = 20;
 const ARTWORK_SCALE_MAX = 160;
 const ARTWORK_SCALE_STEP = 12;
+const TEXT_SIZE_MIN = 12;
+const TEXT_SIZE_MAX = 160;
+const TEXT_SIZE_STEP = 5;
 
 type PremiumDesignStudioClientProps = {
   backHref?: string;
@@ -136,6 +142,7 @@ function createDesign(): SideDesign {
     artwork: { enabled: false, x: 0, y: -8, scale: 34, rotate: 0 },
     artworkCopies: [],
     text: { enabled: false, value: "", color: "#ffffff", size: 34, rotate: 0, x: 0, y: 22, font: "Arial, sans-serif" },
+    textCopies: [],
   };
 }
 
@@ -164,6 +171,7 @@ export default function PremiumDesignStudioClient({
   const [snap, setSnap] = useState(true);
   const [selectedLayer, setSelectedLayer] = useState<Layer | null>(null);
   const [selectedArtworkCopyId, setSelectedArtworkCopyId] = useState<number | null>(null);
+  const [selectedTextCopyId, setSelectedTextCopyId] = useState<number | null>(null);
   const [artworkFiles, setArtworkFiles] = useState<Record<Side, File | null>>({ front: null, back: null });
   const [artworkUrls, setArtworkUrls] = useState<Record<Side, string | null>>({ front: null, back: null });
   const [delivery, setDelivery] = useState(DELIVERY_OPTIONS[0]);
@@ -175,10 +183,14 @@ export default function PremiumDesignStudioClient({
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const printZoneRef = useRef<HTMLDivElement | null>(null);
   const artworkFrameRef = useRef<HTMLDivElement | null>(null);
+  const textFrameRef = useRef<HTMLDivElement | null>(null);
   const artworkCopySequence = useRef(0);
-  const dragRef = useRef<{ pointerId: number; layer: Layer; artworkCopyId: number | null; startX: number; startY: number; originX: number; originY: number } | null>(null);
+  const textCopySequence = useRef(0);
+  const dragRef = useRef<{ pointerId: number; layer: Layer; copyId: number | null; startX: number; startY: number; originX: number; originY: number } | null>(null);
   const artworkTransformRef = useRef<{ pointerId: number; kind: "rotate" | "scale"; startAngle: number; startDistance: number; originRotate: number; originScale: number; changed: boolean } | null>(null);
+  const textTransformRef = useRef<{ pointerId: number; kind: "rotate" | "scale"; startAngle: number; startDistance: number; originRotate: number; originSize: number; changed: boolean } | null>(null);
   const skipArtworkTransformClick = useRef(false);
+  const skipTextTransformClick = useRef(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -237,15 +249,20 @@ export default function PremiumDesignStudioClient({
   const method = METHODS.find((item) => item.id === methodId) ?? METHODS[0];
   const activeDesign = designs[activeSide];
   const activeArtwork = selectedArtworkCopyId === null ? activeDesign.artwork : activeDesign.artworkCopies.find((copy) => copy.id === selectedArtworkCopyId) ?? activeDesign.artwork;
+  const activeText = selectedTextCopyId === null ? activeDesign.text : activeDesign.textCopies.find((copy) => copy.id === selectedTextCopyId) ?? activeDesign.text;
   const activeArtworkLayers: Array<ArtworkPlacement & { copyId: number | null }> = [
     ...(activeDesign.artwork.enabled ? [{ ...activeDesign.artwork, copyId: null }] : []),
     ...activeDesign.artworkCopies.map((copy) => ({ ...copy, copyId: copy.id })),
   ];
   const activeArtworkUrl = artworkUrls[activeSide];
+  const activeTextLayers: Array<TextPlacement & { copyId: number | null }> = [
+    ...(activeDesign.text.enabled && activeDesign.text.value.trim() ? [{ ...activeDesign.text, copyId: null }] : []),
+    ...activeDesign.textCopies.filter((copy) => copy.enabled && copy.value.trim()).map((copy) => ({ ...copy, copyId: copy.id })),
+  ];
   const printZone = PRINT_ZONES[productId];
   const totalQty = availableSizes.reduce((sum, size) => sum + (sizes[size] || 0), 0);
   const selectedSizes = availableSizes.filter((size) => sizes[size] > 0).map((size) => `${size} × ${sizes[size]}`).join(", ") || "None";
-  const decoratedSides = (["front", "back"] as Side[]).filter((side) => (designs[side].artwork.enabled && artworkUrls[side]) || (designs[side].text.enabled && designs[side].text.value.trim())).length;
+  const decoratedSides = (["front", "back"] as Side[]).filter((side) => (designs[side].artwork.enabled && artworkUrls[side]) || (designs[side].text.enabled && designs[side].text.value.trim()) || designs[side].textCopies.some((copy) => copy.enabled && copy.value.trim())).length;
   const artworkSides = (["front", "back"] as Side[]).filter((side) => artworkFiles[side]).map((side) => `${side[0].toUpperCase()}${side.slice(1)}`).join(" + ") || "Text only";
   const discount = totalQty >= 100 ? 0.14 : totalQty >= 50 ? 0.1 : totalQty >= 20 ? 0.06 : 0;
   const garmentSubtotal = availableSizes.reduce((sum, size) => {
@@ -271,14 +288,19 @@ export default function PremiumDesignStudioClient({
     });
   }
 
-  function patchText(patch: Partial<SideDesign["text"]>, side = activeSide) {
-    setDesigns((current) => ({ ...current, [side]: { ...current[side], text: { ...current[side].text, ...patch } } }));
+  function patchText(patch: Partial<TextPlacement>, side = activeSide, copyId = selectedTextCopyId) {
+    setDesigns((current) => {
+      const currentDesign = current[side];
+      if (copyId === null) return { ...current, [side]: { ...currentDesign, text: { ...currentDesign.text, ...patch } } };
+      return { ...current, [side]: { ...currentDesign, textCopies: currentDesign.textCopies.map((copy) => copy.id === copyId ? { ...copy, ...patch } : copy) } };
+    });
   }
 
   function changeSide(side: Side) {
     setActiveSide(side);
     setSelectedLayer(null);
     setSelectedArtworkCopyId(null);
+    setSelectedTextCopyId(null);
   }
 
   function selectProduct(nextProductId: ProductId) {
@@ -359,18 +381,46 @@ export default function PremiumDesignStudioClient({
     setSelectedLayer(activeDesign.artwork.enabled ? "artwork" : null);
   }
 
-  function placeText(x: number, y: number) {
-    const nextX = snap && Math.abs(x) < 3 ? 0 : x;
-    const nextY = snap && Math.abs(y) < 3 ? 0 : y;
-    patchText({ x: clamp(nextX, -LAYER_X_LIMIT, LAYER_X_LIMIT), y: clamp(nextY, -LAYER_Y_LIMIT, LAYER_Y_LIMIT) });
+  function duplicateText() {
+    const id = ++textCopySequence.current;
+    const duplicate: TextCopy = {
+      ...activeText,
+      id,
+      enabled: true,
+      x: clamp(activeText.x + 18, -LAYER_X_LIMIT, LAYER_X_LIMIT),
+      y: clamp(activeText.y - 12, -LAYER_Y_LIMIT, LAYER_Y_LIMIT),
+    };
+    setDesigns((current) => ({ ...current, [activeSide]: { ...current[activeSide], textCopies: [...current[activeSide].textCopies, duplicate] } }));
+    setSelectedTextCopyId(id);
+    setSelectedLayer("text");
   }
 
-  function beginDrag(layer: Layer, artworkCopyId: number | null = selectedArtworkCopyId) {
+  function removeSelectedText() {
+    if (selectedTextCopyId === null) {
+      patchText({ enabled: false }, activeSide, null);
+      setSelectedLayer(null);
+      return;
+    }
+    setDesigns((current) => ({ ...current, [activeSide]: { ...current[activeSide], textCopies: current[activeSide].textCopies.filter((copy) => copy.id !== selectedTextCopyId) } }));
+    setSelectedTextCopyId(null);
+    setSelectedLayer(activeDesign.text.enabled && Boolean(activeDesign.text.value.trim()) ? "text" : null);
+  }
+
+  function placeText(x: number, y: number, copyId: number | null) {
+    const nextX = snap && Math.abs(x) < 3 ? 0 : x;
+    const nextY = snap && Math.abs(y) < 3 ? 0 : y;
+    patchText({ x: clamp(nextX, -LAYER_X_LIMIT, LAYER_X_LIMIT), y: clamp(nextY, -LAYER_Y_LIMIT, LAYER_Y_LIMIT) }, activeSide, copyId);
+  }
+
+  function beginDrag(layer: Layer, copyId: number | null = layer === "artwork" ? selectedArtworkCopyId : selectedTextCopyId) {
     return (event: ReactPointerEvent<HTMLDivElement>) => {
       event.stopPropagation();
-      const target = layer === "artwork" ? (artworkCopyId === null ? activeDesign.artwork : activeDesign.artworkCopies.find((copy) => copy.id === artworkCopyId) ?? activeDesign.artwork) : activeDesign.text;
-      dragRef.current = { pointerId: event.pointerId, layer, artworkCopyId, startX: event.clientX, startY: event.clientY, originX: target.x, originY: target.y };
-      if (layer === "artwork") setSelectedArtworkCopyId(artworkCopyId);
+      const target = layer === "artwork"
+        ? (copyId === null ? activeDesign.artwork : activeDesign.artworkCopies.find((copy) => copy.id === copyId) ?? activeDesign.artwork)
+        : (copyId === null ? activeDesign.text : activeDesign.textCopies.find((copy) => copy.id === copyId) ?? activeDesign.text);
+      dragRef.current = { pointerId: event.pointerId, layer, copyId, startX: event.clientX, startY: event.clientY, originX: target.x, originY: target.y };
+      if (layer === "artwork") setSelectedArtworkCopyId(copyId);
+      else setSelectedTextCopyId(copyId);
       setSelectedLayer(layer);
       canvasRef.current?.setPointerCapture(event.pointerId);
     };
@@ -385,8 +435,8 @@ export default function PremiumDesignStudioClient({
     if (drag.layer === "artwork") {
       const snappedX = snap && Math.abs(nextX) < 3 ? 0 : nextX;
       const snappedY = snap && Math.abs(nextY) < 3 ? 0 : nextY;
-      patchArtwork({ x: clamp(snappedX, -LAYER_X_LIMIT, LAYER_X_LIMIT), y: clamp(snappedY, -LAYER_Y_LIMIT, LAYER_Y_LIMIT) }, drag.artworkCopyId);
-    } else placeText(nextX, nextY);
+      patchArtwork({ x: clamp(snappedX, -LAYER_X_LIMIT, LAYER_X_LIMIT), y: clamp(snappedY, -LAYER_Y_LIMIT, LAYER_Y_LIMIT) }, drag.copyId);
+    } else placeText(nextX, nextY, drag.copyId);
   }
 
   function endDrag(event: ReactPointerEvent<HTMLDivElement>) {
@@ -446,6 +496,56 @@ export default function PremiumDesignStudioClient({
     }
     if (kind === "rotate") patchArtwork({ rotate: activeArtwork.rotate >= 165 ? -180 : activeArtwork.rotate + 15 });
     else patchArtwork({ scale: Math.min(ARTWORK_SCALE_MAX, activeArtwork.scale + ARTWORK_SCALE_STEP) });
+  }
+
+  function beginTextTransform(kind: "rotate" | "scale") {
+    return (event: ReactPointerEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const bounds = textFrameRef.current?.getBoundingClientRect();
+      if (!bounds) return;
+      const offsetX = event.clientX - (bounds.left + bounds.width / 2);
+      const offsetY = event.clientY - (bounds.top + bounds.height / 2);
+      textTransformRef.current = { pointerId: event.pointerId, kind, startAngle: Math.atan2(offsetY, offsetX), startDistance: Math.hypot(offsetX, offsetY), originRotate: activeText.rotate, originSize: activeText.size, changed: false };
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setSelectedLayer("text");
+    };
+  }
+
+  function moveTextTransform(event: ReactPointerEvent<HTMLButtonElement>) {
+    const transform = textTransformRef.current;
+    const bounds = textFrameRef.current?.getBoundingClientRect();
+    if (!transform || !bounds || transform.pointerId !== event.pointerId) return;
+    const offsetX = event.clientX - (bounds.left + bounds.width / 2);
+    const offsetY = event.clientY - (bounds.top + bounds.height / 2);
+    if (transform.kind === "rotate") {
+      const delta = ((Math.atan2(offsetY, offsetX) - transform.startAngle) * 180) / Math.PI;
+      transform.changed ||= Math.abs(delta) > 1;
+      patchText({ rotate: clamp(Math.round(transform.originRotate + delta), -180, 180) });
+    } else {
+      const distance = Math.hypot(offsetX, offsetY);
+      const ratio = transform.startDistance > 0 ? distance / transform.startDistance : 1;
+      transform.changed ||= Math.abs(ratio - 1) > 0.02;
+      patchText({ size: clamp(Math.round(transform.originSize * ratio), TEXT_SIZE_MIN, TEXT_SIZE_MAX) });
+    }
+  }
+
+  function endTextTransform(event: ReactPointerEvent<HTMLButtonElement>) {
+    const transform = textTransformRef.current;
+    if (!transform || transform.pointerId !== event.pointerId) return;
+    skipTextTransformClick.current = transform.changed;
+    if (transform.changed) setTimeout(() => { skipTextTransformClick.current = false; }, 0);
+    textTransformRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  }
+
+  function activateTextTransform(kind: "rotate" | "scale") {
+    if (skipTextTransformClick.current) {
+      skipTextTransformClick.current = false;
+      return;
+    }
+    if (kind === "rotate") patchText({ rotate: activeText.rotate >= 165 ? -180 : activeText.rotate + 15 });
+    else patchText({ size: Math.min(TEXT_SIZE_MAX, activeText.size + TEXT_SIZE_STEP) });
   }
 
   const summary = `Hi MO T-SHIRT, I would like a quote.\nProduct: ${product.label}\nColour: ${selectedColor}\nPrint: ${method.label}\nArtwork: ${artworkSides}\nSizes: ${selectedSizes}\nQuantity: ${totalQty}\nEstimate: ${formatMoney(totalPrice)}`;
@@ -524,12 +624,15 @@ export default function PremiumDesignStudioClient({
 
           <form onSubmit={submitQuote} className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(330px,.8fr)]">
             <section className="overflow-hidden rounded-[26px] border border-[#dfded8] bg-[#fff] shadow-[0_18px_55px_rgba(32,30,24,0.07)]">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ecebe6] px-4 py-3.5 sm:px-5"><div><p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#99978f]">Live preview</p><h2 className="mt-0.5 text-lg font-bold tracking-[-0.025em]">{product.label} · {activeSide}</h2></div><div className="flex items-center gap-1.5">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-xl px-4 py-2 text-xs font-bold capitalize ${activeSide === side ? "studio-primary bg-[#ff5a0a] !text-white" : "bg-[#f4f3ef] text-[#686761]"}`}>{side}</button>)}<button type="button" onClick={() => { setDesigns({ front: createDesign(), back: createDesign() }); setSelectedLayer(null); setSelectedArtworkCopyId(null); }} className="ml-1 flex h-9 w-9 items-center justify-center rounded-xl border border-[#e1e0da] text-[#66655f]" aria-label="Reset design"><RotateCcw className="h-4 w-4" /></button></div></div>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ecebe6] px-4 py-3.5 sm:px-5"><div><p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#99978f]">Live preview</p><h2 className="mt-0.5 text-lg font-bold tracking-[-0.025em]">{product.label} · {activeSide}</h2></div><div className="flex items-center gap-1.5">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-xl px-4 py-2 text-xs font-bold capitalize ${activeSide === side ? "studio-primary bg-[#ff5a0a] !text-white" : "bg-[#f4f3ef] text-[#686761]"}`}>{side}</button>)}<button type="button" onClick={() => { setDesigns({ front: createDesign(), back: createDesign() }); setSelectedLayer(null); setSelectedArtworkCopyId(null); setSelectedTextCopyId(null); }} className="ml-1 flex h-9 w-9 items-center justify-center rounded-xl border border-[#e1e0da] text-[#66655f]" aria-label="Reset design"><RotateCcw className="h-4 w-4" /></button></div></div>
               <div className="bg-[radial-gradient(circle_at_50%_0%,#ffffff_0%,#f5f3ed_55%,#eeece5_100%)] p-3 sm:p-6">
                 <div ref={canvasRef} onPointerDown={() => setSelectedLayer(null)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className="relative mx-auto aspect-[4/5] w-full max-w-[550px] overflow-hidden rounded-[24px] border border-[#fff] bg-[#fff]/30" style={{ touchAction: "none" }}>
                   <div className="pointer-events-none absolute inset-0 z-10"><div className="relative h-full w-full origin-center transition duration-200" style={{ transform: `scale(${previewZoom / 100})` }}><Image src={productPreviewImage} alt={`Realistic ${product.label} ${activeSide} preview`} fill priority sizes="(min-width: 1024px) 550px, 92vw" className="object-contain drop-shadow-[0_26px_28px_rgba(15,23,42,.22)]" /></div></div>
                   <div ref={printZoneRef} className="absolute z-30" style={{ left: `${printZone.left}%`, top: `${printZone.top}%`, width: `${printZone.width}%`, height: `${printZone.height}%` }}>
-                    {activeDesign.text.enabled && activeDesign.text.value.trim() ? <div onPointerDown={beginDrag("text")} className={`absolute cursor-grab select-none rounded px-1 active:cursor-grabbing ${selectedLayer === "text" ? "ring-2 ring-[#2f80ed] ring-offset-1" : ""}`} style={{ left: `${50 + activeDesign.text.x}%`, top: `${50 + activeDesign.text.y}%`, transform: `translate(-50%,-50%) rotate(${activeDesign.text.rotate}deg)`, color: activeDesign.text.color, fontFamily: activeDesign.text.font, fontSize: `${activeDesign.text.size}px`, fontWeight: 800, lineHeight: 1, whiteSpace: "nowrap", textShadow: "0 2px 8px rgba(0,0,0,.24)" }}>{activeDesign.text.value}</div> : null}
+                    {activeTextLayers.map((textLayer) => {
+                      const isSelected = selectedLayer === "text" && selectedTextCopyId === textLayer.copyId;
+                      return <div key={textLayer.copyId ?? "primary-text"} ref={isSelected ? textFrameRef : undefined} onPointerDown={beginDrag("text", textLayer.copyId)} className="absolute cursor-grab select-none active:cursor-grabbing" style={{ left: `${50 + textLayer.x}%`, top: `${50 + textLayer.y}%`, transform: `translate(-50%,-50%) rotate(${textLayer.rotate}deg)` }}><div className={`relative rounded px-1 ${isSelected ? "outline outline-2 outline-white outline-offset-1" : ""}`} style={{ color: textLayer.color, fontFamily: textLayer.font, fontSize: `${textLayer.size}px`, fontWeight: 800, lineHeight: 1, whiteSpace: "nowrap", textShadow: "0 2px 8px rgba(0,0,0,.24)" }}>{textLayer.value}</div>{isSelected ? <><button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={removeSelectedText} className="absolute -left-5 -top-5 z-20 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-[#f2d2cd] bg-white text-[#e53b2f] shadow-[0_6px_18px_rgba(22,26,35,.22)]" style={{ transform: `rotate(${-textLayer.rotate}deg)` }} aria-label={textLayer.copyId === null ? `Remove ${activeSide} text` : "Remove duplicated text"} title="Remove text"><X className="h-5 w-5" /></button><button type="button" onPointerDown={beginTextTransform("rotate")} onPointerMove={moveTextTransform} onPointerUp={endTextTransform} onPointerCancel={endTextTransform} onClick={() => activateTextTransform("rotate")} className="absolute -right-5 -top-5 z-20 flex h-9 w-9 touch-none cursor-grab items-center justify-center rounded-full border border-[#dce1fb] bg-white text-[#2947d3] shadow-[0_6px_18px_rgba(22,26,35,.22)] active:cursor-grabbing" style={{ transform: `rotate(${-textLayer.rotate}deg)` }} aria-label="Rotate text" title="Drag to rotate"><RotateCw className="h-5 w-5" /></button><button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={duplicateText} className="absolute -bottom-5 -left-5 z-20 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-[#dce1fb] bg-white text-[#2947d3] shadow-[0_6px_18px_rgba(22,26,35,.22)]" style={{ transform: `rotate(${-textLayer.rotate}deg)` }} aria-label="Duplicate text above and to the right" title="Duplicate text"><Copy className="h-4.5 w-4.5" /></button><button type="button" onPointerDown={beginTextTransform("scale")} onPointerMove={moveTextTransform} onPointerUp={endTextTransform} onPointerCancel={endTextTransform} onClick={() => activateTextTransform("scale")} className="absolute -bottom-5 -right-5 z-20 flex h-9 w-9 touch-none cursor-nwse-resize items-center justify-center rounded-full border border-[#dce1fb] bg-white text-[#2947d3] shadow-[0_6px_18px_rgba(22,26,35,.22)]" style={{ transform: `rotate(${-textLayer.rotate}deg)` }} aria-label="Resize text" title="Drag to resize"><Maximize2 className="h-5 w-5" /></button></> : null}</div>;
+                    })}
                     {activeArtworkUrl ? activeArtworkLayers.map((artwork) => {
                       const isSelected = selectedLayer === "artwork" && selectedArtworkCopyId === artwork.copyId;
                       return <div key={artwork.copyId ?? "primary"} ref={isSelected ? artworkFrameRef : undefined} onPointerDown={beginDrag("artwork", artwork.copyId)} className="absolute cursor-grab select-none active:cursor-grabbing" style={{ left: `${50 + artwork.x}%`, top: `${50 + artwork.y}%`, width: `${artwork.scale}%`, aspectRatio: "1/1", transform: `translate(-50%,-50%) rotate(${artwork.rotate}deg)` }}><div className={`relative h-full w-full ${isSelected ? "outline outline-2 outline-[#2947d3] outline-offset-1" : ""}`}><img src={activeArtworkUrl} alt={`${activeSide} artwork on garment`} className="pointer-events-none h-full w-full object-contain" /></div>{isSelected ? <><button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={removeSelectedArtwork} className="absolute -left-5 -top-5 z-20 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-[#f2d2cd] bg-white text-[#e53b2f] shadow-[0_6px_18px_rgba(22,26,35,.22)]" style={{ transform: `rotate(${-artwork.rotate}deg)` }} aria-label={artwork.copyId === null ? `Remove ${activeSide} artwork` : "Remove duplicated artwork"} title="Remove artwork"><X className="h-5 w-5" /></button><button type="button" onPointerDown={beginArtworkTransform("rotate")} onPointerMove={moveArtworkTransform} onPointerUp={endArtworkTransform} onPointerCancel={endArtworkTransform} onClick={() => activateArtworkTransform("rotate")} className="absolute -right-5 -top-5 z-20 flex h-9 w-9 touch-none cursor-grab items-center justify-center rounded-full border border-[#dce1fb] bg-white text-[#2947d3] shadow-[0_6px_18px_rgba(22,26,35,.22)] active:cursor-grabbing" style={{ transform: `rotate(${-artwork.rotate}deg)` }} aria-label="Rotate artwork" title="Drag to rotate"><RotateCw className="h-5 w-5" /></button><button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={duplicateArtwork} className="absolute -bottom-5 -left-5 z-20 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-[#dce1fb] bg-white text-[#2947d3] shadow-[0_6px_18px_rgba(22,26,35,.22)]" style={{ transform: `rotate(${-artwork.rotate}deg)` }} aria-label="Duplicate artwork above and to the right" title="Duplicate artwork"><Copy className="h-4.5 w-4.5" /></button><button type="button" onPointerDown={beginArtworkTransform("scale")} onPointerMove={moveArtworkTransform} onPointerUp={endArtworkTransform} onPointerCancel={endArtworkTransform} onClick={() => activateArtworkTransform("scale")} className="absolute -bottom-5 -right-5 z-20 flex h-9 w-9 touch-none cursor-nwse-resize items-center justify-center rounded-full border border-[#dce1fb] bg-white text-[#2947d3] shadow-[0_6px_18px_rgba(22,26,35,.22)]" style={{ transform: `rotate(${-artwork.rotate}deg)` }} aria-label="Resize artwork" title="Drag to resize"><Maximize2 className="h-5 w-5" /></button></> : null}</div>;
@@ -562,7 +665,7 @@ export default function PremiumDesignStudioClient({
 
                 {step === 5 ? <div className="space-y-4"><div><Label>Artwork side</Label><div className="mt-2 grid grid-cols-2 gap-2">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-2xl border p-3 text-left transition ${activeSide === side ? "border-[#ff5a0a] bg-[#fff8f3] ring-2 ring-[#ff5a0a]/10" : "border-[#e2e1dc] bg-white"}`}><span className="flex items-center justify-between"><span className="text-xs font-extrabold capitalize">{side}</span>{artworkUrls[side] ? <CheckCircle2 className="h-4 w-4 text-[#16a462]" /> : <span className="h-2 w-2 rounded-full bg-[#d5d3cc]" />}</span><span className="mt-1 block text-[9px] font-bold uppercase tracking-[0.08em] text-[#96948c]">{artworkUrls[side] ? "Artwork ready" : "No artwork"}</span></button>)}</div></div>{activeArtworkUrl ? <><div className="flex items-center gap-3 rounded-2xl border border-[#c9ead8] bg-[#f4fbf7] p-3"><span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm"><img src={activeArtworkUrl} alt={`${activeSide} artwork preview`} className="h-full w-full object-contain" /></span><span className="min-w-0 flex-1"><span className="block text-[9px] font-bold uppercase tracking-[0.1em] text-[#168455]">Editing {selectedArtworkCopyId === null ? activeSide : `duplicated ${activeSide}`}</span><span className="mt-1 block truncate text-xs font-bold">{artworkFiles[activeSide]?.name}</span></span></div><div className="grid grid-cols-3 gap-2"><PresetButton icon={<Crosshair />} label="Left chest" onClick={() => patchArtwork({ x: -28, y: -38 })} /><PresetButton icon={<Focus />} label="Centre" onClick={() => patchArtwork({ x: 0, y: 0 })} /><PresetButton icon={<Move />} label="Lower" onClick={() => patchArtwork({ x: 0, y: 52 })} /></div><RangeControl icon={<ZoomIn />} label="Artwork size" value={activeArtwork.scale} min={ARTWORK_SCALE_MIN} max={ARTWORK_SCALE_MAX} suffix="%" onChange={(value) => patchArtwork({ scale: value })} /><RangeControl icon={<Move />} label="Horizontal" value={activeArtwork.x} min={-LAYER_X_LIMIT} max={LAYER_X_LIMIT} onChange={(value) => patchArtwork({ x: value })} /><RangeControl icon={<Move className="rotate-90" />} label="Vertical" value={activeArtwork.y} min={-LAYER_Y_LIMIT} max={LAYER_Y_LIMIT} onChange={(value) => patchArtwork({ y: value })} /><RangeControl icon={<RotateCcw />} label="Rotation" value={activeArtwork.rotate} min={-180} max={180} suffix="°" onChange={(value) => patchArtwork({ rotate: value })} /><button type="button" onClick={() => setSnap((current) => !current)} className={`flex w-full items-center justify-between rounded-2xl border p-4 ${snap ? "border-[#bfe9d4] bg-[#f1fbf6]" : "border-[#e2e1dc]"}`}><span className="flex items-center gap-2 text-sm font-bold"><Magnet className="h-4 w-4 text-[#16a462]" />Snap to centre</span><span className={`rounded-full px-2 py-1 text-[9px] font-bold ${snap ? "studio-success bg-[#16a462] !text-white" : "bg-[#efeee9]"}`}>{snap ? "ON" : "OFF"}</span></button></> : <div className="flex min-h-64 flex-col items-center justify-center rounded-[22px] border-2 border-dashed border-[#ddd9d1] bg-[#fafaf7] p-6 text-center"><span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-[#ff5a0a] shadow-[0_8px_25px_rgba(35,32,24,.08)]"><ImagePlus className="h-6 w-6" /></span><p className="mt-4 text-sm font-extrabold">No {activeSide} artwork yet</p><p className="mt-1 max-w-[250px] text-xs leading-5 text-[#85847d]">Upload an image for this side before positioning it, or continue to add text only.</p><button type="button" onClick={() => setStep(4)} className="studio-primary mt-4 inline-flex items-center gap-2 rounded-xl bg-[#ff5a0a] px-4 py-2.5 text-xs font-bold !text-white"><UploadCloud className="h-4 w-4" />Go to uploads</button></div>}</div> : null}
 
-                {step === 6 ? <div className="space-y-5"><label className="flex items-center justify-between rounded-2xl border border-[#e2e1dc] p-4"><span className="flex items-center gap-2 text-sm font-bold"><TypeIcon className="h-4 w-4 text-[#ff5a0a]" />Custom text</span><input type="checkbox" checked={activeDesign.text.enabled} onChange={(event) => patchText({ enabled: event.target.checked })} className="h-5 w-5 accent-[#ff5a0a]" /></label><Field label="Your text"><input value={activeDesign.text.value} onChange={(event) => patchText({ value: event.target.value, enabled: true })} className="studio-field" placeholder="e.g. Team Mauritius" /></Field><div className="grid grid-cols-[1fr_72px] gap-3"><Field label="Font"><select value={activeDesign.text.font} onChange={(event) => patchText({ font: event.target.value })} className="studio-field"><option value="Arial, sans-serif">Modern sans</option><option value="Impact, sans-serif">Impact</option><option value="Georgia, serif">Classic serif</option><option value="cursive">Signature</option></select></Field><Field label="Colour"><input type="color" value={activeDesign.text.color} onChange={(event) => patchText({ color: event.target.value })} className="studio-field p-1.5" /></Field></div><RangeControl icon={<TypeIcon />} label="Text size" value={activeDesign.text.size} min={18} max={72} onChange={(value) => patchText({ size: value })} /><RangeControl icon={<RotateCcw />} label="Rotation" value={activeDesign.text.rotate} min={-180} max={180} suffix="°" onChange={(value) => patchText({ rotate: value })} /><div className="grid grid-cols-3 gap-2"><PresetButton icon={<Crosshair />} label="Left chest" onClick={() => patchText({ x: -20, y: -18 })} /><PresetButton icon={<Focus />} label="Centre" onClick={() => patchText({ x: 0, y: 0 })} /><PresetButton icon={<Move />} label="Lower" onClick={() => patchText({ x: 0, y: 24 })} /></div></div> : null}
+                {step === 6 ? <div className="space-y-5"><label className="flex items-center justify-between rounded-2xl border border-[#e2e1dc] p-4"><span className="flex items-center gap-2 text-sm font-bold"><TypeIcon className="h-4 w-4 text-[#ff5a0a]" />Custom text</span><input type="checkbox" checked={activeText.enabled} onChange={(event) => patchText({ enabled: event.target.checked })} className="h-5 w-5 accent-[#ff5a0a]" /></label><Field label="Your text"><input value={activeText.value} onChange={(event) => patchText({ value: event.target.value, enabled: true })} className="studio-field" placeholder="e.g. Team Mauritius" /></Field><div className="grid grid-cols-[1fr_72px] gap-3"><Field label="Font"><select value={activeText.font} onChange={(event) => patchText({ font: event.target.value })} className="studio-field"><option value="Arial, sans-serif">Modern sans</option><option value="Impact, sans-serif">Impact</option><option value="Georgia, serif">Classic serif</option><option value="cursive">Signature</option></select></Field><Field label="Colour"><input type="color" value={activeText.color} onChange={(event) => patchText({ color: event.target.value })} className="studio-field p-1.5" /></Field></div><RangeControl icon={<TypeIcon />} label="Text size" value={activeText.size} min={TEXT_SIZE_MIN} max={TEXT_SIZE_MAX} onChange={(value) => patchText({ size: value })} /><RangeControl icon={<RotateCcw />} label="Rotation" value={activeText.rotate} min={-180} max={180} suffix="°" onChange={(value) => patchText({ rotate: value })} /><div className="grid grid-cols-3 gap-2"><PresetButton icon={<Crosshair />} label="Left chest" onClick={() => patchText({ x: -20, y: -18 })} /><PresetButton icon={<Focus />} label="Centre" onClick={() => patchText({ x: 0, y: 0 })} /><PresetButton icon={<Move />} label="Lower" onClick={() => patchText({ x: 0, y: 24 })} /></div></div> : null}
 
                 {step === 7 ? <div className="space-y-4"><div className="rounded-2xl border border-[#e2e1dc] p-4"><Label>Order summary</Label><dl className="mt-3 space-y-3"><SummaryRow label="Product" value={product.label} /><SummaryRow label="Shop colour" value={selectedColor} /><SummaryRow label="Artwork files" value={artworkSides} /><SummaryRow label="Print method" value={method.label} /><SummaryRow label="Sizes" value={selectedSizes} /><SummaryRow label="Lead time" value={product.lead} /></dl></div><div className="studio-dark rounded-2xl bg-[#171714] p-5 !text-white"><div className="flex justify-between text-xs text-[#aaa9a2]"><span>Total quantity</span><span>{totalQty}</span></div><div className="mt-3 flex items-end justify-between"><span className="text-xs text-[#aaa9a2]">Estimated total</span><span className="text-2xl font-extrabold">{formatMoney(totalPrice)}</span></div><p className="mt-3 border-t border-white/10 pt-3 text-[9px] leading-4 text-[#888780]">Garment pricing and available sizes come directly from Shops. Final printing price is confirmed after artwork review.</p></div><Field label="Order notes"><textarea value={client.notes} onChange={(event) => setClient((current) => ({ ...current, notes: event.target.value }))} className="studio-field min-h-24 resize-none py-3" placeholder="Special instructions, placement details..." /></Field></div> : null}
 
