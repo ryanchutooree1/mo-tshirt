@@ -174,7 +174,6 @@ const money = (value: number) => formatDisplayMoney(value);
 const MAX_UPLOAD_BYTES = 6 * 1024 * 1024;
 const IMAGE_RETRY_LIMIT = 2;
 const IMAGE_RETRY_DELAY_MS = 900;
-const CATALOG_PAGE_SIZE = 12;
 
 function getCatalogThumbnailUrl(src: string) {
   if (!src.startsWith("/api/shops/uploads/")) return src;
@@ -287,7 +286,6 @@ export default function AdminShopsPage() {
   const [search, setSearch] = useState("");
   const [showActiveOnly, setShowActiveOnly] = useState(false);
   const [showInStockOnly, setShowInStockOnly] = useState(false);
-  const [catalogPage, setCatalogPage] = useState(1);
 
   const [imageFiles, setImageFiles] = useState<ImageFileState>(() => buildEmptyImageFiles());
   const [previewUrls, setPreviewUrls] = useState<Record<ShopImageViewKey, string>>({
@@ -398,14 +396,6 @@ export default function AdminShopsPage() {
       return true;
     });
   }, [items, search, showActiveOnly, showInStockOnly]);
-  const catalogPageCount = Math.max(1, Math.ceil(filteredItems.length / CATALOG_PAGE_SIZE));
-  const safeCatalogPage = Math.min(catalogPage, catalogPageCount);
-  const pagedItems = useMemo(
-    () => filteredItems.slice((safeCatalogPage - 1) * CATALOG_PAGE_SIZE, safeCatalogPage * CATALOG_PAGE_SIZE),
-    [filteredItems, safeCatalogPage]
-  );
-  const firstVisibleItem = filteredItems.length ? (safeCatalogPage - 1) * CATALOG_PAGE_SIZE + 1 : 0;
-  const lastVisibleItem = Math.min(safeCatalogPage * CATALOG_PAGE_SIZE, filteredItems.length);
 
   const studioItemsNeedingPreparation = useMemo(
     () =>
@@ -1056,10 +1046,7 @@ export default function AdminShopsPage() {
               <FiSearch className="absolute left-3 top-2.5 text-slate-400" />
               <input
                 value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setCatalogPage(1);
-                }}
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by title or color..."
                 className="w-full rounded-full border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-200 sm:w-64"
               />
@@ -1067,10 +1054,7 @@ export default function AdminShopsPage() {
             <button
               type="button"
               aria-pressed={showActiveOnly}
-              onClick={() => {
-                setShowActiveOnly((v) => !v);
-                setCatalogPage(1);
-              }}
+              onClick={() => setShowActiveOnly((v) => !v)}
               className={togglePill(showActiveOnly, "border-emerald-200 bg-emerald-50 text-emerald-700")}
             >
               <FiActivity className="h-4 w-4" /> Active only
@@ -1078,16 +1062,13 @@ export default function AdminShopsPage() {
             <button
               type="button"
               aria-pressed={showInStockOnly}
-              onClick={() => {
-                setShowInStockOnly((v) => !v);
-                setCatalogPage(1);
-              }}
+              onClick={() => setShowInStockOnly((v) => !v)}
               className={togglePill(showInStockOnly, "border-sky-200 bg-sky-50 text-sky-700")}
             >
               <FiBox className="h-4 w-4" /> In stock
             </button>
             <div className="ml-auto text-xs font-semibold text-slate-500">
-              Showing {firstVisibleItem}–{lastVisibleItem} of {filteredItems.length}
+              Showing {filteredItems.length} of {items.length}
             </div>
           </div>
         </section>
@@ -1126,7 +1107,7 @@ export default function AdminShopsPage() {
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                {pagedItems.length} on this page
+                {filteredItems.length} shown
               </span>
               <button
                 type="button"
@@ -1142,9 +1123,8 @@ export default function AdminShopsPage() {
           {loading ? (
             <div className="mt-8 text-sm text-slate-500">Loading items...</div>
           ) : filteredItems.length ? (
-            <>
             <ul className="mt-6 grid gap-4 2xl:grid-cols-2">
-              {pagedItems.map((item) => {
+              {filteredItems.map((item) => {
                 const sizePrices = getSizePrices(item);
                 const isSinglePriceItem =
                   sizePrices.length === 1 && isOneSizeLabel(sizePrices[0]?.size || "");
@@ -1415,30 +1395,6 @@ export default function AdminShopsPage() {
                 );
               })}
             </ul>
-            {catalogPageCount > 1 && (
-              <nav className="mt-6 flex flex-wrap items-center justify-center gap-3 border-t border-slate-200 pt-5" aria-label="Product catalog pages">
-                <button
-                  type="button"
-                  onClick={() => setCatalogPage(Math.max(1, safeCatalogPage - 1))}
-                  disabled={safeCatalogPage === 1}
-                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Previous
-                </button>
-                <span className="text-xs font-semibold text-slate-500">
-                  Page {safeCatalogPage} of {catalogPageCount}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setCatalogPage(Math.min(catalogPageCount, safeCatalogPage + 1))}
-                  disabled={safeCatalogPage === catalogPageCount}
-                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Next
-                </button>
-              </nav>
-            )}
-            </>
           ) : (
             <div className="mt-8 rounded-[1.5rem] border border-dashed border-slate-200 px-4 py-16 text-center text-sm text-slate-500">
               No shop items yet.

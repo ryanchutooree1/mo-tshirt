@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { collection, doc, getDoc, getDocs, orderBy, query } from "firebase/firestore";
-import sharp from "sharp";
+import { collection, doc, getDoc, getDocs, orderBy, query, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { createProductThumbnail } from "@/lib/prepare-product-image";
 
 type FirestoreLike = Record<string, unknown>;
 
@@ -11,6 +11,19 @@ function cleanString(value: unknown) {
 
 function formatContentDisposition(filename: string) {
   return `inline; filename*=UTF-8''${encodeURIComponent(filename)}`;
+}
+
+function imageResponse(buffer: Buffer, filename: string, contentType: string) {
+  const body = new Uint8Array(buffer.byteLength);
+  body.set(buffer);
+  return new NextResponse(body, {
+    headers: {
+      "Cache-Control": "public, max-age=31536000, s-maxage=31536000, immutable",
+      "Content-Disposition": formatContentDisposition(filename),
+      "Content-Length": String(buffer.byteLength),
+      "Content-Type": contentType,
+    },
+  });
 }
 
 export async function GET(
@@ -25,7 +38,8 @@ export async function GET(
   }
 
   try {
-    const metaSnap = await getDoc(doc(db, "shopUploads", cleanedUploadId));
+    const metaRef = doc(db, "shopUploads", cleanedUploadId);
+    const metaSnap = await getDoc(metaRef);
     if (!metaSnap.exists()) {
       return NextResponse.json({ error: "Upload not found." }, { status: 404 });
     }
@@ -33,6 +47,15 @@ export async function GET(
     const meta = metaSnap.data() as FirestoreLike;
     const filename = cleanString(meta.filename) || "shop-image";
     const contentType = cleanString(meta.contentType) || "application/octet-stream";
+    const wantsThumbnail = new URL(req.url).searchParams.get("variant") === "thumbnail";
+    const storedThumbnail = cleanString(meta.thumbnailBase64);
+    if (wantsThumbnail && storedThumbnail) {
+      return imageResponse(
+        Buffer.from(storedThumbnail, "base64"),
+        filename,
+        cleanString(meta.thumbnailContentType) || "image/webp"
+      );
+    }
 
     const chunksSnap = await getDocs(
       query(collection(db, "shopUploads", cleanedUploadId, "chunks"), orderBy("index", "asc"))
@@ -51,26 +74,18 @@ export async function GET(
     }
 
     const buffer = Buffer.from(base64, "base64");
-    const wantsThumbnail = new URL(req.url).searchParams.get("variant") === "thumbnail";
-    const responseBuffer = wantsThumbnail && contentType.startsWith("image/") && contentType !== "image/svg+xml" && contentType !== "image/gif"
-      ? await sharp(buffer)
-          .rotate()
-          .resize({ width: 320, height: 320, fit: "inside", withoutEnlargement: true })
-          .webp({ quality: 78, alphaQuality: 88, effort: 3 })
-          .toBuffer()
-      : buffer;
-    const responseContentType = wantsThumbnail && responseBuffer !== buffer ? "image/webp" : contentType;
-    const responseBody = new Uint8Array(responseBuffer.byteLength);
-    responseBody.set(responseBuffer);
+    if (!wantsThumbnail) return imageResponse(buffer, filename, contentType);
 
-    return new NextResponse(responseBody, {
-      headers: {
-        "Cache-Control": "public, max-age=31536000, s-maxage=31536000, immutable",
-        "Content-Disposition": formatContentDisposition(filename),
-        "Content-Length": String(responseBuffer.byteLength),
-        "Content-Type": responseContentType,
-      },
-    });
+    const thumbnail = await createProductThumbnail(buffer, contentType);
+    if (!thumbnail) return imageResponse(buffer, filename, contentType);
+
+    await updateDoc(metaRef, {
+      thumbnailBase64: thumbnail.buffer.toString("base64"),
+      thumbnailContentType: thumbnail.contentType,
+      thumbnailSize: thumbnail.buffer.byteLength,
+    }).catch((error) => console.warn("shops:thumbnail:cache", cleanedUploadId, error));
+
+    return imageResponse(thumbnail.buffer, filename, thumbnail.contentType);
   } catch (error) {
     console.error("shops:upload:get", error);
     return NextResponse.json({ error: "Failed to load upload." }, { status: 500 });

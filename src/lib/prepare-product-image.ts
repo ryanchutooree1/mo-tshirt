@@ -51,3 +51,20 @@ export async function prepareProductImage(file: File) {
     filename: `${baseName}.webp`,
   };
 }
+
+export async function createProductThumbnail(buffer: Buffer, contentType: string) {
+  if (!contentType.startsWith("image/") || contentType === "image/svg+xml" || contentType === "image/gif") {
+    return null;
+  }
+
+  const thumbnail = await sharp(buffer)
+    .rotate()
+    .resize({ width: 320, height: 320, fit: "inside", withoutEnlargement: true })
+    .webp({ quality: 78, alphaQuality: 88, effort: 3 })
+    .toBuffer();
+
+  return {
+    buffer: thumbnail,
+    contentType: "image/webp",
+  };
+}
