@@ -1048,7 +1048,7 @@ export default function AdminShopsPage() {
 
         {/* Filters */}
         <section
-          className="sticky top-20 z-10 rounded-3xl border border-slate-200/70 bg-white/90 p-4 shadow-sm backdrop-blur"
+          className="rounded-3xl border border-slate-200/70 bg-white/90 p-4 shadow-sm backdrop-blur"
           style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.14s" }}
         >
           <div className="flex flex-wrap items-start gap-3">
@@ -1143,7 +1143,7 @@ export default function AdminShopsPage() {
             <div className="mt-8 text-sm text-slate-500">Loading items...</div>
           ) : filteredItems.length ? (
             <>
-            <ul className="mt-6 grid gap-4 xl:grid-cols-2">
+            <ul className="mt-6 grid gap-4 2xl:grid-cols-2">
               {pagedItems.map((item) => {
                 const sizePrices = getSizePrices(item);
                 const isSinglePriceItem =
@@ -1268,19 +1268,19 @@ export default function AdminShopsPage() {
 
                         {isStudioProduct && (
                           <div className="mt-4 rounded-2xl border border-violet-100 bg-violet-50/60 p-3">
-                            <div className="flex items-center justify-between gap-3">
-                              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-violet-700">
-                                Design Studio images
+                            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                              <p className="whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.1em] text-violet-700">
+                                Design Studio
                               </p>
-                              <span className="text-[10px] font-semibold text-violet-600">
+                              <span className="whitespace-nowrap text-[10px] font-semibold text-violet-600">
                                 Transparent copies
                               </span>
                             </div>
-                            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                            <div className="mt-2 grid gap-2">
                               <div className="flex items-center justify-between rounded-xl border border-violet-100 bg-white px-3 py-2">
-                                <span className="text-xs font-semibold text-slate-700">Front</span>
+                                <span className="whitespace-nowrap text-xs font-semibold text-slate-700">Front</span>
                                 <span
-                                  className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${
+                                  className={`inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-bold ${
                                     !item.photoUrl
                                       ? "text-slate-400"
                                       : isPreparingThisItem
@@ -1305,9 +1305,9 @@ export default function AdminShopsPage() {
                                 </span>
                               </div>
                               <div className="flex items-center justify-between rounded-xl border border-violet-100 bg-white px-3 py-2">
-                                <span className="text-xs font-semibold text-slate-700">Back</span>
+                                <span className="whitespace-nowrap text-xs font-semibold text-slate-700">Back</span>
                                 <span
-                                  className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${
+                                  className={`inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-bold ${
                                     !item.backPhotoUrl
                                       ? "text-slate-400"
                                       : isPreparingThisItem
