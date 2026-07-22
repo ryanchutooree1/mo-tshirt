@@ -94,11 +94,16 @@ export async function prepareStudioImageFile(
 }
 
 export async function downloadShopImage(url: string, title: string, view: StudioImageViewKey) {
-  const response = await fetch(url, { credentials: "same-origin" });
+  const resolvedUrl = new URL(url, window.location.origin);
+  const downloadUrl =
+    resolvedUrl.origin === window.location.origin
+      ? resolvedUrl.toString()
+      : `/api/admin/shops/image-source?url=${encodeURIComponent(resolvedUrl.toString())}`;
+  const response = await fetch(downloadUrl, { credentials: "same-origin" });
   if (!response.ok) throw new Error(`Could not download the ${view} photo for ${title}.`);
   const blob = await response.blob();
   if (!blob.type.startsWith("image/")) throw new Error(`${title} ${view} is not an image.`);
-  const pathname = new URL(url, window.location.origin).pathname;
+  const pathname = resolvedUrl.pathname;
   const sourceName = decodeURIComponent(pathname.split("/").pop() || `${title}-${view}.png`);
   return new File([blob], sourceName, { type: blob.type, lastModified: Date.now() });
 }
