@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { collection, doc, getDoc, getDocs, orderBy, query } from "firebase/firestore";
+import sharp from "sharp";
 import { db } from "@/lib/firebase";
 
 type FirestoreLike = Record<string, unknown>;
@@ -13,7 +14,7 @@ function formatContentDisposition(filename: string) {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ uploadId: string }> }
 ) {
   const { uploadId } = await params;
@@ -50,13 +51,24 @@ export async function GET(
     }
 
     const buffer = Buffer.from(base64, "base64");
+    const wantsThumbnail = new URL(req.url).searchParams.get("variant") === "thumbnail";
+    const responseBuffer = wantsThumbnail && contentType.startsWith("image/") && contentType !== "image/svg+xml" && contentType !== "image/gif"
+      ? await sharp(buffer)
+          .rotate()
+          .resize({ width: 320, height: 320, fit: "inside", withoutEnlargement: true })
+          .webp({ quality: 78, alphaQuality: 88, effort: 3 })
+          .toBuffer()
+      : buffer;
+    const responseContentType = wantsThumbnail && responseBuffer !== buffer ? "image/webp" : contentType;
+    const responseBody = new Uint8Array(responseBuffer.byteLength);
+    responseBody.set(responseBuffer);
 
-    return new NextResponse(buffer, {
+    return new NextResponse(responseBody, {
       headers: {
-        "Cache-Control": "public, max-age=31536000, immutable",
+        "Cache-Control": "public, max-age=31536000, s-maxage=31536000, immutable",
         "Content-Disposition": formatContentDisposition(filename),
-        "Content-Length": String(buffer.byteLength),
-        "Content-Type": contentType,
+        "Content-Length": String(responseBuffer.byteLength),
+        "Content-Type": responseContentType,
       },
     });
   } catch (error) {
