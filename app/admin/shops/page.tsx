@@ -286,6 +286,7 @@ export default function AdminShopsPage() {
   const [search, setSearch] = useState("");
   const [showActiveOnly, setShowActiveOnly] = useState(false);
   const [showInStockOnly, setShowInStockOnly] = useState(false);
+  const [catalogImageSelections, setCatalogImageSelections] = useState<Record<string, ShopImageViewKey>>({});
 
   const [imageFiles, setImageFiles] = useState<ImageFileState>(() => buildEmptyImageFiles());
   const [previewUrls, setPreviewUrls] = useState<Record<ShopImageViewKey, string>>({
@@ -1138,7 +1139,8 @@ export default function AdminShopsPage() {
                 const extraSizes = Math.max(0, sizePrices.length - visibleSizes.length);
                 const colorLabels = sortQuoteColors(item.colors);
                 const imageViews = getShopImageViews(item);
-                const coverImageUrl = imageViews[0]?.url || item.photoUrl;
+                const selectedCatalogView = imageViews.find((view) => view.key === catalogImageSelections[item.id]) || imageViews[0];
+                const coverImageUrl = selectedCatalogView?.url || item.photoUrl;
                 const isStudioProduct = Boolean(getShopDesignProductId(item.title));
                 const hasStudioSources = Boolean(item.photoUrl || item.backPhotoUrl);
                 const studioReady = Boolean(
@@ -1179,7 +1181,7 @@ export default function AdminShopsPage() {
                           {coverImageUrl ? (
                             <AsyncCatalogImage
                               src={getCatalogThumbnailUrl(coverImageUrl)}
-                              alt={item.title}
+                              alt={`${item.title}${selectedCatalogView ? ` ${selectedCatalogView.label.toLowerCase()} view` : ""}`}
                               className="h-full w-full object-cover object-center"
                               fallback={<span className="px-3 leading-tight">Image unavailable</span>}
                             />
@@ -1189,6 +1191,34 @@ export default function AdminShopsPage() {
                             </div>
                           )}
                         </div>
+                        {imageViews.length > 1 && (
+                          <div className="mt-2 grid grid-cols-3 gap-1.5" aria-label={`${item.title} image views`}>
+                            {imageViews.map((view) => {
+                              const isSelected = selectedCatalogView?.key === view.key;
+                              return (
+                                <button
+                                  key={`${item.id}-${view.key}`}
+                                  type="button"
+                                  onClick={() => setCatalogImageSelections((current) => ({ ...current, [item.id]: view.key }))}
+                                  aria-label={`Show ${item.title} ${view.label.toLowerCase()} view`}
+                                  aria-pressed={isSelected}
+                                  title={view.label}
+                                  className={`relative aspect-square overflow-hidden rounded-lg bg-white transition ${
+                                    isSelected
+                                      ? "border-2 border-slate-900 ring-2 ring-slate-200"
+                                      : "border border-slate-200 hover:border-slate-400"
+                                  }`}
+                                >
+                                  <AsyncCatalogImage
+                                    src={getCatalogThumbnailUrl(view.url || "")}
+                                    alt={`${item.title} ${view.label.toLowerCase()} thumbnail`}
+                                    className="h-full w-full object-contain object-center p-0.5"
+                                  />
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
 
                       <div className="min-w-0 flex-1">
