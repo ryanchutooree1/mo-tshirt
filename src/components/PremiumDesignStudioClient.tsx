@@ -232,8 +232,8 @@ export default function PremiumDesignStudioClient({
   const selectedColor = selectedShopItem?.colors[0] || "Black";
   const availableSizes = selectedShopItem ? getSizes(selectedShopItem) : DEFAULT_SIZES;
   const productPreviewImage = activeSide === "back"
-    ? selectedShopItem?.backPhotoUrl || product.backImage
-    : selectedShopItem?.photoUrl || product.image;
+    ? selectedShopItem?.studioBackPhotoUrl || selectedShopItem?.backPhotoUrl || product.backImage
+    : selectedShopItem?.studioPhotoUrl || selectedShopItem?.photoUrl || product.image;
   const method = METHODS.find((item) => item.id === methodId) ?? METHODS[0];
   const activeDesign = designs[activeSide];
   const activeArtwork = selectedArtworkCopyId === null ? activeDesign.artwork : activeDesign.artworkCopies.find((copy) => copy.id === selectedArtworkCopyId) ?? activeDesign.artwork;
@@ -478,7 +478,7 @@ export default function PremiumDesignStudioClient({
       const file = artworkFiles[side];
       return file ? [{ side, file }] : [];
     });
-    payload.append("designBrief", JSON.stringify({ product: product.label, shopItemId: selectedShopItem?.id || "", colour: selectedColor, productImages: { front: selectedShopItem?.photoUrl || product.image, back: selectedShopItem?.backPhotoUrl || product.backImage }, printMethod: method.label, activeSide, front: designs.front, back: designs.back, artworkFiles: { front: artworkFiles.front?.name || "", back: artworkFiles.back?.name || "" }, sizes, totalQty, estimatedTotal: totalPrice, rush }));
+    payload.append("designBrief", JSON.stringify({ product: product.label, shopItemId: selectedShopItem?.id || "", colour: selectedColor, productImages: { front: selectedShopItem?.studioPhotoUrl || selectedShopItem?.photoUrl || product.image, back: selectedShopItem?.studioBackPhotoUrl || selectedShopItem?.backPhotoUrl || product.backImage }, printMethod: method.label, activeSide, front: designs.front, back: designs.back, artworkFiles: { front: artworkFiles.front?.name || "", back: artworkFiles.back?.name || "" }, sizes, totalQty, estimatedTotal: totalPrice, rush }));
     payload.append("attachments", JSON.stringify(submittedArtworks.map(({ side, file }) => ({ label: `${side[0].toUpperCase()}${side.slice(1)} artwork`, description: `${product.label} ${side} print artwork`, filename: `${side}-${file.name}`, contentType: file.type, size: file.size }))));
     submittedArtworks.forEach(({ side, file }) => payload.append("files", file, `${side}-${file.name}`));
     try {

@@ -119,6 +119,8 @@ export function parseShopPayload(body: unknown): ParseResult {
   const photoUrl = cleanString(payload.photoUrl) || null;
   const backPhotoUrl = cleanString(payload.backPhotoUrl) || null;
   const sidePhotoUrl = cleanString(payload.sidePhotoUrl) || null;
+  const studioPhotoUrl = cleanString(payload.studioPhotoUrl) || null;
+  const studioBackPhotoUrl = cleanString(payload.studioBackPhotoUrl) || null;
 
   if (!photoUrl && (backPhotoUrl || sidePhotoUrl)) {
     return { ok: false, error: "Add the front view before adding back or side photos." };
@@ -139,6 +141,8 @@ export function parseShopPayload(body: unknown): ParseResult {
     photoUrl,
     backPhotoUrl,
     sidePhotoUrl,
+    studioPhotoUrl,
+    studioBackPhotoUrl,
     isActive,
     inStock,
   };

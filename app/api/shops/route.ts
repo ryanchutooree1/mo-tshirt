@@ -56,6 +56,8 @@ function mapDoc(id: string, data: Record<string, any>): ShopItem {
     photoUrl: data.photoUrl ?? null,
     backPhotoUrl: data.backPhotoUrl ?? null,
     sidePhotoUrl: data.sidePhotoUrl ?? null,
+    studioPhotoUrl: data.studioPhotoUrl ?? null,
+    studioBackPhotoUrl: data.studioBackPhotoUrl ?? null,
     position: getPositionValue(data),
     isActive: Boolean(data.isActive),
     inStock: data.inStock !== false,

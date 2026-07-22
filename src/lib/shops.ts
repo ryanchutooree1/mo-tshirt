@@ -60,6 +60,8 @@ export type ShopItem = {
   photoUrl?: string | null;
   backPhotoUrl?: string | null;
   sidePhotoUrl?: string | null;
+  studioPhotoUrl?: string | null;
+  studioBackPhotoUrl?: string | null;
   position?: number;
   isActive: boolean;
   inStock: boolean;

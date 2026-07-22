@@ -7,6 +7,7 @@ import {
   ONE_SIZE_LABEL,
   SHOP_IMAGE_VIEWS,
   formatSizeLabel,
+  getShopDesignProductId,
   getShopImageViews,
   getSizePrices,
   isOneSizeLabel,
@@ -17,6 +18,12 @@ import {
   type ShopItem,
 } from "@/lib/shops";
 import { formatMoney as formatDisplayMoney } from "@/lib/money";
+import {
+  downloadShopImage,
+  getStudioImageField,
+  prepareStudioImageFile,
+  type StudioImageViewKey,
+} from "@/lib/shop-studio-images";
 import {
   FiActivity,
   FiBarChart2,
@@ -32,6 +39,7 @@ import {
   FiTag,
   FiTrendingUp,
   FiX,
+  FiZap,
 } from "react-icons/fi";
 
 type SizePriceRow = {
@@ -127,6 +135,8 @@ type FormState = {
   photoUrl: string;
   backPhotoUrl: string;
   sidePhotoUrl: string;
+  studioPhotoUrl: string;
+  studioBackPhotoUrl: string;
   isActive: boolean;
   inStock: boolean;
 };
@@ -145,6 +155,8 @@ function buildEmptyFormState(): FormState {
     photoUrl: "",
     backPhotoUrl: "",
     sidePhotoUrl: "",
+    studioPhotoUrl: "",
+    studioBackPhotoUrl: "",
     isActive: true,
     inStock: true,
   };
@@ -277,6 +289,9 @@ export default function AdminShopsPage() {
   });
   const [selectedImageView, setSelectedImageView] = useState<ShopImageViewKey>("front");
   const [uploading, setUploading] = useState(false);
+  const [preparingStudio, setPreparingStudio] = useState(false);
+  const [preparingStudioItemId, setPreparingStudioItemId] = useState<string | null>(null);
+  const [studioProgress, setStudioProgress] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -376,6 +391,18 @@ export default function AdminShopsPage() {
     });
   }, [items, search, showActiveOnly, showInStockOnly]);
 
+  const studioItemsNeedingPreparation = useMemo(
+    () =>
+      items.filter((item) => {
+        if (!getShopDesignProductId(item.title)) return false;
+        return Boolean(
+          (item.photoUrl && !item.studioPhotoUrl) ||
+          (item.backPhotoUrl && !item.studioBackPhotoUrl)
+        );
+      }),
+    [items]
+  );
+
   const sortedFormColors = useMemo(
     () => sortQuoteColors(normalizeList(form.colors)),
     [form.colors]
@@ -441,6 +468,8 @@ export default function AdminShopsPage() {
       photoUrl: item.photoUrl || "",
       backPhotoUrl: item.backPhotoUrl || "",
       sidePhotoUrl: item.sidePhotoUrl || "",
+      studioPhotoUrl: item.studioPhotoUrl || "",
+      studioBackPhotoUrl: item.studioBackPhotoUrl || "",
       isActive: item.isActive,
       inStock: item.inStock,
     });
@@ -548,10 +577,21 @@ export default function AdminShopsPage() {
     return previewUrls[view] || getFormImageUrl(view);
   }
 
+  function getFormStudioImageUrl(view: ShopImageViewKey) {
+    if (view === "front") return form.studioPhotoUrl;
+    if (view === "back") return form.studioBackPhotoUrl;
+    return "";
+  }
+
   function updateFormImageUrl(view: ShopImageViewKey, url: string) {
     const config = SHOP_IMAGE_VIEWS.find((entry) => entry.key === view);
     if (!config) return;
-    setForm((prev) => ({ ...prev, [config.field]: url }));
+    setForm((prev) => {
+      const next = { ...prev, [config.field]: url };
+      if (view === "front" && prev.photoUrl !== url) next.studioPhotoUrl = "";
+      if (view === "back" && prev.backPhotoUrl !== url) next.studioBackPhotoUrl = "";
+      return next;
+    });
   }
 
   function getFormImageViews() {
@@ -570,19 +610,26 @@ export default function AdminShopsPage() {
     }
     setNotice(null);
     setError(null);
+    setUploading(true);
     try {
-      const url = await uploadFileAndGetUrl(selectedImageView);
-      if (url) {
+      const result = await uploadFileAndGetUrl(selectedImageView);
+      if (result.url) {
         const viewLabel = SHOP_IMAGE_VIEWS.find((view) => view.key === selectedImageView)?.label || "Photo";
-        setNotice(`${viewLabel} photo uploaded. Save the item to apply it.`);
+        setNotice(
+          result.warning
+            ? `${viewLabel} photo uploaded, but its studio copy still needs preparation. Save the item, then use Prepare studio images.`
+            : `${viewLabel} photo and transparent studio copy uploaded. Save the item to apply them.`
+        );
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Upload failed. Use an image URL instead.");
+    } finally {
+      setUploading(false);
+      setStudioProgress(null);
     }
   }
 
   async function uploadImageFile(file: File) {
-    setUploading(true);
     try {
       const body = new FormData();
       body.append("file", file);
@@ -601,20 +648,45 @@ export default function AdminShopsPage() {
       console.error("upload error", err);
       if (err instanceof Error) throw err;
       throw new Error("Photo upload failed. Paste an image URL instead.");
-    } finally {
-      setUploading(false);
     }
   }
 
   async function uploadFileAndGetUrl(view: ShopImageViewKey) {
     const file = imageFiles[view];
-    if (!file) return getFormImageUrl(view);
+    if (!file) {
+      return {
+        url: getFormImageUrl(view),
+        studioUrl:
+          view === "front"
+            ? form.studioPhotoUrl
+            : view === "back"
+              ? form.studioBackPhotoUrl
+              : "",
+      };
+    }
 
     const url = await uploadImageFile(file);
     updateFormImageUrl(view, url);
+    let studioUrl = "";
+    let warning: string | undefined;
+
+    if (view === "front" || view === "back") {
+      try {
+        setStudioProgress(`Preparing ${view} photo for Design Studio`);
+        const studioFile = await prepareStudioImageFile(file, view, setStudioProgress);
+        setStudioProgress(`Saving transparent ${view} studio image`);
+        studioUrl = await uploadImageFile(studioFile);
+        const studioField = getStudioImageField(view);
+        setForm((prev) => ({ ...prev, [studioField]: studioUrl }));
+      } catch (error) {
+        console.error("studio image preparation error", error);
+        warning = error instanceof Error ? error.message : "Studio image preparation failed.";
+      }
+    }
+
     setImageFiles((prev) => ({ ...prev, [view]: null }));
     if (photoInputRef.current) photoInputRef.current.value = "";
-    return url;
+    return { url, studioUrl, warning };
   }
 
   async function uploadPendingImageFiles() {
@@ -622,14 +694,21 @@ export default function AdminShopsPage() {
       front: form.photoUrl,
       back: form.backPhotoUrl,
       side: form.sidePhotoUrl,
+      studioFront: form.studioPhotoUrl,
+      studioBack: form.studioBackPhotoUrl,
     };
+    const warnings: string[] = [];
 
     for (const view of SHOP_IMAGE_VIEWS) {
       if (!imageFiles[view.key]) continue;
-      uploaded[view.key] = await uploadFileAndGetUrl(view.key);
+      const result = await uploadFileAndGetUrl(view.key);
+      uploaded[view.key] = result.url;
+      if (view.key === "front") uploaded.studioFront = result.studioUrl;
+      if (view.key === "back") uploaded.studioBack = result.studioUrl;
+      if (result.warning) warnings.push(result.warning);
     }
 
-    return uploaded;
+    return { uploaded, warnings };
   }
 
   async function saveItem(e: React.FormEvent) {
@@ -641,7 +720,7 @@ export default function AdminShopsPage() {
 
     try {
       const wasEditing = Boolean(editingId);
-      const imageUrls = await uploadPendingImageFiles();
+      const { uploaded: imageUrls, warnings: studioWarnings } = await uploadPendingImageFiles();
       const sizePrices =
         form.pricingMode === "single"
           ? (() => {
@@ -703,6 +782,8 @@ export default function AdminShopsPage() {
         photoUrl: imageUrls.front,
         backPhotoUrl: imageUrls.back,
         sidePhotoUrl: imageUrls.side,
+        studioPhotoUrl: imageUrls.studioFront,
+        studioBackPhotoUrl: imageUrls.studioBack,
         isActive: form.isActive,
         inStock: form.inStock,
       };
@@ -716,11 +797,16 @@ export default function AdminShopsPage() {
       if (!res.ok) throw new Error(data?.error || "Failed to save item.");
       await refresh();
       closeComposer();
-      setNotice(wasEditing ? "Item updated." : "Item created.");
+      setNotice(
+        studioWarnings.length
+          ? `${wasEditing ? "Item updated" : "Item created"}. ${studioWarnings.length} studio image${studioWarnings.length === 1 ? "" : "s"} still need preparation.`
+          : `${wasEditing ? "Item updated" : "Item created"} with transparent Design Studio images.`
+      );
     } catch (err: any) {
       setError(err?.message || "Failed to save item.");
     } finally {
       setSaving(false);
+      setStudioProgress(null);
     }
   }
 
@@ -735,6 +821,92 @@ export default function AdminShopsPage() {
     } catch (err: any) {
       setError(err?.message || "Failed to delete item.");
     }
+  }
+
+  async function prepareStudioProduct(item: ShopItem, force = false) {
+    const views: Array<{
+      view: StudioImageViewKey;
+      sourceUrl: string | null | undefined;
+      studioUrl: string | null | undefined;
+    }> = [
+      { view: "front", sourceUrl: item.photoUrl, studioUrl: item.studioPhotoUrl },
+      { view: "back", sourceUrl: item.backPhotoUrl, studioUrl: item.studioBackPhotoUrl },
+    ];
+    const patch: Record<string, string> = {};
+
+    for (const { view, sourceUrl, studioUrl } of views) {
+      if (!sourceUrl || (!force && studioUrl)) continue;
+      setStudioProgress(`Downloading ${item.title} ${view} photo`);
+      const sourceFile = await downloadShopImage(sourceUrl, item.title, view);
+      setStudioProgress(`Removing ${item.title} ${view} background`);
+      const studioFile = await prepareStudioImageFile(sourceFile, view, (label) => {
+        setStudioProgress(`${item.title} ${view}: ${label}`);
+      });
+      setStudioProgress(`Saving ${item.title} transparent ${view} image`);
+      patch[getStudioImageField(view)] = await uploadImageFile(studioFile);
+    }
+
+    if (!Object.keys(patch).length) return 0;
+    const response = await fetch(`/api/admin/shops/${item.id}/studio-images`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body?.error || `Could not save studio images for ${item.title}.`);
+    return Object.keys(patch).length;
+  }
+
+  async function prepareOneStudioProduct(item: ShopItem) {
+    if (preparingStudio || !getShopDesignProductId(item.title)) return;
+    setPreparingStudio(true);
+    setPreparingStudioItemId(item.id);
+    setNotice(null);
+    setError(null);
+    try {
+      const count = await prepareStudioProduct(item, true);
+      await refresh();
+      setNotice(
+        count
+          ? `${item.title} now has ${count} refreshed transparent studio image${count === 1 ? "" : "s"}.`
+          : `${item.title} has no front or back photo to prepare.`
+      );
+    } catch (error) {
+      setError(error instanceof Error ? error.message : `Could not prepare ${item.title}.`);
+    } finally {
+      setPreparingStudio(false);
+      setPreparingStudioItemId(null);
+      setStudioProgress(null);
+    }
+  }
+
+  async function prepareAllStudioProducts() {
+    if (preparingStudio || !studioItemsNeedingPreparation.length) return;
+    setPreparingStudio(true);
+    setPreparingStudioItemId("all");
+    setNotice(null);
+    setError(null);
+    let converted = 0;
+    const failures: string[] = [];
+
+    for (const item of studioItemsNeedingPreparation) {
+      try {
+        converted += await prepareStudioProduct(item);
+      } catch (error) {
+        console.error("studio batch preparation error", error);
+        failures.push(item.title);
+      }
+    }
+
+    await refresh();
+    if (failures.length) {
+      setError(`Prepared ${converted} studio image${converted === 1 ? "" : "s"}, but ${failures.join(", ")} could not be converted.`);
+    } else {
+      setNotice(`Prepared ${converted} transparent image${converted === 1 ? "" : "s"} for Design Studio.`);
+    }
+    setPreparingStudio(false);
+    setPreparingStudioItemId(null);
+    setStudioProgress(null);
   }
 
   async function normalizeSizes() {
@@ -834,6 +1006,18 @@ export default function AdminShopsPage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
+              {studioItemsNeedingPreparation.length > 0 && (
+                <button
+                  onClick={prepareAllStudioProducts}
+                  disabled={preparingStudio}
+                  className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"
+                >
+                  <FiZap className="h-4 w-4" />
+                  {preparingStudioItemId === "all"
+                    ? "Preparing studio images..."
+                    : `Prepare ${studioItemsNeedingPreparation.length} studio product${studioItemsNeedingPreparation.length === 1 ? "" : "s"}`}
+                </button>
+              )}
               {needsNormalization && (
                 <button
                   onClick={normalizeSizes}
@@ -922,6 +1106,13 @@ export default function AdminShopsPage() {
           </div>
         )}
 
+        {studioProgress && (
+          <div className="flex items-center gap-3 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm font-semibold text-violet-700 shadow-sm">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-violet-200 border-t-violet-600" />
+            {studioProgress}
+          </div>
+        )}
+
         <section
           className="rounded-[2rem] border border-slate-200/70 bg-white/90 p-6 shadow-sm backdrop-blur"
           style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.2s" }}
@@ -968,6 +1159,11 @@ export default function AdminShopsPage() {
                 const colorLabels = sortQuoteColors(item.colors);
                 const imageViews = getShopImageViews(item);
                 const coverImageUrl = imageViews[0]?.url || item.photoUrl;
+                const isStudioProduct = Boolean(getShopDesignProductId(item.title));
+                const hasStudioSources = Boolean(item.photoUrl || item.backPhotoUrl);
+                const studioReady = Boolean(
+                  item.studioPhotoUrl && (!item.backPhotoUrl || item.studioBackPhotoUrl)
+                );
 
                 return (
                   <li
@@ -1059,6 +1255,17 @@ export default function AdminShopsPage() {
                           <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-600">
                             {sizePrices.length} price row{sizePrices.length === 1 ? "" : "s"}
                           </span>
+                          {isStudioProduct && (
+                            <span
+                              className={`rounded-full border px-3 py-1.5 text-[11px] font-semibold ${
+                                studioReady
+                                  ? "border-violet-200 bg-violet-50 text-violet-700"
+                                  : "border-amber-200 bg-amber-50 text-amber-700"
+                              }`}
+                            >
+                              {studioReady ? "Studio ready" : "Studio images needed"}
+                            </span>
+                          )}
                         </div>
 
                         <div className="mt-4 flex flex-wrap gap-2">
@@ -1131,6 +1338,16 @@ export default function AdminShopsPage() {
                         >
                           Edit
                         </button>
+                        {isStudioProduct && hasStudioSources && (
+                          <button
+                            type="button"
+                            onClick={() => prepareOneStudioProduct(item)}
+                            disabled={preparingStudio}
+                            className="rounded-full border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-50 disabled:cursor-wait disabled:opacity-50"
+                          >
+                            {preparingStudioItemId === item.id ? "Preparing..." : studioReady ? "Refresh studio" : "Prepare studio"}
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => deleteItem(item.id)}
@@ -1203,6 +1420,13 @@ export default function AdminShopsPage() {
                             }`}
                           >
                             {error || notice}
+                          </div>
+                        )}
+
+                        {studioProgress && (
+                          <div className="flex items-center gap-3 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm font-semibold text-violet-700">
+                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-violet-200 border-t-violet-600" />
+                            {studioProgress}
                           </div>
                         )}
 
@@ -1594,6 +1818,42 @@ export default function AdminShopsPage() {
                                 className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-200"
                                 placeholder={`Paste ${SHOP_IMAGE_VIEWS.find((view) => view.key === selectedImageView)?.label.toLowerCase()} image URL`}
                               />
+
+                              {(selectedImageView === "front" || selectedImageView === "back") && (
+                                <div className="mt-4 rounded-2xl border border-violet-100 bg-violet-50/70 p-4">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <div>
+                                      <div className="text-sm font-semibold text-violet-900">Design Studio copy</div>
+                                      <div className="mt-1 text-xs leading-5 text-violet-700/75">
+                                        Generated automatically with a transparent background and consistent square alignment.
+                                      </div>
+                                    </div>
+                                    {getFormStudioImageUrl(selectedImageView) ? (
+                                      <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-emerald-700">
+                                        Ready
+                                      </span>
+                                    ) : (
+                                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-amber-700">
+                                        Pending
+                                      </span>
+                                    )}
+                                  </div>
+                                  {getFormStudioImageUrl(selectedImageView) && (
+                                    <div className="mt-3 flex items-center gap-3">
+                                      <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl border border-violet-100 bg-[linear-gradient(45deg,#e8e7f5_25%,transparent_25%),linear-gradient(-45deg,#e8e7f5_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#e8e7f5_75%),linear-gradient(-45deg,transparent_75%,#e8e7f5_75%)] bg-[length:16px_16px] bg-[position:0_0,0_8px,8px_-8px,-8px_0]">
+                                        <AsyncCatalogImage
+                                          src={getFormStudioImageUrl(selectedImageView)}
+                                          alt={`${selectedImageView} transparent studio preview`}
+                                          className="h-full w-full object-contain object-center"
+                                        />
+                                      </div>
+                                      <p className="text-xs leading-5 text-violet-700">
+                                        This copy is used only in Design Studio. The public Shops photo stays unchanged.
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </section>

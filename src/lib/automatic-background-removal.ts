@@ -14,6 +14,10 @@ export type AutomaticBackgroundRemovalResult = {
   method: "already-transparent" | "solid-color" | "ai";
 };
 
+export type AutomaticBackgroundRemovalOptions = {
+  forceAi?: boolean;
+};
+
 const SOLID_TOLERANCE = 38;
 const SOLID_FEATHER = 18;
 
@@ -208,7 +212,8 @@ export function canAutomaticallyRemoveBackground(file: Pick<File, "name" | "type
 
 export async function removeBackgroundAutomatically(
   input: File,
-  onProgress?: (update: BackgroundRemovalProgress) => void
+  onProgress?: (update: BackgroundRemovalProgress) => void,
+  options: AutomaticBackgroundRemovalOptions = {}
 ): Promise<AutomaticBackgroundRemovalResult> {
   onProgress?.({ progress: 0.04, label: "Preparing logo" });
   const file = await prepareImage(input);
@@ -218,7 +223,7 @@ export async function removeBackgroundAutomatically(
     onProgress?.({ progress: 1, label: "Already transparent" });
     return { blob: solidResult.blob, method: solidResult.method };
   }
-  if (solidResult.cornerSpread <= 42) {
+  if (!options.forceAi && solidResult.cornerSpread <= 42) {
     onProgress?.({ progress: 1, label: "Transparent PNG ready" });
     return { blob: solidResult.blob, method: solidResult.method };
   }
