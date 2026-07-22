@@ -67,6 +67,24 @@ export type ShopItem = {
 
 export type ShopItemInput = Omit<ShopItem, "id">;
 
+export type ShopDesignProductId = "tshirt" | "polo";
+
+export function getShopDesignProductId(title: string): ShopDesignProductId | null {
+  const normalized = String(title || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+
+  if (normalized === "plain poloshirt" || normalized === "plain polo shirt") {
+    return "polo";
+  }
+  if (normalized === "plain t shirt" || normalized === "plain tshirt") {
+    return "tshirt";
+  }
+  return null;
+}
+
 export type ShopSelection = {
   color: string;
   size: string;

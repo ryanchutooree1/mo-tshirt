@@ -124,13 +124,6 @@ export async function proxy(req: NextRequest) {
     return applySecurityHeaders(response);
   }
 
-  if (pathname === "/design-studio") {
-    const url = req.nextUrl.clone();
-    url.pathname = "/";
-    url.hash = "contact";
-    return applySecurityHeaders(NextResponse.redirect(url, 308));
-  }
-
   if (isPartnerDeskRoute(pathname)) {
     const response = NextResponse.next();
     response.headers.set("X-Robots-Tag", "noindex, nofollow");

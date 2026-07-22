@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FiDownload } from "react-icons/fi";
+import { FiDownload, FiEdit3 } from "react-icons/fi";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { getWhatsAppUrl } from "@/data/work";
 import { trackShopOrderSubmit, trackWhatsAppClick } from "@/lib/analytics";
@@ -12,6 +12,7 @@ import {
   buildShopWhatsAppMessageForLines,
   formatSizeLabel,
   getSizePrice,
+  getShopDesignProductId,
   getShopImageViews,
   getSizePrices,
   getSizes,
@@ -814,6 +815,15 @@ export default function ShopClient() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
+                    {getShopDesignProductId(item.title) && item.inStock ? (
+                      <Link
+                        href={`/design-studio?shopItem=${encodeURIComponent(item.id)}`}
+                        className="inline-flex items-center justify-center gap-2 rounded-full bg-[#FF6600] px-4 py-2 text-xs font-semibold text-white transition hover:bg-orange-600"
+                      >
+                        <FiEdit3 className="h-3.5 w-3.5" />
+                        Design this product
+                      </Link>
+                    ) : null}
                     <button
                       type="button"
                       onClick={() => addLineItem(item)}
