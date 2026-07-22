@@ -90,8 +90,8 @@ export default function ServiceLandingPage({ page }: ServiceLandingPageProps) {
             <Link href="/" className="transition hover:text-black">
               Home
             </Link>
-            <Link href="/shops" className="transition hover:text-black">
-              Plain T-Shirts
+            <Link href="/shop" className="transition hover:text-black">
+              Shop
             </Link>
             <a href="#quote" className="transition hover:text-black">
               Get Quote
@@ -359,8 +359,8 @@ export default function ServiceLandingPage({ page }: ServiceLandingPageProps) {
             <Link href="/" className="transition hover:text-white">
               Home
             </Link>
-            <Link href="/shops" className="transition hover:text-white">
-              Plain T-Shirts
+            <Link href="/shop" className="transition hover:text-white">
+              Shop
             </Link>
             <Link href="/contact" className="transition hover:text-white">
               Contact

@@ -577,10 +577,10 @@ export default function ShopClient() {
             />
           </Link>
           <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
-            <nav className="flex w-max min-w-full items-center justify-start gap-2 pb-1 text-xs font-semibold text-neutral-600 sm:w-auto sm:min-w-0 sm:justify-end sm:gap-4 sm:pb-0 sm:text-sm" aria-label="Shops navigation">
+            <nav className="flex w-max min-w-full items-center justify-start gap-2 pb-1 text-xs font-semibold text-neutral-600 sm:w-auto sm:min-w-0 sm:justify-end sm:gap-4 sm:pb-0 sm:text-sm" aria-label="Shop navigation">
               <Link href="/" className="whitespace-nowrap rounded-full border border-neutral-200 bg-white px-3 py-2 transition hover:border-black hover:text-black sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">Home</Link>
-              <Link href="/shops" className="whitespace-nowrap rounded-full border border-transparent bg-[#FF6600] px-3 py-2 text-white shadow-sm hover:bg-orange-600 sm:px-3 sm:py-1">
-                Plain Shops
+              <Link href="/shop" className="whitespace-nowrap rounded-full border border-transparent bg-[#FF6600] px-3 py-2 text-white shadow-sm hover:bg-orange-600 sm:px-3 sm:py-1">
+                Shop
               </Link>
               <Link href="/#our-work" className="whitespace-nowrap rounded-full border border-neutral-200 bg-white px-3 py-2 transition hover:border-black hover:text-black sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">Our Work</Link>
               <Link href="/#contact" className="whitespace-nowrap rounded-full border border-neutral-200 bg-white px-3 py-2 transition hover:border-black hover:text-black sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">Contact</Link>

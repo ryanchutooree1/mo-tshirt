@@ -35,8 +35,8 @@ export default async function DesignStudioPage({ searchParams }: DesignStudioPag
   return (
     <main className={`ceo-theme ${sora.variable} ${plusJakartaSans.variable}`}>
       <PremiumDesignStudioClient
-        backHref="/shops"
-        backLabel="Back to shops"
+        backHref="/shop"
+        backLabel="Back to shop"
         initialShopItemId={shopItem}
         requestSource="Public Design Studio"
       />

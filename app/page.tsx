@@ -7,6 +7,7 @@ import { buildPageMetadata } from "@/lib/seo";
 import {
   HiOutlineCheckBadge,
   HiOutlineBolt,
+  HiOutlineClipboardDocumentList,
   HiOutlineGlobeAlt,
   HiOutlineShoppingBag,
   HiOutlineSparkles,
@@ -34,7 +35,7 @@ const navLinks = [
   { label: "Uniform Designs", href: READY_MADE_UNIFORMS_PATH },
   { label: "Quote Form", href: "#contact", buttonTone: "orange" as const },
   { label: "MO AI Order", href: "#mo-ai-order", buttonTone: "rainbow" as const },
-  { label: "Plain Shops", href: "/shops" },
+  { label: "Shop", href: "/shop" },
   { label: "Our Work", href: "#our-work" },
   { label: "Contact", href: "#contact" },
   { label: "WhatsApp", href: getWhatsAppUrl() },
@@ -167,7 +168,7 @@ export default function HomePage() {
                   <a
                     key={link.label}
                     href={link.href}
-                    className={`rounded-2xl px-4 py-3 transition ${
+                    className={`flex items-center gap-2 rounded-2xl px-4 py-3 transition ${
                       link.buttonTone === "orange"
                         ? "bg-[#FF6600] text-white shadow-sm hover:bg-orange-600"
                         : link.buttonTone === "rainbow"
@@ -175,6 +176,11 @@ export default function HomePage() {
                           : "hover:bg-neutral-50 hover:text-black"
                     }`}
                   >
+                    {link.label === "Quote Form" ? (
+                      <HiOutlineClipboardDocumentList className="h-4 w-4" aria-hidden="true" />
+                    ) : link.label === "Shop" ? (
+                      <HiOutlineShoppingBag className="h-4 w-4" aria-hidden="true" />
+                    ) : null}
                     {link.label}
                   </a>
                 )
@@ -212,7 +218,9 @@ export default function HomePage() {
                           : "text-black/70 hover:text-black"
                     }`}
                   >
-                    {link.label === "Plain Shops" ? (
+                    {link.label === "Quote Form" ? (
+                      <HiOutlineClipboardDocumentList className="h-4 w-4" aria-hidden="true" />
+                    ) : link.label === "Shop" ? (
                       <HiOutlineShoppingBag className="h-4 w-4" aria-hidden="true" />
                     ) : null}
                     {link.label}

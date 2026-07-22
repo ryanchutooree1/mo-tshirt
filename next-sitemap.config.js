@@ -45,7 +45,7 @@ module.exports = {
     let priority = 0.7;
     if (normalized === "/") priority = 1.0;
     else if (normalized === "/contact") priority = 0.9;
-    else if (normalized === "/shops") priority = 0.85;
+    else if (normalized === "/shop") priority = 0.85;
     else if (servicePages.has(normalized)) priority = 0.85;
     return {
       loc: path,

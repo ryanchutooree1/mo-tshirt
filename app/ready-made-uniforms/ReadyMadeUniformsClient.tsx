@@ -77,7 +77,7 @@ export default function ReadyMadeUniformsClient({ uniforms }: Props) {
 
           <nav className="flex w-full max-w-full items-center gap-2 overflow-x-auto text-sm font-semibold text-neutral-600 sm:w-auto sm:justify-end sm:gap-4 sm:overflow-visible">
             <Link href="/" className="shrink-0 rounded-full px-4 py-2 transition hover:bg-neutral-100 hover:text-black">Home</Link>
-            <Link href="/shops" className="shrink-0 rounded-full px-4 py-2 transition hover:bg-neutral-100 hover:text-black">Plain Shops</Link>
+            <Link href="/shop" className="shrink-0 rounded-full px-4 py-2 transition hover:bg-neutral-100 hover:text-black">Shop</Link>
             <a href="#collections" className="shrink-0 rounded-full bg-[#FF6600] px-5 py-2 text-white shadow-sm transition hover:bg-orange-600">Uniforms</a>
             <Link href="/#work" className="shrink-0 rounded-full px-4 py-2 transition hover:bg-neutral-100 hover:text-black">Our Work</Link>
             <TrackedWhatsAppLink
