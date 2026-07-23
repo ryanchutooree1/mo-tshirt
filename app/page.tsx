@@ -408,19 +408,14 @@ export default function HomePage() {
                   <QuoteForm source="Website Quotation" />
                 </div>
               </div>
-              <div className="relative overflow-hidden rounded-[24px] border border-[#EAEAEA] bg-neutral-50 shadow-sm">
-                <div className="px-8 pt-5 text-sm text-neutral-500">
-                </div>
-                <div className="mt-4 px-6 pb-6">
-                  <Image
-                    src="/boss_imagine.webp"
-                    alt="Business owner imagining his team in branded company shirts"
-                    width={1122}
-                    height={1402}
-                    className="block h-auto w-full object-contain"
-                    sizes="(max-width: 1024px) 100vw, 40vw"
-                  />
-                </div>
+              <div className="relative aspect-[1122/1402] overflow-hidden rounded-[24px] border border-[#EAEAEA] bg-neutral-50 shadow-sm lg:aspect-auto">
+                <Image
+                  src="/boss_imagine.webp"
+                  alt="Business owner imagining his team in branded company shirts"
+                  fill
+                  className="object-cover object-center"
+                  sizes="(max-width: 1024px) 100vw, 40vw"
+                />
               </div>
             </div>
 
