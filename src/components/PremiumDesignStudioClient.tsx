@@ -46,6 +46,7 @@ import {
   type ReactNode,
 } from "react";
 import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
+import { removeBackgroundAutomatically } from "@/lib/automatic-background-removal";
 import { formatMoney } from "@/lib/money";
 import {
   getMinSizePrice,
@@ -350,6 +351,14 @@ export default function PremiumDesignStudioClient({
   function handleArtwork(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (file) chooseArtwork(file, uploadTarget.current);
+  }
+
+  function replaceArtworkFile(file: File, side: Side) {
+    const nextUrl = URL.createObjectURL(file);
+    setArtworkFiles((current) => ({ ...current, [side]: file }));
+    setArtworkUrls((current) => ({ ...current, [side]: nextUrl }));
+    setResult(null);
+    changeSide(side);
   }
 
   function clearArtwork(side: Side) {
@@ -673,7 +682,7 @@ export default function PremiumDesignStudioClient({
 
                 {step === 3 ? <div className="space-y-6"><div><Label>Print side</Label><div className="mt-3 grid grid-cols-2 gap-3">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-2xl border p-4 text-left ${activeSide === side ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e4e3de]"}`}><div className="flex justify-between"><Layers3 className="h-5 w-5 text-[#ff5a0a]" />{activeSide === side ? <CheckCircle2 className="h-5 w-5 text-[#ff5a0a]" /> : null}</div><p className="mt-5 text-sm font-extrabold capitalize">{side}</p><p className="mt-1 text-xs text-[#85847d]">Design the {side} side.</p></button>)}</div></div><div><Label>Print method</Label><div className="mt-3 space-y-2.5">{METHODS.map((option) => <label key={option.id} className={`flex cursor-pointer gap-3 rounded-2xl border p-3.5 ${methodId === option.id ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e4e3de]"}`}><input type="radio" name="method" checked={methodId === option.id} onChange={() => setMethodId(option.id)} className="mt-1 accent-[#ff5a0a]" /><span><span className="block text-sm font-bold">{option.label}</span><span className="mt-1 block text-xs leading-5 text-[#85847d]">{option.note}</span></span></label>)}</div></div></div> : null}
 
-                {step === 4 ? <div className="space-y-4"><div className="rounded-2xl border border-[#ffd8c4] bg-[linear-gradient(135deg,#fff8f3_0%,#fff_100%)] p-4"><div className="flex gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ff5a0a] text-white"><Layers3 className="h-5 w-5" /></span><div><p className="text-sm font-extrabold">One file for each print side</p><p className="mt-1 text-xs leading-5 text-[#7d6b62]">Upload separate artwork for the front and back. You can add either side or both.</p></div></div></div><input ref={artworkInput} type="file" accept=".png,.jpg,.jpeg,.webp,.svg" onClick={(event) => { event.currentTarget.value = ""; }} onChange={handleArtwork} className="hidden" />{(["front", "back"] as Side[]).map((side) => <ArtworkUploadSlot key={side} side={side} file={artworkFiles[side]} url={artworkUrls[side]} active={activeSide === side} onChoose={() => openArtworkPicker(side)} onDrop={(file) => chooseArtwork(file, side)} onRemove={() => clearArtwork(side)} onPosition={() => { changeSide(side); setStep(5); }} />)}<div className="flex items-center justify-center gap-2 text-[9px] font-bold uppercase tracking-[0.1em] text-[#8d8b84]"><BadgeCheck className="h-4 w-4 text-[#16a462]" />PNG, JPG, WEBP or SVG · 5MB per file</div>{result && !result.ok ? <p className="rounded-xl bg-[#fff1f1] p-3 text-xs text-[#b91c1c]">{result.text}</p> : null}</div> : null}
+                {step === 4 ? <div className="space-y-4"><div className="rounded-2xl border border-[#ffd8c4] bg-[linear-gradient(135deg,#fff8f3_0%,#fff_100%)] p-4"><div className="flex gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ff5a0a] text-white"><Layers3 className="h-5 w-5" /></span><div><p className="text-sm font-extrabold">One file for each print side</p><p className="mt-1 text-xs leading-5 text-[#7d6b62]">Upload separate artwork for the front and back. You can add either side or both.</p></div></div></div><input ref={artworkInput} type="file" accept=".png,.jpg,.jpeg,.webp,.svg" onClick={(event) => { event.currentTarget.value = ""; }} onChange={handleArtwork} className="hidden" />{(["front", "back"] as Side[]).map((side) => <ArtworkUploadSlot key={side} side={side} file={artworkFiles[side]} url={artworkUrls[side]} active={activeSide === side} onChoose={() => openArtworkPicker(side)} onDrop={(file) => chooseArtwork(file, side)} onRemove={() => clearArtwork(side)} onBackgroundRemoved={(file) => replaceArtworkFile(file, side)} onPosition={() => { changeSide(side); setStep(5); }} />)}<div className="flex items-center justify-center gap-2 text-[9px] font-bold uppercase tracking-[0.1em] text-[#8d8b84]"><BadgeCheck className="h-4 w-4 text-[#16a462]" />PNG, JPG, WEBP or SVG · 5MB per file</div>{result && !result.ok ? <p className="rounded-xl bg-[#fff1f1] p-3 text-xs text-[#b91c1c]">{result.text}</p> : null}</div> : null}
 
                 {step === 5 ? <div className="space-y-4"><div><Label>Artwork side</Label><div className="mt-2 grid grid-cols-2 gap-2">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-2xl border p-3 text-left transition ${activeSide === side ? "border-[#ff5a0a] bg-[#fff8f3] ring-2 ring-[#ff5a0a]/10" : "border-[#e2e1dc] bg-white"}`}><span className="flex items-center justify-between"><span className="text-xs font-extrabold capitalize">{side}</span>{artworkUrls[side] ? <CheckCircle2 className="h-4 w-4 text-[#16a462]" /> : <span className="h-2 w-2 rounded-full bg-[#d5d3cc]" />}</span><span className="mt-1 block text-[9px] font-bold uppercase tracking-[0.08em] text-[#96948c]">{artworkUrls[side] ? "Artwork ready" : "No artwork"}</span></button>)}</div></div>{activeArtworkUrl ? <><div className="flex items-center gap-3 rounded-2xl border border-[#c9ead8] bg-[#f4fbf7] p-3"><span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm"><img src={activeArtworkUrl} alt={`${activeSide} artwork preview`} className="h-full w-full object-contain" /></span><span className="min-w-0 flex-1"><span className="block text-[9px] font-bold uppercase tracking-[0.1em] text-[#168455]">Editing {selectedArtworkCopyId === null ? activeSide : `duplicated ${activeSide}`}</span><span className="mt-1 block truncate text-xs font-bold">{artworkFiles[activeSide]?.name}</span></span></div><div className="grid grid-cols-3 gap-2"><PresetButton icon={<Crosshair />} label="Left chest" onClick={() => patchArtwork({ x: -28, y: -38 })} /><PresetButton icon={<Focus />} label="Centre" onClick={() => patchArtwork({ x: 0, y: 0 })} /><PresetButton icon={<Move />} label="Lower" onClick={() => patchArtwork({ x: 0, y: 52 })} /></div><RangeControl icon={<ZoomIn />} label="Artwork size" value={activeArtwork.scale} min={ARTWORK_SCALE_MIN} max={ARTWORK_SCALE_MAX} suffix="%" onChange={(value) => patchArtwork({ scale: value })} /><RangeControl icon={<Move />} label="Horizontal" value={activeArtwork.x} min={-LAYER_X_LIMIT} max={LAYER_X_LIMIT} onChange={(value) => patchArtwork({ x: value })} /><RangeControl icon={<Move className="rotate-90" />} label="Vertical" value={activeArtwork.y} min={-LAYER_Y_LIMIT} max={LAYER_Y_LIMIT} onChange={(value) => patchArtwork({ y: value })} /><RangeControl icon={<RotateCcw />} label="Rotation" value={activeArtwork.rotate} min={-180} max={180} suffix="°" onChange={(value) => patchArtwork({ rotate: value })} /><button type="button" onClick={() => setSnap((current) => !current)} className={`flex w-full items-center justify-between rounded-2xl border p-4 ${snap ? "border-[#bfe9d4] bg-[#f1fbf6]" : "border-[#e2e1dc]"}`}><span className="flex items-center gap-2 text-sm font-bold"><Magnet className="h-4 w-4 text-[#16a462]" />Snap to centre</span><span className={`rounded-full px-2 py-1 text-[9px] font-bold ${snap ? "studio-success bg-[#16a462] !text-white" : "bg-[#efeee9]"}`}>{snap ? "ON" : "OFF"}</span></button></> : <div className="flex min-h-64 flex-col items-center justify-center rounded-[22px] border-2 border-dashed border-[#ddd9d1] bg-[#fafaf7] p-6 text-center"><span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-[#ff5a0a] shadow-[0_8px_25px_rgba(35,32,24,.08)]"><ImagePlus className="h-6 w-6" /></span><p className="mt-4 text-sm font-extrabold">No {activeSide} artwork yet</p><p className="mt-1 max-w-[250px] text-xs leading-5 text-[#85847d]">Upload an image for this side before positioning it, or continue to add text only.</p><button type="button" onClick={() => setStep(4)} className="studio-primary mt-4 inline-flex items-center gap-2 rounded-xl bg-[#ff5a0a] px-4 py-2.5 text-xs font-bold !text-white"><UploadCloud className="h-4 w-4" />Go to uploads</button></div>}</div> : null}
 
@@ -707,8 +716,89 @@ function PresetButton({ icon, label, disabled, onClick }: { icon: ReactNode; lab
 function Benefit({ icon, title }: { icon: ReactNode; title: string }) { return <div className="flex items-center justify-center gap-3 sm:justify-start"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#fff0e8] text-[#ff5a0a] [&_svg]:h-5 [&_svg]:w-5">{icon}</span><span className="text-xs font-bold text-[#4a4944]">{title}</span></div>; }
 function Success({ message, onReset }: { message: string; onReset: () => void }) { return <div className="flex min-h-[430px] flex-col items-center justify-center text-center"><span className="studio-success flex h-20 w-20 items-center justify-center rounded-full bg-[#1faf68] !text-white"><Check className="h-10 w-10" /></span><h3 className="mt-6 text-3xl font-extrabold">Thank you!</h3><p className="mt-2 max-w-xs text-sm leading-6 text-[#77766f]">{message}</p><div className="mt-6 rounded-2xl bg-[#f5f4f0] p-4 text-sm"><Label>What happens next</Label><p className="mt-2 font-semibold">We will review your design and confirm the final price within 24 hours.</p></div><button type="button" onClick={onReset} className="studio-primary mt-5 w-full rounded-xl bg-[#ff5a0a] px-4 py-3 text-sm font-bold !text-white">Create another design</button></div>; }
 
-function ArtworkUploadSlot({ side, file, url, active, onChoose, onDrop, onRemove, onPosition }: { side: Side; file: File | null; url: string | null; active: boolean; onChoose: () => void; onDrop: (file: File) => void; onRemove: () => void; onPosition: () => void }) {
+type ArtworkUploadSlotProps = {
+  side: Side;
+  file: File | null;
+  url: string | null;
+  active: boolean;
+  onChoose: () => void;
+  onDrop: (file: File) => void;
+  onRemove: () => void;
+  onBackgroundRemoved: (file: File) => void;
+  onPosition: () => void;
+};
+
+type BackgroundRemovalState = "idle" | "processing" | "done" | "error";
+
+function ArtworkUploadSlot({
+  side,
+  file,
+  url,
+  active,
+  onChoose,
+  onDrop,
+  onRemove,
+  onBackgroundRemoved,
+  onPosition,
+}: ArtworkUploadSlotProps) {
   const title = `${side[0].toUpperCase()}${side.slice(1)}`;
+  const [removalState, setRemovalState] = useState<BackgroundRemovalState>("idle");
+  const [removalProgress, setRemovalProgress] = useState(0);
+  const [removalMessage, setRemovalMessage] = useState("");
+  const processedFile = useRef<File | null>(null);
+
+  useEffect(() => {
+    if (file === processedFile.current) return;
+    setRemovalState("idle");
+    setRemovalProgress(0);
+    setRemovalMessage("");
+  }, [file]);
+
+  async function removeArtworkBackground() {
+    if (!file || removalState === "processing") return;
+
+    setRemovalState("processing");
+    setRemovalProgress(0.04);
+    setRemovalMessage("Preparing your logo");
+
+    try {
+      const result = await removeBackgroundAutomatically(file, ({ progress, label }) => {
+        setRemovalProgress(progress);
+        setRemovalMessage(label);
+      });
+      const baseName = file.name.replace(/\.[^.]+$/, "") || `${side}-artwork`;
+      const transparentFile = new File([result.blob], `${baseName}-transparent.png`, {
+        type: "image/png",
+        lastModified: Date.now(),
+      });
+
+      processedFile.current = transparentFile;
+      onBackgroundRemoved(transparentFile);
+      setRemovalProgress(1);
+      setRemovalState("done");
+      setRemovalMessage(
+        result.method === "already-transparent"
+          ? "Your logo was already transparent"
+          : "Background removed — transparent PNG ready"
+      );
+    } catch (error) {
+      setRemovalState("error");
+      setRemovalProgress(0);
+      setRemovalMessage(
+        error instanceof Error ? error.message : "Could not remove the background. Please try again."
+      );
+    }
+  }
+
+  const isRemovingBackground = removalState === "processing";
+  const magicButtonLabel =
+    removalState === "done"
+      ? "Background removed"
+      : removalState === "error"
+        ? "Try magic again"
+        : isRemovingBackground
+          ? removalMessage
+          : "Remove background";
 
   return (
     <section className={`overflow-hidden rounded-[22px] border transition ${file ? "border-[#cbded3] bg-[#fbfefc]" : active ? "border-[#ffb48f] bg-[#fffaf7]" : "border-[#dfded8] bg-white"}`} aria-label={`${title} artwork upload`}>
@@ -716,7 +806,127 @@ function ArtworkUploadSlot({ side, file, url, active, onChoose, onDrop, onRemove
         <div className="flex items-center gap-2.5"><span className={`flex h-8 w-8 items-center justify-center rounded-lg ${side === "front" ? "bg-[#fff0e8] text-[#e94f08]" : "bg-[#efefff] text-[#5551c8]"}`}><Shirt className="h-4 w-4" /></span><div><h3 className="text-sm font-extrabold">{title} artwork</h3><p className="text-[9px] font-bold uppercase tracking-[0.1em] text-[#97958e]">Printed on the {side}</p></div></div>
         {file ? <span className="flex items-center gap-1 rounded-full bg-[#eaf8f0] px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.08em] text-[#13814f]"><CheckCircle2 className="h-3.5 w-3.5" />Ready</span> : <span className="rounded-full bg-[#f2f1ed] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.08em] text-[#8b8982]">Optional</span>}
       </div>
-      {file && url ? <div className="p-3.5"><div className="flex items-center gap-3"><span className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#e6e5df] bg-[radial-gradient(circle_at_50%_35%,#fff_0%,#f0efeb_100%)] p-2"><img src={url} alt={`${title} artwork preview`} className="h-full w-full object-contain" /></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-extrabold">{file.name}</p><p className="mt-1 text-[10px] text-[#86847d]">{(file.size / 1024 / 1024).toFixed(2)} MB · Uploaded separately</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={onChoose} className="rounded-lg border border-[#dcdbd5] bg-white px-3 py-2 text-[10px] font-bold hover:border-[#ff9c6c]">Replace</button><button type="button" onClick={onRemove} className="flex items-center gap-1 rounded-lg border border-[#f0d5d5] bg-[#fffafa] px-3 py-2 text-[10px] font-bold text-[#b94343]"><Trash2 className="h-3.5 w-3.5" />Remove</button></div></div></div><button type="button" onClick={onPosition} className="mt-3 flex w-full items-center justify-between rounded-xl bg-[#181815] px-4 py-3 text-xs font-bold text-white"><span>Position {title.toLowerCase()} artwork</span><ArrowRight className="h-4 w-4" /></button></div> : <button type="button" onClick={onChoose} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); const droppedFile = event.dataTransfer.files?.[0]; if (droppedFile) onDrop(droppedFile); }} className="group flex min-h-36 w-full flex-col items-center justify-center p-5 text-center outline-none focus-visible:ring-2 focus-visible:ring-[#ff5a0a] focus-visible:ring-inset"><span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f5f4f0] text-[#ff5a0a] transition group-hover:bg-[#fff0e8]"><UploadCloud className="h-5 w-5" /></span><span className="mt-3 text-xs font-extrabold">Choose {title.toLowerCase()} artwork</span><span className="mt-1 text-[10px] text-[#8a8982]">Browse or drag and drop here</span></button>}
+      {file && url ? (
+        <div className="p-3.5">
+          <div className="flex items-center gap-3">
+            <span className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[#e6e5df] bg-[conic-gradient(#edf0f4_25%,#fff_0_50%,#edf0f4_0_75%,#fff_0)] bg-[size:14px_14px] p-2">
+              <img src={url} alt={`${title} artwork preview`} className="h-full w-full object-contain" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-extrabold">{file.name}</p>
+              <p className="mt-1 text-[10px] text-[#86847d]">
+                {(file.size / 1024 / 1024).toFixed(2)} MB · Uploaded separately
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={onChoose}
+                  disabled={isRemovingBackground}
+                  className="rounded-lg border border-[#dcdbd5] bg-white px-3 py-2 text-[10px] font-bold hover:border-[#ff9c6c] disabled:cursor-wait disabled:opacity-50"
+                >
+                  Replace
+                </button>
+                <button
+                  type="button"
+                  onClick={onRemove}
+                  disabled={isRemovingBackground}
+                  className="flex items-center gap-1 rounded-lg border border-[#f0d5d5] bg-[#fffafa] px-3 py-2 text-[10px] font-bold text-[#b94343] disabled:cursor-wait disabled:opacity-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Remove
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={removeArtworkBackground}
+            disabled={isRemovingBackground}
+            aria-label={`Remove background from ${title.toLowerCase()} artwork`}
+            className="group relative mt-3 flex min-h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-[linear-gradient(110deg,#7c3aed_0%,#db2777_35%,#f97316_68%,#06b6d4_100%)] px-4 py-3 text-xs font-extrabold text-white shadow-[0_10px_26px_rgba(168,85,247,.3)] transition duration-300 hover:-translate-y-0.5 hover:saturate-150 hover:shadow-[0_14px_32px_rgba(219,39,119,.34)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a855f7] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-80"
+          >
+            <span
+              aria-hidden="true"
+              className="absolute inset-y-[-40%] left-[-30%] w-1/4 rotate-12 bg-white/35 blur-md transition-transform duration-700 group-hover:translate-x-[600%]"
+            />
+            {isRemovingBackground ? (
+              <Loader2 className="relative h-4 w-4 animate-spin" />
+            ) : removalState === "done" ? (
+              <CheckCircle2 className="relative h-4 w-4" />
+            ) : (
+              <Sparkles className="relative h-4 w-4" />
+            )}
+            <span className="relative">{magicButtonLabel}</span>
+            {!isRemovingBackground && removalState !== "done" ? (
+              <span className="relative rounded-full border border-white/35 bg-white/20 px-2 py-0.5 text-[8px] uppercase tracking-[0.16em]">
+                Magic
+              </span>
+            ) : null}
+          </button>
+
+          {removalState !== "idle" ? (
+            <div
+              className={`mt-2 rounded-xl px-3 py-2 ${
+                removalState === "error"
+                  ? "bg-[#fff1f2] text-[#be123c]"
+                  : removalState === "done"
+                    ? "bg-[#ecfdf5] text-[#047857]"
+                    : "bg-[#f5f3ff] text-[#6d28d9]"
+              }`}
+              aria-live="polite"
+            >
+              <div className="flex items-center justify-between gap-3 text-[9px] font-bold">
+                <span>{removalMessage}</span>
+                {isRemovingBackground ? <span>{Math.round(removalProgress * 100)}%</span> : null}
+              </div>
+              {isRemovingBackground ? (
+                <div
+                  className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/70"
+                  role="progressbar"
+                  aria-label="Background removal progress"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(removalProgress * 100)}
+                >
+                  <div
+                    className="h-full rounded-full bg-[linear-gradient(90deg,#8b5cf6,#ec4899,#f97316)] transition-[width] duration-300"
+                    style={{ width: `${Math.round(removalProgress * 100)}%` }}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={onPosition}
+            disabled={isRemovingBackground}
+            className="mt-3 flex w-full items-center justify-between rounded-xl bg-[#181815] px-4 py-3 text-xs font-bold text-white disabled:cursor-wait disabled:opacity-50"
+          >
+            <span>Position {title.toLowerCase()} artwork</span>
+            <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={onChoose}
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={(event) => {
+            event.preventDefault();
+            const droppedFile = event.dataTransfer.files?.[0];
+            if (droppedFile) onDrop(droppedFile);
+          }}
+          className="group flex min-h-36 w-full flex-col items-center justify-center p-5 text-center outline-none focus-visible:ring-2 focus-visible:ring-[#ff5a0a] focus-visible:ring-inset"
+        >
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f5f4f0] text-[#ff5a0a] transition group-hover:bg-[#fff0e8]">
+            <UploadCloud className="h-5 w-5" />
+          </span>
+          <span className="mt-3 text-xs font-extrabold">Choose {title.toLowerCase()} artwork</span>
+          <span className="mt-1 text-[10px] text-[#8a8982]">Browse or drag and drop here</span>
+        </button>
+      )}
     </section>
   );
 }
