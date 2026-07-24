@@ -7,6 +7,7 @@ export type AdminPagePath =
   | "/admin/shops"
   | "/admin/ready-made-uniforms"
   | "/admin/inventory"
+  | "/admin/inventory-photo-log"
   | "/admin/quotation-approval"
   | "/admin/tanvi"
   | "/admin/partners"
@@ -151,6 +152,12 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
     path: "/admin/inventory",
     label: "Inventory",
     description: "Products, stock, and pricing updates.",
+    group: "Operations",
+  },
+  {
+    path: "/admin/inventory-photo-log",
+    label: "Inventory Photo Log",
+    description: "Capture stock photos now and complete inventory details later.",
     group: "Operations",
   },
   {
@@ -407,6 +414,7 @@ export const DEFAULT_MORE_NAV_PATHS: AdminPagePath[] = [
   "/admin",
   "/admin/orders",
   "/admin/inventory",
+  "/admin/inventory-photo-log",
   "/admin/automation",
   "/admin/partners",
   "/admin/settings",
@@ -453,6 +461,7 @@ export function resolveAdminPagePath(pathname: string) {
 }
 
 export function resolveAdminApiPermission(pathname: string) {
+  if (pathname.startsWith("/api/admin/inventory-photo-log")) return "/admin/inventory-photo-log" as AdminPagePath;
   if (pathname.startsWith("/api/admin/tanvi")) return "/admin/tanvi" as AdminPagePath;
   if (pathname.startsWith("/api/admin/settings")) return "/admin/settings" as AdminPagePath;
   if (pathname.startsWith("/api/admin/partners")) return "/admin/partners" as AdminPagePath;

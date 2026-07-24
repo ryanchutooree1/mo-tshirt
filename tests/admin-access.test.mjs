@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   hasAdminPageAccess,
+  resolveAdminApiPermission,
   resolveAdminPagePath,
 } from "../src/lib/admin-access.ts";
 
@@ -16,6 +17,25 @@ test("the dashboard permission does not grant unregistered admin routes", () => 
 
 test("registered nested routes resolve to their owning module", () => {
   assert.equal(resolveAdminPagePath("/admin/partners/example"), "/admin/partners");
+});
+
+test("inventory photo log pages and APIs use the new scoped permission", () => {
+  assert.equal(
+    resolveAdminPagePath("/admin/inventory-photo-log"),
+    "/admin/inventory-photo-log"
+  );
+  assert.equal(
+    resolveAdminApiPermission("/api/admin/inventory-photo-log/upload"),
+    "/admin/inventory-photo-log"
+  );
+  assert.equal(
+    hasAdminPageAccess(
+      ["/admin/inventory-photo-log"],
+      "/admin/inventory-photo-log",
+      { isOwner: false }
+    ),
+    true
+  );
 });
 
 test("Tanvi access continues to include quotations", () => {
