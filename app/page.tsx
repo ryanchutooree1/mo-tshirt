@@ -250,10 +250,10 @@ export default function HomePage() {
 
             <div className="mt-[49px] w-full max-w-5xl lg:max-w-6xl">
               <Image
-                src="/all_products.jpg"
-                alt="Custom T-shirt printing in Mauritius"
-                width={1600}
-                height={628}
+                src="/design-it-we-print-it.webp"
+                alt="Design it. We print it. MO T-Shirt custom garment design studio"
+                width={2666}
+                height={1422}
                 className="h-auto w-full rounded-[32px] border border-[#EAEAEA] object-cover shadow-sm"
                 priority
                 sizes="(max-width: 1024px) calc(100vw - 48px), 1024px"
