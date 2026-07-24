@@ -729,6 +729,7 @@ type ArtworkUploadSlotProps = {
 };
 
 type BackgroundRemovalState = "idle" | "processing" | "done" | "error";
+type BackgroundRemovalMode = "smart" | "ai";
 
 function ArtworkUploadSlot({
   side,
@@ -745,41 +746,77 @@ function ArtworkUploadSlot({
   const [removalState, setRemovalState] = useState<BackgroundRemovalState>("idle");
   const [removalProgress, setRemovalProgress] = useState(0);
   const [removalMessage, setRemovalMessage] = useState("");
-  const processedFile = useRef<File | null>(null);
+  const [processingMode, setProcessingMode] = useState<BackgroundRemovalMode | null>(null);
+  const [appliedMode, setAppliedMode] = useState<BackgroundRemovalMode | null>(null);
+  const sourceFile = useRef<File | null>(file);
+  const latestGeneratedFile = useRef<File | null>(null);
+  const generatedFiles = useRef<Partial<Record<BackgroundRemovalMode, File>>>({});
 
   useEffect(() => {
-    if (file === processedFile.current) return;
+    if (file === latestGeneratedFile.current) return;
+    sourceFile.current = file;
+    latestGeneratedFile.current = null;
+    generatedFiles.current = {};
     setRemovalState("idle");
     setRemovalProgress(0);
     setRemovalMessage("");
+    setProcessingMode(null);
+    setAppliedMode(null);
   }, [file]);
 
-  async function removeArtworkBackground() {
-    if (!file || removalState === "processing") return;
+  async function removeArtworkBackground(mode: BackgroundRemovalMode) {
+    const originalFile = sourceFile.current ?? file;
+    if (!originalFile || removalState === "processing") return;
+
+    const cachedFile = generatedFiles.current[mode];
+    if (cachedFile) {
+      latestGeneratedFile.current = cachedFile;
+      onBackgroundRemoved(cachedFile);
+      setAppliedMode(mode);
+      setProcessingMode(mode);
+      setRemovalState("done");
+      setRemovalProgress(1);
+      setRemovalMessage(
+        mode === "ai"
+          ? "Free AI result applied — switch back to compare"
+          : "Smart result applied — try Free AI to compare"
+      );
+      return;
+    }
 
     setRemovalState("processing");
+    setProcessingMode(mode);
     setRemovalProgress(0.04);
-    setRemovalMessage("Preparing your logo");
+    setRemovalMessage(mode === "ai" ? "Preparing free AI cutout" : "Preparing smart cutout");
 
     try {
-      const result = await removeBackgroundAutomatically(file, ({ progress, label }) => {
-        setRemovalProgress(progress);
-        setRemovalMessage(label);
-      });
-      const baseName = file.name.replace(/\.[^.]+$/, "") || `${side}-artwork`;
-      const transparentFile = new File([result.blob], `${baseName}-transparent.png`, {
+      const result = await removeBackgroundAutomatically(
+        originalFile,
+        ({ progress, label }) => {
+          setRemovalProgress(progress);
+          setRemovalMessage(label);
+        },
+        mode === "ai" ? { forceAi: true } : {}
+      );
+      const baseName = originalFile.name.replace(/\.[^.]+$/, "") || `${side}-artwork`;
+      const suffix = mode === "ai" ? "free-ai-cutout" : "smart-cutout";
+      const transparentFile = new File([result.blob], `${baseName}-${suffix}.png`, {
         type: "image/png",
         lastModified: Date.now(),
       });
 
-      processedFile.current = transparentFile;
+      generatedFiles.current[mode] = transparentFile;
+      latestGeneratedFile.current = transparentFile;
       onBackgroundRemoved(transparentFile);
+      setAppliedMode(mode);
       setRemovalProgress(1);
       setRemovalState("done");
       setRemovalMessage(
         result.method === "already-transparent"
           ? "Your logo was already transparent"
-          : "Background removed — transparent PNG ready"
+          : mode === "ai"
+            ? "Free AI result applied — tap Smart to compare"
+            : "Smart result applied — try Free AI to compare"
       );
     } catch (error) {
       setRemovalState("error");
@@ -791,14 +828,15 @@ function ArtworkUploadSlot({
   }
 
   const isRemovingBackground = removalState === "processing";
-  const magicButtonLabel =
-    removalState === "done"
-      ? "Background removed"
-      : removalState === "error"
-        ? "Try magic again"
-        : isRemovingBackground
-          ? removalMessage
-          : "Remove background";
+
+  function getRemovalButtonLabel(mode: BackgroundRemovalMode) {
+    if (isRemovingBackground && processingMode === mode) return removalMessage;
+    if (appliedMode === mode) return mode === "ai" ? "Free AI result applied" : "Smart result applied";
+    if (removalState === "error" && processingMode === mode) {
+      return mode === "ai" ? "Retry free AI" : "Retry smart magic";
+    }
+    return mode === "ai" ? "Free AI cutout" : "Remove background";
+  }
 
   return (
     <section className={`overflow-hidden rounded-[22px] border transition ${file ? "border-[#cbded3] bg-[#fbfefc]" : active ? "border-[#ffb48f] bg-[#fffaf7]" : "border-[#dfded8] bg-white"}`} aria-label={`${title} artwork upload`}>
@@ -839,31 +877,65 @@ function ArtworkUploadSlot({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={removeArtworkBackground}
-            disabled={isRemovingBackground}
-            aria-label={`Remove background from ${title.toLowerCase()} artwork`}
-            className="group relative mt-3 flex min-h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-[linear-gradient(110deg,#7c3aed_0%,#db2777_35%,#f97316_68%,#06b6d4_100%)] px-4 py-3 text-xs font-extrabold text-white shadow-[0_10px_26px_rgba(168,85,247,.3)] transition duration-300 hover:-translate-y-0.5 hover:saturate-150 hover:shadow-[0_14px_32px_rgba(219,39,119,.34)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a855f7] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-80"
-          >
-            <span
-              aria-hidden="true"
-              className="absolute inset-y-[-40%] left-[-30%] w-1/4 rotate-12 bg-white/35 blur-md transition-transform duration-700 group-hover:translate-x-[600%]"
-            />
-            {isRemovingBackground ? (
-              <Loader2 className="relative h-4 w-4 animate-spin" />
-            ) : removalState === "done" ? (
-              <CheckCircle2 className="relative h-4 w-4" />
-            ) : (
-              <Sparkles className="relative h-4 w-4" />
-            )}
-            <span className="relative">{magicButtonLabel}</span>
-            {!isRemovingBackground && removalState !== "done" ? (
-              <span className="relative rounded-full border border-white/35 bg-white/20 px-2 py-0.5 text-[8px] uppercase tracking-[0.16em]">
-                Magic
-              </span>
-            ) : null}
-          </button>
+          <div className="mt-3 grid gap-2">
+            <button
+              type="button"
+              onClick={() => removeArtworkBackground("smart")}
+              disabled={isRemovingBackground}
+              aria-label={`Smart background removal for ${title.toLowerCase()} artwork`}
+              aria-pressed={appliedMode === "smart"}
+              className="group relative flex min-h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-[linear-gradient(110deg,#7c3aed_0%,#db2777_35%,#f97316_68%,#06b6d4_100%)] px-4 py-3 text-xs font-extrabold text-white shadow-[0_10px_26px_rgba(168,85,247,.3)] transition duration-300 hover:-translate-y-0.5 hover:saturate-150 hover:shadow-[0_14px_32px_rgba(219,39,119,.34)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a855f7] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-80"
+            >
+              <span
+                aria-hidden="true"
+                className="absolute inset-y-[-40%] left-[-30%] w-1/4 rotate-12 bg-white/35 blur-md transition-transform duration-700 group-hover:translate-x-[600%]"
+              />
+              {isRemovingBackground && processingMode === "smart" ? (
+                <Loader2 className="relative h-4 w-4 animate-spin" />
+              ) : appliedMode === "smart" ? (
+                <CheckCircle2 className="relative h-4 w-4" />
+              ) : (
+                <Sparkles className="relative h-4 w-4" />
+              )}
+              <span className="relative">{getRemovalButtonLabel("smart")}</span>
+              {!isRemovingBackground && appliedMode !== "smart" ? (
+                <span className="relative rounded-full border border-white/35 bg-white/20 px-2 py-0.5 text-[8px] uppercase tracking-[0.16em]">
+                  Smart
+                </span>
+              ) : null}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => removeArtworkBackground("ai")}
+              disabled={isRemovingBackground}
+              aria-label={`Use free AI background remover on ${title.toLowerCase()} artwork`}
+              aria-pressed={appliedMode === "ai"}
+              className="group relative flex min-h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-[linear-gradient(110deg,#06b6d4_0%,#2563eb_34%,#7c3aed_68%,#ec4899_100%)] px-4 py-3 text-xs font-extrabold text-white shadow-[0_10px_26px_rgba(37,99,235,.28)] transition duration-300 hover:-translate-y-0.5 hover:saturate-150 hover:shadow-[0_14px_32px_rgba(124,58,237,.34)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-80"
+            >
+              <span
+                aria-hidden="true"
+                className="absolute inset-y-[-40%] left-[-30%] w-1/4 rotate-12 bg-white/35 blur-md transition-transform duration-700 group-hover:translate-x-[600%]"
+              />
+              {isRemovingBackground && processingMode === "ai" ? (
+                <Loader2 className="relative h-4 w-4 animate-spin" />
+              ) : appliedMode === "ai" ? (
+                <CheckCircle2 className="relative h-4 w-4" />
+              ) : (
+                <Sparkles className="relative h-4 w-4" />
+              )}
+              <span className="relative">{getRemovalButtonLabel("ai")}</span>
+              {!isRemovingBackground && appliedMode !== "ai" ? (
+                <span className="relative rounded-full border border-white/35 bg-white/20 px-2 py-0.5 text-[8px] uppercase tracking-[0.16em]">
+                  AI test
+                </span>
+              ) : null}
+            </button>
+
+            <p className="px-1 text-center text-[9px] leading-4 text-[#77766f]">
+              Both options use your original upload. Switch between saved results to compare.
+            </p>
+          </div>
 
           {removalState !== "idle" ? (
             <div
@@ -884,7 +956,11 @@ function ArtworkUploadSlot({
                 <div
                   className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/70"
                   role="progressbar"
-                  aria-label="Background removal progress"
+                  aria-label={
+                    processingMode === "ai"
+                      ? "Free AI background removal progress"
+                      : "Smart background removal progress"
+                  }
                   aria-valuemin={0}
                   aria-valuemax={100}
                   aria-valuenow={Math.round(removalProgress * 100)}
