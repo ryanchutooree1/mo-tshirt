@@ -119,6 +119,7 @@ const TEXT_SIZE_STEP = 5;
 type PremiumDesignStudioClientProps = {
   backHref?: string;
   backLabel?: string;
+  embedded?: boolean;
   initialShopItemId?: string;
   requestSource?: string;
 };
@@ -153,6 +154,7 @@ function clamp(value: number, min: number, max: number) {
 export default function PremiumDesignStudioClient({
   backHref = "/admin",
   backLabel = "Back to admin",
+  embedded = false,
   initialShopItemId,
   requestSource = "Premium Admin Design Studio",
 }: PremiumDesignStudioClientProps) {
@@ -597,28 +599,35 @@ export default function PremiumDesignStudioClient({
 
   const activeStep = STEPS[step - 1];
   const goTo = (value: number) => setStep(clamp(value, 1, STEPS.length) as StudioStep);
+  const HeadingTag = embedded ? "h2" : "h1";
 
   return (
-    <div className="premium-studio min-h-screen bg-[#f5f5f2] text-[#1b1b18] [font-family:var(--font-studio-body)]">
-      <header className="border-b border-[#e5e4df] bg-[#fff]/95 px-4 py-3 backdrop-blur sm:px-6">
+    <div
+      className={`premium-studio bg-[#f5f5f2] text-left text-[#1b1b18] [font-family:var(--font-studio-body)] ${
+        embedded
+          ? "overflow-hidden rounded-[32px] border border-[#e5e4df] shadow-sm"
+          : "min-h-screen"
+      }`}
+    >
+      {!embedded ? <header className="border-b border-[#e5e4df] bg-[#fff]/95 px-4 py-3 backdrop-blur sm:px-6">
         <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-3">
           <Link href={backHref} className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 text-sm font-semibold hover:bg-[#f4f3ef]"><ArrowLeft className="h-4 w-4" /><span className="hidden sm:inline">{backLabel}</span></Link>
           <div className="text-center"><p className="text-[15px] font-extrabold tracking-[-0.025em]">MO T-Shirt<span className="text-[#ff5a0a]">.mu</span></p><p className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#8c8b85]">Premium Design Studio</p></div>
           <div className="flex h-11 items-center gap-2 rounded-xl border border-[#e5e4df] bg-[#fafaf8] px-3 text-xs font-semibold text-[#696862]"><BadgeCheck className="h-4 w-4 text-[#16a462]" /><span className="hidden sm:inline">Live preview</span></div>
         </div>
-      </header>
+      </header> : null}
 
       <section className="border-b border-[#e5e4df] bg-[#fff] px-4 py-6 sm:px-6 sm:py-8">
         <div className="mx-auto max-w-[1500px]">
           <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-            <div><div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#fff0e8] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#d94500]"><Sparkles className="h-3.5 w-3.5" />Live customiser</div><h1 className="text-3xl font-bold tracking-[-0.045em] text-[#161613] [font-family:var(--font-studio-display)] sm:text-5xl">Design it. <span className="text-[#ff5a0a]">We print it.</span></h1><p className="mt-3 max-w-2xl text-sm leading-6 text-[#6e6d67] sm:text-base">Build a production-ready garment mockup, then send every detail to the MO T-Shirt team in one request.</p></div>
+            <div><div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#fff0e8] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#d94500]"><Sparkles className="h-3.5 w-3.5" />Live customiser</div><HeadingTag className="text-3xl font-bold tracking-[-0.045em] text-[#161613] [font-family:var(--font-studio-display)] sm:text-5xl">Design it. <span className="text-[#ff5a0a]">We print it.</span></HeadingTag><p className="mt-3 max-w-2xl text-sm leading-6 text-[#6e6d67] sm:text-base">Build a production-ready garment mockup, then send every detail to the MO T-Shirt team in one request.</p></div>
             <div className="w-full max-w-md"><div className="mb-2 flex justify-between text-[10px] font-bold uppercase tracking-[0.12em] text-[#77766f]"><span>Step {step} of {STEPS.length}</span><span>{Math.round((step / STEPS.length) * 100)}% complete</span></div><div className="h-2 overflow-hidden rounded-full bg-[#ecebe6]"><motion.div className="h-full rounded-full bg-[#ff5a0a]" animate={{ width: `${(step / STEPS.length) * 100}%` }} /></div></div>
           </div>
           <div className="mt-6 flex gap-2 overflow-x-auto pb-1 xl:hidden">{STEPS.map((item) => <button key={item.id} type="button" onClick={() => setStep(item.id)} className={`flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold ${step === item.id ? "studio-primary border-[#ff5a0a] bg-[#ff5a0a] !text-white" : step > item.id ? "border-[#ffd5c1] bg-[#fff5ef] text-[#c54306]" : "border-[#e4e3dd] bg-[#fff] text-[#73726c]"}`}><span>{step > item.id ? <Check className="h-3.5 w-3.5" /> : item.id}</span>{item.short}</button>)}</div>
         </div>
       </section>
 
-      <main className="mx-auto max-w-[1500px] px-3 py-4 sm:px-6 sm:py-7">
+      <div className="mx-auto max-w-[1500px] px-3 py-4 sm:px-6 sm:py-7">
         <div className="grid items-start gap-5 xl:grid-cols-[230px_minmax(0,1fr)]">
           <nav className="hidden rounded-[24px] border border-[#e1e0da] bg-[#fff] p-3 shadow-[0_14px_45px_rgba(29,27,20,0.05)] xl:block" aria-label="Design steps">
             {STEPS.map((item) => <button key={item.id} type="button" onClick={() => setStep(item.id)} aria-current={step === item.id ? "step" : undefined} className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${step === item.id ? "studio-dark bg-[#171714] !text-white" : "text-[#686761] hover:bg-[#f5f4f0]"}`}><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${step === item.id ? "studio-primary bg-[#ff5a0a] !text-white" : step > item.id ? "bg-[#fff0e8] text-[#df4d08]" : "bg-[#f1f0ec] text-[#8d8c85]"}`}>{step > item.id ? <Check className="h-4 w-4" /> : item.id}</span><span className="min-w-0"><span className="block text-[9px] font-bold uppercase tracking-[0.13em] opacity-55">Step {item.id}</span><span className="mt-0.5 block text-[13px] font-bold leading-tight">{item.label}</span></span><ChevronRight className="ml-auto h-4 w-4 opacity-25" /></button>)}
@@ -678,9 +687,9 @@ export default function PremiumDesignStudioClient({
             </aside>
           </form>
         </div>
-      </main>
+      </div>
 
-      <footer className="border-t border-[#e3e2dc] bg-[#fff] px-4 py-7 sm:px-6"><div className="mx-auto grid max-w-[1200px] grid-cols-2 gap-5 sm:grid-cols-4"><Benefit icon={<Shirt />} title="Premium garments" /><Benefit icon={<Palette />} title="High-quality printing" /><Benefit icon={<PackageCheck />} title="Reliable service" /><Benefit icon={<CircleDollarSign />} title="Local pricing" /></div><div className="mx-auto mt-6 flex max-w-[1200px] flex-wrap justify-center gap-x-5 gap-y-2 border-t border-[#efeee9] pt-5 text-[10px] text-[#77766f]"><a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a><span>•</span><a href={`tel:${CONTACT_TEL}`}>{CONTACT_PHONE_DISPLAY}</a></div></footer>
+      {!embedded ? <footer className="border-t border-[#e3e2dc] bg-[#fff] px-4 py-7 sm:px-6"><div className="mx-auto grid max-w-[1200px] grid-cols-2 gap-5 sm:grid-cols-4"><Benefit icon={<Shirt />} title="Premium garments" /><Benefit icon={<Palette />} title="High-quality printing" /><Benefit icon={<PackageCheck />} title="Reliable service" /><Benefit icon={<CircleDollarSign />} title="Local pricing" /></div><div className="mx-auto mt-6 flex max-w-[1200px] flex-wrap justify-center gap-x-5 gap-y-2 border-t border-[#efeee9] pt-5 text-[10px] text-[#77766f]"><a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a><span>•</span><a href={`tel:${CONTACT_TEL}`}>{CONTACT_PHONE_DISPLAY}</a></div></footer> : null}
     </div>
   );
 }

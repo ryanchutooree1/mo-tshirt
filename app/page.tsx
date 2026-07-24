@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { Plus_Jakarta_Sans, Sora } from "next/font/google";
 import { getWhatsAppUrl, CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL } from "@/data/work";
 import { buildPageMetadata } from "@/lib/seo";
 import {
@@ -17,11 +18,26 @@ import MapCard from "@/components/MapCard";
 import QuoteForm from "@/components/QuoteForm";
 import ZoomableImage from "@/components/ZoomableImage";
 import LocationJump from "@/components/LocationJump";
+import PremiumDesignStudioClient from "@/components/PremiumDesignStudioClient";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 
 const pageTitle = "MO T-SHIRT PRINTING | Fastest in Mauritius";
 const pageDescription =
   "T-shirt printing in Mauritius for businesses and events. Fast custom T-shirts, Poloshirts, Caps & Hoodies trusted by 80+ local businesses.";
+
+const studioSora = Sora({
+  subsets: ["latin"],
+  variable: "--font-studio-display",
+  weight: ["400", "600", "700"],
+  display: "swap",
+});
+
+const studioPlusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-studio-body",
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
 
 export const metadata: Metadata = buildPageMetadata({
   title: pageTitle,
@@ -234,7 +250,7 @@ export default function HomePage() {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
         {/* Hero */}
         <section id="hero" className="flex min-h-[80vh] items-center justify-center px-6 pt-14 pb-12 sm:pt-20 sm:pb-20">
-          <div className="mx-auto flex w-full max-w-5xl flex-col items-center text-center">
+          <div className="mx-auto flex w-full max-w-[1500px] flex-col items-center text-center">
             <h1 className="text-4xl font-semibold tracking-tight text-black sm:text-5xl">
               Trying to be #1 in Mauritius.
             </h1>
@@ -248,15 +264,12 @@ export default function HomePage() {
 
             <ActionButtons />
 
-            <div className="mt-[49px] w-full max-w-5xl lg:max-w-6xl">
-              <Image
-                src="/design-it-we-print-it.webp"
-                alt="Design it. We print it. MO T-Shirt custom garment design studio"
-                width={2666}
-                height={1422}
-                className="h-auto w-full rounded-[32px] border border-[#EAEAEA] object-cover shadow-sm"
-                priority
-                sizes="(max-width: 1024px) calc(100vw - 48px), 1024px"
+            <div className={`mt-[49px] w-full ${studioSora.variable} ${studioPlusJakartaSans.variable}`}>
+              <PremiumDesignStudioClient
+                embedded
+                backHref="/"
+                backLabel="Back to home"
+                requestSource="Homepage Design Studio"
               />
             </div>
             <div className="mt-6 w-full max-w-5xl">
