@@ -8,6 +8,7 @@ import {
   HardDrive,
   ImageOff,
   LoaderCircle,
+  PackagePlus,
   RefreshCw,
   Save,
   Settings,
@@ -33,6 +34,7 @@ export default function MobSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [cleaning, setCleaning] = useState(false);
+  const [seeding, setSeeding] = useState(false);
   const [cleanupResult, setCleanupResult] =
     useState<InventoryPhotoCleanupResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -125,6 +127,36 @@ export default function MobSettingsPage() {
       );
     } finally {
       setCleaning(false);
+    }
+  }
+
+  async function loadTestInventory() {
+    const confirmed = window.confirm(
+      "Load the realistic mobile-shop test inventory? Running this again refreshes the same test products and history."
+    );
+    if (!confirmed) return;
+
+    setSeeding(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/admin/mob/inventory/demo", {
+        method: "POST",
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok) {
+        throw new Error(data?.error || "Could not load test inventory.");
+      }
+      setNotice(
+        `${data.items} test products and ${data.transactions} movements are ready.`
+      );
+    } catch (seedError) {
+      setError(
+        seedError instanceof Error
+          ? seedError.message
+          : "Could not load test inventory."
+      );
+    } finally {
+      setSeeding(false);
     }
   }
 
@@ -372,6 +404,38 @@ export default function MobSettingsPage() {
               : "Keep all records and all photos until automatic cleanup is enabled."}
           </p>
         </div>
+      </section>
+
+      <section className={`mt-5 rounded-2xl border p-4 shadow-sm sm:p-5 ${panelClass}`}>
+        <div className="flex items-start gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-white">
+            <PackagePlus className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-black">Test inventory</h2>
+            <p className={`mt-1 text-[11px] leading-5 ${muted}`}>
+              Add a realistic set of phone accessories and daily stock movements
+              for dashboard testing.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => void loadTestInventory()}
+          disabled={seeding || loading}
+          className={`mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 text-xs font-black disabled:opacity-50 sm:w-auto ${
+            isDark
+              ? "border-white/10 bg-white/5 hover:bg-white/10"
+              : "border-slate-200 bg-white hover:bg-slate-50"
+          }`}
+        >
+          {seeding ? (
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+          ) : (
+            <PackagePlus className="h-4 w-4" />
+          )}
+          Load realistic test inventory
+        </button>
       </section>
 
       {notice ? (

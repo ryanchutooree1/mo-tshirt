@@ -6,9 +6,10 @@ import {
   CalendarClock,
   Camera,
   Check,
+  ChevronLeft,
+  ChevronRight,
   CircleAlert,
   Clock3,
-  History,
   ImagePlus,
   LoaderCircle,
   PackageCheck,
@@ -136,16 +137,26 @@ export default function InventoryPhotoLogPage() {
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>("pending");
   const [search, setSearch] = useState("");
+  const [cursorStack, setCursorStack] = useState<Array<string | null>>([null]);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
   const [editingItem, setEditingItem] =
     useState<InventoryPhotoLogItem | null>(null);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const currentCursor = cursorStack[pageIndex] || null;
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/admin/inventory-photo-log", {
+      const params = new URLSearchParams({
+        scope: view,
+        limit: "20",
+      });
+      if (currentCursor) params.set("cursor", currentCursor);
+      const response = await fetch(`/api/admin/inventory-photo-log?${params}`, {
         cache: "no-store",
       });
       const data = await response.json().catch(() => ({}));
@@ -153,6 +164,10 @@ export default function InventoryPhotoLogPage() {
         throw new Error(data?.error || "Could not load the photo log.");
       }
       setItems(Array.isArray(data.items) ? data.items : []);
+      setTotal(Number.isFinite(data.total) ? Number(data.total) : 0);
+      setNextCursor(
+        typeof data.nextCursor === "string" ? data.nextCursor : null
+      );
       setError(null);
     } catch (refreshError) {
       setError(
@@ -163,7 +178,7 @@ export default function InventoryPhotoLogPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentCursor, view]);
 
   useEffect(() => {
     void refresh();
@@ -198,31 +213,41 @@ export default function InventoryPhotoLogPage() {
     };
   }, [editingItem]);
 
-  const pendingItems = useMemo(
-    () => items.filter((item) => item.isPending),
-    [items]
-  );
-
   const visibleItems = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const source = view === "pending" ? pendingItems : items;
-    if (!term) return source;
+    if (!term) return items;
 
-    return source.filter((item) =>
+    return items.filter((item) =>
       `${item.productName} ${item.category} ${item.transactionType || ""} ${item.notes}`
         .toLowerCase()
         .includes(term)
     );
-  }, [items, pendingItems, search, view]);
+  }, [items, search]);
 
-  const stockInCount = useMemo(
-    () => items.filter((item) => item.transactionType === "stock-in").length,
-    [items]
-  );
-  const stockOutCount = useMemo(
-    () => items.filter((item) => item.transactionType === "stock-out").length,
-    [items]
-  );
+  function switchView(nextView: ViewMode) {
+    if (nextView === view) return;
+    setView(nextView);
+    setSearch("");
+    setCursorStack([null]);
+    setPageIndex(0);
+    setNextCursor(null);
+  }
+
+  function showNextPage() {
+    if (!nextCursor) return;
+    setCursorStack((current) => [
+      ...current.slice(0, pageIndex + 1),
+      nextCursor,
+    ]);
+    setPageIndex((current) => current + 1);
+    setSearch("");
+  }
+
+  function showPreviousPage() {
+    if (pageIndex <= 0) return;
+    setPageIndex((current) => current - 1);
+    setSearch("");
+  }
 
   async function uploadPhoto(file: File) {
     if (file.size > MAX_UPLOAD_BYTES) {
@@ -251,12 +276,16 @@ export default function InventoryPhotoLogPage() {
       }
 
       const saved = data.item as InventoryPhotoLogItem;
+      setView("pending");
+      setCursorStack([null]);
+      setPageIndex(0);
+      setNextCursor(null);
       setItems((current) => [
         saved,
         ...current.filter((item) => item.id !== saved.id),
-      ]);
+      ].slice(0, 20));
+      setTotal((current) => current + 1);
       setQuickName("");
-      setView("pending");
       setNotice(`${saved.productName} saved. Details can be added anytime.`);
     } catch (uploadError) {
       setError(
@@ -311,9 +340,15 @@ export default function InventoryPhotoLogPage() {
       }
 
       const saved = data.item as InventoryPhotoLogItem;
-      setItems((current) =>
-        current.map((item) => (item.id === saved.id ? saved : item))
-      );
+      setItems((current) => {
+        if (view === "pending" && !saved.isPending) {
+          return current.filter((item) => item.id !== saved.id);
+        }
+        return current.map((item) => (item.id === saved.id ? saved : item));
+      });
+      if (view === "pending" && !saved.isPending) {
+        setTotal((current) => Math.max(0, current - 1));
+      }
       setEditingItem(null);
       setEditForm(null);
       setNotice(
@@ -505,48 +540,6 @@ export default function InventoryPhotoLogPage() {
         </div>
       ) : null}
 
-      <section className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[
-          {
-            label: "All photos",
-            value: items.length,
-            icon: History,
-            color: "text-sky-500",
-          },
-          {
-            label: "Need details",
-            value: pendingItems.length,
-            icon: Clock3,
-            color: "text-orange-500",
-          },
-          {
-            label: "Stock In",
-            value: stockInCount,
-            icon: ArrowDownToLine,
-            color: "text-emerald-500",
-          },
-          {
-            label: "Stock Out",
-            value: stockOutCount,
-            icon: ArrowUpFromLine,
-            color: "text-rose-500",
-          },
-        ].map(({ label, value, icon: Icon, color }) => (
-          <div
-            key={label}
-            className={`rounded-2xl border p-3.5 sm:p-4 ${panelClass}`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className={`text-[11px] font-bold ${mutedText}`}>
-                {label}
-              </span>
-              <Icon className={`h-4 w-4 ${color}`} />
-            </div>
-            <div className="mt-2 font-mono text-2xl font-black">{value}</div>
-          </div>
-        ))}
-      </section>
-
       <section className={`overflow-hidden rounded-[24px] border ${panelClass}`}>
         <div
           className={`flex flex-col gap-3 border-b p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4 ${
@@ -560,7 +553,7 @@ export default function InventoryPhotoLogPage() {
           >
             <button
               type="button"
-              onClick={() => setView("pending")}
+              onClick={() => switchView("pending")}
               className={`min-h-10 rounded-lg px-3 text-xs font-extrabold transition ${
                 view === "pending"
                   ? isDark
@@ -569,11 +562,11 @@ export default function InventoryPhotoLogPage() {
                   : mutedText
               }`}
             >
-              Pending ({pendingItems.length})
+              Pending
             </button>
             <button
               type="button"
-              onClick={() => setView("history")}
+              onClick={() => switchView("history")}
               className={`min-h-10 rounded-lg px-3 text-xs font-extrabold transition ${
                 view === "history"
                   ? isDark
@@ -582,7 +575,7 @@ export default function InventoryPhotoLogPage() {
                   : mutedText
               }`}
             >
-              History ({items.length})
+              History
             </button>
           </div>
           <div className="relative w-full sm:max-w-xs">
@@ -592,7 +585,7 @@ export default function InventoryPhotoLogPage() {
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search photo log…"
+              placeholder="Search this page…"
               aria-label="Search inventory photo log"
               className={`${inputClass} min-h-10 pl-9`}
             />
@@ -631,12 +624,13 @@ export default function InventoryPhotoLogPage() {
             </p>
           </div>
         ) : (
-          <div
-            className={`divide-y ${
-              isDark ? "divide-white/10" : "divide-slate-200/70"
-            }`}
-          >
-            {visibleItems.map((item) => (
+          <>
+            <div
+              className={`divide-y ${
+                isDark ? "divide-white/10" : "divide-slate-200/70"
+              }`}
+            >
+              {visibleItems.map((item) => (
               <article
                 key={item.id}
                 className={`grid gap-4 p-3 transition sm:grid-cols-[112px_1fr_auto] sm:p-4 ${
@@ -744,8 +738,48 @@ export default function InventoryPhotoLogPage() {
                   {item.isPending ? "Add details" : "Edit"}
                 </button>
               </article>
-            ))}
-          </div>
+              ))}
+            </div>
+            <div
+              className={`flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4 ${
+                isDark ? "border-white/10" : "border-slate-200"
+              }`}
+            >
+              <p className={`text-[11px] font-semibold ${mutedText}`}>
+                Showing {items.length ? pageIndex * 20 + 1 : 0}–
+                {Math.min((pageIndex + 1) * 20, total)} of {total}. Search
+                filters this page only.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={showPreviousPage}
+                  disabled={pageIndex === 0 || loading}
+                  className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border px-3 text-[11px] font-extrabold disabled:opacity-40 ${
+                    isDark
+                      ? "border-white/10 bg-white/5"
+                      : "border-slate-200 bg-white"
+                  }`}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={showNextPage}
+                  disabled={!nextCursor || loading}
+                  className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border px-3 text-[11px] font-extrabold disabled:opacity-40 ${
+                    isDark
+                      ? "border-white/10 bg-white/5"
+                      : "border-slate-200 bg-white"
+                  }`}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </section>
 

@@ -5,6 +5,8 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   Check,
+  ChevronLeft,
+  ChevronRight,
   CircleAlert,
   ImageOff,
   LoaderCircle,
@@ -89,6 +91,15 @@ export default function MobInventoryPage() {
   const [transactions, setTransactions] = useState<MobInventoryTransaction[]>(
     []
   );
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [historyCursorStack, setHistoryCursorStack] = useState<
+    Array<string | null>
+  >([null]);
+  const [historyPageIndex, setHistoryPageIndex] = useState(0);
+  const [historyNextCursor, setHistoryNextCursor] = useState<string | null>(
+    null
+  );
   const [readyPhotoLogs, setReadyPhotoLogs] = useState<InventoryPhotoLogItem[]>(
     []
   );
@@ -116,9 +127,6 @@ export default function MobInventoryPage() {
         throw new Error(data?.error || "Could not load inventory.");
       }
       setItems(Array.isArray(data.items) ? data.items : []);
-      setTransactions(
-        Array.isArray(data.transactions) ? data.transactions : []
-      );
       setReadyPhotoLogs(
         Array.isArray(data.readyPhotoLogs) ? data.readyPhotoLogs : []
       );
@@ -134,9 +142,48 @@ export default function MobInventoryPage() {
     }
   }, []);
 
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const params = new URLSearchParams({ limit: "20" });
+      const cursor = historyCursorStack[historyPageIndex];
+      if (cursor) params.set("cursor", cursor);
+      const response = await fetch(
+        `/api/admin/mob/inventory/history?${params}`,
+        { cache: "no-store" }
+      );
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data?.error || "Could not load inventory history.");
+      }
+      setTransactions(
+        Array.isArray(data.transactions) ? data.transactions : []
+      );
+      setHistoryTotal(
+        Number.isFinite(data.total) ? Number(data.total) : 0
+      );
+      setHistoryNextCursor(
+        typeof data.nextCursor === "string" ? data.nextCursor : null
+      );
+      setError(null);
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : "Could not load inventory history."
+      );
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [historyCursorStack, historyPageIndex]);
+
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (view === "history") void loadHistory();
+  }, [loadHistory, view]);
 
   useEffect(() => {
     if (!notice) return;
@@ -220,6 +267,31 @@ export default function MobInventoryPage() {
     setActiveItem(null);
   }
 
+  function changeView(nextView: InventoryView) {
+    setView(nextView);
+    if (nextView !== "stock") setSearch("");
+  }
+
+  function resetHistoryPagination() {
+    setHistoryCursorStack([null]);
+    setHistoryPageIndex(0);
+    setHistoryNextCursor(null);
+  }
+
+  function showNextHistoryPage() {
+    if (!historyNextCursor) return;
+    setHistoryCursorStack((current) => [
+      ...current.slice(0, historyPageIndex + 1),
+      historyNextCursor,
+    ]);
+    setHistoryPageIndex((current) => current + 1);
+  }
+
+  function showPreviousHistoryPage() {
+    if (historyPageIndex <= 0) return;
+    setHistoryPageIndex((current) => current - 1);
+  }
+
   async function saveItem() {
     setSaving(true);
     setError(null);
@@ -246,6 +318,7 @@ export default function MobInventoryPage() {
       );
       setEditorMode(null);
       setActiveItem(null);
+      resetHistoryPagination();
       await refresh();
     } catch (saveError) {
       setError(
@@ -280,6 +353,7 @@ export default function MobInventoryPage() {
       );
       setEditorMode(null);
       setActiveItem(null);
+      resetHistoryPagination();
       await refresh();
     } catch (saveError) {
       setError(
@@ -309,8 +383,9 @@ export default function MobInventoryPage() {
       setNotice(
         `${data.imported || 0} worker record${data.imported === 1 ? "" : "s"} added to inventory.`
       );
+      resetHistoryPagination();
       await refresh();
-      if (ids.length === readyPhotoLogs.length) setView("stock");
+      if (ids.length === readyPhotoLogs.length) changeView("stock");
     } catch (importError) {
       setError(
         importError instanceof Error
@@ -426,7 +501,7 @@ export default function MobInventoryPage() {
       {readyPhotoLogs.length ? (
         <button
           type="button"
-          onClick={() => setView("imports")}
+          onClick={() => changeView("imports")}
           className={`mt-5 flex w-full items-center gap-3 rounded-2xl border p-4 text-left shadow-sm ${panelClass}`}
         >
           <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-500 text-white">
@@ -467,7 +542,7 @@ export default function MobInventoryPage() {
               <button
                 key={tab.key}
                 type="button"
-                onClick={() => setView(tab.key)}
+                onClick={() => changeView(tab.key)}
                 className={`min-h-10 rounded-lg px-2 text-[11px] font-black ${
                   view === tab.key
                     ? isDark
@@ -496,7 +571,7 @@ export default function MobInventoryPage() {
           ) : null}
         </div>
 
-        {loading ? (
+        {loading || (view === "history" && historyLoading) ? (
           <div className={`flex min-h-52 items-center justify-center gap-2 ${muted}`}>
             <LoaderCircle className="h-5 w-5 animate-spin" />
             <span className="text-sm font-bold">Loading inventory…</span>
@@ -659,12 +734,13 @@ export default function MobInventoryPage() {
             </div>
           )
         ) : transactions.length ? (
-          <div
-            className={`divide-y ${
-              isDark ? "divide-white/10" : "divide-slate-100"
-            }`}
-          >
-            {transactions.map((transaction) => (
+          <>
+            <div
+              className={`divide-y ${
+                isDark ? "divide-white/10" : "divide-slate-100"
+              }`}
+            >
+              {transactions.map((transaction) => (
               <div
                 key={transaction.id}
                 className="flex items-center gap-3 px-4 py-3"
@@ -709,8 +785,48 @@ export default function MobInventoryPage() {
                   </span>
                 </span>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            <div
+              className={`flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${
+                isDark ? "border-white/10" : "border-slate-100"
+              }`}
+            >
+              <p className={`text-[10px] font-semibold ${muted}`}>
+                Showing {historyPageIndex * 20 + 1}–
+                {Math.min((historyPageIndex + 1) * 20, historyTotal)} of{" "}
+                {historyTotal} movements
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={showPreviousHistoryPage}
+                  disabled={historyPageIndex === 0 || historyLoading}
+                  className={`inline-flex min-h-10 items-center justify-center gap-1 rounded-xl border px-3 text-[10px] font-black disabled:opacity-40 ${
+                    isDark
+                      ? "border-white/10 bg-white/5"
+                      : "border-slate-200 bg-white"
+                  }`}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={showNextHistoryPage}
+                  disabled={!historyNextCursor || historyLoading}
+                  className={`inline-flex min-h-10 items-center justify-center gap-1 rounded-xl border px-3 text-[10px] font-black disabled:opacity-40 ${
+                    isDark
+                      ? "border-white/10 bg-white/5"
+                      : "border-slate-200 bg-white"
+                  }`}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </>
         ) : (
           <div className={`px-5 py-14 text-center text-xs ${muted}`}>
             Stock history will appear after the first transaction.

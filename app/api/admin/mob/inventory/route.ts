@@ -23,7 +23,6 @@ import {
   getInventoryItemIdForMergeKey,
   getInventoryMergeKey,
   mapMobInventoryItem,
-  mapMobInventoryTransaction,
   parseMobInventoryItemInput,
 } from "@/lib/mob-inventory";
 
@@ -40,30 +39,22 @@ export async function GET() {
   }
 
   try {
-    const [itemSnapshot, transactionSnapshot, photoSnapshot] =
-      await Promise.all([
-        getDocs(
-          query(
-            collection(db, MOB_INVENTORY_COLLECTION),
-            orderBy("updatedAtIso", "desc"),
-            limit(250)
-          )
-        ),
-        getDocs(
-          query(
-            collection(db, MOB_INVENTORY_TRANSACTIONS_COLLECTION),
-            orderBy("createdAtIso", "desc"),
-            limit(100)
-          )
-        ),
-        getDocs(
-          query(
-            collection(db, INVENTORY_PHOTO_LOG_COLLECTION),
-            orderBy("uploadedAtIso", "desc"),
-            limit(250)
-          )
-        ),
-      ]);
+    const [itemSnapshot, photoSnapshot] = await Promise.all([
+      getDocs(
+        query(
+          collection(db, MOB_INVENTORY_COLLECTION),
+          orderBy("updatedAtIso", "desc"),
+          limit(250)
+        )
+      ),
+      getDocs(
+        query(
+          collection(db, INVENTORY_PHOTO_LOG_COLLECTION),
+          orderBy("uploadedAtIso", "desc"),
+          limit(250)
+        )
+      ),
+    ]);
 
     const items = itemSnapshot.docs
       .map((entry) =>
@@ -73,12 +64,6 @@ export async function GET() {
         )
       )
       .filter((item) => !item.isArchived);
-    const transactions = transactionSnapshot.docs.map((entry) =>
-      mapMobInventoryTransaction(
-        entry.id,
-        entry.data() as Record<string, unknown>
-      )
-    );
     const readyPhotoLogs = photoSnapshot.docs
       .map((entry) =>
         mapInventoryPhotoLogItem(
@@ -89,7 +74,7 @@ export async function GET() {
       .filter((entry) => !entry.isPending && !entry.inventoryImportedAt);
 
     return NextResponse.json(
-      { items, transactions, readyPhotoLogs },
+      { items, readyPhotoLogs },
       { headers: { "Cache-Control": "no-store" } }
     );
   } catch (error) {
