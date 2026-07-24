@@ -48,17 +48,36 @@ export async function PATCH(
     }
 
     const updatedAtIso = new Date().toISOString();
+    const existingData = existing.data() as Record<string, unknown>;
+    const completedAtIso =
+      parsed.data.isPending
+        ? null
+        : typeof existingData.completedAtIso === "string" &&
+            existingData.completedAtIso
+          ? existingData.completedAtIso
+          : updatedAtIso;
+    const completionFields = parsed.data.isPending
+      ? { completedAt: null, completedAtIso: null }
+      : typeof existingData.completedAtIso === "string" &&
+          existingData.completedAtIso
+        ? {}
+        : {
+            completedAt: serverTimestamp(),
+            completedAtIso: updatedAtIso,
+          };
     await updateDoc(recordRef, {
       ...parsed.data,
       updatedAt: serverTimestamp(),
       updatedAtIso,
+      ...completionFields,
     });
 
     return NextResponse.json({
       item: mapInventoryPhotoLogItem(id, {
-        ...(existing.data() as Record<string, unknown>),
+        ...existingData,
         ...parsed.data,
         updatedAtIso,
+        completedAtIso,
       }),
     });
   } catch (error) {

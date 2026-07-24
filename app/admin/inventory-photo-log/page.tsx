@@ -1,15 +1,5 @@
-import type { Metadata } from "next";
-import InventoryPhotoLogPage from "@/components/admin/InventoryPhotoLogPage";
-
-export const metadata: Metadata = {
-  title: "Inventory Photo Log | MO Admin",
-  description: "Capture inventory photos now and complete stock details later.",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+import { redirect } from "next/navigation";
 
 export default function AdminInventoryPhotoLogPage() {
-  return <InventoryPhotoLogPage />;
+  redirect("/mob/photo-log");
 }

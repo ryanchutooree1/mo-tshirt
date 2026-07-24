@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   getInventoryPhotoPendingState,
+  isInventoryPhotoEligibleForDeletion,
   parseExifDateTime,
   parseInventoryPhotoUpdate,
 } from "../src/lib/inventory-photo-log.ts";
@@ -53,11 +54,51 @@ test("marks incomplete and temporary records as pending", () => {
   assert.equal(
     getInventoryPhotoPendingState({
       productName: "Blue Polo",
-      category: "Polo",
       quantity: 12,
       sellingPrice: 450,
       transactionType: "stock-in",
     }),
+    false
+  );
+});
+
+test("category is optional when all stock details are complete", () => {
+  const parsed = parseInventoryPhotoUpdate({
+    productName: "Blue Polo",
+    category: "",
+    quantity: 12,
+    sellingPrice: 450,
+    transactionType: "stock-in",
+  });
+  assert.equal(parsed.ok, true);
+  if (parsed.ok) assert.equal(parsed.data.isPending, false);
+});
+
+test("retention deletes only completed photos after the configured age", () => {
+  const now = new Date("2026-07-24T12:00:00.000Z");
+  const complete = {
+    productName: "Blue Polo",
+    isTemporaryName: false,
+    quantity: 2,
+    sellingPrice: 450,
+    transactionType: "stock-in",
+    completedAtIso: "2026-07-22T11:59:59.000Z",
+  };
+  assert.equal(isInventoryPhotoEligibleForDeletion(complete, 2, now), true);
+  assert.equal(
+    isInventoryPhotoEligibleForDeletion(
+      { ...complete, completedAtIso: "2026-07-23T12:00:00.000Z" },
+      2,
+      now
+    ),
+    false
+  );
+  assert.equal(
+    isInventoryPhotoEligibleForDeletion(
+      { ...complete, isTemporaryName: true },
+      2,
+      now
+    ),
     false
   );
 });

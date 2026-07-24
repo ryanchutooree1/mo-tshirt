@@ -117,7 +117,6 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Operations",
     paths: [
       "/admin/inventory",
-      "/admin/inventory-photo-log",
       "/admin/tanvi",
       "/admin/partners",
       "/admin/prescription-ocr",

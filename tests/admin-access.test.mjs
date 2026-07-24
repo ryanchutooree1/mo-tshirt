@@ -29,6 +29,10 @@ test("inventory photo log pages and APIs use the new scoped permission", () => {
     "/admin/inventory-photo-log"
   );
   assert.equal(
+    resolveAdminApiPermission("/api/admin/mob/inventory"),
+    "/admin/inventory-photo-log"
+  );
+  assert.equal(
     hasAdminPageAccess(
       ["/admin/inventory-photo-log"],
       "/admin/inventory-photo-log",

@@ -96,6 +96,19 @@ function RecordPhoto({
   item: InventoryPhotoLogItem;
   className: string;
 }) {
+  if (item.imageDeleted) {
+    return (
+      <div
+        className={`${className} flex flex-col items-center justify-center bg-slate-100 px-3 text-center text-slate-400`}
+      >
+        <ImagePlus className="h-6 w-6" />
+        <span className="mt-2 text-[10px] font-bold uppercase tracking-wide">
+          Photo expired
+        </span>
+      </div>
+    );
+  }
+
   return (
     // Protected admin images cannot use the unauthenticated Next.js image optimizer.
     <img
@@ -671,7 +684,7 @@ export default function InventoryPhotoLogPage() {
                   </div>
 
                   <div className={`mt-1 text-xs ${mutedText}`}>
-                    {item.category || "Category pending"}
+                    {item.category || "No category"}
                     <span className="mx-2 opacity-40">•</span>
                     {item.quantity === null
                       ? "Quantity pending"
@@ -834,7 +847,7 @@ export default function InventoryPhotoLogPage() {
 
                 <label>
                   <span className={`mb-1.5 block text-xs font-bold ${mutedText}`}>
-                    Category
+                    Category <span className="font-medium">(optional)</span>
                   </span>
                   <input
                     value={editForm.category}
@@ -1024,7 +1037,7 @@ export default function InventoryPhotoLogPage() {
         <div
           role="status"
           aria-live="polite"
-          className={`fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-[90] flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-bold shadow-2xl ${
+          className={`fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-1/2 z-[90] flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-bold shadow-2xl ${
             isDark
               ? "border-emerald-400/20 bg-[#122019] text-emerald-200"
               : "border-emerald-200 bg-white text-emerald-700"

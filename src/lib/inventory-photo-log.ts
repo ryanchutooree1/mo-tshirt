@@ -20,6 +20,11 @@ export type InventoryPhotoLogItem = {
   photoTakenAtRaw: string | null;
   uploadedAt: string;
   updatedAt: string;
+  completedAt: string | null;
+  imageDeleted: boolean;
+  photoDeletedAt: string | null;
+  inventoryItemId: string | null;
+  inventoryImportedAt: string | null;
   isPending: boolean;
 };
 
@@ -201,11 +206,37 @@ export function getInventoryPhotoPendingState(input: {
   return (
     Boolean(input.isTemporaryName) ||
     !cleanString(input.productName) ||
-    !cleanString(input.category) ||
     !Number.isFinite(input.quantity) ||
     !Number.isFinite(input.sellingPrice) ||
     (input.transactionType !== "stock-in" &&
       input.transactionType !== "stock-out")
+  );
+}
+
+export function isInventoryPhotoEligibleForDeletion(
+  data: Record<string, unknown>,
+  retentionDays: number,
+  now = new Date()
+) {
+  if (
+    data.imageDeleted ||
+    getInventoryPhotoPendingState(data) ||
+    !Number.isInteger(retentionDays) ||
+    retentionDays < 1
+  ) {
+    return false;
+  }
+
+  const dateValue =
+    typeof data.completedAtIso === "string" && data.completedAtIso
+      ? data.completedAtIso
+      : data.updatedAtIso;
+  if (typeof dateValue !== "string" || !dateValue) return false;
+  const completedAt = new Date(dateValue);
+  if (Number.isNaN(completedAt.getTime())) return false;
+  return (
+    now.getTime() - completedAt.getTime() >=
+    retentionDays * 24 * 60 * 60 * 1000
   );
 }
 
@@ -314,6 +345,12 @@ export function mapInventoryPhotoLogItem(
     photoTakenAtRaw: cleanString(data.photoTakenAtRaw, 80) || null,
     uploadedAt,
     updatedAt: cleanString(data.updatedAtIso, 80) || uploadedAt,
+    completedAt: cleanString(data.completedAtIso, 80) || null,
+    imageDeleted: Boolean(data.imageDeleted),
+    photoDeletedAt: cleanString(data.photoDeletedAtIso, 80) || null,
+    inventoryItemId: cleanString(data.inventoryItemId, 180) || null,
+    inventoryImportedAt:
+      cleanString(data.inventoryImportedAtIso, 80) || null,
     isPending: getInventoryPhotoPendingState(data),
   };
 }

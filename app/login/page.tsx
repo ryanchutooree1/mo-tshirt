@@ -57,8 +57,16 @@ function LoginInner() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const requestedNext = params.get("next") || "";
+  const isMobNext =
+    requestedNext === "/" ||
+    requestedNext === "/photo-log" ||
+    requestedNext === "/inventory" ||
+    requestedNext === "/settings" ||
+    requestedNext === "/mob" ||
+    requestedNext.startsWith("/mob/");
   const next =
-    requestedNext.startsWith("/admin") && !requestedNext.startsWith("//")
+    (requestedNext.startsWith("/admin") || isMobNext) &&
+    !requestedNext.startsWith("//")
       ? requestedNext
       : "/admin";
 

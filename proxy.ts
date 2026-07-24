@@ -43,6 +43,10 @@ function isCbeHost(host: string | null) {
   return Boolean(host?.split(":")[0].toLowerCase() === "cbe.mo-tshirt.mu");
 }
 
+function isMobHost(host: string | null) {
+  return Boolean(host?.split(":")[0].toLowerCase() === "mob.mo-tshirt.mu");
+}
+
 function readCronSecret() {
   return String(process.env.CRON_SECRET || process.env.IOT_CRON_SECRET || "").trim();
 }
@@ -69,6 +73,7 @@ function isAuthorizedCoupleFoodCron(req: NextRequest) {
 
 export async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
+  const mobHost = isMobHost(req.headers.get("host"));
 
   if (isCbeHost(req.headers.get("host")) && pathname === "/") {
     const url = req.nextUrl.clone();
@@ -130,6 +135,72 @@ export async function proxy(req: NextRequest) {
     return applySecurityHeaders(response);
   }
 
+  const isMobPath = pathname === "/mob" || pathname.startsWith("/mob/");
+  const isMobLogin = mobHost && pathname === "/login";
+  const isMobAsset =
+    mobHost &&
+    (pathname.startsWith("/_next/") ||
+      pathname.startsWith("/favicon") ||
+      pathname.startsWith("/apple-touch-icon") ||
+      pathname === "/icon.png" ||
+      pathname === "/site.webmanifest" ||
+      /\.(?:avif|gif|ico|jpe?g|png|svg|webp)$/i.test(pathname));
+  const isMobSurface = isMobPath || (mobHost && !isMobLogin && !isMobAsset);
+
+  if (isMobSurface) {
+    const internalPath = mobHost
+      ? pathname === "/"
+        ? "/mob"
+        : `/mob${pathname}`
+      : pathname;
+    const session = await readAdminSession(req.cookies);
+    if (!session) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/login";
+      url.search = `?next=${encodeURIComponent(pathname + search)}`;
+      return applySecurityHeaders(NextResponse.redirect(url));
+    }
+
+    const canUsePhotoLog =
+      session.isOwner ||
+      hasAdminPageAccess(
+        session.allowedPages,
+        "/admin/inventory-photo-log",
+        { isOwner: session.isOwner }
+      );
+    if (!session.isOwner && internalPath !== "/mob/photo-log") {
+      if (!canUsePhotoLog) {
+        const url = req.nextUrl.clone();
+        url.pathname = "/login";
+        url.search = "";
+        return applySecurityHeaders(NextResponse.redirect(url));
+      }
+      const url = req.nextUrl.clone();
+      url.pathname = mobHost ? "/photo-log" : "/mob/photo-log";
+      url.search = "";
+      return applySecurityHeaders(NextResponse.redirect(url));
+    }
+    if (
+      internalPath === "/mob/photo-log" &&
+      !canUsePhotoLog
+    ) {
+      const fallbackPath = getAdminLandingPath(session.allowedPages, {
+        isOwner: session.isOwner,
+      });
+      const url = req.nextUrl.clone();
+      url.pathname = fallbackPath;
+      url.search = "?denied=1";
+      return applySecurityHeaders(NextResponse.redirect(url));
+    }
+
+    if (mobHost) {
+      const url = req.nextUrl.clone();
+      url.pathname = internalPath;
+      return applySecurityHeaders(NextResponse.rewrite(url));
+    }
+    return applySecurityHeaders(NextResponse.next());
+  }
+
   // Protect all /admin routes and the standalone IoT command deck.
   const isProtectedRoute = pathname.startsWith("/admin") || pathname === "/iot";
   if (!isProtectedRoute) return applySecurityHeaders(NextResponse.next());
@@ -164,5 +235,16 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/admin/:path*", "/design-studio", "/iot", "/api/:path*"],
+  matcher: [
+    "/",
+    "/admin/:path*",
+    "/mob/:path*",
+    "/photo-log/:path*",
+    "/inventory/:path*",
+    "/settings/:path*",
+    "/login",
+    "/design-studio",
+    "/iot",
+    "/api/:path*",
+  ],
 };
