@@ -121,7 +121,7 @@ function Checkbox({
           onChange={(event) => onChange(event.target.checked)}
           className="sr-only"
         />
-        <Check className="h-4 w-4" strokeWidth={3} />
+        <Check className="pointer-events-none h-4 w-4" strokeWidth={3} />
       </span>
       {label}
     </label>
@@ -172,6 +172,12 @@ export default function TanviHouseInventoryPage() {
   useEffect(() => {
     void loadItems();
   }, []);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timeoutId = window.setTimeout(() => setNotice(null), 3500);
+    return () => window.clearTimeout(timeoutId);
+  }, [notice]);
 
   const filteredItems = useMemo(() => {
     const term = search.trim().toLocaleLowerCase("en");

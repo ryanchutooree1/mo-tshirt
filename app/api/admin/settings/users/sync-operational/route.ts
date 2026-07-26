@@ -19,7 +19,12 @@ export async function POST() {
         email: managerEmail,
         username: "tanvi",
         displayName: manager.name,
-        allowedPages: ["/admin/tanvi", "/admin/quotation-approval", "/admin/couple-goals"],
+        allowedPages: [
+          "/admin/tanvi",
+          "/admin/quotation-approval",
+          "/admin/couple-goals",
+          "/admin/house-inventory",
+        ],
         isActive: true,
       }));
     } else {

@@ -45,6 +45,7 @@ export type AdminPagePath =
   | "/admin/her-dream-life"
   | "/admin/our-dream"
   | "/admin/couple-goals"
+  | "/admin/house-inventory"
   | "/admin/settings";
 
 export type AdminPermissionGroup =
@@ -341,6 +342,12 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
     group: "Planning",
   },
   {
+    path: "/admin/house-inventory",
+    label: "House Inventory",
+    description: "Household stock levels and the shared shopping list.",
+    group: "Planning",
+  },
+  {
     path: "/admin/settings",
     label: "Settings",
     description: "Workspace controls for storage, admin access, and routing.",
@@ -408,6 +415,7 @@ export const DEFAULT_TOP_NAV_PATHS: AdminPagePath[] = [
   "/admin/her-dream-life",
   "/admin/our-dream",
   "/admin/couple-goals",
+  "/admin/house-inventory",
 ];
 
 export const DEFAULT_MORE_NAV_PATHS: AdminPagePath[] = [
@@ -463,6 +471,7 @@ export function resolveAdminPagePath(pathname: string) {
 export function resolveAdminApiPermission(pathname: string) {
   if (pathname.startsWith("/api/admin/mob")) return "/admin/inventory-photo-log" as AdminPagePath;
   if (pathname.startsWith("/api/admin/inventory-photo-log")) return "/admin/inventory-photo-log" as AdminPagePath;
+  if (pathname.startsWith("/api/admin/tanvi/house-inventory")) return "/admin/house-inventory" as AdminPagePath;
   if (pathname.startsWith("/api/admin/tanvi")) return "/admin/tanvi" as AdminPagePath;
   if (pathname.startsWith("/api/admin/settings")) return "/admin/settings" as AdminPagePath;
   if (pathname.startsWith("/api/admin/partners")) return "/admin/partners" as AdminPagePath;
@@ -491,6 +500,12 @@ export function hasAdminPageAccess(
   ) {
     return true;
   }
+  if (
+    requiredPage === "/admin/house-inventory" &&
+    allowedPages.includes("/admin/tanvi")
+  ) {
+    return true;
+  }
   return allowedPages.includes(requiredPage);
 }
 
@@ -505,6 +520,12 @@ export function hasAdminApiAccess(
   if (!requiredPage) return true;
   if (
     requiredPage === "/admin/quotation-approval" &&
+    allowedPages.includes("/admin/tanvi")
+  ) {
+    return true;
+  }
+  if (
+    requiredPage === "/admin/house-inventory" &&
     allowedPages.includes("/admin/tanvi")
   ) {
     return true;

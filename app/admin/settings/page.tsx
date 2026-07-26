@@ -1307,7 +1307,7 @@ export default function SettingsPage() {
                   <div className="mt-4 text-sm text-slate-400">{productionManager.email || "No email added"}</div>
                 )}
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {['Production Workspace', 'Quotes & Invoices', 'Couple Goals'].map((access) => (
+                  {['Production Workspace', 'Quotes & Invoices', 'Couple Goals', 'House Inventory'].map((access) => (
                     <span key={access} className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold text-slate-300">{access}</span>
                   ))}
                 </div>

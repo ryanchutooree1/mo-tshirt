@@ -200,7 +200,7 @@ function LoginInner() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="mt-2 w-full rounded-2xl border border-[#EAEAEA] bg-white px-4 py-3 text-sm text-black shadow-sm focus:border-black focus:outline-none focus:ring-2 focus:ring-black/5"
-                  placeholder="tanvi or team@mo-tshirt.mu"
+                  placeholder="team@mo-tshirt.mu"
                   autoComplete="username"
                 />
                 <p className="mt-2 text-xs text-neutral-500">

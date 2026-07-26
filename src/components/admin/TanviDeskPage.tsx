@@ -13,7 +13,6 @@ import {
   EyeOff,
   ExternalLink,
   FileText,
-  House,
   Image as ImageIcon,
   LockKeyhole,
   MessageCircle,
@@ -33,7 +32,6 @@ import {
 } from "lucide-react";
 import { differenceInCalendarDays, format, formatDistanceToNow } from "date-fns";
 import { useAdminTheme } from "@/admin/AdminThemeContext";
-import TanviHouseInventoryPage from "@/components/admin/TanviHouseInventoryPage";
 import {
   PARTNER_CLIENT_STATUS_LABELS,
   PARTNER_CLIENT_STATUS_OPTIONS,
@@ -60,7 +58,6 @@ type DeskPayload = {
 };
 
 type QueueFilter = "all" | "unrouted" | "waiting" | "blocked" | "ready" | "active";
-type TanviWorkspaceTab = "orders" | "house-inventory";
 type WorkflowTone = "success" | "warning" | "danger" | "info" | "neutral";
 type WhatsappPrintPlacement = "front" | "back" | "front_back";
 type WhatsappLogoSlot = "front" | "back";
@@ -720,8 +717,6 @@ export default function TanviDeskPage() {
   const [artworkDescriptionDrafts, setArtworkDescriptionDrafts] = useState<Record<string, string>>({});
   const [documentStudioOpen, setDocumentStudioOpen] = useState(true);
   const [documentDraft, setDocumentDraft] = useState<DocumentStudioDraft | null>(null);
-  const [activeWorkspace, setActiveWorkspace] =
-    useState<TanviWorkspaceTab>("orders");
 
   useEffect(() => {
     if (!themeReady || theme === "light") return;
@@ -1630,44 +1625,6 @@ export default function TanviDeskPage() {
     <>
     <main className={`${pageClass} max-w-full overflow-x-hidden`}>
       <div className="mx-auto flex w-full max-w-[1680px] min-w-0 flex-col gap-3 overflow-x-hidden px-2 py-3 sm:gap-5 sm:px-6 sm:py-4 lg:px-8">
-        <nav
-          className="grid grid-cols-2 gap-1 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-[0_10px_28px_rgba(15,23,42,0.06)] sm:w-fit"
-          aria-label="Tanvi workspace"
-        >
-          <button
-            type="button"
-            onClick={() => setActiveWorkspace("orders")}
-            aria-current={activeWorkspace === "orders" ? "page" : undefined}
-            className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
-              activeWorkspace === "orders"
-                ? "bg-slate-950 text-white shadow-sm"
-                : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-            }`}
-          >
-            <ClipboardCheck className="h-4 w-4" />
-            Orders
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveWorkspace("house-inventory")}
-            aria-current={
-              activeWorkspace === "house-inventory" ? "page" : undefined
-            }
-            className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
-              activeWorkspace === "house-inventory"
-                ? "bg-violet-600 text-white shadow-sm"
-                : "text-slate-500 hover:bg-violet-50 hover:text-violet-800"
-            }`}
-          >
-            <House className="h-4 w-4" />
-            House inventory
-          </button>
-        </nav>
-
-        {activeWorkspace === "house-inventory" ? (
-          <TanviHouseInventoryPage />
-        ) : (
-          <>
         <section className={heroClass}>
           <div className="grid gap-3 p-3 sm:p-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(24rem,1fr)] lg:p-5">
             <div className="min-w-0">
@@ -3377,11 +3334,9 @@ export default function TanviDeskPage() {
             </section>
           )}
         </section>
-          </>
-        )}
       </div>
     </main>
-    {activeWorkspace === "orders" && zoomArtwork ? (
+    {zoomArtwork ? (
       <div
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3"
         role="dialog"

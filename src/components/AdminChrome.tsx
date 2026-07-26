@@ -28,6 +28,7 @@ import {
   Headphones,
   Heart,
   HeartHandshake,
+  House,
   Landmark,
   LayoutDashboard,
   LogOut,
@@ -167,6 +168,7 @@ const NAV_GROUPS: NavGroup[] = [
       "/admin/her-dream-life",
       "/admin/our-dream",
       "/admin/couple-goals",
+      "/admin/house-inventory",
     ],
   },
   {
@@ -234,6 +236,7 @@ const PAGE_ICONS: Partial<Record<AdminPagePath, LucideIcon>> = {
   "/admin/her-dream-life": Heart,
   "/admin/our-dream": UsersRound,
   "/admin/couple-goals": HeartHandshake,
+  "/admin/house-inventory": House,
   "/admin/docker-postgres": Database,
   "/admin/settings": Settings,
 };
@@ -507,7 +510,10 @@ export default function AdminChrome({
     if (!session) return new Set<AdminPagePath>();
     if (session.isOwner) return new Set<AdminPagePath>(ALL_ADMIN_PAGE_PATHS);
     const allowed = new Set<AdminPagePath>(session.allowedPages);
-    if (allowed.has("/admin/tanvi")) allowed.add("/admin/quotation-approval");
+    if (allowed.has("/admin/tanvi")) {
+      allowed.add("/admin/quotation-approval");
+      allowed.add("/admin/house-inventory");
+    }
     return allowed;
   }, [session]);
 

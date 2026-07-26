@@ -50,3 +50,16 @@ test("Tanvi access continues to include quotations", () => {
     true
   );
 });
+
+test("Tanvi access includes the separate house inventory page and API", () => {
+  assert.equal(
+    hasAdminPageAccess(["/admin/tanvi"], "/admin/house-inventory", {
+      isOwner: false,
+    }),
+    true
+  );
+  assert.equal(
+    resolveAdminApiPermission("/api/admin/tanvi/house-inventory"),
+    "/admin/house-inventory"
+  );
+});
