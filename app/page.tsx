@@ -13,6 +13,7 @@ import {
   HiOutlineSparkles,
 } from "react-icons/hi2";
 import Gallery from "@/components/Gallery";
+import HowToOrder from "@/components/HowToOrder";
 import MapCard from "@/components/MapCard";
 import QuoteForm from "@/components/QuoteForm";
 import ZoomableImage from "@/components/ZoomableImage";
@@ -290,16 +291,7 @@ export default function HomePage() {
                 />
               </div>
             </div>
-            <div className="mt-6 w-full max-w-5xl lg:max-w-6xl">
-              <Image
-                src="/how_to_order.webp"
-                alt="How to order custom printed products"
-                width={1600}
-                height={628}
-                className="h-auto w-full rounded-[32px] border border-[#EAEAEA] object-cover shadow-sm"
-                sizes="(max-width: 1024px) calc(100vw - 48px), 1024px"
-              />
-            </div>
+            <HowToOrder />
           </div>
         </section>
 
