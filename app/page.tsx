@@ -260,7 +260,7 @@ export default function HomePage() {
 
             <ActionButtons />
 
-            <div className={`mt-[49px] w-full ${studioSora.variable} ${studioPlusJakartaSans.variable}`}>
+            <div className={`mt-10 -mx-6 w-[calc(100%+3rem)] sm:mx-0 sm:mt-[49px] sm:w-full ${studioSora.variable} ${studioPlusJakartaSans.variable}`}>
               <PremiumDesignStudioClient
                 embedded
                 backHref="/"

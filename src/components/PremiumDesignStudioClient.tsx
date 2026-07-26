@@ -49,6 +49,8 @@ import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } fro
 import { removeBackgroundAutomatically } from "@/lib/automatic-background-removal";
 import { formatMoney } from "@/lib/money";
 import { uploadPublicArtwork } from "@/lib/public-artwork-upload";
+import { MobileFabricPanel } from "@/components/MobileFabricPanel";
+import { MobileStudioDock, type MobileStudioTool } from "@/components/MobileStudioDock";
 import {
   getMinSizePrice,
   getShopDesignProductId,
@@ -79,6 +81,10 @@ const PRODUCTS = [
   { id: "tshirt" as const, label: "Plain T-Shirt", base: 150, min: 10, lead: "5–7 working days", image: "/design-studio/tshirt-realistic.png", backImage: "/design-studio/tshirt-realistic-back.png" },
   { id: "polo" as const, label: "Plain Poloshirt", base: 450, min: 10, lead: "6–8 working days", image: "/design-studio/polo-realistic.png", backImage: "/design-studio/polo-realistic-back.png" },
 ];
+const MOBILE_FABRIC_PRODUCTS = PRODUCTS.map((item) => ({
+  id: item.id,
+  label: item.label.replace("Plain ", ""),
+}));
 
 const METHODS = [
   { id: "dtf" as const, label: "DTF full colour", add: 60, note: "Best for logos, photos and gradients." },
@@ -182,7 +188,10 @@ export default function PremiumDesignStudioClient({
   const [client, setClient] = useState({ name: "", email: "", phone: "", deadline: "", deliveryName: "", address: "", postCode: "", deliveryPhone: "", notes: "" });
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [mobileTool, setMobileTool] = useState<MobileStudioTool>("fabric");
+  const [mobileFabricPanelOpen, setMobileFabricPanelOpen] = useState(true);
   const artworkInput = useRef<HTMLInputElement | null>(null);
+  const cameraInput = useRef<HTMLInputElement | null>(null);
   const uploadTarget = useRef<Side>("front");
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const printZoneRef = useRef<HTMLDivElement | null>(null);
@@ -246,6 +255,12 @@ export default function PremiumDesignStudioClient({
   const productVariants = catalogByProduct[productId];
   const selectedShopItem = shopItems.find((item) => item.id === selectedShopItemId) ?? null;
   const selectedColor = selectedShopItem?.colors[0] || "Black";
+  const mobileFabricColours = useMemo(
+    () => productVariants
+      .map((item) => ({ id: item.id, label: item.colors.join(", ") || "Default" }))
+      .sort((a, b) => Number(b.id === selectedShopItemId) - Number(a.id === selectedShopItemId)),
+    [productVariants, selectedShopItemId]
+  );
   const availableSizes = selectedShopItem ? getSizes(selectedShopItem) : DEFAULT_SIZES;
   const productPreviewImage = activeSide === "back"
     ? selectedShopItem?.studioBackPhotoUrl || selectedShopItem?.backPhotoUrl || product.backImage
@@ -335,6 +350,11 @@ export default function PremiumDesignStudioClient({
     artworkInput.current?.click();
   }
 
+  function openCamera(side: Side) {
+    uploadTarget.current = side;
+    cameraInput.current?.click();
+  }
+
   function chooseArtwork(file: File, side: Side) {
     const allowed = /\.(png|jpe?g|webp|svg)$/i.test(file.name);
     if (!allowed || file.size > 5 * 1024 * 1024) {
@@ -352,6 +372,27 @@ export default function PremiumDesignStudioClient({
   function handleArtwork(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (file) chooseArtwork(file, uploadTarget.current);
+  }
+
+  function selectMobileTool(tool: MobileStudioTool) {
+    setMobileTool(tool);
+    setMobileFabricPanelOpen(tool === "fabric");
+
+    if (tool === "fabric") {
+      setStep(2);
+      return;
+    }
+    if (tool === "graphics") {
+      setStep(activeArtworkUrl ? 5 : 4);
+      return;
+    }
+    if (tool === "background") {
+      setStep(4);
+      return;
+    }
+
+    setStep(4);
+    openCamera(activeSide);
   }
 
   function replaceArtworkFile(file: File, side: Side) {
@@ -626,7 +667,7 @@ export default function PremiumDesignStudioClient({
     <div
       className={`premium-studio bg-[#f5f5f2] text-left text-[#1b1b18] [font-family:var(--font-studio-body)] ${
         embedded
-          ? "overflow-hidden rounded-[32px] border border-[#e5e4df] shadow-sm"
+          ? "overflow-hidden border-y border-[#e5e4df] shadow-sm sm:rounded-[32px] sm:border"
           : "min-h-screen"
       }`}
     >
@@ -638,28 +679,30 @@ export default function PremiumDesignStudioClient({
         </div>
       </header> : null}
 
-      <section className="border-b border-[#e5e4df] bg-[#fff] px-4 py-6 sm:px-6 sm:py-8">
+      <section className="hidden border-b border-[#e5e4df] bg-[#fff] px-4 py-6 sm:block sm:px-6 sm:py-8">
         <div className="mx-auto max-w-[1500px]">
           <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
             <HeadingTag className="text-3xl font-bold tracking-[-0.045em] text-[#161613] [font-family:var(--font-studio-display)] sm:text-5xl">Design it. <span className="text-[#ff5a0a]">We print it.</span></HeadingTag>
             <div className="w-full max-w-md"><div className="mb-2 flex justify-between text-[10px] font-bold uppercase tracking-[0.12em] text-[#77766f]"><span>Step {step} of {STEPS.length}</span><span>{Math.round((step / STEPS.length) * 100)}% complete</span></div><div className="h-2 overflow-hidden rounded-full bg-[#ecebe6]"><motion.div className="h-full rounded-full bg-[#ff5a0a]" animate={{ width: `${(step / STEPS.length) * 100}%` }} /></div></div>
           </div>
-          <div className="mt-6 flex gap-2 overflow-x-auto pb-1 xl:hidden">{STEPS.map((item) => <button key={item.id} type="button" onClick={() => setStep(item.id)} className={`flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold ${step === item.id ? "studio-primary border-[#ff5a0a] bg-[#ff5a0a] !text-white" : step > item.id ? "border-[#ffd5c1] bg-[#fff5ef] text-[#c54306]" : "border-[#e4e3dd] bg-[#fff] text-[#73726c]"}`}><span>{step > item.id ? <Check className="h-3.5 w-3.5" /> : item.id}</span>{item.short}</button>)}</div>
+          <div className="mt-6 hidden gap-2 overflow-x-auto pb-1 sm:flex xl:hidden">{STEPS.map((item) => <button key={item.id} type="button" onClick={() => setStep(item.id)} className={`flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold ${step === item.id ? "studio-primary border-[#ff5a0a] bg-[#ff5a0a] !text-white" : step > item.id ? "border-[#ffd5c1] bg-[#fff5ef] text-[#c54306]" : "border-[#e4e3dd] bg-[#fff] text-[#73726c]"}`}><span>{step > item.id ? <Check className="h-3.5 w-3.5" /> : item.id}</span>{item.short}</button>)}</div>
         </div>
       </section>
 
-      <div className="mx-auto max-w-[1500px] px-3 py-4 sm:px-6 sm:py-7">
-        <div className="grid items-start gap-5 xl:grid-cols-[230px_minmax(0,1fr)]">
+      <div className="mx-auto max-w-[1500px] px-0 py-0 sm:px-6 sm:py-7">
+        <div className="grid items-start gap-0 sm:gap-5 xl:grid-cols-[230px_minmax(0,1fr)]">
           <nav className="hidden rounded-[24px] border border-[#e1e0da] bg-[#fff] p-3 shadow-[0_14px_45px_rgba(29,27,20,0.05)] xl:block" aria-label="Design steps">
             {STEPS.map((item) => <button key={item.id} type="button" onClick={() => setStep(item.id)} aria-current={step === item.id ? "step" : undefined} className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${step === item.id ? "studio-dark bg-[#171714] !text-white" : "text-[#686761] hover:bg-[#f5f4f0]"}`}><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${step === item.id ? "studio-primary bg-[#ff5a0a] !text-white" : step > item.id ? "bg-[#fff0e8] text-[#df4d08]" : "bg-[#f1f0ec] text-[#8d8c85]"}`}>{step > item.id ? <Check className="h-4 w-4" /> : item.id}</span><span className="min-w-0"><span className="block text-[9px] font-bold uppercase tracking-[0.13em] opacity-55">Step {item.id}</span><span className="mt-0.5 block text-[13px] font-bold leading-tight">{item.label}</span></span><ChevronRight className="ml-auto h-4 w-4 opacity-25" /></button>)}
             <div className="mt-3 rounded-2xl bg-[#f6f5f1] p-4"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8a8982]">Need help?</p><a href={`tel:${CONTACT_TEL}`} className="mt-2 flex items-center gap-2 text-xs font-bold"><MessageCircle className="h-4 w-4 text-[#ff5a0a]" />{CONTACT_PHONE_DISPLAY}</a></div>
           </nav>
 
-          <form onSubmit={submitQuote} className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(330px,.8fr)]">
-            <section className="overflow-hidden rounded-[26px] border border-[#dfded8] bg-[#fff] shadow-[0_18px_55px_rgba(32,30,24,0.07)]">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#ecebe6] px-4 py-3.5 sm:px-5"><div><p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#99978f]">Live preview</p><h2 className="mt-0.5 text-lg font-bold tracking-[-0.025em]">{product.label} · {activeSide}</h2></div><div className="flex items-center gap-1.5">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-xl px-4 py-2 text-xs font-bold capitalize ${activeSide === side ? "studio-primary bg-[#ff5a0a] !text-white" : "bg-[#f4f3ef] text-[#686761]"}`}>{side}</button>)}<button type="button" onClick={() => { setDesigns({ front: createDesign(), back: createDesign() }); setSelectedLayer(null); setSelectedArtworkCopyId(null); setSelectedTextCopyId(null); }} className="ml-1 flex h-9 w-9 items-center justify-center rounded-xl border border-[#e1e0da] text-[#66655f]" aria-label="Reset design"><RotateCcw className="h-4 w-4" /></button></div></div>
-              <div className="bg-[radial-gradient(circle_at_50%_0%,#ffffff_0%,#f5f3ed_55%,#eeece5_100%)] p-3 sm:p-6">
-                <div ref={canvasRef} onPointerDown={() => setSelectedLayer(null)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className="relative mx-auto aspect-[4/5] w-full max-w-[550px] overflow-hidden rounded-[24px] border border-[#fff] bg-[#fff]/30" style={{ touchAction: "none" }}>
+          <form onSubmit={submitQuote} className="grid min-w-0 gap-0 sm:gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(330px,.8fr)]">
+            <input ref={artworkInput} type="file" accept=".png,.jpg,.jpeg,.webp,.svg" onClick={(event) => { event.currentTarget.value = ""; }} onChange={handleArtwork} className="hidden" />
+            <input ref={cameraInput} type="file" accept="image/*" capture="environment" onClick={(event) => { event.currentTarget.value = ""; }} onChange={handleArtwork} className="hidden" />
+            <section className="overflow-hidden border-y border-[#dfded8] bg-[#fff] shadow-none sm:rounded-[26px] sm:border sm:shadow-[0_18px_55px_rgba(32,30,24,0.07)]">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#ecebe6] px-3 py-2.5 sm:gap-3 sm:px-5 sm:py-3.5"><div><p className="text-[8px] font-bold uppercase tracking-[0.16em] text-[#99978f] sm:text-[9px]">Live preview</p><h2 className="mt-0.5 text-base font-bold tracking-[-0.025em] sm:text-lg">{product.label} · {activeSide}</h2></div><div className="flex items-center gap-1">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`min-h-10 rounded-xl px-3 text-[11px] font-bold capitalize sm:px-4 sm:py-2 sm:text-xs ${activeSide === side ? "studio-primary bg-[#ff5a0a] !text-white" : "bg-[#f4f3ef] text-[#686761]"}`}>{side}</button>)}<button type="button" onClick={() => { setDesigns({ front: createDesign(), back: createDesign() }); setSelectedLayer(null); setSelectedArtworkCopyId(null); setSelectedTextCopyId(null); }} className="ml-0.5 flex h-10 w-10 items-center justify-center rounded-xl border border-[#e1e0da] text-[#66655f]" aria-label="Reset design"><RotateCcw className="h-4 w-4" /></button></div></div>
+              <div className="bg-[radial-gradient(circle_at_50%_0%,#ffffff_0%,#f5f3ed_55%,#eeece5_100%)] p-0 sm:p-6">
+                <div ref={canvasRef} onPointerDown={() => setSelectedLayer(null)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className="relative mx-auto aspect-[4/5] w-full max-w-[550px] overflow-hidden bg-[#fff]/30 sm:rounded-[24px] sm:border sm:border-[#fff]" style={{ touchAction: "none" }}>
                   <div className="pointer-events-none absolute inset-0 z-10"><div className="relative h-full w-full origin-center transition duration-200" style={{ transform: `scale(${previewZoom / 100})` }}><Image src={productPreviewImage} alt={`Realistic ${product.label} ${activeSide} preview`} fill priority sizes="(min-width: 1024px) 550px, 92vw" className="object-contain drop-shadow-[0_26px_28px_rgba(15,23,42,.22)]" /></div></div>
                   <div ref={printZoneRef} className="absolute z-30" style={{ left: `${printZone.left}%`, top: `${printZone.top}%`, width: `${printZone.width}%`, height: `${printZone.height}%` }}>
                     {activeTextLayers.map((textLayer) => {
@@ -673,10 +716,13 @@ export default function PremiumDesignStudioClient({
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 border-t border-[#ecebe6] bg-[#fbfbf9] sm:grid-cols-4"><PreviewStat label="Garment" value={product.label} /><PreviewStat label="Colour" value={selectedColor} /><PreviewStat label="Quantity" value={String(totalQty)} /><PreviewStat label="Estimate" value={formatMoney(totalPrice)} accent /></div>
+              {mobileFabricPanelOpen ? <div className="relative z-40 -mt-32 px-3 pb-3 sm:hidden"><MobileFabricPanel products={MOBILE_FABRIC_PRODUCTS} activeProductId={productId} colours={mobileFabricColours} selectedColourId={selectedShopItemId} loading={shopLoading} onProductSelect={(nextProductId) => selectProduct(nextProductId as ProductId)} onColourSelect={(itemId) => { const item = shopItems.find((shopItem) => shopItem.id === itemId); if (item) selectShopItem(item); }} onClose={() => setMobileFabricPanelOpen(false)} /></div> : null}
+              <div className="grid grid-cols-4 border-t border-[#ecebe6] bg-[#fbfbf9]"><PreviewStat label="Garment" value={product.label} /><PreviewStat label="Colour" value={selectedColor} /><PreviewStat label="Quantity" value={String(totalQty)} /><PreviewStat label="Estimate" value={formatMoney(totalPrice)} accent /></div>
             </section>
 
-            <aside className="flex min-h-[600px] flex-col rounded-[26px] border border-[#dfded8] bg-[#fff] shadow-[0_18px_55px_rgba(32,30,24,0.07)]">
+            <div className="sticky bottom-3 z-[60] mx-2 my-3 sm:hidden"><MobileStudioDock activeTool={mobileTool} onSelect={selectMobileTool} /></div>
+
+            <aside className="mx-2 mb-4 flex min-h-[520px] flex-col rounded-[26px] border border-[#dfded8] bg-[#fff] shadow-[0_18px_55px_rgba(32,30,24,0.07)] sm:mx-0 sm:mb-0 sm:min-h-[600px]">
               <div className="border-b border-[#ecebe6] px-5 py-5"><div className="flex items-start gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fff0e8] text-sm font-extrabold text-[#e44c04]">{step}</span><div><h2 className="text-xl font-bold tracking-[-0.03em]">{activeStep.label}</h2><p className="mt-1 text-xs leading-5 text-[#77766f]">{stepCopy(step)}</p></div></div></div>
               <motion.div key={step} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} className="flex-1 p-5">
                 {step === 1 ? <div className="space-y-3"><div className="flex items-center gap-2 rounded-xl bg-[#f2f8f4] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.1em] text-[#168455]"><BadgeCheck className="h-4 w-4" />Live products from Shops</div>{shopLoading ? <div className="flex min-h-48 items-center justify-center gap-2 text-xs font-semibold text-[#77766f]"><Loader2 className="h-4 w-4 animate-spin text-[#ff5a0a]" />Loading real garments…</div> : <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">{PRODUCTS.map((option) => {
@@ -694,7 +740,7 @@ export default function PremiumDesignStudioClient({
 
                 {step === 3 ? <div className="space-y-6"><div><Label>Print side</Label><div className="mt-3 grid grid-cols-2 gap-3">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-2xl border p-4 text-left ${activeSide === side ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e4e3de]"}`}><div className="flex justify-between"><Layers3 className="h-5 w-5 text-[#ff5a0a]" />{activeSide === side ? <CheckCircle2 className="h-5 w-5 text-[#ff5a0a]" /> : null}</div><p className="mt-5 text-sm font-extrabold capitalize">{side}</p><p className="mt-1 text-xs text-[#85847d]">Design the {side} side.</p></button>)}</div></div><div><Label>Print method</Label><div className="mt-3 space-y-2.5">{METHODS.map((option) => <label key={option.id} className={`flex cursor-pointer gap-3 rounded-2xl border p-3.5 ${methodId === option.id ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e4e3de]"}`}><input type="radio" name="method" checked={methodId === option.id} onChange={() => setMethodId(option.id)} className="mt-1 accent-[#ff5a0a]" /><span><span className="block text-sm font-bold">{option.label}</span><span className="mt-1 block text-xs leading-5 text-[#85847d]">{option.note}</span></span></label>)}</div></div></div> : null}
 
-                {step === 4 ? <div className="space-y-4"><div className="rounded-2xl border border-[#ffd8c4] bg-[linear-gradient(135deg,#fff8f3_0%,#fff_100%)] p-4"><div className="flex gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ff5a0a] text-white"><Layers3 className="h-5 w-5" /></span><div><p className="text-sm font-extrabold">One file for each print side</p><p className="mt-1 text-xs leading-5 text-[#7d6b62]">Upload separate artwork for the front and back. You can add either side or both.</p></div></div></div><input ref={artworkInput} type="file" accept=".png,.jpg,.jpeg,.webp,.svg" onClick={(event) => { event.currentTarget.value = ""; }} onChange={handleArtwork} className="hidden" />{(["front", "back"] as Side[]).map((side) => <ArtworkUploadSlot key={side} side={side} file={artworkFiles[side]} url={artworkUrls[side]} active={activeSide === side} onChoose={() => openArtworkPicker(side)} onDrop={(file) => chooseArtwork(file, side)} onRemove={() => clearArtwork(side)} onBackgroundRemoved={(file) => replaceArtworkFile(file, side)} onPosition={() => { changeSide(side); setStep(5); }} />)}<div className="flex items-center justify-center gap-2 text-[9px] font-bold uppercase tracking-[0.1em] text-[#8d8b84]"><BadgeCheck className="h-4 w-4 text-[#16a462]" />PNG, JPG, WEBP or SVG · 5MB per file</div>{result && !result.ok ? <p className="rounded-xl bg-[#fff1f1] p-3 text-xs text-[#b91c1c]">{result.text}</p> : null}</div> : null}
+                {step === 4 ? <div className="space-y-4"><div className="rounded-2xl border border-[#ffd8c4] bg-[linear-gradient(135deg,#fff8f3_0%,#fff_100%)] p-4"><div className="flex gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ff5a0a] text-white"><Layers3 className="h-5 w-5" /></span><div><p className="text-sm font-extrabold">One file for each print side</p><p className="mt-1 text-xs leading-5 text-[#7d6b62]">Upload separate artwork for the front and back. You can add either side or both.</p></div></div></div>{(["front", "back"] as Side[]).map((side) => <ArtworkUploadSlot key={side} side={side} file={artworkFiles[side]} url={artworkUrls[side]} active={activeSide === side} onChoose={() => openArtworkPicker(side)} onDrop={(file) => chooseArtwork(file, side)} onRemove={() => clearArtwork(side)} onBackgroundRemoved={(file) => replaceArtworkFile(file, side)} onPosition={() => { changeSide(side); setStep(5); }} />)}<div className="flex items-center justify-center gap-2 text-[9px] font-bold uppercase tracking-[0.1em] text-[#8d8b84]"><BadgeCheck className="h-4 w-4 text-[#16a462]" />PNG, JPG, WEBP or SVG · 5MB per file</div>{result && !result.ok ? <p className="rounded-xl bg-[#fff1f1] p-3 text-xs text-[#b91c1c]">{result.text}</p> : null}</div> : null}
 
                 {step === 5 ? <div className="space-y-4"><div><Label>Artwork side</Label><div className="mt-2 grid grid-cols-2 gap-2">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-2xl border p-3 text-left transition ${activeSide === side ? "border-[#ff5a0a] bg-[#fff8f3] ring-2 ring-[#ff5a0a]/10" : "border-[#e2e1dc] bg-white"}`}><span className="flex items-center justify-between"><span className="text-xs font-extrabold capitalize">{side}</span>{artworkUrls[side] ? <CheckCircle2 className="h-4 w-4 text-[#16a462]" /> : <span className="h-2 w-2 rounded-full bg-[#d5d3cc]" />}</span><span className="mt-1 block text-[9px] font-bold uppercase tracking-[0.08em] text-[#96948c]">{artworkUrls[side] ? "Artwork ready" : "No artwork"}</span></button>)}</div></div>{activeArtworkUrl ? <><div className="flex items-center gap-3 rounded-2xl border border-[#c9ead8] bg-[#f4fbf7] p-3"><span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm"><img src={activeArtworkUrl} alt={`${activeSide} artwork preview`} className="h-full w-full object-contain" /></span><span className="min-w-0 flex-1"><span className="block text-[9px] font-bold uppercase tracking-[0.1em] text-[#168455]">Editing {selectedArtworkCopyId === null ? activeSide : `duplicated ${activeSide}`}</span><span className="mt-1 block truncate text-xs font-bold">{artworkFiles[activeSide]?.name}</span></span></div><div className="grid grid-cols-3 gap-2"><PresetButton icon={<Crosshair />} label="Left chest" onClick={() => patchArtwork({ x: -28, y: -38 })} /><PresetButton icon={<Focus />} label="Centre" onClick={() => patchArtwork({ x: 0, y: 0 })} /><PresetButton icon={<Move />} label="Lower" onClick={() => patchArtwork({ x: 0, y: 52 })} /></div><RangeControl icon={<ZoomIn />} label="Artwork size" value={activeArtwork.scale} min={ARTWORK_SCALE_MIN} max={ARTWORK_SCALE_MAX} suffix="%" onChange={(value) => patchArtwork({ scale: value })} /><RangeControl icon={<Move />} label="Horizontal" value={activeArtwork.x} min={-LAYER_X_LIMIT} max={LAYER_X_LIMIT} onChange={(value) => patchArtwork({ x: value })} /><RangeControl icon={<Move className="rotate-90" />} label="Vertical" value={activeArtwork.y} min={-LAYER_Y_LIMIT} max={LAYER_Y_LIMIT} onChange={(value) => patchArtwork({ y: value })} /><RangeControl icon={<RotateCcw />} label="Rotation" value={activeArtwork.rotate} min={-180} max={180} suffix="°" onChange={(value) => patchArtwork({ rotate: value })} /><button type="button" onClick={() => setSnap((current) => !current)} className={`flex w-full items-center justify-between rounded-2xl border p-4 ${snap ? "border-[#bfe9d4] bg-[#f1fbf6]" : "border-[#e2e1dc]"}`}><span className="flex items-center gap-2 text-sm font-bold"><Magnet className="h-4 w-4 text-[#16a462]" />Snap to centre</span><span className={`rounded-full px-2 py-1 text-[9px] font-bold ${snap ? "studio-success bg-[#16a462] !text-white" : "bg-[#efeee9]"}`}>{snap ? "ON" : "OFF"}</span></button></> : <div className="flex min-h-64 flex-col items-center justify-center rounded-[22px] border-2 border-dashed border-[#ddd9d1] bg-[#fafaf7] p-6 text-center"><span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-[#ff5a0a] shadow-[0_8px_25px_rgba(35,32,24,.08)]"><ImagePlus className="h-6 w-6" /></span><p className="mt-4 text-sm font-extrabold">No {activeSide} artwork yet</p><p className="mt-1 max-w-[250px] text-xs leading-5 text-[#85847d]">Upload an image for this side before positioning it, or continue to add text only.</p><button type="button" onClick={() => setStep(4)} className="studio-primary mt-4 inline-flex items-center gap-2 rounded-xl bg-[#ff5a0a] px-4 py-2.5 text-xs font-bold !text-white"><UploadCloud className="h-4 w-4" />Go to uploads</button></div>}</div> : null}
 
@@ -704,7 +750,7 @@ export default function PremiumDesignStudioClient({
 
                 {step === 8 ? result?.ok ? <Success message={result.text} onReset={() => { setResult(null); setStep(1); }} /> : <div className="space-y-4"><Field label="Client name *"><input required value={client.name} onChange={(event) => setClient((current) => ({ ...current, name: event.target.value }))} className="studio-field" placeholder="Full name" /></Field><div className="grid gap-3 2xl:grid-cols-2"><Field label="Email"><input type="email" value={client.email} onChange={(event) => setClient((current) => ({ ...current, email: event.target.value }))} className="studio-field" placeholder="you@example.com" /></Field><Field label="Phone / WhatsApp"><input type="tel" value={client.phone} onChange={(event) => setClient((current) => ({ ...current, phone: event.target.value }))} className="studio-field" placeholder="+230 5..." /></Field></div><Field label="Preferred deadline"><input type="date" min={today} value={client.deadline} onChange={(event) => setClient((current) => ({ ...current, deadline: event.target.value }))} className="studio-field" /></Field><Field label="Delivery"><select value={delivery} onChange={(event) => setDelivery(event.target.value)} className="studio-field">{DELIVERY_OPTIONS.map((option) => <option key={option}>{option}</option>)}</select></Field>{needsDelivery ? <div className="space-y-3 rounded-2xl bg-[#f5f4f0] p-4"><Field label="Delivery name *"><input value={client.deliveryName} onChange={(event) => setClient((current) => ({ ...current, deliveryName: event.target.value }))} className="studio-field" /></Field><Field label="Address *"><input value={client.address} onChange={(event) => setClient((current) => ({ ...current, address: event.target.value }))} className="studio-field" /></Field><div className="grid grid-cols-2 gap-2"><input value={client.postCode} onChange={(event) => setClient((current) => ({ ...current, postCode: event.target.value }))} className="studio-field" placeholder="Post code" /><input value={client.deliveryPhone} onChange={(event) => setClient((current) => ({ ...current, deliveryPhone: event.target.value }))} className="studio-field" placeholder="Phone" /></div></div> : null}<div className="rounded-2xl border border-[#ffd2bd] bg-[#fff7f1] p-4"><div className="flex items-center justify-between"><span className="text-xs font-bold text-[#8b5d47]">{hasCustomization ? "Estimated total" : "Garment total"}</span><span className="text-xl font-extrabold text-[#dd4904]">{formatMoney(totalPrice)}</span></div>{!hasCustomization ? <p className="mt-2 text-[10px] text-[#9a725f]">Printing and setup charges begin only after artwork or custom text is added.</p> : null}</div>{result && !result.ok ? <p className="rounded-xl bg-[#fff1f1] p-3 text-xs text-[#b91c1c]">{result.text}</p> : null}<a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#bce8d1] bg-[#f0fbf5] px-4 py-3 text-sm font-bold text-[#087b45]"><MessageCircle className="h-4 w-4" />Send details on WhatsApp</a></div> : null}
               </motion.div>
-              {!result?.ok ? <div className="sticky bottom-0 mt-auto border-t border-[#ecebe6] bg-[#fff]/95 p-4 backdrop-blur"><div className="flex gap-2.5">{step > 1 ? <button type="button" onClick={() => goTo(step - 1)} className="inline-flex h-12 items-center gap-2 rounded-xl border border-[#deddd7] px-4 text-sm font-bold"><ChevronLeft className="h-4 w-4" />Back</button> : null}{step < STEPS.length ? <button type="button" onClick={() => goTo(step + 1)} className="studio-primary inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#ff5a0a] px-4 text-sm font-bold !text-white shadow-[0_10px_24px_rgba(255,90,10,.22)]">Next step<ArrowRight className="h-4 w-4" /></button> : <button type="submit" disabled={!canSubmit || submitting} className="studio-primary inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#ff5a0a] px-4 text-sm font-bold !text-white shadow-[0_10px_24px_rgba(255,90,10,.22)] disabled:cursor-not-allowed disabled:opacity-45">{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{submitting ? "Sending..." : "Request final price"}</button>}</div></div> : null}
+              {!result?.ok ? <div className="sticky bottom-[94px] mt-auto border-t border-[#ecebe6] bg-[#fff]/95 p-4 backdrop-blur sm:bottom-0"><div className="flex gap-2.5">{step > 1 ? <button type="button" onClick={() => goTo(step - 1)} className="inline-flex h-12 items-center gap-2 rounded-xl border border-[#deddd7] px-4 text-sm font-bold"><ChevronLeft className="h-4 w-4" />Back</button> : null}{step < STEPS.length ? <button type="button" onClick={() => goTo(step + 1)} className="studio-primary inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#ff5a0a] px-4 text-sm font-bold !text-white shadow-[0_10px_24px_rgba(255,90,10,.22)]">Next step<ArrowRight className="h-4 w-4" /></button> : <button type="submit" disabled={!canSubmit || submitting} className="studio-primary inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#ff5a0a] px-4 text-sm font-bold !text-white shadow-[0_10px_24px_rgba(255,90,10,.22)] disabled:cursor-not-allowed disabled:opacity-45">{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{submitting ? "Sending..." : "Request final price"}</button>}</div></div> : null}
             </aside>
           </form>
         </div>
@@ -721,7 +767,7 @@ function stepCopy(step: StudioStep) {
 
 function Label({ children }: { children: ReactNode }) { return <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#77766f]">{children}</p>; }
 function Field({ label, children }: { label: string; children: ReactNode }) { return <label className="block"><Label>{label}</Label><div className="mt-1.5">{children}</div></label>; }
-function PreviewStat({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) { return <div className="border-r border-[#ecebe6] px-4 py-3 last:border-r-0"><p className="text-[8px] font-bold uppercase tracking-[0.13em] text-[#99978f]">{label}</p><p className={`mt-1 truncate text-xs font-extrabold ${accent ? "text-[#e74d05]" : "text-[#34332f]"}`}>{value}</p></div>; }
+function PreviewStat({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) { return <div className="min-w-0 border-r border-[#ecebe6] px-2 py-3 last:border-r-0 sm:px-4"><p className="truncate text-[7px] font-bold uppercase tracking-[0.1em] text-[#99978f] sm:text-[8px] sm:tracking-[0.13em]">{label}</p><p className={`mt-1 truncate text-[10px] font-extrabold sm:text-xs ${accent ? "text-[#e74d05]" : "text-[#34332f]"}`}>{value}</p></div>; }
 function SummaryRow({ label, value }: { label: string; value: string }) { return <div className="flex items-start justify-between gap-4 border-b border-[#efeee9] pb-3 last:border-0 last:pb-0"><dt className="text-xs text-[#85847d]">{label}</dt><dd className="max-w-[65%] text-right text-xs font-bold capitalize">{value}</dd></div>; }
 function RangeControl({ icon, label, value, min, max, suffix = "", onChange }: { icon: ReactNode; label: string; value: number; min: number; max: number; suffix?: string; onChange: (value: number) => void }) { return <label className="block rounded-2xl border border-[#e2e1dc] p-4"><span className="flex justify-between text-xs font-bold"><span className="flex items-center gap-2 text-[#575650] [&_svg]:h-4 [&_svg]:w-4">{icon}{label}</span><span className="rounded-md bg-[#f1f0ec] px-2 py-1 text-[9px] text-[#77766f]">{value}{suffix}</span></span><input type="range" min={min} max={max} value={value} onChange={(event) => onChange(Number(event.target.value))} className="mt-4 w-full accent-[#ff5a0a]" /></label>; }
 function PresetButton({ icon, label, disabled, onClick }: { icon: ReactNode; label: string; disabled?: boolean; onClick: () => void }) { return <button type="button" disabled={disabled} onClick={onClick} className="rounded-2xl border border-[#e2e1dc] p-3 text-center disabled:opacity-35"><span className="flex justify-center text-[#ff5a0a] [&_svg]:h-5 [&_svg]:w-5">{icon}</span><span className="mt-2 block text-[10px] font-bold">{label}</span></button>; }
