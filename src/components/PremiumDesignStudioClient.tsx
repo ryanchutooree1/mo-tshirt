@@ -49,7 +49,6 @@ import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } fro
 import { removeBackgroundAutomatically } from "@/lib/automatic-background-removal";
 import { formatMoney } from "@/lib/money";
 import { uploadPublicArtwork } from "@/lib/public-artwork-upload";
-import { MobileFabricPanel } from "@/components/MobileFabricPanel";
 import { MobileStudioDock, type MobileStudioTool } from "@/components/MobileStudioDock";
 import {
   getMinSizePrice,
@@ -63,6 +62,7 @@ import {
 type ProductId = ShopDesignProductId;
 type Side = "front" | "back";
 type MethodId = "dtf" | "screen" | "vinyl";
+type MobileProductPanel = "garment" | "quantity" | "print";
 type StudioStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 type Layer = "artwork" | "text";
 type ArtworkPlacement = { enabled: boolean; x: number; y: number; scale: number; rotate: number };
@@ -85,6 +85,12 @@ const MOBILE_FABRIC_PRODUCTS = PRODUCTS.map((item) => ({
   id: item.id,
   label: item.label.replace("Plain ", ""),
 }));
+const STUDIO_COLOURS: Array<[string, string]> = [
+  ["black", "#171717"], ["white", "#f8f8f6"], ["grey", "#8b8b8b"], ["gray", "#8b8b8b"],
+  ["burgundy", "#7d2135"], ["bungundy", "#7d2135"], ["red", "#df3f3f"], ["pink", "#ef8ead"], ["green", "#39a85b"],
+  ["navy", "#29356d"], ["blue", "#3569d4"], ["purple", "#7c4eb5"], ["yellow", "#e8cf43"],
+  ["orange", "#ef762f"], ["brown", "#7b4d34"], ["beige", "#e8d8b8"], ["cream", "#f2e8cf"],
+];
 
 const METHODS = [
   { id: "dtf" as const, label: "DTF full colour", add: 60, note: "Best for logos, photos and gradients." },
@@ -159,6 +165,11 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+function getStudioColour(label: string) {
+  const normalized = label.toLowerCase();
+  return STUDIO_COLOURS.find(([name]) => normalized.includes(name))?.[1] ?? "#a8a8a8";
+}
+
 export default function PremiumDesignStudioClient({
   backHref = "/admin",
   backLabel = "Back to admin",
@@ -189,8 +200,8 @@ export default function PremiumDesignStudioClient({
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [mobileTool, setMobileTool] = useState<MobileStudioTool>("fabric");
-  const [mobileFabricPanelOpen, setMobileFabricPanelOpen] = useState(true);
-  const [mobileReviewOpen, setMobileReviewOpen] = useState(false);
+  const [mobileToolExpanded, setMobileToolExpanded] = useState(false);
+  const [mobileProductPanel, setMobileProductPanel] = useState<MobileProductPanel>("garment");
   const artworkInput = useRef<HTMLInputElement | null>(null);
   const cameraInput = useRef<HTMLInputElement | null>(null);
   const uploadTarget = useRef<Side>("front");
@@ -256,12 +267,6 @@ export default function PremiumDesignStudioClient({
   const productVariants = catalogByProduct[productId];
   const selectedShopItem = shopItems.find((item) => item.id === selectedShopItemId) ?? null;
   const selectedColor = selectedShopItem?.colors[0] || "Black";
-  const mobileFabricColours = useMemo(
-    () => productVariants
-      .map((item) => ({ id: item.id, label: item.colors.join(", ") || "Default" }))
-      .sort((a, b) => Number(b.id === selectedShopItemId) - Number(a.id === selectedShopItemId)),
-    [productVariants, selectedShopItemId]
-  );
   const availableSizes = selectedShopItem ? getSizes(selectedShopItem) : DEFAULT_SIZES;
   const productPreviewImage = activeSide === "back"
     ? selectedShopItem?.studioBackPhotoUrl || selectedShopItem?.backPhotoUrl || product.backImage
@@ -376,9 +381,12 @@ export default function PremiumDesignStudioClient({
   }
 
   function selectMobileTool(tool: MobileStudioTool) {
+    if (tool === mobileTool && mobileToolExpanded) {
+      setMobileToolExpanded(false);
+      return;
+    }
     setMobileTool(tool);
-    setMobileReviewOpen(false);
-    setMobileFabricPanelOpen(tool === "fabric");
+    setMobileToolExpanded(true);
   }
 
   function replaceArtworkFile(file: File, side: Side) {
@@ -653,8 +661,8 @@ export default function PremiumDesignStudioClient({
     <div
       className={`premium-studio bg-[#f5f5f2] text-left text-[#1b1b18] [font-family:var(--font-studio-body)] ${
         embedded
-          ? "overflow-hidden border-y border-[#e5e4df] shadow-sm sm:rounded-[32px] sm:border"
-          : "min-h-screen"
+          ? "h-[100dvh] overflow-hidden border-y border-[#e5e4df] shadow-sm sm:h-auto sm:rounded-[32px] sm:border"
+          : "h-[100dvh] overflow-hidden sm:h-auto sm:min-h-screen sm:overflow-visible"
       }`}
     >
       {!embedded ? <header className="border-b border-[#e5e4df] bg-[#fff]/95 px-4 py-3 backdrop-blur sm:px-6">
@@ -675,20 +683,20 @@ export default function PremiumDesignStudioClient({
         </div>
       </section>
 
-      <div className="mx-auto max-w-[1500px] px-0 py-0 sm:px-6 sm:py-7">
-        <div className="grid items-start gap-0 sm:gap-5 xl:grid-cols-[230px_minmax(0,1fr)]">
+      <div className={`mx-auto max-w-[1500px] px-0 py-0 sm:h-auto sm:px-6 sm:py-7 ${embedded ? "h-[100dvh]" : "h-[calc(100dvh-69px)]"}`}>
+        <div className="grid h-full items-start gap-0 sm:h-auto sm:gap-5 xl:grid-cols-[230px_minmax(0,1fr)]">
           <nav className="hidden rounded-[24px] border border-[#e1e0da] bg-[#fff] p-3 shadow-[0_14px_45px_rgba(29,27,20,0.05)] xl:block" aria-label="Design steps">
             {STEPS.map((item) => <button key={item.id} type="button" onClick={() => setStep(item.id)} aria-current={step === item.id ? "step" : undefined} className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${step === item.id ? "studio-dark bg-[#171714] !text-white" : "text-[#686761] hover:bg-[#f5f4f0]"}`}><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${step === item.id ? "studio-primary bg-[#ff5a0a] !text-white" : step > item.id ? "bg-[#fff0e8] text-[#df4d08]" : "bg-[#f1f0ec] text-[#8d8c85]"}`}>{step > item.id ? <Check className="h-4 w-4" /> : item.id}</span><span className="min-w-0"><span className="block text-[9px] font-bold uppercase tracking-[0.13em] opacity-55">Step {item.id}</span><span className="mt-0.5 block text-[13px] font-bold leading-tight">{item.label}</span></span><ChevronRight className="ml-auto h-4 w-4 opacity-25" /></button>)}
             <div className="mt-3 rounded-2xl bg-[#f6f5f1] p-4"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8a8982]">Need help?</p><a href={`tel:${CONTACT_TEL}`} className="mt-2 flex items-center gap-2 text-xs font-bold"><MessageCircle className="h-4 w-4 text-[#ff5a0a]" />{CONTACT_PHONE_DISPLAY}</a></div>
           </nav>
 
-          <form onSubmit={submitQuote} className="grid min-w-0 gap-0 sm:gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(330px,.8fr)]">
+          <form onSubmit={submitQuote} className="relative grid h-full min-w-0 gap-0 overflow-hidden sm:h-auto sm:gap-5 sm:overflow-visible lg:grid-cols-[minmax(0,1.35fr)_minmax(330px,.8fr)]">
             <input ref={artworkInput} type="file" accept=".png,.jpg,.jpeg,.webp,.svg" onClick={(event) => { event.currentTarget.value = ""; }} onChange={handleArtwork} className="hidden" />
             <input ref={cameraInput} type="file" accept="image/*" capture="environment" onClick={(event) => { event.currentTarget.value = ""; }} onChange={handleArtwork} className="hidden" />
-            <section className="overflow-hidden border-y border-[#dfded8] bg-[#fff] shadow-none sm:rounded-[26px] sm:border sm:shadow-[0_18px_55px_rgba(32,30,24,0.07)]">
+            <section className="absolute inset-0 flex min-h-0 flex-col overflow-hidden border-y border-[#dfded8] bg-[#fff] pb-[78px] shadow-none sm:static sm:block sm:rounded-[26px] sm:border sm:pb-0 sm:shadow-[0_18px_55px_rgba(32,30,24,0.07)]">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#ecebe6] px-3 py-2.5 sm:gap-3 sm:px-5 sm:py-3.5"><div><p className="text-[8px] font-bold uppercase tracking-[0.16em] text-[#99978f] sm:text-[9px]">Live preview</p><h2 className="mt-0.5 text-base font-bold tracking-[-0.025em] sm:text-lg">{product.label} · {activeSide}</h2></div><div className="flex items-center gap-1">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`min-h-10 rounded-xl px-3 text-[11px] font-bold capitalize sm:px-4 sm:py-2 sm:text-xs ${activeSide === side ? "studio-primary bg-[#ff5a0a] !text-white" : "bg-[#f4f3ef] text-[#686761]"}`}>{side}</button>)}<button type="button" onClick={() => { setDesigns({ front: createDesign(), back: createDesign() }); setSelectedLayer(null); setSelectedArtworkCopyId(null); setSelectedTextCopyId(null); }} className="ml-0.5 flex h-10 w-10 items-center justify-center rounded-xl border border-[#e1e0da] text-[#66655f]" aria-label="Reset design"><RotateCcw className="h-4 w-4" /></button></div></div>
-              <div className="bg-[radial-gradient(circle_at_50%_0%,#ffffff_0%,#f5f3ed_55%,#eeece5_100%)] p-0 sm:p-6">
-                <div ref={canvasRef} onPointerDown={() => setSelectedLayer(null)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className="relative mx-auto aspect-[4/5] w-full max-w-[550px] overflow-hidden bg-[#fff]/30 sm:rounded-[24px] sm:border sm:border-[#fff]" style={{ touchAction: "none" }}>
+              <div className="min-h-0 flex-1 bg-[radial-gradient(circle_at_50%_0%,#ffffff_0%,#f5f3ed_55%,#eeece5_100%)] p-0 sm:p-6">
+                <div ref={canvasRef} onPointerDown={() => setSelectedLayer(null)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className="relative mx-auto h-full w-full max-w-[550px] overflow-hidden bg-[#fff]/30 sm:aspect-[4/5] sm:h-auto sm:rounded-[24px] sm:border sm:border-[#fff]" style={{ touchAction: "none" }}>
                   <div className="pointer-events-none absolute inset-0 z-10"><div className="relative h-full w-full origin-center transition duration-200" style={{ transform: `scale(${previewZoom / 100})` }}><Image src={productPreviewImage} alt={`Realistic ${product.label} ${activeSide} preview`} fill priority sizes="(min-width: 1024px) 550px, 92vw" className="object-contain drop-shadow-[0_26px_28px_rgba(15,23,42,.22)]" /></div></div>
                   <div ref={printZoneRef} className="absolute z-30" style={{ left: `${printZone.left}%`, top: `${printZone.top}%`, width: `${printZone.width}%`, height: `${printZone.height}%` }}>
                     {activeTextLayers.map((textLayer) => {
@@ -702,17 +710,18 @@ export default function PremiumDesignStudioClient({
                   </div>
                 </div>
               </div>
-              {mobileTool === "fabric" && mobileFabricPanelOpen && !mobileReviewOpen ? <div className="relative z-40 -mt-32 px-3 pb-3 sm:hidden"><MobileFabricPanel products={MOBILE_FABRIC_PRODUCTS} activeProductId={productId} colours={mobileFabricColours} selectedColourId={selectedShopItemId} loading={shopLoading} onProductSelect={(nextProductId) => selectProduct(nextProductId as ProductId)} onColourSelect={(itemId) => { const item = shopItems.find((shopItem) => shopItem.id === itemId); if (item) selectShopItem(item); }} onClose={() => setMobileFabricPanelOpen(false)} /></div> : null}
               <div className="grid grid-cols-4 border-t border-[#ecebe6] bg-[#fbfbf9]"><PreviewStat label="Garment" value={product.label} /><PreviewStat label="Colour" value={selectedColor} /><PreviewStat label="Quantity" value={String(totalQty)} /><PreviewStat label="Estimate" value={formatMoney(totalPrice)} accent /></div>
             </section>
 
-            <div className="sticky bottom-3 z-[60] mx-2 my-3 sm:hidden"><MobileStudioDock activeTool={mobileTool} onSelect={selectMobileTool} /></div>
+            <div className="absolute inset-x-2 bottom-[max(.5rem,env(safe-area-inset-bottom))] z-[70] sm:hidden"><MobileStudioDock activeTool={mobileTool} expanded={mobileToolExpanded} onSelect={selectMobileTool} /></div>
 
-            <section className="mx-2 mb-28 sm:hidden" aria-label="Mobile design controls">
-              {mobileReviewOpen ? (
+            {mobileToolExpanded ? <section className={`absolute inset-x-2 bottom-[78px] z-[60] overflow-y-auto overscroll-contain rounded-[26px] border border-[#d9d8d2] bg-white shadow-[0_22px_70px_rgba(0,0,0,.28)] sm:hidden ${mobileTool === "order" ? "top-2" : "max-h-[58dvh]"}`} aria-label="Mobile design controls">
+              <button type="button" onClick={() => setMobileToolExpanded(false)} className="sticky top-2 z-20 ml-auto mr-2 mt-2 flex h-9 w-9 items-center justify-center rounded-full bg-[#171714] text-white shadow-lg" aria-label="Close mobile tool"><X className="h-4 w-4" /></button>
+              <div className="-mt-9">
+              {mobileTool === "order" ? (
                 <MobileWorkspace eyebrow="Final step" title="Review & request quote" description="Check your order, then tell us how to contact you.">
                   {result?.ok ? (
-                    <Success message={result.text} onReset={() => { setResult(null); setMobileReviewOpen(false); selectMobileTool("fabric"); }} />
+                    <Success message={result.text} onReset={() => { setResult(null); setMobileTool("fabric"); setMobileToolExpanded(false); }} />
                   ) : (
                     <div className="space-y-4">
                       <div className="rounded-2xl border border-[#e2e1dc] p-4">
@@ -745,27 +754,39 @@ export default function PremiumDesignStudioClient({
               ) : (
                 <>
                   {mobileTool === "fabric" ? (
-                    <MobileWorkspace eyebrow="Fabric" title="Garment & quantity" description="Choose the garment, colour, sizes and printing setup.">
-                      {!mobileFabricPanelOpen ? <button type="button" onClick={() => setMobileFabricPanelOpen(true)} className="studio-primary flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#171714] text-sm font-bold !text-white"><Palette className="h-4 w-4" />Choose garment & colour</button> : null}
-                      <div><Label>Sizes & quantities</Label><div className="mt-3 grid grid-cols-4 gap-2">{availableSizes.map((size) => <label key={size} className={`rounded-xl border p-2 text-center ${sizes[size] ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e4e3de]"}`}><span className="block text-[10px] font-extrabold">{size}</span><input inputMode="numeric" value={sizes[size] || ""} onChange={(event) => { const value = event.target.value; if (/^\d*$/.test(value)) setSizes((current) => ({ ...current, [size]: Number(value) || 0 })); }} className="studio-field mt-1 h-9 w-full rounded-lg bg-white text-center text-xs font-bold outline-none" placeholder="0" aria-label={`${size} quantity`} /></label>)}</div></div>
-                      <div><Label>Print side</Label><div className="mt-2 grid grid-cols-2 gap-2">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-xl border p-3 text-left ${activeSide === side ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e2e1dc]"}`}><span className="flex items-center justify-between text-xs font-extrabold capitalize">{side}{activeSide === side ? <CheckCircle2 className="h-4 w-4 text-[#ff5a0a]" /> : null}</span></button>)}</div></div>
-                      <div><Label>Print method</Label><div className="mt-2 space-y-2">{METHODS.map((option) => <label key={option.id} className={`flex gap-3 rounded-xl border p-3 ${methodId === option.id ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e4e3de]"}`}><input type="radio" name="mobile-method" checked={methodId === option.id} onChange={() => setMethodId(option.id)} className="accent-[#ff5a0a]" /><span><span className="block text-xs font-extrabold">{option.label}</span><span className="mt-1 block text-[10px] leading-4 text-[#85847d]">{option.note}</span></span></label>)}</div></div>
-                      <label className="flex items-center justify-between rounded-xl border border-[#e4e3de] p-4"><span><span className="block text-sm font-bold">Rush production</span><span className="mt-1 block text-xs text-[#85847d]">Adds 12% to the estimate</span></span><input type="checkbox" checked={rush} onChange={(event) => setRush(event.target.checked)} className="h-5 w-5 accent-[#ff5a0a]" /></label>
+                    <MobileWorkspace eyebrow="Product" title="Set up your garment" description="Choose one section. Your shirt stays visible behind this panel.">
+                      <div className="grid grid-cols-3 rounded-xl bg-[#f0efeb] p-1">
+                        {([{ id: "garment", label: "Garment" }, { id: "quantity", label: `Sizes · ${totalQty}` }, { id: "print", label: "Print" }] as const).map((panel) => <button key={panel.id} type="button" onClick={() => setMobileProductPanel(panel.id)} className={`min-h-10 rounded-lg px-2 text-[10px] font-extrabold ${mobileProductPanel === panel.id ? "bg-white text-[#ff5a0a] shadow-sm" : "text-[#74736d]"}`}>{panel.label}</button>)}
+                      </div>
+                      {mobileProductPanel === "garment" ? <div className="space-y-4"><div className="grid grid-cols-2 gap-2">{MOBILE_FABRIC_PRODUCTS.map((option) => <button key={option.id} type="button" onClick={() => selectProduct(option.id as ProductId)} className={`rounded-xl border p-3 text-xs font-extrabold ${productId === option.id ? "border-[#ff5a0a] bg-[#fff7f1] text-[#d74705]" : "border-[#e2e1dc]"}`}>{option.label}</button>)}</div><div><div className="flex items-center justify-between"><Label>Colour</Label><span className="text-[10px] font-bold text-[#77766f]">{selectedColor}</span></div><div className="mt-3 flex gap-3 overflow-x-auto px-1 pb-2">{productVariants.map((item) => { const colour = item.colors.join(", ") || "Default"; const selected = item.id === selectedShopItemId; return <button key={item.id} type="button" onClick={() => selectShopItem(item)} aria-label={`Choose ${colour}`} aria-pressed={selected} title={colour} style={{ backgroundColor: getStudioColour(colour) }} className={`relative h-12 w-12 shrink-0 rounded-full border-2 ${selected ? "border-[#249cf0] ring-2 ring-[#249cf0] ring-offset-2" : "border-[#d8d7d1]"}`}>{selected ? <Check className={`absolute inset-0 m-auto h-5 w-5 ${colour.toLowerCase().includes("white") ? "text-[#171714]" : "text-white"}`} /> : null}</button>; })}</div></div></div> : null}
+                      {mobileProductPanel === "quantity" ? <div><div className="flex items-center justify-between"><Label>Size quantities</Label><span className="studio-dark rounded-full bg-[#171714] px-2.5 py-1 text-[9px] font-bold !text-white">{totalQty} total</span></div><div className="mt-3 grid grid-cols-4 gap-2">{availableSizes.map((size) => <label key={size} className={`rounded-xl border p-2 text-center ${sizes[size] ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e4e3de]"}`}><span className="block text-[10px] font-extrabold">{size}</span><input inputMode="numeric" value={sizes[size] || ""} onChange={(event) => { const value = event.target.value; if (/^\d*$/.test(value)) setSizes((current) => ({ ...current, [size]: Number(value) || 0 })); }} className="studio-field mt-1 h-9 w-full rounded-lg bg-white text-center text-xs font-bold outline-none" placeholder="0" aria-label={`${size} quantity`} /></label>)}</div></div> : null}
+                      {mobileProductPanel === "print" ? <div className="space-y-3"><div className="grid grid-cols-2 gap-2">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-xl border p-3 text-xs font-extrabold capitalize ${activeSide === side ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e2e1dc]"}`}>{side} side</button>)}</div>{METHODS.map((option) => <label key={option.id} className={`flex gap-3 rounded-xl border p-3 ${methodId === option.id ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e4e3de]"}`}><input type="radio" name="mobile-method" checked={methodId === option.id} onChange={() => setMethodId(option.id)} className="accent-[#ff5a0a]" /><span><span className="block text-xs font-extrabold">{option.label}</span><span className="mt-1 block text-[10px] text-[#85847d]">{option.note}</span></span></label>)}<label className="flex items-center justify-between rounded-xl border border-[#e4e3de] p-3"><span className="text-xs font-bold">Rush production (+12%)</span><input type="checkbox" checked={rush} onChange={(event) => setRush(event.target.checked)} className="h-5 w-5 accent-[#ff5a0a]" /></label><button type="button" onClick={() => { setDesigns({ front: createDesign(), back: createDesign() }); setSelectedLayer(null); setSelectedArtworkCopyId(null); setSelectedTextCopyId(null); }} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#e2e1dc] text-xs font-bold text-[#77766f]"><RotateCcw className="h-4 w-4" />Reset design</button></div> : null}
                     </MobileWorkspace>
                   ) : null}
 
                   {mobileTool === "graphics" ? (
-                    <MobileWorkspace eyebrow="Graphics" title="Artwork & text" description="Upload each side, then position the artwork or add custom text.">
+                    <MobileWorkspace eyebrow="Image" title="Upload & position" description="Choose a side, upload the image, then adjust it on the shirt.">
                       {(["front", "back"] as Side[]).map((side) => <ArtworkUploadSlot key={side} side={side} file={artworkFiles[side]} url={artworkUrls[side]} active={activeSide === side} showBackgroundTools={false} onChoose={() => openArtworkPicker(side)} onDrop={(file) => chooseArtwork(file, side)} onRemove={() => clearArtwork(side)} onBackgroundRemoved={(file) => replaceArtworkFile(file, side)} onPosition={() => changeSide(side)} />)}
                       <div><Label>Edit side</Label><div className="mt-2 grid grid-cols-2 gap-2">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-xl border p-3 text-xs font-extrabold capitalize ${activeSide === side ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e2e1dc]"}`}>{side} {artworkUrls[side] ? "✓" : ""}</button>)}</div></div>
-                      {activeArtworkUrl ? <div className="space-y-3"><div className="grid grid-cols-3 gap-2"><PresetButton icon={<Crosshair />} label="Left chest" onClick={() => patchArtwork({ x: -28, y: -38 })} /><PresetButton icon={<Focus />} label="Centre" onClick={() => patchArtwork({ x: 0, y: 0 })} /><PresetButton icon={<Move />} label="Lower" onClick={() => patchArtwork({ x: 0, y: 52 })} /></div><RangeControl icon={<ZoomIn />} label="Artwork size" value={activeArtwork.scale} min={ARTWORK_SCALE_MIN} max={ARTWORK_SCALE_MAX} suffix="%" onChange={(value) => patchArtwork({ scale: value })} /><RangeControl icon={<Move />} label="Horizontal" value={activeArtwork.x} min={-LAYER_X_LIMIT} max={LAYER_X_LIMIT} onChange={(value) => patchArtwork({ x: value })} /><RangeControl icon={<Move className="rotate-90" />} label="Vertical" value={activeArtwork.y} min={-LAYER_Y_LIMIT} max={LAYER_Y_LIMIT} onChange={(value) => patchArtwork({ y: value })} /><RangeControl icon={<RotateCcw />} label="Rotation" value={activeArtwork.rotate} min={-180} max={180} suffix="°" onChange={(value) => patchArtwork({ rotate: value })} /></div> : null}
-                      <div className="border-t border-[#ecebe6] pt-4"><label className="flex items-center justify-between"><span className="flex items-center gap-2 text-sm font-bold"><TypeIcon className="h-4 w-4 text-[#ff5a0a]" />Custom text</span><input type="checkbox" checked={activeText.enabled} onChange={(event) => patchText({ enabled: event.target.checked })} className="h-5 w-5 accent-[#ff5a0a]" /></label><div className="mt-4 space-y-3"><Field label="Your text"><input value={activeText.value} onChange={(event) => patchText({ value: event.target.value, enabled: true })} className="studio-field" placeholder="e.g. Team Mauritius" /></Field><div className="grid grid-cols-[1fr_72px] gap-3"><Field label="Font"><select value={activeText.font} onChange={(event) => patchText({ font: event.target.value })} className="studio-field"><option value="Arial, sans-serif">Modern sans</option><option value="Impact, sans-serif">Impact</option><option value="Georgia, serif">Classic serif</option><option value="cursive">Signature</option></select></Field><Field label="Colour"><input type="color" value={activeText.color} onChange={(event) => patchText({ color: event.target.value })} className="studio-field p-1.5" /></Field></div><RangeControl icon={<TypeIcon />} label="Text size" value={activeText.size} min={TEXT_SIZE_MIN} max={TEXT_SIZE_MAX} onChange={(value) => patchText({ size: value })} /><RangeControl icon={<RotateCcw />} label="Rotation" value={activeText.rotate} min={-180} max={180} suffix="°" onChange={(value) => patchText({ rotate: value })} /></div></div>
+                      {activeArtworkUrl ? <div className="space-y-3"><div className="grid grid-cols-3 gap-2"><PresetButton icon={<Crosshair />} label="Left chest" onClick={() => patchArtwork({ x: -28, y: -38 })} /><PresetButton icon={<Focus />} label="Centre" onClick={() => patchArtwork({ x: 0, y: 0 })} /><PresetButton icon={<Move />} label="Lower" onClick={() => patchArtwork({ x: 0, y: 52 })} /></div><RangeControl icon={<ZoomIn />} label="Artwork size" value={activeArtwork.scale} min={ARTWORK_SCALE_MIN} max={ARTWORK_SCALE_MAX} suffix="%" onChange={(value) => patchArtwork({ scale: value })} /><RangeControl icon={<Move />} label="Horizontal" value={activeArtwork.x} min={-LAYER_X_LIMIT} max={LAYER_X_LIMIT} onChange={(value) => patchArtwork({ x: value })} /><RangeControl icon={<Move className="rotate-90" />} label="Vertical" value={activeArtwork.y} min={-LAYER_Y_LIMIT} max={LAYER_Y_LIMIT} onChange={(value) => patchArtwork({ y: value })} /><RangeControl icon={<RotateCcw />} label="Rotation" value={activeArtwork.rotate} min={-180} max={180} suffix="°" onChange={(value) => patchArtwork({ rotate: value })} /><button type="button" onClick={() => setSnap((current) => !current)} className={`flex w-full items-center justify-between rounded-xl border p-3 ${snap ? "border-[#bfe9d4] bg-[#f1fbf6]" : "border-[#e2e1dc]"}`}><span className="flex items-center gap-2 text-xs font-bold"><Magnet className="h-4 w-4 text-[#16a462]" />Snap to centre</span><span className="text-[9px] font-extrabold">{snap ? "ON" : "OFF"}</span></button></div> : null}
+                    </MobileWorkspace>
+                  ) : null}
+
+                  {mobileTool === "text" ? (
+                    <MobileWorkspace eyebrow="Text" title="Add custom text" description={`Editing the ${activeSide} side. Changes appear immediately on the shirt.`}>
+                      <div className="grid grid-cols-2 gap-2">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-xl border p-3 text-xs font-extrabold capitalize ${activeSide === side ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e2e1dc]"}`}>{side}</button>)}</div>
+                      <label className="flex items-center justify-between rounded-xl border border-[#e2e1dc] p-3"><span className="flex items-center gap-2 text-xs font-bold"><TypeIcon className="h-4 w-4 text-[#ff5a0a]" />Show text</span><input type="checkbox" checked={activeText.enabled} onChange={(event) => patchText({ enabled: event.target.checked })} className="h-5 w-5 accent-[#ff5a0a]" /></label>
+                      <Field label="Your text"><input autoFocus value={activeText.value} onChange={(event) => patchText({ value: event.target.value, enabled: true })} className="studio-field" placeholder="e.g. Team Mauritius" /></Field>
+                      <div className="grid grid-cols-[1fr_72px] gap-3"><Field label="Font"><select value={activeText.font} onChange={(event) => patchText({ font: event.target.value })} className="studio-field"><option value="Arial, sans-serif">Modern sans</option><option value="Impact, sans-serif">Impact</option><option value="Georgia, serif">Classic serif</option><option value="cursive">Signature</option></select></Field><Field label="Colour"><input type="color" value={activeText.color} onChange={(event) => patchText({ color: event.target.value })} className="studio-field p-1.5" /></Field></div>
+                      <div className="grid grid-cols-3 gap-2"><PresetButton icon={<Crosshair />} label="Left chest" onClick={() => patchText({ x: -20, y: -18 })} /><PresetButton icon={<Focus />} label="Centre" onClick={() => patchText({ x: 0, y: 0 })} /><PresetButton icon={<Move />} label="Lower" onClick={() => patchText({ x: 0, y: 24 })} /></div>
+                      <RangeControl icon={<TypeIcon />} label="Text size" value={activeText.size} min={TEXT_SIZE_MIN} max={TEXT_SIZE_MAX} onChange={(value) => patchText({ size: value })} />
+                      <RangeControl icon={<RotateCcw />} label="Rotation" value={activeText.rotate} min={-180} max={180} suffix="°" onChange={(value) => patchText({ rotate: value })} />
                     </MobileWorkspace>
                   ) : null}
 
                   {mobileTool === "background" ? (
                     <MobileWorkspace eyebrow="Background" title="Clean your artwork" description="Remove a photo background and compare the saved results.">
-                      {artworkFiles.front || artworkFiles.back ? (["front", "back"] as Side[]).filter((side) => artworkFiles[side]).map((side) => <ArtworkUploadSlot key={side} side={side} file={artworkFiles[side]} url={artworkUrls[side]} active={activeSide === side} onChoose={() => openArtworkPicker(side)} onDrop={(file) => chooseArtwork(file, side)} onRemove={() => clearArtwork(side)} onBackgroundRemoved={(file) => replaceArtworkFile(file, side)} onPosition={() => { changeSide(side); selectMobileTool("graphics"); }} />) : <MobileEmpty icon={<Sparkles />} title="Upload artwork first" description="Add a logo or photo in Graphics, then return here to remove its background." action="Go to Graphics" onAction={() => selectMobileTool("graphics")} />}
+                      {artworkFiles.front || artworkFiles.back ? (["front", "back"] as Side[]).filter((side) => artworkFiles[side]).map((side) => <ArtworkUploadSlot key={side} side={side} file={artworkFiles[side]} url={artworkUrls[side]} active={activeSide === side} onChoose={() => openArtworkPicker(side)} onDrop={(file) => chooseArtwork(file, side)} onRemove={() => clearArtwork(side)} onBackgroundRemoved={(file) => replaceArtworkFile(file, side)} onPosition={() => { changeSide(side); selectMobileTool("graphics"); }} />) : <MobileEmpty icon={<Sparkles />} title="Upload artwork first" description="Add a logo or photo in Image, then return here to remove its background." action="Go to Image" onAction={() => selectMobileTool("graphics")} />}
                     </MobileWorkspace>
                   ) : null}
 
@@ -775,11 +796,10 @@ export default function PremiumDesignStudioClient({
                       <button type="button" onClick={() => selectMobileTool("graphics")} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#ffd2bd] bg-[#fff7f1] text-sm font-bold text-[#dd4904]">Position artwork<ArrowRight className="h-4 w-4" /></button>
                     </MobileWorkspace>
                   ) : null}
-
-                  <button type="button" onClick={() => { setMobileReviewOpen(true); setMobileFabricPanelOpen(false); }} className="studio-primary mt-3 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#ff5a0a] text-sm font-extrabold !text-white shadow-[0_12px_28px_rgba(255,90,10,.25)]">Review & request quote<ArrowRight className="h-4 w-4" /></button>
                 </>
               )}
-            </section>
+              </div>
+            </section> : null}
 
             <aside className="mx-2 mb-4 hidden min-h-[520px] flex-col rounded-[26px] border border-[#dfded8] bg-[#fff] shadow-[0_18px_55px_rgba(32,30,24,0.07)] sm:mx-0 sm:mb-0 sm:flex sm:min-h-[600px]">
               <div className="border-b border-[#ecebe6] px-5 py-5"><div className="flex items-start gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fff0e8] text-sm font-extrabold text-[#e44c04]">{step}</span><div><h2 className="text-xl font-bold tracking-[-0.03em]">{activeStep.label}</h2><p className="mt-1 text-xs leading-5 text-[#77766f]">{stepCopy(step)}</p></div></div></div>
@@ -815,7 +835,7 @@ export default function PremiumDesignStudioClient({
         </div>
       </div>
 
-      {!embedded ? <footer className="border-t border-[#e3e2dc] bg-[#fff] px-4 py-7 sm:px-6"><div className="mx-auto grid max-w-[1200px] grid-cols-2 gap-5 sm:grid-cols-4"><Benefit icon={<Shirt />} title="Premium garments" /><Benefit icon={<Palette />} title="High-quality printing" /><Benefit icon={<PackageCheck />} title="Reliable service" /><Benefit icon={<CircleDollarSign />} title="Local pricing" /></div><div className="mx-auto mt-6 flex max-w-[1200px] flex-wrap justify-center gap-x-5 gap-y-2 border-t border-[#efeee9] pt-5 text-[10px] text-[#77766f]"><a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a><span>•</span><a href={`tel:${CONTACT_TEL}`}>{CONTACT_PHONE_DISPLAY}</a></div></footer> : null}
+      {!embedded ? <footer className="hidden border-t border-[#e3e2dc] bg-[#fff] px-4 py-7 sm:block sm:px-6"><div className="mx-auto grid max-w-[1200px] grid-cols-2 gap-5 sm:grid-cols-4"><Benefit icon={<Shirt />} title="Premium garments" /><Benefit icon={<Palette />} title="High-quality printing" /><Benefit icon={<PackageCheck />} title="Reliable service" /><Benefit icon={<CircleDollarSign />} title="Local pricing" /></div><div className="mx-auto mt-6 flex max-w-[1200px] flex-wrap justify-center gap-x-5 gap-y-2 border-t border-[#efeee9] pt-5 text-[10px] text-[#77766f]"><a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a><span>•</span><a href={`tel:${CONTACT_TEL}`}>{CONTACT_PHONE_DISPLAY}</a></div></footer> : null}
     </div>
   );
 }
@@ -830,7 +850,7 @@ function PreviewStat({ label, value, accent = false }: { label: string; value: s
 function SummaryRow({ label, value }: { label: string; value: string }) { return <div className="flex items-start justify-between gap-4 border-b border-[#efeee9] pb-3 last:border-0 last:pb-0"><dt className="text-xs text-[#85847d]">{label}</dt><dd className="max-w-[65%] text-right text-xs font-bold capitalize">{value}</dd></div>; }
 function RangeControl({ icon, label, value, min, max, suffix = "", onChange }: { icon: ReactNode; label: string; value: number; min: number; max: number; suffix?: string; onChange: (value: number) => void }) { return <label className="block rounded-2xl border border-[#e2e1dc] p-4"><span className="flex justify-between text-xs font-bold"><span className="flex items-center gap-2 text-[#575650] [&_svg]:h-4 [&_svg]:w-4">{icon}{label}</span><span className="rounded-md bg-[#f1f0ec] px-2 py-1 text-[9px] text-[#77766f]">{value}{suffix}</span></span><input type="range" min={min} max={max} value={value} onChange={(event) => onChange(Number(event.target.value))} className="mt-4 w-full accent-[#ff5a0a]" /></label>; }
 function PresetButton({ icon, label, disabled, onClick }: { icon: ReactNode; label: string; disabled?: boolean; onClick: () => void }) { return <button type="button" disabled={disabled} onClick={onClick} className="rounded-2xl border border-[#e2e1dc] p-3 text-center disabled:opacity-35"><span className="flex justify-center text-[#ff5a0a] [&_svg]:h-5 [&_svg]:w-5">{icon}</span><span className="mt-2 block text-[10px] font-bold">{label}</span></button>; }
-function MobileWorkspace({ eyebrow, title, description, children }: { eyebrow: string; title: string; description: string; children: ReactNode }) { return <div className="overflow-hidden rounded-[24px] border border-[#dfded8] bg-white shadow-[0_14px_40px_rgba(32,30,24,.07)]"><div className="border-b border-[#ecebe6] p-5"><p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#ff5a0a]">{eyebrow}</p><h2 className="mt-1 text-xl font-extrabold tracking-[-0.03em]">{title}</h2><p className="mt-1 text-xs leading-5 text-[#77766f]">{description}</p></div><div className="space-y-4 p-4">{children}</div></div>; }
+function MobileWorkspace({ eyebrow, title, description, children }: { eyebrow: string; title: string; description: string; children: ReactNode }) { return <div><div className="border-b border-[#ecebe6] px-4 pb-4 pt-5"><p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#ff5a0a]">{eyebrow}</p><h2 className="mt-1 text-lg font-extrabold tracking-[-0.03em]">{title}</h2><p className="mt-1 pr-10 text-[11px] leading-4 text-[#77766f]">{description}</p></div><div className="space-y-3 p-4">{children}</div></div>; }
 function MobileEmpty({ icon, title, description, action, onAction }: { icon: ReactNode; title: string; description: string; action: string; onAction: () => void }) { return <div className="flex min-h-64 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#ddd9d1] bg-[#fafaf7] p-6 text-center"><span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-[#ff5a0a] shadow-sm [&_svg]:h-6 [&_svg]:w-6">{icon}</span><p className="mt-4 text-sm font-extrabold">{title}</p><p className="mt-1 max-w-[260px] text-xs leading-5 text-[#85847d]">{description}</p><button type="button" onClick={onAction} className="studio-primary mt-4 rounded-xl bg-[#ff5a0a] px-4 py-2.5 text-xs font-bold !text-white">{action}</button></div>; }
 function Benefit({ icon, title }: { icon: ReactNode; title: string }) { return <div className="flex items-center justify-center gap-3 sm:justify-start"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#fff0e8] text-[#ff5a0a] [&_svg]:h-5 [&_svg]:w-5">{icon}</span><span className="text-xs font-bold text-[#4a4944]">{title}</span></div>; }
 function Success({ message, onReset }: { message: string; onReset: () => void }) { return <div className="flex min-h-[430px] flex-col items-center justify-center text-center"><span className="studio-success flex h-20 w-20 items-center justify-center rounded-full bg-[#1faf68] !text-white"><Check className="h-10 w-10" /></span><h3 className="mt-6 text-3xl font-extrabold">Thank you!</h3><p className="mt-2 max-w-xs text-sm leading-6 text-[#77766f]">{message}</p><div className="mt-6 rounded-2xl bg-[#f5f4f0] p-4 text-sm"><Label>What happens next</Label><p className="mt-2 font-semibold">We will review your design and confirm the final price within 24 hours.</p></div><button type="button" onClick={onReset} className="studio-primary mt-5 w-full rounded-xl bg-[#ff5a0a] px-4 py-3 text-sm font-bold !text-white">Create another design</button></div>; }

@@ -1,42 +1,45 @@
 "use client";
 
-import { Camera, ImagePlus, Shirt, Sparkles } from "lucide-react";
+import { Camera, ClipboardCheck, ImagePlus, Shirt, Sparkles, Type } from "lucide-react";
 
-export type MobileStudioTool = "fabric" | "graphics" | "background" | "camera";
+export type MobileStudioTool = "fabric" | "graphics" | "text" | "background" | "camera" | "order";
 
 type MobileStudioDockProps = {
   activeTool: MobileStudioTool;
+  expanded: boolean;
   onSelect: (tool: MobileStudioTool) => void;
 };
 
 const TOOLS = [
-  { id: "fabric" as const, label: "Fabric", icon: Shirt },
-  { id: "graphics" as const, label: "Graphics", icon: ImagePlus },
-  { id: "background" as const, label: "Background", icon: Sparkles },
+  { id: "fabric" as const, label: "Product", icon: Shirt },
+  { id: "graphics" as const, label: "Image", icon: ImagePlus },
+  { id: "text" as const, label: "Text", icon: Type },
+  { id: "background" as const, label: "Cutout", icon: Sparkles },
   { id: "camera" as const, label: "Camera", icon: Camera },
+  { id: "order" as const, label: "Order", icon: ClipboardCheck },
 ];
 
-export function MobileStudioDock({ activeTool, onSelect }: MobileStudioDockProps) {
+export function MobileStudioDock({ activeTool, expanded, onSelect }: MobileStudioDockProps) {
   return (
     <nav
-      className="grid grid-cols-4 rounded-[26px] border border-white/10 bg-[#202020]/96 px-1.5 py-2 text-white shadow-[0_20px_48px_rgba(0,0,0,.32)] backdrop-blur-xl"
+      className="grid grid-cols-6 rounded-[24px] border border-white/10 bg-[#202020]/96 px-1 py-1.5 text-white shadow-[0_20px_48px_rgba(0,0,0,.32)] backdrop-blur-xl"
       aria-label="Mobile design tools"
     >
       {TOOLS.map((tool) => {
         const Icon = tool.icon;
-        const isActive = activeTool === tool.id;
+        const isActive = expanded && activeTool === tool.id;
         return (
           <button
             key={tool.id}
             type="button"
             onClick={() => onSelect(tool.id)}
-            aria-current={isActive ? "page" : undefined}
-            className={`flex min-h-[62px] flex-col items-center justify-center gap-1 rounded-[20px] px-1 transition active:scale-95 ${
+            aria-pressed={isActive}
+            className={`flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-[18px] px-0.5 transition active:scale-95 ${
               isActive ? "bg-white/10 text-white" : "text-white/45"
             }`}
           >
-            <Icon className={`h-6 w-6 ${isActive ? "stroke-[2.4]" : ""}`} />
-            <span className="text-[10px] font-semibold">{tool.label}</span>
+            <Icon className={`h-5 w-5 ${isActive ? "stroke-[2.5]" : ""}`} />
+            <span className="text-[8px] font-semibold">{tool.label}</span>
           </button>
         );
       })}
