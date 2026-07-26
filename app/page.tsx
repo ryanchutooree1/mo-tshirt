@@ -541,37 +541,73 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="border-t border-orange-200 bg-[#FF6600] px-6 py-12 text-white">
-        <div className="mx-auto max-w-6xl text-center">
-          <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-white/90">
-            <a href="#contact" className="transition hover:text-white">Quote Form</a>
-            <a href="#our-work" className="transition hover:text-white">Our Work</a>
-            <Link href="/terms" className="transition hover:text-white">Terms</Link>
-            <Link href="/privacy" className="transition hover:text-white">Privacy</Link>
-            <a href="https://www.instagram.com/mo_tshirt_printing/" target="_blank" rel="noopener noreferrer" className="transition hover:text-white">
-              Instagram
-            </a>
-            <a href="https://www.tiktok.com/@mo_tshirt_mauritius" target="_blank" rel="noopener noreferrer" className="transition hover:text-white">
-              TikTok
-            </a>
-            <TrackedWhatsAppLink
-              href={getWhatsAppUrl()}
-              trackingLocation="home_footer"
-              trackingSource="homepage"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition hover:text-white"
-            >
-              WhatsApp
-            </TrackedWhatsAppLink>
+      <footer className="border-t border-neutral-200 bg-white px-4 py-10 sm:px-6 sm:py-14">
+        <div className="mx-auto max-w-6xl">
+          <div className="rounded-[28px] border border-neutral-200 bg-[#FAFAFA] px-5 py-10 text-center sm:px-10 sm:py-12">
+            <div className="flex flex-col items-center justify-center gap-2 text-lg font-semibold tracking-tight text-neutral-900 sm:flex-row sm:flex-wrap sm:gap-x-3 sm:text-xl">
+              <span className="inline-flex items-center gap-2">
+                <span aria-hidden="true">🇲🇺</span>
+                <span>MO T-SHIRT Mauritius</span>
+              </span>
+              <span className="hidden text-neutral-400 sm:inline" aria-hidden="true">•</span>
+              <a
+                href={`tel:${CONTACT_TEL}`}
+                className="text-[#FF6600] transition hover:text-orange-700 focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FF6600]"
+              >
+                {CONTACT_PHONE_DISPLAY}
+              </a>
+              <span className="hidden text-neutral-400 sm:inline" aria-hidden="true">•</span>
+              <a
+                href={`mailto:${CONTACT_EMAIL}`}
+                className="break-all transition hover:text-[#FF6600] focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FF6600] sm:break-normal"
+              >
+                {CONTACT_EMAIL}
+              </a>
+            </div>
+            <p className="mt-4 text-sm text-neutral-500 sm:text-base">
+              Surinam, Mauritius
+              <span className="mx-2 text-neutral-400" aria-hidden="true">•</span>
+              Island-wide delivery via Mauritius Post
+            </p>
           </div>
-          <p className="mt-6 text-xs text-white/80">
-            © 2026 MO T-SHIRT — Mauritius’ trusted name in custom printing.
-            <span className="mx-2 text-white/70">|</span>
-            <Link href="/login" className="transition hover:text-white hover:underline">
-              All Rights Reserved
-            </Link>
-          </p>
+
+          <div className="mt-7 flex flex-col items-center gap-5 text-center">
+            <nav
+              className="flex flex-wrap items-center justify-center gap-x-5 gap-y-3 text-sm text-neutral-600"
+              aria-label="Footer"
+            >
+              <a href="#contact" className="transition hover:text-[#FF6600]">Quote Form</a>
+              <a href="#our-work" className="transition hover:text-[#FF6600]">Our Work</a>
+              <Link href="/terms" className="transition hover:text-[#FF6600]">Terms</Link>
+              <Link href="/privacy" className="transition hover:text-[#FF6600]">Privacy</Link>
+              <a href="https://www.instagram.com/mo_tshirt_printing/" target="_blank" rel="noopener noreferrer" className="transition hover:text-[#FF6600]">
+                Instagram
+              </a>
+              <a href="https://www.tiktok.com/@mo_tshirt_mauritius" target="_blank" rel="noopener noreferrer" className="transition hover:text-[#FF6600]">
+                TikTok
+              </a>
+              <TrackedWhatsAppLink
+                href={getWhatsAppUrl()}
+                trackingLocation="home_footer"
+                trackingSource="homepage"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition hover:text-[#FF6600]"
+              >
+                WhatsApp
+              </TrackedWhatsAppLink>
+            </nav>
+            <p className="text-xs text-neutral-400">
+              © 2026 MO T-SHIRT
+              <span className="mx-2" aria-hidden="true">•</span>
+              <Link
+                href="/login"
+                className="transition hover:text-neutral-600 focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FF6600]"
+              >
+                All Rights Reserved
+              </Link>
+            </p>
+          </div>
         </div>
       </footer>
     </div>
