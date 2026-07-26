@@ -15,15 +15,27 @@ import { FaWhatsapp } from "react-icons/fa";
 import { getWhatsAppUrl } from "@/data/work";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 
-const trustMarks = [
-  "MCB",
-  "ENL",
-  "VITAL",
-  "DBM",
-  "IBL",
-  "CIM finance",
-  "Gamma",
-  "Swan",
+const trustedBrands = [
+  {
+    name: "Zoza Pastry & Coffee",
+    logo: "/trusted-brands/zoza-pastry-and-coffee-logo.webp",
+    alt: "Zoza Pastry & Coffee logo",
+  },
+  {
+    name: "Le Rochester Restaurant & Auberge",
+    logo: "/trusted-brands/le-rochester-restaurant-and-auberge-logo.webp",
+    alt: "Le Rochester Restaurant & Auberge logo",
+  },
+  {
+    name: "Shanti Ghar",
+    logo: "/trusted-brands/shanti-ghar-logo.webp",
+    alt: "Shanti Ghar logo",
+  },
+  {
+    name: "Escale des iles Restaurant & Lodging",
+    logo: "/trusted-brands/escale-des-iles-restaurant-and-lodging-logo.webp",
+    alt: "Escale des iles Restaurant & Lodging logo",
+  },
 ];
 
 const processSteps = [
@@ -145,23 +157,36 @@ export default function HomepageIntro() {
       </section>
 
       <section className="relative z-10 -mt-7 px-4 sm:-mt-9 sm:px-6" aria-label="Trusted clients">
-        <div className="mx-auto flex max-w-[1400px] items-center gap-7 overflow-x-auto rounded-[24px] border border-black/5 bg-white px-7 py-6 shadow-[0_18px_50px_rgba(44,35,25,0.09)] sm:px-10">
-          <p className="w-32 shrink-0 text-sm font-semibold leading-5 text-[#191919]">
+        <div className="mx-auto max-w-[1400px] rounded-[24px] border border-black/5 bg-white px-5 py-6 shadow-[0_18px_50px_rgba(44,35,25,0.09)] sm:flex sm:items-center sm:gap-7 sm:px-10">
+          <p className="shrink-0 text-sm font-semibold leading-5 text-[#191919] sm:w-32">
             Trusted by
             <br />
             amazing brands
           </p>
-          <div className="h-9 w-px shrink-0 bg-neutral-200" aria-hidden="true" />
-          <div className="flex min-w-max flex-1 items-center justify-between gap-11">
-            {trustMarks.map((mark) => (
-              <span
-                key={mark}
-                className="text-lg font-extrabold tracking-[-0.04em] text-neutral-400 grayscale sm:text-xl"
-              >
-                {mark}
-              </span>
+          <div className="hidden h-16 w-px shrink-0 bg-neutral-200 sm:block" aria-hidden="true" />
+          <ul
+            className="mt-5 flex w-full snap-x snap-mandatory items-start gap-4 overflow-x-auto pb-2 sm:mt-0 sm:flex-1"
+            aria-label="Brands that trust MO T-SHIRT"
+          >
+            {trustedBrands.map((brand) => (
+              <li key={brand.name} className="w-44 shrink-0 snap-start">
+                <figure>
+                  <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-neutral-100 bg-neutral-50">
+                    <Image
+                      src={brand.logo}
+                      alt={brand.alt}
+                      fill
+                      sizes="176px"
+                      className="object-contain transition duration-300 hover:scale-[1.03]"
+                    />
+                  </div>
+                  <figcaption className="mt-2 text-center text-xs font-semibold leading-5 text-neutral-600">
+                    {brand.name}
+                  </figcaption>
+                </figure>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
 
