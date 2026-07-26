@@ -161,7 +161,7 @@ export default function HomepageIntro() {
       </section>
 
       <section
-        className="relative z-10 -mt-7 px-4 sm:-mt-9 sm:px-6 lg:-mt-20"
+        className="relative z-10 -mt-7 px-4 sm:-mt-9 sm:px-6"
         aria-label="Trusted clients"
       >
         <div className="mx-auto max-w-[1400px] rounded-[24px] border border-black/5 bg-white px-5 py-4 shadow-[0_18px_50px_rgba(44,35,25,0.09)] sm:flex sm:items-center sm:gap-7 sm:px-10">
