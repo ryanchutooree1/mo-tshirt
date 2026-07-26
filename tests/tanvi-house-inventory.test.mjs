@@ -16,6 +16,7 @@ test("house inventory creation trims input and supplies safe defaults", () => {
   if (parsed.ok) {
     assert.equal(parsed.data.name, "Hand soap");
     assert.equal(parsed.data.category, "Other");
+    assert.equal(parsed.data.quantity, null);
     assert.equal(parsed.data.stockLevel, "high");
   }
 });
@@ -41,6 +42,25 @@ test("house inventory patches only supported editable fields", () => {
   });
 });
 
+test("house inventory accepts an optional non-negative whole-number quantity", () => {
+  const created = parseHouseInventoryCreate({
+    name: "Hand soap",
+    quantity: 3,
+  });
+  const cleared = parseHouseInventoryPatch({ quantity: null });
+  const updated = parseHouseInventoryPatch({ quantity: 5 });
+
+  assert.equal(created.ok && created.data.quantity, 3);
+  assert.deepEqual(cleared, { ok: true, data: { quantity: null } });
+  assert.deepEqual(updated, { ok: true, data: { quantity: 5 } });
+});
+
+test("house inventory rejects invalid quantities", () => {
+  assert.equal(parseHouseInventoryCreate({ name: "Salt", quantity: -1 }).ok, false);
+  assert.equal(parseHouseInventoryPatch({ quantity: 1.5 }).ok, false);
+  assert.equal(parseHouseInventoryPatch({ quantity: "many" }).ok, false);
+});
+
 test("house inventory checkbox patches require real booleans", () => {
   assert.equal(parseHouseInventoryPatch({ needNow: "false" }).ok, false);
   assert.equal(parseHouseInventoryPatch({ purchased: 1 }).ok, false);
@@ -56,6 +76,7 @@ test("stored house inventory values map to stable UI defaults", () => {
 
   assert.equal(item.id, "item-1");
   assert.equal(item.stockLevel, "high");
+  assert.equal(item.quantity, null);
   assert.equal(item.needNow, true);
   assert.equal(item.purchased, false);
 });

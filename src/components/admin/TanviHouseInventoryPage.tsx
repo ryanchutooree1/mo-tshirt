@@ -28,6 +28,7 @@ type InventoryView = "inventory" | "shopping";
 type ItemDraft = {
   name: string;
   category: string;
+  quantity: string;
   stockLevel: HouseStockLevel;
 };
 
@@ -139,6 +140,7 @@ export default function TanviHouseInventoryPage() {
   const [draft, setDraft] = useState<ItemDraft>({
     name: "",
     category: "Bathroom",
+    quantity: "",
     stockLevel: "high",
   });
   const [editDraft, setEditDraft] = useState<Pick<ItemDraft, "name" | "category">>({
@@ -225,14 +227,22 @@ export default function TanviHouseInventoryPage() {
       const response = await fetch(API_PATH, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(draft),
+        body: JSON.stringify({
+          ...draft,
+          quantity: draft.quantity === "" ? null : Number(draft.quantity),
+        }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data?.item) {
         throw new Error(data?.error || "Could not add this item.");
       }
       setItems((current) => [data.item as TanviHouseInventoryItem, ...current]);
-      setDraft((current) => ({ ...current, name: "", stockLevel: "high" }));
+      setDraft((current) => ({
+        ...current,
+        name: "",
+        quantity: "",
+        stockLevel: "high",
+      }));
       setShowAddForm(false);
       setNotice(`${data.item.name} added.`);
     } catch (createError) {
@@ -249,7 +259,7 @@ export default function TanviHouseInventoryPage() {
     patch: Partial<
       Pick<
         TanviHouseInventoryItem,
-        "name" | "category" | "stockLevel" | "needNow" | "purchased"
+        "name" | "category" | "quantity" | "stockLevel" | "needNow" | "purchased"
       >
     >,
     successMessage?: string
@@ -426,18 +436,6 @@ export default function TanviHouseInventoryPage() {
             <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1">
               <button
                 type="button"
-                onClick={() => setView("inventory")}
-                className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
-                  view === "inventory"
-                    ? "bg-white text-slate-950 shadow-sm"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                <PackageOpen className="h-4 w-4" />
-                Inventory
-              </button>
-              <button
-                type="button"
                 onClick={() => setView("shopping")}
                 className={`relative inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
                   view === "shopping"
@@ -452,6 +450,18 @@ export default function TanviHouseInventoryPage() {
                     {needsNowCount}
                   </span>
                 ) : null}
+              </button>
+              <button
+                type="button"
+                onClick={() => setView("inventory")}
+                className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                  view === "inventory"
+                    ? "bg-white text-slate-950 shadow-sm"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                <PackageOpen className="h-4 w-4" />
+                Inventory
               </button>
             </div>
 
@@ -512,7 +522,7 @@ export default function TanviHouseInventoryPage() {
               <Plus className="h-4 w-4 text-violet-700" />
               <h2 className="text-sm font-semibold text-violet-950">Add a household item</h2>
             </div>
-            <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_12rem_auto] md:items-end">
+            <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_7rem_12rem_auto] md:items-end">
               <label className="text-xs font-semibold text-slate-600">
                 Item name
                 <input
@@ -537,6 +547,23 @@ export default function TanviHouseInventoryPage() {
                   }
                   list="house-category-suggestions"
                   placeholder="e.g. Bathroom"
+                  className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                />
+              </label>
+              <label className="text-xs font-semibold text-slate-600">
+                Quantity
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={draft.quantity}
+                  onChange={(event) =>
+                    setDraft((current) => ({
+                      ...current,
+                      quantity: event.target.value,
+                    }))
+                  }
+                  placeholder="Optional"
                   className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
                 />
               </label>
@@ -615,7 +642,7 @@ export default function TanviHouseInventoryPage() {
                         return (
                           <article
                             key={item.id}
-                            className={`grid gap-3 px-3 py-3 transition sm:grid-cols-[minmax(0,1fr)_11rem_9rem_auto] sm:items-center sm:px-4 ${
+                            className={`grid gap-3 px-3 py-3 transition sm:grid-cols-[minmax(0,1fr)_7rem_11rem_9rem_auto] sm:items-center sm:px-4 ${
                               item.needNow ? "bg-violet-50/40" : "bg-white"
                             }`}
                           >
@@ -659,6 +686,48 @@ export default function TanviHouseInventoryPage() {
                                 </p>
                               </div>
                             )}
+
+                            <label className="relative">
+                              <span className="sr-only">Quantity for {item.name}</span>
+                              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                                Qty
+                              </span>
+                              <input
+                                type="number"
+                                min={0}
+                                step={1}
+                                value={item.quantity ?? ""}
+                                disabled={savingId === item.id}
+                                onChange={(event) => {
+                                  const value = event.target.value;
+                                  const quantity = value === "" ? null : Number(value);
+                                  if (
+                                    quantity === null ||
+                                    (Number.isInteger(quantity) && quantity >= 0)
+                                  ) {
+                                    setItems((current) =>
+                                      current.map((entry) =>
+                                        entry.id === item.id
+                                          ? { ...entry, quantity }
+                                          : entry
+                                      )
+                                    );
+                                  }
+                                }}
+                                onBlur={(event) => {
+                                  const value = event.target.value;
+                                  const quantity = value === "" ? null : Number(value);
+                                  if (
+                                    quantity === null ||
+                                    (Number.isInteger(quantity) && quantity >= 0)
+                                  ) {
+                                    void patchItem(item, { quantity });
+                                  }
+                                }}
+                                placeholder="Qty"
+                                className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400 disabled:opacity-50"
+                              />
+                            </label>
 
                             <label className="relative">
                               <span className="sr-only">Stock level for {item.name}</span>
@@ -937,6 +1006,7 @@ function ShoppingGroup({
                 </p>
                 <p className="mt-0.5 truncate text-xs text-slate-400">
                   {item.category}
+                  {item.quantity !== null ? ` · Qty ${item.quantity}` : ""}
                 </p>
               </div>
               <span

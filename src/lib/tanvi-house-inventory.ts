@@ -8,6 +8,7 @@ export type TanviHouseInventoryItem = {
   id: string;
   name: string;
   category: string;
+  quantity: number | null;
   stockLevel: HouseStockLevel;
   needNow: boolean;
   purchased: boolean;
@@ -18,11 +19,15 @@ export type TanviHouseInventoryItem = {
 type HouseInventoryCreateInput = {
   name: string;
   category: string;
+  quantity: number | null;
   stockLevel: HouseStockLevel;
 };
 
 type HouseInventoryPatchInput = Partial<
-  Pick<TanviHouseInventoryItem, "name" | "category" | "stockLevel" | "needNow" | "purchased">
+  Pick<
+    TanviHouseInventoryItem,
+    "name" | "category" | "quantity" | "stockLevel" | "needNow" | "purchased"
+  >
 >;
 
 function cleanString(value: unknown, maxLength: number) {
@@ -31,6 +36,24 @@ function cleanString(value: unknown, maxLength: number) {
 
 function isHouseStockLevel(value: unknown): value is HouseStockLevel {
   return HOUSE_STOCK_LEVELS.includes(value as HouseStockLevel);
+}
+
+function parseOptionalQuantity(
+  value: unknown
+): { ok: true; value: number | null } | { ok: false; error: string } {
+  if (value === "" || value === null || value === undefined) {
+    return { ok: true, value: null };
+  }
+
+  const quantity = Number(value);
+  if (!Number.isInteger(quantity) || quantity < 0) {
+    return {
+      ok: false,
+      error: "Quantity must be a whole number of zero or more, or left blank.",
+    };
+  }
+
+  return { ok: true, value: quantity };
 }
 
 export function parseHouseInventoryCreate(
@@ -42,12 +65,15 @@ export function parseHouseInventoryCreate(
     body && typeof body === "object" ? (body as Record<string, unknown>) : {};
   const name = cleanString(payload.name, 140);
   if (!name) return { ok: false, error: "Item name is required." };
+  const quantity = parseOptionalQuantity(payload.quantity);
+  if (!quantity.ok) return quantity;
 
   return {
     ok: true,
     data: {
       name,
       category: cleanString(payload.category, 80) || "Other",
+      quantity: quantity.value,
       stockLevel: isHouseStockLevel(payload.stockLevel)
         ? payload.stockLevel
         : "high",
@@ -71,6 +97,11 @@ export function parseHouseInventoryPatch(
   }
   if ("category" in payload) {
     data.category = cleanString(payload.category, 80) || "Other";
+  }
+  if ("quantity" in payload) {
+    const quantity = parseOptionalQuantity(payload.quantity);
+    if (!quantity.ok) return quantity;
+    data.quantity = quantity.value;
   }
   if ("stockLevel" in payload) {
     if (!isHouseStockLevel(payload.stockLevel)) {
@@ -108,6 +139,12 @@ export function mapTanviHouseInventoryItem(
     id,
     name: cleanString(data.name, 140) || "Unnamed item",
     category: cleanString(data.category, 80) || "Other",
+    quantity:
+      typeof data.quantity === "number" &&
+      Number.isInteger(data.quantity) &&
+      data.quantity >= 0
+        ? data.quantity
+        : null,
     stockLevel: isHouseStockLevel(data.stockLevel)
       ? data.stockLevel
       : "high",
