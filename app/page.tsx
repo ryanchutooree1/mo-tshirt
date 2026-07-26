@@ -17,7 +17,6 @@ import HomeAiOrder from "@/components/HomeAiOrder";
 import MapCard from "@/components/MapCard";
 import QuoteForm from "@/components/QuoteForm";
 import ZoomableImage from "@/components/ZoomableImage";
-import LocationJump from "@/components/LocationJump";
 import PremiumDesignStudioClient from "@/components/PremiumDesignStudioClient";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 
@@ -145,7 +144,6 @@ function ActionButtons() {
 export default function HomePage() {
   return (
     <div id="top" className="min-h-screen bg-white text-black">
-      <LocationJump />
       <header className="sticky top-0 z-40 border-b border-[#EAEAEA] bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:h-20 sm:gap-4 sm:px-6">
           <Link href="#top" className="flex shrink-0 items-center" aria-label="MO T-SHIRT Home">
