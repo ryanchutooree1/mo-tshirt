@@ -4805,11 +4805,16 @@ export default function QuotationApprovalPage() {
                               setStaffDecisionNote("");
                               setStaffDecisionDialog("accepted");
                             }}
-                            disabled={staffDecisionSaving}
-                            className="inline-flex max-w-full min-w-0 items-center justify-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-center text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled={
+                              staffDecisionSaving ||
+                              selected.clientDecision === "accepted"
+                            }
+                            className="inline-flex max-w-full min-w-0 items-center justify-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-center text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:border-[#ececec] disabled:bg-[#f7f7f7] disabled:text-[#b0b0b0] disabled:shadow-none"
                           >
                             <FiCheckCircle className="h-4 w-4" />
-                            Accept for client
+                            {selected.clientDecision === "accepted"
+                              ? "Client accepted"
+                              : "Accept for client"}
                           </button>
                           <button
                             type="button"
@@ -4817,11 +4822,16 @@ export default function QuotationApprovalPage() {
                               setStaffDecisionNote("");
                               setStaffDecisionDialog("rejected");
                             }}
-                            disabled={staffDecisionSaving}
-                            className="inline-flex max-w-full min-w-0 items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2.5 text-center text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled={
+                              staffDecisionSaving ||
+                              selected.clientDecision === "rejected"
+                            }
+                            className="inline-flex max-w-full min-w-0 items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2.5 text-center text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:border-[#ececec] disabled:bg-[#f7f7f7] disabled:text-[#b0b0b0] disabled:shadow-none"
                           >
                             <FiXCircle className="h-4 w-4" />
-                            Reject for client
+                            {selected.clientDecision === "rejected"
+                              ? "Client rejected"
+                              : "Reject for client"}
                           </button>
                         </>
                       ) : null}

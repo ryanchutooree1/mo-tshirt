@@ -87,6 +87,17 @@ export async function PATCH(
     }
 
     const quoteData = quoteSnap.data() as Record<string, unknown>;
+    if (cleanString(quoteData.clientDecision, 30) === decision) {
+      return NextResponse.json(
+        {
+          error:
+            decision === "accepted"
+              ? "Client acceptance is already recorded."
+              : "Client rejection is already recorded.",
+        },
+        { status: 409 }
+      );
+    }
     const storedQuote =
       quoteData.quote && typeof quoteData.quote === "object" && !Array.isArray(quoteData.quote)
         ? quoteData.quote as Record<string, unknown>
