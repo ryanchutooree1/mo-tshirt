@@ -190,6 +190,7 @@ export default function PremiumDesignStudioClient({
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [mobileTool, setMobileTool] = useState<MobileStudioTool>("fabric");
   const [mobileFabricPanelOpen, setMobileFabricPanelOpen] = useState(true);
+  const [mobileReviewOpen, setMobileReviewOpen] = useState(false);
   const artworkInput = useRef<HTMLInputElement | null>(null);
   const cameraInput = useRef<HTMLInputElement | null>(null);
   const uploadTarget = useRef<Side>("front");
@@ -376,23 +377,8 @@ export default function PremiumDesignStudioClient({
 
   function selectMobileTool(tool: MobileStudioTool) {
     setMobileTool(tool);
+    setMobileReviewOpen(false);
     setMobileFabricPanelOpen(tool === "fabric");
-
-    if (tool === "fabric") {
-      setStep(2);
-      return;
-    }
-    if (tool === "graphics") {
-      setStep(activeArtworkUrl ? 5 : 4);
-      return;
-    }
-    if (tool === "background") {
-      setStep(4);
-      return;
-    }
-
-    setStep(4);
-    openCamera(activeSide);
   }
 
   function replaceArtworkFile(file: File, side: Side) {
@@ -716,13 +702,86 @@ export default function PremiumDesignStudioClient({
                   </div>
                 </div>
               </div>
-              {mobileFabricPanelOpen ? <div className="relative z-40 -mt-32 px-3 pb-3 sm:hidden"><MobileFabricPanel products={MOBILE_FABRIC_PRODUCTS} activeProductId={productId} colours={mobileFabricColours} selectedColourId={selectedShopItemId} loading={shopLoading} onProductSelect={(nextProductId) => selectProduct(nextProductId as ProductId)} onColourSelect={(itemId) => { const item = shopItems.find((shopItem) => shopItem.id === itemId); if (item) selectShopItem(item); }} onClose={() => setMobileFabricPanelOpen(false)} /></div> : null}
+              {mobileTool === "fabric" && mobileFabricPanelOpen && !mobileReviewOpen ? <div className="relative z-40 -mt-32 px-3 pb-3 sm:hidden"><MobileFabricPanel products={MOBILE_FABRIC_PRODUCTS} activeProductId={productId} colours={mobileFabricColours} selectedColourId={selectedShopItemId} loading={shopLoading} onProductSelect={(nextProductId) => selectProduct(nextProductId as ProductId)} onColourSelect={(itemId) => { const item = shopItems.find((shopItem) => shopItem.id === itemId); if (item) selectShopItem(item); }} onClose={() => setMobileFabricPanelOpen(false)} /></div> : null}
               <div className="grid grid-cols-4 border-t border-[#ecebe6] bg-[#fbfbf9]"><PreviewStat label="Garment" value={product.label} /><PreviewStat label="Colour" value={selectedColor} /><PreviewStat label="Quantity" value={String(totalQty)} /><PreviewStat label="Estimate" value={formatMoney(totalPrice)} accent /></div>
             </section>
 
             <div className="sticky bottom-3 z-[60] mx-2 my-3 sm:hidden"><MobileStudioDock activeTool={mobileTool} onSelect={selectMobileTool} /></div>
 
-            <aside className="mx-2 mb-4 flex min-h-[520px] flex-col rounded-[26px] border border-[#dfded8] bg-[#fff] shadow-[0_18px_55px_rgba(32,30,24,0.07)] sm:mx-0 sm:mb-0 sm:min-h-[600px]">
+            <section className="mx-2 mb-28 sm:hidden" aria-label="Mobile design controls">
+              {mobileReviewOpen ? (
+                <MobileWorkspace eyebrow="Final step" title="Review & request quote" description="Check your order, then tell us how to contact you.">
+                  {result?.ok ? (
+                    <Success message={result.text} onReset={() => { setResult(null); setMobileReviewOpen(false); selectMobileTool("fabric"); }} />
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="rounded-2xl border border-[#e2e1dc] p-4">
+                        <Label>Order summary</Label>
+                        <dl className="mt-3 space-y-3">
+                          <SummaryRow label="Product" value={product.label} />
+                          <SummaryRow label="Colour" value={selectedColor} />
+                          <SummaryRow label="Artwork" value={artworkSides} />
+                          <SummaryRow label="Print" value={printMethodLabel} />
+                          <SummaryRow label="Sizes" value={selectedSizes} />
+                        </dl>
+                      </div>
+                      <div className="studio-dark rounded-2xl bg-[#171714] p-5 !text-white">
+                        <div className="flex justify-between text-xs text-[#aaa9a2]"><span>Total quantity</span><span>{totalQty}</span></div>
+                        <div className="mt-3 flex items-end justify-between"><span className="text-xs text-[#aaa9a2]">Estimated total</span><span className="text-2xl font-extrabold">{formatMoney(totalPrice)}</span></div>
+                      </div>
+                      <Field label="Order notes"><textarea value={client.notes} onChange={(event) => setClient((current) => ({ ...current, notes: event.target.value }))} className="studio-field min-h-24 resize-none py-3" placeholder="Placement details or special instructions" /></Field>
+                      <Field label="Your name *"><input required value={client.name} onChange={(event) => setClient((current) => ({ ...current, name: event.target.value }))} className="studio-field" placeholder="Full name" /></Field>
+                      <Field label="Phone / WhatsApp"><input type="tel" value={client.phone} onChange={(event) => setClient((current) => ({ ...current, phone: event.target.value }))} className="studio-field" placeholder="+230 5..." /></Field>
+                      <Field label="Email"><input type="email" value={client.email} onChange={(event) => setClient((current) => ({ ...current, email: event.target.value }))} className="studio-field" placeholder="you@example.com" /></Field>
+                      <Field label="Preferred deadline"><input type="date" min={today} value={client.deadline} onChange={(event) => setClient((current) => ({ ...current, deadline: event.target.value }))} className="studio-field" /></Field>
+                      <Field label="Delivery"><select value={delivery} onChange={(event) => setDelivery(event.target.value)} className="studio-field">{DELIVERY_OPTIONS.map((option) => <option key={option}>{option}</option>)}</select></Field>
+                      {needsDelivery ? <div className="space-y-3 rounded-2xl bg-[#f5f4f0] p-4"><Field label="Delivery name *"><input value={client.deliveryName} onChange={(event) => setClient((current) => ({ ...current, deliveryName: event.target.value }))} className="studio-field" /></Field><Field label="Address *"><input value={client.address} onChange={(event) => setClient((current) => ({ ...current, address: event.target.value }))} className="studio-field" /></Field><div className="grid grid-cols-2 gap-2"><input value={client.postCode} onChange={(event) => setClient((current) => ({ ...current, postCode: event.target.value }))} className="studio-field" placeholder="Post code" /><input value={client.deliveryPhone} onChange={(event) => setClient((current) => ({ ...current, deliveryPhone: event.target.value }))} className="studio-field" placeholder="Phone" /></div></div> : null}
+                      {result && !result.ok ? <p className="rounded-xl bg-[#fff1f1] p-3 text-xs text-[#b91c1c]">{result.text}</p> : null}
+                      <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#bce8d1] bg-[#f0fbf5] text-sm font-bold text-[#087b45]"><MessageCircle className="h-4 w-4" />Send on WhatsApp</a>
+                      <button type="submit" disabled={!canSubmit || submitting} className="studio-primary flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#ff5a0a] text-sm font-extrabold !text-white shadow-[0_12px_28px_rgba(255,90,10,.25)] disabled:opacity-45">{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{submitting ? "Sending..." : "Request final price"}</button>
+                    </div>
+                  )}
+                </MobileWorkspace>
+              ) : (
+                <>
+                  {mobileTool === "fabric" ? (
+                    <MobileWorkspace eyebrow="Fabric" title="Garment & quantity" description="Choose the garment, colour, sizes and printing setup.">
+                      {!mobileFabricPanelOpen ? <button type="button" onClick={() => setMobileFabricPanelOpen(true)} className="studio-primary flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#171714] text-sm font-bold !text-white"><Palette className="h-4 w-4" />Choose garment & colour</button> : null}
+                      <div><Label>Sizes & quantities</Label><div className="mt-3 grid grid-cols-4 gap-2">{availableSizes.map((size) => <label key={size} className={`rounded-xl border p-2 text-center ${sizes[size] ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e4e3de]"}`}><span className="block text-[10px] font-extrabold">{size}</span><input inputMode="numeric" value={sizes[size] || ""} onChange={(event) => { const value = event.target.value; if (/^\d*$/.test(value)) setSizes((current) => ({ ...current, [size]: Number(value) || 0 })); }} className="studio-field mt-1 h-9 w-full rounded-lg bg-white text-center text-xs font-bold outline-none" placeholder="0" aria-label={`${size} quantity`} /></label>)}</div></div>
+                      <div><Label>Print side</Label><div className="mt-2 grid grid-cols-2 gap-2">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-xl border p-3 text-left ${activeSide === side ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e2e1dc]"}`}><span className="flex items-center justify-between text-xs font-extrabold capitalize">{side}{activeSide === side ? <CheckCircle2 className="h-4 w-4 text-[#ff5a0a]" /> : null}</span></button>)}</div></div>
+                      <div><Label>Print method</Label><div className="mt-2 space-y-2">{METHODS.map((option) => <label key={option.id} className={`flex gap-3 rounded-xl border p-3 ${methodId === option.id ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e4e3de]"}`}><input type="radio" name="mobile-method" checked={methodId === option.id} onChange={() => setMethodId(option.id)} className="accent-[#ff5a0a]" /><span><span className="block text-xs font-extrabold">{option.label}</span><span className="mt-1 block text-[10px] leading-4 text-[#85847d]">{option.note}</span></span></label>)}</div></div>
+                      <label className="flex items-center justify-between rounded-xl border border-[#e4e3de] p-4"><span><span className="block text-sm font-bold">Rush production</span><span className="mt-1 block text-xs text-[#85847d]">Adds 12% to the estimate</span></span><input type="checkbox" checked={rush} onChange={(event) => setRush(event.target.checked)} className="h-5 w-5 accent-[#ff5a0a]" /></label>
+                    </MobileWorkspace>
+                  ) : null}
+
+                  {mobileTool === "graphics" ? (
+                    <MobileWorkspace eyebrow="Graphics" title="Artwork & text" description="Upload each side, then position the artwork or add custom text.">
+                      {(["front", "back"] as Side[]).map((side) => <ArtworkUploadSlot key={side} side={side} file={artworkFiles[side]} url={artworkUrls[side]} active={activeSide === side} showBackgroundTools={false} onChoose={() => openArtworkPicker(side)} onDrop={(file) => chooseArtwork(file, side)} onRemove={() => clearArtwork(side)} onBackgroundRemoved={(file) => replaceArtworkFile(file, side)} onPosition={() => changeSide(side)} />)}
+                      <div><Label>Edit side</Label><div className="mt-2 grid grid-cols-2 gap-2">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-xl border p-3 text-xs font-extrabold capitalize ${activeSide === side ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e2e1dc]"}`}>{side} {artworkUrls[side] ? "✓" : ""}</button>)}</div></div>
+                      {activeArtworkUrl ? <div className="space-y-3"><div className="grid grid-cols-3 gap-2"><PresetButton icon={<Crosshair />} label="Left chest" onClick={() => patchArtwork({ x: -28, y: -38 })} /><PresetButton icon={<Focus />} label="Centre" onClick={() => patchArtwork({ x: 0, y: 0 })} /><PresetButton icon={<Move />} label="Lower" onClick={() => patchArtwork({ x: 0, y: 52 })} /></div><RangeControl icon={<ZoomIn />} label="Artwork size" value={activeArtwork.scale} min={ARTWORK_SCALE_MIN} max={ARTWORK_SCALE_MAX} suffix="%" onChange={(value) => patchArtwork({ scale: value })} /><RangeControl icon={<Move />} label="Horizontal" value={activeArtwork.x} min={-LAYER_X_LIMIT} max={LAYER_X_LIMIT} onChange={(value) => patchArtwork({ x: value })} /><RangeControl icon={<Move className="rotate-90" />} label="Vertical" value={activeArtwork.y} min={-LAYER_Y_LIMIT} max={LAYER_Y_LIMIT} onChange={(value) => patchArtwork({ y: value })} /><RangeControl icon={<RotateCcw />} label="Rotation" value={activeArtwork.rotate} min={-180} max={180} suffix="°" onChange={(value) => patchArtwork({ rotate: value })} /></div> : null}
+                      <div className="border-t border-[#ecebe6] pt-4"><label className="flex items-center justify-between"><span className="flex items-center gap-2 text-sm font-bold"><TypeIcon className="h-4 w-4 text-[#ff5a0a]" />Custom text</span><input type="checkbox" checked={activeText.enabled} onChange={(event) => patchText({ enabled: event.target.checked })} className="h-5 w-5 accent-[#ff5a0a]" /></label><div className="mt-4 space-y-3"><Field label="Your text"><input value={activeText.value} onChange={(event) => patchText({ value: event.target.value, enabled: true })} className="studio-field" placeholder="e.g. Team Mauritius" /></Field><div className="grid grid-cols-[1fr_72px] gap-3"><Field label="Font"><select value={activeText.font} onChange={(event) => patchText({ font: event.target.value })} className="studio-field"><option value="Arial, sans-serif">Modern sans</option><option value="Impact, sans-serif">Impact</option><option value="Georgia, serif">Classic serif</option><option value="cursive">Signature</option></select></Field><Field label="Colour"><input type="color" value={activeText.color} onChange={(event) => patchText({ color: event.target.value })} className="studio-field p-1.5" /></Field></div><RangeControl icon={<TypeIcon />} label="Text size" value={activeText.size} min={TEXT_SIZE_MIN} max={TEXT_SIZE_MAX} onChange={(value) => patchText({ size: value })} /><RangeControl icon={<RotateCcw />} label="Rotation" value={activeText.rotate} min={-180} max={180} suffix="°" onChange={(value) => patchText({ rotate: value })} /></div></div>
+                    </MobileWorkspace>
+                  ) : null}
+
+                  {mobileTool === "background" ? (
+                    <MobileWorkspace eyebrow="Background" title="Clean your artwork" description="Remove a photo background and compare the saved results.">
+                      {artworkFiles.front || artworkFiles.back ? (["front", "back"] as Side[]).filter((side) => artworkFiles[side]).map((side) => <ArtworkUploadSlot key={side} side={side} file={artworkFiles[side]} url={artworkUrls[side]} active={activeSide === side} onChoose={() => openArtworkPicker(side)} onDrop={(file) => chooseArtwork(file, side)} onRemove={() => clearArtwork(side)} onBackgroundRemoved={(file) => replaceArtworkFile(file, side)} onPosition={() => { changeSide(side); selectMobileTool("graphics"); }} />) : <MobileEmpty icon={<Sparkles />} title="Upload artwork first" description="Add a logo or photo in Graphics, then return here to remove its background." action="Go to Graphics" onAction={() => selectMobileTool("graphics")} />}
+                    </MobileWorkspace>
+                  ) : null}
+
+                  {mobileTool === "camera" ? (
+                    <MobileWorkspace eyebrow="Camera" title="Take a product photo" description="Photograph artwork or choose an existing image for either side.">
+                      {(["front", "back"] as Side[]).map((side) => <div key={side} className="rounded-2xl border border-[#e2e1dc] p-4"><div className="flex items-center justify-between"><div><p className="text-sm font-extrabold capitalize">{side} artwork</p><p className="mt-1 text-[10px] text-[#85847d]">{artworkFiles[side] ? artworkFiles[side]?.name : "No photo selected"}</p></div>{artworkUrls[side] ? <img src={artworkUrls[side] ?? ""} alt={`${side} camera artwork`} className="h-14 w-14 rounded-xl border object-contain" /> : <ImagePlus className="h-6 w-6 text-[#c6c3bb]" />}</div><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => openCamera(side)} className="studio-primary h-11 rounded-xl bg-[#171714] text-xs font-bold !text-white">Take photo</button><button type="button" onClick={() => openArtworkPicker(side)} className="h-11 rounded-xl border border-[#deddd7] text-xs font-bold">Choose photo</button></div></div>)}
+                      <button type="button" onClick={() => selectMobileTool("graphics")} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#ffd2bd] bg-[#fff7f1] text-sm font-bold text-[#dd4904]">Position artwork<ArrowRight className="h-4 w-4" /></button>
+                    </MobileWorkspace>
+                  ) : null}
+
+                  <button type="button" onClick={() => { setMobileReviewOpen(true); setMobileFabricPanelOpen(false); }} className="studio-primary mt-3 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#ff5a0a] text-sm font-extrabold !text-white shadow-[0_12px_28px_rgba(255,90,10,.25)]">Review & request quote<ArrowRight className="h-4 w-4" /></button>
+                </>
+              )}
+            </section>
+
+            <aside className="mx-2 mb-4 hidden min-h-[520px] flex-col rounded-[26px] border border-[#dfded8] bg-[#fff] shadow-[0_18px_55px_rgba(32,30,24,0.07)] sm:mx-0 sm:mb-0 sm:flex sm:min-h-[600px]">
               <div className="border-b border-[#ecebe6] px-5 py-5"><div className="flex items-start gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fff0e8] text-sm font-extrabold text-[#e44c04]">{step}</span><div><h2 className="text-xl font-bold tracking-[-0.03em]">{activeStep.label}</h2><p className="mt-1 text-xs leading-5 text-[#77766f]">{stepCopy(step)}</p></div></div></div>
               <motion.div key={step} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} className="flex-1 p-5">
                 {step === 1 ? <div className="space-y-3"><div className="flex items-center gap-2 rounded-xl bg-[#f2f8f4] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.1em] text-[#168455]"><BadgeCheck className="h-4 w-4" />Live products from Shops</div>{shopLoading ? <div className="flex min-h-48 items-center justify-center gap-2 text-xs font-semibold text-[#77766f]"><Loader2 className="h-4 w-4 animate-spin text-[#ff5a0a]" />Loading real garments…</div> : <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">{PRODUCTS.map((option) => {
@@ -771,6 +830,8 @@ function PreviewStat({ label, value, accent = false }: { label: string; value: s
 function SummaryRow({ label, value }: { label: string; value: string }) { return <div className="flex items-start justify-between gap-4 border-b border-[#efeee9] pb-3 last:border-0 last:pb-0"><dt className="text-xs text-[#85847d]">{label}</dt><dd className="max-w-[65%] text-right text-xs font-bold capitalize">{value}</dd></div>; }
 function RangeControl({ icon, label, value, min, max, suffix = "", onChange }: { icon: ReactNode; label: string; value: number; min: number; max: number; suffix?: string; onChange: (value: number) => void }) { return <label className="block rounded-2xl border border-[#e2e1dc] p-4"><span className="flex justify-between text-xs font-bold"><span className="flex items-center gap-2 text-[#575650] [&_svg]:h-4 [&_svg]:w-4">{icon}{label}</span><span className="rounded-md bg-[#f1f0ec] px-2 py-1 text-[9px] text-[#77766f]">{value}{suffix}</span></span><input type="range" min={min} max={max} value={value} onChange={(event) => onChange(Number(event.target.value))} className="mt-4 w-full accent-[#ff5a0a]" /></label>; }
 function PresetButton({ icon, label, disabled, onClick }: { icon: ReactNode; label: string; disabled?: boolean; onClick: () => void }) { return <button type="button" disabled={disabled} onClick={onClick} className="rounded-2xl border border-[#e2e1dc] p-3 text-center disabled:opacity-35"><span className="flex justify-center text-[#ff5a0a] [&_svg]:h-5 [&_svg]:w-5">{icon}</span><span className="mt-2 block text-[10px] font-bold">{label}</span></button>; }
+function MobileWorkspace({ eyebrow, title, description, children }: { eyebrow: string; title: string; description: string; children: ReactNode }) { return <div className="overflow-hidden rounded-[24px] border border-[#dfded8] bg-white shadow-[0_14px_40px_rgba(32,30,24,.07)]"><div className="border-b border-[#ecebe6] p-5"><p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#ff5a0a]">{eyebrow}</p><h2 className="mt-1 text-xl font-extrabold tracking-[-0.03em]">{title}</h2><p className="mt-1 text-xs leading-5 text-[#77766f]">{description}</p></div><div className="space-y-4 p-4">{children}</div></div>; }
+function MobileEmpty({ icon, title, description, action, onAction }: { icon: ReactNode; title: string; description: string; action: string; onAction: () => void }) { return <div className="flex min-h-64 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#ddd9d1] bg-[#fafaf7] p-6 text-center"><span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-[#ff5a0a] shadow-sm [&_svg]:h-6 [&_svg]:w-6">{icon}</span><p className="mt-4 text-sm font-extrabold">{title}</p><p className="mt-1 max-w-[260px] text-xs leading-5 text-[#85847d]">{description}</p><button type="button" onClick={onAction} className="studio-primary mt-4 rounded-xl bg-[#ff5a0a] px-4 py-2.5 text-xs font-bold !text-white">{action}</button></div>; }
 function Benefit({ icon, title }: { icon: ReactNode; title: string }) { return <div className="flex items-center justify-center gap-3 sm:justify-start"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#fff0e8] text-[#ff5a0a] [&_svg]:h-5 [&_svg]:w-5">{icon}</span><span className="text-xs font-bold text-[#4a4944]">{title}</span></div>; }
 function Success({ message, onReset }: { message: string; onReset: () => void }) { return <div className="flex min-h-[430px] flex-col items-center justify-center text-center"><span className="studio-success flex h-20 w-20 items-center justify-center rounded-full bg-[#1faf68] !text-white"><Check className="h-10 w-10" /></span><h3 className="mt-6 text-3xl font-extrabold">Thank you!</h3><p className="mt-2 max-w-xs text-sm leading-6 text-[#77766f]">{message}</p><div className="mt-6 rounded-2xl bg-[#f5f4f0] p-4 text-sm"><Label>What happens next</Label><p className="mt-2 font-semibold">We will review your design and confirm the final price within 24 hours.</p></div><button type="button" onClick={onReset} className="studio-primary mt-5 w-full rounded-xl bg-[#ff5a0a] px-4 py-3 text-sm font-bold !text-white">Create another design</button></div>; }
 
@@ -784,6 +845,7 @@ type ArtworkUploadSlotProps = {
   onRemove: () => void;
   onBackgroundRemoved: (file: File) => void;
   onPosition: () => void;
+  showBackgroundTools?: boolean;
 };
 
 type BackgroundRemovalState = "idle" | "processing" | "done" | "error";
@@ -799,6 +861,7 @@ function ArtworkUploadSlot({
   onRemove,
   onBackgroundRemoved,
   onPosition,
+  showBackgroundTools = true,
 }: ArtworkUploadSlotProps) {
   const title = `${side[0].toUpperCase()}${side.slice(1)}`;
   const [removalState, setRemovalState] = useState<BackgroundRemovalState>("idle");
@@ -935,7 +998,7 @@ function ArtworkUploadSlot({
             </div>
           </div>
 
-          <div className="mt-3 grid gap-2">
+          {showBackgroundTools ? <><div className="mt-3 grid gap-2">
             <button
               type="button"
               onClick={() => removeArtworkBackground("smart")}
@@ -1030,7 +1093,7 @@ function ArtworkUploadSlot({
                 </div>
               ) : null}
             </div>
-          ) : null}
+          ) : null}</> : null}
 
           <button
             type="button"
