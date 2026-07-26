@@ -48,6 +48,7 @@ import {
 import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
 import { removeBackgroundAutomatically } from "@/lib/automatic-background-removal";
 import { formatMoney } from "@/lib/money";
+import { uploadPublicArtwork } from "@/lib/public-artwork-upload";
 import {
   getMinSizePrice,
   getShopDesignProductId,
@@ -570,37 +571,48 @@ export default function PremiumDesignStudioClient({
     if (!canSubmit) { setResult({ ok: false, text: "Add a client name, contact method and valid delivery details." }); return; }
     setSubmitting(true);
     setResult(null);
-    const payload = new FormData();
-    payload.append("name", client.name.trim());
-    payload.append("email", client.email.trim());
-    payload.append("phone", client.phone.trim());
-    payload.append("message", "Premium Design Studio request submitted via mo-tshirt.mu");
-    payload.append("garment", product.label);
-    payload.append("size", availableSizes.find((size) => sizes[size] > 0) || "Mixed");
-    payload.append("printMethod", printMethodLabel);
-    payload.append("quantity", String(totalQty));
-    payload.append("garments", JSON.stringify(availableSizes.filter((size) => sizes[size] > 0).map((size) => ({ garment: product.label, color: selectedColor, size, quantity: sizes[size] }))));
-    payload.append("deadline", client.deadline);
-    payload.append("notes", client.notes);
-    payload.append("source", requestSource);
-    payload.append("delivery", delivery);
-    payload.append("deliveryName", client.deliveryName);
-    payload.append("deliveryAddress", client.address);
-    payload.append("deliveryPostCode", client.postCode);
-    payload.append("deliveryPhone", client.deliveryPhone);
     const submittedArtworks = (["front", "back"] as Side[]).flatMap((side) => {
       const file = artworkFiles[side];
       return file ? [{ side, file }] : [];
     });
-    payload.append("designBrief", JSON.stringify({ product: product.label, shopItemId: selectedShopItem?.id || "", colour: selectedColor, productImages: { front: selectedShopItem?.studioPhotoUrl || selectedShopItem?.photoUrl || product.image, back: selectedShopItem?.studioBackPhotoUrl || selectedShopItem?.backPhotoUrl || product.backImage }, printMethod: printMethodLabel, activeSide, front: designs.front, back: designs.back, artworkFiles: { front: artworkFiles.front?.name || "", back: artworkFiles.back?.name || "" }, sizes, totalQty, estimatedTotal: totalPrice, rush: hasCustomization && rush }));
-    payload.append("attachments", JSON.stringify(submittedArtworks.map(({ side, file }) => ({ label: `${side[0].toUpperCase()}${side.slice(1)} artwork`, description: `${product.label} ${side} print artwork`, filename: `${side}-${file.name}`, contentType: file.type, size: file.size }))));
-    submittedArtworks.forEach(({ side, file }) => payload.append("files", file, `${side}-${file.name}`));
     try {
+      let uploadSessionId = `design-studio-${crypto.randomUUID().slice(0, 12)}`;
+      const uploadedArtworks = [];
+      for (const { side, file } of submittedArtworks) {
+        const upload = await uploadPublicArtwork({
+          file,
+          filename: `${side}-${file.name}`,
+          sessionId: uploadSessionId,
+        });
+        uploadSessionId = upload.sessionId;
+        uploadedArtworks.push({ side, file, attachment: upload.attachment });
+      }
+
+      const payload = new FormData();
+      payload.append("name", client.name.trim());
+      payload.append("email", client.email.trim());
+      payload.append("phone", client.phone.trim());
+      payload.append("message", "Premium Design Studio request submitted via mo-tshirt.mu");
+      payload.append("garment", product.label);
+      payload.append("size", availableSizes.find((size) => sizes[size] > 0) || "Mixed");
+      payload.append("printMethod", printMethodLabel);
+      payload.append("quantity", String(totalQty));
+      payload.append("garments", JSON.stringify(availableSizes.filter((size) => sizes[size] > 0).map((size) => ({ garment: product.label, color: selectedColor, size, quantity: sizes[size] }))));
+      payload.append("deadline", client.deadline);
+      payload.append("notes", client.notes);
+      payload.append("source", requestSource);
+      payload.append("delivery", delivery);
+      payload.append("deliveryName", client.deliveryName);
+      payload.append("deliveryAddress", client.address);
+      payload.append("deliveryPostCode", client.postCode);
+      payload.append("deliveryPhone", client.deliveryPhone);
+      payload.append("designBrief", JSON.stringify({ product: product.label, shopItemId: selectedShopItem?.id || "", colour: selectedColor, productImages: { front: selectedShopItem?.studioPhotoUrl || selectedShopItem?.photoUrl || product.image, back: selectedShopItem?.studioBackPhotoUrl || selectedShopItem?.backPhotoUrl || product.backImage }, printMethod: printMethodLabel, activeSide, front: designs.front, back: designs.back, artworkFiles: { front: artworkFiles.front?.name || "", back: artworkFiles.back?.name || "" }, sizes, totalQty, estimatedTotal: totalPrice, rush: hasCustomization && rush }));
+      payload.append("attachments", JSON.stringify(uploadedArtworks.map(({ side, file, attachment }) => ({ label: `${side[0].toUpperCase()}${side.slice(1)} artwork`, description: `${product.label} ${side} print artwork`, url: attachment.url, filename: attachment.name, contentType: attachment.contentType || file.type, size: attachment.size ?? file.size }))));
       const response = await fetch("/api/contact", { method: "POST", body: payload });
       const body = (await response.json()) as { message?: string; error?: string };
       setResult(response.ok ? { ok: true, text: body.message || "Your design has been submitted successfully." } : { ok: false, text: body.error || "Could not send the request." });
-    } catch {
-      setResult({ ok: false, text: "Network error. Please try again or use WhatsApp." });
+    } catch (error) {
+      setResult({ ok: false, text: error instanceof Error ? error.message : "Network error. Please try again or use WhatsApp." });
     } finally {
       setSubmitting(false);
     }

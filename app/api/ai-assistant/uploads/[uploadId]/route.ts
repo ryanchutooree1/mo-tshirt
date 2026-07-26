@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
 import { collection, doc, getDoc, getDocs, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import {
+  PUBLIC_UPLOAD_CHUNK_BYTES,
+  completePublicChunkedUpload,
+  storePublicUploadChunk,
+} from "@/lib/public-upload-store";
+import {
+  isContentLengthWithinLimit,
+  isRequestOriginAllowed,
+} from "@/lib/request-safety";
 
 type FirestoreLike = Record<string, unknown>;
 
@@ -10,6 +19,72 @@ function cleanString(value: unknown) {
 
 function formatContentDisposition(filename: string) {
   return `inline; filename*=UTF-8''${encodeURIComponent(filename)}`;
+}
+
+function getUploadToken(req: Request) {
+  return cleanString(req.headers.get("x-upload-token"));
+}
+
+export async function PUT(
+  req: Request,
+  { params }: { params: Promise<{ uploadId: string }> }
+) {
+  if (!isRequestOriginAllowed(req)) {
+    return NextResponse.json({ error: "Origin not allowed." }, { status: 403 });
+  }
+  if (!isContentLengthWithinLimit(req.headers, PUBLIC_UPLOAD_CHUNK_BYTES)) {
+    return NextResponse.json({ error: "Upload chunk is too large." }, { status: 413 });
+  }
+
+  const { uploadId } = await params;
+  const index = Number(req.headers.get("x-chunk-index"));
+
+  try {
+    await storePublicUploadChunk({
+      uploadId,
+      uploadToken: getUploadToken(req),
+      index,
+      buffer: Buffer.from(await req.arrayBuffer()),
+    });
+    return NextResponse.json({ ok: true, index });
+  } catch (error) {
+    console.error("ai-assistant:public-upload:chunk", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to upload artwork." },
+      { status: 400 }
+    );
+  }
+}
+
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ uploadId: string }> }
+) {
+  if (!isRequestOriginAllowed(req)) {
+    return NextResponse.json({ error: "Origin not allowed." }, { status: 403 });
+  }
+
+  const { uploadId } = await params;
+
+  try {
+    const upload = await completePublicChunkedUpload(uploadId, getUploadToken(req));
+    return NextResponse.json({
+      attachment: {
+        name: upload.filename,
+        url: upload.url,
+        contentType: upload.contentType,
+        size: upload.size,
+        uploadedAt: upload.uploadedAt,
+      },
+      sessionId: upload.sessionId,
+    });
+  } catch (error) {
+    console.error("ai-assistant:public-upload:complete", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to finish artwork upload." },
+      { status: 400 }
+    );
+  }
 }
 
 export async function GET(
@@ -30,6 +105,9 @@ export async function GET(
     }
 
     const meta = metaSnap.data() as FirestoreLike;
+    if (meta.uploadState === "uploading") {
+      return NextResponse.json({ error: "Upload is not ready." }, { status: 409 });
+    }
     const filename = cleanString(meta.filename) || "upload";
     const contentType = cleanString(meta.contentType) || "application/octet-stream";
 
@@ -41,15 +119,19 @@ export async function GET(
       return NextResponse.json({ error: "Upload data is missing." }, { status: 404 });
     }
 
-    const base64 = chunksSnap.docs
-      .map((chunk) => cleanString((chunk.data() as FirestoreLike).data))
-      .join("");
+    const encodedChunks = chunksSnap.docs.map((chunk) =>
+      cleanString((chunk.data() as FirestoreLike).data)
+    );
+    const base64 = encodedChunks.join("");
 
     if (!base64) {
       return NextResponse.json({ error: "Upload data is empty." }, { status: 404 });
     }
 
-    const buffer = Buffer.from(base64, "base64");
+    const buffer =
+      meta.uploadState === "ready" && Number(meta.chunkSize) > 0
+        ? Buffer.concat(encodedChunks.map((chunk) => Buffer.from(chunk, "base64")))
+        : Buffer.from(base64, "base64");
 
     return new NextResponse(buffer, {
       headers: {
