@@ -95,8 +95,8 @@ export default function HomepageIntro() {
         id="hero"
         className="relative overflow-hidden bg-[linear-gradient(115deg,#fffdfb_0%,#fff9f4_46%,#fff1e4_100%)]"
       >
-        <div className="mx-auto grid min-h-[620px] w-full max-w-[1400px] lg:grid-cols-[0.92fr_1.08fr]">
-          <div className="relative z-10 flex flex-col justify-center px-5 py-14 sm:px-8 lg:px-10 lg:py-16">
+        <div className="mx-auto grid min-h-[520px] w-full max-w-[1400px] lg:grid-cols-[0.92fr_1.08fr] 2xl:min-h-[620px]">
+          <div className="relative z-10 flex flex-col justify-center px-5 py-14 sm:px-8 lg:px-10 lg:py-8 2xl:py-16">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-black/10 bg-white/80 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.1em] text-neutral-600 shadow-sm backdrop-blur">
               Proudly Mauritian
               <span className="text-base leading-none" aria-hidden="true">
@@ -143,7 +143,7 @@ export default function HomepageIntro() {
             </div>
           </div>
 
-          <div className="relative min-h-[430px] overflow-hidden lg:min-h-[620px]">
+          <div className="relative min-h-[430px] overflow-hidden lg:min-h-[520px] 2xl:min-h-[620px]">
             <div
               className="pointer-events-none absolute -left-16 top-[-12%] h-[115%] w-[80%] rounded-full bg-orange-200/45 blur-2xl"
               aria-hidden="true"
@@ -160,8 +160,11 @@ export default function HomepageIntro() {
         </div>
       </section>
 
-      <section className="relative z-10 -mt-7 px-4 sm:-mt-9 sm:px-6" aria-label="Trusted clients">
-        <div className="mx-auto max-w-[1400px] rounded-[24px] border border-black/5 bg-white px-5 py-6 shadow-[0_18px_50px_rgba(44,35,25,0.09)] sm:flex sm:items-center sm:gap-7 sm:px-10">
+      <section
+        className="relative z-10 -mt-7 px-4 sm:-mt-9 sm:px-6 lg:-mt-20"
+        aria-label="Trusted clients"
+      >
+        <div className="mx-auto max-w-[1400px] rounded-[24px] border border-black/5 bg-white px-5 py-4 shadow-[0_18px_50px_rgba(44,35,25,0.09)] sm:flex sm:items-center sm:gap-7 sm:px-10">
           <p className="shrink-0 text-sm font-semibold leading-5 text-[#191919] sm:w-32">
             Trusted by
             <br />
@@ -175,13 +178,13 @@ export default function HomepageIntro() {
             {trustedBrands.map((brand) => (
               <li
                 key={brand.name}
-                className="relative h-28 w-28 shrink-0 snap-start overflow-hidden rounded-full sm:h-32 sm:w-32"
+                className="relative h-28 w-28 shrink-0 snap-start overflow-hidden rounded-full"
               >
                 <Image
                   src={brand.logo}
                   alt={brand.alt}
                   fill
-                  sizes="(max-width: 640px) 112px, 128px"
+                  sizes="112px"
                   className={`object-cover ${brand.imageClassName}`}
                 />
               </li>
