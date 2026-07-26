@@ -436,6 +436,12 @@ type QuoteRecord = {
     ocrText?: string;
     verificationStatus?: "pending_manual_confirmation" | "confirmed";
     submittedAtIso?: string;
+    uploadedByStaff?: boolean;
+    uploadedBy?: {
+      userId?: string;
+      displayName?: string;
+      email?: string;
+    };
     assessment?: PaymentEvidenceAssessment;
   };
   paymentReceipt?: {
@@ -735,6 +741,8 @@ const DOC_TYPE_TONES: Record<DocumentType, string> = {
 };
 
 const QUICK_PRODUCT_LINES = ["T-Shirt", "Poloshirt", "Hoodie", "Cap"];
+const MAX_PAYMENT_EVIDENCE_BYTES = 8 * 1024 * 1024;
+const PAYMENT_EVIDENCE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 const getQuoteDocumentType = (quote: QuoteRecord): DocumentType => quote.quote?.documentType || "quotation";
 
@@ -812,6 +820,13 @@ const getPaymentStatusMeta = (quote: QuoteRecord) => {
       label: "Payment proof submitted",
       shortLabel: "Proof submitted",
       tone: "border-blue-200 bg-blue-50 text-blue-700",
+    };
+  }
+  if (quote.paymentReceipt) {
+    return {
+      label: "Receipt generated · payment image optional",
+      shortLabel: "Receipt ready",
+      tone: "border-emerald-200 bg-emerald-50 text-emerald-700",
     };
   }
 
@@ -1879,6 +1894,7 @@ export default function QuotationApprovalPage() {
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | "all">("all");
   const [draft, setDraft] = useState<QuoteDraft | null>(null);
   const [quotationPreviewUrl, setQuotationPreviewUrl] = useState<string | null>(null);
+  const [quotationPreviewOpen, setQuotationPreviewOpen] = useState(false);
   const [paymentReceiptPreviewOpen, setPaymentReceiptPreviewOpen] = useState(false);
   const [paymentReceiptPreviewUrl, setPaymentReceiptPreviewUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -1889,6 +1905,7 @@ export default function QuotationApprovalPage() {
   >(null);
   const [staffDecisionNote, setStaffDecisionNote] = useState("");
   const [paymentVerificationSaving, setPaymentVerificationSaving] = useState(false);
+  const [uploadingPaymentEvidence, setUploadingPaymentEvidence] = useState(false);
   const [resolvingClientResponseId, setResolvingClientResponseId] = useState<string | null>(null);
   const [paymentOcrProgress, setPaymentOcrProgress] = useState<number | null>(null);
   const [paymentOcrRetryNonce, setPaymentOcrRetryNonce] = useState(0);
@@ -1924,6 +1941,7 @@ export default function QuotationApprovalPage() {
   const prevDocumentTypeRef = useRef<DocumentType | null>(null);
   const quotationPreviewUrlRef = useRef<string | null>(null);
   const paymentReceiptPreviewUrlRef = useRef<string | null>(null);
+  const paymentEvidenceInputRef = useRef<HTMLInputElement | null>(null);
   const designLogoSectionRef = useRef<HTMLDivElement | null>(null);
   const backgroundRemovalRunsRef = useRef(new Set<string>());
   const backgroundRemovalAttemptsRef = useRef(new Set<string>());
@@ -2827,6 +2845,7 @@ export default function QuotationApprovalPage() {
   }, [selected]);
 
   useEffect(() => {
+    setQuotationPreviewOpen(false);
     setPaymentReceiptPreviewOpen(false);
     setStaffDecisionDialog(null);
     setStaffDecisionNote("");
@@ -2942,6 +2961,9 @@ export default function QuotationApprovalPage() {
   );
   const quoteIsMarkedApproved = selectedStatus === "approved" || selectedStatus === "sent";
   const quoteHasBeenSent = selectedStatus === "sent";
+  const clientDecisionFinalized =
+    selected?.clientDecision === "accepted" ||
+    selected?.clientDecision === "rejected";
   const quoteInOrders = Boolean(selected?.orderTransactionId);
   const moveToOrdersError = sendValidationError;
   const moveToOrdersTitle = moveToOrdersError
@@ -3030,7 +3052,13 @@ export default function QuotationApprovalPage() {
   }, [buildStoredQuotePayload]);
 
   useEffect(() => {
-    if (!selected || selected.paymentEvidence?.verificationStatus !== "confirmed") {
+    if (
+      !selected ||
+      (
+        selected.clientDecision !== "accepted" &&
+        selected.paymentEvidence?.verificationStatus !== "confirmed"
+      )
+    ) {
       return;
     }
 
@@ -3038,7 +3066,8 @@ export default function QuotationApprovalPage() {
     const receiptTotal = safeNumber(selected.paymentReceipt?.total, 0);
     if (selected.paymentReceipt && Math.abs(quoteTotal - receiptTotal) < 0.01) return;
 
-    const runKey = `${selected.id}:${selected.paymentEvidence.uploadId || "confirmed-payment"}:${quoteTotal.toFixed(2)}`;
+    const sourcePaymentEvidenceUploadId = selected.paymentEvidence?.uploadId || "";
+    const runKey = `${selected.id}:${sourcePaymentEvidenceUploadId || "accepted-without-image"}:${quoteTotal.toFixed(2)}`;
     if (automaticReceiptRunsRef.current.has(runKey)) return;
     automaticReceiptRunsRef.current.add(runKey);
 
@@ -3046,7 +3075,7 @@ export default function QuotationApprovalPage() {
     const receiptRecord = buildPaidReceiptRecord(
       buildDraftFromQuote(selected),
       generatedAtIso,
-      selected.paymentEvidence.uploadId || ""
+      sourcePaymentEvidenceUploadId
     );
     let active = true;
 
@@ -3056,11 +3085,17 @@ export default function QuotationApprovalPage() {
       updatedAt: serverTimestamp(),
     })
       .then(() => {
-        if (active) setNotice("A paid receipt was generated for the confirmed payment.");
+        if (active) {
+          setNotice(
+            sourcePaymentEvidenceUploadId
+              ? "A paid receipt was generated for the accepted quotation and payment image."
+              : "A paid receipt was generated for the accepted quotation."
+          );
+        }
       })
       .catch(() => {
         automaticReceiptRunsRef.current.delete(runKey);
-        if (active) setNotice("The payment is confirmed, but the receipt could not be generated.");
+        if (active) setNotice("The quotation is accepted, but the receipt could not be generated.");
       });
 
     return () => {
@@ -3285,6 +3320,70 @@ export default function QuotationApprovalPage() {
       setNotice("Failed to confirm payment evidence.");
     } finally {
       setPaymentVerificationSaving(false);
+    }
+  };
+
+  const uploadInternalPaymentEvidence = async (file: File) => {
+    if (!selected) return;
+    if (!PAYMENT_EVIDENCE_TYPES.has(file.type)) {
+      setNotice("Upload a JPG, PNG or WebP payment image.");
+      return;
+    }
+    if (!file.size || file.size > MAX_PAYMENT_EVIDENCE_BYTES) {
+      setNotice("The payment image must be 8 MB or smaller.");
+      return;
+    }
+
+    setUploadingPaymentEvidence(true);
+    setNotice(null);
+    try {
+      const safeName = file.name.replace(/[^a-z0-9._-]/gi, "_");
+      const paymentRef = ref(
+        storage,
+        `quotes/${selected.id}/payment-evidence/${Date.now()}-${safeName}`
+      );
+      const snapshot = await uploadBytes(paymentRef, file);
+      const url = await getDownloadURL(snapshot.ref);
+      const submittedAtIso = new Date().toISOString();
+      const paymentEvidence = {
+        uploadId: snapshot.ref.fullPath,
+        url,
+        filename: file.name,
+        contentType: file.type,
+        size: file.size,
+        submittedAtIso,
+        ocrStatus: "pending" as const,
+        ocrError: "",
+        verificationStatus: "pending_manual_confirmation" as const,
+        uploadedByStaff: true,
+        uploadedBy: {
+          userId: currentAdmin?.userId || "",
+          displayName: currentAdmin?.displayName || "Administrator",
+          email: currentAdmin?.email || "",
+        },
+      };
+
+      await updateDoc(doc(db, "quotes", selected.id), {
+        paymentEvidence,
+        paymentEvidenceHistory: arrayUnion({
+          id: crypto.randomUUID(),
+          ...paymentEvidence,
+        }),
+        updatedAt: serverTimestamp(),
+      });
+      setNotice(
+        selected.paymentEvidence
+          ? "Payment image replaced. The new image is being checked."
+          : "Payment image added. It is being checked now."
+      );
+    } catch (error) {
+      console.error("quotes:internal-payment-upload", error);
+      setNotice(getStorageUploadErrorMessage(error));
+    } finally {
+      setUploadingPaymentEvidence(false);
+      if (paymentEvidenceInputRef.current) {
+        paymentEvidenceInputRef.current.value = "";
+      }
     }
   };
 
@@ -4590,12 +4689,14 @@ export default function QuotationApprovalPage() {
                         </div>
                       ) : null}
 
-                      {selected.paymentEvidence?.verificationStatus === "confirmed" && paymentReceiptDraft ? (
+                      {paymentReceiptDraft ? (
                         <div className={`mt-5 rounded-2xl border p-4 sm:p-5 ${isDark ? "border-emerald-300/25 bg-emerald-300/10" : "border-emerald-200 bg-emerald-50"}`}>
                           <div className="flex flex-wrap items-start justify-between gap-4">
                             <div>
                               <p className={`text-[11px] font-bold uppercase tracking-[0.18em] ${isDark ? "text-emerald-200" : "text-emerald-700"}`}>
-                                Receipt generated automatically
+                                {selected.paymentEvidence?.verificationStatus === "confirmed"
+                                  ? "Receipt generated automatically"
+                                  : "Receipt generated from accepted quotation"}
                               </p>
                               <h4 className={`mt-1.5 text-lg font-semibold ${isDark ? "text-white" : "text-[#222222]"}`}>
                                 {paymentReceiptDraft.documentNumber || "Paid receipt"}
@@ -4603,7 +4704,9 @@ export default function QuotationApprovalPage() {
                               <p className={`mt-1 text-xs ${isDark ? "text-white/55" : "text-[#5f6f65]"}`}>
                                 {selected.paymentReceipt?.generatedAtIso
                                   ? `Generated ${format(parseTimestamp(selected.paymentReceipt.generatedAtIso) || new Date(), "dd MMM yyyy, HH:mm")}`
-                                  : "Generated when the bank payment was confirmed."}
+                                  : selected.paymentEvidence?.verificationStatus === "confirmed"
+                                    ? "Generated when the bank payment was confirmed."
+                                    : "Generated when the client acceptance was recorded."}
                               </p>
                             </div>
                             <span className="rounded-full border border-emerald-300 bg-white px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.12em] text-emerald-700">
@@ -4619,7 +4722,7 @@ export default function QuotationApprovalPage() {
                               className={secondaryButtonClass}
                             >
                               <FiFileText className="h-4 w-4" />
-                              View Receipt
+                              Receipt PDF
                               {paymentReceiptPreviewOpen ? (
                                 <FiChevronUp className="h-4 w-4" aria-hidden="true" />
                               ) : (
@@ -4807,7 +4910,7 @@ export default function QuotationApprovalPage() {
                             }}
                             disabled={
                               staffDecisionSaving ||
-                              selected.clientDecision === "accepted"
+                              clientDecisionFinalized
                             }
                             className="inline-flex max-w-full min-w-0 items-center justify-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-center text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:border-[#ececec] disabled:bg-[#f7f7f7] disabled:text-[#b0b0b0] disabled:shadow-none"
                           >
@@ -4824,7 +4927,7 @@ export default function QuotationApprovalPage() {
                             }}
                             disabled={
                               staffDecisionSaving ||
-                              selected.clientDecision === "rejected"
+                              clientDecisionFinalized
                             }
                             className="inline-flex max-w-full min-w-0 items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2.5 text-center text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:border-[#ececec] disabled:bg-[#f7f7f7] disabled:text-[#b0b0b0] disabled:shadow-none"
                           >
@@ -4835,13 +4938,46 @@ export default function QuotationApprovalPage() {
                           </button>
                         </>
                       ) : null}
+                      <input
+                        ref={paymentEvidenceInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onClick={(event) => {
+                          event.currentTarget.value = "";
+                        }}
+                        onChange={(event) => {
+                          const file = event.currentTarget.files?.[0];
+                          if (file) void uploadInternalPaymentEvidence(file);
+                        }}
+                      />
                       <button
                         type="button"
-                        onClick={handleViewPdf}
+                        onClick={() => paymentEvidenceInputRef.current?.click()}
+                        disabled={uploadingPaymentEvidence}
+                        className={secondaryButtonClass}
+                      >
+                        <FiUpload className="h-4 w-4" />
+                        {uploadingPaymentEvidence
+                          ? "Uploading payment..."
+                          : selected.paymentEvidence
+                            ? "Replace payment image"
+                            : "Add payment image"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQuotationPreviewOpen((isOpen) => !isOpen)}
+                        aria-expanded={quotationPreviewOpen}
+                        aria-controls="quotation-pdf-preview"
                         className={secondaryButtonClass}
                       >
                         <FiFileText className="h-4 w-4" />
-                        View PDF
+                        Quotation PDF
+                        {quotationPreviewOpen ? (
+                          <FiChevronUp className="h-4 w-4" aria-hidden="true" />
+                        ) : (
+                          <FiChevronDown className="h-4 w-4" aria-hidden="true" />
+                        )}
                       </button>
                       <button
                         type="button"
@@ -4925,10 +5061,21 @@ export default function QuotationApprovalPage() {
                       </div>
 
                       <div
+                        id="quotation-pdf-preview"
                         aria-label="Live quotation PDF preview"
                         className="overflow-hidden rounded-[24px] border border-[#dedede] bg-[#e9ecef] shadow-[0_24px_70px_-36px_rgba(15,23,42,0.35)]"
                       >
-                        {quotationPreviewUrl ? (
+                        {!quotationPreviewOpen ? (
+                          <button
+                            type="button"
+                            onClick={() => setQuotationPreviewOpen(true)}
+                            className="flex min-h-28 w-full items-center justify-center gap-2 bg-white px-4 text-sm font-semibold text-[#484848] transition hover:bg-[#fafafa]"
+                          >
+                            <FiFileText className="h-4 w-4 text-[#ff6600]" />
+                            Open quotation PDF
+                            <FiChevronDown className="h-4 w-4" aria-hidden="true" />
+                          </button>
+                        ) : quotationPreviewUrl ? (
                           <iframe
                             key={quotationPreviewUrl}
                             src={quotationPreviewUrl}

@@ -18,9 +18,41 @@ import {
 } from "@/lib/request-safety";
 
 const MAX_DECISION_REQUEST_BYTES = 16 * 1024;
+const RECEIPT_TERMS = [
+  "This receipt confirms full payment received by MO T-SHIRT.",
+  "No outstanding balance remains for the related invoice.",
+  "This receipt serves as official proof of payment.",
+  "Any discrepancies must be reported within 24 hours of receipt issuance.",
+].join("\n");
 
 function cleanString(value: unknown, maxLength = 1_000) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+}
+
+function buildAcceptedQuotationReceipt(
+  storedQuote: Record<string, unknown>,
+  generatedAtIso: string,
+  sourcePaymentEvidenceUploadId: string
+) {
+  const documentNumber = cleanString(storedQuote.documentNumber, 120);
+  const baseNumber =
+    documentNumber.replace(/^(Q|INV|PR|R)-/i, "") ||
+    crypto.randomUUID().slice(0, 5).toUpperCase();
+  const total = Number(storedQuote.total);
+
+  return {
+    receiptId: crypto.randomUUID(),
+    ...storedQuote,
+    documentType: "receipt",
+    documentNumber: `R-${baseNumber}`,
+    documentDate: generatedAtIso.slice(0, 10),
+    paymentStatus: "Paid",
+    amountReceived: Number.isFinite(total) ? total : 0,
+    validUntil: "",
+    terms: RECEIPT_TERMS,
+    generatedAtIso,
+    sourcePaymentEvidenceUploadId,
+  };
 }
 
 async function verifyCurrentAdminPassword(
@@ -87,13 +119,11 @@ export async function PATCH(
     }
 
     const quoteData = quoteSnap.data() as Record<string, unknown>;
-    if (cleanString(quoteData.clientDecision, 30) === decision) {
+    const existingDecision = cleanString(quoteData.clientDecision, 30);
+    if (existingDecision === "accepted" || existingDecision === "rejected") {
       return NextResponse.json(
         {
-          error:
-            decision === "accepted"
-              ? "Client acceptance is already recorded."
-              : "Client rejection is already recorded.",
+          error: "A final client decision is already recorded.",
         },
         { status: 409 }
       );
@@ -129,7 +159,7 @@ export async function PATCH(
       recordedByStaff: true,
       recordedBy,
     };
-    await updateDoc(quoteRef, {
+    const updatePayload: Record<string, unknown> = {
       status: decision === "accepted" ? "approved" : "review",
       clientDecision: decision,
       clientDecisionComment: comment,
@@ -139,14 +169,30 @@ export async function PATCH(
       clientDecisionRecordedBy: recordedBy,
       clientResponseHistory: arrayUnion(historyEntry),
       updatedAt: serverTimestamp(),
-    });
+    };
+    if (decision === "accepted") {
+      const paymentEvidence =
+        quoteData.paymentEvidence &&
+        typeof quoteData.paymentEvidence === "object" &&
+        !Array.isArray(quoteData.paymentEvidence)
+          ? quoteData.paymentEvidence as Record<string, unknown>
+          : {};
+      const receiptRecord = buildAcceptedQuotationReceipt(
+        storedQuote,
+        submittedAtIso,
+        cleanString(paymentEvidence.uploadId, 500)
+      );
+      updatePayload.paymentReceipt = receiptRecord;
+      updatePayload.paymentReceiptHistory = arrayUnion(receiptRecord);
+    }
+    await updateDoc(quoteRef, updatePayload);
 
     return NextResponse.json({
       ok: true,
       decision,
       message:
         decision === "accepted"
-          ? "Client acceptance recorded from WhatsApp."
+          ? "Client acceptance recorded from WhatsApp and receipt generated."
           : "Client rejection recorded from WhatsApp.",
     });
   } catch (error) {
