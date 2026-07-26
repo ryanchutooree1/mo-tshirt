@@ -20,21 +20,25 @@ const trustedBrands = [
     name: "Zoza Pastry & Coffee",
     logo: "/trusted-brands/zoza-pastry-and-coffee-logo.webp",
     alt: "Zoza Pastry & Coffee logo",
+    imageClassName: "scale-[1.35]",
   },
   {
     name: "Le Rochester Restaurant & Auberge",
     logo: "/trusted-brands/le-rochester-restaurant-and-auberge-logo.webp",
     alt: "Le Rochester Restaurant & Auberge logo",
+    imageClassName: "scale-[1.24]",
   },
   {
     name: "Shanti Ghar",
     logo: "/trusted-brands/shanti-ghar-logo.webp",
     alt: "Shanti Ghar logo",
+    imageClassName: "scale-[1.35]",
   },
   {
     name: "Escale des iles Restaurant & Lodging",
     logo: "/trusted-brands/escale-des-iles-restaurant-and-lodging-logo.webp",
     alt: "Escale des iles Restaurant & Lodging logo",
+    imageClassName: "scale-[1.24]",
   },
 ];
 
@@ -165,25 +169,21 @@ export default function HomepageIntro() {
           </p>
           <div className="hidden h-16 w-px shrink-0 bg-neutral-200 sm:block" aria-hidden="true" />
           <ul
-            className="mt-5 flex w-full snap-x snap-mandatory items-start gap-4 overflow-x-auto pb-2 sm:mt-0 sm:flex-1"
+            className="mt-5 flex w-full snap-x snap-mandatory items-center gap-6 overflow-x-auto pb-2 sm:mt-0 sm:flex-1 sm:gap-10"
             aria-label="Brands that trust MO T-SHIRT"
           >
             {trustedBrands.map((brand) => (
-              <li key={brand.name} className="w-44 shrink-0 snap-start">
-                <figure>
-                  <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-neutral-100 bg-neutral-50">
-                    <Image
-                      src={brand.logo}
-                      alt={brand.alt}
-                      fill
-                      sizes="176px"
-                      className="object-contain transition duration-300 hover:scale-[1.03]"
-                    />
-                  </div>
-                  <figcaption className="mt-2 text-center text-xs font-semibold leading-5 text-neutral-600">
-                    {brand.name}
-                  </figcaption>
-                </figure>
+              <li
+                key={brand.name}
+                className="relative h-28 w-28 shrink-0 snap-start overflow-hidden rounded-full sm:h-32 sm:w-32"
+              >
+                <Image
+                  src={brand.logo}
+                  alt={brand.alt}
+                  fill
+                  sizes="(max-width: 640px) 112px, 128px"
+                  className={`object-cover ${brand.imageClassName}`}
+                />
               </li>
             ))}
           </ul>
