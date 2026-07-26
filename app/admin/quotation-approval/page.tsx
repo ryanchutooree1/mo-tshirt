@@ -4709,26 +4709,28 @@ export default function QuotationApprovalPage() {
                                     : "Generated when the client acceptance was recorded."}
                               </p>
                             </div>
-                            <span className="rounded-full border border-emerald-300 bg-white px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.12em] text-emerald-700">
-                              Paid
-                            </span>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={handleViewPaymentReceipt}
+                                aria-expanded={paymentReceiptPreviewOpen}
+                                aria-controls="payment-receipt-preview"
+                                className="inline-flex items-center justify-center gap-2 rounded-full border border-cyan-300 bg-[linear-gradient(135deg,#059669,#0891b2)] px-4 py-2 text-xs font-extrabold text-white shadow-[0_10px_24px_rgba(8,145,178,0.24)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(8,145,178,0.32)]"
+                              >
+                                <FiFileText className="h-4 w-4" />
+                                Receipt PDF
+                                {paymentReceiptPreviewOpen ? (
+                                  <FiChevronUp className="h-4 w-4" aria-hidden="true" />
+                                ) : (
+                                  <FiChevronDown className="h-4 w-4" aria-hidden="true" />
+                                )}
+                              </button>
+                              <span className="rounded-full border border-emerald-300 bg-white px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.12em] text-emerald-700">
+                                Paid
+                              </span>
+                            </div>
                           </div>
                           <div className="mt-4 flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              onClick={handleViewPaymentReceipt}
-                              aria-expanded={paymentReceiptPreviewOpen}
-                              aria-controls="payment-receipt-preview"
-                              className={secondaryButtonClass}
-                            >
-                              <FiFileText className="h-4 w-4" />
-                              Receipt PDF
-                              {paymentReceiptPreviewOpen ? (
-                                <FiChevronUp className="h-4 w-4" aria-hidden="true" />
-                              ) : (
-                                <FiChevronDown className="h-4 w-4" aria-hidden="true" />
-                              )}
-                            </button>
                             <button type="button" onClick={handleDownloadPaymentReceipt} className={secondaryButtonClass}>
                               <FiDownload className="h-4 w-4" /> Download receipt
                             </button>
@@ -4966,21 +4968,6 @@ export default function QuotationApprovalPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setQuotationPreviewOpen((isOpen) => !isOpen)}
-                        aria-expanded={quotationPreviewOpen}
-                        aria-controls="quotation-pdf-preview"
-                        className={secondaryButtonClass}
-                      >
-                        <FiFileText className="h-4 w-4" />
-                        Quotation PDF
-                        {quotationPreviewOpen ? (
-                          <FiChevronUp className="h-4 w-4" aria-hidden="true" />
-                        ) : (
-                          <FiChevronDown className="h-4 w-4" aria-hidden="true" />
-                        )}
-                      </button>
-                      <button
-                        type="button"
                         onClick={() => moveToOrders()}
                         disabled={
                           movingToOrders ||
@@ -5043,21 +5030,38 @@ export default function QuotationApprovalPage() {
                             </div>
                           ) : null}
                         </div>
-                        {quotationMissingCount > 0 ? (
+                        <div className="flex flex-wrap items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => openWorkflowStudioAt(quotationMissingFields[0]?.target)}
-                            className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-2 text-xs font-extrabold text-red-700 transition hover:bg-red-100"
+                            onClick={() => setQuotationPreviewOpen((isOpen) => !isOpen)}
+                            aria-expanded={quotationPreviewOpen}
+                            aria-controls="quotation-pdf-preview"
+                            className="inline-flex items-center justify-center gap-2 rounded-full border border-orange-300 bg-[linear-gradient(135deg,#ff6600,#f97316)] px-4 py-2 text-xs font-extrabold text-white shadow-[0_10px_24px_rgba(249,115,22,0.26)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(249,115,22,0.34)]"
                           >
-                            <FiEdit2 className="h-3.5 w-3.5" />
-                            {quotationMissingCount} missing field{quotationMissingCount === 1 ? "" : "s"} — fill now
+                            <FiFileText className="h-4 w-4" />
+                            Quotation PDF
+                            {quotationPreviewOpen ? (
+                              <FiChevronUp className="h-4 w-4" aria-hidden="true" />
+                            ) : (
+                              <FiChevronDown className="h-4 w-4" aria-hidden="true" />
+                            )}
                           </button>
-                        ) : (
-                          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
-                            <FiCheckCircle className="h-3.5 w-3.5" />
-                            Complete and ready
-                          </span>
-                        )}
+                          {quotationMissingCount > 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => openWorkflowStudioAt(quotationMissingFields[0]?.target)}
+                              className="inline-flex items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-2 text-xs font-extrabold text-red-700 transition hover:bg-red-100"
+                            >
+                              <FiEdit2 className="h-3.5 w-3.5" />
+                              {quotationMissingCount} missing field{quotationMissingCount === 1 ? "" : "s"} — fill now
+                            </button>
+                          ) : (
+                            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
+                              <FiCheckCircle className="h-3.5 w-3.5" />
+                              Complete and ready
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div
