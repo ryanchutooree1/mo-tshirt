@@ -200,6 +200,13 @@ type ClientResponseHistoryEntry = {
   decision?: "accepted" | "changes_requested" | "rejected";
   comment?: string;
   submittedAtIso?: string;
+  responseChannel?: "whatsapp" | "quotation_link";
+  recordedByStaff?: boolean;
+  recordedBy?: {
+    userId?: string;
+    displayName?: string;
+    email?: string;
+  };
   paymentEvidence?: {
     uploadId?: string;
     url?: string;
@@ -410,6 +417,12 @@ type QuoteRecord = {
   clientDecision?: "accepted" | "changes_requested" | "rejected";
   clientDecisionComment?: string;
   clientDecisionAtIso?: string;
+  clientDecisionSource?: "staff_whatsapp" | "quotation_link";
+  clientDecisionRecordedBy?: {
+    userId?: string;
+    displayName?: string;
+    email?: string;
+  };
   clientResponseHistory?: ClientResponseHistoryEntry[];
   clientResponseResolvedIds?: string[];
   sentAt?: Date | null;
@@ -1870,6 +1883,11 @@ export default function QuotationApprovalPage() {
   const [paymentReceiptPreviewUrl, setPaymentReceiptPreviewUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [statusSaving, setStatusSaving] = useState(false);
+  const [staffDecisionSaving, setStaffDecisionSaving] = useState(false);
+  const [staffDecisionDialog, setStaffDecisionDialog] = useState<
+    "accepted" | "rejected" | null
+  >(null);
+  const [staffDecisionNote, setStaffDecisionNote] = useState("");
   const [paymentVerificationSaving, setPaymentVerificationSaving] = useState(false);
   const [resolvingClientResponseId, setResolvingClientResponseId] = useState<string | null>(null);
   const [paymentOcrProgress, setPaymentOcrProgress] = useState<number | null>(null);
@@ -2810,6 +2828,8 @@ export default function QuotationApprovalPage() {
 
   useEffect(() => {
     setPaymentReceiptPreviewOpen(false);
+    setStaffDecisionDialog(null);
+    setStaffDecisionNote("");
   }, [selectedId]);
 
   useEffect(() => {
@@ -2843,11 +2863,15 @@ export default function QuotationApprovalPage() {
       : "";
 
     if (selected?.clientDecision === "accepted") {
+      const recordedByStaff = selected.clientDecisionSource === "staff_whatsapp";
+      const recordedByName = selected.clientDecisionRecordedBy?.displayName;
       return {
-        label: "Client accepted",
-        detail: formattedResponseDate
-          ? `Accepted on ${formattedResponseDate}.`
-          : "The client accepted this quotation.",
+        label: recordedByStaff ? "Client accepted · WhatsApp" : "Client accepted",
+        detail: recordedByStaff
+          ? `Recorded${recordedByName ? ` by ${recordedByName}` : ""} from the client’s WhatsApp reply${formattedResponseDate ? ` on ${formattedResponseDate}` : ""}.`
+          : formattedResponseDate
+            ? `Accepted on ${formattedResponseDate}.`
+            : "The client accepted this quotation.",
         tone: "border-emerald-200 bg-emerald-50 text-emerald-800",
         state: "accepted" as const,
       };
@@ -2871,11 +2895,15 @@ export default function QuotationApprovalPage() {
       };
     }
     if (selected?.clientDecision === "rejected") {
+      const recordedByStaff = selected.clientDecisionSource === "staff_whatsapp";
+      const recordedByName = selected.clientDecisionRecordedBy?.displayName;
       return {
-        label: "Client rejected",
-        detail: selected.clientDecisionComment || (formattedResponseDate
-          ? `Client responded on ${formattedResponseDate}.`
-          : "The client rejected this quotation."),
+        label: recordedByStaff ? "Client rejected · WhatsApp" : "Client rejected",
+        detail: selected.clientDecisionComment || (recordedByStaff
+          ? `Recorded${recordedByName ? ` by ${recordedByName}` : ""} from the client’s WhatsApp reply.`
+          : formattedResponseDate
+            ? `Client responded on ${formattedResponseDate}.`
+            : "The client rejected this quotation."),
         tone: "border-red-200 bg-red-50 text-red-800",
         state: "rejected" as const,
       };
@@ -3189,6 +3217,47 @@ export default function QuotationApprovalPage() {
       setNotice("Failed to update status.");
     } finally {
       setStatusSaving(false);
+    }
+  };
+
+  const recordStaffClientDecision = async () => {
+    if (!selected || !staffDecisionDialog) return;
+    if (staffDecisionDialog === "rejected" && !staffDecisionNote.trim()) {
+      setNotice("Add the client’s rejection reason.");
+      return;
+    }
+
+    setStaffDecisionSaving(true);
+    setNotice(null);
+    try {
+      const response = await fetch(`/api/admin/quotes/${selected.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "record-client-decision",
+          decision: staffDecisionDialog,
+          note: staffDecisionNote.trim(),
+        }),
+      });
+      const body = await response.json().catch(() => ({})) as {
+        error?: string;
+        message?: string;
+      };
+      if (!response.ok) {
+        throw new Error(body.error || "Failed to record the client decision.");
+      }
+
+      setNotice(body.message || "Client decision recorded.");
+      setStaffDecisionDialog(null);
+      setStaffDecisionNote("");
+    } catch (error) {
+      setNotice(
+        error instanceof Error
+          ? error.message
+          : "Failed to record the client decision."
+      );
+    } finally {
+      setStaffDecisionSaving(false);
     }
   };
 
@@ -4430,6 +4499,12 @@ export default function QuotationApprovalPage() {
                                   {entry.comment ? (
                                     <p className={`mt-2 whitespace-pre-wrap text-xs leading-5 ${isDark ? "text-white/60" : "text-[#5f5f5f]"}`}>{entry.comment}</p>
                                   ) : null}
+                                  {entry.recordedByStaff ? (
+                                    <p className={`mt-2 text-[11px] font-semibold ${isDark ? "text-cyan-200/75" : "text-blue-700"}`}>
+                                      Recorded by {entry.recordedBy?.displayName || "staff"} for the client
+                                      {entry.responseChannel === "whatsapp" ? " · WhatsApp" : ""}
+                                    </p>
+                                  ) : null}
                                   {entry.paymentEvidence?.url ? (
                                     <a href={entry.paymentEvidence.url} target="_blank" rel="noreferrer" className={`${secondaryButtonClass} mt-2.5`}>
                                       <FiFileText className="h-4 w-4" />
@@ -4722,6 +4797,34 @@ export default function QuotationApprovalPage() {
                         <FiCheckCircle className="h-4 w-4" />
                         {quoteIsMarkedApproved ? "Approved" : "Approve + order"}
                       </button>
+                      {draft.documentType === "quotation" ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setStaffDecisionNote("");
+                              setStaffDecisionDialog("accepted");
+                            }}
+                            disabled={staffDecisionSaving}
+                            className="inline-flex max-w-full min-w-0 items-center justify-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-center text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <FiCheckCircle className="h-4 w-4" />
+                            Accept for client
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setStaffDecisionNote("");
+                              setStaffDecisionDialog("rejected");
+                            }}
+                            disabled={staffDecisionSaving}
+                            className="inline-flex max-w-full min-w-0 items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2.5 text-center text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <FiXCircle className="h-4 w-4" />
+                            Reject for client
+                          </button>
+                        </>
+                      ) : null}
                       <button
                         type="button"
                         onClick={handleViewPdf}
@@ -6520,6 +6623,101 @@ export default function QuotationApprovalPage() {
               </button>
             </div>
           </div>
+        </div>
+      ) : null}
+      {staffDecisionDialog && selected && draft ? (
+        <div
+          className="fixed inset-0 z-[85] flex items-center justify-center bg-slate-950/70 px-4 py-8"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !staffDecisionSaving) {
+              setStaffDecisionDialog(null);
+            }
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="staff-client-decision-title"
+            className={`w-full max-w-lg rounded-[28px] border p-5 shadow-2xl sm:p-6 ${
+              isDark
+                ? "border-white/15 bg-slate-950 text-slate-100"
+                : "border-slate-200 bg-white text-[#222222]"
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
+                staffDecisionDialog === "accepted"
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-red-100 text-red-700"
+              }`}>
+                {staffDecisionDialog === "accepted"
+                  ? <FiCheckCircle className="h-5 w-5" />
+                  : <FiXCircle className="h-5 w-5" />}
+              </span>
+              <div>
+                <p className={labelClass}>WhatsApp client reply</p>
+                <h2 id="staff-client-decision-title" className="mt-1 text-xl font-semibold">
+                  Record client {staffDecisionDialog === "accepted" ? "acceptance" : "rejection"}
+                </h2>
+              </div>
+            </div>
+
+            <div className={`mt-5 rounded-2xl border p-4 text-sm leading-6 ${
+              isDark
+                ? "border-cyan-300/20 bg-cyan-300/10 text-cyan-100"
+                : "border-blue-200 bg-blue-50 text-blue-900"
+            }`}>
+              Use this after the client replies on WhatsApp. The history will show that
+              {` ${currentAdmin?.displayName || "an administrator"} recorded the decision for the client.`}
+            </div>
+
+            <label className={`mt-5 block text-sm font-semibold ${isDark ? "text-white" : "text-[#333333]"}`}>
+              {staffDecisionDialog === "accepted" ? "Internal note (optional)" : "Client’s reason *"}
+              <textarea
+                autoFocus
+                value={staffDecisionNote}
+                onChange={(event) => setStaffDecisionNote(event.target.value)}
+                maxLength={1_000}
+                className={textAreaClass}
+                placeholder={
+                  staffDecisionDialog === "accepted"
+                    ? "Example: Client confirmed on WhatsApp at 14:40."
+                    : "Enter the reason the client gave on WhatsApp."
+                }
+              />
+            </label>
+
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setStaffDecisionDialog(null)}
+                disabled={staffDecisionSaving}
+                className={secondaryButtonClass}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={recordStaffClientDecision}
+                disabled={
+                  staffDecisionSaving ||
+                  (staffDecisionDialog === "rejected" && !staffDecisionNote.trim())
+                }
+                className={
+                  staffDecisionDialog === "accepted"
+                    ? primaryButtonClass
+                    : "inline-flex items-center justify-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-xs font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                }
+              >
+                {staffDecisionSaving
+                  ? "Recording..."
+                  : staffDecisionDialog === "accepted"
+                    ? "Confirm client accepted"
+                    : "Confirm client rejected"}
+              </button>
+            </div>
+          </section>
         </div>
       ) : null}
       {workflowStudioOpen && selected && draft ? (
