@@ -1,8 +1,8 @@
 "use client";
 
-import { Camera, ClipboardCheck, ImagePlus, Shirt, Sparkles, Type } from "lucide-react";
+import { ClipboardCheck, ImagePlus, Shirt, Type } from "lucide-react";
 
-export type MobileStudioTool = "fabric" | "graphics" | "text" | "background" | "camera" | "order";
+export type MobileStudioTool = "fabric" | "graphics" | "text" | "order";
 
 type MobileStudioDockProps = {
   activeTool: MobileStudioTool;
@@ -14,15 +14,13 @@ const TOOLS = [
   { id: "fabric" as const, label: "Product", icon: Shirt },
   { id: "graphics" as const, label: "Image", icon: ImagePlus },
   { id: "text" as const, label: "Text", icon: Type },
-  { id: "background" as const, label: "Cutout", icon: Sparkles },
-  { id: "camera" as const, label: "Camera", icon: Camera },
   { id: "order" as const, label: "Order", icon: ClipboardCheck },
 ];
 
 export function MobileStudioDock({ activeTool, expanded, onSelect }: MobileStudioDockProps) {
   return (
     <nav
-      className="grid grid-cols-6 rounded-[24px] border border-white/10 bg-[#202020]/96 px-1 py-1.5 text-white shadow-[0_20px_48px_rgba(0,0,0,.32)] backdrop-blur-xl"
+      className="grid grid-cols-4 rounded-[24px] border border-white/10 bg-[#202020]/96 px-1 py-1.5 text-white shadow-[0_20px_48px_rgba(0,0,0,.32)] backdrop-blur-xl"
       aria-label="Mobile design tools"
     >
       {TOOLS.map((tool) => {

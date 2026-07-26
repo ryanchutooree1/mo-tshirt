@@ -203,7 +203,6 @@ export default function PremiumDesignStudioClient({
   const [mobileToolExpanded, setMobileToolExpanded] = useState(false);
   const [mobileProductPanel, setMobileProductPanel] = useState<MobileProductPanel>("garment");
   const artworkInput = useRef<HTMLInputElement | null>(null);
-  const cameraInput = useRef<HTMLInputElement | null>(null);
   const uploadTarget = useRef<Side>("front");
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const printZoneRef = useRef<HTMLDivElement | null>(null);
@@ -354,11 +353,6 @@ export default function PremiumDesignStudioClient({
   function openArtworkPicker(side: Side) {
     uploadTarget.current = side;
     artworkInput.current?.click();
-  }
-
-  function openCamera(side: Side) {
-    uploadTarget.current = side;
-    cameraInput.current?.click();
   }
 
   function chooseArtwork(file: File, side: Side) {
@@ -692,7 +686,6 @@ export default function PremiumDesignStudioClient({
 
           <form onSubmit={submitQuote} className="relative grid h-full min-w-0 gap-0 overflow-hidden sm:h-auto sm:gap-5 sm:overflow-visible lg:grid-cols-[minmax(0,1.35fr)_minmax(330px,.8fr)]">
             <input ref={artworkInput} type="file" accept=".png,.jpg,.jpeg,.webp,.svg" onClick={(event) => { event.currentTarget.value = ""; }} onChange={handleArtwork} className="hidden" />
-            <input ref={cameraInput} type="file" accept="image/*" capture="environment" onClick={(event) => { event.currentTarget.value = ""; }} onChange={handleArtwork} className="hidden" />
             <section className="absolute inset-0 flex min-h-0 flex-col overflow-hidden border-y border-[#dfded8] bg-[#fff] pb-[78px] shadow-none sm:static sm:block sm:rounded-[26px] sm:border sm:pb-0 sm:shadow-[0_18px_55px_rgba(32,30,24,0.07)]">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#ecebe6] px-3 py-2.5 sm:gap-3 sm:px-5 sm:py-3.5"><div><p className="text-[8px] font-bold uppercase tracking-[0.16em] text-[#99978f] sm:text-[9px]">Live preview</p><h2 className="mt-0.5 text-base font-bold tracking-[-0.025em] sm:text-lg">{product.label} · {activeSide}</h2></div><div className="flex items-center gap-1">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`min-h-10 rounded-xl px-3 text-[11px] font-bold capitalize sm:px-4 sm:py-2 sm:text-xs ${activeSide === side ? "studio-primary bg-[#ff5a0a] !text-white" : "bg-[#f4f3ef] text-[#686761]"}`}>{side}</button>)}<button type="button" onClick={() => { setDesigns({ front: createDesign(), back: createDesign() }); setSelectedLayer(null); setSelectedArtworkCopyId(null); setSelectedTextCopyId(null); }} className="ml-0.5 flex h-10 w-10 items-center justify-center rounded-xl border border-[#e1e0da] text-[#66655f]" aria-label="Reset design"><RotateCcw className="h-4 w-4" /></button></div></div>
               <div className="min-h-0 flex-1 bg-[radial-gradient(circle_at_50%_0%,#ffffff_0%,#f5f3ed_55%,#eeece5_100%)] p-0 sm:p-6">
@@ -766,7 +759,7 @@ export default function PremiumDesignStudioClient({
 
                   {mobileTool === "graphics" ? (
                     <MobileWorkspace eyebrow="Image" title="Upload & position" description="Choose a side, upload the image, then adjust it on the shirt.">
-                      {(["front", "back"] as Side[]).map((side) => <ArtworkUploadSlot key={side} side={side} file={artworkFiles[side]} url={artworkUrls[side]} active={activeSide === side} showBackgroundTools={false} onChoose={() => openArtworkPicker(side)} onDrop={(file) => chooseArtwork(file, side)} onRemove={() => clearArtwork(side)} onBackgroundRemoved={(file) => replaceArtworkFile(file, side)} onPosition={() => changeSide(side)} />)}
+                      {(["front", "back"] as Side[]).map((side) => <ArtworkUploadSlot key={side} side={side} file={artworkFiles[side]} url={artworkUrls[side]} active={activeSide === side} onChoose={() => openArtworkPicker(side)} onDrop={(file) => chooseArtwork(file, side)} onRemove={() => clearArtwork(side)} onBackgroundRemoved={(file) => replaceArtworkFile(file, side)} onPosition={() => changeSide(side)} />)}
                       <div><Label>Edit side</Label><div className="mt-2 grid grid-cols-2 gap-2">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-xl border p-3 text-xs font-extrabold capitalize ${activeSide === side ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e2e1dc]"}`}>{side} {artworkUrls[side] ? "✓" : ""}</button>)}</div></div>
                       {activeArtworkUrl ? <div className="space-y-3"><div className="grid grid-cols-3 gap-2"><PresetButton icon={<Crosshair />} label="Left chest" onClick={() => patchArtwork({ x: -28, y: -38 })} /><PresetButton icon={<Focus />} label="Centre" onClick={() => patchArtwork({ x: 0, y: 0 })} /><PresetButton icon={<Move />} label="Lower" onClick={() => patchArtwork({ x: 0, y: 52 })} /></div><RangeControl icon={<ZoomIn />} label="Artwork size" value={activeArtwork.scale} min={ARTWORK_SCALE_MIN} max={ARTWORK_SCALE_MAX} suffix="%" onChange={(value) => patchArtwork({ scale: value })} /><RangeControl icon={<Move />} label="Horizontal" value={activeArtwork.x} min={-LAYER_X_LIMIT} max={LAYER_X_LIMIT} onChange={(value) => patchArtwork({ x: value })} /><RangeControl icon={<Move className="rotate-90" />} label="Vertical" value={activeArtwork.y} min={-LAYER_Y_LIMIT} max={LAYER_Y_LIMIT} onChange={(value) => patchArtwork({ y: value })} /><RangeControl icon={<RotateCcw />} label="Rotation" value={activeArtwork.rotate} min={-180} max={180} suffix="°" onChange={(value) => patchArtwork({ rotate: value })} /><button type="button" onClick={() => setSnap((current) => !current)} className={`flex w-full items-center justify-between rounded-xl border p-3 ${snap ? "border-[#bfe9d4] bg-[#f1fbf6]" : "border-[#e2e1dc]"}`}><span className="flex items-center gap-2 text-xs font-bold"><Magnet className="h-4 w-4 text-[#16a462]" />Snap to centre</span><span className="text-[9px] font-extrabold">{snap ? "ON" : "OFF"}</span></button></div> : null}
                     </MobileWorkspace>
@@ -784,18 +777,6 @@ export default function PremiumDesignStudioClient({
                     </MobileWorkspace>
                   ) : null}
 
-                  {mobileTool === "background" ? (
-                    <MobileWorkspace eyebrow="Background" title="Clean your artwork" description="Remove a photo background and compare the saved results.">
-                      {artworkFiles.front || artworkFiles.back ? (["front", "back"] as Side[]).filter((side) => artworkFiles[side]).map((side) => <ArtworkUploadSlot key={side} side={side} file={artworkFiles[side]} url={artworkUrls[side]} active={activeSide === side} onChoose={() => openArtworkPicker(side)} onDrop={(file) => chooseArtwork(file, side)} onRemove={() => clearArtwork(side)} onBackgroundRemoved={(file) => replaceArtworkFile(file, side)} onPosition={() => { changeSide(side); selectMobileTool("graphics"); }} />) : <MobileEmpty icon={<Sparkles />} title="Upload artwork first" description="Add a logo or photo in Image, then return here to remove its background." action="Go to Image" onAction={() => selectMobileTool("graphics")} />}
-                    </MobileWorkspace>
-                  ) : null}
-
-                  {mobileTool === "camera" ? (
-                    <MobileWorkspace eyebrow="Camera" title="Take a product photo" description="Photograph artwork or choose an existing image for either side.">
-                      {(["front", "back"] as Side[]).map((side) => <div key={side} className="rounded-2xl border border-[#e2e1dc] p-4"><div className="flex items-center justify-between"><div><p className="text-sm font-extrabold capitalize">{side} artwork</p><p className="mt-1 text-[10px] text-[#85847d]">{artworkFiles[side] ? artworkFiles[side]?.name : "No photo selected"}</p></div>{artworkUrls[side] ? <img src={artworkUrls[side] ?? ""} alt={`${side} camera artwork`} className="h-14 w-14 rounded-xl border object-contain" /> : <ImagePlus className="h-6 w-6 text-[#c6c3bb]" />}</div><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => openCamera(side)} className="studio-primary h-11 rounded-xl bg-[#171714] text-xs font-bold !text-white">Take photo</button><button type="button" onClick={() => openArtworkPicker(side)} className="h-11 rounded-xl border border-[#deddd7] text-xs font-bold">Choose photo</button></div></div>)}
-                      <button type="button" onClick={() => selectMobileTool("graphics")} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#ffd2bd] bg-[#fff7f1] text-sm font-bold text-[#dd4904]">Position artwork<ArrowRight className="h-4 w-4" /></button>
-                    </MobileWorkspace>
-                  ) : null}
                 </>
               )}
               </div>
@@ -851,7 +832,6 @@ function SummaryRow({ label, value }: { label: string; value: string }) { return
 function RangeControl({ icon, label, value, min, max, suffix = "", onChange }: { icon: ReactNode; label: string; value: number; min: number; max: number; suffix?: string; onChange: (value: number) => void }) { return <label className="block rounded-2xl border border-[#e2e1dc] p-4"><span className="flex justify-between text-xs font-bold"><span className="flex items-center gap-2 text-[#575650] [&_svg]:h-4 [&_svg]:w-4">{icon}{label}</span><span className="rounded-md bg-[#f1f0ec] px-2 py-1 text-[9px] text-[#77766f]">{value}{suffix}</span></span><input type="range" min={min} max={max} value={value} onChange={(event) => onChange(Number(event.target.value))} className="mt-4 w-full accent-[#ff5a0a]" /></label>; }
 function PresetButton({ icon, label, disabled, onClick }: { icon: ReactNode; label: string; disabled?: boolean; onClick: () => void }) { return <button type="button" disabled={disabled} onClick={onClick} className="rounded-2xl border border-[#e2e1dc] p-3 text-center disabled:opacity-35"><span className="flex justify-center text-[#ff5a0a] [&_svg]:h-5 [&_svg]:w-5">{icon}</span><span className="mt-2 block text-[10px] font-bold">{label}</span></button>; }
 function MobileWorkspace({ eyebrow, title, description, children }: { eyebrow: string; title: string; description: string; children: ReactNode }) { return <div><div className="border-b border-[#ecebe6] px-4 pb-4 pt-5"><p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#ff5a0a]">{eyebrow}</p><h2 className="mt-1 text-lg font-extrabold tracking-[-0.03em]">{title}</h2><p className="mt-1 pr-10 text-[11px] leading-4 text-[#77766f]">{description}</p></div><div className="space-y-3 p-4">{children}</div></div>; }
-function MobileEmpty({ icon, title, description, action, onAction }: { icon: ReactNode; title: string; description: string; action: string; onAction: () => void }) { return <div className="flex min-h-64 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#ddd9d1] bg-[#fafaf7] p-6 text-center"><span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-[#ff5a0a] shadow-sm [&_svg]:h-6 [&_svg]:w-6">{icon}</span><p className="mt-4 text-sm font-extrabold">{title}</p><p className="mt-1 max-w-[260px] text-xs leading-5 text-[#85847d]">{description}</p><button type="button" onClick={onAction} className="studio-primary mt-4 rounded-xl bg-[#ff5a0a] px-4 py-2.5 text-xs font-bold !text-white">{action}</button></div>; }
 function Benefit({ icon, title }: { icon: ReactNode; title: string }) { return <div className="flex items-center justify-center gap-3 sm:justify-start"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#fff0e8] text-[#ff5a0a] [&_svg]:h-5 [&_svg]:w-5">{icon}</span><span className="text-xs font-bold text-[#4a4944]">{title}</span></div>; }
 function Success({ message, onReset }: { message: string; onReset: () => void }) { return <div className="flex min-h-[430px] flex-col items-center justify-center text-center"><span className="studio-success flex h-20 w-20 items-center justify-center rounded-full bg-[#1faf68] !text-white"><Check className="h-10 w-10" /></span><h3 className="mt-6 text-3xl font-extrabold">Thank you!</h3><p className="mt-2 max-w-xs text-sm leading-6 text-[#77766f]">{message}</p><div className="mt-6 rounded-2xl bg-[#f5f4f0] p-4 text-sm"><Label>What happens next</Label><p className="mt-2 font-semibold">We will review your design and confirm the final price within 24 hours.</p></div><button type="button" onClick={onReset} className="studio-primary mt-5 w-full rounded-xl bg-[#ff5a0a] px-4 py-3 text-sm font-bold !text-white">Create another design</button></div>; }
 
@@ -865,7 +845,6 @@ type ArtworkUploadSlotProps = {
   onRemove: () => void;
   onBackgroundRemoved: (file: File) => void;
   onPosition: () => void;
-  showBackgroundTools?: boolean;
 };
 
 type BackgroundRemovalState = "idle" | "processing" | "done" | "error";
@@ -881,7 +860,6 @@ function ArtworkUploadSlot({
   onRemove,
   onBackgroundRemoved,
   onPosition,
-  showBackgroundTools = true,
 }: ArtworkUploadSlotProps) {
   const title = `${side[0].toUpperCase()}${side.slice(1)}`;
   const [removalState, setRemovalState] = useState<BackgroundRemovalState>("idle");
@@ -1018,7 +996,7 @@ function ArtworkUploadSlot({
             </div>
           </div>
 
-          {showBackgroundTools ? <><div className="mt-3 grid gap-2">
+          <div className="mt-3 grid gap-2">
             <button
               type="button"
               onClick={() => removeArtworkBackground("smart")}
@@ -1113,7 +1091,7 @@ function ArtworkUploadSlot({
                 </div>
               ) : null}
             </div>
-          ) : null}</> : null}
+          ) : null}
 
           <button
             type="button"
