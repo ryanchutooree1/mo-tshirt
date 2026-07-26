@@ -13,7 +13,6 @@ import {
   HiOutlineSparkles,
 } from "react-icons/hi2";
 import Gallery from "@/components/Gallery";
-import HomeAiOrder from "@/components/HomeAiOrder";
 import MapCard from "@/components/MapCard";
 import QuoteForm from "@/components/QuoteForm";
 import ZoomableImage from "@/components/ZoomableImage";
@@ -47,7 +46,6 @@ export const metadata: Metadata = buildPageMetadata({
 const navLinks = [
   { label: "Home", href: "#top" },
   { label: "Quote Form", href: "#contact", buttonTone: "orange" as const },
-  { label: "MO AI Order", href: "#mo-ai-order", buttonTone: "rainbow" as const },
   { label: "Shop", href: "/shop" },
   { label: "Our Work", href: "#our-work" },
   { label: "Contact", href: "#contact" },
@@ -429,10 +427,6 @@ export default function HomePage() {
                   sizes="(max-width: 1024px) 100vw, 40vw"
                 />
               </div>
-            </div>
-
-            <div id="mo-ai-order" className="mx-auto mt-12 max-w-6xl scroll-mt-24 sm:scroll-mt-28">
-              <HomeAiOrder />
             </div>
 
             <div id="location" className="mx-auto mt-12 max-w-5xl scroll-mt-24 sm:scroll-mt-28">
