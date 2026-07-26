@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Clock3,
   Heart,
+  House,
   Mail,
   Plus,
   Save,
@@ -15,11 +16,13 @@ import {
   Trophy,
   Utensils,
 } from "lucide-react";
+import TanviHouseInventoryPage from "@/components/admin/TanviHouseInventoryPage";
 import { db } from "@/lib/firebase";
 
 type ShiftKey = "first" | "second" | "third" | "m" | "rest";
 type MShiftChoice = "not-confirmed" | Exclude<ShiftKey, "m">;
 type GoalStatus = "Not Started" | "In Progress" | "Completed";
+type CoupleWorkspaceTab = "couple-goals" | "house-inventory";
 
 type LittleWin = {
   id: string;
@@ -532,6 +535,8 @@ export default function CoupleGoalsPage() {
   const [recipientDraft, setRecipientDraft] = useState("");
   const [mailState, setMailState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [toast, setToast] = useState<string | null>(null);
+  const [activeWorkspace, setActiveWorkspace] =
+    useState<CoupleWorkspaceTab>("couple-goals");
 
   useEffect(() => {
     let ignore = false;
@@ -813,6 +818,46 @@ export default function CoupleGoalsPage() {
       )}
 
       <div className="mx-auto max-w-7xl px-3 py-5 sm:px-5 lg:px-8">
+        <nav
+          className="mb-5 grid grid-cols-2 gap-1 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm sm:w-fit"
+          aria-label="Tanvi home workspace"
+        >
+          <button
+            type="button"
+            onClick={() => setActiveWorkspace("couple-goals")}
+            aria-current={
+              activeWorkspace === "couple-goals" ? "page" : undefined
+            }
+            className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+              activeWorkspace === "couple-goals"
+                ? "bg-slate-950 text-white shadow-sm"
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+            }`}
+          >
+            <Heart className="h-4 w-4" />
+            Couple goals
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveWorkspace("house-inventory")}
+            aria-current={
+              activeWorkspace === "house-inventory" ? "page" : undefined
+            }
+            className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+              activeWorkspace === "house-inventory"
+                ? "bg-violet-600 text-white shadow-sm"
+                : "text-slate-500 hover:bg-violet-50 hover:text-violet-800"
+            }`}
+          >
+            <House className="h-4 w-4" />
+            House inventory
+          </button>
+        </nav>
+
+        {activeWorkspace === "house-inventory" ? (
+          <TanviHouseInventoryPage />
+        ) : (
+          <>
         <header className="mb-5 overflow-hidden rounded-2xl bg-slate-950 text-white shadow-sm">
           <div className="grid gap-6 p-5 md:grid-cols-[1.5fr_1fr] md:p-7">
             <div>
@@ -1332,6 +1377,8 @@ export default function CoupleGoalsPage() {
           <div className="fixed inset-x-0 bottom-4 mx-auto w-fit rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-xl">
             Loading Couple Goals...
           </div>
+        )}
+          </>
         )}
       </div>
     </main>
