@@ -12,8 +12,9 @@ import {
   HiOutlineShoppingBag,
   HiOutlineSparkles,
 } from "react-icons/hi2";
+import { FaWhatsapp } from "react-icons/fa";
 import Gallery from "@/components/Gallery";
-import HowToOrder from "@/components/HowToOrder";
+import HomepageIntro from "@/components/HomepageIntro";
 import MapCard from "@/components/MapCard";
 import QuoteForm from "@/components/QuoteForm";
 import ZoomableImage from "@/components/ZoomableImage";
@@ -49,6 +50,7 @@ const navLinks = [
   { label: "Quote Form", href: "#contact", buttonTone: "orange" as const },
   { label: "Shop", href: "/shop" },
   { label: "Our Work", href: "#our-work" },
+  { label: "About Us", href: "#why" },
   { label: "Contact", href: "#contact" },
   { label: "WhatsApp", href: getWhatsAppUrl() },
 ];
@@ -117,39 +119,16 @@ const faqLd = {
   })),
 };
 
-function ActionButtons() {
-  return (
-    <div className="mt-8 mx-auto flex w-full max-w-2xl flex-wrap items-center justify-center gap-3">
-      <TrackedWhatsAppLink
-        href={getWhatsAppUrl()}
-        trackingLocation="home_hero"
-        trackingSource="homepage"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center justify-center rounded-full bg-[#FF6600] px-6 py-3 text-sm font-medium text-white transition hover:bg-orange-600"
-      >
-        WhatsApp
-      </TrackedWhatsAppLink>
-      <a
-        href="#contact"
-        className="inline-flex items-center justify-center rounded-full bg-black px-6 py-3 text-sm font-medium text-white transition hover:bg-neutral-800"
-      >
-        Get pricing in hours
-      </a>
-    </div>
-  );
-}
-
 export default function HomePage() {
   return (
     <div id="top" className="min-h-screen bg-white text-black">
       <header className="sticky top-0 z-40 border-b border-[#EAEAEA] bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:h-20 sm:gap-4 sm:px-6">
+        <div className="mx-auto flex h-14 w-full max-w-[1400px] items-center justify-between gap-3 px-4 sm:h-20 sm:gap-4 sm:px-6">
           <Link href="#top" className="flex shrink-0 items-center" aria-label="MO T-SHIRT Home">
             <Image src="/logo_transparent.webp" alt="MO T-SHIRT logo" width={150} height={60} priority className="h-8 w-auto sm:h-12" />
           </Link>
 
-          <details className="group relative sm:hidden">
+          <details className="group relative lg:hidden">
             <summary className="flex list-none items-center gap-2 rounded-full border border-[#EAEAEA] bg-white px-4 py-2 text-sm font-semibold text-black/75 shadow-sm marker:hidden">
               Menu
               <span className="flex h-4 w-4 flex-col justify-center gap-1" aria-hidden="true">
@@ -171,8 +150,9 @@ export default function HomePage() {
                     trackingSource="homepage"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-2xl px-4 py-3 transition hover:bg-neutral-50 hover:text-black"
+                    className="flex items-center gap-2 rounded-2xl px-4 py-3 text-[#087b45] transition hover:bg-emerald-50"
                   >
+                    <FaWhatsapp className="h-4 w-4" aria-hidden="true" />
                     {link.label}
                   </TrackedWhatsAppLink>
                 ) : (
@@ -199,10 +179,10 @@ export default function HomePage() {
             </nav>
           </details>
 
-          <div className="hidden sm:mx-0 sm:block sm:px-0">
+          <div className="hidden lg:mx-0 lg:block lg:px-0">
             <nav
               aria-label="Primary"
-              className="flex flex-wrap items-center justify-end gap-x-6 gap-y-3 text-sm font-medium text-black/70"
+              className="flex flex-wrap items-center justify-end gap-x-7 gap-y-3 text-sm font-medium text-black/75"
             >
               {navLinks.map((link) => (
                 link.label === "WhatsApp" ? (
@@ -213,8 +193,9 @@ export default function HomePage() {
                     trackingSource="homepage"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center whitespace-nowrap rounded-full leading-none transition hover:border-black hover:text-black"
+                    className="inline-flex min-h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-emerald-300 px-5 leading-none text-[#087b45] transition hover:bg-emerald-50"
                   >
+                    <FaWhatsapp className="h-4 w-4" aria-hidden="true" />
                     {link.label}
                   </TrackedWhatsAppLink>
                 ) : (
@@ -226,7 +207,9 @@ export default function HomePage() {
                         ? "min-h-10 border-transparent bg-[#FF6600] px-5 py-2 text-sm text-white shadow-sm hover:bg-orange-600"
                         : link.buttonTone === "rainbow"
                           ? "min-h-10 border-transparent bg-[linear-gradient(135deg,#22d3ee_0%,#8b5cf6_52%,#ec4899_100%)] px-5 py-2 text-sm font-semibold text-white shadow-[0_14px_28px_-16px_rgba(124,58,237,0.75)] hover:brightness-110"
-                          : "text-black/70 hover:text-black"
+                          : link.label === "Home"
+                            ? "rounded-none border-b-2 border-[#ff5a00] pb-2 text-[#ff5a00]"
+                            : "text-black/70 hover:text-black"
                     }`}
                   >
                     {link.label === "Quote Form" ? (
@@ -245,23 +228,11 @@ export default function HomePage() {
 
       <main>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
-        {/* Hero */}
-        <section id="hero" className="flex min-h-[80vh] items-center justify-center px-6 pt-14 pb-12 sm:pt-20 sm:pb-20">
+        <HomepageIntro />
+
+        <section className="px-0 pb-12 pt-8 sm:px-6 sm:pb-20 sm:pt-12">
           <div className="mx-auto flex w-full max-w-[1500px] flex-col items-center text-center">
-            <h1 className="text-4xl font-semibold tracking-tight text-black sm:text-5xl">
-              Trying to be #1 in Mauritius.
-            </h1>
-            <p className="mt-4 text-lg text-neutral-600">
-              We print T‑Shirts, Poloshirts, Caps & Hoodies fast. Trusted by 80+ businesses across Mauritius and Reunion Island.
-            </p>
-
-            <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-orange-700">
-              For businesses and events
-            </div>
-
-            <ActionButtons />
-
-            <div className={`mt-10 -mx-6 w-[calc(100%+3rem)] sm:mx-0 sm:mt-[49px] sm:w-full ${studioSora.variable} ${studioPlusJakartaSans.variable}`}>
+            <div className={`w-full ${studioSora.variable} ${studioPlusJakartaSans.variable}`}>
               <PremiumDesignStudioClient
                 embedded
                 backHref="/"
@@ -291,7 +262,6 @@ export default function HomePage() {
                 />
               </div>
             </div>
-            <HowToOrder />
           </div>
         </section>
 
