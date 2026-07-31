@@ -12,6 +12,7 @@ type LoadingImageProps = ImgHTMLAttributes<HTMLImageElement> & {
   delayMs?: number;
   inViewRootMargin?: string;
   pollMs?: number;
+  compactStatus?: boolean;
 };
 
 export default function LoadingImage({
@@ -22,6 +23,7 @@ export default function LoadingImage({
   delayMs = 1200,
   inViewRootMargin = "200px",
   pollMs = 300,
+  compactStatus = false,
   src,
   alt,
   className,
@@ -124,7 +126,17 @@ export default function LoadingImage({
 
   return (
     <div ref={wrapperRef} className={`relative ${wrapperClassName || ""}`} aria-busy={status === "loading"}>
-      {showStatus && (
+      {showStatus && compactStatus && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-white/75 backdrop-blur-[2px]">
+          {status === "loading" ? (
+            <span className="inline-flex h-7 w-7 animate-spin rounded-full border-[3px] border-slate-200 border-t-[#ff5a0a]" />
+          ) : (
+            <span className="px-2 text-center text-[10px] font-medium text-slate-500">{errorText}</span>
+          )}
+          <span className="sr-only">{statusTextLabel}</span>
+        </div>
+      )}
+      {showStatus && !compactStatus && (
         <div className="absolute bottom-3 right-3 z-10 flex items-center gap-2 rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 backdrop-blur">
           <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-slate-300 border-t-slate-500 animate-spin" />
           <span>{statusTextLabel}</span>
