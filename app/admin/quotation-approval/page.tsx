@@ -172,6 +172,7 @@ type QuoteDraft = {
 };
 
 type QuoteAttachment = {
+  role?: "final-mockup" | "print-artwork";
   label?: string;
   description?: string;
   quantity?: string | number | null;
@@ -1054,6 +1055,40 @@ const getQuoteAttachments = (quote: QuoteRecord | null | undefined) => {
   }
   if (quote.attachment) return [quote.attachment];
   return [] as QuoteAttachment[];
+};
+
+const isFinalMockupAttachment = (attachment: QuoteAttachment) => {
+  if (attachment.role === "final-mockup") return true;
+  const searchableText = [
+    attachment.label,
+    attachment.filename,
+    attachment.originalFilename,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join(" ");
+  return /\bfinal[\s_-]*mockup\b/i.test(searchableText);
+};
+
+const restoreFinalMockupOriginal = (attachment: QuoteAttachment) => {
+  if (!isFinalMockupAttachment(attachment) || !attachment.originalUrl) return attachment;
+  const restored: QuoteAttachment = {
+    ...attachment,
+    role: "final-mockup" as const,
+    url: attachment.originalUrl,
+    filename: attachment.originalFilename || attachment.filename,
+    contentType: attachment.originalContentType || attachment.contentType,
+    size: attachment.originalSize ?? attachment.size,
+  };
+  delete restored.originalUrl;
+  delete restored.originalFilename;
+  delete restored.originalContentType;
+  delete restored.originalSize;
+  delete restored.backgroundRemovalMethod;
+  delete restored.backgroundRemovedAt;
+  if (!restored.filename) delete restored.filename;
+  if (!restored.contentType) delete restored.contentType;
+  if (restored.size === undefined) delete restored.size;
+  return restored;
 };
 
 const getQuoteAttachmentDownloadHref = (attachment: QuoteAttachment, index: number) => {
@@ -2456,9 +2491,15 @@ export default function QuotationApprovalPage() {
     const quoteId = selected.id;
     if (backgroundRemovalRunsRef.current.has(quoteId)) return;
 
-    const pendingAttachments = selectedAttachments
+    const workingAttachments = selectedAttachments.map(restoreFinalMockupOriginal);
+    const hasMockupsToRestore = workingAttachments.some(
+      (attachment, index) => attachment !== selectedAttachments[index]
+    );
+
+    const pendingAttachments = workingAttachments
       .map((attachment, index) => ({ attachment, index }))
       .filter(({ attachment, index }) => {
+        if (isFinalMockupAttachment(attachment)) return false;
         if (!attachment.url || attachment.originalUrl) return false;
         if (
           !canAutomaticallyRemoveBackground({
@@ -2472,12 +2513,22 @@ export default function QuotationApprovalPage() {
         return !backgroundRemovalAttemptsRef.current.has(key);
       });
 
-    if (!pendingAttachments.length) return;
+    if (!pendingAttachments.length && !hasMockupsToRestore) return;
     backgroundRemovalRunsRef.current.add(quoteId);
     void backgroundRemovalRetryNonce;
 
     void (async () => {
-      const workingAttachments = selectedAttachments.map((attachment) => ({ ...attachment }));
+      if (hasMockupsToRestore) {
+        try {
+          await updateDoc(doc(db, "quotes", quoteId), {
+            attachments: workingAttachments,
+            attachment: workingAttachments[0] || null,
+            updatedAt: serverTimestamp(),
+          });
+        } catch (error) {
+          console.error("quotes:restore-final-mockups", error);
+        }
+      }
 
       for (const { attachment, index } of pendingAttachments) {
         const sourceUrl = attachment.url || "";
@@ -2560,7 +2611,7 @@ export default function QuotationApprovalPage() {
   }, [backgroundRemovalRetryNonce, selected?.id, selectedAttachments]);
 
   function retryAutomaticBackgroundRemoval(attachment: QuoteAttachment, index: number) {
-    if (!selected?.id) return;
+    if (!selected?.id || isFinalMockupAttachment(attachment)) return;
     const jobKey = getBackgroundRemovalJobKey(selected.id, attachment, index);
     backgroundRemovalAttemptsRef.current.delete(jobKey);
     setBackgroundRemovalJobs((current) => {
@@ -5322,15 +5373,21 @@ export default function QuotationApprovalPage() {
                       <div className="mt-4 space-y-3">
                         {selectedAttachments.length ? (
                           selectedAttachments.map((attachment, index) => {
+                            const finalMockup = isFinalMockupAttachment(attachment);
+                            const visibleAttachment = finalMockup
+                              ? restoreFinalMockupOriginal(attachment)
+                              : attachment;
                             const attachmentIsImage = Boolean(
-                              attachment.contentType?.startsWith("image/") ||
-                                attachment.originalContentType?.startsWith("image/")
+                              visibleAttachment.contentType?.startsWith("image/") ||
+                                visibleAttachment.originalContentType?.startsWith("image/")
                             );
                             const attachmentDownloadHref = getQuoteAttachmentDownloadHref(
-                              attachment,
+                              visibleAttachment,
                               index
                             );
-                            const originalAttachmentUrl = attachment.originalUrl || attachment.url || "";
+                            const originalAttachmentUrl = finalMockup
+                              ? visibleAttachment.url || ""
+                              : attachment.originalUrl || attachment.url || "";
                             const originalDownloadHref = getQuoteAttachmentDownloadHref(
                               {
                                 ...attachment,
@@ -5339,13 +5396,15 @@ export default function QuotationApprovalPage() {
                               },
                               index
                             );
-                            const backgroundRemovalJobKey = getBackgroundRemovalJobKey(
-                              selected.id,
-                              attachment,
-                              index
+                            const backgroundRemovalJobKey = finalMockup
+                              ? ""
+                              : getBackgroundRemovalJobKey(selected.id, attachment, index);
+                            const backgroundRemovalJob = finalMockup
+                              ? undefined
+                              : backgroundRemovalJobs[backgroundRemovalJobKey];
+                            const hasTransparentArtwork = Boolean(
+                              !finalMockup && attachment.originalUrl && attachment.url
                             );
-                            const backgroundRemovalJob = backgroundRemovalJobs[backgroundRemovalJobKey];
-                            const hasTransparentArtwork = Boolean(attachment.originalUrl && attachment.url);
                             return (
                               <div
                                 key={`${attachment.originalUrl || attachment.url || attachment.originalFilename || attachment.filename || "attachment"}-${index}`}
@@ -5358,9 +5417,9 @@ export default function QuotationApprovalPage() {
                                     </p>
                                     <p
                                       className="mt-1 max-w-full truncate text-sm font-semibold text-[#222222]"
-                                      title={attachment.originalFilename || attachment.filename || "Attachment"}
+                                      title={visibleAttachment.originalFilename || visibleAttachment.filename || "Attachment"}
                                     >
-                                      {attachment.originalFilename || attachment.filename || "Attachment"}
+                                      {visibleAttachment.originalFilename || visibleAttachment.filename || "Attachment"}
                                     </p>
                                     {attachment.description ? (
                                       <p className="mt-1 break-words text-xs text-[#717171]">
@@ -5373,8 +5432,8 @@ export default function QuotationApprovalPage() {
                                       </p>
                                     ) : null}
                                   </div>
-                                  {attachment.url ? (
-                                    <div className="grid w-full gap-2 sm:grid-cols-2">
+                                  {visibleAttachment.url ? (
+                                    <div className={`grid w-full gap-2 ${hasTransparentArtwork ? "sm:grid-cols-2" : ""}`}>
                                       <a
                                         href={originalAttachmentUrl}
                                         target="_blank"
@@ -5382,7 +5441,7 @@ export default function QuotationApprovalPage() {
                                         className={`${secondaryButtonClass} whitespace-nowrap px-3`}
                                       >
                                         <FiFileText className="h-3.5 w-3.5" />
-                                        Open original
+                                        {finalMockup ? "Open final mockup" : "Open original"}
                                       </a>
                                       {hasTransparentArtwork ? (
                                         <a
@@ -5398,7 +5457,35 @@ export default function QuotationApprovalPage() {
                                     </div>
                                   ) : null}
                                 </div>
-                                {attachmentIsImage && attachment.url ? (
+                                {attachmentIsImage && visibleAttachment.url ? (
+                                  finalMockup ? (
+                                    <div className="mt-3 rounded-[22px] border border-[#e7e7e7] bg-white p-2.5">
+                                      <div className="flex items-center justify-between gap-2 px-1">
+                                        <div>
+                                          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#717171]">
+                                            Final mockup
+                                          </p>
+                                          <p className="mt-0.5 text-[11px] text-[#9a9a9a]">
+                                            Complete garment preview · background processing disabled
+                                          </p>
+                                        </div>
+                                        {attachmentDownloadHref ? (
+                                          <a
+                                            href={attachmentDownloadHref}
+                                            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#e5e5e5] bg-white text-[#717171] transition hover:border-[#c7c7c7]"
+                                            aria-label="Download final mockup"
+                                            title="Download final mockup"
+                                          >
+                                            <FiDownload className="h-3.5 w-3.5" />
+                                          </a>
+                                        ) : null}
+                                      </div>
+                                      <QuoteAttachmentPreview
+                                        src={visibleAttachment.url}
+                                        alt={`${visibleAttachment.filename || "Final mockup"} preview`}
+                                      />
+                                    </div>
+                                  ) : (
                                   <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-3">
                                     <div className="rounded-[22px] border border-[#e7e7e7] bg-white p-2.5">
                                       <div className="flex items-center justify-between gap-2 px-1">
@@ -5456,7 +5543,7 @@ export default function QuotationApprovalPage() {
 
                                       {hasTransparentArtwork ? (
                                         <QuoteAttachmentPreview
-                                          src={attachment.url}
+                                          src={attachment.url || ""}
                                           alt={`${attachment.filename || "Artwork"} with transparent background`}
                                           transparent
                                         />
@@ -5499,7 +5586,8 @@ export default function QuotationApprovalPage() {
                                       )}
                                     </div>
                                   </div>
-                                ) : !attachment.url ? (
+                                  )
+                                ) : !visibleAttachment.url ? (
                                   <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 text-xs font-semibold text-amber-800">
                                     Email-only artwork:{" "}
                                     {attachment.filename || `Attachment ${index + 1}`}.

@@ -40,6 +40,7 @@ type ParsedPayload = {
   garments?: QuoteGarmentLine[] | string;
   attachments?:
     | {
+        role?: "final-mockup" | "print-artwork";
         label?: string;
         description?: string;
         quantity?: string | number | null;
@@ -58,6 +59,7 @@ type ParsedPayload = {
 };
 
 type QuoteAttachment = {
+  role?: "final-mockup" | "print-artwork";
   label?: string;
   description?: string;
   quantity?: string | number | null;
@@ -100,6 +102,9 @@ function parseAttachmentList(value: unknown): QuoteAttachment[] {
   const normalizeAttachment = (entry: unknown): QuoteAttachment | null => {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
     const source = entry as Record<string, unknown>;
+    const role = source.role === "final-mockup" || source.role === "print-artwork"
+      ? source.role
+      : "";
     const label = typeof source.label === "string" ? source.label.trim() : "";
     const description = typeof source.description === "string" ? source.description.trim() : "";
     const quantity =
@@ -119,11 +124,12 @@ function parseAttachmentList(value: unknown): QuoteAttachment[] {
           ? Number(rawSize)
           : null;
 
-    if (!label && !description && !quantity && !url && !filename && !contentType && parsedSize === null) {
+    if (!role && !label && !description && !quantity && !url && !filename && !contentType && parsedSize === null) {
       return null;
     }
 
     return {
+      ...(role ? { role } : {}),
       ...(label ? { label } : {}),
       ...(description ? { description } : {}),
       ...(quantity !== null ? { quantity } : {}),
