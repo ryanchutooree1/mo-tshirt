@@ -53,6 +53,13 @@ const trustedBrands: Array<{
     imageClassName: "scale-[1.1]",
     itemClassName: "!w-20 !scale-100 overflow-hidden rounded-full sm:!w-[88px]",
   },
+  {
+    name: "Chez Yoh",
+    logo: "/trusted-brands/chez-yoh-logo.webp",
+    alt: "Chez Yoh logo",
+    imageClassName: "scale-[1.1]",
+    itemClassName: "!w-20 !scale-100 overflow-hidden rounded-full sm:!w-[88px]",
+  },
 ];
 
 const processSteps = [
@@ -185,13 +192,13 @@ export default function HomepageIntro() {
           </p>
           <div className="hidden h-10 w-px shrink-0 bg-neutral-200/80 lg:block" aria-hidden="true" />
           <ul
-            className="mt-4 grid w-full grid-cols-2 items-center gap-x-7 gap-y-7 sm:grid-cols-6 sm:gap-8 lg:mt-0 lg:max-w-[760px] lg:flex-1 lg:grid-cols-5"
+            className="mt-4 grid w-full grid-cols-2 items-center gap-x-7 gap-y-7 sm:grid-cols-6 sm:gap-8 lg:mt-0 lg:max-w-[900px] lg:flex-1 lg:grid-cols-6"
             aria-label="Brands that trust MO T-SHIRT"
           >
-            {trustedBrands.map((brand, index) => (
+            {trustedBrands.map((brand) => (
               <li
                 key={brand.name}
-                className={`relative h-20 w-28 scale-[1.3] justify-self-center sm:col-span-2 sm:h-[88px] sm:w-[120px] lg:col-span-1 ${index === 3 ? "sm:col-start-2 lg:col-start-auto" : ""} ${index === 4 ? "col-span-2 lg:col-span-1" : ""} ${brand.itemClassName || ""}`}
+                className={`relative h-20 w-28 scale-[1.3] justify-self-center sm:col-span-2 sm:h-[88px] sm:w-[120px] lg:col-span-1 ${brand.itemClassName || ""}`}
               >
                 <Image
                   src={brand.logo}
