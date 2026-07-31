@@ -17,7 +17,7 @@ import Gallery from "@/components/Gallery";
 import HomepageIntro from "@/components/HomepageIntro";
 import MapCard from "@/components/MapCard";
 import QuoteForm from "@/components/QuoteForm";
-import ZoomableImage from "@/components/ZoomableImage";
+import MeasurementCarousel from "@/components/MeasurementCarousel";
 import PremiumDesignStudioClient from "@/components/PremiumDesignStudioClient";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 
@@ -241,26 +241,7 @@ export default function HomePage() {
               />
             </div>
             <div className="mt-6 w-full max-w-5xl">
-              <div className="grid gap-6 sm:grid-cols-2">
-                <ZoomableImage
-                  src="/T-Shirt%20Measurement.webp"
-                  alt="T-shirt measurement guide"
-                  width={1400}
-                  height={900}
-                  sizes="(max-width: 640px) 100vw, 50vw"
-                  wrapperClassName="rounded-[28px] border border-[#EAEAEA] bg-white shadow-sm"
-                  imageClassName="cursor-zoom-in"
-                />
-                <ZoomableImage
-                  src="/Kids%20T-Shirt%20Measurement.webp"
-                  alt="Kids T-shirt measurement guide"
-                  width={1400}
-                  height={900}
-                  sizes="(max-width: 640px) 100vw, 50vw"
-                  wrapperClassName="rounded-[28px] border border-[#EAEAEA] bg-white shadow-sm"
-                  imageClassName="cursor-zoom-in"
-                />
-              </div>
+              <MeasurementCarousel />
             </div>
           </div>
         </section>
