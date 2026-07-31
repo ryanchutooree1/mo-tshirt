@@ -49,15 +49,6 @@ import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } fro
 import { removeBackgroundAutomatically } from "@/lib/automatic-background-removal";
 import { formatMoney } from "@/lib/money";
 import { uploadPublicArtwork } from "@/lib/public-artwork-upload";
-import {
-  renderDesignStudioMockup,
-  sideHasVisibleDesign,
-  type ArtworkCopy,
-  type ArtworkPlacement,
-  type DesignSideLayout,
-  type TextCopy,
-  type TextPlacement,
-} from "@/lib/design-studio-mockup";
 import { MobileStudioDock, type MobileStudioTool } from "@/components/MobileStudioDock";
 import {
   getMinSizePrice,
@@ -74,7 +65,17 @@ type MethodId = "dtf" | "screen" | "vinyl";
 type MobileProductPanel = "garment" | "quantity" | "print";
 type StudioStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 type Layer = "artwork" | "text";
-type SideDesign = DesignSideLayout;
+type ArtworkPlacement = { enabled: boolean; x: number; y: number; scale: number; rotate: number };
+type ArtworkCopy = ArtworkPlacement & { id: number };
+type TextPlacement = { enabled: boolean; value: string; color: string; size: number; rotate: number; x: number; y: number; font: string };
+type TextCopy = TextPlacement & { id: number };
+
+type SideDesign = {
+  artwork: ArtworkPlacement;
+  artworkCopies: ArtworkCopy[];
+  text: TextPlacement;
+  textCopies: TextCopy[];
+};
 
 const PRODUCTS = [
   { id: "tshirt" as const, label: "Plain T-Shirt", base: 150, min: 10, lead: "5–7 working days", image: "/design-studio/tshirt-realistic.png", backImage: "/design-studio/tshirt-realistic-back.png" },
@@ -197,7 +198,6 @@ export default function PremiumDesignStudioClient({
   const [delivery, setDelivery] = useState(DELIVERY_OPTIONS[0]);
   const [client, setClient] = useState({ name: "", email: "", phone: "", deadline: "", deliveryName: "", address: "", postCode: "", deliveryPhone: "", notes: "" });
   const [submitting, setSubmitting] = useState(false);
-  const [submissionStatus, setSubmissionStatus] = useState("Sending…");
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [mobileTool, setMobileTool] = useState<MobileStudioTool>("fabric");
   const [mobileToolExpanded, setMobileToolExpanded] = useState(false);
@@ -599,64 +599,23 @@ export default function PremiumDesignStudioClient({
     event.preventDefault();
     if (!canSubmit) { setResult({ ok: false, text: "Add a client name, contact method and valid delivery details." }); return; }
     setSubmitting(true);
-    setSubmissionStatus("Preparing final mockups…");
     setResult(null);
     const submittedArtworks = (["front", "back"] as Side[]).flatMap((side) => {
       const file = artworkFiles[side];
       return file ? [{ side, file }] : [];
     });
     try {
-      const mockupSides = (["front", "back"] as Side[]).filter((side) =>
-        sideHasVisibleDesign(designs[side], artworkFiles[side])
-      );
-      const productImages: Record<Side, string> = {
-        front: selectedShopItem?.studioPhotoUrl || selectedShopItem?.photoUrl || product.image,
-        back: selectedShopItem?.studioBackPhotoUrl || selectedShopItem?.backPhotoUrl || product.backImage,
-      };
-      const finalMockups = await Promise.all(
-        mockupSides.map(async (side) => ({
-          side,
-          file: await renderDesignStudioMockup({
-            side,
-            productLabel: product.label,
-            color: selectedColor,
-            garmentImageUrl: productImages[side],
-            printZone: PRINT_ZONES[productId],
-            design: designs[side],
-            artworkFile: artworkFiles[side],
-          }),
-        }))
-      );
-
-      setSubmissionStatus("Uploading design files…");
-      const uploadSessionId = `design-studio-${crypto.randomUUID().slice(0, 12)}`;
-      const [uploadedMockups, uploadedArtworks] = await Promise.all([
-        Promise.all(finalMockups.map(async ({ side, file }) => ({
-          side,
+      let uploadSessionId = `design-studio-${crypto.randomUUID().slice(0, 12)}`;
+      const uploadedArtworks = [];
+      for (const { side, file } of submittedArtworks) {
+        const upload = await uploadPublicArtwork({
           file,
-          attachment: (await uploadPublicArtwork({ file, filename: file.name, sessionId: uploadSessionId })).attachment,
-        }))),
-        Promise.all(submittedArtworks.map(async ({ side, file }) => ({
-          side,
-          file,
-          attachment: (await uploadPublicArtwork({ file, filename: `${side}-${file.name}`, sessionId: uploadSessionId })).attachment,
-        }))),
-      ]);
-      const finalMockupUrls = Object.fromEntries(
-        uploadedMockups.map(({ side, attachment }) => [side, attachment.url])
-      );
-      const getSideText = (side: Side) => [designs[side].text, ...designs[side].textCopies]
-        .filter((text) => text.enabled && text.value.trim())
-        .map((text) => text.value.trim())
-        .join(" · ");
-      const hasSideArtwork = (side: Side) => Boolean(
-        artworkFiles[side] && [designs[side].artwork, ...designs[side].artworkCopies].some((artwork) => artwork.enabled)
-      );
-      const selectedSizeRows = availableSizes
-        .filter((size) => sizes[size] > 0)
-        .map((size) => ({ size, quantity: sizes[size] }));
-
-      setSubmissionStatus("Sending quote request…");
+          filename: `${side}-${file.name}`,
+          sessionId: uploadSessionId,
+        });
+        uploadSessionId = upload.sessionId;
+        uploadedArtworks.push({ side, file, attachment: upload.attachment });
+      }
 
       const payload = new FormData();
       payload.append("name", client.name.trim());
@@ -664,7 +623,6 @@ export default function PremiumDesignStudioClient({
       payload.append("phone", client.phone.trim());
       payload.append("message", "Premium Design Studio request submitted via mo-tshirt.mu");
       payload.append("garment", product.label);
-      payload.append("color", selectedColor);
       payload.append("size", availableSizes.find((size) => sizes[size] > 0) || "Mixed");
       payload.append("printMethod", printMethodLabel);
       payload.append("quantity", String(totalQty));
@@ -677,11 +635,8 @@ export default function PremiumDesignStudioClient({
       payload.append("deliveryAddress", client.address);
       payload.append("deliveryPostCode", client.postCode);
       payload.append("deliveryPhone", client.deliveryPhone);
-      payload.append("designBrief", JSON.stringify({ product: product.label, shopItemId: selectedShopItem?.id || "", color: selectedColor, colour: selectedColor, productImages, finalMockups: finalMockupUrls, printMethod: printMethodLabel, printPlacement: mockupSides.map((side) => side[0].toUpperCase() + side.slice(1)).join(" + "), activeSide, frontLogo: hasSideArtwork("front"), backLogo: hasSideArtwork("back"), frontText: getSideText("front"), backText: getSideText("back"), front: designs.front, back: designs.back, artworkFiles: { front: artworkFiles.front?.name || "", back: artworkFiles.back?.name || "" }, sizes, selectedSizes: selectedSizeRows, totalQty, estimatedTotal: totalPrice, rush: hasCustomization && rush }));
-      payload.append("attachments", JSON.stringify([
-        ...uploadedMockups.map(({ side, file, attachment }) => ({ label: `${side[0].toUpperCase()}${side.slice(1)} final mockup`, description: `${product.label} ${side} view with the client's complete design`, url: attachment.url, filename: attachment.name, contentType: attachment.contentType || file.type, size: attachment.size ?? file.size })),
-        ...uploadedArtworks.map(({ side, file, attachment }) => ({ label: `${side[0].toUpperCase()}${side.slice(1)} print artwork`, description: `Original ${side} artwork supplied for production`, url: attachment.url, filename: attachment.name, contentType: attachment.contentType || file.type, size: attachment.size ?? file.size })),
-      ]));
+      payload.append("designBrief", JSON.stringify({ product: product.label, shopItemId: selectedShopItem?.id || "", colour: selectedColor, productImages: { front: selectedShopItem?.studioPhotoUrl || selectedShopItem?.photoUrl || product.image, back: selectedShopItem?.studioBackPhotoUrl || selectedShopItem?.backPhotoUrl || product.backImage }, printMethod: printMethodLabel, activeSide, front: designs.front, back: designs.back, artworkFiles: { front: artworkFiles.front?.name || "", back: artworkFiles.back?.name || "" }, sizes, totalQty, estimatedTotal: totalPrice, rush: hasCustomization && rush }));
+      payload.append("attachments", JSON.stringify(uploadedArtworks.map(({ side, file, attachment }) => ({ label: `${side[0].toUpperCase()}${side.slice(1)} artwork`, description: `${product.label} ${side} print artwork`, url: attachment.url, filename: attachment.name, contentType: attachment.contentType || file.type, size: attachment.size ?? file.size }))));
       const response = await fetch("/api/contact", { method: "POST", body: payload });
       const body = (await response.json()) as { message?: string; error?: string };
       setResult(response.ok ? { ok: true, text: body.message || "Your design has been submitted successfully." } : { ok: false, text: body.error || "Could not send the request." });
@@ -689,7 +644,6 @@ export default function PremiumDesignStudioClient({
       setResult({ ok: false, text: error instanceof Error ? error.message : "Network error. Please try again or use WhatsApp." });
     } finally {
       setSubmitting(false);
-      setSubmissionStatus("Sending…");
     }
   }
 
@@ -786,7 +740,7 @@ export default function PremiumDesignStudioClient({
                       {needsDelivery ? <div className="space-y-3 rounded-2xl bg-[#f5f4f0] p-4"><Field label="Delivery name *"><input value={client.deliveryName} onChange={(event) => setClient((current) => ({ ...current, deliveryName: event.target.value }))} className="studio-field" /></Field><Field label="Address *"><input value={client.address} onChange={(event) => setClient((current) => ({ ...current, address: event.target.value }))} className="studio-field" /></Field><div className="grid grid-cols-2 gap-2"><input value={client.postCode} onChange={(event) => setClient((current) => ({ ...current, postCode: event.target.value }))} className="studio-field" placeholder="Post code" /><input value={client.deliveryPhone} onChange={(event) => setClient((current) => ({ ...current, deliveryPhone: event.target.value }))} className="studio-field" placeholder="Phone" /></div></div> : null}
                       {result && !result.ok ? <p className="rounded-xl bg-[#fff1f1] p-3 text-xs text-[#b91c1c]">{result.text}</p> : null}
                       <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#bce8d1] bg-[#f0fbf5] text-sm font-bold text-[#087b45]"><MessageCircle className="h-4 w-4" />Send on WhatsApp</a>
-                      <button type="submit" disabled={!canSubmit || submitting} className="studio-primary flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#ff5a0a] text-sm font-extrabold !text-white shadow-[0_12px_28px_rgba(255,90,10,.25)] disabled:opacity-45">{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{submitting ? submissionStatus : "Request final price"}</button>
+                      <button type="submit" disabled={!canSubmit || submitting} className="studio-primary flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#ff5a0a] text-sm font-extrabold !text-white shadow-[0_12px_28px_rgba(255,90,10,.25)] disabled:opacity-45">{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{submitting ? "Sending..." : "Request final price"}</button>
                     </div>
                   )}
                 </MobileWorkspace>
@@ -856,7 +810,7 @@ export default function PremiumDesignStudioClient({
 
                 {step === 8 ? result?.ok ? <Success message={result.text} onReset={() => { setResult(null); setStep(1); }} /> : <div className="space-y-4"><Field label="Client name *"><input required value={client.name} onChange={(event) => setClient((current) => ({ ...current, name: event.target.value }))} className="studio-field" placeholder="Full name" /></Field><div className="grid gap-3 2xl:grid-cols-2"><Field label="Email"><input type="email" value={client.email} onChange={(event) => setClient((current) => ({ ...current, email: event.target.value }))} className="studio-field" placeholder="you@example.com" /></Field><Field label="Phone / WhatsApp"><input type="tel" value={client.phone} onChange={(event) => setClient((current) => ({ ...current, phone: event.target.value }))} className="studio-field" placeholder="+230 5..." /></Field></div><Field label="Preferred deadline"><input type="date" min={today} value={client.deadline} onChange={(event) => setClient((current) => ({ ...current, deadline: event.target.value }))} className="studio-field" /></Field><Field label="Delivery"><select value={delivery} onChange={(event) => setDelivery(event.target.value)} className="studio-field">{DELIVERY_OPTIONS.map((option) => <option key={option}>{option}</option>)}</select></Field>{needsDelivery ? <div className="space-y-3 rounded-2xl bg-[#f5f4f0] p-4"><Field label="Delivery name *"><input value={client.deliveryName} onChange={(event) => setClient((current) => ({ ...current, deliveryName: event.target.value }))} className="studio-field" /></Field><Field label="Address *"><input value={client.address} onChange={(event) => setClient((current) => ({ ...current, address: event.target.value }))} className="studio-field" /></Field><div className="grid grid-cols-2 gap-2"><input value={client.postCode} onChange={(event) => setClient((current) => ({ ...current, postCode: event.target.value }))} className="studio-field" placeholder="Post code" /><input value={client.deliveryPhone} onChange={(event) => setClient((current) => ({ ...current, deliveryPhone: event.target.value }))} className="studio-field" placeholder="Phone" /></div></div> : null}<div className="rounded-2xl border border-[#ffd2bd] bg-[#fff7f1] p-4"><div className="flex items-center justify-between"><span className="text-xs font-bold text-[#8b5d47]">{hasCustomization ? "Estimated total" : "Garment total"}</span><span className="text-xl font-extrabold text-[#dd4904]">{formatMoney(totalPrice)}</span></div>{!hasCustomization ? <p className="mt-2 text-[10px] text-[#9a725f]">Printing and setup charges begin only after artwork or custom text is added.</p> : null}</div>{result && !result.ok ? <p className="rounded-xl bg-[#fff1f1] p-3 text-xs text-[#b91c1c]">{result.text}</p> : null}<a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#bce8d1] bg-[#f0fbf5] px-4 py-3 text-sm font-bold text-[#087b45]"><MessageCircle className="h-4 w-4" />Send details on WhatsApp</a></div> : null}
               </motion.div>
-              {!result?.ok ? <div className="sticky bottom-[94px] mt-auto border-t border-[#ecebe6] bg-[#fff]/95 p-4 backdrop-blur sm:bottom-0"><div className="flex gap-2.5">{step > 1 ? <button type="button" onClick={() => goTo(step - 1)} className="inline-flex h-12 items-center gap-2 rounded-xl border border-[#deddd7] px-4 text-sm font-bold"><ChevronLeft className="h-4 w-4" />Back</button> : null}{step < STEPS.length ? <button type="button" onClick={() => goTo(step + 1)} className="studio-primary inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#ff5a0a] px-4 text-sm font-bold !text-white shadow-[0_10px_24px_rgba(255,90,10,.22)]">Next step<ArrowRight className="h-4 w-4" /></button> : <button type="submit" disabled={!canSubmit || submitting} className="studio-primary inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#ff5a0a] px-4 text-sm font-bold !text-white shadow-[0_10px_24px_rgba(255,90,10,.22)] disabled:cursor-not-allowed disabled:opacity-45">{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{submitting ? submissionStatus : "Request final price"}</button>}</div></div> : null}
+              {!result?.ok ? <div className="sticky bottom-[94px] mt-auto border-t border-[#ecebe6] bg-[#fff]/95 p-4 backdrop-blur sm:bottom-0"><div className="flex gap-2.5">{step > 1 ? <button type="button" onClick={() => goTo(step - 1)} className="inline-flex h-12 items-center gap-2 rounded-xl border border-[#deddd7] px-4 text-sm font-bold"><ChevronLeft className="h-4 w-4" />Back</button> : null}{step < STEPS.length ? <button type="button" onClick={() => goTo(step + 1)} className="studio-primary inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#ff5a0a] px-4 text-sm font-bold !text-white shadow-[0_10px_24px_rgba(255,90,10,.22)]">Next step<ArrowRight className="h-4 w-4" /></button> : <button type="submit" disabled={!canSubmit || submitting} className="studio-primary inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#ff5a0a] px-4 text-sm font-bold !text-white shadow-[0_10px_24px_rgba(255,90,10,.22)] disabled:cursor-not-allowed disabled:opacity-45">{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{submitting ? "Sending..." : "Request final price"}</button>}</div></div> : null}
             </aside>
           </form>
         </div>
