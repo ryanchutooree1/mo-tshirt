@@ -10,6 +10,7 @@ import {
   Check,
   CheckCircle2,
   ChevronLeft,
+  ChevronRight,
   CircleDollarSign,
   Copy,
   Crosshair,
@@ -19,6 +20,7 @@ import {
   Loader2,
   Magnet,
   Maximize2,
+  MessageCircle,
   Move,
   PackageCheck,
   Palette,
@@ -727,11 +729,17 @@ export default function PremiumDesignStudioClient({
             <HeadingTag className="text-3xl font-bold leading-tight tracking-[-0.045em] text-[#161613] [font-family:var(--font-studio-display)] sm:text-4xl">Design it. <span className="text-[#ff5a0a]">We print it.</span></HeadingTag>
             <div className="w-full max-w-md"><div className="mb-2 flex justify-between text-[10px] font-bold uppercase tracking-[0.12em] text-[#77766f]"><span>Step {step} of {STEPS.length}</span><span>{Math.round((step / STEPS.length) * 100)}% complete</span></div><div className="h-2 overflow-hidden rounded-full bg-[#ecebe6]"><motion.div className="h-full rounded-full bg-[#ff5a0a]" animate={{ width: `${(step / STEPS.length) * 100}%` }} /></div></div>
           </div>
+          <div className="mt-6 hidden gap-2 overflow-x-auto pb-1 sm:flex xl:hidden">{STEPS.map((item) => <button key={item.id} type="button" onClick={() => setStep(item.id)} className={`flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold ${step === item.id ? "studio-primary border-[#ff5a0a] bg-[#ff5a0a] !text-white" : step > item.id ? "border-[#ffd5c1] bg-[#fff5ef] text-[#c54306]" : "border-[#e4e3dd] bg-[#fff] text-[#73726c]"}`}><span>{step > item.id ? <Check className="h-3.5 w-3.5" /> : item.id}</span>{item.short}</button>)}</div>
         </div>
       </section>
 
       <div className={`mx-auto max-w-[1500px] px-0 py-0 sm:h-auto sm:px-6 sm:py-7 ${embedded ? "h-[100dvh]" : "h-[calc(100dvh-69px)]"}`}>
-        <div className="grid h-full items-start gap-0 sm:h-auto sm:gap-5">
+        <div className="grid h-full items-start gap-0 sm:h-auto sm:gap-5 xl:grid-cols-[230px_minmax(0,1fr)]">
+          <nav className="hidden rounded-[24px] border border-[#e1e0da] bg-[#fff] p-3 shadow-[0_14px_45px_rgba(29,27,20,0.05)] xl:block" aria-label="Design steps">
+            {STEPS.map((item) => <button key={item.id} type="button" onClick={() => setStep(item.id)} aria-current={step === item.id ? "step" : undefined} className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${step === item.id ? "studio-dark bg-[#171714] !text-white" : "text-[#686761] hover:bg-[#f5f4f0]"}`}><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${step === item.id ? "studio-primary bg-[#ff5a0a] !text-white" : step > item.id ? "bg-[#fff0e8] text-[#df4d08]" : "bg-[#f1f0ec] text-[#8d8c85]"}`}>{step > item.id ? <Check className="h-4 w-4" /> : item.id}</span><span className="min-w-0"><span className="block text-[9px] font-bold uppercase tracking-[0.13em] opacity-55">Step {item.id}</span><span className="mt-0.5 block text-[13px] font-bold leading-tight">{item.label}</span></span><ChevronRight className="ml-auto h-4 w-4 opacity-25" /></button>)}
+            <div className="mt-3 rounded-2xl bg-[#f6f5f1] p-4"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8a8982]">Need help?</p><a href={`tel:${CONTACT_TEL}`} className="mt-2 flex items-center gap-2 text-xs font-bold"><MessageCircle className="h-4 w-4 text-[#ff5a0a]" />{CONTACT_PHONE_DISPLAY}</a></div>
+          </nav>
+
           <form onSubmit={submitQuote} className="relative grid h-full min-w-0 gap-0 overflow-hidden sm:h-auto sm:gap-5 sm:overflow-visible lg:grid-cols-[minmax(0,1.35fr)_minmax(330px,.8fr)]">
             <input ref={artworkInput} type="file" accept=".png,.jpg,.jpeg,.webp,.svg" onClick={(event) => { event.currentTarget.value = ""; }} onChange={handleArtwork} className="hidden" />
             <section className="absolute inset-0 flex min-h-0 flex-col overflow-hidden border-y border-[#dfded8] bg-[#fff] pb-[78px] shadow-none sm:static sm:block sm:rounded-[26px] sm:border sm:pb-0 sm:shadow-[0_18px_55px_rgba(32,30,24,0.07)]">
