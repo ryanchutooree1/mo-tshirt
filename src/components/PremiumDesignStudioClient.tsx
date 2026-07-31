@@ -711,7 +711,7 @@ export default function PremiumDesignStudioClient({
     <div
       className={`premium-studio bg-[#f5f5f2] text-left text-[#1b1b18] [font-family:var(--font-studio-body)] ${
         embedded
-          ? "h-[100dvh] overflow-hidden border-y border-[#e5e4df] shadow-sm sm:h-auto sm:rounded-[32px] sm:border"
+          ? "h-[100dvh] overflow-hidden border-y border-[#e5e4df] shadow-sm sm:h-auto sm:rounded-[32px] sm:border xl:flex xl:h-[calc(100dvh-7.5rem)] xl:flex-col"
           : "h-[100dvh] overflow-hidden sm:h-auto sm:min-h-screen sm:overflow-visible"
       }`}
     >
@@ -723,29 +723,29 @@ export default function PremiumDesignStudioClient({
         </div>
       </header> : null}
 
-      <section className="hidden border-b border-[#e5e4df] bg-[#fff] px-4 py-5 sm:block sm:px-6 sm:py-6">
+      <section className="hidden border-b border-[#e5e4df] bg-[#fff] px-4 py-5 sm:block sm:px-6 sm:py-6 xl:shrink-0 xl:py-3">
         <div className="mx-auto max-w-[1500px]">
           <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
-            <HeadingTag className="text-3xl font-bold leading-tight tracking-[-0.045em] text-[#161613] [font-family:var(--font-studio-display)] sm:text-4xl">Design it. <span className="text-[#ff5a0a]">We print it.</span></HeadingTag>
+            <HeadingTag className="text-3xl font-bold leading-tight tracking-[-0.045em] text-[#161613] [font-family:var(--font-studio-display)] sm:text-4xl xl:text-3xl">Design it. <span className="text-[#ff5a0a]">We print it.</span></HeadingTag>
             <div className="w-full max-w-md"><div className="mb-2 flex justify-between text-[10px] font-bold uppercase tracking-[0.12em] text-[#77766f]"><span>Step {step} of {STEPS.length}</span><span>{Math.round((step / STEPS.length) * 100)}% complete</span></div><div className="h-2 overflow-hidden rounded-full bg-[#ecebe6]"><motion.div className="h-full rounded-full bg-[#ff5a0a]" animate={{ width: `${(step / STEPS.length) * 100}%` }} /></div></div>
           </div>
           <div className="mt-6 hidden gap-2 overflow-x-auto pb-1 sm:flex xl:hidden">{STEPS.map((item) => <button key={item.id} type="button" onClick={() => setStep(item.id)} className={`flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold ${step === item.id ? "studio-primary border-[#ff5a0a] bg-[#ff5a0a] !text-white" : step > item.id ? "border-[#ffd5c1] bg-[#fff5ef] text-[#c54306]" : "border-[#e4e3dd] bg-[#fff] text-[#73726c]"}`}><span>{step > item.id ? <Check className="h-3.5 w-3.5" /> : item.id}</span>{item.short}</button>)}</div>
         </div>
       </section>
 
-      <div className={`mx-auto max-w-[1500px] px-0 py-0 sm:h-auto sm:px-6 sm:py-7 ${embedded ? "h-[100dvh]" : "h-[calc(100dvh-69px)]"}`}>
-        <div className="grid h-full items-start gap-0 sm:h-auto sm:gap-5 xl:grid-cols-[230px_minmax(0,1fr)]">
-          <nav className="hidden rounded-[24px] border border-[#e1e0da] bg-[#fff] p-3 shadow-[0_14px_45px_rgba(29,27,20,0.05)] xl:block" aria-label="Design steps">
+      <div className={`mx-auto max-w-[1500px] px-0 py-0 sm:h-auto sm:px-6 sm:py-7 ${embedded ? "h-[100dvh] xl:h-auto xl:min-h-0 xl:flex-1 xl:py-4" : "h-[calc(100dvh-69px)]"}`}>
+        <div className="grid h-full items-start gap-0 sm:h-auto sm:gap-5 xl:h-full xl:min-h-0 xl:items-stretch xl:grid-cols-[230px_minmax(0,1fr)]">
+          <nav className="hidden rounded-[24px] border border-[#e1e0da] bg-[#fff] p-3 shadow-[0_14px_45px_rgba(29,27,20,0.05)] xl:block xl:h-full xl:min-h-0 xl:overflow-y-auto" aria-label="Design steps">
             {STEPS.map((item) => <button key={item.id} type="button" onClick={() => setStep(item.id)} aria-current={step === item.id ? "step" : undefined} className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${step === item.id ? "studio-dark bg-[#171714] !text-white" : "text-[#686761] hover:bg-[#f5f4f0]"}`}><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-extrabold ${step === item.id ? "studio-primary bg-[#ff5a0a] !text-white" : step > item.id ? "bg-[#fff0e8] text-[#df4d08]" : "bg-[#f1f0ec] text-[#8d8c85]"}`}>{step > item.id ? <Check className="h-4 w-4" /> : item.id}</span><span className="min-w-0"><span className="block text-[9px] font-bold uppercase tracking-[0.13em] opacity-55">Step {item.id}</span><span className="mt-0.5 block text-[13px] font-bold leading-tight">{item.label}</span></span><ChevronRight className="ml-auto h-4 w-4 opacity-25" /></button>)}
             <div className="mt-3 rounded-2xl bg-[#f6f5f1] p-4"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8a8982]">Need help?</p><a href={`tel:${CONTACT_TEL}`} className="mt-2 flex items-center gap-2 text-xs font-bold"><MessageCircle className="h-4 w-4 text-[#ff5a0a]" />{CONTACT_PHONE_DISPLAY}</a></div>
           </nav>
 
-          <form onSubmit={submitQuote} className="relative grid h-full min-w-0 gap-0 overflow-hidden sm:h-auto sm:gap-5 sm:overflow-visible lg:grid-cols-[minmax(0,1.35fr)_minmax(330px,.8fr)]">
+          <form onSubmit={submitQuote} className="relative grid h-full min-w-0 gap-0 overflow-hidden sm:h-auto sm:gap-5 sm:overflow-visible lg:grid-cols-[minmax(0,1.35fr)_minmax(330px,.8fr)] xl:h-full xl:min-h-0 xl:overflow-hidden">
             <input ref={artworkInput} type="file" accept=".png,.jpg,.jpeg,.webp,.svg" onClick={(event) => { event.currentTarget.value = ""; }} onChange={handleArtwork} className="hidden" />
-            <section className="absolute inset-0 flex min-h-0 flex-col overflow-hidden border-y border-[#dfded8] bg-[#fff] pb-[78px] shadow-none sm:static sm:block sm:rounded-[26px] sm:border sm:pb-0 sm:shadow-[0_18px_55px_rgba(32,30,24,0.07)]">
+            <section className="absolute inset-0 flex min-h-0 flex-col overflow-hidden border-y border-[#dfded8] bg-[#fff] pb-[78px] shadow-none sm:static sm:block sm:rounded-[26px] sm:border sm:pb-0 sm:shadow-[0_18px_55px_rgba(32,30,24,0.07)] xl:flex xl:h-full">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#ecebe6] px-3 py-2.5 sm:gap-3 sm:px-5 sm:py-3.5"><div><p className="text-[8px] font-bold uppercase tracking-[0.16em] text-[#99978f] sm:text-[9px]">Live preview</p><h2 className="mt-0.5 text-base font-bold tracking-[-0.025em] sm:text-lg">{product.label} · {activeSide}</h2></div><div className="flex items-center gap-1">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`min-h-10 rounded-xl px-3 text-[11px] font-bold capitalize sm:px-4 sm:py-2 sm:text-xs ${activeSide === side ? "studio-primary bg-[#ff5a0a] !text-white" : "bg-[#f4f3ef] text-[#686761]"}`}>{side}</button>)}<button type="button" onClick={() => { setDesigns({ front: createDesign(), back: createDesign() }); setSelectedLayer(null); setSelectedArtworkCopyId(null); setSelectedTextCopyId(null); }} className="ml-0.5 flex h-10 w-10 items-center justify-center rounded-xl border border-[#e1e0da] text-[#66655f]" aria-label="Reset design"><RotateCcw className="h-4 w-4" /></button></div></div>
-              <div className="min-h-0 flex-1 bg-[radial-gradient(circle_at_50%_0%,#ffffff_0%,#f5f3ed_55%,#eeece5_100%)] p-0 sm:p-6">
-                <div ref={canvasRef} onPointerDown={() => setSelectedLayer(null)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className="relative mx-auto h-full w-full max-w-[550px] overflow-hidden bg-[#fff]/30 sm:aspect-[4/5] sm:h-auto sm:rounded-[24px] sm:border sm:border-[#fff]" style={{ touchAction: "none" }}>
+              <div className="min-h-0 flex-1 bg-[radial-gradient(circle_at_50%_0%,#ffffff_0%,#f5f3ed_55%,#eeece5_100%)] p-0 sm:p-6 xl:flex xl:items-center xl:justify-center xl:overflow-hidden xl:p-4">
+                <div ref={canvasRef} onPointerDown={() => setSelectedLayer(null)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className="relative mx-auto h-full w-full max-w-[550px] overflow-hidden bg-[#fff]/30 sm:aspect-[4/5] sm:h-auto sm:rounded-[24px] sm:border sm:border-[#fff] xl:mx-0 xl:h-full xl:w-auto xl:max-w-full" style={{ touchAction: "none" }}>
                   <div className="pointer-events-none absolute inset-0 z-10"><div className="relative h-full w-full origin-center transition duration-200" style={{ transform: `scale(${previewZoom / 100})` }}><LoadingImage src={productPreviewImage} fallbackSrc={activeSide === "back" ? product.backImage : product.image} alt={`Realistic ${product.label} ${activeSide} preview`} wrapperClassName="h-full w-full" className="h-full w-full object-contain drop-shadow-[0_26px_28px_rgba(15,23,42,.22)]" loading="eager" fetchPriority="high" decoding="async" delayMs={100} statusText="Loading garment…" /></div></div>
                   <div ref={printZoneRef} className="absolute z-30" style={{ left: `${printZone.left}%`, top: `${printZone.top}%`, width: `${printZone.width}%`, height: `${printZone.height}%` }}>
                     {activeTextLayers.map((textLayer) => {
@@ -837,9 +837,9 @@ export default function PremiumDesignStudioClient({
               </div>
             </section> : null}
 
-            <aside className="mx-2 mb-4 hidden min-h-[520px] flex-col rounded-[26px] border border-[#dfded8] bg-[#fff] shadow-[0_18px_55px_rgba(32,30,24,0.07)] sm:mx-0 sm:mb-0 sm:flex sm:min-h-[600px]">
+            <aside className="mx-2 mb-4 hidden min-h-[520px] flex-col rounded-[26px] border border-[#dfded8] bg-[#fff] shadow-[0_18px_55px_rgba(32,30,24,0.07)] sm:mx-0 sm:mb-0 sm:flex sm:min-h-[600px] xl:h-full xl:min-h-0 xl:overflow-hidden">
               <div className="border-b border-[#ecebe6] px-5 py-5"><div className="flex items-start gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fff0e8] text-sm font-extrabold text-[#e44c04]">{step}</span><div><h2 className="text-xl font-bold tracking-[-0.03em]">{activeStep.label}</h2><p className="mt-1 text-xs leading-5 text-[#77766f]">{stepCopy(step)}</p></div></div></div>
-              <motion.div key={step} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} className="flex-1 p-5">
+              <motion.div key={step} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} className="min-h-0 flex-1 overflow-y-auto p-5">
                 {step === 1 ? <div className="space-y-3"><div className="flex items-center gap-2 rounded-xl bg-[#f2f8f4] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.1em] text-[#168455]"><BadgeCheck className="h-4 w-4" />Live products from Shops</div>{shopLoading ? <div className="flex min-h-48 items-center justify-center gap-2 text-xs font-semibold text-[#77766f]"><Loader2 className="h-4 w-4 animate-spin text-[#ff5a0a]" />Loading real garments…</div> : <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">{PRODUCTS.map((option) => {
                   const variants = catalogByProduct[option.id];
                   const preferredItem = productId === option.id && selectedShopItem ? selectedShopItem : getPreferredShopItem(shopItems, option.id);
