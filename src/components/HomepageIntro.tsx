@@ -20,25 +20,25 @@ const trustedBrands = [
     name: "Zoza Pastry & Coffee",
     logo: "/trusted-brands/zoza-pastry-and-coffee-logo.webp",
     alt: "Zoza Pastry & Coffee logo",
-    imageClassName: "scale-[1.08]",
+    imageClassName: "scale-[1.12]",
   },
   {
     name: "Le Rochester Restaurant & Auberge",
     logo: "/trusted-brands/le-rochester-restaurant-and-auberge-logo.webp",
     alt: "Le Rochester Restaurant & Auberge logo",
-    imageClassName: "scale-[1.06]",
+    imageClassName: "scale-[1.1]",
   },
   {
     name: "Shanti Ghar",
     logo: "/trusted-brands/shanti-ghar-logo.webp",
     alt: "Shanti Ghar logo",
-    imageClassName: "scale-100",
+    imageClassName: "scale-[1.06]",
   },
   {
     name: "Escale des iles Restaurant & Lodging",
     logo: "/trusted-brands/escale-des-iles-restaurant-and-lodging-logo.webp",
     alt: "Escale des iles Restaurant & Lodging logo",
-    imageClassName: "scale-[1.06]",
+    imageClassName: "scale-[1.1]",
   },
 ];
 
@@ -162,29 +162,29 @@ export default function HomepageIntro() {
 
       <section
         className="relative z-10 -mt-10 px-4 sm:-mt-12 sm:px-6"
-        aria-label="Clients de confiance"
+        aria-label="Trusted clients"
       >
         <div className="mx-auto max-w-[1360px] rounded-[22px] border border-black/[0.04] bg-white/95 px-5 py-5 shadow-[0_18px_55px_rgba(44,35,25,0.08)] backdrop-blur-sm sm:flex sm:items-center sm:gap-8 sm:px-9 sm:py-5">
           <p className="shrink-0 text-[11px] font-semibold uppercase leading-[1.45] tracking-[0.12em] text-neutral-500 sm:w-36">
-            Ils nous font
+            Trusted by
             <br />
-            confiance
+            amazing brands
           </p>
           <div className="hidden h-12 w-px shrink-0 bg-neutral-200/80 sm:block" aria-hidden="true" />
           <ul
             className="mt-4 grid w-full grid-cols-2 items-center gap-x-7 gap-y-4 sm:mt-0 sm:max-w-[610px] sm:flex-1 sm:grid-cols-4 sm:gap-8"
-            aria-label="Marques qui font confiance à MO T-SHIRT"
+            aria-label="Brands that trust MO T-SHIRT"
           >
             {trustedBrands.map((brand) => (
               <li
                 key={brand.name}
-                className="relative h-14 w-20 justify-self-center sm:h-16 sm:w-24"
+                className="relative h-20 w-28 justify-self-center sm:h-[88px] sm:w-[120px]"
               >
                 <Image
                   src={brand.logo}
                   alt={brand.alt}
                   fill
-                  sizes="(max-width: 640px) 80px, 96px"
+                  sizes="(max-width: 640px) 112px, 120px"
                   className={`object-contain ${brand.imageClassName}`}
                 />
               </li>
