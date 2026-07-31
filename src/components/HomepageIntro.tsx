@@ -165,7 +165,7 @@ export default function HomepageIntro() {
         aria-label="Trusted clients"
       >
         <div className="mx-auto max-w-[1360px] rounded-[22px] border border-black/[0.04] bg-white/95 px-5 py-3 shadow-[0_18px_55px_rgba(44,35,25,0.08)] backdrop-blur-sm sm:flex sm:items-center sm:gap-8 sm:px-9 sm:py-3">
-          <p className="shrink-0 text-[11px] font-semibold uppercase leading-[1.45] tracking-[0.12em] text-neutral-500 sm:w-36">
+          <p className="shrink-0 text-[11px] font-semibold uppercase leading-[1.45] tracking-[0.12em] text-[#96999f] sm:w-36">
             Trusted by
             <br />
             amazing brands
