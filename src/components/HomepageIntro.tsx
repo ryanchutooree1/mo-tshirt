@@ -30,9 +30,9 @@ const trustedBrands = [
   },
   {
     name: "Shanti Ghar",
-    logo: "/trusted-brands/shanti-ghar-logo.webp",
+    logo: "/trusted-brands/shanti-ghar-illuminated-logo.png",
     alt: "Shanti Ghar logo",
-    imageClassName: "scale-[1.06]",
+    imageClassName: "scale-[1.3]",
   },
   {
     name: "Escale des iles Restaurant & Lodging",
