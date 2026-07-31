@@ -69,7 +69,7 @@ export default function MeasurementCarousel() {
           alt={activeGuide.alt}
           width={1536}
           height={1024}
-          sizes="(max-width: 1024px) 100vw, 1024px"
+          sizes="(max-width: 640px) 100vw, 50vw"
           wrapperClassName="rounded-[28px] border border-[#EAEAEA] bg-white shadow-sm"
           imageClassName="cursor-zoom-in"
         />
