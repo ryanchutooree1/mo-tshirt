@@ -60,6 +60,13 @@ const trustedBrands: Array<{
     imageClassName: "scale-[1.1]",
     itemClassName: "!w-20 !scale-100 overflow-hidden rounded-full sm:!w-[88px]",
   },
+  {
+    name: "Razz Grill",
+    logo: "/trusted-brands/razz-grill-logo.webp",
+    alt: "Razz Grill logo",
+    imageClassName: "scale-[1.1]",
+    itemClassName: "!w-20 !scale-100 overflow-hidden rounded-full sm:!w-[88px]",
+  },
 ];
 
 const processSteps = [
@@ -184,21 +191,21 @@ export default function HomepageIntro() {
         className="relative z-10 mt-3 px-4 sm:mt-4 sm:px-6"
         aria-label="Trusted clients"
       >
-        <div className="mx-auto max-w-[1360px] rounded-[22px] border border-black/[0.04] bg-white/95 px-5 py-3 shadow-[0_18px_55px_rgba(44,35,25,0.08)] backdrop-blur-sm sm:px-9 sm:py-3 lg:flex lg:items-center lg:gap-8">
-          <p className="shrink-0 text-[11px] font-semibold uppercase leading-[1.45] tracking-[0.12em] text-[#96999f] lg:w-36">
+        <div className="mx-auto max-w-[1360px] rounded-[22px] border border-black/[0.04] bg-white/95 px-5 py-3 shadow-[0_18px_55px_rgba(44,35,25,0.08)] backdrop-blur-sm sm:px-9 sm:py-3 xl:flex xl:items-center xl:gap-8">
+          <p className="shrink-0 text-[11px] font-semibold uppercase leading-[1.45] tracking-[0.12em] text-[#96999f] xl:w-36">
             Trusted by
             <br />
             amazing brands
           </p>
-          <div className="hidden h-10 w-px shrink-0 bg-neutral-200/80 lg:block" aria-hidden="true" />
+          <div className="hidden h-10 w-px shrink-0 bg-neutral-200/80 xl:block" aria-hidden="true" />
           <ul
-            className="mt-4 grid w-full grid-cols-2 items-center gap-x-7 gap-y-7 sm:grid-cols-6 sm:gap-8 lg:mt-0 lg:max-w-[900px] lg:flex-1 lg:grid-cols-6"
+            className="mt-4 grid w-full grid-cols-2 items-center gap-x-7 gap-y-7 sm:grid-cols-6 sm:gap-8 xl:mt-0 xl:max-w-[1040px] xl:flex-1 xl:grid-cols-7 xl:gap-5"
             aria-label="Brands that trust MO T-SHIRT"
           >
-            {trustedBrands.map((brand) => (
+            {trustedBrands.map((brand, index) => (
               <li
                 key={brand.name}
-                className={`relative h-20 w-28 scale-[1.3] justify-self-center sm:col-span-2 sm:h-[88px] sm:w-[120px] lg:col-span-1 ${brand.itemClassName || ""}`}
+                className={`relative h-20 w-28 scale-[1.3] justify-self-center sm:col-span-2 sm:h-[88px] sm:w-[120px] xl:col-span-1 ${index === 6 ? "col-span-2 sm:col-start-3 xl:col-start-auto" : ""} ${brand.itemClassName || ""}`}
               >
                 <Image
                   src={brand.logo}
