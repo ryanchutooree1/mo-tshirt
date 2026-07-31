@@ -723,10 +723,10 @@ export default function PremiumDesignStudioClient({
         </div>
       </header> : null}
 
-      <section className="hidden border-b border-[#e5e4df] bg-[#fff] px-4 py-6 sm:block sm:px-6 sm:py-8">
+      <section className="hidden border-b border-[#e5e4df] bg-[#fff] px-4 py-5 sm:block sm:px-6 sm:py-6">
         <div className="mx-auto max-w-[1500px]">
-          <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-            <HeadingTag className="text-3xl font-bold tracking-[-0.045em] text-[#161613] [font-family:var(--font-studio-display)] sm:text-5xl">Design it. <span className="text-[#ff5a0a]">We print it.</span></HeadingTag>
+          <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-end">
+            <HeadingTag className="text-3xl font-bold leading-tight tracking-[-0.045em] text-[#161613] [font-family:var(--font-studio-display)] sm:text-4xl">Design it. <span className="text-[#ff5a0a]">We print it.</span></HeadingTag>
             <div className="w-full max-w-md"><div className="mb-2 flex justify-between text-[10px] font-bold uppercase tracking-[0.12em] text-[#77766f]"><span>Step {step} of {STEPS.length}</span><span>{Math.round((step / STEPS.length) * 100)}% complete</span></div><div className="h-2 overflow-hidden rounded-full bg-[#ecebe6]"><motion.div className="h-full rounded-full bg-[#ff5a0a]" animate={{ width: `${(step / STEPS.length) * 100}%` }} /></div></div>
           </div>
           <div className="mt-6 hidden gap-2 overflow-x-auto pb-1 sm:flex xl:hidden">{STEPS.map((item) => <button key={item.id} type="button" onClick={() => setStep(item.id)} className={`flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold ${step === item.id ? "studio-primary border-[#ff5a0a] bg-[#ff5a0a] !text-white" : step > item.id ? "border-[#ffd5c1] bg-[#fff5ef] text-[#c54306]" : "border-[#e4e3dd] bg-[#fff] text-[#73726c]"}`}><span>{step > item.id ? <Check className="h-3.5 w-3.5" /> : item.id}</span>{item.short}</button>)}</div>
