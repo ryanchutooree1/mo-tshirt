@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
@@ -80,6 +80,21 @@ function escapeHtml(value: string) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function getAbsoluteAttachmentUrl(value: string | undefined) {
+  const url = String(value || "").trim();
+  if (!url) return "";
+  try {
+    const resolved = new URL(url, SITE_URL);
+    const site = new URL(SITE_URL);
+    const allowedPath =
+      resolved.pathname.startsWith("/api/ai-assistant/uploads/") ||
+      resolved.pathname.startsWith("/api/shops/uploads/");
+    return resolved.origin === site.origin && allowedPath ? resolved.toString() : "";
+  } catch {
+    return "";
+  }
 }
 
 function parseJsonObject(value: unknown): Record<string, unknown> | null {
@@ -507,12 +522,13 @@ export async function POST(req: Request) {
       return [];
     })();
     const formatAttachmentValue = (entry: QuoteAttachment, index: number) => {
+      const attachmentUrl = getAbsoluteAttachmentUrl(entry.url);
       const lines = [
         entry.filename || `attachment-${index + 1}`,
         entry.label ? `Label: ${entry.label}` : "",
         entry.description ? `Description: ${entry.description}` : "",
         entry.quantity ? `Qty: ${entry.quantity}` : "",
-        entry.url ? `URL: ${entry.url}` : "URL: Attached to email",
+        attachmentUrl ? `URL: ${attachmentUrl}` : "URL: Attached to email",
       ].filter(Boolean);
       return lines.join("\n");
     };
@@ -657,11 +673,55 @@ export async function POST(req: Request) {
       const sectionRows = rows.map(([label, value]) => renderRow(label, value)).join("");
       return `${sectionHeader}${sectionRows}`;
     };
+    const renderAttachmentPreviews = () => {
+      const imageAttachments = storedAttachments.filter(
+        (entry) => entry.contentType?.startsWith("image/") && getAbsoluteAttachmentUrl(entry.url)
+      );
+      if (!imageAttachments.length) return "";
+
+      const cards = imageAttachments.map((entry, index) => {
+        const url = getAbsoluteAttachmentUrl(entry.url);
+        const title = entry.label || (entry.role === "final-mockup" ? "Final mockup" : `Original logo ${index + 1}`);
+        const typeLabel = entry.role === "final-mockup"
+          ? "Complete garment preview"
+          : entry.role === "print-artwork"
+            ? "Original print artwork"
+            : "Client image";
+        const description = entry.description
+          ? `<div style="margin:5px 0 0;color:#737373;font-size:12px;line-height:1.45;">${escapeHtml(entry.description)}</div>`
+          : "";
+
+        return `<tr>
+  <td style="padding:0 0 14px;">
+    <div style="border:1px solid #e7e5e4;border-radius:16px;background:#fafaf9;padding:12px;">
+      <div style="margin:0 0 3px;font-size:13px;font-weight:800;color:#111;">${escapeHtml(title)}</div>
+      <div style="margin:0 0 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:${entry.role === "final-mockup" ? "#ea580c" : "#15803d"};">${escapeHtml(typeLabel)}</div>
+      <a href="${escapeHtml(url)}" style="display:block;text-decoration:none;">
+        <img src="${escapeHtml(url)}" alt="${escapeHtml(title)}" width="460" style="display:block;width:100%;max-width:460px;max-height:420px;height:auto;object-fit:contain;margin:0 auto;border:1px solid #e7e5e4;border-radius:12px;background:#fff;" />
+      </a>
+      ${description}
+      <a href="${escapeHtml(url)}" style="display:inline-block;margin-top:11px;padding:9px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-size:12px;font-weight:800;">Open full resolution</a>
+    </div>
+  </td>
+</tr>`;
+      }).join("");
+
+      return `<tr>
+  <td colspan="2" style="padding:10px 0 6px;font-weight:800;font-size:15px;border-bottom:1px solid #e5e7eb;color:#111;">Design previews</td>
+</tr>
+<tr>
+  <td colspan="2" style="padding:12px 0 0;">
+    <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;max-width:484px;">${cards}</table>
+  </td>
+</tr>
+<tr><td colspan="2" style="height:4px;"></td></tr>`;
+    };
     const htmlRows = [
       renderSection("Client Info", contactRows),
       `<tr><td colspan="2" style="height:10px;"></td></tr>`,
       renderSection("Order Details", orderRows),
       `<tr><td colspan="2" style="height:10px;"></td></tr>`,
+      renderAttachmentPreviews(),
       storedAttachments.length
         ? `${renderSection("Artwork Files", attachmentRows)}<tr><td colspan="2" style="height:10px;"></td></tr>`
         : "",
@@ -684,37 +744,38 @@ export async function POST(req: Request) {
 </div>`;
 
     if (host && user && pass) {
-      try {
-        // @ts-expect-error nodemailer may not be installed yet
-        const nodemailer = await import("nodemailer");
-        const transporter = nodemailer.createTransport({
-          host,
-          port,
-          secure,
-          auth: { user, pass },
-        });
+      after(async () => {
+        try {
+          // @ts-expect-error nodemailer may not be installed yet
+          const nodemailer = await import("nodemailer");
+          const transporter = nodemailer.createTransport({
+            host,
+            port,
+            secure,
+            auth: { user, pass },
+          });
 
-        const subject = `New Website Quotation from ${safeName}`;
-        const notificationRecipients = await getQuotationNotificationRecipients();
-        const mailOptions: Record<string, unknown> = {
-          from,
-          to: notificationRecipients.length ? notificationRecipients.join(", ") : user,
-          subject,
-          text,
-          html,
-        };
-        if (safeEmail) {
-          mailOptions.replyTo = safeEmail;
+          const subject = `New Website Quotation from ${safeName}`;
+          const notificationRecipients = await getQuotationNotificationRecipients();
+          const mailOptions: Record<string, unknown> = {
+            from,
+            to: notificationRecipients.length ? notificationRecipients.join(", ") : user,
+            subject,
+            text,
+            html,
+          };
+          if (safeEmail) {
+            mailOptions.replyTo = safeEmail;
+          }
+          if (originalEmailAttachments.length) {
+            mailOptions.attachments = originalEmailAttachments;
+          }
+          await transporter.sendMail(mailOptions);
+        } catch (error) {
+          console.error("contact:notification-email", error);
         }
-        if (originalEmailAttachments.length) {
-          mailOptions.attachments = originalEmailAttachments;
-        }
-        await transporter.sendMail(mailOptions);
-        return json({ message: "Thanks! We received your message.", quoteId }, 200);
-      } catch {
-        // Fall through to success without email if nodemailer not available
-        return json({ message: "Received. Email not sent (mailer unavailable).", quoteId }, 200);
-      }
+      });
+      return json({ message: "Thanks! We received your message.", quoteId }, 200);
     }
 
     // No SMTP configured; acknowledge without sending
