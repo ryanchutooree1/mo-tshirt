@@ -234,8 +234,8 @@ export default function HomepageIntro() {
 
           <ol className="relative grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {processSteps.map(({ icon: Icon, title, copy }, index) => (
-              <li key={title} className="relative z-10">
-                <article className="flex min-h-[210px] flex-col rounded-[26px] border border-neutral-200 bg-white p-6 shadow-[0_12px_34px_rgba(0,0,0,0.035)]">
+              <li key={title} className="relative z-10 h-full">
+                <article className="flex h-full min-h-[210px] flex-col rounded-[26px] border border-neutral-200 bg-white p-6 shadow-[0_12px_34px_rgba(0,0,0,0.035)]">
                   <span className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-xs font-bold text-neutral-500">
                     {String(index + 1).padStart(2, "0")}
                   </span>
