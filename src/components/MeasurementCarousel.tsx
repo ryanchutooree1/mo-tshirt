@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ZoomableImage from "@/components/ZoomableImage";
 
 const measurementGuides = {
@@ -35,13 +35,30 @@ type MeasurementCarouselProps = {
 };
 
 const SWIPE_THRESHOLD = 45;
+const AUTOPLAY_DELAY_MS = 4500;
 
 export default function MeasurementCarousel({
   variant = "adult",
 }: MeasurementCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const guides = measurementGuides[variant];
+
+  useEffect(() => {
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    if (isHovered || isFocused || prefersReducedMotion) return;
+
+    const autoplayTimer = window.setTimeout(() => {
+      setActiveIndex((current) => (current + 1) % guides.length);
+    }, AUTOPLAY_DELAY_MS);
+
+    return () => window.clearTimeout(autoplayTimer);
+  }, [activeIndex, guides.length, isFocused, isHovered]);
 
   const showPrevious = () => {
     setActiveIndex((current) =>
@@ -60,6 +77,14 @@ export default function MeasurementCarousel({
       aria-label={`${variant === "kids" ? "Kids" : "Adult"} garment measurement guides`}
       aria-roledescription="carousel"
       className="w-full"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onFocusCapture={() => setIsFocused(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setIsFocused(false);
+        }
+      }}
       onKeyDown={(event) => {
         if (event.key === "ArrowLeft") showPrevious();
         if (event.key === "ArrowRight") showNext();
@@ -157,7 +182,11 @@ export default function MeasurementCarousel({
         })}
       </div>
 
-      <p className="sr-only" aria-live="polite" aria-atomic="true">
+      <p
+        className="sr-only"
+        aria-live={isHovered || isFocused ? "polite" : "off"}
+        aria-atomic="true"
+      >
         Showing {activeGuide.label} measurement guide, slide {activeIndex + 1} of{" "}
         {guides.length}
       </p>
