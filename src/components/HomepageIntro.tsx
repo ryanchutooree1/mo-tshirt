@@ -67,6 +67,13 @@ const trustedBrands: Array<{
     imageClassName: "scale-[1.1]",
     itemClassName: "!w-20 !scale-100 overflow-hidden rounded-full sm:!w-[88px]",
   },
+  {
+    name: "Prit Fitness",
+    logo: "/trusted-brands/prit-fitness-logo.webp",
+    alt: "Prit Fitness logo",
+    imageClassName: "scale-[1.1]",
+    itemClassName: "!w-20 !scale-100 overflow-hidden rounded-full sm:!w-[88px]",
+  },
 ];
 
 const processSteps = [
@@ -199,13 +206,13 @@ export default function HomepageIntro() {
           </p>
           <div className="hidden h-10 w-px shrink-0 bg-neutral-200/80 xl:block" aria-hidden="true" />
           <ul
-            className="mt-4 grid w-full grid-cols-2 items-center gap-x-7 gap-y-7 sm:grid-cols-6 sm:gap-8 xl:mt-0 xl:max-w-[1040px] xl:flex-1 xl:grid-cols-7 xl:gap-5"
+            className="mt-4 grid w-full grid-cols-2 items-center gap-x-7 gap-y-7 sm:grid-cols-6 sm:gap-8 xl:mt-0 xl:max-w-[1040px] xl:flex-1 xl:grid-cols-8 xl:gap-5"
             aria-label="Brands that trust MO T-SHIRT"
           >
             {trustedBrands.map((brand, index) => (
               <li
                 key={brand.name}
-                className={`relative h-20 w-28 scale-[1.3] justify-self-center sm:col-span-2 sm:h-[88px] sm:w-[120px] xl:col-span-1 ${index === 6 ? "col-span-2 sm:col-start-3 xl:col-start-auto" : ""} ${brand.itemClassName || ""}`}
+                className={`relative h-20 w-28 scale-[1.3] justify-self-center sm:col-span-2 sm:h-[88px] sm:w-[120px] xl:col-span-1 ${index === 6 ? "sm:col-start-2 xl:col-start-auto" : ""} ${brand.itemClassName || ""}`}
               >
                 <Image
                   src={brand.logo}
