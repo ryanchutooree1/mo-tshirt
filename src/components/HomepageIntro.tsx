@@ -15,7 +15,13 @@ import { FaWhatsapp } from "react-icons/fa";
 import { getWhatsAppUrl } from "@/data/work";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 
-const trustedBrands = [
+const trustedBrands: Array<{
+  name: string;
+  logo: string;
+  alt: string;
+  imageClassName: string;
+  itemClassName?: string;
+}> = [
   {
     name: "Zoza Pastry & Coffee",
     logo: "/trusted-brands/zoza-pastry-and-coffee-logo.webp",
@@ -39,6 +45,13 @@ const trustedBrands = [
     logo: "/trusted-brands/escale-des-iles-restaurant-and-lodging-logo.webp",
     alt: "Escale des iles Restaurant & Lodging logo",
     imageClassName: "scale-[1.1]",
+  },
+  {
+    name: "Beauty Angel",
+    logo: "/trusted-brands/beauty-angel-logo.webp",
+    alt: "Beauty Angel logo",
+    imageClassName: "scale-[1.1]",
+    itemClassName: "!w-20 overflow-hidden rounded-full sm:!w-[88px]",
   },
 ];
 
@@ -164,21 +177,21 @@ export default function HomepageIntro() {
         className="relative z-10 mt-3 px-4 sm:mt-4 sm:px-6"
         aria-label="Trusted clients"
       >
-        <div className="mx-auto max-w-[1360px] rounded-[22px] border border-black/[0.04] bg-white/95 px-5 py-3 shadow-[0_18px_55px_rgba(44,35,25,0.08)] backdrop-blur-sm sm:flex sm:items-center sm:gap-8 sm:px-9 sm:py-3">
-          <p className="shrink-0 text-[11px] font-semibold uppercase leading-[1.45] tracking-[0.12em] text-[#96999f] sm:w-36">
+        <div className="mx-auto max-w-[1360px] rounded-[22px] border border-black/[0.04] bg-white/95 px-5 py-3 shadow-[0_18px_55px_rgba(44,35,25,0.08)] backdrop-blur-sm sm:px-9 sm:py-3 lg:flex lg:items-center lg:gap-8">
+          <p className="shrink-0 text-[11px] font-semibold uppercase leading-[1.45] tracking-[0.12em] text-[#96999f] lg:w-36">
             Trusted by
             <br />
             amazing brands
           </p>
-          <div className="hidden h-10 w-px shrink-0 bg-neutral-200/80 sm:block" aria-hidden="true" />
+          <div className="hidden h-10 w-px shrink-0 bg-neutral-200/80 lg:block" aria-hidden="true" />
           <ul
-            className="mt-4 grid w-full grid-cols-2 items-center gap-x-7 gap-y-7 sm:mt-0 sm:max-w-[610px] sm:flex-1 sm:grid-cols-4 sm:gap-8"
+            className="mt-4 grid w-full grid-cols-2 items-center gap-x-7 gap-y-7 sm:grid-cols-6 sm:gap-8 lg:mt-0 lg:max-w-[760px] lg:flex-1 lg:grid-cols-5"
             aria-label="Brands that trust MO T-SHIRT"
           >
-            {trustedBrands.map((brand) => (
+            {trustedBrands.map((brand, index) => (
               <li
                 key={brand.name}
-                className="relative h-20 w-28 scale-[1.3] justify-self-center sm:h-[88px] sm:w-[120px]"
+                className={`relative h-20 w-28 scale-[1.3] justify-self-center sm:col-span-2 sm:h-[88px] sm:w-[120px] lg:col-span-1 ${index === 3 ? "sm:col-start-2 lg:col-start-auto" : ""} ${index === 4 ? "col-span-2 lg:col-span-1" : ""} ${brand.itemClassName || ""}`}
               >
                 <Image
                   src={brand.logo}
