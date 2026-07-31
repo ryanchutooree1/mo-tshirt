@@ -20,25 +20,25 @@ const trustedBrands = [
     name: "Zoza Pastry & Coffee",
     logo: "/trusted-brands/zoza-pastry-and-coffee-logo.webp",
     alt: "Zoza Pastry & Coffee logo",
-    imageClassName: "scale-[1.35]",
+    imageClassName: "scale-[1.08]",
   },
   {
     name: "Le Rochester Restaurant & Auberge",
     logo: "/trusted-brands/le-rochester-restaurant-and-auberge-logo.webp",
     alt: "Le Rochester Restaurant & Auberge logo",
-    imageClassName: "scale-[1.24]",
+    imageClassName: "scale-[1.06]",
   },
   {
     name: "Shanti Ghar",
     logo: "/trusted-brands/shanti-ghar-logo.webp",
     alt: "Shanti Ghar logo",
-    imageClassName: "scale-[1.35]",
+    imageClassName: "scale-100",
   },
   {
     name: "Escale des iles Restaurant & Lodging",
     logo: "/trusted-brands/escale-des-iles-restaurant-and-lodging-logo.webp",
     alt: "Escale des iles Restaurant & Lodging logo",
-    imageClassName: "scale-[1.24]",
+    imageClassName: "scale-[1.06]",
   },
 ];
 
@@ -161,31 +161,31 @@ export default function HomepageIntro() {
       </section>
 
       <section
-        className="relative z-10 -mt-7 px-4 sm:-mt-5 sm:px-6"
-        aria-label="Trusted clients"
+        className="relative z-10 -mt-10 px-4 sm:-mt-12 sm:px-6"
+        aria-label="Clients de confiance"
       >
-        <div className="mx-auto max-w-[1400px] rounded-[24px] border border-black/5 bg-white px-5 py-4 shadow-[0_18px_50px_rgba(44,35,25,0.09)] sm:flex sm:items-center sm:gap-7 sm:px-10">
-          <p className="shrink-0 text-sm font-semibold leading-5 text-[#191919] sm:w-32">
-            Trusted by
+        <div className="mx-auto max-w-[1360px] rounded-[22px] border border-black/[0.04] bg-white/95 px-5 py-5 shadow-[0_18px_55px_rgba(44,35,25,0.08)] backdrop-blur-sm sm:flex sm:items-center sm:gap-8 sm:px-9 sm:py-5">
+          <p className="shrink-0 text-[11px] font-semibold uppercase leading-[1.45] tracking-[0.12em] text-neutral-500 sm:w-36">
+            Ils nous font
             <br />
-            amazing brands
+            confiance
           </p>
-          <div className="hidden h-16 w-px shrink-0 bg-neutral-200 sm:block" aria-hidden="true" />
+          <div className="hidden h-12 w-px shrink-0 bg-neutral-200/80 sm:block" aria-hidden="true" />
           <ul
-            className="mt-5 flex w-full snap-x snap-mandatory items-center gap-6 overflow-x-auto pb-2 sm:mt-0 sm:flex-1 sm:gap-10"
-            aria-label="Brands that trust MO T-SHIRT"
+            className="mt-4 grid w-full grid-cols-2 items-center gap-x-7 gap-y-4 sm:mt-0 sm:max-w-[610px] sm:flex-1 sm:grid-cols-4 sm:gap-8"
+            aria-label="Marques qui font confiance à MO T-SHIRT"
           >
             {trustedBrands.map((brand) => (
               <li
                 key={brand.name}
-                className="relative h-28 w-28 shrink-0 snap-start overflow-hidden rounded-full"
+                className="relative h-14 w-20 justify-self-center sm:h-16 sm:w-24"
               >
                 <Image
                   src={brand.logo}
                   alt={brand.alt}
                   fill
-                  sizes="112px"
-                  className={`object-cover ${brand.imageClassName}`}
+                  sizes="(max-width: 640px) 80px, 96px"
+                  className={`object-contain ${brand.imageClassName}`}
                 />
               </li>
             ))}
