@@ -49,6 +49,7 @@ import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } fro
 import { removeBackgroundAutomatically } from "@/lib/automatic-background-removal";
 import { formatMoney } from "@/lib/money";
 import { uploadPublicArtwork } from "@/lib/public-artwork-upload";
+import { getMinimumOrderAdjustment } from "@/lib/design-studio-pricing";
 import {
   renderDesignStudioMockup,
   sideHasVisibleDesign,
@@ -303,9 +304,14 @@ export default function PremiumDesignStudioClient({
   }, 0);
   const printUnitPrice = hasCustomization ? method.add + Math.max(0, decoratedSides - 1) * 35 : 0;
   const productionSubtotal = Math.round((garmentSubtotal + printUnitPrice * totalQty) * (1 - discount));
-  const setupFee = hasCustomization && totalQty > 0 && totalQty < product.min ? 750 : 0;
+  const minimumOrderAdjustment = getMinimumOrderAdjustment({
+    hasCustomization,
+    totalQty,
+    minimumQuantity: product.min,
+    productionSubtotal,
+  });
   const rushFee = hasCustomization && rush ? Math.round(productionSubtotal * 0.12) : 0;
-  const totalPrice = productionSubtotal + setupFee + rushFee;
+  const totalPrice = productionSubtotal + minimumOrderAdjustment + rushFee;
   const printMethodLabel = hasCustomization ? method.label : "No customization";
   const needsDelivery = delivery !== DELIVERY_OPTIONS[0];
   const canSubmit = totalQty > 0 && client.name.trim() !== "" && (client.email.trim() !== "" || client.phone.trim() !== "") && (!needsDelivery || (client.deliveryName.trim() !== "" && client.address.trim() !== ""));
