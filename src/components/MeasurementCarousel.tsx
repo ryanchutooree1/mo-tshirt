@@ -3,40 +3,61 @@
 import { useRef, useState } from "react";
 import ZoomableImage from "@/components/ZoomableImage";
 
-const measurementGuides = [
-  {
-    label: "T-Shirt",
-    src: "/T-Shirt%20Measurement.webp",
-    alt: "T-shirt measurement guide for adult sizes XS to 4XL",
-  },
-  {
-    label: "Polo Shirt",
-    src: "/Polo-Shirt-Measurement.webp",
-    alt: "Polo shirt measurement guide for adult sizes XS to 4XL",
-  },
-] as const;
+const measurementGuides = {
+  adult: [
+    {
+      label: "T-Shirt",
+      src: "/T-Shirt%20Measurement.webp",
+      alt: "T-shirt measurement guide for adult sizes XS to 4XL",
+    },
+    {
+      label: "Polo Shirt",
+      src: "/Polo-Shirt-Measurement.webp",
+      alt: "Polo shirt measurement guide for adult sizes XS to 4XL",
+    },
+  ],
+  kids: [
+    {
+      label: "T-Shirt",
+      src: "/Kids%20T-Shirt%20Measurement.webp",
+      alt: "Kids T-shirt measurement guide for ages 1 to 14 years",
+    },
+    {
+      label: "Polo Shirt",
+      src: "/Kids-Polo-Shirt-Measurement.webp",
+      alt: "Kids polo shirt measurement guide for ages 1 to 14 years",
+    },
+  ],
+} as const;
+
+type MeasurementCarouselProps = {
+  variant?: keyof typeof measurementGuides;
+};
 
 const SWIPE_THRESHOLD = 45;
 
-export default function MeasurementCarousel() {
+export default function MeasurementCarousel({
+  variant = "adult",
+}: MeasurementCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const touchStartX = useRef<number | null>(null);
+  const guides = measurementGuides[variant];
 
   const showPrevious = () => {
     setActiveIndex((current) =>
-      current === 0 ? measurementGuides.length - 1 : current - 1,
+      current === 0 ? guides.length - 1 : current - 1,
     );
   };
 
   const showNext = () => {
-    setActiveIndex((current) => (current + 1) % measurementGuides.length);
+    setActiveIndex((current) => (current + 1) % guides.length);
   };
 
-  const activeGuide = measurementGuides[activeIndex];
+  const activeGuide = guides[activeIndex];
 
   return (
     <section
-      aria-label="Garment measurement guides"
+      aria-label={`${variant === "kids" ? "Kids" : "Adult"} garment measurement guides`}
       aria-roledescription="carousel"
       className="w-full"
       onKeyDown={(event) => {
@@ -114,7 +135,7 @@ export default function MeasurementCarousel() {
         role="group"
         aria-label="Choose a measurement guide"
       >
-        {measurementGuides.map((guide, index) => {
+        {guides.map((guide, index) => {
           const isActive = index === activeIndex;
 
           return (
@@ -138,7 +159,7 @@ export default function MeasurementCarousel() {
 
       <p className="sr-only" aria-live="polite" aria-atomic="true">
         Showing {activeGuide.label} measurement guide, slide {activeIndex + 1} of{" "}
-        {measurementGuides.length}
+        {guides.length}
       </p>
     </section>
   );

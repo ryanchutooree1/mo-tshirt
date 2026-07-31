@@ -20,7 +20,6 @@ import QuoteForm from "@/components/QuoteForm";
 import MeasurementCarousel from "@/components/MeasurementCarousel";
 import PremiumDesignStudioClient from "@/components/PremiumDesignStudioClient";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
-import ZoomableImage from "@/components/ZoomableImage";
 
 const pageTitle = "MO T-SHIRT PRINTING | Fastest in Mauritius";
 const pageDescription =
@@ -243,16 +242,8 @@ export default function HomePage() {
             </div>
             <div className="mt-6 w-full max-w-5xl">
               <div className="grid gap-6 sm:grid-cols-2">
-                <MeasurementCarousel />
-                <ZoomableImage
-                  src="/Kids%20T-Shirt%20Measurement.webp"
-                  alt="Kids T-shirt measurement guide"
-                  width={1536}
-                  height={1024}
-                  sizes="(max-width: 640px) 100vw, 50vw"
-                  wrapperClassName="rounded-[28px] border border-[#EAEAEA] bg-white shadow-sm"
-                  imageClassName="cursor-zoom-in"
-                />
+                <MeasurementCarousel variant="adult" />
+                <MeasurementCarousel variant="kids" />
               </div>
             </div>
           </div>
