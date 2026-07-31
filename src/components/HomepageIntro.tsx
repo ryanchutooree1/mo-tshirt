@@ -51,7 +51,7 @@ const trustedBrands: Array<{
     logo: "/trusted-brands/beauty-angel-logo.webp",
     alt: "Beauty Angel logo",
     imageClassName: "scale-[1.1]",
-    itemClassName: "!w-20 overflow-hidden rounded-full sm:!w-[88px]",
+    itemClassName: "!w-20 !scale-100 overflow-hidden rounded-full sm:!w-[88px]",
   },
 ];
 
