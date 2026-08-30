@@ -14,13 +14,16 @@ import { db } from "@/lib/firebase";
 import { isAdminRequest } from "@/lib/admin-request";
 import {
   TANVI_HOUSE_INVENTORY_COLLECTION,
+  STARTER_GROCERY_ITEMS,
   mapTanviHouseInventoryItem,
   parseHouseInventoryCreate,
+  shoppingCompatibilityFields,
 } from "@/lib/tanvi-house-inventory";
 
 export const dynamic = "force-dynamic";
 
 const API_PATH = "/api/admin/tanvi/house-inventory";
+const STARTER_MARKER_ID = "__seed-tanvi-grocery-budget-v1";
 
 export async function GET() {
   if (!(await isAdminRequest(API_PATH))) {
@@ -32,17 +35,71 @@ export async function GET() {
       query(
         collection(db, TANVI_HOUSE_INVENTORY_COLLECTION),
         orderBy("updatedAtIso", "desc"),
-        limit(300)
+        limit(1000)
       )
     );
-    const items = snapshot.docs.map((entry) =>
+    const starterAlreadyLoaded = snapshot.docs.some(
+      (entry) => entry.id === STARTER_MARKER_ID
+    );
+    const items = snapshot.docs
+      .filter((entry) => entry.id !== STARTER_MARKER_ID)
+      .map((entry) =>
       mapTanviHouseInventoryItem(
         entry.id,
         entry.data() as Record<string, unknown>
       )
+      );
+
+    const existingNames = new Set(
+      items.map((item) => item.name.trim().toLocaleLowerCase("en"))
     );
+    const missingStarterItems = starterAlreadyLoaded
+      ? []
+      : STARTER_GROCERY_ITEMS.filter(
+          (item) => !existingNames.has(item.name.toLocaleLowerCase("en"))
+        );
+
+    if (!starterAlreadyLoaded) {
+      const batch = writeBatch(db);
+      const nowIso = new Date().toISOString();
+      missingStarterItems.forEach((starter) => {
+        const itemData = {
+          name: starter.name,
+          category: starter.category,
+          stockQuantity: "",
+          stockLevel: "unknown" as const,
+          ...shoppingCompatibilityFields("later"),
+          buyQuantity: starter.buyQuantity,
+          budgetMin: starter.budgetMin,
+          budgetMax: starter.budgetMax,
+          seedSource: "tanvi-grocery-budget-v1",
+          createdAt: serverTimestamp(),
+          createdAtIso: nowIso,
+          updatedAt: serverTimestamp(),
+          updatedAtIso: nowIso,
+        };
+        batch.set(
+          doc(db, TANVI_HOUSE_INVENTORY_COLLECTION, `starter-${starter.key}`),
+          itemData,
+          { merge: true }
+        );
+        items.push(
+          mapTanviHouseInventoryItem(`starter-${starter.key}`, itemData)
+        );
+      });
+      batch.set(doc(db, TANVI_HOUSE_INVENTORY_COLLECTION, STARTER_MARKER_ID), {
+        recordType: "seed-marker",
+        seedSource: "tanvi-grocery-budget-v1",
+        createdAt: serverTimestamp(),
+        createdAtIso: nowIso,
+        updatedAt: serverTimestamp(),
+        updatedAtIso: nowIso,
+      });
+      await batch.commit();
+    }
+
     return NextResponse.json(
-      { items },
+      { items: items.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)) },
       { headers: { "Cache-Control": "no-store" } }
     );
   } catch (error) {
@@ -71,8 +128,7 @@ export async function POST(request: Request) {
     const itemRef = doc(collection(db, TANVI_HOUSE_INVENTORY_COLLECTION));
     const itemData = {
       ...parsed.data,
-      needNow: false,
-      purchased: false,
+      ...shoppingCompatibilityFields(parsed.data.shoppingStatus),
       createdAt: serverTimestamp(),
       createdAtIso: nowIso,
       updatedAt: serverTimestamp(),
@@ -109,20 +165,22 @@ export async function PATCH(request: Request) {
     }
 
     const snapshot = await getDocs(
-      query(collection(db, TANVI_HOUSE_INVENTORY_COLLECTION), limit(300))
+      query(collection(db, TANVI_HOUSE_INVENTORY_COLLECTION), limit(1000))
     );
-    const purchasedEntries = snapshot.docs.filter((entry) =>
-      Boolean(entry.data().purchased)
+    const purchasedEntries = snapshot.docs.filter(
+      (entry) => mapTanviHouseInventoryItem(entry.id, entry.data()).shoppingStatus === "bought"
     );
 
     if (purchasedEntries.length) {
       const batch = writeBatch(db);
       const nowIso = new Date().toISOString();
       purchasedEntries.forEach((entry) => {
+        const item = mapTanviHouseInventoryItem(entry.id, entry.data());
         batch.update(entry.ref, {
           stockLevel: "high",
-          needNow: false,
-          purchased: false,
+          stockQuantity: item.buyQuantity || item.stockQuantity,
+          ...shoppingCompatibilityFields("none"),
+          lastBoughtAtIso: nowIso,
           updatedAt: serverTimestamp(),
           updatedAtIso: nowIso,
         });

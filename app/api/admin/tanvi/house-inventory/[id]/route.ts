@@ -12,6 +12,7 @@ import {
   TANVI_HOUSE_INVENTORY_COLLECTION,
   mapTanviHouseInventoryItem,
   parseHouseInventoryPatch,
+  shoppingCompatibilityFields,
 } from "@/lib/tanvi-house-inventory";
 
 export const dynamic = "force-dynamic";
@@ -50,14 +51,12 @@ export async function PATCH(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Inventory item not found." }, { status: 404 });
     }
 
-    const nextData = { ...parsed.data };
-    if (nextData.needNow === false) {
-      nextData.purchased = false;
-    } else if (nextData.purchased === true) {
-      nextData.needNow = true;
-    } else if (nextData.needNow === true) {
-      nextData.purchased = false;
-    }
+    const nextData = {
+      ...parsed.data,
+      ...(parsed.data.shoppingStatus
+        ? shoppingCompatibilityFields(parsed.data.shoppingStatus)
+        : {}),
+    };
 
     const nowIso = new Date().toISOString();
     await updateDoc(itemRef, {
