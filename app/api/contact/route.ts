@@ -15,6 +15,7 @@ import {
 import { getQuotationNotificationRecipients } from "@/lib/quotation-notification-settings";
 import { storePublicUploadBuffer } from "@/lib/public-upload-store";
 import { buildAutomaticQuotePricing } from "@/lib/quote-auto-pricing";
+import { normalizeQuotationUploadUrl } from "@/lib/quotation-upload-paths";
 import { SITE_URL } from "@/lib/seo";
 
 type ParsedPayload = {
@@ -89,12 +90,13 @@ function escapeHtml(value: string) {
 }
 
 function getAbsoluteAttachmentUrl(value: string | undefined) {
-  const url = String(value || "").trim();
+  const url = normalizeQuotationUploadUrl(value);
   if (!url) return "";
   try {
     const resolved = new URL(url, SITE_URL);
     const site = new URL(SITE_URL);
     const allowedPath =
+      resolved.pathname.startsWith("/api/quotation/uploads/") ||
       resolved.pathname.startsWith("/api/ai-assistant/uploads/") ||
       resolved.pathname.startsWith("/api/shops/uploads/");
     return resolved.origin === site.origin && allowedPath ? resolved.toString() : "";

@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { collection, doc, getDoc, getDocs, orderBy, query } from "firebase/firestore";
 import { isAdminRequest } from "@/lib/admin-request";
 import { db } from "@/lib/firebase";
+import {
+  LEGACY_QUOTATION_UPLOAD_COLLECTION,
+  QUOTATION_UPLOAD_COLLECTION,
+} from "@/lib/quotation-upload-paths";
 
 type FirestoreLike = Record<string, unknown>;
 
@@ -29,7 +33,13 @@ export async function GET(
   }
 
   try {
-    const metaSnap = await getDoc(doc(db, "aiAssistantUploads", cleanedUploadId));
+    const currentMetaSnap = await getDoc(doc(db, QUOTATION_UPLOAD_COLLECTION, cleanedUploadId));
+    let metaSnap = currentMetaSnap;
+    let uploadCollection = QUOTATION_UPLOAD_COLLECTION;
+    if (!currentMetaSnap.exists()) {
+      uploadCollection = LEGACY_QUOTATION_UPLOAD_COLLECTION;
+      metaSnap = await getDoc(doc(db, uploadCollection, cleanedUploadId));
+    }
     if (!metaSnap.exists()) {
       return NextResponse.json({ error: "Upload not found." }, { status: 404 });
     }
@@ -39,7 +49,7 @@ export async function GET(
     const contentType = cleanString(meta.contentType) || "application/octet-stream";
 
     const chunksSnap = await getDocs(
-      query(collection(db, "aiAssistantUploads", cleanedUploadId, "chunks"), orderBy("index", "asc"))
+      query(collection(db, uploadCollection, cleanedUploadId, "chunks"), orderBy("index", "asc"))
     );
 
     if (chunksSnap.empty) {

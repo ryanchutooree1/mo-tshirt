@@ -20,6 +20,7 @@
     "ai:reindex": "node --no-warnings scripts/ai-reindex.mjs",
     "ai:evaluate": "node --no-warnings scripts/ai-evaluate.mjs",
     "firestore:migrate-database": "node scripts/migrate-firestore-database.mjs",
+    "firestore:migrate-quotation-uploads": "node scripts/migrate-quotation-uploads.mjs",
     "test:ai-assistant": "node --no-warnings --test tests/ai-assistant.test.mjs",
     "test:pricing": "node --test tests/pricing.test.js tests/design-studio-pricing.test.js",
     "postbuild": "next-sitemap"

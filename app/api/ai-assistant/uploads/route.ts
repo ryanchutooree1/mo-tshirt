@@ -88,7 +88,7 @@ export async function POST(req: Request) {
       sessionId: upload.sessionId,
     });
   } catch (error) {
-    console.error("ai-assistant:public-upload", error);
+    console.error("quotation:public-upload", error);
     return NextResponse.json({ error: "Failed to upload logo." }, { status: 500 });
   }
 }

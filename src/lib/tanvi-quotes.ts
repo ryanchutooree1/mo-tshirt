@@ -19,6 +19,7 @@ import {
   sortQuoteColors,
   type QuoteGarmentLine,
 } from "@/lib/shops";
+import { normalizeQuotationUploadUrl } from "@/lib/quotation-upload-paths";
 
 type FirestoreTimestampLike = {
   toDate?: () => Date;
@@ -419,7 +420,7 @@ function sanitizeArtwork(attachments: RawAttachment[]): TanviArtworkAttachment[]
       filename: safeString(attachment.filename) || label || `artwork-${index + 1}`,
       contentType: safeString(attachment.contentType),
       size: safeNumber(attachment.size, 0) > 0 ? safeNumber(attachment.size, 0) : null,
-      url: safeString(attachment.url),
+      url: normalizeQuotationUploadUrl(attachment.url),
     };
   });
 }

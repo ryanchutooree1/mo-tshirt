@@ -211,7 +211,7 @@ export default function HomeAiOrder() {
       formData.append("sessionId", sessionId);
 
       const result = await readJson<{ attachment: AssistantAttachment; sessionId: string }>(
-        await fetch("/api/ai-assistant/uploads", {
+        await fetch("/api/quotation/uploads", {
           method: "POST",
           body: formData,
         })

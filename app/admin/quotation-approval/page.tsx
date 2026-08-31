@@ -65,6 +65,7 @@ import {
   type QuoteGarmentLine as QuoteGarmentRequestLine,
 } from "@/lib/shops";
 import { buildAutomaticQuotePricing } from "@/lib/quote-auto-pricing";
+import { normalizeQuotationUploadUrl } from "@/lib/quotation-upload-paths";
 import {
   DEFAULT_PRODUCTION_MANAGER,
   DEFAULT_PARTNER_VISIBLE_FIELDS,
@@ -1043,6 +1044,13 @@ const parseDesignBrief = (value: unknown): DesignBrief | null => {
 
 const getQuoteAttachments = (quote: QuoteRecord | null | undefined) => {
   if (!quote) return [] as QuoteAttachment[];
+  const normalizeAttachment = (attachment: QuoteAttachment): QuoteAttachment => ({
+    ...attachment,
+    ...(attachment.url ? { url: normalizeQuotationUploadUrl(attachment.url) } : {}),
+    ...(attachment.originalUrl
+      ? { originalUrl: normalizeQuotationUploadUrl(attachment.originalUrl) }
+      : {}),
+  });
   const preferOpenableAttachments = (attachments: QuoteAttachment[]) => {
     const openableAttachments = attachments.filter((attachment) => attachment.url);
     return openableAttachments.length ? openableAttachments : attachments;
@@ -1051,9 +1059,9 @@ const getQuoteAttachments = (quote: QuoteRecord | null | undefined) => {
     const attachments = quote.attachments.filter(
       (entry) => Boolean(entry?.filename || entry?.url || entry?.label || entry?.description || entry?.quantity)
     );
-    return preferOpenableAttachments(attachments);
+    return preferOpenableAttachments(attachments.map(normalizeAttachment));
   }
-  if (quote.attachment) return [quote.attachment];
+  if (quote.attachment) return [normalizeAttachment(quote.attachment)];
   return [] as QuoteAttachment[];
 };
 

@@ -36,6 +36,10 @@ import {
   type AssistantTrainingSnapshot,
 } from "@/lib/ai-assistant";
 import { db } from "@/lib/firebase";
+import {
+  getQuotationUploadUrl,
+  QUOTATION_UPLOAD_COLLECTION,
+} from "@/lib/quotation-upload-paths";
 import type {
   AssistantChatPayload,
   AssistantKnowledgeRecord,
@@ -99,7 +103,7 @@ function formatAttachmentSize(value: number | null) {
 }
 
 function buildFallbackUploadUrl(uploadId: string) {
-  return `/api/admin/ai-assistant/uploads/${encodeURIComponent(uploadId)}`;
+  return getQuotationUploadUrl(uploadId);
 }
 
 function chunkString(value: string, size: number) {
@@ -127,7 +131,7 @@ async function storeLogoUploadInternally(sessionId: string, file: File): Promise
   const uploadId = `${sessionId}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   const base64 = arrayBufferToBase64(await file.arrayBuffer());
   const chunks = chunkString(base64, FALLBACK_UPLOAD_CHUNK_SIZE);
-  const metaRef = doc(db, "aiAssistantUploads", uploadId);
+  const metaRef = doc(db, QUOTATION_UPLOAD_COLLECTION, uploadId);
 
   await setDoc(metaRef, {
     uploadId,
@@ -143,7 +147,7 @@ async function storeLogoUploadInternally(sessionId: string, file: File): Promise
 
   const batch = writeBatch(db);
   chunks.forEach((chunk, index) => {
-    batch.set(doc(db, "aiAssistantUploads", uploadId, "chunks", String(index).padStart(4, "0")), {
+    batch.set(doc(db, QUOTATION_UPLOAD_COLLECTION, uploadId, "chunks", String(index).padStart(4, "0")), {
       index,
       data: chunk,
     });

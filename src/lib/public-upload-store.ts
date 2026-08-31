@@ -9,6 +9,11 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import {
+  getQuotationUploadUrl,
+  LEGACY_QUOTATION_UPLOAD_COLLECTION,
+  QUOTATION_UPLOAD_COLLECTION,
+} from "@/lib/quotation-upload-paths";
 
 const CHUNK_SIZE = 700_000;
 const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -83,8 +88,14 @@ async function readAuthorizedChunkedUpload(uploadId: string, uploadToken: string
     throw new Error("Invalid upload authorization.");
   }
 
-  const uploadRef = doc(db, "aiAssistantUploads", cleanedUploadId);
-  const uploadSnap = await getDoc(uploadRef);
+  const currentUploadRef = doc(db, QUOTATION_UPLOAD_COLLECTION, cleanedUploadId);
+  const currentUploadSnap = await getDoc(currentUploadRef);
+  let uploadRef = currentUploadRef;
+  let uploadSnap = currentUploadSnap;
+  if (!currentUploadSnap.exists()) {
+    uploadRef = doc(db, LEGACY_QUOTATION_UPLOAD_COLLECTION, cleanedUploadId);
+    uploadSnap = await getDoc(uploadRef);
+  }
   if (!uploadSnap.exists()) throw new Error("Upload not found.");
 
   const upload = uploadSnap.data() as Record<string, unknown>;
@@ -121,7 +132,7 @@ export async function startPublicChunkedUpload(
   const chunkCount = Math.ceil(size / PUBLIC_UPLOAD_CHUNK_BYTES);
   const nowIso = new Date().toISOString();
 
-  await setDoc(doc(db, "aiAssistantUploads", uploadId), {
+  await setDoc(doc(db, QUOTATION_UPLOAD_COLLECTION, uploadId), {
     uploadId,
     sessionId,
     filename,
@@ -220,7 +231,7 @@ export async function completePublicChunkedUpload(
     contentType: cleanString(upload.contentType) || "application/octet-stream",
     size: expectedSize,
     uploadedAt,
-    url: `/api/ai-assistant/uploads/${encodeURIComponent(cleanString(upload.uploadId))}`,
+    url: getQuotationUploadUrl(cleanString(upload.uploadId)),
   };
 }
 
@@ -249,7 +260,7 @@ export async function storePublicUploadBuffer(input: StorePublicUploadInput) {
   const chunks = splitIntoChunks(base64, CHUNK_SIZE);
   const nowIso = new Date().toISOString();
 
-  await setDoc(doc(db, "aiAssistantUploads", uploadId), {
+  await setDoc(doc(db, QUOTATION_UPLOAD_COLLECTION, uploadId), {
     uploadId,
     sessionId,
     filename,
@@ -266,7 +277,7 @@ export async function storePublicUploadBuffer(input: StorePublicUploadInput) {
     batch.set(
       doc(
         db,
-        "aiAssistantUploads",
+        QUOTATION_UPLOAD_COLLECTION,
         uploadId,
         "chunks",
         String(index).padStart(4, "0")
@@ -286,6 +297,6 @@ export async function storePublicUploadBuffer(input: StorePublicUploadInput) {
     contentType,
     size,
     uploadedAt: nowIso,
-    url: `/api/ai-assistant/uploads/${encodeURIComponent(uploadId)}`,
+    url: getQuotationUploadUrl(uploadId),
   };
 }

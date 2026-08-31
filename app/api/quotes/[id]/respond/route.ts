@@ -14,6 +14,7 @@ import {
   isRequestOriginAllowed,
 } from "@/lib/request-safety";
 import { storePublicUploadBuffer } from "@/lib/public-upload-store";
+import { normalizeQuotationUploadUrl } from "@/lib/quotation-upload-paths";
 
 const MAX_PAYMENT_SCREENSHOT_BYTES = 8 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -27,7 +28,7 @@ function cleanString(value: unknown, maxLength = 4_000) {
 function cleanPaymentEvidence(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
-  const url = cleanString(raw.url, 2_000);
+  const url = normalizeQuotationUploadUrl(cleanString(raw.url, 2_000));
   if (!url) return null;
   return {
     uploadId: cleanString(raw.uploadId, 200),
@@ -41,7 +42,7 @@ function cleanPaymentEvidence(value: unknown) {
 function cleanQuotationDocument(value: unknown) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
-  const url = cleanString(raw.url, 2_000);
+  const url = normalizeQuotationUploadUrl(cleanString(raw.url, 2_000));
   if (!url) return null;
   return {
     url,

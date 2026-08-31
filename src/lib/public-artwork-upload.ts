@@ -29,7 +29,7 @@ export async function uploadPublicArtwork(input: {
   sessionId: string;
 }) {
   const created = await readJson(
-    await fetch("/api/ai-assistant/uploads", {
+    await fetch("/api/quotation/uploads", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -50,7 +50,7 @@ export async function uploadPublicArtwork(input: {
     throw new Error("Artwork upload could not be started.");
   }
 
-  const uploadUrl = `/api/ai-assistant/uploads/${encodeURIComponent(created.uploadId)}`;
+  const uploadUrl = `/api/quotation/uploads/${encodeURIComponent(created.uploadId)}`;
   let index = 0;
   for (let offset = 0; offset < input.file.size; offset += created.chunkSize) {
     await readJson(

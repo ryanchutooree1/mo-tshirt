@@ -7,6 +7,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { normalizeQuotationUploadUrl } from "@/lib/quotation-upload-paths";
 import { getPrintPartnerById } from "@/lib/partner-registry";
 import {
   getPrintPartner,
@@ -352,7 +353,7 @@ function sanitizeAttachments(attachments: QuoteAttachment[]) {
         label: attachment.label || attachment.description || `Artwork ${index + 1}`,
         filename: attachment.filename || `artwork-${index + 1}`,
         contentType: attachment.contentType || "",
-        ...(attachment.url ? { url: attachment.url } : {}),
+        ...(attachment.url ? { url: normalizeQuotationUploadUrl(attachment.url) } : {}),
         quantity:
           attachment.quantity === undefined || attachment.quantity === null
             ? undefined

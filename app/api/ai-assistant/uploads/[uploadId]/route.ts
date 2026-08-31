@@ -7,6 +7,10 @@ import {
   storePublicUploadChunk,
 } from "@/lib/public-upload-store";
 import {
+  LEGACY_QUOTATION_UPLOAD_COLLECTION,
+  QUOTATION_UPLOAD_COLLECTION,
+} from "@/lib/quotation-upload-paths";
+import {
   isContentLengthWithinLimit,
   isRequestOriginAllowed,
 } from "@/lib/request-safety";
@@ -48,7 +52,7 @@ export async function PUT(
     });
     return NextResponse.json({ ok: true, index });
   } catch (error) {
-    console.error("ai-assistant:public-upload:chunk", error);
+    console.error("quotation:public-upload:chunk", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to upload artwork." },
       { status: 400 }
@@ -79,7 +83,7 @@ export async function PATCH(
       sessionId: upload.sessionId,
     });
   } catch (error) {
-    console.error("ai-assistant:public-upload:complete", error);
+    console.error("quotation:public-upload:complete", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to finish artwork upload." },
       { status: 400 }
@@ -99,7 +103,13 @@ export async function GET(
   }
 
   try {
-    const metaSnap = await getDoc(doc(db, "aiAssistantUploads", cleanedUploadId));
+    const currentMetaSnap = await getDoc(doc(db, QUOTATION_UPLOAD_COLLECTION, cleanedUploadId));
+    let metaSnap = currentMetaSnap;
+    let uploadCollection = QUOTATION_UPLOAD_COLLECTION;
+    if (!currentMetaSnap.exists()) {
+      uploadCollection = LEGACY_QUOTATION_UPLOAD_COLLECTION;
+      metaSnap = await getDoc(doc(db, uploadCollection, cleanedUploadId));
+    }
     if (!metaSnap.exists()) {
       return NextResponse.json({ error: "Upload not found." }, { status: 404 });
     }
@@ -112,7 +122,7 @@ export async function GET(
     const contentType = cleanString(meta.contentType) || "application/octet-stream";
 
     const chunksSnap = await getDocs(
-      query(collection(db, "aiAssistantUploads", cleanedUploadId, "chunks"), orderBy("index", "asc"))
+      query(collection(db, uploadCollection, cleanedUploadId, "chunks"), orderBy("index", "asc"))
     );
 
     if (chunksSnap.empty) {
@@ -142,7 +152,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("ai-assistant:public-upload:get", error);
+    console.error("quotation:public-upload:get", error);
     return NextResponse.json({ error: "Failed to load upload." }, { status: 500 });
   }
 }
