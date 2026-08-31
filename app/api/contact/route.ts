@@ -73,6 +73,12 @@ function isValidEmail(email: string) {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
 }
 
+function formatDeadline(value: unknown) {
+  const deadline = value === undefined || value === null ? "" : String(value).trim();
+  const isoDate = /^(\d{4})-(\d{2})-(\d{2})$/.exec(deadline);
+  return isoDate ? `${isoDate[3]}/${isoDate[2]}/${isoDate[1]}` : deadline;
+}
+
 function escapeHtml(value: string) {
   return value
     .replace(/&/g, "&amp;")
@@ -406,6 +412,7 @@ export async function POST(req: Request) {
         ? safeNotes
         : safeMessage;
     const sourceValue = formatValue(source);
+    const formattedDeadline = formatDeadline(deadline);
     const parsedGarments: QuoteGarmentLine[] = (() => {
       if (!garments) return [];
       if (Array.isArray(garments)) return garments;
@@ -609,7 +616,7 @@ export async function POST(req: Request) {
       "Order Details:",
       `  Garments: ${garmentsSummary}`,
       `  Print method: ${formatValue(printMethod)}`,
-      `  Deadline: ${formatValue(deadline)}`,
+      `  Deadline: ${formatValue(formattedDeadline)}`,
       `  Notes: ${formatValue(notesValue)}`,
       `  Delivery: ${formatValue(delivery)}`,
     ];
@@ -643,7 +650,7 @@ export async function POST(req: Request) {
     const orderRows: [string, unknown][] = [
       ["Garments", garmentsSummary],
       ["Print method", printMethod],
-      ["Deadline", deadline],
+      ["Deadline", formattedDeadline],
       ["Notes", notesValue],
       ["Delivery", delivery],
     ];
