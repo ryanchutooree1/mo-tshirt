@@ -143,11 +143,12 @@
   flex-shrink: 0;
   background: linear-gradient(
     to bottom,
-    #be1230 0% 25%,
-    #062e65 25% 50%,
-    #f7b52b 50% 75%,
-    #006b49 75% 100%
+    #ff304f 0% 25%,
+    #2375ff 25% 50%,
+    #ffe02b 50% 75%,
+    #00cf72 75% 100%
   );
+  box-shadow: 0 0 0 1px #ffffff80;
 }
 .announcement {
   color: #fff;
