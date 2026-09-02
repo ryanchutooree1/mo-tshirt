@@ -358,8 +358,8 @@
 .brandTrack {
   display: flex;
   width: 200%;
-  min-width: 1600px;
-  animation: brand-scroll-right 28s linear infinite;
+  min-width: 2800px;
+  animation: brand-scroll-right 40s linear infinite;
 }
 .brandGroup {
   display: flex;
@@ -375,6 +375,20 @@
   font-size: 19px;
   letter-spacing: -0.055em;
   font-weight: 600;
+}
+.brandLogo {
+  display: block;
+  width: 80px;
+  height: 80px;
+  overflow: hidden;
+  border-radius: 50%;
+}
+.brandLogo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.1);
 }
 .brandViewport:hover .brandTrack,
 .brandViewport:focus-within .brandTrack { animation-play-state: paused; }
@@ -1161,7 +1175,8 @@
   .brandViewport {
     margin-top: 23px;
   }
-  .brandTrack { min-width: 1440px; }
+  .brandTrack { min-width: 2560px; }
+  .brandLogo { width: 64px; height: 64px; }
   .brandGroup > span {
     font-size: 18px;
   }

@@ -25,6 +25,13 @@ export const metadata: Metadata = buildPageMetadata({
   path: "/",
 });
 
+const clientLogoImages = [
+  { name: "Beauty Angel", src: "/trusted-brands/beauty-angel-logo.webp" },
+  { name: "Chez Yoh", src: "/trusted-brands/chez-yoh-logo.webp" },
+  { name: "Razz Grill", src: "/trusted-brands/razz-grill-logo.webp" },
+  { name: "Prit Fitness", src: "/trusted-brands/prit-fitness-logo.webp" },
+];
+
 const services = [
   {
     title: "Business uniforms",
@@ -218,6 +225,18 @@ export default function HomePage() {
                       zoza<small>PASTRY & COFFEE</small>
                     </span>
                     <span>Escale des Îles</span>
+                    {clientLogoImages.map((brand) => (
+                      <span className={editorial.brandLogo} key={brand.name}>
+                        <Image
+                          src={brand.src}
+                          alt={`${brand.name} logo`}
+                          width={80}
+                          height={80}
+                          sizes="(max-width: 760px) 64px, 80px"
+                          loading="eager"
+                        />
+                      </span>
+                    ))}
                   </div>
                 ))}
               </div>
