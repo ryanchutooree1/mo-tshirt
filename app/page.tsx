@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { FaWhatsapp } from "react-icons/fa";
 import {
   ArrowDown,
   ArrowDownRight,
@@ -21,9 +22,9 @@ import { buildPageMetadata } from "@/lib/seo";
 import styles from "./home.module.css";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "MO T-SHIRT | Your brand. Worn well.",
+  title: "MO T-SHIRT | Custom T-shirt Printing in Mauritius",
   description:
-    "Custom T-shirts, polos and hoodies printed in Mauritius. Send your design, get a quote and arrange island-wide delivery.",
+    "Custom T-shirts, polos, caps and hoodies printed in Mauritius. Trusted by 80+ businesses. Send your design on WhatsApp or request a quote.",
   path: "/",
 });
 
@@ -81,6 +82,12 @@ const process = [
     title: "Delivery",
     copy: "Collect in Surinam or get it delivered.",
   },
+];
+const heroBenefits = [
+  { value: "80+", label: "Business clients" },
+  { value: "5–7 days", label: "Standard (working days)" },
+  { value: "Quality prints", label: "Made to last" },
+  { value: "Island-wide", label: "Delivery in Mauritius" },
 ];
 const faqs = [
   {
@@ -141,31 +148,51 @@ export default function HomePage() {
         <section className={styles.hero} aria-labelledby="hero-title">
           <div className={styles.heroCopy}>
             <p className={styles.eyebrow}>
-              CUSTOM APPAREL · MAURITIUS <span>↗</span>
+              PROUDLY MAURITIAN <span aria-hidden="true">↗</span>
             </p>
             <h1 id="hero-title">
-              Your brand.
+              T-shirt printing.
               <br />
-              Worn well.
+              Done right<span className={styles.heroAccent}>.</span>
             </h1>
             <p className={styles.heroDescription}>
-              Custom T-shirts, polos and hoodies.
+              T-shirts, polos, caps &amp; hoodies.
               <br />
-              Your logo. Our printing. Island-wide delivery.
+              Printed for your business, team or event.
             </p>
             <div className={styles.heroActions}>
-              <a href="#contact" className={styles.primaryButton}>
-                Get a quote <ArrowUpRight size={19} />
+              <TrackedWhatsAppLink
+                href={getWhatsAppUrl(
+                  "Hi, I would like a quote for custom printing. Product: / Quantity: / Deadline:",
+                )}
+                trackingLocation="home_hero"
+                trackingSource="homepage"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.primaryButton}
+              >
+                <span className={styles.buttonLabel}>
+                  <FaWhatsapp size={19} aria-hidden="true" /> Chat on WhatsApp
+                </span>
+                <ArrowUpRight size={18} aria-hidden="true" />
+              </TrackedWhatsAppLink>
+              <a href="#contact" className={styles.heroQuoteButton}>
+                Get a quote <ArrowUpRight size={17} aria-hidden="true" />
               </a>
-              <Link href="/design-studio" className={styles.textButton}>
-                Create your design <ArrowUpRight size={16} />
-              </Link>
             </div>
+            <dl className={styles.heroBenefits} aria-label="Why order with us">
+              {heroBenefits.map((benefit) => (
+                <div key={benefit.label}>
+                  <dt>{benefit.label}</dt>
+                  <dd>{benefit.value}</dd>
+                </div>
+              ))}
+            </dl>
             <div className={styles.heroBottom}>
               <span>
                 SURINAM, MAURITIUS
                 <br />
-                <strong>Collection or island-wide delivery.</strong>
+                <strong>Your local print partner.</strong>
               </span>
               <a href="#how-it-works" aria-label="See how to order">
                 <ArrowDown size={23} />
@@ -174,15 +201,15 @@ export default function HomePage() {
           </div>
           <div className={styles.heroVisual}>
             <Image
-              src="/editorial/navy-studio.png"
-              alt="Midnight navy T-shirt and neatly folded polos in a minimal architectural studio"
+              src="/editorial/custom-apparel-range.png"
+              alt="Navy polo, black T-shirt and cap, and ivory hoodie with custom logo prints in a minimal studio"
               fill
               priority
               sizes="(max-width: 760px) 100vw, 48vw"
               className={styles.heroImage}
             />
             <span className={styles.imageLabel}>
-              T-SHIRTS / POLOS / HOODIES
+              YOUR LOGO. ON EVERY PIECE.
             </span>
             <span className={styles.imageIndex}>MO / 01</span>
           </div>

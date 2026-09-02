@@ -6,6 +6,14 @@ The changes are limited to the homepage, its two small interactive components an
 
 ## Direct ordering flow
 
+### Hero concept
+
+The hero now brings the old homepage's commercial structure into the new visual direction: a clear printing offer, the complete T-shirt/polo/cap/hoodie range, direct WhatsApp contact, a quote action and compact service proof. The 80+ business figure comes from the existing `HomepageIntro` copy. Turnaround uses the existing FAQ's standard 5–7 working days. Orange is limited to small accents.
+
+The new hero asset is `public/editorial/custom-apparel-range.png`, generated with the built-in image generation tool. It is an illustrative product scene; existing customer-work photography remains separate. The generation prompt is in `docs/custom-apparel-range-image.md`.
+
+### Buying steps
+
 The four-step buying image now sits immediately below the hero, replacing the previous text-only process section. A white section blends with the artwork, while the surrounding page keeps the ivory, black and restrained orange palette. Desktop shows the full illustration with one short instruction per step. Mobile adds readable numbered step labels in a two-column grid. The process is also available as a semantic ordered list.
 
 The primary action is consistently **Get a quote**. The hero states the products and delivery coverage; service, work, collection and contact copy is shorter and more specific. Existing contact and design-studio destinations are retained.
@@ -20,7 +28,7 @@ The homepage links to the existing shop and design studio. The full quotation fo
 
 ## Image provenance
 
-Saved project asset: `public/editorial/navy-studio.png`.
+Previous hero asset, retained in the project: `public/editorial/navy-studio.png`.
 Generated using the built-in image generation tool. The image is a styled apparel concept; the Le Rochester section retains existing actual project photography. The supplied lifestyle photos were used to understand the direction and are not published on the page.
 
 Prompt:
