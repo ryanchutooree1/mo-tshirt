@@ -1,10 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, ArrowUpRight } from "lucide-react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { ArrowLeft, ArrowRight, ArrowUpRight, Pause, Play } from "lucide-react";
 import type { Swiper as SwiperInstance } from "swiper";
-import { A11y } from "swiper/modules";
+import { A11y, Autoplay } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { getWhatsAppUrl, workImages } from "@/data/work";
@@ -24,21 +24,33 @@ const projects = [
   { title: "Zoza Pastry & Coffee", detail: "Tees & caps", alt: "Black Zoza Pastry and Coffee T-shirt and matching printed caps" },
 ];
 
+const motionQuery = "(prefers-reduced-motion: reduce)";
+function subscribeToMotionPreference(onChange: () => void) {
+  const preference = window.matchMedia(motionQuery);
+  preference.addEventListener("change", onChange);
+  return () => preference.removeEventListener("change", onChange);
+}
+const getReducedMotion = () => window.matchMedia(motionQuery).matches;
+const getServerReducedMotion = () => false;
+
 export default function HomeWorkCarousel() {
   const swiperRef = useRef<SwiperInstance | null>(null);
   const speedRef = useRef(450);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [hasFocus, setHasFocus] = useState(false);
+  const reducedMotion = useSyncExternalStore(subscribeToMotionPreference, getReducedMotion, getServerReducedMotion);
+  const shouldAutoplay = !isPaused && !isHovered && !hasFocus && !reducedMotion;
 
   useEffect(() => {
-    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const updateSpeed = () => {
-      speedRef.current = preference.matches ? 0 : 450;
-      if (swiperRef.current) swiperRef.current.params.speed = speedRef.current;
-    };
-    updateSpeed();
-    preference.addEventListener("change", updateSpeed);
-    return () => preference.removeEventListener("change", updateSpeed);
-  }, []);
+    speedRef.current = reducedMotion ? 0 : 450;
+    const swiper = swiperRef.current;
+    if (!swiper) return;
+    swiper.params.speed = speedRef.current;
+    if (shouldAutoplay && !swiper.autoplay.running) swiper.autoplay.start();
+    else if (!shouldAutoplay && swiper.autoplay.running) swiper.autoplay.stop();
+  }, [reducedMotion, shouldAutoplay]);
 
   return (
     <section
@@ -46,6 +58,12 @@ export default function HomeWorkCarousel() {
       className={styles.section}
       aria-labelledby="work-carousel-title"
       aria-roledescription="carousel"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onFocusCapture={() => setHasFocus(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setHasFocus(false);
+      }}
       onKeyDown={(event) => {
         if (event.target !== swiperRef.current?.el) return;
         if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
@@ -78,7 +96,8 @@ export default function HomeWorkCarousel() {
       <Swiper
         id="work-carousel"
         className={styles.carousel}
-        modules={[A11y]}
+        modules={[A11y, Autoplay]}
+        autoplay={{ delay: 3000, disableOnInteraction: false }}
         slidesPerView="auto"
         spaceBetween={20}
         loop
@@ -138,9 +157,14 @@ export default function HomeWorkCarousel() {
           ))}
         </div>
         <div className={styles.navigation}>
-          <span className={styles.counter} aria-live="polite" aria-atomic="true">
+          <span className={styles.counter} aria-live={shouldAutoplay ? "off" : "polite"} aria-atomic="true">
             <strong>{String(activeIndex + 1).padStart(2, "0")}</strong> / {String(workImages.length).padStart(2, "0")}
           </span>
+          {!reducedMotion && (
+            <button type="button" aria-label={isPaused ? "Resume automatic slideshow" : "Pause automatic slideshow"} aria-controls="work-carousel" onClick={() => setIsPaused((paused) => !paused)}>
+              {isPaused ? <Play size={18} aria-hidden="true" /> : <Pause size={18} aria-hidden="true" />}
+            </button>
+          )}
           <button type="button" aria-label="Previous work image" aria-controls="work-carousel" onClick={() => swiperRef.current?.slidePrev()}><ArrowLeft size={20} aria-hidden="true" /></button>
           <button type="button" aria-label="Next work image" aria-controls="work-carousel" onClick={() => swiperRef.current?.slideNext()}><ArrowRight size={20} aria-hidden="true" /></button>
         </div>
