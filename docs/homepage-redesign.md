@@ -1,36 +1,31 @@
-# Homepage design review
+# Homepage: saved website with selected additions
 
-The homepage uses the supplied black service-list screenshot as its principal layout reference: oversized bold typography, fine dividers, numbered rows and generous space. The lifestyle references inform the architectural composition and a palette of ink black, warm ivory, cool grey and midnight navy.
+The homepage now uses the user-provided **MO T-SHIRT | Custom T-Shirt Printing Mauritius** website as its base.
 
-The changes are limited to the homepage, its two small interactive components and its editorial images. The existing admin, shop, design studio, quotation backend and authentication remain unchanged.
+## Source
 
-## Direct ordering flow
+- Saved HTML: `/Users/ryanchutooree/Downloads/MO T-SHIRT _ Custom T-Shirt Printing Mauritius.html`
+- Saved CSS and hero: the adjacent `MO T-SHIRT _ Custom T-Shirt Printing Mauritius_files` folder.
+- Local hero asset: `public/editorial/hero-founder.png`, copied without image editing.
 
-### Hero concept
+The saved announcement, navigation, “MAKE IT HAPPEN” hero, ticker, standard, four service rows, statement, order layout and footer are retained. Styles were copied from the saved website’s custom CSS and scoped to this homepage. Saved framework scripts are not included.
 
-The hero now brings the old homepage's commercial structure into the new visual direction: a clear printing offer, the complete T-shirt/polo/cap/hoodie range, direct WhatsApp contact, a quote action and compact service proof. The 80+ business figure comes from the existing `HomepageIntro` copy. Turnaround uses the existing FAQ's standard 5–7 working days. Orange is limited to small accents.
+## Selected additions
 
-The new hero asset is `public/editorial/custom-apparel-range.png`, generated with the built-in image generation tool. It is an illustrative product scene; existing customer-work photography remains separate. The generation prompt is in `docs/custom-apparel-range-image.md`.
+Only the three sections selected in the user’s screenshots were brought across from the earlier redesign:
 
-### Buying steps
+1. **Order in 4 steps** with `public/editorial/buying-flow-v2.png` and short step descriptions, replacing the saved website’s original process.
+2. The **Printed for** client strip.
+3. The **Made for Le Rochester** section using existing customer-work photography.
 
-The four-step buying image now sits immediately below the hero, replacing the previous text-only process section. A white section blends with the artwork, while the surrounding page keeps the ivory, black and restrained orange palette. Desktop shows the full illustration with one short instruction per step. Mobile adds readable numbered step labels in a two-column grid. The process is also available as a semantic ordered list.
+These sections remain responsive native page content, with functional links and accessible text. The prior product hero, collection, FAQ and contact layout are no longer displayed.
 
-The primary action is consistently **Get a quote**. The hero states the products and delivery coverage; service, work, collection and contact copy is shorter and more specific. Existing contact and design-studio destinations are retained.
+## Interactions
 
-Displayed buying-flow asset: `public/editorial/buying-flow-v2.png`. See `docs/buying-flow-image.md` for provenance and the edit prompt.
+The mobile menu uses a native disclosure with close-on-selection and Escape behavior. Section links stay on localhost. The saved compact quote form is connected to the existing `POST /api/contact` endpoint, with required fields, pending/error/success feedback and retained input after failures. The contact backend, admin, authentication, shop and design studio are unchanged.
 
 ## Local review
 
-Run `npm run dev -- --hostname 127.0.0.1 --port 3000` from this checkout and open **http://localhost:3000/**. Use the localhost hostname for the application's existing same-origin checks.
+Run `npm run dev -- --hostname 127.0.0.1 --port 3000` from this checkout and open **http://localhost:3000/**. Use localhost for the existing same-origin checks.
 
-The homepage links to the existing shop and design studio. The full quotation form loads when its disclosure is opened, and its state stays available when closed and reopened. Customer messages and quotation submissions were not sent during visual testing.
-
-## Image provenance
-
-Previous hero asset, retained in the project: `public/editorial/navy-studio.png`.
-Generated using the built-in image generation tool. The image is a styled apparel concept; the Le Rochester section retains existing actual project photography. The supplied lifestyle photos were used to understand the direction and are not published on the page.
-
-Prompt:
-
-> Use case: product-mockup. Asset type: portrait editorial hero photograph for a minimalist Mauritius custom T-shirt business homepage. Create a photorealistic, architecturally composed apparel still life inspired by a very minimal contemporary office and quiet luxury navy tailoring. In the centre a beautiful plain midnight navy cotton T-shirt with structured short sleeves on a polished steel hanger suspended from a straight thin chrome garment rail. To the lower right a precisely folded navy polo shirt and an ivory T-shirt on a matte white rectangular monolithic plinth. Restrained white and cool light grey plaster walls, pale grey stone floor, soft natural side light from a huge frosted window just outside the frame, a subtle warm ambient light accent at far left. Geometric modern luxury showroom. No wood, no plants, no tropical motifs, no rounded arches, no tan or green palette. Very tactile cotton fabric, deep inky blue, chalk white, cool grey, black shadows. Spare composition, the hanging navy T-shirt dominates the frame, entire shirt and hanger visible. Camera frontal eye level, 4:5 portrait image, fine fashion editorial photography. No people, no text, no typography, no logos, no watermark. Tasteful, precise, confident and minimal.
+The page is checked at desktop and phone widths, including the selected sections and mobile navigation. No live quotation or customer message is submitted during visual checks.

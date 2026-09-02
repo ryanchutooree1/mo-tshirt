@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useRef } from "react";
-import { ArrowUpRight } from "lucide-react";
+import { Menu } from "lucide-react";
 
 export default function HomeMobileMenu({ className }: { className: string }) {
   const menu = useRef<HTMLDetailsElement>(null);
@@ -21,9 +20,8 @@ export default function HomeMobileMenu({ className }: { className: string }) {
         }
       }}
     >
-      <summary aria-label="Open navigation">
-        <span />
-        <span />
+      <summary aria-label="Open menu">
+        <Menu size={24} aria-hidden="true" />
       </summary>
       <nav
         aria-label="Mobile navigation"
@@ -31,15 +29,10 @@ export default function HomeMobileMenu({ className }: { className: string }) {
           if ((event.target as HTMLElement).closest("a")) close();
         }}
       >
-        <a href="#what-we-print">What we print</a>
-        <a href="#collection">The collection</a>
-        <Link href="/design-studio">Design studio</Link>
-        <a href="#our-work">Our work</a>
-        <a href="#how-it-works">How to order</a>
-        <a href="#contact">
-          Get a quote <ArrowUpRight size={16} />
-        </a>
-        <Link href="/admin">Business admin</Link>
+        <a href="#services">What we print</a>
+        <a href="#process">How it works</a>
+        <a href="#standard">Our standard</a>
+        <a href="#order">Start an order</a>
       </nav>
     </details>
   );
