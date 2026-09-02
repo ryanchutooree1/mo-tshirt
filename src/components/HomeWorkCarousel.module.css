@@ -18,6 +18,7 @@
 .cta svg { color: #ff5a00; }
 .cta:hover { color: #d94800; }
 .carousel { overflow: visible; }
+.carousel :global(.swiper-wrapper) { transition-timing-function: linear; }
 .slide { width: calc((100% - 60px) / 3.15); height: auto; }
 .card { margin: 0; background: #fff; border: 1px solid #d8d5ce; }
 .photo { position: relative; height: clamp(350px, 41vw, 570px); margin: 12px 12px 0; background: #eae7e1; overflow: hidden; }
