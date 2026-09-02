@@ -61,6 +61,7 @@ import {
 } from "@/lib/design-studio-mockup";
 import { MobileStudioDock, type MobileStudioTool } from "@/components/MobileStudioDock";
 import LoadingImage from "@/components/LoadingImage";
+import uploadStyles from "./ArtworkUploadSlot.module.css";
 import {
   getMinSizePrice,
   getShopDesignProductId,
@@ -924,6 +925,8 @@ function ArtworkUploadSlot({
   onPosition,
 }: ArtworkUploadSlotProps) {
   const title = `${side[0].toUpperCase()}${side.slice(1)}`;
+  const [isDragging, setIsDragging] = useState(false);
+  const dragDepth = useRef(0);
   const [removalState, setRemovalState] = useState<BackgroundRemovalState>("idle");
   const [removalProgress, setRemovalProgress] = useState(0);
   const [removalMessage, setRemovalMessage] = useState("");
@@ -1020,11 +1023,23 @@ function ArtworkUploadSlot({
   }
 
   return (
-    <section className={`overflow-hidden rounded-[22px] border transition ${file ? "border-[#cbded3] bg-[#fbfefc]" : active ? "border-[#ffb48f] bg-[#fffaf7]" : "border-[#dfded8] bg-white"}`} aria-label={`${title} artwork upload`}>
-      <div className="flex items-center justify-between border-b border-[#ecebe6] px-4 py-3">
-        <div className="flex items-center gap-2.5"><span className={`flex h-8 w-8 items-center justify-center rounded-lg ${side === "front" ? "bg-[#fff0e8] text-[#e94f08]" : "bg-[#efefff] text-[#5551c8]"}`}><Shirt className="h-4 w-4" /></span><div><h3 className="text-sm font-extrabold">{title} artwork</h3><p className="text-[9px] font-bold uppercase tracking-[0.1em] text-[#97958e]">Printed on the {side}</p></div></div>
-        {file ? <span className="flex items-center gap-1 rounded-full bg-[#eaf8f0] px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.08em] text-[#13814f]"><CheckCircle2 className="h-3.5 w-3.5" />Ready</span> : <span className="rounded-full bg-[#f2f1ed] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.08em] text-[#8b8982]">Optional</span>}
-      </div>
+    <section
+      className={uploadStyles.card}
+      data-active={active}
+      data-ready={Boolean(file && url)}
+      data-dragging={isDragging}
+      aria-label={`${title} artwork upload`}
+    >
+      <header className={uploadStyles.header}>
+        <span className={uploadStyles.sideIcon} aria-hidden="true"><Shirt size={19} /></span>
+        <div className={uploadStyles.heading}>
+          <h3>{title} artwork</h3>
+          <p>{file ? "Your design is ready" : "Add a logo or illustration"}</p>
+        </div>
+        <span className={uploadStyles.badge}>
+          {file ? <><CheckCircle2 size={12} aria-hidden="true" /> Ready</> : active ? <><span className={uploadStyles.activeDot} /> In preview</> : "Optional"}
+        </span>
+      </header>
       {file && url ? (
         <div className="p-3.5">
           <div className="flex items-center gap-3">
@@ -1034,7 +1049,7 @@ function ArtworkUploadSlot({
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-extrabold">{file.name}</p>
               <p className="mt-1 text-[10px] text-[#86847d]">
-                {(file.size / 1024 / 1024).toFixed(2)} MB · Uploaded separately
+                {(file.size / 1024 / 1024).toFixed(2)} MB · Added to the {side}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
@@ -1169,19 +1184,41 @@ function ArtworkUploadSlot({
         <button
           type="button"
           onClick={onChoose}
-          onDragOver={(event) => event.preventDefault()}
+          aria-label={`Upload ${side} artwork`}
+          onDragEnter={(event) => {
+            event.preventDefault();
+            if (!event.dataTransfer.types.includes("Files")) return;
+            dragDepth.current += 1;
+            setIsDragging(true);
+          }}
+          onDragOver={(event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "copy";
+          }}
+          onDragLeave={(event) => {
+            event.preventDefault();
+            dragDepth.current = Math.max(0, dragDepth.current - 1);
+            if (dragDepth.current === 0) setIsDragging(false);
+          }}
           onDrop={(event) => {
             event.preventDefault();
+            dragDepth.current = 0;
+            setIsDragging(false);
             const droppedFile = event.dataTransfer.files?.[0];
             if (droppedFile) onDrop(droppedFile);
           }}
-          className="group flex min-h-36 w-full flex-col items-center justify-center p-5 text-center outline-none focus-visible:ring-2 focus-visible:ring-[#ff5a0a] focus-visible:ring-inset"
+          className={uploadStyles.dropZone}
         >
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f5f4f0] text-[#ff5a0a] transition group-hover:bg-[#fff0e8]">
-            <UploadCloud className="h-5 w-5" />
+          <span className={uploadStyles.artworkIcon} aria-hidden="true">
+            <ImagePlus size={28} strokeWidth={1.6} />
+            <span className={uploadStyles.uploadIcon}><UploadCloud size={14} /></span>
           </span>
-          <span className="mt-3 text-xs font-extrabold">Choose {title.toLowerCase()} artwork</span>
-          <span className="mt-1 text-[10px] text-[#8a8982]">Browse or drag and drop here</span>
+          <span className={uploadStyles.uploadAction}>
+            {isDragging ? "Drop your artwork" : `Upload ${side} artwork`}
+            <ArrowRight size={15} aria-hidden="true" />
+          </span>
+          <span className={uploadStyles.dropHint}>{isDragging ? "Release to see it on your garment" : "or drag and drop your file here"}</span>
+          <span className={uploadStyles.fileTypes}>PNG, JPG, WEBP, SVG <span aria-hidden="true">·</span> Max 5 MB</span>
         </button>
       )}
     </section>
