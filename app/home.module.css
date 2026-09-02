@@ -1,5 +1,6 @@
 .site {
   --ink: #101010;
+  --accent: #ff5a00;
   --paper: #f3f1ec;
   --muted: #72716e;
   --line: #d7d5cf;
@@ -84,6 +85,9 @@
   border-left: 1px solid #afada7;
   font-weight: 500;
 }
+.wordmark > span:first-child {
+  color: var(--accent);
+}
 .desktopNav {
   display: flex;
   gap: 34px;
@@ -101,7 +105,7 @@
   left: 0;
   width: 0;
   height: 1px;
-  background: currentColor;
+  background: var(--accent);
   transition: width 0.2s;
 }
 .desktopNav a:hover:after {
@@ -119,6 +123,10 @@
 }
 .headerCta:hover {
   background: #1f2937;
+}
+.headerCta > svg,
+.primaryButton > svg {
+  color: var(--accent);
 }
 .mobileMenu {
   display: none;
@@ -154,6 +162,7 @@
 }
 .heroCopy .eyebrow > span {
   font-size: 18px;
+  color: var(--accent);
 }
 .hero h1 {
   font-size: clamp(60px, 7.15vw, 112px);
@@ -203,6 +212,10 @@
 }
 .textButton:hover {
   gap: 24px;
+}
+.textButton:hover > svg,
+.lightButton:hover > svg {
+  color: var(--accent);
 }
 .heroBottom {
   display: flex;
@@ -343,7 +356,7 @@
 }
 .rowNumber {
   font-size: 11px;
-  color: #787878;
+  color: var(--accent);
 }
 .serviceRow h3 {
   font-size: clamp(25px, 3vw, 45px);
@@ -364,6 +377,7 @@
 }
 .serviceRow:hover > svg {
   transform: translate(4px, 4px);
+  color: var(--accent);
 }
 .serviceFootnote {
   display: flex;
@@ -445,6 +459,9 @@
   position: absolute;
   right: 18px;
   bottom: 18px;
+}
+.productVisual:hover .productArrow {
+  color: var(--accent);
 }
 .productInfo {
   padding: 18px 0;
@@ -546,6 +563,9 @@
   justify-content: space-between;
   font-size: 10px;
   color: #74716b;
+}
+.processNumber > svg {
+  color: var(--accent);
 }
 .processGrid h3 {
   font-size: 24px;
