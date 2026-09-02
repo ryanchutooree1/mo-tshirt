@@ -11,6 +11,7 @@ import { FaWhatsapp } from "react-icons/fa";
 import HomeWorkCarousel from "@/components/HomeWorkCarousel";
 import HomeMobileMenu from "@/components/HomeMobileMenu";
 import HomeSizeGuide from "@/components/HomeSizeGuide";
+import HomeLocation from "@/components/HomeLocation";
 import HomeOrderForm from "@/components/HomeOrderForm";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { getWhatsAppUrl } from "@/data/work";
@@ -299,6 +300,7 @@ export default function HomePage() {
           </div>
           <HomeOrderForm />
         </section>
+        <HomeLocation />
       </main>
 
       <footer className={styles.footer}>
