@@ -255,6 +255,33 @@
   font-size: 18px;
   line-height: 1.5;
 }
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 12px;
+}
+.whatsappButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s;
+}
+.whatsappButton:hover {
+  background: #222;
+  border-color: #ff5a00;
+}
+.whatsappArrow {
+  margin-left: 12px;
+  color: #ff5a00;
+}
 .primaryButton,
 .submitButton {
   color: #fff;

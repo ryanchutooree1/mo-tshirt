@@ -8,6 +8,7 @@ import {
   Check,
   Plus,
 } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
 import HomeMobileMenu from "@/components/HomeMobileMenu";
 import HomeOrderForm from "@/components/HomeOrderForm";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
@@ -126,9 +127,23 @@ export default function HomePage() {
               Your idea should not stay on a screen. We turn it into a T-shirt
               people are proud to wear.
             </p>
-            <a className={styles.primaryButton} href="#order">
-              Get your price <ArrowRight size={20} aria-hidden="true" />
-            </a>
+            <div className={styles.heroActions}>
+              <a className={styles.primaryButton} href="#order">
+                Get your price <ArrowRight size={20} aria-hidden="true" />
+              </a>
+              <TrackedWhatsAppLink
+                className={styles.whatsappButton}
+                href={getWhatsAppUrl()}
+                trackingLocation="home_hero"
+                trackingSource="homepage"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FaWhatsapp size={22} aria-hidden="true" />
+                <span>Chat on WhatsApp</span>
+                <ArrowUpRight size={22} className={styles.whatsappArrow} aria-hidden="true" />
+              </TrackedWhatsAppLink>
+            </div>
           </div>
           <div className={styles.heroNote}>
             <span>PRINTED LOCALLY</span>
