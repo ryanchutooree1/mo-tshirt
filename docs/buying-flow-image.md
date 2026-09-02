@@ -2,6 +2,18 @@
 
 Asset: `public/editorial/buying-flow.png`.
 
+## Homepage version
+
+Displayed asset: `public/editorial/buying-flow-v2.png` (1983 × 793).
+
+The user supplied `ChatGPT Image Sep 2, 2026, 10_00_34 PM.png` as the edit target. The built-in image generation tool added the requested orange arrow between Payment and Delivery. This version is now used in the homepage buying-flow section. The original generated concept below remains available separately.
+
+Edit prompt:
+
+> Use case: precise-object-edit. Edit target: the supplied buying-flow image. Make ONLY ONE change: add a single thin orange right-pointing arrow in the white gap to the right of the payment terminal and its card, between Payment and the delivery box. Match the existing two orange arrows in color, stroke thickness, arrowhead shape and approximate size. Align the new arrow horizontally with the two existing arrows (around 58% down the image), placing it in the narrow white space just before the left edge of the delivery box, around 77% across the image. Preserve the entire original image otherwise: same dimensions, white background, exact composition, all four object groups, card, clipboard and its existing text, all labels and step numbers, existing two arrows, typography, branding, color, shadows and lighting. Do not move or resize any object. Do not add any other mark. The only visible difference should be this one matching orange arrow.
+
+## Original concept
+
 Generated as a new image with the built-in image generation tool on 2026-09-02. The supplied example informed the four-step composition; the image uses MO T-SHIRT branding, warm ivory, black objects and small orange accents. It is saved for review and is not yet placed on the homepage.
 
 Flow: **Design → Quotation → Payment → Delivery**. The objects are illustrative; the quotation includes no prices and the payment card has no account details.

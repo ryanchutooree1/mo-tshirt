@@ -2,7 +2,15 @@
 
 The homepage uses the supplied black service-list screenshot as its principal layout reference: oversized bold typography, fine dividers, numbered rows and generous space. The lifestyle references inform the architectural composition and a palette of ink black, warm ivory, cool grey and midnight navy.
 
-The changes are limited to the homepage, its two small interactive components and its new image. The existing admin, shop, design studio, quotation backend and authentication remain unchanged.
+The changes are limited to the homepage, its two small interactive components and its editorial images. The existing admin, shop, design studio, quotation backend and authentication remain unchanged.
+
+## Direct ordering flow
+
+The four-step buying image now sits immediately below the hero, replacing the previous text-only process section. A white section blends with the artwork, while the surrounding page keeps the ivory, black and restrained orange palette. Desktop shows the full illustration with one short instruction per step. Mobile adds readable numbered step labels in a two-column grid. The process is also available as a semantic ordered list.
+
+The primary action is consistently **Get a quote**. The hero states the products and delivery coverage; service, work, collection and contact copy is shorter and more specific. Existing contact and design-studio destinations are retained.
+
+Displayed buying-flow asset: `public/editorial/buying-flow-v2.png`. See `docs/buying-flow-image.md` for provenance and the edit prompt.
 
 ## Local review
 

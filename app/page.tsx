@@ -23,7 +23,7 @@ import styles from "./home.module.css";
 export const metadata: Metadata = buildPageMetadata({
   title: "MO T-SHIRT | Your brand. Worn well.",
   description:
-    "Custom T-shirts, polo shirts and hoodies for businesses, events and teams in Mauritius. Thoughtful apparel, clean printing and personal service. Start your project.",
+    "Custom T-shirts, polos and hoodies printed in Mauritius. Send your design, get a quote and arrange island-wide delivery.",
   path: "/",
 });
 
@@ -31,17 +31,17 @@ const services = [
   {
     title: "Business uniforms",
     description:
-      "Make your team look like one. Clean prints for daily workwear, activations and client-facing teams.",
+      "Branded workwear for your staff, restaurant or business.",
   },
   {
     title: "Events & teams",
     description:
-      "From one-day events to full team kits. Easy sizing, considered details and a finish people keep wearing.",
+      "Custom apparel for your event, club or team.",
   },
   {
     title: "Clothing brands",
     description:
-      "Start with your idea. Explore the garment, print and finish before bringing your collection to life.",
+      "Your designs, printed on T-shirts, polos and hoodies.",
   },
 ];
 const collection = [
@@ -49,36 +49,37 @@ const collection = [
     number: "01",
     name: "T-shirts",
     image: "/design-studio/tshirt-realistic.png",
-    description: "Your everyday canvas.",
     detail: "FOR TEAMS, EVENTS & EVERYDAY",
   },
   {
     number: "02",
     name: "Polo shirts",
     image: "/design-studio/polo-realistic.png",
-    description: "A sharper way to show up.",
     detail: "FOR BUSINESS, HOSPITALITY & CLUBS",
   },
   {
     number: "03",
     name: "Hoodies",
     image: "/design-studio/hoodie-realistic.png",
-    description: "Comfort with a point of view.",
     detail: "FOR BRANDS, CREATORS & COMMUNITIES",
   },
 ];
 const process = [
   {
-    title: "Tell us the idea.",
-    copy: "Your garment, quantity, artwork and deadline. Share what you have in mind or explore it in our design studio.",
+    title: "Design",
+    copy: "Send your logo, quantity and sizes.",
   },
   {
-    title: "Get the details right.",
-    copy: "We prepare your quote, confirm the specifications and review your artwork with you before printing.",
+    title: "Quotation",
+    copy: "Confirm your price and artwork.",
   },
   {
-    title: "Make your impression.",
-    copy: "We print and prepare your order. Collect in Surinam or arrange delivery across Mauritius.",
+    title: "Payment",
+    copy: "Pay the agreed deposit to start printing.",
+  },
+  {
+    title: "Delivery",
+    copy: "Collect in Surinam or get it delivered.",
   },
 ];
 const faqs = [
@@ -129,10 +130,10 @@ export default function HomePage() {
         <nav className={styles.desktopNav} aria-label="Main navigation">
           <a href="#what-we-print">What we print</a>
           <a href="#collection">The collection</a>
-          <a href="#how-it-works">Our process</a>
+          <a href="#how-it-works">How to order</a>
         </nav>
         <a href="#contact" className={styles.headerCta}>
-          Start a project <ArrowUpRight size={17} />
+          Get a quote <ArrowUpRight size={17} />
         </a>
         <HomeMobileMenu className={styles.mobileMenu} />
       </header>
@@ -140,7 +141,7 @@ export default function HomePage() {
         <section className={styles.hero} aria-labelledby="hero-title">
           <div className={styles.heroCopy}>
             <p className={styles.eyebrow}>
-              CUSTOM APPAREL. MADE PERSONAL. <span>↗</span>
+              CUSTOM APPAREL · MAURITIUS <span>↗</span>
             </p>
             <h1 id="hero-title">
               Your brand.
@@ -148,26 +149,25 @@ export default function HomePage() {
               Worn well.
             </h1>
             <p className={styles.heroDescription}>
-              For the people building something.
+              Custom T-shirts, polos and hoodies.
               <br />
-              Thoughtful apparel, clean printing and a lasting impression. Right
-              here in Mauritius.
+              Your logo. Our printing. Island-wide delivery.
             </p>
             <div className={styles.heroActions}>
               <a href="#contact" className={styles.primaryButton}>
-                Let’s make it yours <ArrowUpRight size={19} />
+                Get a quote <ArrowUpRight size={19} />
               </a>
               <Link href="/design-studio" className={styles.textButton}>
-                Open design studio <ArrowUpRight size={16} />
+                Create your design <ArrowUpRight size={16} />
               </Link>
             </div>
             <div className={styles.heroBottom}>
               <span>
                 SURINAM, MAURITIUS
                 <br />
-                <strong>Personal service. Island-wide delivery.</strong>
+                <strong>Collection or island-wide delivery.</strong>
               </span>
-              <a href="#what-we-print" aria-label="Discover what we print">
+              <a href="#how-it-works" aria-label="See how to order">
                 <ArrowDown size={23} />
               </a>
             </div>
@@ -182,16 +182,49 @@ export default function HomePage() {
               className={styles.heroImage}
             />
             <span className={styles.imageLabel}>
-              A BLANK CANVAS. ENDLESS POSSIBILITIES.
+              T-SHIRTS / POLOS / HOODIES
             </span>
             <span className={styles.imageIndex}>MO / 01</span>
           </div>
         </section>
         <section
+          id="how-it-works"
+          className={styles.process}
+          aria-labelledby="process-title"
+        >
+          <div className={styles.processHeading}>
+            <div>
+              <p className={styles.eyebrow}>HOW TO ORDER</p>
+              <h2 id="process-title">Order in 4 steps.</h2>
+            </div>
+            <a href="#contact" className={styles.textButton}>
+              Get a quote <ArrowUpRight size={17} />
+            </a>
+          </div>
+          <Image
+            src="/editorial/buying-flow-v2.png"
+            alt="A custom T-shirt and design tablet, quotation clipboard, payment terminal and delivery box connected by orange arrows."
+            width={1983}
+            height={793}
+            sizes="(max-width: 760px) 100vw, 90vw"
+            className={styles.processImage}
+          />
+          <ol className={styles.processSteps}>
+            {process.map((step, index) => (
+              <li key={step.title}>
+                <h3 className={styles.stepLabel}>
+                  <span>0{index + 1}</span> {step.title}
+                </h3>
+                <p>{step.copy}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+        <section
           className={styles.brandStrip}
           aria-label="A few of the businesses we have printed for"
         >
-          <p>IN GOOD COMPANY</p>
+          <p>PRINTED FOR</p>
           <div>
             <span>Le Rochester</span>
             <span className={styles.spacedBrand}>SHANTI GHAR</span>
@@ -230,9 +263,9 @@ export default function HomePage() {
             ))}
           </div>
           <div className={styles.serviceFootnote}>
-            <span>GOOD GARMENTS. CONSIDERED PRINTING. YOUR IDENTITY.</span>
+            <span>PRINTED IN MAURITIUS.</span>
             <Link href="/design-studio">
-              Bring your idea to the studio <ArrowUpRight size={15} />
+              Create your design <ArrowUpRight size={15} />
             </Link>
           </div>
         </section>
@@ -242,9 +275,9 @@ export default function HomePage() {
             <p className={styles.eyebrow}>THE COLLECTION</p>
             <div>
               <h2>
-                The essentials.
+                Choose your
                 <br />
-                <span>Made yours.</span>
+                <span>apparel.</span>
               </h2>
               <Link href="/shop" className={styles.textButton}>
                 Explore all apparel <ArrowUpRight size={17} />
@@ -274,7 +307,6 @@ export default function HomePage() {
                   <span>{product.detail}</span>
                   <div>
                     <h3>{product.name}</h3>
-                    <p>{product.description}</p>
                   </div>
                 </div>
               </article>
@@ -293,19 +325,14 @@ export default function HomePage() {
             <span>LE ROCHESTER — RESTAURANT & AUBERGE</span>
           </div>
           <div className={styles.workCopy}>
-            <p className={styles.eyebrow}>REAL PEOPLE. REAL WORK.</p>
+            <p className={styles.eyebrow}>OUR WORK</p>
             <h2>
-              Good company.
+              Made for
               <br />
-              <span>Great impressions.</span>
+              <span>Le Rochester.</span>
             </h2>
             <p>
-              A restaurant opening its doors. A team finding its identity. A
-              business taking its next step.
-            </p>
-            <p>
-              We work with the people behind the brand to create apparel that
-              feels right for what they do.
+              Custom printed apparel for Le Rochester Restaurant & Auberge.
             </p>
             <TrackedWhatsAppLink
               href={getWhatsAppUrl(
@@ -317,46 +344,19 @@ export default function HomePage() {
               rel="noopener noreferrer"
               className={styles.textButton}
             >
-              Let’s talk about your brand <ArrowUpRight size={17} />
+              Get uniforms for your team <ArrowUpRight size={17} />
             </TrackedWhatsAppLink>
             <div className={styles.workSignature}>
               <span>PRINTED IN MAURITIUS</span>
-              <span>WORN WITH PURPOSE ↗</span>
+              <span>CUSTOM TEAM APPAREL ↗</span>
             </div>
-          </div>
-        </section>
-
-        <section id="how-it-works" className={styles.process}>
-          <div className={styles.sectionHeading}>
-            <p className={styles.eyebrow}>THE PROCESS</p>
-            <h2>
-              Good work.
-              <br />
-              <span>No guesswork.</span>
-            </h2>
-          </div>
-          <div className={styles.processGrid}>
-            {process.map((step, index) => (
-              <article key={step.title}>
-                <span className={styles.processNumber}>
-                  0{index + 1}
-                  <ArrowUpRight size={21} />
-                </span>
-                <h3>{step.title}</h3>
-                <p>{step.copy}</p>
-              </article>
-            ))}
           </div>
         </section>
 
         <section className={styles.faqSection}>
           <div>
-            <p className={styles.eyebrow}>BEFORE WE BEGIN</p>
-            <h2>
-              A little
-              <br />
-              clarity.
-            </h2>
+            <p className={styles.eyebrow}>QUICK ANSWERS</p>
+            <h2>Questions?</h2>
           </div>
           <div className={styles.faqList}>
             {faqs.map((faq) => (
@@ -372,20 +372,20 @@ export default function HomePage() {
         </section>
 
         <section id="contact" className={styles.contact}>
-          <p className={styles.eyebrow}>YOUR NEXT GOOD IDEA STARTS HERE</p>
+          <p className={styles.eyebrow}>LET’S PRINT</p>
           <div className={styles.contactHeading}>
             <h2>
-              Make your
+              Get your
               <br />
-              next impression.
+              quote.
             </h2>
             <ArrowUpRight className={styles.contactArrow} aria-hidden="true" />
           </div>
           <div className={styles.contactActions}>
             <p>
-              Tell us what you have in mind.
+              Send your logo, quantity and deadline.
               <br />
-              We’ll help you put it into print.
+              We’ll confirm the price and next steps.
             </p>
             <TrackedWhatsAppLink
               href={getWhatsAppUrl(
@@ -397,7 +397,7 @@ export default function HomePage() {
               rel="noopener noreferrer"
               className={styles.lightButton}
             >
-              Start on WhatsApp <ArrowUpRight size={19} />
+              Get a quote on WhatsApp <ArrowUpRight size={19} />
             </TrackedWhatsAppLink>
             <a href={`mailto:${CONTACT_EMAIL}`} className={styles.textButton}>
               Send us an email <ArrowRight size={17} />
@@ -415,9 +415,9 @@ export default function HomePage() {
             <Wordmark />
           </Link>
           <p>
-            Considered apparel.
+            Custom apparel.
             <br />
-            Confident brands.
+            Printed in Mauritius.
           </p>
           <div>
             <span>GET IN TOUCH</span>

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 
 const QuoteForm = dynamic(() => import("@/components/QuoteForm"), {
-  loading: () => <p role="status">Preparing your project form…</p>,
+  loading: () => <p role="status">Loading quote form…</p>,
 });
 
 export default function HomeQuoteRequest({
@@ -24,7 +24,7 @@ export default function HomeQuoteRequest({
       }}
     >
       <summary>
-        Or send us your project details <Plus size={18} />
+        Or use the quote form <Plus size={18} />
       </summary>
       {opened ? (
         <div className={formClassName}>

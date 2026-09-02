@@ -545,39 +545,61 @@
   color: #74716b;
 }
 .process {
-  padding: 74px 5% 80px;
-  background: #e9e6df;
+  padding: 58px 5% 48px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
 }
-.processGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 38px;
-}
-.processGrid article {
-  border-top: 1px solid #bcb9b1;
-  padding-top: 16px;
-}
-.processNumber {
+.processHeading {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  font-size: 10px;
-  color: #74716b;
+  gap: 24px;
+  margin-bottom: 25px;
 }
-.processNumber > svg {
+.processHeading .eyebrow {
+  color: var(--muted);
+  margin-bottom: 17px;
+}
+.processHeading h2 {
+  font-size: clamp(38px, 4.8vw, 70px);
+}
+.processHeading .textButton {
+  flex-shrink: 0;
+}
+.processHeading .textButton > svg {
   color: var(--accent);
 }
-.processGrid h3 {
-  font-size: 24px;
-  font-weight: 500;
-  letter-spacing: -0.04em;
-  margin: 28px 0 13px;
+.processImage {
+  display: block;
+  width: 100%;
+  height: auto;
 }
-.processGrid p {
+.processSteps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+.processSteps li {
+  position: relative;
+  text-align: center;
+}
+.stepLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.processSteps p {
   font-size: 12px;
-  color: #6e6c66;
-  line-height: 1.9;
-  max-width: 310px;
+  color: #65635f;
+  line-height: 1.6;
+  max-width: 25ch;
+  margin-inline: auto;
 }
 .faqSection {
   padding: 80px 5%;
@@ -856,12 +878,6 @@
   .workCopy h2 {
     font-size: 44px;
   }
-  .processGrid {
-    gap: 25px;
-  }
-  .processGrid h3 {
-    font-size: 21px;
-  }
   .footerMain {
     gap: 20px;
   }
@@ -1138,22 +1154,58 @@
     font-size: 7px;
   }
   .process {
-    padding: 47px 6% 45px;
+    padding: 38px 6% 36px;
   }
-  .processGrid {
-    grid-template-columns: 1fr;
-    gap: 27px;
+  .processHeading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
   }
-  .processGrid h3 {
-    margin: 16px 0 9px;
-    font-size: 25px;
+  .processHeading .eyebrow {
+    font-size: 8px;
+    margin-bottom: 13px;
   }
-  .processGrid p {
+  .processHeading h2 {
+    font-size: clamp(36px, 7.5vw, 48px);
+  }
+  .processImage {
+    width: calc(100% + 12vw);
     max-width: none;
-    font-size: 12px;
+    margin-inline: -6vw;
   }
-  .processNumber {
-    font-size: 9px;
+  .processSteps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px 20px;
+    margin-top: 22px;
+  }
+  .processSteps li {
+    border-top: 1px solid var(--line);
+    padding-top: 13px;
+    text-align: left;
+  }
+  .processSteps .stepLabel {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    margin-bottom: 7px;
+  }
+  .stepLabel > span {
+    color: var(--accent);
+    font-size: 10px;
+    margin-right: 5px;
+    font-weight: 500;
+  }
+  .processSteps p {
+    margin-inline: 0;
+    font-size: 11px;
+    max-width: 22ch;
   }
   .faqSection {
     grid-template-columns: 1fr;

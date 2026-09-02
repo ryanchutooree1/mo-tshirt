@@ -35,9 +35,9 @@ export default function HomeMobileMenu({ className }: { className: string }) {
         <a href="#collection">The collection</a>
         <Link href="/design-studio">Design studio</Link>
         <a href="#our-work">Our work</a>
-        <a href="#how-it-works">Our process</a>
+        <a href="#how-it-works">How to order</a>
         <a href="#contact">
-          Start a project <ArrowUpRight size={16} />
+          Get a quote <ArrowUpRight size={16} />
         </a>
         <Link href="/admin">Business admin</Link>
       </nav>
