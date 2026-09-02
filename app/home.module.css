@@ -376,19 +376,42 @@
   letter-spacing: -0.055em;
   font-weight: 600;
 }
-.brandLogo {
-  display: block;
-  width: 80px;
-  height: 80px;
-  overflow: hidden;
-  border-radius: 50%;
+.brandWordmark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  text-align: center;
 }
-.brandLogo img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transform: scale(1.1);
+.brandWordmark small {
+  margin-top: 7px;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 5.5px;
+  font-weight: 600;
+  font-style: normal;
+  letter-spacing: .17em;
+}
+.brandStrip .beautyBrand {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 25px;
+  font-weight: 500;
+  font-style: italic;
+}
+.brandStrip .chezBrand {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -.045em;
+}
+.brandStrip .razzBrand {
+  font-size: 24px;
+  font-weight: 850;
+  font-style: italic;
+}
+.razzBrand small { font-size: 8px; letter-spacing: .32em; margin-top: 4px; }
+.brandStrip .pritBrand {
+  font-size: 21px;
+  font-weight: 500;
+  letter-spacing: -.04em;
 }
 .brandViewport:hover .brandTrack,
 .brandViewport:focus-within .brandTrack { animation-play-state: paused; }
@@ -1176,7 +1199,6 @@
     margin-top: 23px;
   }
   .brandTrack { min-width: 2560px; }
-  .brandLogo { width: 64px; height: 64px; }
   .brandGroup > span {
     font-size: 18px;
   }
