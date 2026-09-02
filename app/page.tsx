@@ -178,6 +178,21 @@ export default function HomePage() {
               ))}
             </ol>
           </section>
+
+          <section
+            className={editorial.brandStrip}
+            aria-label="A few of the businesses we have printed for"
+          >
+            <p>PRINTED FOR</p>
+            <div>
+              <span>Le Rochester</span>
+              <span className={editorial.spacedBrand}>SHANTI GHAR</span>
+              <span className={editorial.zozaBrand}>
+                zoza<small>PASTRY & COFFEE</small>
+              </span>
+              <span>Escale des Îles</span>
+            </div>
+          </section>
         </div>
 
         <section className={styles.manifesto} id="standard">
@@ -241,21 +256,6 @@ export default function HomePage() {
         </section>
 
         <div className={`${editorial.site} ${styles.highlights}`}>
-          <section
-            className={editorial.brandStrip}
-            aria-label="A few of the businesses we have printed for"
-          >
-            <p>PRINTED FOR</p>
-            <div>
-              <span>Le Rochester</span>
-              <span className={editorial.spacedBrand}>SHANTI GHAR</span>
-              <span className={editorial.zozaBrand}>
-                zoza<small>PASTRY & COFFEE</small>
-              </span>
-              <span>Escale des Îles</span>
-            </div>
-          </section>
-
           <section id="our-work" className={editorial.work}>
             <div className={editorial.workPhoto}>
               <Image

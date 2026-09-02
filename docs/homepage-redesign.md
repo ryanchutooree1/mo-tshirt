@@ -20,7 +20,7 @@ Only the three sections selected in the user’s screenshots were brought across
 
 These sections remain responsive native page content, with functional links and accessible text. The prior product hero, collection, FAQ and contact layout are no longer displayed.
 
-The ordering flow sits directly below the “ONE SHIRT OR 1,000 / SAME STANDARD / ZERO GUESSWORK” strip. The client strip and Le Rochester section remain after the services.
+The ordering flow sits directly below the “ONE SHIRT OR 1,000 / SAME STANDARD / ZERO GUESSWORK” strip, followed immediately by the Printed for client strip. The Le Rochester section remains after the services.
 
 ## Interactions
 
