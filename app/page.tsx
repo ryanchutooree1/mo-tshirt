@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import HomeMobileMenu from "@/components/HomeMobileMenu";
+import HomeSizeGuide from "@/components/HomeSizeGuide";
 import HomeOrderForm from "@/components/HomeOrderForm";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { getWhatsAppUrl } from "@/data/work";
@@ -223,6 +224,8 @@ export default function HomePage() {
             </div>
           </section>
         </div>
+
+        <HomeSizeGuide />
 
         <section className={styles.manifesto} id="standard">
           <p className={styles.sectionKicker}>THE MO STANDARD</p>
