@@ -342,23 +342,46 @@
   border-bottom: 1px solid var(--line);
 }
 .brandStrip > p {
+  flex-shrink: 0;
   font-size: 8px;
   letter-spacing: 0.14em;
   color: #76746c;
   white-space: nowrap;
 }
-.brandStrip > div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.brandViewport {
   flex: 1;
-  gap: 25px;
+  min-width: 0;
+  overflow: hidden;
   color: #54534f;
+  mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
 }
-.brandStrip > div > span {
+.brandTrack {
+  display: flex;
+  width: 200%;
+  min-width: 1600px;
+  animation: brand-scroll-right 28s linear infinite;
+}
+.brandGroup {
+  display: flex;
+  flex: 0 0 50%;
+  align-items: center;
+  justify-content: space-around;
+  gap: 40px;
+  padding-inline: 20px;
+}
+.brandGroup > span {
+  flex-shrink: 0;
+  white-space: nowrap;
   font-size: 19px;
   letter-spacing: -0.055em;
   font-weight: 600;
+}
+.brandViewport:hover .brandTrack,
+.brandViewport:focus-within .brandTrack { animation-play-state: paused; }
+.brandViewport:focus-visible { outline: 2px solid #ff3b22; outline-offset: 6px; }
+@keyframes brand-scroll-right {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
 }
 .brandStrip .spacedBrand {
   font-size: 12px;
@@ -1135,20 +1158,17 @@
     padding: 25px 6% 30px;
     text-align: center;
   }
-  .brandStrip > div {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 24px 20px;
+  .brandViewport {
     margin-top: 23px;
   }
-  .brandStrip > div > span {
-    min-width: 42%;
+  .brandTrack { min-width: 1440px; }
+  .brandGroup > span {
     font-size: 18px;
   }
-  .brandStrip > div > .spacedBrand {
+  .brandGroup > .spacedBrand {
     font-size: 10px;
   }
-  .brandStrip > div > .zozaBrand {
+  .brandGroup > .zozaBrand {
     font-size: 26px;
   }
   .services {
@@ -1457,6 +1477,10 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .brandViewport { mask-image: none; }
+  .brandTrack { animation: none; width: 100%; min-width: 0; }
+  .brandGroup { flex-basis: 100%; flex-wrap: wrap; gap: 24px; padding: 0; }
+  .brandGroup[aria-hidden="true"] { display: none; }
   .site * {
     scroll-behavior: auto !important;
     transition: none !important;

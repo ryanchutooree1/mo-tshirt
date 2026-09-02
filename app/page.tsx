@@ -202,13 +202,24 @@ export default function HomePage() {
             aria-label="A few of the businesses we have printed for"
           >
             <p>PRINTED FOR</p>
-            <div>
-              <span>Le Rochester</span>
-              <span className={editorial.spacedBrand}>SHANTI GHAR</span>
-              <span className={editorial.zozaBrand}>
-                zoza<small>PASTRY & COFFEE</small>
-              </span>
-              <span>Escale des Îles</span>
+            <div
+              className={editorial.brandViewport}
+              tabIndex={0}
+              role="group"
+              aria-label="Client logos. Hover or focus to pause scrolling."
+            >
+              <div className={editorial.brandTrack}>
+                {[0, 1].map((copy) => (
+                  <div className={editorial.brandGroup} key={copy} aria-hidden={copy === 1 ? true : undefined}>
+                    <span>Le Rochester</span>
+                    <span className={editorial.spacedBrand}>SHANTI GHAR</span>
+                    <span className={editorial.zozaBrand}>
+                      zoza<small>PASTRY & COFFEE</small>
+                    </span>
+                    <span>Escale des Îles</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
         </div>
