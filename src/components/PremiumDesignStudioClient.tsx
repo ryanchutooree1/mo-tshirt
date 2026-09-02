@@ -192,6 +192,7 @@ export default function PremiumDesignStudioClient({
   const [shopError, setShopError] = useState<string | null>(null);
   const [methodId, setMethodId] = useState<MethodId>("dtf");
   const [activeSide, setActiveSide] = useState<Side>("front");
+  const [loadedPreviewImage, setLoadedPreviewImage] = useState<string | null>(null);
   const [designs, setDesigns] = useState<Record<Side, SideDesign>>({ front: createDesign(), back: createDesign() });
   const [sizes, setSizes] = useState<Record<string, number>>(() => createSizeQuantities());
   const [rush, setRush] = useState(false);
@@ -275,9 +276,10 @@ export default function PremiumDesignStudioClient({
   const selectedShopItem = shopItems.find((item) => item.id === selectedShopItemId) ?? null;
   const selectedColor = selectedShopItem?.colors[0] || "Black";
   const availableSizes = selectedShopItem ? getSizes(selectedShopItem) : DEFAULT_SIZES;
-  const productPreviewImage = activeSide === "back"
-    ? selectedShopItem?.studioBackPhotoUrl || selectedShopItem?.backPhotoUrl || product.backImage
-    : selectedShopItem?.studioPhotoUrl || selectedShopItem?.photoUrl || product.image;
+  const frontPreviewImage = selectedShopItem?.studioPhotoUrl || selectedShopItem?.photoUrl || product.image;
+  const backPreviewImage = selectedShopItem?.studioBackPhotoUrl || selectedShopItem?.backPhotoUrl || product.backImage;
+  const productPreviewImage = activeSide === "back" ? backPreviewImage : frontPreviewImage;
+  const nextPreviewImage = activeSide === "back" ? frontPreviewImage : backPreviewImage;
   const method = METHODS.find((item) => item.id === methodId) ?? METHODS[0];
   const activeDesign = designs[activeSide];
   const activeArtwork = selectedArtworkCopyId === null ? activeDesign.artwork : activeDesign.artworkCopies.find((copy) => copy.id === selectedArtworkCopyId) ?? activeDesign.artwork;
@@ -746,7 +748,11 @@ export default function PremiumDesignStudioClient({
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#ecebe6] px-3 py-2.5 sm:gap-3 sm:px-5 sm:py-3.5"><div><p className="text-[8px] font-bold uppercase tracking-[0.16em] text-[#99978f] sm:text-[9px]">Live preview</p><h2 className="mt-0.5 text-base font-bold tracking-[-0.025em] sm:text-lg">{product.label} · {activeSide}</h2></div><div className="flex items-center gap-1">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`min-h-10 rounded-xl px-3 text-[11px] font-bold capitalize sm:px-4 sm:py-2 sm:text-xs ${activeSide === side ? "studio-primary bg-[#ff5a0a] !text-white" : "bg-[#f4f3ef] text-[#686761]"}`}>{side}</button>)}<button type="button" onClick={() => { setDesigns({ front: createDesign(), back: createDesign() }); setSelectedLayer(null); setSelectedArtworkCopyId(null); setSelectedTextCopyId(null); }} className="ml-0.5 flex h-10 w-10 items-center justify-center rounded-xl border border-[#e1e0da] text-[#66655f]" aria-label="Reset design"><RotateCcw className="h-4 w-4" /></button></div></div>
               <div className="min-h-0 flex-1 bg-[radial-gradient(circle_at_50%_0%,#ffffff_0%,#f5f3ed_55%,#eeece5_100%)] p-0 sm:p-6 xl:flex xl:items-center xl:justify-center xl:overflow-hidden xl:p-4">
                 <div ref={canvasRef} onPointerDown={() => setSelectedLayer(null)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className="relative mx-auto h-full w-full max-w-[550px] overflow-hidden bg-[#fff]/30 sm:aspect-[4/5] sm:h-auto sm:rounded-[24px] sm:border sm:border-[#fff] xl:mx-0 xl:h-full xl:w-auto xl:max-w-full" style={{ touchAction: "none" }}>
-                  <div className="pointer-events-none absolute inset-0 z-10"><div className="relative h-full w-full origin-center transition duration-200" style={{ transform: `scale(${previewZoom / 100})` }}><LoadingImage src={productPreviewImage} fallbackSrc={activeSide === "back" ? product.backImage : product.image} alt={`Realistic ${product.label} ${activeSide} preview`} wrapperClassName="h-full w-full" className="h-full w-full object-contain drop-shadow-[0_26px_28px_rgba(15,23,42,.22)]" loading="eager" fetchPriority="high" decoding="async" delayMs={100} statusText="Loading garment…" /></div></div>
+                  <div className="pointer-events-none absolute inset-0 z-10"><div className="relative h-full w-full origin-center transition duration-200" style={{ transform: `scale(${previewZoom / 100})` }}><LoadingImage key={productPreviewImage} src={productPreviewImage} onLoad={() => setLoadedPreviewImage(productPreviewImage)} fallbackSrc={activeSide === "back" ? product.backImage : product.image} alt={`Realistic ${product.label} ${activeSide} preview`} wrapperClassName="h-full w-full" className="h-full w-full object-contain drop-shadow-[0_26px_28px_rgba(15,23,42,.22)]" loading="eager" fetchPriority="high" decoding="async" delayMs={100} statusText="Loading garment…" /></div></div>
+                  {/* Warm the other side only after the selected preview has loaded. */}
+                  {loadedPreviewImage === productPreviewImage && nextPreviewImage !== productPreviewImage ? (
+                    <img key={nextPreviewImage} src={nextPreviewImage} alt="" aria-hidden="true" hidden loading="eager" fetchPriority="low" decoding="async" />
+                  ) : null}
                   <div ref={printZoneRef} className="absolute z-30" style={{ left: `${printZone.left}%`, top: `${printZone.top}%`, width: `${printZone.width}%`, height: `${printZone.height}%` }}>
                     {activeTextLayers.map((textLayer) => {
                       const isSelected = selectedLayer === "text" && selectedTextCopyId === textLayer.copyId;
