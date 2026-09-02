@@ -8,6 +8,7 @@ import {
   Plus,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
+import HomeWorkCarousel from "@/components/HomeWorkCarousel";
 import HomeMobileMenu from "@/components/HomeMobileMenu";
 import HomeSizeGuide from "@/components/HomeSizeGuide";
 import HomeOrderForm from "@/components/HomeOrderForm";
@@ -260,46 +261,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <div className={`${editorial.site} ${styles.highlights}`}>
-          <section id="our-work" className={editorial.work}>
-            <div className={editorial.workPhoto}>
-              <Image
-                src="/work/work-01.webp"
-                alt="Custom printed team apparel for Le Rochester Restaurant & Auberge, Mauritius"
-                fill
-                sizes="(max-width: 760px) 100vw, 45vw"
-              />
-              <span>LE ROCHESTER — RESTAURANT & AUBERGE</span>
-            </div>
-            <div className={editorial.workCopy}>
-              <p className={editorial.eyebrow}>OUR WORK</p>
-              <h2>
-                Made for
-                <br />
-                <span>Le Rochester.</span>
-              </h2>
-              <p>
-                Custom printed apparel for Le Rochester Restaurant & Auberge.
-              </p>
-              <TrackedWhatsAppLink
-                href={getWhatsAppUrl(
-                  "Hi, I would like to discuss custom apparel for my business.",
-                )}
-                trackingLocation="home_work"
-                trackingSource="homepage"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={editorial.textButton}
-              >
-                Get uniforms for your team <ArrowUpRight size={17} />
-              </TrackedWhatsAppLink>
-              <div className={editorial.workSignature}>
-                <span>PRINTED IN MAURITIUS</span>
-                <span>CUSTOM TEAM APPAREL ↗</span>
-              </div>
-            </div>
-          </section>
-        </div>
+        <HomeWorkCarousel />
 
         <section className={styles.statement}>
           <p>THE RULE IS SIMPLE</p>

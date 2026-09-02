@@ -1,0 +1,67 @@
+.section {
+  padding: 80px 4vw 48px;
+  background: #f3f1ec;
+  color: #111;
+  font-family: var(--font-sans), Arial, sans-serif;
+  overflow: hidden;
+  scroll-margin-top: 24px;
+}
+.heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 40px; margin-bottom: 36px; }
+.eyebrow { display: flex; align-items: center; gap: 18px; margin: 0 0 22px; font-size: 10px; font-weight: 700; letter-spacing: .16em; }
+.eyebrow::before { content: ""; width: 7px; height: 7px; background: #ff5a00; }
+.eyebrow span { color: #77746d; border-left: 1px solid #c9c6be; padding-left: 18px; font-weight: 500; }
+.heading h2 { margin: 0; font-size: clamp(42px, 5.4vw, 80px); line-height: 1.02; letter-spacing: -.07em; font-weight: 800; }
+.heading h2 span { color: #85827b; }
+.intro { max-width: 310px; }
+.intro > p { margin: 0 0 18px; color: #6a6760; font-size: 14px; line-height: 1.7; }
+.cta { display: inline-flex; align-items: center; gap: 20px; padding-bottom: 9px; border-bottom: 1px solid #aaa69d; font-size: 12px; }
+.cta svg { color: #ff5a00; }
+.cta:hover { color: #d94800; }
+.carousel { overflow: visible; }
+.slide { width: calc((100% - 60px) / 3.15); height: auto; }
+.card { margin: 0; background: #fff; border: 1px solid #d8d5ce; }
+.photo { position: relative; height: clamp(350px, 41vw, 570px); margin: 12px 12px 0; background: #eae7e1; overflow: hidden; }
+.image { object-fit: contain; user-select: none; }
+.caption { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 20px; }
+.caption h3 { margin: 0 0 6px; font-size: 17px; font-weight: 650; letter-spacing: -.035em; }
+.caption p { margin: 0; font-size: 11px; color: #767169; }
+.projectNumber { align-self: flex-start; padding-top: 2px; color: #c0bbb2; font-size: 12px; font-variant-numeric: tabular-nums; }
+.controls { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-top: 22px; }
+.hint { margin: 0; font-size: 11px; color: #77746d; }
+.pagination { display: flex; align-items: center; gap: 4px; }
+.pagination button { position: relative; width: 22px; height: 44px; padding: 0; background: none; border: 0; cursor: pointer; }
+.pagination button::after { content: ""; position: absolute; left: 0; right: 0; top: 21px; height: 2px; background: #ccc8c0; }
+.pagination button[aria-current="true"]::after { background: #ff5a00; height: 3px; }
+.navigation { display: flex; align-items: center; gap: 8px; }
+.counter { min-width: 70px; margin-right: 12px; color: #827d74; font-size: 12px; font-variant-numeric: tabular-nums; }
+.counter strong { color: #111; font-weight: 600; }
+.navigation button { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 46px; background: transparent; color: #111; border: 1px solid #bdb8ae; border-radius: 50%; cursor: pointer; transition: background 160ms, color 160ms; }
+.navigation button:hover { background: #111; border-color: #111; color: #fff; }
+.section :focus-visible { outline: 2px solid #ff5a00; outline-offset: 4px; }
+@media (max-width: 1100px) {
+  .heading { align-items: flex-start; }
+  .slide { width: calc((100% - 40px) / 2.15); }
+  .photo { height: 510px; }
+}
+@media (max-width: 700px) {
+  .section { padding: 44px 5vw 30px; }
+  .heading { flex-direction: column; gap: 20px; margin-bottom: 26px; }
+  .eyebrow { gap: 10px; font-size: 9px; margin-bottom: 17px; }
+  .eyebrow span { padding-left: 10px; }
+  .intro { max-width: 340px; }
+  .intro > p { font-size: 13px; margin-bottom: 12px; }
+  .slide { width: 87%; }
+  .photo { height: clamp(350px, 112vw, 530px); margin: 8px 8px 0; }
+  .caption { padding: 16px; }
+  .caption h3 { font-size: 16px; }
+  .controls { flex-wrap: wrap; gap: 8px 16px; margin-top: 14px; }
+  .hint { order: 3; width: 100%; }
+  .pagination { gap: 3px; }
+  .pagination button { width: 13px; }
+  .counter { min-width: 51px; margin-right: 4px; }
+  .navigation { gap: 6px; }
+  .navigation button { width: 44px; height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .navigation button { transition: none; }
+}
