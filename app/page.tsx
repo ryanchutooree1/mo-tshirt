@@ -1,533 +1,464 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { Plus_Jakarta_Sans, Sora } from "next/font/google";
-import { getWhatsAppUrl, CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL } from "@/data/work";
-import { buildPageMetadata } from "@/lib/seo";
 import {
-  HiOutlineCheckBadge,
-  HiOutlineBolt,
-  HiOutlineClipboardDocumentList,
-  HiOutlineGlobeAlt,
-  HiOutlineShoppingBag,
-  HiOutlineSparkles,
-} from "react-icons/hi2";
-import { FaWhatsapp } from "react-icons/fa";
-import Gallery from "@/components/Gallery";
-import HomepageIntro from "@/components/HomepageIntro";
-import MapCard from "@/components/MapCard";
-import QuoteForm from "@/components/QuoteForm";
-import MeasurementCarousel from "@/components/MeasurementCarousel";
-import PremiumDesignStudioClient from "@/components/PremiumDesignStudioClient";
+  ArrowDown,
+  ArrowDownRight,
+  ArrowRight,
+  ArrowUpRight,
+  Plus,
+} from "lucide-react";
+import HomeQuoteRequest from "@/components/HomeQuoteRequest";
+import HomeMobileMenu from "@/components/HomeMobileMenu";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
-
-const pageTitle = "MO T-SHIRT PRINTING | Fastest in Mauritius";
-const pageDescription =
-  "T-shirt printing in Mauritius for businesses and events. Fast custom T-shirts, Poloshirts, Caps & Hoodies trusted by 80+ local businesses.";
-
-const studioSora = Sora({
-  subsets: ["latin"],
-  variable: "--font-studio-display",
-  weight: ["400", "600", "700"],
-  display: "swap",
-});
-
-const studioPlusJakartaSans = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  variable: "--font-studio-body",
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-});
+import {
+  CONTACT_EMAIL,
+  CONTACT_PHONE_DISPLAY,
+  CONTACT_TEL,
+  getWhatsAppUrl,
+} from "@/data/work";
+import { buildPageMetadata } from "@/lib/seo";
+import styles from "./home.module.css";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: pageTitle,
-  description: pageDescription,
+  title: "MO T-SHIRT | Your brand. Worn well.",
+  description:
+    "Custom T-shirts, polo shirts and hoodies for businesses, events and teams in Mauritius. Thoughtful apparel, clean printing and personal service. Start your project.",
   path: "/",
 });
 
-const navLinks = [
-  { label: "Home", href: "#top" },
-  { label: "Quote Form", href: "#contact", buttonTone: "orange" as const },
-  { label: "Shop", href: "/shop" },
-  { label: "Our Work", href: "#our-work" },
-  { label: "About Us", href: "#why" },
-  { label: "Contact", href: "#contact" },
-  { label: "WhatsApp", href: getWhatsAppUrl() },
-];
-
-const benefits = [
+const services = [
   {
-    icon: HiOutlineCheckBadge,
-    title: "Quality T-shirts",
-    copy: "Soft, durable tees and polos that print cleanly.",
+    title: "Business uniforms",
+    description:
+      "Make your team look like one. Clean prints for daily workwear, activations and client-facing teams.",
   },
   {
-    icon: HiOutlineBolt,
-    title: "Fast turnaround",
-    copy: "Standard 5-7 days, with 48-hour rush slots.",
+    title: "Events & teams",
+    description:
+      "From one-day events to full team kits. Easy sizing, considered details and a finish people keep wearing.",
   },
   {
-    icon: HiOutlineSparkles,
-    title: "Built for business",
-    copy: "Uniforms, events, and brand launches.",
-  },
-  {
-    icon: HiOutlineGlobeAlt,
-    title: "Made in Mauritius",
-    copy: "Local production with island-wide delivery.",
+    title: "Clothing brands",
+    description:
+      "Start with your idea. Explore the garment, print and finish before bringing your collection to life.",
   },
 ];
-
-const faqItems = [
+const collection = [
   {
-    question: "What is the turnaround time for custom T-shirt printing?",
+    number: "01",
+    name: "T-shirts",
+    image: "/design-studio/tshirt-realistic.png",
+    description: "Your everyday canvas.",
+    detail: "FOR TEAMS, EVENTS & EVERYDAY",
+  },
+  {
+    number: "02",
+    name: "Polo shirts",
+    image: "/design-studio/polo-realistic.png",
+    description: "A sharper way to show up.",
+    detail: "FOR BUSINESS, HOSPITALITY & CLUBS",
+  },
+  {
+    number: "03",
+    name: "Hoodies",
+    image: "/design-studio/hoodie-realistic.png",
+    description: "Comfort with a point of view.",
+    detail: "FOR BRANDS, CREATORS & COMMUNITIES",
+  },
+];
+const process = [
+  {
+    title: "Tell us the idea.",
+    copy: "Your garment, quantity, artwork and deadline. Share what you have in mind or explore it in our design studio.",
+  },
+  {
+    title: "Get the details right.",
+    copy: "We prepare your quote, confirm the specifications and review your artwork with you before printing.",
+  },
+  {
+    title: "Make your impression.",
+    copy: "We print and prepare your order. Collect in Surinam or arrange delivery across Mauritius.",
+  },
+];
+const faqs = [
+  {
+    question: "How long will my order take?",
     answer:
-      "Standard turnaround is 5-7 working days across Mauritius. 48-hour rush is possible when slots are open.",
+      "Standard production takes 5–7 working days. Tell us your deadline when you enquire. Rush slots may be available and are confirmed with your quote.",
   },
   {
-    question: "What is your minimum order?",
-    answer: "We can print small batches, but best pricing starts at 50+ units.",
+    question: "Can I order a small quantity?",
+    answer:
+      "Yes, we print small batches. Pricing depends on the garment, quantity and artwork, with better unit pricing typically available from 50 pieces.",
   },
   {
-    question: "Do you offer delivery or collection?",
-    answer: "Pickup is available in Surinam, Mauritius. We deliver island-wide via Mauritius Post.",
+    question: "Do I need a finished design?",
+    answer:
+      "Send your logo or idea and we will help you choose a print method. AI, EPS or PDF artwork is ideal; high-resolution PNG and JPG files also work. You can explore your idea in our online design studio.",
   },
   {
-    question: "Which print method should I choose: Vinyl or DTF?",
-    answer: "Vinyl is best for simple logos and 1-3 colors. DTF works best for full-color artwork and photos.",
-  },
-  {
-    question: "Which file formats do you accept?",
-    answer: "Send AI, EPS, or PDF files when possible. High-resolution PNG or JPG also works.",
-  },
-  {
-    question: "Do you print polos for teams and uniforms?",
-    answer: "Yes. We do polo shirt printing in Mauritius and can recommend the best fabric and finish.",
+    question: "Do you deliver across Mauritius?",
+    answer:
+      "Yes. Choose collection in Surinam or island-wide delivery via Mauritius Post. We confirm delivery arrangements with your order.",
   },
 ];
-
-const faqLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: faqItems.map((item) => ({
-    "@type": "Question",
-    name: item.question,
-    acceptedAnswer: {
-      "@type": "Answer",
-      text: item.answer,
-    },
-  })),
-};
+function Wordmark() {
+  return (
+    <span className={styles.wordmark}>
+      mo<span>.</span>
+      <span className={styles.wordmarkLabel}>
+        T-SHIRT
+        <br />
+        MAURITIUS
+      </span>
+    </span>
+  );
+}
 
 export default function HomePage() {
   return (
-    <div id="top" className="min-h-screen bg-white text-black">
-      <header className="sticky top-0 z-40 border-b border-[#EAEAEA] bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-14 w-full max-w-[1400px] items-center justify-between gap-3 px-4 sm:h-20 sm:gap-4 sm:px-6">
-          <Link href="#top" className="flex shrink-0 items-center" aria-label="MO T-SHIRT Home">
-            <Image src="/logo_transparent.webp" alt="MO T-SHIRT logo" width={150} height={60} priority className="h-8 w-auto sm:h-12" />
-          </Link>
-
-          <details className="group relative lg:hidden">
-            <summary className="flex list-none items-center gap-2 rounded-full border border-[#EAEAEA] bg-white px-4 py-2 text-sm font-semibold text-black/75 shadow-sm marker:hidden">
-              Menu
-              <span className="flex h-4 w-4 flex-col justify-center gap-1" aria-hidden="true">
-                <span className="h-0.5 w-4 rounded-full bg-current transition group-open:translate-y-1.5 group-open:rotate-45" />
-                <span className="h-0.5 w-4 rounded-full bg-current transition group-open:opacity-0" />
-                <span className="h-0.5 w-4 rounded-full bg-current transition group-open:-translate-y-1.5 group-open:-rotate-45" />
-              </span>
-            </summary>
-            <nav
-              aria-label="Mobile primary"
-              className="absolute right-0 top-[calc(100%+0.75rem)] grid w-[min(86vw,320px)] gap-2 rounded-[24px] border border-[#EAEAEA] bg-white p-3 text-sm font-semibold text-black/75 shadow-[0_20px_55px_rgba(0,0,0,0.14)]"
-            >
-              {navLinks.map((link) =>
-                link.label === "WhatsApp" ? (
-                  <TrackedWhatsAppLink
-                    key={link.label}
-                    href={link.href}
-                    trackingLocation="home_header_mobile"
-                    trackingSource="homepage"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 rounded-2xl px-4 py-3 text-[#087b45] transition hover:bg-emerald-50"
-                  >
-                    <FaWhatsapp className="h-4 w-4" aria-hidden="true" />
-                    {link.label}
-                  </TrackedWhatsAppLink>
-                ) : (
-                  <a
-                    key={link.label}
-                    href={link.href}
-                    className={`flex items-center gap-2 rounded-2xl px-4 py-3 transition ${
-                      link.buttonTone === "orange"
-                        ? "bg-[#FF6600] text-white shadow-sm hover:bg-orange-600"
-                        : link.buttonTone === "rainbow"
-                          ? "bg-[linear-gradient(135deg,#22d3ee_0%,#8b5cf6_52%,#ec4899_100%)] text-white shadow-[0_14px_28px_-16px_rgba(124,58,237,0.75)] hover:brightness-110"
-                          : "hover:bg-neutral-50 hover:text-black"
-                    }`}
-                  >
-                    {link.label === "Quote Form" ? (
-                      <HiOutlineClipboardDocumentList className="h-4 w-4" aria-hidden="true" />
-                    ) : link.label === "Shop" ? (
-                      <HiOutlineShoppingBag className="h-4 w-4" aria-hidden="true" />
-                    ) : null}
-                    {link.label}
-                  </a>
-                )
-              )}
-            </nav>
-          </details>
-
-          <div className="hidden lg:mx-0 lg:block lg:px-0">
-            <nav
-              aria-label="Primary"
-              className="flex flex-wrap items-center justify-end gap-x-7 gap-y-3 text-sm font-medium text-black/75"
-            >
-              {navLinks.map((link) => (
-                link.label === "WhatsApp" ? (
-                  <TrackedWhatsAppLink
-                    key={link.label}
-                    href={link.href}
-                    trackingLocation="home_header"
-                    trackingSource="homepage"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex min-h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-emerald-300 px-5 leading-none text-[#087b45] transition hover:bg-emerald-50"
-                  >
-                    <FaWhatsapp className="h-4 w-4" aria-hidden="true" />
-                    {link.label}
-                  </TrackedWhatsAppLink>
-                ) : (
-                  <a
-                    key={link.label}
-                    href={link.href}
-                    className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full leading-none transition ${
-                      link.buttonTone === "orange"
-                        ? "min-h-10 border-transparent bg-[#FF6600] px-5 py-2 text-sm text-white shadow-sm hover:bg-orange-600"
-                        : link.buttonTone === "rainbow"
-                          ? "min-h-10 border-transparent bg-[linear-gradient(135deg,#22d3ee_0%,#8b5cf6_52%,#ec4899_100%)] px-5 py-2 text-sm font-semibold text-white shadow-[0_14px_28px_-16px_rgba(124,58,237,0.75)] hover:brightness-110"
-                          : link.label === "Home"
-                            ? "rounded-none border-b-2 border-[#ff5a00] pb-2 text-[#ff5a00]"
-                            : "text-black/70 hover:text-black"
-                    }`}
-                  >
-                    {link.label === "Quote Form" ? (
-                      <HiOutlineClipboardDocumentList className="h-4 w-4" aria-hidden="true" />
-                    ) : link.label === "Shop" ? (
-                      <HiOutlineShoppingBag className="h-4 w-4" aria-hidden="true" />
-                    ) : null}
-                    {link.label}
-                  </a>
-                )
-              ))}
-            </nav>
-          </div>
-        </div>
+    <div id="top" className={styles.site}>
+      <a href="#main-content" className={styles.skipLink}>
+        Skip to content
+      </a>
+      <header className={styles.header}>
+        <Link href="/" aria-label="MO T-SHIRT home">
+          <Wordmark />
+        </Link>
+        <nav className={styles.desktopNav} aria-label="Main navigation">
+          <a href="#what-we-print">What we print</a>
+          <a href="#collection">The collection</a>
+          <a href="#how-it-works">Our process</a>
+        </nav>
+        <a href="#contact" className={styles.headerCta}>
+          Start a project <ArrowUpRight size={17} />
+        </a>
+        <HomeMobileMenu className={styles.mobileMenu} />
       </header>
-
-      <main>
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
-        <HomepageIntro />
-
-        <section className="px-0 pb-12 pt-8 sm:px-6 sm:pb-20 sm:pt-12">
-          <div className="mx-auto flex w-full max-w-[1500px] flex-col items-center text-center">
-            <div className={`w-full ${studioSora.variable} ${studioPlusJakartaSans.variable}`}>
-              <PremiumDesignStudioClient
-                embedded
-                backHref="/"
-                backLabel="Back to home"
-                requestSource="Homepage Design Studio"
-              />
+      <main id="main-content">
+        <section className={styles.hero} aria-labelledby="hero-title">
+          <div className={styles.heroCopy}>
+            <p className={styles.eyebrow}>
+              CUSTOM APPAREL. MADE PERSONAL. <span>↗</span>
+            </p>
+            <h1 id="hero-title">
+              Your brand.
+              <br />
+              Worn well.
+            </h1>
+            <p className={styles.heroDescription}>
+              For the people building something.
+              <br />
+              Thoughtful apparel, clean printing and a lasting impression. Right
+              here in Mauritius.
+            </p>
+            <div className={styles.heroActions}>
+              <a href="#contact" className={styles.primaryButton}>
+                Let’s make it yours <ArrowUpRight size={19} />
+              </a>
+              <Link href="/design-studio" className={styles.textButton}>
+                Open design studio <ArrowUpRight size={16} />
+              </Link>
             </div>
-            <div className="mt-6 w-full max-w-5xl">
-              <div className="grid gap-6 sm:grid-cols-2">
-                <MeasurementCarousel variant="adult" />
-                <MeasurementCarousel variant="kids" />
-              </div>
+            <div className={styles.heroBottom}>
+              <span>
+                SURINAM, MAURITIUS
+                <br />
+                <strong>Personal service. Island-wide delivery.</strong>
+              </span>
+              <a href="#what-we-print" aria-label="Discover what we print">
+                <ArrowDown size={23} />
+              </a>
             </div>
+          </div>
+          <div className={styles.heroVisual}>
+            <Image
+              src="/editorial/navy-studio.png"
+              alt="Midnight navy T-shirt and neatly folded polos in a minimal architectural studio"
+              fill
+              priority
+              sizes="(max-width: 760px) 100vw, 48vw"
+              className={styles.heroImage}
+            />
+            <span className={styles.imageLabel}>
+              A BLANK CANVAS. ENDLESS POSSIBILITIES.
+            </span>
+            <span className={styles.imageIndex}>MO / 01</span>
+          </div>
+        </section>
+        <section
+          className={styles.brandStrip}
+          aria-label="A few of the businesses we have printed for"
+        >
+          <p>IN GOOD COMPANY</p>
+          <div>
+            <span>Le Rochester</span>
+            <span className={styles.spacedBrand}>SHANTI GHAR</span>
+            <span className={styles.zozaBrand}>
+              zoza<small>PASTRY & COFFEE</small>
+            </span>
+            <span>Escale des Îles</span>
           </div>
         </section>
 
-        {/* Why Choose Us */}
-        <section id="why" className="bg-[#F9F9F9] px-6 py-16 sm:py-20">
-          <div className="mx-auto max-w-6xl text-center">
-            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Why choose MO T-SHIRT</h2>
-            <p className="mt-4 text-base text-neutral-600">
-              Craftsmanship, precision, and support for Mauritius businesses.
-            </p>
+        <section
+          id="what-we-print"
+          className={styles.services}
+          aria-labelledby="services-title"
+        >
+          <div className={styles.editorialHeading}>
+            <p className={styles.eyebrow}>WHAT WE PRINT</p>
+            <h2 id="services-title">
+              Built for the
+              <br />
+              work you do.
+            </h2>
+          </div>
+          <div className={styles.serviceList}>
+            {services.map((service, index) => (
+              <a
+                href="#contact"
+                key={service.title}
+                className={styles.serviceRow}
+              >
+                <span className={styles.rowNumber}>0{index + 1}</span>
+                <h3>{service.title}</h3>
+                <p>{service.description}</p>
+                <ArrowDownRight size={29} />
+              </a>
+            ))}
+          </div>
+          <div className={styles.serviceFootnote}>
+            <span>GOOD GARMENTS. CONSIDERED PRINTING. YOUR IDENTITY.</span>
+            <Link href="/design-studio">
+              Bring your idea to the studio <ArrowUpRight size={15} />
+            </Link>
+          </div>
+        </section>
 
-            <div className="mt-16 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
-              {benefits.map(({ icon: Icon, title, copy }) => (
-                <div key={title} className="flex flex-col items-center gap-4 text-center">
-                  <span className="flex h-16 w-16 items-center justify-center rounded-full border border-black/10 bg-white">
-                    <Icon className="h-7 w-7 text-black" />
+        <section id="collection" className={styles.collection}>
+          <div className={styles.sectionHeading}>
+            <p className={styles.eyebrow}>THE COLLECTION</p>
+            <div>
+              <h2>
+                The essentials.
+                <br />
+                <span>Made yours.</span>
+              </h2>
+              <Link href="/shop" className={styles.textButton}>
+                Explore all apparel <ArrowUpRight size={17} />
+              </Link>
+            </div>
+          </div>
+          <div className={styles.productGrid}>
+            {collection.map((product) => (
+              <article key={product.number} className={styles.productCard}>
+                <Link
+                  href="/shop"
+                  className={styles.productVisual}
+                  aria-label={`Shop ${product.name.toLowerCase()}`}
+                >
+                  <span className={styles.productNumber}>
+                    MO / {product.number}
                   </span>
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-semibold text-black">{title}</h3>
-                    <p className="text-sm text-neutral-600">{copy}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-          </div>
-        </section>
-
-        <section className="px-6 py-16 sm:py-20">
-          <div className="mx-auto flex max-w-6xl justify-center">
-            <div className="relative w-full max-w-3xl rounded-[28px] border border-[#EAEAEA] bg-white px-6 py-6 text-left shadow-sm">
-              <div className="absolute right-5 top-5">
-                <Image
-                  src="/Postofficelogo.webp"
-                  alt="Mauritius Post logo"
-                  width={104}
-                  height={104}
-                  className="h-16 w-16 object-contain"
-                  sizes="64px"
-                />
-              </div>
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                <div className="flex-shrink-0">
                   <Image
-                    src="/Postman.webp"
-                    alt="Mauritius Post delivery"
-                    width={384}
-                    height={384}
-                    className="h-80 w-80 object-contain"
-                    sizes="320px"
+                    src={product.image}
+                    alt={`Plain black ${product.name.toLowerCase()} ready for custom printing`}
+                    fill
+                    sizes="(max-width: 760px) 90vw, 30vw"
                   />
+                  <ArrowUpRight className={styles.productArrow} size={24} />
+                </Link>
+                <div className={styles.productInfo}>
+                  <span>{product.detail}</span>
+                  <div>
+                    <h3>{product.name}</h3>
+                    <p>{product.description}</p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-xs uppercase tracking-[0.2em] text-orange-500">Track & Trace</p>
-                  <h3 className="mt-2 text-2xl font-semibold text-black">Track your Mauritius Post parcel</h3>
-                  <p className="mt-2 text-sm text-neutral-600">
-                    Enter your tracking code. Results open on the official Mauritius Post website.
-                  </p>
-                  <form
-                    action="https://www.mauritiuspost.mu/track-trace/"
-                    method="get"
-                    target="_blank"
-                    className="mt-4 flex flex-col gap-3 sm:flex-row"
-                  >
-                    <input
-                      name="tracking_code"
-                      placeholder="Tracking Code e.g HH123456785MU"
-                      className="w-full flex-1 rounded-full border border-neutral-200 px-4 py-2 text-sm focus:border-black focus:outline-none"
-                    />
-                    <button
-                      type="submit"
-                      className="inline-flex items-center justify-center rounded-full bg-[#FDD901] px-5 py-2 text-sm font-semibold text-black transition hover:brightness-95"
-                    >
-                      Track parcel
-                    </button>
-                  </form>
-                </div>
-              </div>
-            </div>
+              </article>
+            ))}
           </div>
         </section>
 
-        {/* Our Work */}
-        <section id="our-work" className="px-6 py-16 sm:py-20">
-          <div className="mx-auto max-w-6xl text-center">
-            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Our Work</h2>
-            <p className="mt-4 text-base text-neutral-600">
-              Recent T-shirt printing for local teams, events, and businesses in Mauritius.
+        <section id="our-work" className={styles.work}>
+          <div className={styles.workPhoto}>
+            <Image
+              src="/work/work-01.webp"
+              alt="Custom printed team apparel for Le Rochester Restaurant & Auberge, Mauritius"
+              fill
+              sizes="(max-width: 760px) 100vw, 45vw"
+            />
+            <span>LE ROCHESTER — RESTAURANT & AUBERGE</span>
+          </div>
+          <div className={styles.workCopy}>
+            <p className={styles.eyebrow}>REAL PEOPLE. REAL WORK.</p>
+            <h2>
+              Good company.
+              <br />
+              <span>Great impressions.</span>
+            </h2>
+            <p>
+              A restaurant opening its doors. A team finding its identity. A
+              business taking its next step.
             </p>
-            <div className="mt-12">
-              <Gallery />
-            </div>
-          </div>
-        </section>
-
-        {/* Contact */}
-        <section id="contact" className="px-4 py-16 sm:px-6 sm:py-20">
-          <div className="mx-auto max-w-6xl">
-            <div className="mb-10 text-center">
-              <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Let’s start your order.</h2>
-              <p className="mt-4 text-base text-neutral-600">
-                Tell us what you need and get a fast quote. WhatsApp for rush jobs.
-              </p>
-            </div>
-
-            <div className="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.75fr)] lg:items-stretch">
-              <div className="rounded-[24px] border border-[#EAEAEA] bg-white p-8 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.08em] text-orange-500">Quote form</p>
-                    <h3 className="text-2xl font-semibold text-black">Get pricing in hours</h3>
-                  </div>
-                </div>
-                <div className="mt-6">
-                  <QuoteForm source="Website Quotation" />
-                </div>
-              </div>
-              <div className="relative overflow-hidden rounded-[24px] border border-[#EAEAEA] bg-neutral-50 p-3 shadow-sm sm:p-4">
-                <Image
-                  src="/boss_imagine.webp"
-                  alt="Business owner imagining his team in branded company shirts"
-                  width={1122}
-                  height={1402}
-                  className="block h-auto w-full rounded-[18px] object-contain"
-                  sizes="(max-width: 1024px) 100vw, 40vw"
-                />
-              </div>
-            </div>
-
-            <div id="location" className="mx-auto mt-12 max-w-5xl scroll-mt-24 sm:scroll-mt-28">
-              <div className="space-y-6 sm:space-y-7">
-                <h2 id="location-title" className="scroll-mt-28 text-center text-3xl font-semibold text-black sm:scroll-mt-32 sm:text-4xl">
-                  Our Location 📍
-                </h2>
-                <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
-                  <MapCard />
-                </div>
-                <div className="flex justify-center">
-                  <a
-                    href="https://maps.app.goo.gl/dBwPF4mC2xnPYtP2A"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#4285F4_0%,#34A853_34%,#FBBC05_68%,#EA4335_100%)] px-5 py-2 text-sm font-semibold text-white shadow-[0_18px_30px_-18px_rgba(66,133,244,0.75)] transition hover:brightness-95"
-                  >
-                    Open Google Maps
-                    <svg
-                      aria-hidden="true"
-                      viewBox="0 0 24 24"
-                      className="h-4 w-4 shrink-0"
-                      fill="currentColor"
-                    >
-                      <path d="M6.28 19.14 4.86 17.72 14.59 8H7V6h11v11h-2V9.41l-9.72 9.73Z" />
-                    </svg>
-                  </a>
-                </div>
-              </div>
-              <div className="relative mt-8 overflow-hidden rounded-[28px] border border-[#EAEAEA] bg-gradient-to-br from-[#FFF3E8] via-white to-[#F6F7FB] px-5 py-5 text-center shadow-sm">
-                <div className="pointer-events-none absolute -top-10 right-6 h-24 w-24 rounded-full bg-orange-100/70 blur-2xl" aria-hidden="true" />
-                <div className="pointer-events-none absolute -bottom-10 left-6 h-24 w-24 rounded-full bg-orange-100/60 blur-2xl" aria-hidden="true" />
-                <div className="relative flex flex-col items-center justify-center gap-4 text-sm font-semibold text-neutral-700 sm:flex-row sm:gap-8 sm:text-base">
-                  <div className="text-center">
-                    <p className="text-[11px] uppercase tracking-[0.24em] text-neutral-400">Email</p>
-                    <a
-                      className="mt-1 inline-block text-base font-semibold text-black underline decoration-orange-400 underline-offset-4 hover:text-black sm:text-lg"
-                      href={`mailto:${CONTACT_EMAIL}`}
-                    >
-                      {CONTACT_EMAIL}
-                    </a>
-                  </div>
-                  <span className="hidden h-8 w-px bg-neutral-200 sm:inline-block" aria-hidden="true" />
-                  <div className="text-center">
-                    <p className="text-[11px] uppercase tracking-[0.24em] text-neutral-400">Phone</p>
-                    <a
-                      className="mt-1 inline-block text-base font-semibold text-black underline decoration-orange-400 underline-offset-4 hover:text-black sm:text-lg"
-                      href={`tel:${CONTACT_TEL}`}
-                    >
-                      {CONTACT_PHONE_DISPLAY}
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <section id="faqs" className="mx-auto mt-12 max-w-6xl">
-              <div className="relative overflow-hidden rounded-[32px] border border-[#EAEAEA] bg-gradient-to-br from-[#FFF3E8] via-white to-[#F6F7FB] p-8 shadow-sm">
-                <div className="pointer-events-none absolute -top-16 right-0 h-40 w-40 rounded-full bg-orange-100/70 blur-3xl" aria-hidden="true" />
-                <div className="pointer-events-none absolute -bottom-16 left-4 h-40 w-40 rounded-full bg-orange-100/60 blur-3xl" aria-hidden="true" />
-
-                <div className="relative grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.08em] text-orange-500">FAQ</p>
-                    <h2 className="mt-3 text-3xl font-semibold tracking-tight text-black sm:text-4xl">
-                      Fast answers for T-shirt printing in Mauritius
-                    </h2>
-                    <p className="mt-4 text-base text-neutral-600">
-                      Everything you need to decide quickly, from rush timelines to print method choices.
-                    </p>
-                    <div className="mt-6 flex flex-wrap gap-2">
-                      <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-neutral-700 shadow-sm">
-                        5-7 day standard
-                      </span>
-                      <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-neutral-700 shadow-sm">
-                        48h rush slots
-                      </span>
-                      <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-neutral-700 shadow-sm">
-                        Island-wide delivery
-                      </span>
-                    </div>
-                    <div className="mt-6 rounded-2xl border border-orange-100 bg-white/80 p-4">
-                      <p className="text-sm font-semibold text-black">Want a fast answer?</p>
-                      <p className="mt-1 text-sm text-neutral-600">
-                        Message us on WhatsApp and we’ll recommend the right print method for your logo.
-                      </p>
-                      <TrackedWhatsAppLink
-                        href={getWhatsAppUrl("Hi! I have a quick question about my T-shirt print.")}
-                        trackingLocation="home_faq"
-                        trackingSource="homepage"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-3 inline-flex items-center justify-center rounded-full bg-[#FF6600] px-4 py-2 text-xs font-semibold text-white transition hover:bg-orange-600"
-                      >
-                        Ask on WhatsApp
-                      </TrackedWhatsAppLink>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    {faqItems.map((item) => (
-                      <details
-                        key={item.question}
-                        className="group rounded-2xl border border-neutral-200 bg-white/90 p-5 shadow-sm transition hover:shadow-md"
-                      >
-                        <summary className="flex cursor-pointer list-none items-start justify-between gap-4 text-base font-semibold text-black">
-                          <span>{item.question}</span>
-                          <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-neutral-200 text-sm leading-none text-neutral-500 transition group-open:rotate-45 sm:h-6 sm:w-6 sm:text-xs">
-                            +
-                          </span>
-                        </summary>
-                        <p className="mt-3 text-sm text-neutral-600">{item.answer}</p>
-                      </details>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </section>
-          </div>
-        </section>
-      </main>
-
-      <footer className="border-t border-orange-200 bg-[#FF6600] px-6 py-12 text-white">
-        <div className="mx-auto max-w-6xl text-center">
-          <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-white/90">
-            <a href="#contact" className="transition hover:text-white">Quote Form</a>
-            <a href="#our-work" className="transition hover:text-white">Our Work</a>
-            <Link href="/terms" className="transition hover:text-white">Terms</Link>
-            <Link href="/privacy" className="transition hover:text-white">Privacy</Link>
-            <a href="https://www.instagram.com/mo_tshirt_printing/" target="_blank" rel="noopener noreferrer" className="transition hover:text-white">
-              Instagram
-            </a>
-            <a href="https://www.tiktok.com/@mo_tshirt_mauritius" target="_blank" rel="noopener noreferrer" className="transition hover:text-white">
-              TikTok
-            </a>
+            <p>
+              We work with the people behind the brand to create apparel that
+              feels right for what they do.
+            </p>
             <TrackedWhatsAppLink
-              href={getWhatsAppUrl()}
-              trackingLocation="home_footer"
+              href={getWhatsAppUrl(
+                "Hi, I would like to discuss custom apparel for my business.",
+              )}
+              trackingLocation="home_work"
               trackingSource="homepage"
               target="_blank"
               rel="noopener noreferrer"
-              className="transition hover:text-white"
+              className={styles.textButton}
             >
-              WhatsApp
+              Let’s talk about your brand <ArrowUpRight size={17} />
             </TrackedWhatsAppLink>
+            <div className={styles.workSignature}>
+              <span>PRINTED IN MAURITIUS</span>
+              <span>WORN WITH PURPOSE ↗</span>
+            </div>
           </div>
-          <p className="mt-6 text-xs text-white/80">
-            © 2026 MO T-SHIRT — Mauritius’ trusted name in custom printing.
-            <span className="mx-2 text-white/70">|</span>
-            <Link href="/login" className="transition hover:text-white hover:underline">
-              All Rights Reserved
-            </Link>
+        </section>
+
+        <section id="how-it-works" className={styles.process}>
+          <div className={styles.sectionHeading}>
+            <p className={styles.eyebrow}>THE PROCESS</p>
+            <h2>
+              Good work.
+              <br />
+              <span>No guesswork.</span>
+            </h2>
+          </div>
+          <div className={styles.processGrid}>
+            {process.map((step, index) => (
+              <article key={step.title}>
+                <span className={styles.processNumber}>
+                  0{index + 1}
+                  <ArrowUpRight size={21} />
+                </span>
+                <h3>{step.title}</h3>
+                <p>{step.copy}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className={styles.faqSection}>
+          <div>
+            <p className={styles.eyebrow}>BEFORE WE BEGIN</p>
+            <h2>
+              A little
+              <br />
+              clarity.
+            </h2>
+          </div>
+          <div className={styles.faqList}>
+            {faqs.map((faq) => (
+              <details key={faq.question}>
+                <summary>
+                  {faq.question}
+                  <Plus size={20} />
+                </summary>
+                <p>{faq.answer}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+
+        <section id="contact" className={styles.contact}>
+          <p className={styles.eyebrow}>YOUR NEXT GOOD IDEA STARTS HERE</p>
+          <div className={styles.contactHeading}>
+            <h2>
+              Make your
+              <br />
+              next impression.
+            </h2>
+            <ArrowUpRight className={styles.contactArrow} aria-hidden="true" />
+          </div>
+          <div className={styles.contactActions}>
+            <p>
+              Tell us what you have in mind.
+              <br />
+              We’ll help you put it into print.
+            </p>
+            <TrackedWhatsAppLink
+              href={getWhatsAppUrl(
+                "Hi, I would like a quote for custom apparel.",
+              )}
+              trackingLocation="home_contact"
+              trackingSource="homepage"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.lightButton}
+            >
+              Start on WhatsApp <ArrowUpRight size={19} />
+            </TrackedWhatsAppLink>
+            <a href={`mailto:${CONTACT_EMAIL}`} className={styles.textButton}>
+              Send us an email <ArrowRight size={17} />
+            </a>
+          </div>
+          <HomeQuoteRequest
+            className={styles.quoteDisclosure}
+            formClassName={styles.quoteForm}
+          />
+        </section>
+      </main>
+      <footer className={styles.footer}>
+        <div className={styles.footerMain}>
+          <Link href="/" aria-label="MO T-SHIRT home">
+            <Wordmark />
+          </Link>
+          <p>
+            Considered apparel.
+            <br />
+            Confident brands.
           </p>
+          <div>
+            <span>GET IN TOUCH</span>
+            <a href={`tel:${CONTACT_TEL}`}>{CONTACT_PHONE_DISPLAY}</a>
+            <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+          </div>
+          <div>
+            <span>FIND US</span>
+            <p>
+              Surinam, Mauritius
+              <br />
+              Monday–Friday · 9am–5pm
+            </p>
+          </div>
+        </div>
+        <div className={styles.footerBottom}>
+          <span>© {new Date().getFullYear()} MO T-SHIRT</span>
+          <div>
+            <Link href="/privacy">Privacy</Link>
+            <Link href="/terms">Terms</Link>
+            <Link href="/admin">
+              Business admin <ArrowUpRight size={12} />
+            </Link>
+          </div>
+          <span>YOUR BRAND. WORN WELL.</span>
         </div>
       </footer>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: faqs.map((faq) => ({
+              "@type": "Question",
+              name: faq.question,
+              acceptedAnswer: { "@type": "Answer", text: faq.answer },
+            })),
+          }),
+        }}
+      />
     </div>
   );
 }
