@@ -141,6 +141,7 @@
   width: 24px;
   height: 16px;
   flex-shrink: 0;
+  outline: 1px solid #000;
   background: linear-gradient(
     to bottom,
     #ff304f 0% 25%,
