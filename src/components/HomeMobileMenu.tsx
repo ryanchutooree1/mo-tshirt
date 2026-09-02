@@ -31,7 +31,6 @@ export default function HomeMobileMenu({ className }: { className: string }) {
       >
         <a href="#services">What we print</a>
         <a href="#process">How it works</a>
-        <a href="#standard">Our standard</a>
         <a href="#order">Start an order</a>
       </nav>
     </details>

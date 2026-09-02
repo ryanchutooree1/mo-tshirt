@@ -5,7 +5,6 @@ import {
   ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
-  Check,
   Plus,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
@@ -105,7 +104,6 @@ export default function HomePage() {
         <nav className={styles.desktopNav} aria-label="Main navigation">
           <a href="#services">What we print</a>
           <a href="#process">How it works</a>
-          <a href="#standard">Our standard</a>
         </nav>
         <a className={styles.headerCta} href="#order">
           Start an order{" "}
@@ -245,39 +243,6 @@ export default function HomePage() {
         </div>
 
         <HomeSizeGuide />
-
-        <section className={styles.manifesto} id="standard">
-          <p className={styles.sectionKicker}>THE MO STANDARD</p>
-          <div className={styles.manifestoGrid}>
-            <h2>
-              Not merch.
-              <br />
-              <em>A message</em>
-              <br />
-              people wear.
-            </h2>
-            <div className={styles.manifestoCopy}>
-              <p>
-                A weak print makes a strong idea look cheap. We care about the
-                details that change the result: the shirt, placement, colour and
-                finish.
-              </p>
-              <ul>
-                <li>
-                  <Check size={18} aria-hidden="true" /> Honest feasibility
-                  check
-                </li>
-                <li>
-                  <Check size={18} aria-hidden="true" /> Proof before production
-                </li>
-                <li>
-                  <Check size={18} aria-hidden="true" /> Clear pricing and
-                  timing
-                </li>
-              </ul>
-            </div>
-          </div>
-        </section>
 
         <section className={styles.services} id="services">
           <div className={styles.sectionHeading}>
