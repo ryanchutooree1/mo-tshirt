@@ -358,7 +358,7 @@
 .brandTrack {
   display: flex;
   width: 200%;
-  min-width: 2800px;
+  min-width: 2520px;
   animation: brand-scroll-right 40s linear infinite;
 }
 .brandGroup {
@@ -366,8 +366,8 @@
   flex: 0 0 50%;
   align-items: center;
   justify-content: space-around;
-  gap: 40px;
-  padding-inline: 20px;
+  gap: 36px;
+  padding-inline: 18px;
 }
 .brandGroup > span {
   flex-shrink: 0;
@@ -1198,7 +1198,7 @@
   .brandViewport {
     margin-top: 23px;
   }
-  .brandTrack { min-width: 2560px; }
+  .brandTrack { min-width: 2400px; }
   .brandGroup > span {
     font-size: 18px;
   }
