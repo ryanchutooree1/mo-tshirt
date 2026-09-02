@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { ArrowLeft, ArrowRight, ArrowUpRight, Pause, Play } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUpRight } from "lucide-react";
 import type { Swiper as SwiperInstance } from "swiper";
 import { A11y, Autoplay, FreeMode } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -38,11 +38,8 @@ export default function HomeWorkCarousel() {
   const swiperRef = useRef<SwiperInstance | null>(null);
   const speedRef = useRef(9000);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const [hasFocus, setHasFocus] = useState(false);
   const reducedMotion = useSyncExternalStore(subscribeToMotionPreference, getReducedMotion, getServerReducedMotion);
-  const shouldAutoplay = !isPaused && !isHovered && !hasFocus && !reducedMotion;
+  const shouldAutoplay = !reducedMotion;
 
   useEffect(() => {
     speedRef.current = reducedMotion ? 0 : 9000;
@@ -51,7 +48,7 @@ export default function HomeWorkCarousel() {
     swiper.params.speed = speedRef.current;
     if (shouldAutoplay && !swiper.autoplay.running) swiper.autoplay.start();
     else if (!shouldAutoplay && swiper.autoplay.running) {
-      // Freeze the current position immediately, even halfway through a card.
+      // Respect a change to the visitor's reduced-motion preference immediately.
       const position = swiper.getTranslate();
       swiper.autoplay.stop();
       swiper.setTransition(0);
@@ -68,12 +65,6 @@ export default function HomeWorkCarousel() {
       className={styles.section}
       aria-labelledby="work-carousel-title"
       aria-roledescription="carousel"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onFocusCapture={() => setHasFocus(true)}
-      onBlurCapture={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setHasFocus(false);
-      }}
       onKeyDown={(event) => {
         if (event.target !== swiperRef.current?.el) return;
         if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
@@ -108,11 +99,12 @@ export default function HomeWorkCarousel() {
         className={styles.carousel}
         modules={[A11y, Autoplay, FreeMode]}
         speed={9000}
-        autoplay={{ delay: 0, disableOnInteraction: false, reverseDirection: true }}
+        autoplay={{ delay: 0, disableOnInteraction: false, reverseDirection: true, pauseOnMouseEnter: false }}
         freeMode={{ enabled: true, momentum: false }}
         slidesPerView="auto"
         spaceBetween={20}
         loop
+        loopPreventsSliding={false}
         grabCursor
         tabIndex={0}
         a11y={{
@@ -172,11 +164,6 @@ export default function HomeWorkCarousel() {
           <span className={styles.counter} aria-live={shouldAutoplay ? "off" : "polite"} aria-atomic="true">
             <strong>{String(activeIndex + 1).padStart(2, "0")}</strong> / {String(workImages.length).padStart(2, "0")}
           </span>
-          {!reducedMotion && (
-            <button type="button" aria-label={isPaused ? "Resume automatic slideshow" : "Pause automatic slideshow"} aria-controls="work-carousel" onClick={() => setIsPaused((paused) => !paused)}>
-              {isPaused ? <Play size={18} aria-hidden="true" /> : <Pause size={18} aria-hidden="true" />}
-            </button>
-          )}
           <button type="button" aria-label="Previous work image" aria-controls="work-carousel" onClick={() => swiperRef.current?.slidePrev(reducedMotion ? 0 : 450)}><ArrowLeft size={20} aria-hidden="true" /></button>
           <button type="button" aria-label="Next work image" aria-controls="work-carousel" onClick={() => swiperRef.current?.slideNext(reducedMotion ? 0 : 450)}><ArrowRight size={20} aria-hidden="true" /></button>
         </div>
