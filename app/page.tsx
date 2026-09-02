@@ -144,6 +144,42 @@ export default function HomePage() {
           <span>ZERO GUESSWORK</span>
         </section>
 
+        <div id="process" className={`${editorial.site} ${styles.highlights}`}>
+          <section
+            id="how-it-works"
+            className={editorial.process}
+            aria-labelledby="process-title"
+          >
+            <div className={editorial.processHeading}>
+              <div>
+                <p className={editorial.eyebrow}>HOW TO ORDER</p>
+                <h2 id="process-title">Order in 4 steps.</h2>
+              </div>
+              <a href="#order" className={editorial.textButton}>
+                Get a quote <ArrowUpRight size={17} />
+              </a>
+            </div>
+            <Image
+              src="/editorial/buying-flow-v2.png"
+              alt="A custom T-shirt and design tablet, quotation clipboard, payment terminal and delivery box connected by orange arrows."
+              width={1983}
+              height={793}
+              sizes="(max-width: 760px) 100vw, 90vw"
+              className={editorial.processImage}
+            />
+            <ol className={editorial.processSteps}>
+              {process.map((step, index) => (
+                <li key={step.title}>
+                  <h3 className={editorial.stepLabel}>
+                    <span>0{index + 1}</span> {step.title}
+                  </h3>
+                  <p>{step.copy}</p>
+                </li>
+              ))}
+            </ol>
+          </section>
+        </div>
+
         <section className={styles.manifesto} id="standard">
           <p className={styles.sectionKicker}>THE MO STANDARD</p>
           <div className={styles.manifestoGrid}>
@@ -204,41 +240,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <div id="process" className={`${editorial.site} ${styles.highlights}`}>
-          <section
-            id="how-it-works"
-            className={editorial.process}
-            aria-labelledby="process-title"
-          >
-            <div className={editorial.processHeading}>
-              <div>
-                <p className={editorial.eyebrow}>HOW TO ORDER</p>
-                <h2 id="process-title">Order in 4 steps.</h2>
-              </div>
-              <a href="#order" className={editorial.textButton}>
-                Get a quote <ArrowUpRight size={17} />
-              </a>
-            </div>
-            <Image
-              src="/editorial/buying-flow-v2.png"
-              alt="A custom T-shirt and design tablet, quotation clipboard, payment terminal and delivery box connected by orange arrows."
-              width={1983}
-              height={793}
-              sizes="(max-width: 760px) 100vw, 90vw"
-              className={editorial.processImage}
-            />
-            <ol className={editorial.processSteps}>
-              {process.map((step, index) => (
-                <li key={step.title}>
-                  <h3 className={editorial.stepLabel}>
-                    <span>0{index + 1}</span> {step.title}
-                  </h3>
-                  <p>{step.copy}</p>
-                </li>
-              ))}
-            </ol>
-          </section>
-
+        <div className={`${editorial.site} ${styles.highlights}`}>
           <section
             className={editorial.brandStrip}
             aria-label="A few of the businesses we have printed for"

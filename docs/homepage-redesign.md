@@ -20,6 +20,8 @@ Only the three sections selected in the user’s screenshots were brought across
 
 These sections remain responsive native page content, with functional links and accessible text. The prior product hero, collection, FAQ and contact layout are no longer displayed.
 
+The ordering flow sits directly below the “ONE SHIRT OR 1,000 / SAME STANDARD / ZERO GUESSWORK” strip. The client strip and Le Rochester section remain after the services.
+
 ## Interactions
 
 The mobile menu uses a native disclosure with close-on-selection and Escape behavior. Section links stay on localhost. The saved compact quote form is connected to the existing `POST /api/contact` endpoint, with required fields, pending/error/success feedback and retained input after failures. The contact backend, admin, authentication, shop and design studio are unchanged.
