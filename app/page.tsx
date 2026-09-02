@@ -81,7 +81,10 @@ export default function HomePage() {
         Skip to content
       </a>
       <div className={styles.announcement}>
-        <span>MADE IN MAURITIUS</span>
+        <span className={styles.madeInMauritius}>
+          MADE IN MAURITIUS
+          <span className={styles.mauritiusFlag} aria-hidden="true" />
+        </span>
         <span className={styles.announcementCenter}>
           ONE PIECE OR A FULL RUN
         </span>
