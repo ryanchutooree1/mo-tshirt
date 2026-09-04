@@ -1,0 +1,962 @@
+{
+  "verifiedAt": "2026-09-04T17:06:30.650Z",
+  "productCount": 58,
+  "generatedSideViews": 56,
+  "existingSideViewsPreserved": 2,
+  "allProductsHaveSideView": true,
+  "otherProductFieldsUnchanged": true,
+  "checked": [
+    {
+      "id": "k10LqPUc1IIeMVvYnBRq",
+      "slug": "plain-poloshirt-red",
+      "url": "/api/shops/uploads/shop-mtn6nv31-66o26m",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 22770
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2128
+        }
+      }
+    },
+    {
+      "id": "EBd63PgPKypJVoaAaYoa",
+      "slug": "plain-poloshirt-burgundy-red",
+      "url": "/api/shops/uploads/shop-mtn6nxg8-chipq2",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 29020
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2178
+        }
+      }
+    },
+    {
+      "id": "sn3f7Xpzgxh6HSiIe0Rl",
+      "slug": "plain-poloshirt-sky-blue",
+      "url": "/api/shops/uploads/shop-mtn6nyft-anbhs5",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 26768
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2476
+        }
+      }
+    },
+    {
+      "id": "8shkl7zNR2CC26KzhZaT",
+      "slug": "plain-poloshirt-blue-turquoise",
+      "url": "/api/shops/uploads/shop-mtn6nz9h-cphm6k",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 18890
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2516
+        }
+      }
+    },
+    {
+      "id": "t0uWzcYGaafNj69lyyzp",
+      "slug": "plain-poloshirt-white",
+      "url": "/api/shops/uploads/shop-mtn6o0dq-6a47da",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 10212
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1138
+        }
+      }
+    },
+    {
+      "id": "WHusKQGkZkh75vz9SPOu",
+      "slug": "plain-poloshirt-black",
+      "url": "/api/shops/uploads/shop-mtn6o1ez-5jyece",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 12508
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1530
+        }
+      }
+    },
+    {
+      "id": "oz2KxLt1Ga1bdanUHkHe",
+      "slug": "plain-poloshirt-deep-grey",
+      "url": "/api/shops/uploads/shop-mtn6o2cm-9aq04p",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 42734
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1754
+        }
+      }
+    },
+    {
+      "id": "8BwLv1gEqVYcOndkYSvn",
+      "slug": "plain-poloshirt-light-grey",
+      "url": "/api/shops/uploads/shop-mtn6o3ac-7w2gi4",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 40646
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1904
+        }
+      }
+    },
+    {
+      "id": "jrEXRAOx5RkrG0qksz9x",
+      "slug": "plain-poloshirt-royal-blue",
+      "url": "/api/shops/uploads/shop-mtn6o48s-58bgy0",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 22840
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2406
+        }
+      }
+    },
+    {
+      "id": "vtuGyDM93oFgxQDYkQko",
+      "slug": "plain-poloshirt-navy-blue",
+      "url": "/api/shops/uploads/shop-mtn6ui3u-0vf3ih",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 17246
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1876
+        }
+      }
+    },
+    {
+      "id": "lAPGvaVAWkD2JWGCzVQY",
+      "slug": "plain-poloshirt-soft-pastel-yellow",
+      "url": "/api/shops/uploads/shop-mtn6ujsp-prziaz",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 17260
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1982
+        }
+      }
+    },
+    {
+      "id": "wroLOZ4OauZut2B4Le4A",
+      "slug": "plain-poloshirt-vibrant-purple",
+      "url": "/api/shops/uploads/shop-mtn6ukyf-196r7v",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 31368
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2296
+        }
+      }
+    },
+    {
+      "id": "UQbrzvNU8kOoHT65nFhu",
+      "slug": "plain-t-shirt-grey",
+      "url": "/api/shops/uploads/shop-mtn6um09-v6rvgu",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 48096
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1930
+        }
+      }
+    },
+    {
+      "id": "KERfMMBW3wwlQEKk864U",
+      "slug": "plain-t-shirt-bungundy-red",
+      "url": "/api/shops/uploads/shop-mtn6una6-j7eepn",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 20470
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2270
+        }
+      }
+    },
+    {
+      "id": "Gd60s8L6t9EPD7PkP2yD",
+      "slug": "plain-t-shirt-charcoal-grey",
+      "url": "/api/shops/uploads/shop-mtn6uoev-exvb9o",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 25850
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1890
+        }
+      }
+    },
+    {
+      "id": "WmRILiLL9P9eKpWsWRfB",
+      "slug": "plain-t-shirt-red",
+      "url": "/api/shops/uploads/shop-mtn6upix-ungeec",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 20276
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2284
+        }
+      }
+    },
+    {
+      "id": "q3l0lCHsbMIbYlSw7qy9",
+      "slug": "plain-t-shirt-white",
+      "url": "/api/shops/uploads/shop-mtn6uqlc-d3vv5k",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 7148
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 778
+        }
+      }
+    },
+    {
+      "id": "sowqSTXReXiYhZ5Lntb9",
+      "slug": "plain-t-shirt-black",
+      "url": "/api/shops/uploads/shop-mtn6urla-uqhzh4",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 13260
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1602
+        }
+      }
+    },
+    {
+      "id": "spPbHKz6aZs4LzkAQdmb",
+      "slug": "plain-t-shirt-light-pink",
+      "url": "/api/shops/uploads/shop-mtn6usp5-6ttj2c",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 14034
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1448
+        }
+      }
+    },
+    {
+      "id": "OuWeE7n6YC4aFc5mvUaY",
+      "slug": "plain-t-shirt-pastel-green",
+      "url": "/api/shops/uploads/shop-mtn6utrv-6ry9k8",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 11442
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1298
+        }
+      }
+    },
+    {
+      "id": "0KG4WMSRIzpzPt9aCIou",
+      "slug": "plain-t-shirt-vibrant-pink",
+      "url": "/api/shops/uploads/shop-mtn6ynbe-76uk08",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 23018
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1918
+        }
+      }
+    },
+    {
+      "id": "TQbwaiGYs0Im5CSjHaYq",
+      "slug": "plain-t-shirt-deep-red",
+      "url": "/api/shops/uploads/shop-mtn6you1-1ll8dx",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 28066
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2158
+        }
+      }
+    },
+    {
+      "id": "VRUCrLHDER3ywyqXORjw",
+      "slug": "plain-t-shirt-military-green",
+      "url": "/api/shops/uploads/shop-mtn6yq45-tjjddx",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 30468
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2334
+        }
+      }
+    },
+    {
+      "id": "NCZHNJ7nPUCisleW0N7k",
+      "slug": "plain-t-shirt-vibrant-green",
+      "url": "/api/shops/uploads/shop-mtn6yr7u-xsbn60",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 23730
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2442
+        }
+      }
+    },
+    {
+      "id": "PyZUrIwANCmaLEOvoPHI",
+      "slug": "plain-t-shirt-vibrant-apple-green",
+      "url": "/api/shops/uploads/shop-mtn6ysaa-ufitr3",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 21070
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1926
+        }
+      }
+    },
+    {
+      "id": "XwSeKWCS9ugDkhhEtuyK",
+      "slug": "plain-t-shirt-tea-green",
+      "url": "/api/shops/uploads/shop-mtn6ytej-4p7r5j",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 19454
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1694
+        }
+      }
+    },
+    {
+      "id": "ZJnF4V4AszmwZtChoMKi",
+      "slug": "plain-t-shirt-purple",
+      "url": "/api/shops/uploads/shop-mtn6yugr-o9ackq",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 26850
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2166
+        }
+      }
+    },
+    {
+      "id": "PMhHNEq9U1ewSyoC75U4",
+      "slug": "plain-t-shirt-serein-yellow",
+      "url": "/api/shops/uploads/shop-mtn6yvhe-0pgmq4",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 14076
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1884
+        }
+      }
+    },
+    {
+      "id": "0FUFH8SvZguCIdtE1ooA",
+      "slug": "plain-t-shirt-lemon-yellow",
+      "url": "/api/shops/uploads/shop-mtn72cgv-c6x6n0",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 13362
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1694
+        }
+      }
+    },
+    {
+      "id": "kvaG86V7PMkxMPDLc3uA",
+      "slug": "plain-t-shirt-moutard-yellow",
+      "url": "/api/shops/uploads/shop-mtn72dzq-l569kj",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 20402
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2274
+        }
+      }
+    },
+    {
+      "id": "aNBY0a8dxpzrJIzcyVg3",
+      "slug": "plain-t-shirt-aqua-blue",
+      "url": "/api/shops/uploads/shop-mtn72f4k-yvnq9z",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 26194
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2244
+        }
+      }
+    },
+    {
+      "id": "AdVXWMvBwGclj1uXJaiQ",
+      "slug": "plain-t-shirt-navy-blue",
+      "url": "/api/shops/uploads/shop-mtn72g5h-cc15p6",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 16572
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1862
+        }
+      }
+    },
+    {
+      "id": "NyHvK5pzuD1mR9uRKQq7",
+      "slug": "plain-t-shirt-light-grey",
+      "url": "/api/shops/uploads/shop-mtn72h5x-tzs0fs",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 40068
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2094
+        }
+      }
+    },
+    {
+      "id": "gY0cYiScZTmnpaUWcMca",
+      "slug": "baseball-cap-red",
+      "url": "/api/shops/uploads/shop-mtn72i78-lt03a3",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 60710
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2830
+        }
+      }
+    },
+    {
+      "id": "hFu9S2z5cZTV9xHl9N0L",
+      "slug": "baseball-cap-black",
+      "url": "/api/shops/uploads/shop-mtn77t4c-j4hbxb",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 80732
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2160
+        }
+      }
+    },
+    {
+      "id": "90Ukl8iAdRztHFybIvMv",
+      "slug": "baseball-cap-white",
+      "url": "/api/shops/uploads/shop-mtn77umg-jtcrtu",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 18944
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1136
+        }
+      }
+    },
+    {
+      "id": "PlUGQ3dbx3IULwMpRoqZ",
+      "slug": "baseball-cap-off-white",
+      "url": "/api/shops/uploads/shop-mtn77vmm-p23q6a",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 12540
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1104
+        }
+      }
+    },
+    {
+      "id": "UPiZLkViMoB6wuJzvlf5",
+      "slug": "baseball-cap-beige",
+      "url": "/api/shops/uploads/shop-mtn77wnj-rogcqo",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 24900
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1440
+        }
+      }
+    },
+    {
+      "id": "YdvvzeMVU1WiB5ipfLfr",
+      "slug": "baseball-cap-grey",
+      "url": "/api/shops/uploads/shop-mtn77xoy-yv4g5f",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 67348
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1592
+        }
+      }
+    },
+    {
+      "id": "SeouG4ARKaxN2Iw4mk66",
+      "slug": "baseball-cap-navy-blue",
+      "url": "/api/shops/uploads/shop-mtn77yte-xaxpw7",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 81314
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2504
+        }
+      }
+    },
+    {
+      "id": "GXcUWTGC8maQkCVDOeei",
+      "slug": "baseball-cap-military-green",
+      "url": "/api/shops/uploads/shop-mtn77zz1-xyl2o5",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 117388
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2846
+        }
+      }
+    },
+    {
+      "id": "vGco3qlU7weQqda23Jbg",
+      "slug": "baseball-cap-green-fluo",
+      "url": "/api/shops/uploads/shop-mtn78188-bfab8y",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 51642
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2240
+        }
+      }
+    },
+    {
+      "id": "HGSzytHpCsMz511XdhNE",
+      "slug": "baseball-cap-orange",
+      "url": "/api/shops/uploads/shop-mtn782g7-4koceu",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 52362
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 3008
+        }
+      }
+    },
+    {
+      "id": "6ayRZFwcFBMtdlygABXF",
+      "slug": "baseball-cap-royal-blue",
+      "url": "/api/shops/uploads/shop-mtn7cw9w-179imr",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 93960
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2834
+        }
+      }
+    },
+    {
+      "id": "XBK4qJieIOBwkRPyzgzZ",
+      "slug": "baseball-cap-yellow",
+      "url": "/api/shops/uploads/shop-mtn7cxyt-cvq38n",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 24780
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2192
+        }
+      }
+    },
+    {
+      "id": "FVXy43lur8JyWpExj6hz",
+      "slug": "cotton-cap-black",
+      "url": "/api/shops/uploads/shop-mtn7cz1i-qjvitf",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 62538
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2106
+        }
+      }
+    },
+    {
+      "id": "FfIusoMVA322IuIReWZI",
+      "slug": "cotton-cap-white",
+      "url": "/api/shops/uploads/shop-mtn7d092-inq05j",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 29378
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 1288
+        }
+      }
+    },
+    {
+      "id": "csdG76XHWqq8fFfUsnxg",
+      "slug": "cotton-cap-navy-blue",
+      "url": "/api/shops/uploads/shop-mtn7d1cq-l732yk",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 78816
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2396
+        }
+      }
+    },
+    {
+      "id": "CHuvo95LQMy9qVXEgUJh",
+      "slug": "cotton-cap-red",
+      "url": "/api/shops/uploads/shop-mtn7d2q0-nhcwfb",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 68612
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 3038
+        }
+      }
+    },
+    {
+      "id": "q61qUvmD08kPOw4t7w1m",
+      "slug": "mug-white",
+      "url": "/api/shops/uploads/shop-mtn7d3w7-mwh4h2",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 65276
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 6858
+        }
+      }
+    },
+    {
+      "id": "outTnWl9YwD0ej7ZCiGH",
+      "slug": "trucker-cap-black",
+      "url": "/api/shops/uploads/shop-mtn7ftwi-q5t0m2",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 108354
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 7254
+        }
+      }
+    },
+    {
+      "id": "rNDvlKJK4RTPECkceJHv",
+      "slug": "trucker-cap-dark-blue",
+      "url": "/api/shops/uploads/shop-mtn7fw3z-rwe6iw",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 129786
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 8150
+        }
+      }
+    },
+    {
+      "id": "fQSZvregSvuZuoVItyYW",
+      "slug": "trucker-cap-red",
+      "url": "/api/shops/uploads/shop-mtn7fxgh-u0shr7",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 98432
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 6630
+        }
+      }
+    },
+    {
+      "id": "WUo6gIheGEugC6bywkGZ",
+      "slug": "trucker-cap-pink",
+      "url": "/api/shops/uploads/shop-mtn7fynv-vkq4dh",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 56694
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 3352
+        }
+      }
+    },
+    {
+      "id": "lGwAvcSswOlQHDli7iIR",
+      "slug": "magic-mug-blue",
+      "url": "/api/shops/uploads/shop-mtn7fzsp-b78yxp",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 21930
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 3452
+        }
+      }
+    },
+    {
+      "id": "iLjsjDHegrbpJIeohF7K",
+      "slug": "magic-mug-black",
+      "url": "/api/shops/uploads/shop-mtn7g0v7-fr5wm3",
+      "dimensions": {
+        "full": {
+          "width": 1254,
+          "height": 1254,
+          "bytes": 16972
+        },
+        "thumbnail": {
+          "width": 320,
+          "height": 320,
+          "bytes": 2348
+        }
+      }
+    }
+  ]
+}
