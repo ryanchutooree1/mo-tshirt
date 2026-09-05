@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { computeQuote, getVinylCosts } = require("../src/lib/pricing");
 
-test("vinyl price book mode ignores overhead and uses labor + material", () => {
+test("vinyl price book mode uses current retail pricing and excludes overhead from cost", () => {
   const vinyl = getVinylCosts({ rollPrice: 469, wasteFactor: 1.2 });
   assert.equal(vinyl.small, 10);
 
@@ -31,8 +31,14 @@ test("vinyl price book mode ignores overhead and uses labor + material", () => {
     dtfPackageFrontBack: 350,
   });
 
+  assert.equal(result.productionCostPerUnit, 10);
+  assert.equal(result.laborPerUnit, 50);
+  assert.equal(result.overheadUnit, 0);
   assert.equal(result.unitCost, 195);
-  assert.equal(result.suggestedUnitPrice, 270);
+  // July 2026 price book: Rs 390 garment base + Rs 30 vinyl printing.
+  assert.equal(result.priceBookPrice, 420);
+  assert.equal(result.suggestedUnitPrice, 420);
+  assert.equal(result.quoteTotal, 420);
 });
 
 test("vinyl margin engine mode applies overhead and margin", () => {
