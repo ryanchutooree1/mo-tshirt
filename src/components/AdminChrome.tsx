@@ -125,26 +125,6 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    id: "departments",
-    label: "Departments",
-    paths: [
-      "/admin/management",
-      "/admin/sales",
-      "/admin/marketing",
-      "/admin/customer-service",
-      "/admin/design",
-      "/admin/production",
-      "/admin/purchasing",
-      "/admin/inventory-department",
-      "/admin/logistics",
-      "/admin/quality",
-      "/admin/finance",
-      "/admin/hr",
-      "/admin/technology",
-      "/admin/legal-compliance",
-    ],
-  },
-  {
     id: "insights",
     label: "Insights",
     paths: [
