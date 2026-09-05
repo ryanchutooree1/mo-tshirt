@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { MauritiusClientHeatmap, MauritiusLocationPicker } from '@/components/admin/MauritiusClientMap';
+import { MauritiusLocationPicker } from '@/components/admin/MauritiusClientMap';
 import {
   MAURITIUS_DISTRICTS,
   type ClientLocation,
@@ -298,9 +298,6 @@ export default function ClientsPage() {
                 <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
                   <FiStar className="h-4 w-4" /> VIP prioritization
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                  <FiMapPin className="h-4 w-4" /> Mauritius heatmap
-                </span>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -331,14 +328,6 @@ export default function ClientsPage() {
           <StatCard label="Pinned on Map" value={stats.mapped} tone="rose" icon={<FiMapPin className="h-4 w-4" />} />
           <StatCard label="New (7d)" value={stats.last7} tone="slate" icon={<FiTag className="h-4 w-4" />} />
         </section>
-
-        <MauritiusClientHeatmap
-          clients={baseFiltered}
-          totalClients={baseFiltered.length}
-          selectedDistrict={locationFilter}
-          onSelectDistrict={setLocationFilter}
-          onEditClient={(client) => setEditing(client)}
-        />
 
         {/* Filters */}
         <section

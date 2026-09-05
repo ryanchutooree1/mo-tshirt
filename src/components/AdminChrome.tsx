@@ -802,9 +802,6 @@ export default function AdminChrome({
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-2">
-            <div className={`hidden items-center gap-2 rounded-full px-3 py-2 text-[11px] font-semibold xl:flex ${isDark ? "bg-white/7 text-white/75" : "bg-slate-100 text-slate-600"}`}>
-              <span aria-hidden>🇲🇺</span> Mauritius
-            </div>
             <button
               ref={profileMenuButtonRef}
               type="button"
