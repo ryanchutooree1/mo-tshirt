@@ -67,7 +67,7 @@ export type AdminPageOption = {
 export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
   {
     path: "/admin",
-    label: "Dashboard",
+    label: "Daily workspace",
     description: "Overview, KPIs, and quick actions.",
     group: "Overview",
   },
@@ -478,6 +478,7 @@ export function resolveAdminApiPermission(pathname: string) {
   if (pathname.startsWith("/api/admin/docker-postgres")) return "/admin/docker-postgres" as AdminPagePath;
   if (pathname.startsWith("/api/admin/tracking")) return "/admin/tracking" as AdminPagePath;
   if (pathname.startsWith("/api/admin/ai-assistant")) return "/admin/ai-assistant" as AdminPagePath;
+  if (pathname === "/api/admin/workbench") return "/admin" as AdminPagePath;
   if (pathname.startsWith("/api/admin/quotes")) return "/admin/quotation-approval" as AdminPagePath;
   if (pathname.startsWith("/api/admin/ready-made-uniforms")) return "/admin/ready-made-uniforms" as AdminPagePath;
   if (pathname.startsWith("/api/admin/shops")) return "/admin/shops" as AdminPagePath;
