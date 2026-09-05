@@ -1,0 +1,7 @@
+# Downloaded source photos and catalog backups remain available locally.
+references/
+references-*.png
+catalog-before.json
+admin-catalog-before.json
+shop-*-snapshot.yml
+shop-snapshot.yml
