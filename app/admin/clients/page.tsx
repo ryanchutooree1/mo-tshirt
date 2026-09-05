@@ -31,11 +31,8 @@ import {
   FiPhone,
   FiPlus,
   FiSearch,
-  FiShield,
-  FiStar,
   FiTag,
   FiTrash2,
-  FiUsers,
 } from 'react-icons/fi';
 
 // ---------- Types ----------
@@ -186,21 +183,6 @@ export default function ClientsPage() {
     });
   }, [baseFiltered, locationFilter, resolvedById]);
 
-  // Quick stats
-  const stats = useMemo(() => {
-    const total = clients.length;
-    const vip = clients.filter((c) => (c.starRating || 1) >= 4).length;
-    const withPhone = clients.filter((c) => cleanPhone(c.customerPhone)).length;
-    const mapped = clients.filter((c) => resolvedById.get(c.id)).length;
-    const last7 = clients.filter((c) => {
-      const dt = toDateValue(c.createdAt);
-      if (!dt) return false;
-      const diff = (Date.now() - dt.getTime()) / (1000 * 60 * 60 * 24);
-      return diff <= 7;
-    }).length;
-    return { total, vip, withPhone, mapped, last7 };
-  }, [clients, resolvedById]);
-
   // CSV export (filtered)
   const exportCSV = () => {
     const rows: string[] = [
@@ -270,35 +252,17 @@ export default function ClientsPage() {
     }`;
 
   return (
-    <main className="relative min-h-screen bg-white">
-      <div className="relative mx-auto max-w-7xl space-y-6 px-6 py-8">
+    <main className="relative min-h-screen bg-slate-50/50">
+      <div className="relative mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
         {/* Hero */}
         <section
-          className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+          className="relative py-2"
           style={{ animation: 'fadeUp 0.6s ease-out both' }}
         >
           <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
-                Clients
-              </p>
-              <h1 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">
-                Clients (CRM)
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
-                Keep your best customers close with VIP tagging, clean data, live Mauritius pinning, and a market heatmap that shows where to push harder next.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                  <FiUsers className="h-4 w-4" /> Smart CRM
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                  <FiShield className="h-4 w-4" /> Duplicate checks
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                  <FiStar className="h-4 w-4" /> VIP prioritization
-                </span>
-              </div>
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Clients</h1>
+              <p className="mt-1 text-sm text-slate-500">Find a customer, update their details, or get in touch.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <button
@@ -317,34 +281,24 @@ export default function ClientsPage() {
           </div>
         </section>
 
-        {/* Stats */}
-        <section
-          className="grid grid-cols-2 gap-4 md:grid-cols-5"
-          style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.08s' }}
-        >
-          <StatCard label="Total Clients" value={stats.total} tone="sky" icon={<FiUsers className="h-4 w-4" />} />
-          <StatCard label="VIP (4+ stars)" value={stats.vip} tone="amber" icon={<FiStar className="h-4 w-4" />} />
-          <StatCard label="With Phone" value={stats.withPhone} tone="emerald" icon={<FiPhone className="h-4 w-4" />} />
-          <StatCard label="Pinned on Map" value={stats.mapped} tone="rose" icon={<FiMapPin className="h-4 w-4" />} />
-          <StatCard label="New (7d)" value={stats.last7} tone="slate" icon={<FiTag className="h-4 w-4" />} />
-        </section>
-
         {/* Filters */}
         <section
-          className="sticky top-20 z-10 rounded-3xl border border-slate-200/70 bg-white/90 p-4 shadow-sm backdrop-blur"
+          className="rounded-2xl border border-slate-200 bg-white p-4"
           style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.14s' }}
         >
-          <div className="flex flex-wrap items-start gap-3">
-            <div className="relative">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative w-full sm:min-w-64 sm:flex-1">
               <FiSearch className="absolute left-3 top-2.5 text-slate-400" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by name, phone, email…"
-                className="w-full rounded-full border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100 sm:w-72"
+                aria-label="Search clients"
+                placeholder="Search clients…"
+                className="w-full rounded-full border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
               />
             </div>
             <select
+              aria-label="Filter by rating"
               value={minStars}
               onChange={(e) => setMinStars(e.target.value === 'all' ? 'all' : Number(e.target.value))}
               className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
@@ -357,11 +311,12 @@ export default function ClientsPage() {
               <option value={5}>★ 5 only</option>
             </select>
             <select
+              aria-label="Filter by district"
               value={locationFilter}
               onChange={(e) => setLocationFilter((e.target.value || 'all') as LocationFilter)}
               className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-100"
             >
-              <option value="all">All Mauritius</option>
+              <option value="all">All districts</option>
               <option value="unlocated">Unpinned only</option>
               {MAURITIUS_DISTRICTS.map((district) => (
                 <option key={district} value={district}>
@@ -385,7 +340,10 @@ export default function ClientsPage() {
             >
               <FiMail className="h-4 w-4" /> Has email
             </button>
-            <div className="ml-auto text-xs font-semibold text-slate-500">
+            {(search || minStars !== 'all' || locationFilter !== 'all' || hasPhoneOnly || hasEmailOnly) && (
+              <button type="button" className="shrink-0 whitespace-nowrap text-xs font-semibold text-slate-600 underline underline-offset-4" onClick={() => { setSearch(''); setMinStars('all'); setLocationFilter('all'); setHasPhoneOnly(false); setHasEmailOnly(false); }}>Clear filters</button>
+            )}
+            <div className="w-full border-t border-slate-100 pt-3 text-xs text-slate-500">
               Showing {filtered.length} of {clients.length} clients
             </div>
           </div>
@@ -393,7 +351,7 @@ export default function ClientsPage() {
 
         {/* Clients grid */}
         <section
-          className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3"
+          className="grid grid-cols-1 gap-4 lg:grid-cols-2"
           style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.2s' }}
         >
           {filtered.map((c) => {
@@ -402,15 +360,15 @@ export default function ClientsPage() {
             const location = resolvedById.get(c.id);
 
             return (
-              <div key={c.id} className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:border-slate-300 hover:shadow-md">
+              <div key={c.id} className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:border-slate-300">
                 {/* Header */}
                 <div className="border-b border-slate-100/80 p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
                       <Avatar name={c.customerName} />
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <div className="text-base font-semibold text-slate-900">{c.customerName}</div>
+                          <div className="break-words text-base font-semibold text-slate-900">{c.customerName}</div>
                           {(c.starRating || 1) >= 4 && (
                             <span className="text-[10px] font-semibold uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border border-slate-200 bg-white text-slate-700">
                               VIP
@@ -438,20 +396,7 @@ export default function ClientsPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-                        onClick={() => setEditing(c)}
-                      >
-                        <FiEdit2 className="h-3.5 w-3.5" /> Edit
-                      </button>
-                      <button
-                        className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-white px-3 py-1 text-xs font-semibold text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-50"
-                        onClick={() => setConfirmDelete({ id: c.id, name: c.customerName })}
-                      >
-                        <FiTrash2 className="h-3.5 w-3.5" /> Delete
-                      </button>
-                    </div>
+
                   </div>
                 </div>
 
@@ -517,6 +462,20 @@ export default function ClientsPage() {
                     </Row>
                   )}
                 </div>
+                <div className="flex items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/50 px-4 py-3">
+                      <button
+                        className="inline-flex min-h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                        onClick={() => setEditing(c)}
+                      >
+                        <FiEdit2 className="h-3.5 w-3.5" /> Edit
+                      </button>
+                      <button
+                        className="inline-flex min-h-9 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-rose-200 bg-white px-3 py-1 text-xs font-semibold text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-50"
+                        onClick={() => setConfirmDelete({ id: c.id, name: c.customerName })}
+                      >
+                        <FiTrash2 className="h-3.5 w-3.5" /> Delete
+                      </button>
+                    </div>
               </div>
             );
           })}
@@ -577,77 +536,6 @@ export default function ClientsPage() {
 }
 
 // ---------- UI Bits ----------
-function StatCard({
-  label,
-  value,
-  tone = 'slate',
-  icon,
-}: {
-  label: string;
-  value: number;
-  tone?: 'slate' | 'sky' | 'emerald' | 'amber' | 'rose';
-  icon?: ReactNode;
-}) {
-  const tones = {
-    slate: {
-      border: 'border-slate-200',
-      bg: 'from-white via-white to-white',
-      accent: 'border border-slate-200 bg-white text-slate-700',
-      glow: 'bg-transparent',
-      value: 'text-slate-900',
-    },
-    sky: {
-      border: 'border-slate-200',
-      bg: 'from-white via-white to-white',
-      accent: 'border border-slate-200 bg-white text-slate-700',
-      glow: 'bg-transparent',
-      value: 'text-slate-900',
-    },
-    emerald: {
-      border: 'border-slate-200',
-      bg: 'from-white via-white to-white',
-      accent: 'border border-slate-200 bg-white text-slate-700',
-      glow: 'bg-transparent',
-      value: 'text-slate-900',
-    },
-    amber: {
-      border: 'border-slate-200',
-      bg: 'from-white via-white to-white',
-      accent: 'border border-slate-200 bg-white text-slate-700',
-      glow: 'bg-transparent',
-      value: 'text-slate-900',
-    },
-    rose: {
-      border: 'border-slate-200',
-      bg: 'from-white via-white to-white',
-      accent: 'border border-slate-200 bg-white text-slate-700',
-      glow: 'bg-transparent',
-      value: 'text-slate-900',
-    },
-  } as const;
-  const theme = tones[tone] ?? tones.slate;
-
-  return (
-    <div className={`relative overflow-hidden rounded-2xl border ${theme.border} bg-gradient-to-br ${theme.bg} p-4 shadow-sm`}>
-      <div className="flex items-center justify-between">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-          {label}
-        </div>
-        {icon && (
-          <span className={`flex h-9 w-9 items-center justify-center rounded-full ${theme.accent}`}>
-            {icon}
-          </span>
-        )}
-      </div>
-      <div className={`mt-3 text-2xl font-semibold ${theme.value}`}>{value.toLocaleString()}</div>
-      <div
-        aria-hidden
-        className={`pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full blur-2xl ${theme.glow}`}
-      />
-    </div>
-  );
-}
-
 function Avatar({ name }: { name: string }) {
   const initials = name
     .split(' ')
@@ -656,7 +544,7 @@ function Avatar({ name }: { name: string }) {
     .slice(0, 2)
     .toUpperCase();
   return (
-    <div className="h-12 w-12 rounded-full bg-slate-900 text-white flex items-center justify-center font-semibold shadow-sm">
+    <div className="h-10 w-10 shrink-0 rounded-xl bg-slate-900 text-white flex items-center justify-center font-semibold shadow-sm">
       {initials || 'U'}
     </div>
   );
@@ -665,11 +553,11 @@ function Avatar({ name }: { name: string }) {
 function Row({ label, icon, children }: { label: string; icon?: ReactNode; children: ReactNode }) {
   return (
     <div className="flex gap-3">
-      <div className="flex w-24 items-center gap-2 text-slate-500 text-xs font-semibold uppercase tracking-[0.16em]">
+      <div className="flex w-20 shrink-0 items-center gap-2 text-xs text-slate-500">
         {icon}
         <span>{label}</span>
       </div>
-      <div className="flex-1 text-slate-700">{children}</div>
+      <div className="min-w-0 flex-1 break-words text-slate-700">{children}</div>
     </div>
   );
 }

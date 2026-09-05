@@ -23,7 +23,8 @@
     "firestore:migrate-quotation-uploads": "node scripts/migrate-quotation-uploads.mjs",
     "test:ai-assistant": "node --no-warnings --test tests/ai-assistant.test.mjs",
     "test:pricing": "node --test tests/pricing.test.js tests/design-studio-pricing.test.js",
-    "postbuild": "next-sitemap"
+    "postbuild": "next-sitemap",
+    "test:admin-workbench": "node --test tests/admin-workbench.test.cjs tests/admin-order-completion.test.cjs"
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",

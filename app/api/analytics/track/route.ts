@@ -13,6 +13,10 @@ const MAX_TRACKING_REQUEST_BYTES = 8 * 1024;
 const MAX_TEXT_LENGTH = 200;
 const MAX_PARAM_KEYS = 24;
 const ALLOWED_EVENT_NAMES = new Set([
+  "quote_start",
+  "design_start",
+  "design_progress",
+  "product_interest",
   "page_view",
   "whatsapp_click",
   "generate_lead",

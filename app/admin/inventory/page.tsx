@@ -19,19 +19,7 @@ import {
   doc,
   deleteDoc,
 } from "firebase/firestore";
-import {
-  FiAlertTriangle,
-  FiArchive,
-  FiBox,
-  FiDollarSign,
-  FiDownload,
-  FiLayers,
-  FiPackage,
-  FiPlus,
-  FiSearch,
-  FiUpload,
-  FiXCircle,
-} from "react-icons/fi";
+import { FiAlertTriangle, FiArchive, FiBox, FiDownload, FiPlus, FiSearch, FiUpload, FiXCircle } from "react-icons/fi";
 import { formatMoney as formatDisplayMoney } from "@/lib/money";
 
 // ---------- Types ----------
@@ -194,18 +182,6 @@ export default function InventoryPage() {
     );
     return { totalUnits, totalValue, lowCount, outCount };
   };
-
-  const overall = useMemo(() => {
-    let totalUnits = 0, totalValue = 0, low = 0, out = 0;
-    filtered.forEach((p) => {
-      const t = totals(p);
-      totalUnits += t.totalUnits;
-      totalValue += t.totalValue;
-      low += t.lowCount;
-      out += t.outCount;
-    });
-    return { totalUnits, totalValue, low, out };
-  }, [filtered]);
 
   const productStatus = (p: Product) => {
     const { lowCount, outCount } = totals(p);
@@ -519,33 +495,9 @@ export default function InventoryPage() {
     <main className="relative min-h-screen bg-white">
       <div className="relative mx-auto max-w-7xl space-y-6 px-6 py-8">
         {/* Hero */}
-        <section
-          className="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white p-6 shadow-sm"
-          style={{ animation: "fadeUp 0.6s ease-out both" }}
-        >
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-600">
-                Inventory
-              </p>
-              <h1 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">
-                Inventory Control
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
-                Monitor stock health, prevent shortages, and keep pricing accurate with live inventory safety checks.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                  <FiLayers className="h-4 w-4" /> Live stock levels
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                  <FiAlertTriangle className="h-4 w-4" /> Low stock alerts
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">
-                  CSV import / export
-                </span>
-              </div>
-            </div>
+        <section className="py-2">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Inventory</h1>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={exportCSV}
@@ -578,18 +530,6 @@ export default function InventoryPage() {
               </button>
             </div>
           </div>
-        </section>
-
-        {/* Stats */}
-        <section
-          className="grid grid-cols-2 gap-4 md:grid-cols-5"
-          style={{ animation: "fadeUp 0.6s ease-out both", animationDelay: "0.08s" }}
-        >
-          <StatCard label="Products" value={filtered.length} icon={<FiPackage className="h-4 w-4" />} />
-          <StatCard label="Total Units" value={overall.totalUnits} icon={<FiLayers className="h-4 w-4" />} />
-          <StatCard label="Stock Value" value={money(overall.totalValue)} icon={<FiDollarSign className="h-4 w-4" />} />
-          <StatCard label="Low Stock" value={overall.low} icon={<FiAlertTriangle className="h-4 w-4" />} />
-          <StatCard label="Out of Stock" value={overall.out} icon={<FiXCircle className="h-4 w-4" />} />
         </section>
 
         {/* Filters */}
@@ -1022,32 +962,6 @@ export default function InventoryPage() {
         `}</style>
       </div>
     </main>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: string | number;
-  icon?: React.ReactNode;
-}) {
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-          {label}
-        </div>
-        {icon && (
-          <span className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700">
-            {icon}
-          </span>
-        )}
-      </div>
-      <div className="mt-3 text-2xl font-semibold text-slate-900">{value}</div>
-    </div>
   );
 }
 

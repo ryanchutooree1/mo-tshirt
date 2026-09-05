@@ -1,7 +1,7 @@
 // app/admin/dms/page.tsx
 'use client';
 
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   ref as storageRef,
   list,
@@ -17,23 +17,7 @@ import {
   isFirebaseAdminAuthConfigured,
 } from '@/lib/firebase-admin-client-auth';
 import clsx from 'clsx';
-import {
-  FiUploadCloud,
-  FiFolder,
-  FiFileText,
-  FiCheckCircle,
-  FiBarChart2,
-  FiSearch,
-  FiTrash2,
-  FiEdit2,
-  FiDownload,
-  FiCopy,
-  FiChevronLeft,
-  FiX,
-  FiZoomIn,
-  FiZoomOut,
-  FiEye
-} from 'react-icons/fi';
+import { FiUploadCloud, FiFolder, FiFileText, FiSearch, FiTrash2, FiEdit2, FiDownload, FiCopy, FiChevronLeft, FiX, FiZoomIn, FiZoomOut, FiEye } from 'react-icons/fi';
 
 type DocItem = {
   name: string;
@@ -485,14 +469,6 @@ export default function DMSPage() {
   const isImage = (name = '') => /\.(jpe?g|png|gif|webp)$/i.test(name);
   const isPdf = (name = '') => /\.pdf$/i.test(name);
 
-  const stats = useMemo(() => {
-    const folders = items.filter(i => i.isFolder).length;
-    const files = items.filter(i => !i.isFolder).length;
-    const selectedCount = Object.values(selected).filter(Boolean).length;
-    const totalSize = items.reduce((sum, i) => sum + (i.size || 0), 0);
-    return { folders, files, selectedCount, totalSize };
-  }, [items, selected]);
-
   // keyboard: close preview with Esc
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -514,33 +490,9 @@ export default function DMSPage() {
       />
       <div className="relative mx-auto max-w-6xl space-y-6 px-6 py-8">
         {/* Hero */}
-        <section
-          className="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 p-6 shadow-sm backdrop-blur"
-          style={{ animation: 'fadeUp 0.6s ease-out both' }}
-        >
-          <div
-            aria-hidden
-            className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_60%)]"
-          />
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-sky-600">DMS</p>
-              <h1 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">Documents</h1>
-              <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
-                Browse the protected documents area, upload into any folder, and manage PDFs & images with quick previews and shareable links.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
-                  <FiUploadCloud className="h-4 w-4" /> Fast uploads
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                  <FiFileText className="h-4 w-4" /> PDF & image preview
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                  Shareable links
-                </span>
-              </div>
-            </div>
+        <section className="py-2">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Documents</h1>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setCurrentPath(DOCUMENTS_PATH)}
@@ -562,17 +514,6 @@ export default function DMSPage() {
               </button>
             </div>
           </div>
-        </section>
-
-        {/* Stats */}
-        <section
-          className="grid grid-cols-2 gap-4 md:grid-cols-4"
-          style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.08s' }}
-        >
-          <StatCard label="Folders" value={stats.folders} tone="sky" icon={<FiFolder className="h-4 w-4" />} />
-          <StatCard label="Files" value={stats.files} tone="slate" icon={<FiFileText className="h-4 w-4" />} />
-          <StatCard label="Selected" value={stats.selectedCount} tone="amber" icon={<FiCheckCircle className="h-4 w-4" />} />
-          <StatCard label="Storage" value={humanSize(stats.totalSize)} tone="emerald" icon={<FiBarChart2 className="h-4 w-4" />} />
         </section>
 
         <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFilesSelected} />
@@ -826,70 +767,5 @@ export default function DMSPage() {
       `}</style>
       </div>
     </main>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  tone = 'slate',
-  icon,
-}: {
-  label: string;
-  value: string | number;
-  tone?: 'slate' | 'sky' | 'emerald' | 'amber';
-  icon?: React.ReactNode;
-}) {
-  const tones = {
-    slate: {
-      border: 'border-slate-200',
-      bg: 'from-slate-50 via-white to-white',
-      accent: 'bg-slate-100 text-slate-700',
-      glow: 'bg-slate-200/40',
-      value: 'text-slate-900',
-    },
-    sky: {
-      border: 'border-sky-100',
-      bg: 'from-sky-50 via-white to-white',
-      accent: 'bg-sky-100 text-sky-700',
-      glow: 'bg-sky-200/40',
-      value: 'text-slate-900',
-    },
-    emerald: {
-      border: 'border-emerald-100',
-      bg: 'from-emerald-50 via-white to-white',
-      accent: 'bg-emerald-100 text-emerald-700',
-      glow: 'bg-emerald-200/40',
-      value: 'text-slate-900',
-    },
-    amber: {
-      border: 'border-amber-100',
-      bg: 'from-amber-50 via-white to-white',
-      accent: 'bg-amber-100 text-amber-700',
-      glow: 'bg-amber-200/40',
-      value: 'text-slate-900',
-    },
-  } as const;
-  const theme = tones[tone] ?? tones.slate;
-  const displayValue = typeof value === 'number' ? value.toLocaleString() : value;
-
-  return (
-    <div className={`relative overflow-hidden rounded-2xl border ${theme.border} bg-gradient-to-br ${theme.bg} p-4 shadow-sm`}>
-      <div className="flex items-center justify-between">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-          {label}
-        </div>
-        {icon && (
-          <span className={`flex h-9 w-9 items-center justify-center rounded-full ${theme.accent}`}>
-            {icon}
-          </span>
-        )}
-      </div>
-      <div className={`mt-3 text-2xl font-semibold ${theme.value}`}>{displayValue}</div>
-      <div
-        aria-hidden
-        className={`pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full blur-2xl ${theme.glow}`}
-      />
-    </div>
   );
 }

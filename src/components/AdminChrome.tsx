@@ -31,6 +31,7 @@ import {
   House,
   Landmark,
   LayoutDashboard,
+  Layers3,
   LogOut,
   Menu,
   MonitorCog,
@@ -92,9 +93,11 @@ type NavGroup = {
 };
 
 const SIDEBAR_COLLAPSED_KEY = "admin-sidebar-collapsed-v1";
-const SIDEBAR_GROUPS_KEY = "admin-sidebar-groups-v1";
+const SIDEBAR_GROUPS_KEY = "admin-sidebar-groups-v2";
 
+const DAILY_PATHS: AdminPagePath[] = ["/admin", "/admin/quotation-approval", "/admin/orders", "/admin/inventory", "/admin/clients"];
 const NAV_GROUPS: NavGroup[] = [
+  { id: "daily", label: "Your work", paths: DAILY_PATHS },
   {
     id: "core",
     label: "Core",
@@ -324,6 +327,7 @@ export default function AdminChrome({
   const [collapsed, setCollapsed] = useState(false);
   const [focusedQuoteReview, setFocusedQuoteReview] = useState(false);
   const [navQuery, setNavQuery] = useState("");
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [profile, setProfile] = useState<AdminProfile>(initialProfile);
@@ -334,7 +338,7 @@ export default function AdminChrome({
   const [profileNotice, setProfileNotice] = useState("");
   const [isDesktop, setIsDesktop] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(NAV_GROUPS.map((group) => [group.id, true]))
+    Object.fromEntries(NAV_GROUPS.map((group) => [group.id, group.id === "daily"]))
   );
   const searchRef = useRef<HTMLInputElement>(null);
   const mobilePanelRef = useRef<HTMLDivElement>(null);
@@ -502,6 +506,7 @@ export default function AdminChrome({
 
   useEffect(() => {
     if (!currentGroup) return;
+    if (currentGroup.id !== "daily") setToolsOpen(true);
     setOpenGroups((current) => (current[currentGroup.id] ? current : { ...current, [currentGroup.id]: true }));
   }, [currentGroup]);
 
@@ -574,18 +579,18 @@ export default function AdminChrome({
 
   const sidebar = (
     <aside
-      className={`admin-workspace-sidebar flex h-full flex-col overflow-hidden border-r border-white/[0.07] bg-[#071015] text-white transition-[width] duration-300 ${
+      className={`admin-workspace-sidebar flex h-full flex-col overflow-hidden border-r border-white/[0.07] bg-[#141921] text-white transition-[width] duration-300 ${
         sidebarCollapsed ? "lg:w-[68px]" : "lg:w-[272px]"
       } w-[min(300px,calc(100vw-48px))] max-w-full`}
     >
       <div className={`admin-workspace-sidebar-brand flex h-[92px] shrink-0 items-center border-b border-white/[0.07] px-5 ${sidebarCollapsed ? "lg:justify-center lg:px-2" : ""}`}>
-        <Link href="/admin" className="flex min-w-0 items-center gap-3" aria-label="MO T-SHIRT admin dashboard">
+        <Link href="/admin" className="flex min-w-0 items-center gap-3" aria-label="MO T-SHIRT daily workspace">
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
             <Image src="/logo_transparent.webp" alt="" width={1291} height={435} className="h-auto w-10 object-contain" />
           </span>
           <span className={`min-w-0 ${sidebarCollapsed ? "lg:hidden" : ""}`}>
             <span className="block truncate text-[21px] font-bold tracking-[-0.04em]">Mo T-Shirt</span>
-            <span className="mt-0.5 block truncate text-[11px] text-white/45">Wear Your Creativity</span>
+            <span className="mt-0.5 block truncate text-[11px] text-white/45">The business, together</span>
           </span>
         </Link>
         <button
@@ -598,14 +603,14 @@ export default function AdminChrome({
         </button>
       </div>
 
-      <nav className={`min-h-0 flex-1 overscroll-contain overflow-y-auto px-3 py-4 touch-pan-y [-webkit-overflow-scrolling:touch] [scrollbar-color:rgba(255,255,255,0.18)_transparent] ${sidebarCollapsed ? "lg:px-2" : ""}`} aria-label="Administrator modules">
+      <nav className={`min-h-0 flex-1 overscroll-contain overflow-y-auto px-3 py-4 touch-pan-y [-webkit-overflow-scrolling:touch] [scrollbar-color:rgba(255,255,255,0.18)_transparent] ${sidebarCollapsed ? "lg:px-2" : ""}`} aria-label="Administrator navigation">
         <div className={`relative mb-3 ${sidebarCollapsed ? "lg:hidden" : ""}`}>
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
           <input
             value={navQuery}
             onChange={(event) => setNavQuery(event.target.value)}
-            placeholder="Find a module..."
-            aria-label="Filter sidebar modules"
+            placeholder="Find any tool..."
+            aria-label="Find an admin tool"
             className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.055] pl-9 pr-3 text-base text-white outline-none placeholder:text-white/40 focus:border-white/20 sm:text-xs"
           />
         </div>
@@ -613,23 +618,26 @@ export default function AdminChrome({
             const queryValue = navQuery.trim().toLowerCase();
             const items = group.paths.filter((path) => {
               if (!visiblePages.has(path)) return false;
+              if (group.id !== "daily" && DAILY_PATHS.includes(path)) return false;
               if (!queryValue) return true;
               return `${pageLabel(path)} ${group.label} ${path}`.toLowerCase().includes(queryValue);
             });
-            if (!items.length) return null;
-            const expanded = (sidebarCollapsed && isDesktop) || Boolean(queryValue) ? true : openGroups[group.id] !== false;
+            if (!items.length && group.id !== "daily") return null;
+            if (group.id !== "daily" && !toolsOpen && !queryValue) return null;
+            const expanded = group.id === "daily" || (sidebarCollapsed && isDesktop) || Boolean(queryValue) ? true : openGroups[group.id] === true;
             return (
               <div key={group.id} className="mb-2">
                 <button
                   type="button"
                   onClick={() => setOpenGroups((current) => ({ ...current, [group.id]: !expanded }))}
+                  disabled={group.id === "daily"}
                   className={`flex w-full items-center justify-between px-3 py-2 text-left text-[10px] font-bold uppercase tracking-[0.16em] text-white/35 transition hover:text-white/65 ${
                     sidebarCollapsed ? "lg:hidden" : ""
                   }`}
                   aria-expanded={expanded}
                 >
                   {group.label}
-                  <ChevronDown className={`h-3.5 w-3.5 transition ${expanded ? "rotate-0" : "-rotate-90"}`} />
+                  {group.id !== "daily" && <ChevronDown className={`h-3.5 w-3.5 transition ${expanded ? "rotate-0" : "-rotate-90"}`} />}
                 </button>
                 {expanded ? (
                   <div className="space-y-1">
@@ -649,14 +657,15 @@ export default function AdminChrome({
                               : "text-white/62 hover:bg-white/[0.07] hover:text-white"
                           } ${sidebarCollapsed ? "lg:justify-center lg:px-0" : ""}`}
                         >
-                          <Icon className={`h-[18px] w-[18px] shrink-0 ${active ? "text-[#ff6400]" : "text-white/52 group-hover:text-white/85"}`} />
+                          <Icon className={`h-[18px] w-[18px] shrink-0 ${active ? "text-[#f0442a]" : "text-white/52 group-hover:text-white/85"}`} />
                           <span className={`truncate ${sidebarCollapsed ? "lg:hidden" : ""}`}>{pageLabel(path)}</span>
-                          {active ? <span className={`ml-auto h-1.5 w-1.5 rounded-full bg-[#ff6400] ${sidebarCollapsed ? "lg:hidden" : ""}`} /> : null}
+                          {active ? <span className={`ml-auto h-1.5 w-1.5 rounded-full bg-[#f0442a] ${sidebarCollapsed ? "lg:hidden" : ""}`} /> : null}
                         </Link>
                       );
                     })}
                   </div>
                 ) : null}
+                {group.id === "daily" && <button type="button" onClick={() => setToolsOpen((open) => !open)} aria-expanded={toolsOpen} title={sidebarCollapsed ? "All tools" : undefined} className={`mt-5 flex min-h-11 w-full items-center gap-3 rounded-xl border border-white/10 px-3 text-[13px] font-medium text-white/65 hover:bg-white/10 hover:text-white ${sidebarCollapsed ? "lg:justify-center lg:px-0" : ""}`}><Layers3 className="h-[18px] w-[18px] shrink-0" /><span className={sidebarCollapsed ? "lg:hidden" : ""}>All tools</span><ChevronDown className={`ml-auto h-4 w-4 ${toolsOpen ? "rotate-180" : ""} ${sidebarCollapsed ? "lg:hidden" : ""}`} /></button>}
               </div>
             );
           })}
@@ -669,7 +678,7 @@ export default function AdminChrome({
           title={sidebarCollapsed ? "Edit profile" : undefined}
           aria-label={`Edit profile for ${displayName}`}
           aria-disabled={profileLoadState === "loading"}
-          className={`group flex min-h-11 w-full items-center gap-3 rounded-xl p-2.5 text-left transition hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6400]/70 ${sidebarCollapsed ? "lg:justify-center lg:p-1" : ""}`}
+          className={`group flex min-h-11 w-full items-center gap-3 rounded-xl p-2.5 text-left transition hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f0442a]/70 ${sidebarCollapsed ? "lg:justify-center lg:p-1" : ""}`}
         >
           <AdminAvatar
             name={displayName}
@@ -678,7 +687,7 @@ export default function AdminChrome({
             offsetX={profile.avatarOffsetX}
             offsetY={profile.avatarOffsetY}
             sizes="36px"
-            className="h-9 w-9 bg-white text-xs font-bold text-[#071015] ring-1 ring-white/20"
+            className="h-9 w-9 bg-white text-xs font-bold text-[#141921] ring-1 ring-white/20"
           />
           <span className={`min-w-0 flex-1 ${sidebarCollapsed ? "lg:hidden" : ""}`}>
             <span className="block truncate text-xs font-semibold">{displayName}</span>
@@ -804,7 +813,7 @@ export default function AdminChrome({
                 offsetX={profile.avatarOffsetX}
                 offsetY={profile.avatarOffsetY}
                 sizes="28px"
-                className={`h-7 w-7 text-[10px] font-bold ${isDark ? "bg-white text-[#071015]" : "bg-[#071015] text-white"}`}
+                className={`h-7 w-7 text-[10px] font-bold ${isDark ? "bg-white text-[#141921]" : "bg-[#141921] text-white"}`}
               />
               <span className="hidden text-xs font-semibold xl:block">{firstName}</span>
               <ChevronDown className="hidden h-3.5 w-3.5 opacity-45 sm:block" />
@@ -828,7 +837,7 @@ export default function AdminChrome({
                   offsetX={profile.avatarOffsetX}
                   offsetY={profile.avatarOffsetY}
                   sizes="48px"
-                  className={`h-12 w-12 text-xs font-bold ${isDark ? "bg-white text-[#071015]" : "bg-[#071015] text-white"}`}
+                  className={`h-12 w-12 text-xs font-bold ${isDark ? "bg-white text-[#141921]" : "bg-[#141921] text-white"}`}
                 />
                 <div className="min-w-0">
                   <div className="truncate text-sm font-bold">{displayName}</div>

@@ -19,6 +19,7 @@ import { normalizeQuotationUploadUrl } from "@/lib/quotation-upload-paths";
 import { SITE_URL } from "@/lib/seo";
 
 type ParsedPayload = {
+  tracking?: string;
   name: string;
   email: string;
   message: string;
@@ -248,6 +249,7 @@ export async function POST(req: Request) {
         .getAll("files")
         .filter((entry): entry is File => entry instanceof File && entry.size > 0);
       payload = {
+        tracking: form.get("tracking")?.toString(),
         name: String(form.get("name") ?? ""),
         email: String(form.get("email") ?? ""),
         message: String(form.get("message") ?? ""),
@@ -542,9 +544,16 @@ export async function POST(req: Request) {
       return lines.join("\n");
     };
 
+    let tracking: Record<string, string> = {};
+    try {
+      const raw = JSON.parse(payload.tracking || '{}');
+      const keys = ['session_id', 'attempt_id', 'flow', 'traffic_source', 'traffic_medium', 'traffic_campaign'];
+      tracking = Object.fromEntries(keys.flatMap(key => typeof raw?.[key] === 'string' ? [[key, raw[key].slice(0, 120)]] : []));
+    } catch {}
     let quoteId: string | null = null;
     try {
       const ref = await addDoc(collection(db, "quotes"), {
+        tracking,
         name: safeName,
         email: safeEmail,
         phone: safePhone,
