@@ -19,18 +19,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import {
-  FiCheckCircle,
-  FiClipboard,
-  FiCreditCard,
-  FiDollarSign,
-  FiFileText,
-  FiPauseCircle,
-  FiPlayCircle,
-  FiShoppingCart,
-  FiTag,
-  FiUser,
-} from 'react-icons/fi';
+import { FiCheckCircle, FiClipboard, FiPauseCircle, FiPlayCircle, FiShoppingCart, FiTag, FiUser } from 'react-icons/fi';
 import { formatMoney as formatDisplayMoney, formatMoneyValue } from '@/lib/money';
 
 // If you want to show currency consistently
@@ -101,7 +90,6 @@ export default function POSPage() {
   // -------- Cart --------
   const [cart, setCart] = useState<CartItem[]>([]);
   const cartTotal = useMemo(() => cart.reduce((a, c) => a + c.lineTotal, 0), [cart]);
-  const cartItems = useMemo(() => cart.reduce((a, c) => a + c.quantity, 0), [cart]);
 
   // -------- Status & Payment --------
   const [status, setStatus] = useState<CheckoutStatus | ''>('');
@@ -548,22 +536,6 @@ export default function POSPage() {
   };
 
   const canHold = !done && cart.length > 0;
-  const customerReady = Boolean(customerName.trim() && phone.trim() && email.trim());
-  const checkoutSteps = [customerReady, cart.length > 0, Boolean(status), Boolean(payment)];
-  const progressPct = done
-    ? 100
-    : Math.round((checkoutSteps.filter(Boolean).length / checkoutSteps.length) * 100);
-  const checkoutStage = done
-    ? 'Transaction completed'
-    : progressPct < 25
-      ? 'Capture customer details'
-      : progressPct < 50
-        ? 'Build cart with products'
-        : progressPct < 75
-          ? 'Select order status'
-          : progressPct < 100
-            ? 'Choose payment type'
-            : 'Ready to complete';
 
   // ---------- UI ----------
   return (
@@ -573,62 +545,17 @@ export default function POSPage() {
       <div aria-hidden className="posperf-glow posperf-glow-right" />
 
       <div className="relative mx-auto max-w-[1520px] space-y-6 px-4 py-8 sm:px-6 lg:px-8">
-        <section className="posperf-panel posperf-hero" style={{ animation: 'fadeUp 0.6s ease-out both' }}>
-          <div className="posperf-hero-main">
-            <div>
-              <p className="posperf-kicker">MO Admin HQ</p>
-              <h1 className="posperf-title">The POS Control Panel</h1>
-              <p className="posperf-copy">
-                One command view for checkout flow, stock guardrails, held orders, payments, and invoice handoff.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="posperf-chip posperf-chip-sky"><FiShoppingCart className="h-4 w-4" /> Live stock link</span>
-                <span className="posperf-chip posperf-chip-emerald"><FiCreditCard className="h-4 w-4" /> Split payment ready</span>
-                <span className="posperf-chip posperf-chip-slate"><FiFileText className="h-4 w-4" /> PDF + email receipt</span>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-start justify-end gap-2">
-              <button onClick={saveHold} disabled={!canHold} className="posperf-btn posperf-btn-ghost">
-                <FiPauseCircle className="h-4 w-4" /> Hold Current
-              </button>
-              <button onClick={clearAll} className="posperf-btn posperf-btn-solid">
-                <FiPlayCircle className="h-4 w-4" /> New Transaction
-              </button>
-            </div>
+        <header className="flex flex-wrap items-center justify-between gap-4 py-2">
+          <h1 className="text-2xl font-semibold tracking-tight">Point of sale</h1>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={saveHold} disabled={!canHold} className="posperf-btn posperf-btn-ghost">
+              <FiPauseCircle className="h-4 w-4" /> Hold Current
+            </button>
+            <button onClick={clearAll} className="posperf-btn posperf-btn-solid">
+              <FiPlayCircle className="h-4 w-4" /> New Transaction
+            </button>
           </div>
-          <div className="posperf-hero-rail">
-            <div className="posperf-rail-item">
-              <span>Invoice Stream</span>
-              <strong>{fetchingInvoice ? 'Loading…' : `#${String(invoice || 0).padStart(5, '0')}`}</strong>
-            </div>
-            <div className="posperf-rail-item">
-              <span>Checkout Readiness</span>
-              <strong>{progressPct}%</strong>
-            </div>
-            <div className="posperf-rail-item">
-              <span>Live Stage</span>
-              <strong>{checkoutStage}</strong>
-            </div>
-            <div className="posperf-rail-item">
-              <span>Held Orders</span>
-              <strong>{holds.length}</strong>
-            </div>
-            {holdId && (
-              <div className="posperf-rail-item">
-                <span>Current Hold ID</span>
-                <strong className="break-all">{holdId}</strong>
-              </div>
-            )}
-          </div>
-        </section>
-
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5" style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.08s' }}>
-          <StatCard label="Cart Items" value={cartItems} tone="sky" icon={<FiShoppingCart className="h-4 w-4" />} />
-          <StatCard label="Cart Total" value={money(cartTotal)} tone="emerald" icon={<FiDollarSign className="h-4 w-4" />} />
-          <StatCard label="Active Holds" value={holds.length} tone="amber" icon={<FiPauseCircle className="h-4 w-4" />} />
-          <StatCard label="Current Status" value={status || 'Not set'} tone="slate" icon={<FiClipboard className="h-4 w-4" />} />
-          <FlowCard progress={progressPct} stage={checkoutStage} />
-        </section>
+        </header>
 
         <section className="posperf-panel" style={{ animation: 'fadeUp 0.6s ease-out both', animationDelay: '0.14s' }}>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1365,62 +1292,6 @@ export default function POSPage() {
         }
       `}</style>
     </main>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  tone = 'slate',
-  icon,
-}: {
-  label: string;
-  value: string | number;
-  tone?: 'slate' | 'sky' | 'emerald' | 'amber';
-  icon?: React.ReactNode;
-}) {
-  const tones = {
-    slate: {
-      icon: 'posperf-metric-icon-slate',
-      glow: 'posperf-metric-glow-slate',
-    },
-    sky: {
-      icon: 'posperf-metric-icon-sky',
-      glow: 'posperf-metric-glow-sky',
-    },
-    emerald: {
-      icon: 'posperf-metric-icon-emerald',
-      glow: 'posperf-metric-glow-emerald',
-    },
-    amber: {
-      icon: 'posperf-metric-icon-amber',
-      glow: 'posperf-metric-glow-amber',
-    },
-  } as const;
-  const theme = tones[tone] ?? tones.slate;
-
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-[var(--pos-border)] bg-white p-4">
-      <div className="flex items-center justify-between gap-2">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--pos-soft)]">{label}</div>
-        {icon && <span className={`posperf-metric-icon ${theme.icon}`}>{icon}</span>}
-      </div>
-      <div className="mt-3 text-[1.8rem] font-semibold leading-none text-[var(--pos-text)]">{value}</div>
-      <div aria-hidden className={`pointer-events-none absolute -right-12 -top-12 h-28 w-28 rounded-full blur-2xl ${theme.glow}`} />
-    </div>
-  );
-}
-
-function FlowCard({ progress, stage }: { progress: number; stage: string }) {
-  return (
-    <div className="posperf-flow">
-      <div className="posperf-flow-label">Checkout Progress</div>
-      <div className="posperf-flow-value">{progress}%</div>
-      <div className="posperf-flow-track">
-        <span style={{ width: `${Math.min(Math.max(progress, 0), 100)}%` }} />
-      </div>
-      <div className="posperf-flow-note">{stage}</div>
-    </div>
   );
 }
 

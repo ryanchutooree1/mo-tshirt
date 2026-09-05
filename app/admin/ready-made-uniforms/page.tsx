@@ -6,19 +6,7 @@ import {
   type ReadyMadeUniformItem,
 } from "@/lib/ready-made-uniforms-store";
 import LoadingImage from "@/components/LoadingImage";
-import {
-  FiActivity,
-  FiEye,
-  FiEyeOff,
-  FiImage,
-  FiLayers,
-  FiPlus,
-  FiRefreshCw,
-  FiSearch,
-  FiTag,
-  FiUpload,
-  FiX,
-} from "react-icons/fi";
+import { FiEye, FiImage, FiPlus, FiRefreshCw, FiSearch, FiTag, FiUpload, FiX } from "react-icons/fi";
 
 const UNIFORM_IMAGE_VIEWS = [
   { key: "front", label: "Main photo" },
@@ -232,15 +220,6 @@ export default function AdminReadyMadeUniformsPage() {
       return blob.includes(term);
     });
   }, [items, search, showActiveOnly]);
-
-  const stats = useMemo(() => {
-    const active = items.filter((item) => item.isActive).length;
-    return {
-      total: items.length,
-      active,
-      hidden: items.length - active,
-    };
-  }, [items]);
 
   function closeComposer() {
     setIsComposerOpen(false);
@@ -486,20 +465,9 @@ export default function AdminReadyMadeUniformsPage() {
   return (
     <main className="min-h-screen">
       <div className="mx-auto w-full max-w-6xl space-y-6 px-6 py-8">
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-orange-600">
-                Public Page Content
-              </p>
-              <h1 className="mt-3 text-3xl font-semibold text-slate-900 sm:text-4xl">
-                Ready-made uniforms
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
-                Update the style codes, images, selling copy, and WhatsApp messages shown on
-                /ready-made-uniforms.
-              </p>
-            </div>
+        <section className="py-2">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Ready-made uniforms</h1>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -517,12 +485,6 @@ export default function AdminReadyMadeUniformsPage() {
               </button>
             </div>
           </div>
-        </section>
-
-        <section className="grid grid-cols-3 gap-4">
-          <StatCard label="Total" value={stats.total} icon={<FiLayers className="h-4 w-4" />} />
-          <StatCard label="Active" value={stats.active} icon={<FiActivity className="h-4 w-4" />} />
-          <StatCard label="Hidden" value={stats.hidden} icon={<FiEyeOff className="h-4 w-4" />} />
         </section>
 
         <section className="sticky top-20 z-10 rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-sm backdrop-blur">
@@ -982,26 +944,6 @@ export default function AdminReadyMadeUniformsPage() {
         </div>
       )}
     </main>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: number;
-  icon: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-        {icon}
-        {label}
-      </div>
-      <div className="mt-3 text-3xl font-semibold text-slate-900">{value}</div>
-    </div>
   );
 }
 

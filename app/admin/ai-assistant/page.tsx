@@ -253,48 +253,6 @@ function MiniStat({
   );
 }
 
-function HeroStat({
-  label,
-  value,
-  sub,
-  accent,
-}: {
-  label: string;
-  value: string;
-  sub: string;
-  accent: "cyan" | "amber" | "emerald";
-}) {
-  const topEdgeClass =
-    accent === "amber"
-      ? "from-slate-300 via-slate-200 to-white"
-      : accent === "emerald"
-        ? "from-slate-300 via-slate-200 to-white"
-        : "from-slate-300 via-slate-200 to-white";
-
-  const labelClass =
-    accent === "amber"
-      ? "text-slate-500"
-      : accent === "emerald"
-        ? "text-slate-500"
-        : "text-slate-500";
-
-  const subClass =
-    accent === "amber"
-      ? "text-slate-600"
-      : accent === "emerald"
-        ? "text-slate-600"
-        : "text-slate-600";
-
-  return (
-    <div className="relative overflow-hidden rounded-[1.6rem] border border-slate-200 bg-white p-5 shadow-[0_16px_36px_rgba(15,23,42,0.06)]">
-      <div aria-hidden className={`absolute inset-x-0 top-0 h-px bg-gradient-to-r ${topEdgeClass}`} />
-      <p className={`text-[11px] font-semibold uppercase tracking-[0.32em] ${labelClass}`}>{label}</p>
-      <p className="mt-5 text-4xl font-semibold leading-none text-slate-900">{value}</p>
-      <p className={`mt-3 max-w-[16rem] text-sm leading-6 ${subClass}`}>{sub}</p>
-    </div>
-  );
-}
-
 export default function AdminAiAssistantPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messageListRef = useRef<HTMLDivElement | null>(null);
@@ -851,58 +809,9 @@ export default function AdminAiAssistantPage() {
           </div>
         </div>
 
-        <section className="relative isolate overflow-hidden rounded-[2.25rem] border border-slate-200 bg-white px-6 py-7 shadow-[0_24px_60px_rgba(15,23,42,0.08)] sm:px-8 sm:py-9 lg:px-10 lg:py-10">
-          <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1.35fr)_360px] lg:items-start xl:grid-cols-[minmax(0,1.35fr)_390px]">
-            <div className="max-w-3xl text-slate-900">
-              <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-700">
-                <Sparkles className="h-3.5 w-3.5" />
-                Private training cockpit
-              </span>
-              <p className="mt-6 text-xs font-semibold uppercase tracking-[0.38em] text-slate-500">MO T-SHIRT AI Lab</p>
-              <h1 className="mt-4 max-w-3xl font-sans text-4xl font-semibold leading-[0.95] tracking-tight sm:text-5xl xl:text-[4.2rem]">
-                AI Assistant
-              </h1>
-              <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
-                This page keeps your AI private while you validate order capture, submit sample leads, save knowledge, and approve or reject results for learning.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700">
-                  <Bot className="h-3.5 w-3.5" />
-                  Chat-driven lead capture
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700">
-                  <MessageSquareText className="h-3.5 w-3.5" />
-                  Session playback
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Feedback-driven retraining
-                </span>
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-              <HeroStat
-                label="Sessions"
-                value={String(recentSessions.length)}
-                sub={recentSessions.length ? "Recent admin runs loaded" : "No testing sessions yet"}
-                accent="cyan"
-              />
-              <HeroStat
-                label="Leads"
-                value={String(recentLeads.length)}
-                sub={recentLeads.length ? "Recent submitted leads ready for review" : "No submitted leads yet"}
-                accent="emerald"
-              />
-              <HeroStat
-                label="Knowledge"
-                value={String(recentKnowledge.length)}
-                sub={recentKnowledge.length ? "Business notes already feeding Sales AI" : "Knowledge base is empty"}
-                accent="amber"
-              />
-            </div>
-          </div>
-        </section>
+        <header className="py-2">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">AI Assistant</h1>
+        </header>
 
         {(notice || error) && (
           <div
