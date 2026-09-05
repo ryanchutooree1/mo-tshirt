@@ -146,3 +146,46 @@ test("prices a website quotation when the saved print method is missing", () => 
     "T-Shirt (Black / M) — DTF — Small Front Printing only"
   );
 });
+
+test("prices the display labels submitted by both design studios", () => {
+  for (const [label, code] of [["Front", "large_front_only"], ["Back", "back_only"], ["Front + Back", "front_back"]]) {
+    const garment = { garment: "Plain Poloshirt", size: "M", quantity: 1 };
+    const result = buildAutomaticQuotePricing({ garments: [garment], printMethod: "Vinyl heat press", designBrief: { printPlacement: label, estimatedTotal: 1 } });
+    assert.equal(result.lines[0].unitPrice, getAutomaticUnitPrice({ garment, printMethod: "Vinyl", printPlacement: code }));
+    assert.ok(result.total > 0);
+    assert.equal(result.requiresReview, false);
+  }
+});
+
+test("fills unspecified standard garments with a clearly labelled placement estimate", () => {
+  const result = buildAutomaticQuotePricing({ garments: [{ garment: "T-Shirt", size: "M", quantity: 2 }], printMethod: "Not sure" });
+  assert.equal(result.lines[0].unitPrice, 525);
+  assert.match(result.lines[0].description, /Estimated placement/);
+});
+
+test("does not substitute a front estimate for an explicit custom layout", () => {
+  const result = buildAutomaticQuotePricing({ garments: [{ garment: "T-Shirt", size: "M", quantity: 1 }], printMethod: "DTF", designBrief: { printPlacement: "custom" } });
+  assert.equal(result.lines[0].unitPrice, 0);
+  assert.equal(result.requiresReview, true);
+});
+
+test("blank garments are not charged for printing", () => {
+  const result = buildAutomaticQuotePricing({ garments: [{ garment: "Plain Poloshirt", size: "M", quantity: 1 }], printMethod: "No customization", designBrief: { printPlacement: "Front" } });
+  assert.equal(result.lines[0].unitPrice, 450);
+  assert.doesNotMatch(result.lines[0].description, /Front Printing/);
+});
+
+const { buildMissingPricePatch } = require('../src/lib/quote-price-backfill');
+const openRequest = () => ({ status: 'new', garments: [{ garment: 'Plain Poloshirt', size: 'M', quantity: 1 }], printMethod: 'Vinyl heat press', designBrief: { printPlacement: 'Front + Back' }, quote: { lines: [{ quantity: 1, unitPrice: 0 }], discount: 10, deliveryFee: 100 } });
+test("repairs missing quote prices and totals without losing commercial adjustments", () => {
+  const patch = buildMissingPricePatch(openRequest());
+  assert.equal(patch.quote.lines[0].unitPrice, 845);
+  assert.equal(patch.quote.total, 935);
+  assert.equal(patch.quote.discount, 10);
+  assert.equal(buildMissingPricePatch({ ...openRequest(), ...patch }), null);
+});
+test("does not change manual prices, sent quotes, orders or mismatched lines", () => {
+  for (const changes of [{ sentAt: '2026-01-01' }, { status: 'approved' }, { clientDecision: 'accepted' }, { orderTransactionId: 'order' }, { quote: { lines: [{ quantity: 2, unitPrice: 0 }] } }, { quote: { lines: [{ quantity: 1, unitPrice: 200 }] } }, { quote: { lines: [{ quantity: 1, unitPrice: 0, priceSource: 'manual' }] } }]) {
+    assert.equal(buildMissingPricePatch({ ...openRequest(), ...changes }), null);
+  }
+});

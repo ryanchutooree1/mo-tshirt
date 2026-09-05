@@ -38,6 +38,17 @@ function normalizeKey(value) {
   return clean(value).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
+// Accept both the studio's display labels and the quote form's placement codes.
+function normalizePrintPlacement(value) {
+  const raw = clean(value);
+  if (PRINT_PLACEMENT_LABELS[raw]) return raw;
+  const key = normalizeKey(raw);
+  if (key === "front") return "large_front_only";
+  if (key === "back") return "back_only";
+  if (key === "front back" || key === "front and back") return "front_back";
+  return null;
+}
+
 function normalizeMethod(value) {
   const method = normalizeKey(value);
   if (method.includes("dtf") || method.includes("direct to film")) return "DTF";
@@ -141,8 +152,12 @@ function getAutomaticUnitPrice({ garment, printMethod, printPlacement }) {
   // Older website requests did not always store a size. The existing price book
   // uses XS-XL as its normal/default band, so use that band for those records.
   const sizeBand = normalizeSizeBand(garment?.size) || "XS-XL";
+  if (normalizeKey(printMethod) === "no customization") {
+    const blank = getBlankInfo(itemType, normalizeKey(garment?.color) === "red" ? "Red" : "Standard", sizeBand);
+    return blank?.plainSell || null;
+  }
   const method = normalizeMethod(printMethod);
-  const printOption = PRINT_PLACEMENT_TO_OPTION[clean(printPlacement)];
+  const printOption = PRINT_PLACEMENT_TO_OPTION[normalizePrintPlacement(printPlacement)];
   if (!itemType || !sizeBand || !method || !printOption) return null;
 
   const unitPrice = getPriceBookPrice({
@@ -158,8 +173,11 @@ function getAutomaticUnitPrice({ garment, printMethod, printPlacement }) {
 function getAutomaticUnitCost({ garment, printMethod, printPlacement }) {
   const itemType = normalizeItemType(garment?.garment);
   const sizeBand = normalizeSizeBand(garment?.size) || "XS-XL";
+  if (normalizeKey(printMethod) === "no customization") {
+    return getBlankInfo(itemType, normalizeKey(garment?.color) === "red" ? "Red" : "Standard", sizeBand)?.cost || null;
+  }
   const method = normalizeMethod(printMethod);
-  const printOption = PRINT_PLACEMENT_TO_OPTION[clean(printPlacement)];
+  const printOption = PRINT_PLACEMENT_TO_OPTION[normalizePrintPlacement(printPlacement)];
   if (!itemType || !sizeBand || !method || !printOption) return null;
 
   const colorFamily = normalizeKey(garment?.color) === "red" ? "Red" : "Standard";
@@ -198,9 +216,15 @@ function buildAutomaticQuotePricing({
   const artworkItems = getArtworkItems(designBrief);
   const lines = garmentLines.map((garment) => {
     const artwork = findArtworkForGarment(garment, artworkItems);
-    const printPlacement = clean(artwork?.printPlacement) || clean(fallbackPrintPlacement);
+    const rawPlacement = clean(artwork?.printPlacement) || clean(designBrief?.printPlacement);
+    const fallback = normalizePrintPlacement(fallbackPrintPlacement);
+    // An unspecified layout gets a visible large-front estimate. Explicit custom
+    // or unsupported layouts still need review; do not pretend they are standard.
+    const assumedPlacement = !rawPlacement && !fallback;
+    const printPlacement = normalizePrintPlacement(rawPlacement) ||
+      (rawPlacement ? rawPlacement : fallback || "large_front_only");
     const placementLabel = PRINT_PLACEMENT_LABELS[printPlacement];
-    const effectivePrintMethod = normalizeMethod(printMethod)
+    const effectivePrintMethod = normalizeMethod(printMethod) || normalizeKey(printMethod) === "no customization"
       ? printMethod
       : fallbackPrintMethod || "DTF";
     const unitPrice = getAutomaticUnitPrice({
@@ -215,7 +239,8 @@ function buildAutomaticQuotePricing({
     });
     const pricingDescription = [
       normalizeMethod(effectivePrintMethod) || clean(effectivePrintMethod),
-      placementLabel,
+      ...(normalizeKey(effectivePrintMethod) === "no customization" ? [] : [placementLabel]),
+      ...(assumedPlacement && normalizeKey(effectivePrintMethod) !== "no customization" ? ["Estimated placement — confirm artwork"] : []),
     ]
       .filter(Boolean)
       .join(" — ");
@@ -259,6 +284,7 @@ module.exports = {
   getAutomaticDeliveryFee,
   getAutomaticUnitCost,
   getAutomaticUnitPrice,
+  normalizePrintPlacement,
   normalizeItemType,
   normalizeMethod,
   normalizeSizeBand,

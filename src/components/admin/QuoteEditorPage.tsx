@@ -1401,7 +1401,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
       const automaticAmount = safeNumber(automaticPricing.lines[index]?.unitPrice, 0);
       const savedSource = getPriceSource(line.priceSource);
       const shouldRefreshAutomaticPrice =
-        savedSource === "automatic" && automaticAmount > 0;
+        storedAmount <= 0 && automaticAmount > 0;
       const resolvedAmount = shouldRefreshAutomaticPrice
         ? automaticAmount
         : storedAmount > 0
