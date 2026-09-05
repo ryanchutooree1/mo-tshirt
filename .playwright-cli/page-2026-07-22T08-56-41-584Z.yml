@@ -1,0 +1,106 @@
+- generic [ref=f5e1]:
+  - generic [ref=f5e2]:
+    - banner [ref=f5e3]:
+      - generic [ref=f5e4]:
+        - link [ref=f5e160] [cursor=pointer]:
+          - /url: /admin
+        - generic [ref=f5e9]:
+          - paragraph [ref=f5e10]: MO T-Shirt.mu
+          - paragraph [ref=f5e11]: Premium Design Studio
+    - generic [ref=f5e18]:
+      - generic [ref=f5e19]:
+        - generic [ref=f5e20]:
+          - generic [ref=f5e21]: Live customiser
+          - heading "Design it. We print it." [level=1] [ref=f5e25]
+          - paragraph [ref=f5e26]: Build a production-ready garment mockup, then send every detail to the MO T-Shirt team in one request.
+        - generic [ref=f5e28]:
+          - generic [ref=f5e29]: Step 8 of 8
+          - generic [ref=f5e30]: 100% complete
+      - generic [ref=f5e33]:
+        - button [ref=f5e161]
+        - button [ref=f5e164]
+        - button [ref=f5e167]
+        - button [ref=f5e170]
+        - button [ref=f5e173]
+        - button [ref=f5e176]
+        - button [ref=f5e179]
+        - button "8 Quote" [active] [ref=f5e48]:
+          - generic [ref=f5e49]: "8"
+          - text: Quote
+    - main [ref=f5e50]:
+      - generic [ref=f5e52]:
+        - generic [ref=f5e53]:
+          - generic [ref=f5e54]:
+            - generic [ref=f5e55]:
+              - paragraph [ref=f5e56]: Live preview
+              - heading "T-Shirt · front" [level=2] [ref=f5e57]
+            - generic [ref=f5e58]:
+              - button "front" [ref=f5e59]
+              - button "back" [ref=f5e60]
+              - button "Reset design" [ref=f5e61]
+          - generic [ref=f5e65]: Your design area
+          - generic [ref=f5e68]:
+            - generic [ref=f5e69]:
+              - paragraph [ref=f5e70]: Garment
+              - paragraph [ref=f5e71]: T-Shirt
+            - generic [ref=f5e72]:
+              - paragraph [ref=f5e73]: Colour
+              - paragraph [ref=f5e74]: Jet Black
+            - generic [ref=f5e75]:
+              - paragraph [ref=f5e76]: Quantity
+              - paragraph [ref=f5e77]: "1"
+            - generic [ref=f5e78]:
+              - paragraph [ref=f5e79]: Estimate
+              - paragraph [ref=f5e80]: Rs 1,040.00
+        - complementary [ref=f5e81]:
+          - generic [ref=f5e83]:
+            - generic [ref=f5e84]: "8"
+            - generic [ref=f5e85]:
+              - heading "Request quote" [level=2] [ref=f5e182]
+              - paragraph [ref=f5e87]: Tell us where to send the final price.
+          - generic [ref=f5e184]:
+            - generic [ref=f5e185]:
+              - paragraph [ref=f5e186]: Client name *
+              - textbox "Client name *" [ref=f5e188]:
+                - /placeholder: Full name
+            - generic [ref=f5e189]:
+              - generic [ref=f5e190]:
+                - paragraph [ref=f5e191]: Email
+                - textbox "Email" [ref=f5e193]:
+                  - /placeholder: you@example.com
+              - generic [ref=f5e194]:
+                - paragraph [ref=f5e195]: Phone / WhatsApp
+                - textbox "Phone / WhatsApp" [ref=f5e197]:
+                  - /placeholder: +230 5...
+            - generic [ref=f5e198]:
+              - paragraph [ref=f5e199]: Preferred deadline
+              - textbox "Preferred deadline" [ref=f5e201]
+            - generic [ref=f5e202]:
+              - paragraph [ref=f5e203]: Delivery
+              - combobox "Delivery" [ref=f5e205]:
+                - option "Surinam Pickup (Free)" [selected]
+                - option "Post Office Postage Delivery (Rs 100)"
+                - option "Post Office Express Delivery (Rs 150)"
+                - option "Delivery (Need to arrange first)"
+            - generic [ref=f5e207]:
+              - generic [ref=f5e208]: Estimated total
+              - generic [ref=f5e209]: Rs 1,040.00
+            - link "Send details on WhatsApp" [ref=f5e210] [cursor=pointer]:
+              - /url: https://wa.me/23059883880?text=Hi%20MO%20T-SHIRT%2C%20I%20would%20like%20a%20quote.%0AProduct%3A%20T-Shirt%0AColour%3A%20Jet%20Black%0APrint%3A%20DTF%20full%20colour%0ASide%3A%20front%0ASizes%3A%20M%20%C3%97%201%0AQuantity%3A%201%0AEstimate%3A%20Rs%201%2C040.00
+          - generic [ref=f5e112]:
+            - button "Back" [ref=f5e213]
+            - button "Request final price" [disabled] [ref=f5e216]
+    - contentinfo [ref=f5e116]:
+      - generic [ref=f5e117]:
+        - generic [ref=f5e118]: Premium garments
+        - generic [ref=f5e123]: High-quality printing
+        - generic [ref=f5e132]: Reliable service
+        - generic [ref=f5e140]: Local pricing
+      - generic [ref=f5e146]:
+        - link "motshirtmauritius@gmail.com" [ref=f5e147] [cursor=pointer]:
+          - /url: mailto:motshirtmauritius@gmail.com
+        - generic [ref=f5e148]: •
+        - link "+230 5988 3880" [ref=f5e149] [cursor=pointer]:
+          - /url: tel:+23059883880
+  - button "Open Next.js Dev Tools" [ref=f5e155] [cursor=pointer]
+  - alert [ref=f5e159]

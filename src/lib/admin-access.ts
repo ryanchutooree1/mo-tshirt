@@ -1,5 +1,6 @@
 export type AdminPagePath =
   | "/admin"
+  | "/admin/inbox"
   | "/admin/orders"
   | "/admin/pos"
   | "/admin/clients"
@@ -65,6 +66,7 @@ export type AdminPageOption = {
 };
 
 export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
+  { path: "/admin/inbox", label: "Inbox", description: "Read the MO T-SHIRT Gmail inbox.", group: "Sales" },
   {
     path: "/admin",
     label: "Daily workspace",
@@ -375,6 +377,7 @@ const ADMIN_PATHS_BY_LENGTH = [...ALL_ADMIN_PAGE_PATHS].sort(
 );
 
 export const DEFAULT_TOP_NAV_PATHS: AdminPagePath[] = [
+  "/admin/inbox",
   "/admin/pos",
   "/admin/clients",
   "/admin/ai-assistant",
@@ -469,6 +472,7 @@ export function resolveAdminPagePath(pathname: string) {
 }
 
 export function resolveAdminApiPermission(pathname: string) {
+  if (pathname === "/api/admin/inbox" || pathname.startsWith("/api/admin/inbox/")) return "/admin/inbox" as AdminPagePath;
   if (pathname.startsWith("/api/admin/mob")) return "/admin/inventory-photo-log" as AdminPagePath;
   if (pathname.startsWith("/api/admin/inventory-photo-log")) return "/admin/inventory-photo-log" as AdminPagePath;
   if (pathname.startsWith("/api/admin/tanvi/house-inventory")) return "/admin/house-inventory" as AdminPagePath;

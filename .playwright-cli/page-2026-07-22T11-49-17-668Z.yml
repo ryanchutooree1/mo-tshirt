@@ -1,0 +1,93 @@
+- main [ref=f8e2]:
+  - generic [ref=f8e3]:
+    - generic [ref=f8e5]:
+      - link "Back to shops" [ref=f8e6] [cursor=pointer]:
+        - /url: /shops
+      - generic [ref=f8e10]:
+        - paragraph [ref=f8e11]: MO T-Shirt.mu
+        - paragraph [ref=f8e12]: Premium Design Studio
+      - generic [ref=f8e13]: Live preview
+    - generic [ref=f8e19]:
+      - generic [ref=f8e20]:
+        - generic [ref=f8e21]:
+          - generic [ref=f8e22]: Live customiser
+          - heading "Design it. We print it." [level=1] [ref=f8e26]
+          - paragraph [ref=f8e27]: Build a production-ready garment mockup, then send every detail to the MO T-Shirt team in one request.
+        - generic [ref=f8e29]:
+          - generic [ref=f8e30]: Step 1 of 8
+          - generic [ref=f8e31]: 13% complete
+      - generic [ref=f8e34]:
+        - button "1 Product" [ref=f8e35]:
+          - generic [ref=f8e36]: "1"
+          - text: Product
+        - button "2 Details" [ref=f8e37]:
+          - generic [ref=f8e38]: "2"
+          - text: Details
+        - button "3 Print area" [ref=f8e39]:
+          - generic [ref=f8e40]: "3"
+          - text: Print area
+        - button "4 Artwork" [ref=f8e41]:
+          - generic [ref=f8e42]: "4"
+          - text: Artwork
+        - button "5 Position" [ref=f8e43]:
+          - generic [ref=f8e44]: "5"
+          - text: Position
+        - button "6 Text" [ref=f8e45]:
+          - generic [ref=f8e46]: "6"
+          - text: Text
+        - button "7 Review" [ref=f8e47]:
+          - generic [ref=f8e48]: "7"
+          - text: Review
+        - button "8 Quote" [ref=f8e49]:
+          - generic [ref=f8e50]: "8"
+          - text: Quote
+    - main [ref=f8e51]:
+      - generic [ref=f8e53]:
+        - generic [ref=f8e54]:
+          - generic [ref=f8e55]:
+            - generic [ref=f8e56]:
+              - paragraph [ref=f8e57]: Live preview
+              - heading "Plain T-Shirt · front" [level=2] [ref=f8e58]
+            - generic [ref=f8e59]:
+              - button "front" [ref=f8e60]
+              - button "back" [ref=f8e61]
+              - button "Reset design" [ref=f8e62]
+          - generic [ref=f8e67]:
+            - generic:
+              - generic:
+                - img "Realistic Plain T-Shirt front preview"
+          - generic [ref=f8e69]:
+            - generic [ref=f8e70]:
+              - paragraph [ref=f8e71]: Garment
+              - paragraph [ref=f8e72]: Plain T-Shirt
+            - generic [ref=f8e73]:
+              - paragraph [ref=f8e74]: Colour
+              - paragraph [ref=f8e75]: Black
+            - generic [ref=f8e76]:
+              - paragraph [ref=f8e77]: Quantity
+              - paragraph [ref=f8e78]: "1"
+            - generic [ref=f8e79]:
+              - paragraph [ref=f8e80]: Estimate
+              - paragraph [ref=f8e81]: Rs 960.00
+        - complementary [ref=f8e82]:
+          - generic [ref=f8e84]:
+            - generic [ref=f8e85]: "1"
+            - generic [ref=f8e86]:
+              - heading "Choose product" [level=2] [ref=f8e87]
+              - paragraph [ref=f8e88]: Start with the garment that fits your idea.
+          - generic [ref=f8e90]:
+            - generic [ref=f8e91]: Live products from Shops
+            - generic [ref=f8e95]: Loading real garments…
+          - button "Next step" [ref=f8e100]
+    - generic [ref=f8e103]:
+      - generic [ref=f8e104]:
+        - generic [ref=f8e105]: Premium garments
+        - generic [ref=f8e110]: High-quality printing
+        - generic [ref=f8e119]: Reliable service
+        - generic [ref=f8e127]: Local pricing
+      - generic [ref=f8e133]:
+        - link "motshirtmauritius@gmail.com" [ref=f8e134] [cursor=pointer]:
+          - /url: mailto:motshirtmauritius@gmail.com
+        - generic [ref=f8e135]: •
+        - link "+230 5988 3880" [ref=f8e136] [cursor=pointer]:
+          - /url: tel:+23059883880

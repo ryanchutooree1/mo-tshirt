@@ -1,0 +1,20 @@
+- generic [ref=e1]:
+  - main [ref=e2]:
+    - link "Back to Home" [ref=e4] [cursor=pointer]:
+      - /url: /
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - img "MO T-SHIRT logo" [ref=e11]
+        - heading "Admin Access" [level=1] [ref=e12]
+      - generic [ref=e13]:
+        - generic [ref=e14]:
+          - text: Username or email
+          - textbox "Username or email" [ref=e15]:
+            - /placeholder: tanvi or team@mo-tshirt.mu
+          - paragraph [ref=e16]: Use the username assigned by the administrator or your Firebase email.
+        - generic [ref=e17]:
+          - text: Password
+          - textbox "Password" [active] [ref=e18]:
+            - /placeholder: ••••••••
+        - button "Sign in" [ref=e19]
+  - alert [ref=e20]

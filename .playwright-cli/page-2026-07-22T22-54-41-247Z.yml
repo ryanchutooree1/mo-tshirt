@@ -1,0 +1,2401 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e6]
+  - generic [ref=e8]:
+    - banner [ref=e9]:
+      - generic [ref=e10]:
+        - link "MO T-SHIRT Home" [ref=e11] [cursor=pointer]:
+          - /url: /
+          - img "MO T-SHIRT logo" [ref=e12]
+        - navigation "Shop navigation" [ref=e14]:
+          - link "Home" [ref=e15] [cursor=pointer]:
+            - /url: /
+          - link "Shop" [ref=e16] [cursor=pointer]:
+            - /url: /shop
+          - link "Our Work" [ref=e17] [cursor=pointer]:
+            - /url: /#our-work
+          - link "Contact" [ref=e18] [cursor=pointer]:
+            - /url: /#contact
+          - link "WhatsApp" [ref=e19] [cursor=pointer]:
+            - /url: https://wa.me/23059883880?text=Hi%2C%20i%20need%20printing.%20What%E2%80%99s%20your%20price%3F
+    - main [ref=e20]:
+      - region [ref=e21]:
+        - generic [ref=e22]:
+          - paragraph [ref=e23]: MO T-SHIRT Shop
+          - heading "One shop. Two ways to get your team ready." [level=1] [ref=e24]
+          - paragraph [ref=e25]: Buy plain apparel immediately or start from a proven uniform design and customize it with your logo.
+        - generic [ref=e26]:
+          - link "Ready to order Plain Apparel Choose products, colours and sizes Browse 58 live products with current prices, availability, and fast WhatsApp ordering. Browse plain apparel" [ref=e27] [cursor=pointer]:
+            - /url: "#plain-apparel"
+            - generic [ref=e28]: Ready to order
+            - generic [ref=e34]:
+              - paragraph [ref=e35]: Plain Apparel
+              - heading "Choose products, colours and sizes" [level=2] [ref=e36]
+              - paragraph [ref=e37]: Browse 58 live products with current prices, availability, and fast WhatsApp ordering.
+            - generic [ref=e38]: Browse plain apparel
+          - link "6 collections Ready-made T-shirt uniform design Ready-made polo uniform design Ready-made hoodie uniform design Uniform Designs Start with a professional team look Pick a proven style for staff, security, restaurants, sports teams, NGOs, and corporate crews. Explore uniform designs" [ref=e42] [cursor=pointer]:
+            - /url: /ready-made-uniforms
+            - generic [ref=e43]: 6 collections
+            - generic [ref=e50]:
+              - img "Ready-made T-shirt uniform design" [ref=e51]
+              - img "Ready-made polo uniform design" [ref=e52]
+              - img "Ready-made hoodie uniform design" [ref=e53]
+            - generic [ref=e54]:
+              - paragraph [ref=e55]: Uniform Designs
+              - heading "Start with a professional team look" [level=2] [ref=e56]
+              - paragraph [ref=e57]: Pick a proven style for staff, security, restaurants, sports teams, NGOs, and corporate crews.
+            - generic [ref=e58]: Explore uniform designs
+      - generic [ref=e63]:
+        - generic [ref=e64]:
+          - paragraph [ref=e65]: Filters
+          - paragraph [ref=e66]: Refine by product, color, or size.
+        - generic [ref=e67]:
+          - generic [ref=e68]:
+            - text: Product
+            - combobox "Product" [ref=e69]:
+              - option "All products" [selected]
+              - option "Plain Poloshirt"
+              - option "Long Sleeve T-Shirt"
+              - option "Plain T-Shirt"
+              - option "Baseball Cap"
+              - option "Cotton Cap"
+              - option "Trucker Cap"
+              - option "Mug"
+              - option "Magic Mug"
+          - generic [ref=e70]:
+            - text: Color
+            - combobox "Color" [ref=e71]:
+              - option "All colors" [selected]
+              - option "Aqua Blue"
+              - option "Beige"
+              - option "Black"
+              - option "Blue"
+              - option "Blue Turquoise"
+              - option "Bungundy Red"
+              - option "Burgundy Red"
+              - option "Charcoal Grey"
+              - option "Dark Blue"
+              - option "Deep Grey"
+              - option "Deep Red"
+              - option "Green Fluo"
+              - option "Grey"
+              - option "Lemon Yellow"
+              - option "Light Grey"
+              - option "Light Pink"
+              - option "Military Green"
+              - option "Moutard Yellow"
+              - option "Navy Blue"
+              - option "Off-White"
+              - option "Orange"
+              - option "Pastel Green"
+              - option "Pink"
+              - option "Purple"
+              - option "Red"
+              - option "Royal Blue"
+              - option "Serein Yellow"
+              - option "Sky Blue"
+              - option "Soft Pastel Yellow"
+              - option "Tea Green"
+              - option "Vibrant Apple Green"
+              - option "Vibrant Green"
+              - option "Vibrant Pink"
+              - option "Vibrant Purple"
+              - option "White"
+              - option "Yellow"
+          - generic [ref=e72]:
+            - text: Size
+            - combobox "Size" [ref=e73]:
+              - option "All sizes" [selected]
+              - option "1 Yr"
+              - option "2 Yrs"
+              - option "4 Yrs"
+              - option "6 Yrs"
+              - option "8 Yrs"
+              - option "10 Yrs"
+              - option "12 Yrs"
+              - option "14 Yrs"
+              - option "XS"
+              - option "S"
+              - option "M"
+              - option "L"
+              - option "XL"
+              - option "2XL"
+              - option "3XL"
+              - option "4XL"
+      - generic [ref=e74]:
+        - generic [ref=e75]:
+          - generic [ref=e76]:
+            - generic [ref=e77]:
+              - paragraph [ref=e78]: Plain Shop
+              - heading "Plain apparel catalog" [level=2] [ref=e79]
+            - generic [ref=e80]: 58 products
+          - region "Plain apparel products" [ref=e81]:
+            - article [ref=e82]:
+              - generic [ref=e83]:
+                - img "Plain Poloshirt" [ref=e84]
+                - link "Download Plain Poloshirt photo" [ref=e85] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnluoiyc-wbi00g&name=Red_Plain_Poloshirt
+              - generic [ref=e89]:
+                - generic [ref=e90]:
+                  - heading "Red Plain Poloshirt" [level=2] [ref=e91]:
+                    - generic [ref=e92]: Red
+                    - generic [ref=e94]: Plain Poloshirt
+                  - generic [ref=e95]:
+                    - generic [ref=e96]: From Rs 450
+                    - generic "Plain Poloshirt thumbnails" [ref=e97]:
+                      - button "Show front view" [ref=e98]:
+                        - img "Plain Poloshirt front view" [ref=e99]
+                      - button "Show back view" [ref=e100]:
+                        - img "Plain Poloshirt back view" [ref=e101]
+                - generic [ref=e102]:
+                  - button "XS" [ref=e103]
+                  - button "S" [ref=e104]
+                  - button "M" [ref=e105]
+                  - button "L" [ref=e106]
+                  - button "XL" [ref=e107]
+                  - button "2XL" [ref=e108]
+                - generic [ref=e109]:
+                  - generic [ref=e110]:
+                    - text: Size
+                    - combobox "Size" [ref=e111]:
+                      - option "XS (Rs 450)" [selected]
+                      - option "S (Rs 450)"
+                      - option "M (Rs 450)"
+                      - option "L (Rs 450)"
+                      - option "XL (Rs 450)"
+                      - option "2XL (Rs 450)"
+                  - generic [ref=e112]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e113]: "1"
+                - generic [ref=e114]:
+                  - link "Design this product" [ref=e115] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=k10LqPUc1IIeMVvYnBRq
+                  - button "Add to order" [ref=e118]
+            - article [ref=e119]:
+              - generic [ref=e120]:
+                - img "Plain Poloshirt" [ref=e121]
+                - link "Download Plain Poloshirt photo" [ref=e122] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnlumhzu-y98w0b&name=Burgundy_Red_Plain_Poloshirt
+              - generic [ref=e126]:
+                - generic [ref=e127]:
+                  - heading "Burgundy Red Plain Poloshirt" [level=2] [ref=e128]:
+                    - generic [ref=e129]: Burgundy Red
+                    - generic [ref=e131]: Plain Poloshirt
+                  - generic [ref=e132]:
+                    - generic [ref=e133]: From Rs 450
+                    - generic "Plain Poloshirt thumbnails" [ref=e134]:
+                      - button "Show front view" [ref=e135]:
+                        - img "Plain Poloshirt front view" [ref=e136]
+                      - button "Show back view" [ref=e137]:
+                        - img "Plain Poloshirt back view" [ref=e138]
+                - generic [ref=e139]:
+                  - button "XS" [ref=e140]
+                  - button "S" [ref=e141]
+                  - button "M" [ref=e142]
+                  - button "L" [ref=e143]
+                  - button "XL" [ref=e144]
+                  - button "2XL" [ref=e145]
+                - generic [ref=e146]:
+                  - generic [ref=e147]:
+                    - text: Size
+                    - combobox "Size" [ref=e148]:
+                      - option "XS (Rs 450)" [selected]
+                      - option "S (Rs 450)"
+                      - option "M (Rs 450)"
+                      - option "L (Rs 450)"
+                      - option "XL (Rs 450)"
+                      - option "2XL (Rs 450)"
+                  - generic [ref=e149]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e150]: "1"
+                - generic [ref=e151]:
+                  - link "Design this product" [ref=e152] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=EBd63PgPKypJVoaAaYoa
+                  - button "Add to order" [ref=e155]
+            - article [ref=e156]:
+              - generic [ref=e157]:
+                - img "Plain Poloshirt" [ref=e158]
+                - link "Download Plain Poloshirt photo" [ref=e159] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnlu7hzq-2osixc&name=Sky_Blue_Plain_Poloshirt
+              - generic [ref=e163]:
+                - generic [ref=e164]:
+                  - heading "Sky Blue Plain Poloshirt" [level=2] [ref=e165]:
+                    - generic [ref=e166]: Sky Blue
+                    - generic [ref=e168]: Plain Poloshirt
+                  - generic [ref=e169]:
+                    - generic [ref=e170]: From Rs 450
+                    - generic "Plain Poloshirt thumbnails" [ref=e171]:
+                      - button "Show front view" [ref=e172]:
+                        - img "Plain Poloshirt front view" [ref=e173]
+                      - button "Show back view" [ref=e174]:
+                        - img "Plain Poloshirt back view" [ref=e175]
+                - generic [ref=e176]:
+                  - button "XS" [ref=e177]
+                  - button "S" [ref=e178]
+                  - button "M" [ref=e179]
+                  - button "L" [ref=e180]
+                  - button "XL" [ref=e181]
+                  - button "2XL" [ref=e182]
+                - generic [ref=e183]:
+                  - generic [ref=e184]:
+                    - text: Size
+                    - combobox "Size" [ref=e185]:
+                      - option "XS (Rs 450)" [selected]
+                      - option "S (Rs 450)"
+                      - option "M (Rs 450)"
+                      - option "L (Rs 450)"
+                      - option "XL (Rs 450)"
+                      - option "2XL (Rs 450)"
+                  - generic [ref=e186]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e187]: "1"
+                - generic [ref=e188]:
+                  - link "Design this product" [ref=e189] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=sn3f7Xpzgxh6HSiIe0Rl
+                  - button "Add to order" [ref=e192]
+            - article [ref=e193]:
+              - generic [ref=e194]:
+                - img "Plain Poloshirt" [ref=e195]
+                - link "Download Plain Poloshirt photo" [ref=e196] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnlu5liq-4etwci&name=Blue_Turquoise_Plain_Poloshirt
+              - generic [ref=e200]:
+                - generic [ref=e201]:
+                  - heading "Blue Turquoise Plain Poloshirt" [level=2] [ref=e202]:
+                    - generic [ref=e203]: Blue Turquoise
+                    - generic [ref=e205]: Plain Poloshirt
+                  - generic [ref=e206]:
+                    - generic [ref=e207]: From Rs 450
+                    - generic "Plain Poloshirt thumbnails" [ref=e208]:
+                      - button "Show front view" [ref=e209]:
+                        - img "Plain Poloshirt front view" [ref=e210]
+                      - button "Show back view" [ref=e211]:
+                        - img "Plain Poloshirt back view" [ref=e212]
+                - generic [ref=e213]:
+                  - button "XS" [ref=e214]
+                  - button "S" [ref=e215]
+                  - button "M" [ref=e216]
+                  - button "L" [ref=e217]
+                  - button "XL" [ref=e218]
+                  - button "2XL" [ref=e219]
+                - generic [ref=e220]:
+                  - generic [ref=e221]:
+                    - text: Size
+                    - combobox "Size" [ref=e222]:
+                      - option "XS (Rs 450)" [selected]
+                      - option "S (Rs 450)"
+                      - option "M (Rs 450)"
+                      - option "L (Rs 450)"
+                      - option "XL (Rs 450)"
+                      - option "2XL (Rs 450)"
+                  - generic [ref=e223]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e224]: "1"
+                - generic [ref=e225]:
+                  - link "Design this product" [ref=e226] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=8shkl7zNR2CC26KzhZaT
+                  - button "Add to order" [ref=e229]
+            - article [ref=e230]:
+              - generic [ref=e231]:
+                - img "Plain Poloshirt" [ref=e232]
+                - link "Download Plain Poloshirt photo" [ref=e233] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnsl8hsl-3xuqa1&name=White_Plain_Poloshirt
+              - generic [ref=e237]:
+                - generic [ref=e238]:
+                  - heading "White Plain Poloshirt" [level=2] [ref=e239]:
+                    - generic [ref=e240]: White
+                    - generic [ref=e242]: Plain Poloshirt
+                  - generic [ref=e243]:
+                    - generic [ref=e244]: From Rs 450
+                    - generic "Plain Poloshirt thumbnails" [ref=e245]:
+                      - button "Show front view" [ref=e246]:
+                        - img "Plain Poloshirt front view" [ref=e247]
+                      - button "Show back view" [ref=e248]:
+                        - img "Plain Poloshirt back view" [ref=e249]
+                - generic [ref=e250]:
+                  - button "XS" [ref=e251]
+                  - button "S" [ref=e252]
+                  - button "M" [ref=e253]
+                  - button "L" [ref=e254]
+                  - button "XL" [ref=e255]
+                  - button "2XL" [ref=e256]
+                  - button "4XL" [ref=e257]
+                - generic [ref=e258]:
+                  - generic [ref=e259]:
+                    - text: Size
+                    - combobox "Size" [ref=e260]:
+                      - option "XS (Rs 450)" [selected]
+                      - option "S (Rs 450)"
+                      - option "M (Rs 450)"
+                      - option "L (Rs 450)"
+                      - option "XL (Rs 450)"
+                      - option "2XL (Rs 450)"
+                      - option "4XL (Rs 450)"
+                  - generic [ref=e261]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e262]: "1"
+                - generic [ref=e263]:
+                  - link "Design this product" [ref=e264] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=t0uWzcYGaafNj69lyyzp
+                  - button "Add to order" [ref=e267]
+            - article [ref=e268]:
+              - generic [ref=e269]:
+                - img "Plain Poloshirt" [ref=e270]
+                - link "Download Plain Poloshirt photo" [ref=e271] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnsla4j6-427dfj&name=Black_Plain_Poloshirt
+              - generic [ref=e275]:
+                - generic [ref=e276]:
+                  - heading "Black Plain Poloshirt" [level=2] [ref=e277]:
+                    - generic [ref=e278]: Black
+                    - generic [ref=e280]: Plain Poloshirt
+                  - generic [ref=e281]:
+                    - generic [ref=e282]: From Rs 450
+                    - generic "Plain Poloshirt thumbnails" [ref=e283]:
+                      - button "Show front view" [ref=e284]:
+                        - img "Plain Poloshirt front view" [ref=e285]
+                      - button "Show back view" [ref=e286]:
+                        - img "Plain Poloshirt back view" [ref=e287]
+                - generic [ref=e288]:
+                  - button "XS" [ref=e289]
+                  - button "S" [ref=e290]
+                  - button "M" [ref=e291]
+                  - button "L" [ref=e292]
+                  - button "XL" [ref=e293]
+                  - button "2XL" [ref=e294]
+                  - button "4XL" [ref=e295]
+                - generic [ref=e296]:
+                  - generic [ref=e297]:
+                    - text: Size
+                    - combobox "Size" [ref=e298]:
+                      - option "XS (Rs 450)" [selected]
+                      - option "S (Rs 450)"
+                      - option "M (Rs 450)"
+                      - option "L (Rs 450)"
+                      - option "XL (Rs 450)"
+                      - option "2XL (Rs 450)"
+                      - option "4XL (Rs 450)"
+                  - generic [ref=e299]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e300]: "1"
+                - generic [ref=e301]:
+                  - link "Design this product" [ref=e302] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=WHusKQGkZkh75vz9SPOu
+                  - button "Add to order" [ref=e305]
+            - article [ref=e306]:
+              - generic [ref=e307]:
+                - img "Plain Poloshirt" [ref=e308]
+                - link "Download Plain Poloshirt photo" [ref=e309] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnslblet-yz6mk5&name=Navy_Blue_Plain_Poloshirt
+              - generic [ref=e313]:
+                - generic [ref=e314]:
+                  - heading "Navy Blue Plain Poloshirt" [level=2] [ref=e315]:
+                    - generic [ref=e316]: Navy Blue
+                    - generic [ref=e318]: Plain Poloshirt
+                  - generic [ref=e319]:
+                    - generic [ref=e320]: From Rs 450
+                    - generic "Plain Poloshirt thumbnails" [ref=e321]:
+                      - button "Show front view" [ref=e322]:
+                        - img "Plain Poloshirt front view" [ref=e323]
+                      - button "Show back view" [ref=e324]:
+                        - img "Plain Poloshirt back view" [ref=e325]
+                - generic [ref=e326]:
+                  - button "XS" [ref=e327]
+                  - button "S" [ref=e328]
+                  - button "M" [ref=e329]
+                  - button "L" [ref=e330]
+                  - button "XL" [ref=e331]
+                  - button "2XL" [ref=e332]
+                  - button "4XL" [ref=e333]
+                - generic [ref=e334]:
+                  - generic [ref=e335]:
+                    - text: Size
+                    - combobox "Size" [ref=e336]:
+                      - option "XS (Rs 450)" [selected]
+                      - option "S (Rs 450)"
+                      - option "M (Rs 450)"
+                      - option "L (Rs 450)"
+                      - option "XL (Rs 450)"
+                      - option "2XL (Rs 450)"
+                      - option "4XL (Rs 450)"
+                  - generic [ref=e337]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e338]: "1"
+                - generic [ref=e339]:
+                  - link "Design this product" [ref=e340] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=vtuGyDM93oFgxQDYkQko
+                  - button "Add to order" [ref=e343]
+            - article [ref=e344]:
+              - generic [ref=e345]:
+                - img "Plain Poloshirt" [ref=e346]
+                - link "Download Plain Poloshirt photo" [ref=e347] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnslpek0-pawx82&name=Deep_Grey_Plain_Poloshirt
+              - generic [ref=e351]:
+                - generic [ref=e352]:
+                  - heading "Deep Grey Plain Poloshirt" [level=2] [ref=e353]:
+                    - generic [ref=e354]: Deep Grey
+                    - generic [ref=e356]: Plain Poloshirt
+                  - generic [ref=e357]:
+                    - generic [ref=e358]: From Rs 450
+                    - generic "Plain Poloshirt thumbnails" [ref=e359]:
+                      - button "Show front view" [ref=e360]:
+                        - img "Plain Poloshirt front view" [ref=e361]
+                      - button "Show back view" [ref=e362]:
+                        - img "Plain Poloshirt back view" [ref=e363]
+                - generic [ref=e364]:
+                  - button "XS" [ref=e365]
+                  - button "S" [ref=e366]
+                  - button "M" [ref=e367]
+                  - button "L" [ref=e368]
+                  - button "XL" [ref=e369]
+                  - button "2XL" [ref=e370]
+                  - button "4XL" [ref=e371]
+                - generic [ref=e372]:
+                  - generic [ref=e373]:
+                    - text: Size
+                    - combobox "Size" [ref=e374]:
+                      - option "XS (Rs 450)" [selected]
+                      - option "S (Rs 450)"
+                      - option "M (Rs 450)"
+                      - option "L (Rs 450)"
+                      - option "XL (Rs 450)"
+                      - option "2XL (Rs 450)"
+                      - option "4XL (Rs 450)"
+                  - generic [ref=e375]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e376]: "1"
+                - generic [ref=e377]:
+                  - link "Design this product" [ref=e378] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=oz2KxLt1Ga1bdanUHkHe
+                  - button "Add to order" [ref=e381]
+            - article [ref=e382]:
+              - generic [ref=e383]:
+                - img "Plain Poloshirt" [ref=e384]
+                - link "Download Plain Poloshirt photo" [ref=e385] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnsloeka-p15mo6&name=Light_Grey_Plain_Poloshirt
+              - generic [ref=e389]:
+                - generic [ref=e390]:
+                  - heading "Light Grey Plain Poloshirt" [level=2] [ref=e391]:
+                    - generic [ref=e392]: Light Grey
+                    - generic [ref=e394]: Plain Poloshirt
+                  - generic [ref=e395]:
+                    - generic [ref=e396]: From Rs 450
+                    - generic "Plain Poloshirt thumbnails" [ref=e397]:
+                      - button "Show front view" [ref=e398]:
+                        - img "Plain Poloshirt front view" [ref=e399]
+                      - button "Show back view" [ref=e400]:
+                        - img "Plain Poloshirt back view" [ref=e401]
+                - generic [ref=e402]:
+                  - button "XS" [ref=e403]
+                  - button "S" [ref=e404]
+                  - button "M" [ref=e405]
+                  - button "L" [ref=e406]
+                  - button "XL" [ref=e407]
+                  - button "2XL" [ref=e408]
+                  - button "4XL" [ref=e409]
+                - generic [ref=e410]:
+                  - generic [ref=e411]:
+                    - text: Size
+                    - combobox "Size" [ref=e412]:
+                      - option "XS (Rs 450)" [selected]
+                      - option "S (Rs 450)"
+                      - option "M (Rs 450)"
+                      - option "L (Rs 450)"
+                      - option "XL (Rs 450)"
+                      - option "2XL (Rs 450)"
+                      - option "4XL (Rs 450)"
+                  - generic [ref=e413]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e414]: "1"
+                - generic [ref=e415]:
+                  - link "Design this product" [ref=e416] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=8BwLv1gEqVYcOndkYSvn
+                  - button "Add to order" [ref=e419]
+            - article [ref=e420]:
+              - generic [ref=e421]:
+                - img "Plain Poloshirt" [ref=e422]
+                - link "Download Plain Poloshirt photo" [ref=e423] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnlugvm0-ni5lva&name=Royal_Blue_Plain_Poloshirt
+              - generic [ref=e427]:
+                - generic [ref=e428]:
+                  - heading "Royal Blue Plain Poloshirt" [level=2] [ref=e429]:
+                    - generic [ref=e430]: Royal Blue
+                    - generic [ref=e432]: Plain Poloshirt
+                  - generic [ref=e433]:
+                    - generic [ref=e434]: From Rs 450
+                    - generic "Plain Poloshirt thumbnails" [ref=e435]:
+                      - button "Show front view" [ref=e436]:
+                        - img "Plain Poloshirt front view" [ref=e437]
+                      - button "Show back view" [ref=e438]:
+                        - img "Plain Poloshirt back view" [ref=e439]
+                - generic [ref=e440]:
+                  - button "XS" [ref=e441]
+                  - button "S" [ref=e442]
+                - generic [ref=e443]:
+                  - generic [ref=e444]:
+                    - text: Size
+                    - combobox "Size" [ref=e445]:
+                      - option "XS (Rs 450)" [selected]
+                      - option "S (Rs 450)"
+                  - generic [ref=e446]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e447]: "1"
+                - generic [ref=e448]:
+                  - link "Design this product" [ref=e449] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=jrEXRAOx5RkrG0qksz9x
+                  - button "Add to order" [ref=e452]
+            - article [ref=e453]:
+              - generic [ref=e454]:
+                - img "Plain Poloshirt" [ref=e455]
+                - link "Download Plain Poloshirt photo" [ref=e456] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnsljd6q-ko7vs3&name=Soft_Pastel_Yellow_Plain_Poloshirt
+              - generic [ref=e460]:
+                - generic [ref=e461]:
+                  - heading "Soft Pastel Yellow Plain Poloshirt" [level=2] [ref=e462]:
+                    - generic [ref=e463]: Soft Pastel Yellow
+                    - generic [ref=e465]: Plain Poloshirt
+                  - generic [ref=e466]:
+                    - generic [ref=e467]: From Rs 450
+                    - generic "Plain Poloshirt thumbnails" [ref=e468]:
+                      - button "Show front view" [ref=e469]:
+                        - img "Plain Poloshirt front view" [ref=e470]
+                      - button "Show back view" [ref=e471]:
+                        - img "Plain Poloshirt back view" [ref=e472]
+                - generic [ref=e473]:
+                  - button "XS" [ref=e474]
+                  - button "S" [ref=e475]
+                  - button "M" [ref=e476]
+                  - button "L" [ref=e477]
+                  - button "XL" [ref=e478]
+                  - button "2XL" [ref=e479]
+                  - button "4XL" [ref=e480]
+                - generic [ref=e481]:
+                  - generic [ref=e482]:
+                    - text: Size
+                    - combobox "Size" [ref=e483]:
+                      - option "XS (Rs 450)" [selected]
+                      - option "S (Rs 450)"
+                      - option "M (Rs 450)"
+                      - option "L (Rs 450)"
+                      - option "XL (Rs 450)"
+                      - option "2XL (Rs 450)"
+                      - option "4XL (Rs 450)"
+                  - generic [ref=e484]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e485]: "1"
+                - generic [ref=e486]:
+                  - link "Design this product" [ref=e487] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=lAPGvaVAWkD2JWGCzVQY
+                  - button "Add to order" [ref=e490]
+            - article [ref=e491]:
+              - generic [ref=e492]:
+                - img "Plain Poloshirt" [ref=e493]
+                - link "Download Plain Poloshirt photo" [ref=e494] [cursor=pointer]:
+                  - /url: /api/shops/download?url=https%3A%2F%2Ffirebasestorage.googleapis.com%2Fv0%2Fb%2Fpocket-entreprise-app.appspot.com%2Fo%2Fitems%252F1774191375189-vibrant-purple-poloshirt.png%3Falt%3Dmedia%26token%3De6ddaaa7-0d83-44cb-bd1a-f4be13fcb789&name=Vibrant_Purple_Plain_Poloshirt
+              - generic [ref=e498]:
+                - generic [ref=e499]:
+                  - heading "Vibrant Purple Plain Poloshirt" [level=2] [ref=e500]:
+                    - generic [ref=e501]: Vibrant Purple
+                    - generic [ref=e503]: Plain Poloshirt
+                  - generic [ref=e504]:
+                    - generic [ref=e505]: From Rs 450
+                    - generic "Plain Poloshirt thumbnails" [ref=e506]:
+                      - button "Show front view" [ref=e507]:
+                        - img "Plain Poloshirt front view" [ref=e508]
+                      - button "Show back view" [ref=e509]:
+                        - img "Plain Poloshirt back view" [ref=e510]
+                - generic [ref=e511]:
+                  - button "XS" [ref=e512]
+                  - button "S" [ref=e513]
+                  - button "M" [ref=e514]
+                  - button "L" [ref=e515]
+                  - button "XL" [ref=e516]
+                  - button "2XL" [ref=e517]
+                  - button "4XL" [ref=e518]
+                - generic [ref=e519]:
+                  - generic [ref=e520]:
+                    - text: Size
+                    - combobox "Size" [ref=e521]:
+                      - option "XS (Rs 450)" [selected]
+                      - option "S (Rs 450)"
+                      - option "M (Rs 450)"
+                      - option "L (Rs 450)"
+                      - option "XL (Rs 450)"
+                      - option "2XL (Rs 450)"
+                      - option "4XL (Rs 450)"
+                  - generic [ref=e522]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e523]: "1"
+                - generic [ref=e524]:
+                  - link "Design this product" [ref=e525] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=wroLOZ4OauZut2B4Le4A
+                  - button "Add to order" [ref=e528]
+            - article [ref=e529]:
+              - generic [ref=e530]:
+                - img "Long Sleeve T-Shirt" [ref=e531]
+                - link "Download Long Sleeve T-Shirt photo" [ref=e532] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-molvryol-qwmozl&name=Black_Long_Sleeve_T_Shirt
+              - generic [ref=e536]:
+                - generic [ref=e537]:
+                  - heading "Black Long Sleeve T-Shirt" [level=2] [ref=e538]:
+                    - generic [ref=e539]: Black
+                    - generic [ref=e541]: Long Sleeve T-Shirt
+                  - generic [ref=e542]:
+                    - generic [ref=e543]: From Rs 250
+                    - generic "Long Sleeve T-Shirt thumbnails" [ref=e544]:
+                      - button "Show front view" [ref=e545]:
+                        - img "Long Sleeve T-Shirt front view" [ref=e546]
+                      - button "Show back view" [ref=e547]:
+                        - img "Long Sleeve T-Shirt back view" [ref=e548]
+                      - button "Show side view" [ref=e549]:
+                        - img "Long Sleeve T-Shirt side view" [ref=e550]
+                - generic [ref=e551]:
+                  - button "XS" [ref=e552]
+                  - button "S" [ref=e553]
+                  - button "M" [ref=e554]
+                  - button "L" [ref=e555]
+                - generic [ref=e556]:
+                  - generic [ref=e557]:
+                    - text: Size
+                    - combobox "Size" [ref=e558]:
+                      - option "XS (Rs 250)" [selected]
+                      - option "S (Rs 250)"
+                      - option "M (Rs 250)"
+                      - option "L (Rs 250)"
+                  - generic [ref=e559]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e560]: "1"
+                - button "Add to order" [ref=e562]
+            - article [ref=e563]:
+              - generic [ref=e564]:
+                - img "Long Sleeve T-Shirt" [ref=e565]
+                - link "Download Long Sleeve T-Shirt photo" [ref=e566] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-molvmusl-960ar8&name=White_Long_Sleeve_T_Shirt
+              - generic [ref=e570]:
+                - generic [ref=e571]:
+                  - heading "White Long Sleeve T-Shirt" [level=2] [ref=e572]:
+                    - generic [ref=e573]: White
+                    - generic [ref=e575]: Long Sleeve T-Shirt
+                  - generic [ref=e576]:
+                    - generic [ref=e577]: From Rs 250
+                    - generic "Long Sleeve T-Shirt thumbnails" [ref=e578]:
+                      - button "Show front view" [ref=e579]:
+                        - img "Long Sleeve T-Shirt front view" [ref=e580]
+                      - button "Show back view" [ref=e581]:
+                        - img "Long Sleeve T-Shirt back view" [ref=e582]
+                      - button "Show side view" [ref=e583]:
+                        - img "Long Sleeve T-Shirt side view" [ref=e584]
+                - generic [ref=e585]:
+                  - button "XS" [ref=e586]
+                  - button "S" [ref=e587]
+                  - button "M" [ref=e588]
+                  - button "L" [ref=e589]
+                - generic [ref=e590]:
+                  - generic [ref=e591]:
+                    - text: Size
+                    - combobox "Size" [ref=e592]:
+                      - option "XS (Rs 250)" [selected]
+                      - option "S (Rs 250)"
+                      - option "M (Rs 250)"
+                      - option "L (Rs 250)"
+                  - generic [ref=e593]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e594]: "1"
+                - button "Add to order" [ref=e596]
+            - article [ref=e597]:
+              - generic [ref=e598]:
+                - img "Plain T-Shirt" [ref=e599]
+                - link "Download Plain T-Shirt photo" [ref=e600] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnz3c5my-j0tsz6&name=Grey_Plain_T_Shirt
+              - generic [ref=e604]:
+                - generic [ref=e605]:
+                  - heading "Grey Plain T-Shirt" [level=2] [ref=e606]:
+                    - generic [ref=e607]: Grey
+                    - generic [ref=e609]: Plain T-Shirt
+                  - generic [ref=e610]:
+                    - generic [ref=e611]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e612]:
+                      - button "Show front view" [ref=e613]:
+                        - img "Plain T-Shirt front view" [ref=e614]
+                      - button "Show back view" [ref=e615]:
+                        - img "Plain T-Shirt back view" [ref=e616]
+                - generic [ref=e617]:
+                  - button "XS" [ref=e618]
+                  - button "S" [ref=e619]
+                  - button "M" [ref=e620]
+                  - button "L" [ref=e621]
+                  - button "XL" [ref=e622]
+                - generic [ref=e623]:
+                  - generic [ref=e624]:
+                    - text: Size
+                    - combobox "Size" [ref=e625]:
+                      - option "XS (Rs 150)" [selected]
+                      - option "S (Rs 150)"
+                      - option "M (Rs 150)"
+                      - option "L (Rs 150)"
+                      - option "XL (Rs 150)"
+                  - generic [ref=e626]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e627]: "1"
+                - generic [ref=e628]:
+                  - link "Design this product" [ref=e629] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=UQbrzvNU8kOoHT65nFhu
+                  - button "Add to order" [ref=e632]
+            - article [ref=e633]:
+              - generic [ref=e634]:
+                - img "Plain T-Shirt" [ref=e635]
+                - link "Download Plain T-Shirt photo" [ref=e636] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnz37o46-1ysgca&name=Bungundy_Red_Plain_T_Shirt
+              - generic [ref=e640]:
+                - generic [ref=e641]:
+                  - heading "Bungundy Red Plain T-Shirt" [level=2] [ref=e642]:
+                    - generic [ref=e643]: Bungundy Red
+                    - generic [ref=e645]: Plain T-Shirt
+                  - generic [ref=e646]:
+                    - generic [ref=e647]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e648]:
+                      - button "Show front view" [ref=e649]:
+                        - img "Plain T-Shirt front view" [ref=e650]
+                      - button "Show back view" [ref=e651]:
+                        - img "Plain T-Shirt back view" [ref=e652]
+                - generic [ref=e653]:
+                  - button "XS" [ref=e654]
+                  - button "S" [ref=e655]
+                  - button "M" [ref=e656]
+                  - button "L" [ref=e657]
+                  - button "XL" [ref=e658]
+                - generic [ref=e659]:
+                  - generic [ref=e660]:
+                    - text: Size
+                    - combobox "Size" [ref=e661]:
+                      - option "XS (Rs 150)" [selected]
+                      - option "S (Rs 150)"
+                      - option "M (Rs 150)"
+                      - option "L (Rs 150)"
+                      - option "XL (Rs 150)"
+                  - generic [ref=e662]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e663]: "1"
+                - generic [ref=e664]:
+                  - link "Design this product" [ref=e665] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=KERfMMBW3wwlQEKk864U
+                  - button "Add to order" [ref=e668]
+            - article [ref=e669]:
+              - generic [ref=e670]:
+                - img "Plain T-Shirt" [ref=e671]
+                - link "Download Plain T-Shirt photo" [ref=e672] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnslgmrq-du7ok5&name=Charcoal_Grey_Plain_T_Shirt
+              - generic [ref=e676]:
+                - generic [ref=e677]:
+                  - heading "Charcoal Grey Plain T-Shirt" [level=2] [ref=e678]:
+                    - generic [ref=e679]: Charcoal Grey
+                    - generic [ref=e681]: Plain T-Shirt
+                  - generic [ref=e682]:
+                    - generic [ref=e683]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e684]:
+                      - button "Show front view" [ref=e685]:
+                        - img "Plain T-Shirt front view" [ref=e686]
+                      - button "Show back view" [ref=e687]:
+                        - img "Plain T-Shirt back view" [ref=e688]
+                - generic [ref=e689]:
+                  - button "XS" [ref=e690]
+                  - button "S" [ref=e691]
+                  - button "M" [ref=e692]
+                  - button "L" [ref=e693]
+                  - button "XL" [ref=e694]
+                  - button "2XL" [ref=e695]
+                - generic [ref=e696]:
+                  - generic [ref=e697]:
+                    - text: Size
+                    - combobox "Size" [ref=e698]:
+                      - option "XS (Rs 150)" [selected]
+                      - option "S (Rs 150)"
+                      - option "M (Rs 150)"
+                      - option "L (Rs 150)"
+                      - option "XL (Rs 150)"
+                      - option "2XL (Rs 150)"
+                  - generic [ref=e699]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e700]: "1"
+                - generic [ref=e701]:
+                  - link "Design this product" [ref=e702] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=Gd60s8L6t9EPD7PkP2yD
+                  - button "Add to order" [ref=e705]
+            - article [ref=e706]:
+              - generic [ref=e707]:
+                - img "Plain T-Shirt" [ref=e708]
+                - link "Download Plain T-Shirt photo" [ref=e709] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnefvutd-9rogyo&name=Red_Plain_T_Shirt
+              - generic [ref=e713]:
+                - generic [ref=e714]:
+                  - heading "Red Plain T-Shirt" [level=2] [ref=e715]:
+                    - generic [ref=e716]: Red
+                    - generic [ref=e718]: Plain T-Shirt
+                  - generic [ref=e719]:
+                    - generic [ref=e720]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e721]:
+                      - button "Show front view" [ref=e722]:
+                        - img "Plain T-Shirt front view" [ref=e723]
+                      - button "Show back view" [ref=e724]:
+                        - img "Plain T-Shirt back view" [ref=e725]
+                - generic [ref=e726]:
+                  - button "1 Yr" [ref=e727]
+                  - button "2 Yrs" [ref=e728]
+                  - button "4 Yrs" [ref=e729]
+                  - button "6 Yrs" [ref=e730]
+                  - button "8 Yrs" [ref=e731]
+                  - button "10 Yrs" [ref=e732]
+                  - button "12 Yrs" [ref=e733]
+                  - button "14 Yrs" [ref=e734]
+                  - button "XS" [ref=e735]
+                  - button "S" [ref=e736]
+                  - button "M" [ref=e737]
+                  - button "L" [ref=e738]
+                  - button "XL" [ref=e739]
+                  - button "2XL" [ref=e740]
+                  - button "3XL" [ref=e741]
+                  - button "4XL" [ref=e742]
+                - generic [ref=e743]:
+                  - generic [ref=e744]:
+                    - text: Size
+                    - combobox "Size" [ref=e745]:
+                      - option "1 Yr (Rs 150)" [selected]
+                      - option "2 Yrs (Rs 150)"
+                      - option "4 Yrs (Rs 150)"
+                      - option "6 Yrs (Rs 150)"
+                      - option "8 Yrs (Rs 150)"
+                      - option "10 Yrs (Rs 150)"
+                      - option "12 Yrs (Rs 150)"
+                      - option "14 Yrs (Rs 150)"
+                      - option "XS (Rs 175)"
+                      - option "S (Rs 200)"
+                      - option "M (Rs 200)"
+                      - option "L (Rs 200)"
+                      - option "XL (Rs 200)"
+                      - option "2XL (Rs 250)"
+                      - option "3XL (Rs 300)"
+                      - option "4XL (Rs 300)"
+                  - generic [ref=e746]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e747]: "1"
+                - generic [ref=e748]:
+                  - link "Design this product" [ref=e749] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=WmRILiLL9P9eKpWsWRfB
+                  - button "Add to order" [ref=e752]
+            - article [ref=e753]:
+              - generic [ref=e754]:
+                - img "Plain T-Shirt" [ref=e755]
+                - link "Download Plain T-Shirt photo" [ref=e756] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mneenavu-yr3v54&name=White_Plain_T_Shirt
+              - generic [ref=e760]:
+                - generic [ref=e761]:
+                  - heading "White Plain T-Shirt" [level=2] [ref=e762]:
+                    - generic [ref=e763]: White
+                    - generic [ref=e765]: Plain T-Shirt
+                  - generic [ref=e766]:
+                    - generic [ref=e767]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e768]:
+                      - button "Show front view" [ref=e769]:
+                        - img "Plain T-Shirt front view" [ref=e770]
+                      - button "Show back view" [ref=e771]:
+                        - img "Plain T-Shirt back view" [ref=e772]
+                - generic [ref=e773]:
+                  - button "1 Yr" [ref=e774]
+                  - button "2 Yrs" [ref=e775]
+                  - button "4 Yrs" [ref=e776]
+                  - button "6 Yrs" [ref=e777]
+                  - button "8 Yrs" [ref=e778]
+                  - button "10 Yrs" [ref=e779]
+                  - button "12 Yrs" [ref=e780]
+                  - button "14 Yrs" [ref=e781]
+                  - button "XS" [ref=e782]
+                  - button "S" [ref=e783]
+                  - button "M" [ref=e784]
+                  - button "L" [ref=e785]
+                  - button "XL" [ref=e786]
+                  - button "2XL" [ref=e787]
+                  - button "3XL" [ref=e788]
+                  - button "4XL" [ref=e789]
+                - generic [ref=e790]:
+                  - generic [ref=e791]:
+                    - text: Size
+                    - combobox "Size" [ref=e792]:
+                      - option "1 Yr (Rs 150)" [selected]
+                      - option "2 Yrs (Rs 150)"
+                      - option "4 Yrs (Rs 150)"
+                      - option "6 Yrs (Rs 150)"
+                      - option "8 Yrs (Rs 150)"
+                      - option "10 Yrs (Rs 150)"
+                      - option "12 Yrs (Rs 150)"
+                      - option "14 Yrs (Rs 150)"
+                      - option "XS (Rs 175)"
+                      - option "S (Rs 175)"
+                      - option "M (Rs 175)"
+                      - option "L (Rs 175)"
+                      - option "XL (Rs 175)"
+                      - option "2XL (Rs 250)"
+                      - option "3XL (Rs 300)"
+                      - option "4XL (Rs 300)"
+                  - generic [ref=e793]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e794]: "1"
+                - generic [ref=e795]:
+                  - link "Design this product" [ref=e796] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=q3l0lCHsbMIbYlSw7qy9
+                  - button "Add to order" [ref=e799]
+            - article [ref=e800]:
+              - generic [ref=e801]:
+                - img "Plain T-Shirt" [ref=e802]
+                - link "Download Plain T-Shirt photo" [ref=e803] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnefr66k-vlavne&name=Black_Plain_T_Shirt
+              - generic [ref=e807]:
+                - generic [ref=e808]:
+                  - heading "Black Plain T-Shirt" [level=2] [ref=e809]:
+                    - generic [ref=e810]: Black
+                    - generic [ref=e812]: Plain T-Shirt
+                  - generic [ref=e813]:
+                    - generic [ref=e814]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e815]:
+                      - button "Show front view" [ref=e816]:
+                        - img "Plain T-Shirt front view" [ref=e817]
+                      - button "Show back view" [ref=e818]:
+                        - img "Plain T-Shirt back view" [ref=e819]
+                - generic [ref=e820]:
+                  - button "1 Yr" [ref=e821]
+                  - button "2 Yrs" [ref=e822]
+                  - button "4 Yrs" [ref=e823]
+                  - button "6 Yrs" [ref=e824]
+                  - button "8 Yrs" [ref=e825]
+                  - button "10 Yrs" [ref=e826]
+                  - button "12 Yrs" [ref=e827]
+                  - button "14 Yrs" [ref=e828]
+                  - button "XS" [ref=e829]
+                  - button "S" [ref=e830]
+                  - button "M" [ref=e831]
+                  - button "L" [ref=e832]
+                  - button "XL" [ref=e833]
+                  - button "2XL" [ref=e834]
+                  - button "3XL" [ref=e835]
+                  - button "4XL" [ref=e836]
+                - generic [ref=e837]:
+                  - generic [ref=e838]:
+                    - text: Size
+                    - combobox "Size" [ref=e839]:
+                      - option "1 Yr (Rs 150)" [selected]
+                      - option "2 Yrs (Rs 150)"
+                      - option "4 Yrs (Rs 150)"
+                      - option "6 Yrs (Rs 150)"
+                      - option "8 Yrs (Rs 150)"
+                      - option "10 Yrs (Rs 150)"
+                      - option "12 Yrs (Rs 150)"
+                      - option "14 Yrs (Rs 150)"
+                      - option "XS (Rs 175)"
+                      - option "S (Rs 175)"
+                      - option "M (Rs 175)"
+                      - option "L (Rs 175)"
+                      - option "XL (Rs 175)"
+                      - option "2XL (Rs 250)"
+                      - option "3XL (Rs 300)"
+                      - option "4XL (Rs 300)"
+                  - generic [ref=e840]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e841]: "1"
+                - generic [ref=e842]:
+                  - link "Design this product" [ref=e843] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=sowqSTXReXiYhZ5Lntb9
+                  - button "Add to order" [ref=e846]
+            - article [ref=e847]:
+              - generic [ref=e848]:
+                - img "Plain T-Shirt" [ref=e849]
+                - link "Download Plain T-Shirt photo" [ref=e850] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mneftezj-5zv5b1&name=Light_Pink_Plain_T_Shirt
+              - generic [ref=e854]:
+                - generic [ref=e855]:
+                  - heading "Light Pink Plain T-Shirt" [level=2] [ref=e856]:
+                    - generic [ref=e857]: Light Pink
+                    - generic [ref=e859]: Plain T-Shirt
+                  - generic [ref=e860]:
+                    - generic [ref=e861]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e862]:
+                      - button "Show front view" [ref=e863]:
+                        - img "Plain T-Shirt front view" [ref=e864]
+                      - button "Show back view" [ref=e865]:
+                        - img "Plain T-Shirt back view" [ref=e866]
+                - generic [ref=e867]:
+                  - button "1 Yr" [ref=e868]
+                  - button "2 Yrs" [ref=e869]
+                  - button "4 Yrs" [ref=e870]
+                  - button "6 Yrs" [ref=e871]
+                  - button "8 Yrs" [ref=e872]
+                  - button "10 Yrs" [ref=e873]
+                  - button "12 Yrs" [ref=e874]
+                  - button "14 Yrs" [ref=e875]
+                  - button "XS" [ref=e876]
+                  - button "S" [ref=e877]
+                  - button "M" [ref=e878]
+                  - button "L" [ref=e879]
+                  - button "XL" [ref=e880]
+                  - button "2XL" [ref=e881]
+                  - button "3XL" [ref=e882]
+                  - button "4XL" [ref=e883]
+                - generic [ref=e884]:
+                  - generic [ref=e885]:
+                    - text: Size
+                    - combobox "Size" [ref=e886]:
+                      - option "1 Yr (Rs 150)" [selected]
+                      - option "2 Yrs (Rs 150)"
+                      - option "4 Yrs (Rs 150)"
+                      - option "6 Yrs (Rs 150)"
+                      - option "8 Yrs (Rs 150)"
+                      - option "10 Yrs (Rs 150)"
+                      - option "12 Yrs (Rs 150)"
+                      - option "14 Yrs (Rs 150)"
+                      - option "XS (Rs 175)"
+                      - option "S (Rs 175)"
+                      - option "M (Rs 175)"
+                      - option "L (Rs 175)"
+                      - option "XL (Rs 175)"
+                      - option "2XL (Rs 250)"
+                      - option "3XL (Rs 300)"
+                      - option "4XL (Rs 300)"
+                  - generic [ref=e887]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e888]: "1"
+                - generic [ref=e889]:
+                  - link "Design this product" [ref=e890] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=spPbHKz6aZs4LzkAQdmb
+                  - button "Add to order" [ref=e893]
+            - article [ref=e894]:
+              - generic [ref=e895]:
+                - img "Plain T-Shirt" [ref=e896]
+                - link "Download Plain T-Shirt photo" [ref=e897] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mneg2bt4-wy1g8u&name=Vibrant_Pink_Plain_T_Shirt
+              - generic [ref=e901]:
+                - generic [ref=e902]:
+                  - heading "Vibrant Pink Plain T-Shirt" [level=2] [ref=e903]:
+                    - generic [ref=e904]: Vibrant Pink
+                    - generic [ref=e906]: Plain T-Shirt
+                  - generic [ref=e907]:
+                    - generic [ref=e908]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e909]:
+                      - button "Show front view" [ref=e910]:
+                        - img "Plain T-Shirt front view" [ref=e911]
+                      - button "Show back view" [ref=e912]:
+                        - img "Plain T-Shirt back view" [ref=e913]
+                - generic [ref=e914]:
+                  - button "1 Yr" [ref=e915]
+                  - button "2 Yrs" [ref=e916]
+                  - button "4 Yrs" [ref=e917]
+                  - button "6 Yrs" [ref=e918]
+                  - button "8 Yrs" [ref=e919]
+                  - button "10 Yrs" [ref=e920]
+                  - button "12 Yrs" [ref=e921]
+                  - button "14 Yrs" [ref=e922]
+                  - button "XS" [ref=e923]
+                  - button "S" [ref=e924]
+                  - button "M" [ref=e925]
+                  - button "L" [ref=e926]
+                  - button "XL" [ref=e927]
+                  - button "2XL" [ref=e928]
+                  - button "3XL" [ref=e929]
+                  - button "4XL" [ref=e930]
+                - generic [ref=e931]:
+                  - generic [ref=e932]:
+                    - text: Size
+                    - combobox "Size" [ref=e933]:
+                      - option "1 Yr (Rs 150)" [selected]
+                      - option "2 Yrs (Rs 150)"
+                      - option "4 Yrs (Rs 150)"
+                      - option "6 Yrs (Rs 150)"
+                      - option "8 Yrs (Rs 150)"
+                      - option "10 Yrs (Rs 150)"
+                      - option "12 Yrs (Rs 150)"
+                      - option "14 Yrs (Rs 150)"
+                      - option "XS (Rs 175)"
+                      - option "S (Rs 175)"
+                      - option "M (Rs 175)"
+                      - option "L (Rs 175)"
+                      - option "XL (Rs 175)"
+                      - option "2XL (Rs 250)"
+                      - option "3XL (Rs 300)"
+                      - option "4XL (Rs 300)"
+                  - generic [ref=e934]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e935]: "1"
+                - generic [ref=e936]:
+                  - link "Design this product" [ref=e937] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=0KG4WMSRIzpzPt9aCIou
+                  - button "Add to order" [ref=e940]
+            - article [ref=e941]:
+              - generic [ref=e942]:
+                - img "Plain T-Shirt" [ref=e943]
+                - link "Download Plain T-Shirt photo" [ref=e944] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mneg6rzk-xjqgty&name=Deep_Red_Plain_T_Shirt
+              - generic [ref=e948]:
+                - generic [ref=e949]:
+                  - heading "Deep Red Plain T-Shirt" [level=2] [ref=e950]:
+                    - generic [ref=e951]: Deep Red
+                    - generic [ref=e953]: Plain T-Shirt
+                  - generic [ref=e954]:
+                    - generic [ref=e955]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e956]:
+                      - button "Show front view" [ref=e957]:
+                        - img "Plain T-Shirt front view" [ref=e958]
+                      - button "Show back view" [ref=e959]:
+                        - img "Plain T-Shirt back view" [ref=e960]
+                - generic [ref=e961]:
+                  - button "1 Yr" [ref=e962]
+                  - button "2 Yrs" [ref=e963]
+                  - button "4 Yrs" [ref=e964]
+                  - button "6 Yrs" [ref=e965]
+                  - button "8 Yrs" [ref=e966]
+                  - button "10 Yrs" [ref=e967]
+                  - button "12 Yrs" [ref=e968]
+                  - button "14 Yrs" [ref=e969]
+                  - button "XS" [ref=e970]
+                  - button "S" [ref=e971]
+                  - button "M" [ref=e972]
+                  - button "L" [ref=e973]
+                  - button "XL" [ref=e974]
+                  - button "2XL" [ref=e975]
+                  - button "3XL" [ref=e976]
+                  - button "4XL" [ref=e977]
+                - generic [ref=e978]:
+                  - generic [ref=e979]:
+                    - text: Size
+                    - combobox "Size" [ref=e980]:
+                      - option "1 Yr (Rs 150)" [selected]
+                      - option "2 Yrs (Rs 150)"
+                      - option "4 Yrs (Rs 150)"
+                      - option "6 Yrs (Rs 150)"
+                      - option "8 Yrs (Rs 150)"
+                      - option "10 Yrs (Rs 150)"
+                      - option "12 Yrs (Rs 150)"
+                      - option "14 Yrs (Rs 150)"
+                      - option "XS (Rs 175)"
+                      - option "S (Rs 175)"
+                      - option "M (Rs 175)"
+                      - option "L (Rs 175)"
+                      - option "XL (Rs 175)"
+                      - option "2XL (Rs 250)"
+                      - option "3XL (Rs 300)"
+                      - option "4XL (Rs 300)"
+                  - generic [ref=e981]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e982]: "1"
+                - generic [ref=e983]:
+                  - link "Design this product" [ref=e984] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=TQbwaiGYs0Im5CSjHaYq
+                  - button "Add to order" [ref=e987]
+            - article [ref=e988]:
+              - generic [ref=e989]:
+                - img "Plain T-Shirt" [ref=e990]
+                - link "Download Plain T-Shirt photo" [ref=e991] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnelbuac-gcvxia&name=Military_Green_Plain_T_Shirt
+              - generic [ref=e995]:
+                - generic [ref=e996]:
+                  - heading "Military Green Plain T-Shirt" [level=2] [ref=e997]:
+                    - generic [ref=e998]: Military Green
+                    - generic [ref=e1000]: Plain T-Shirt
+                  - generic [ref=e1001]:
+                    - generic [ref=e1002]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e1003]:
+                      - button "Show front view" [ref=e1004]:
+                        - img "Plain T-Shirt front view" [ref=e1005]
+                      - button "Show back view" [ref=e1006]:
+                        - img "Plain T-Shirt back view" [ref=e1007]
+                - generic [ref=e1008]:
+                  - button "1 Yr" [ref=e1009]
+                  - button "2 Yrs" [ref=e1010]
+                  - button "4 Yrs" [ref=e1011]
+                  - button "6 Yrs" [ref=e1012]
+                  - button "8 Yrs" [ref=e1013]
+                  - button "10 Yrs" [ref=e1014]
+                  - button "12 Yrs" [ref=e1015]
+                  - button "14 Yrs" [ref=e1016]
+                  - button "XS" [ref=e1017]
+                  - button "S" [ref=e1018]
+                  - button "M" [ref=e1019]
+                  - button "L" [ref=e1020]
+                  - button "XL" [ref=e1021]
+                  - button "2XL" [ref=e1022]
+                  - button "3XL" [ref=e1023]
+                  - button "4XL" [ref=e1024]
+                - generic [ref=e1025]:
+                  - generic [ref=e1026]:
+                    - text: Size
+                    - combobox "Size" [ref=e1027]:
+                      - option "1 Yr (Rs 150)" [selected]
+                      - option "2 Yrs (Rs 150)"
+                      - option "4 Yrs (Rs 150)"
+                      - option "6 Yrs (Rs 150)"
+                      - option "8 Yrs (Rs 150)"
+                      - option "10 Yrs (Rs 150)"
+                      - option "12 Yrs (Rs 150)"
+                      - option "14 Yrs (Rs 150)"
+                      - option "XS (Rs 175)"
+                      - option "S (Rs 175)"
+                      - option "M (Rs 175)"
+                      - option "L (Rs 175)"
+                      - option "XL (Rs 175)"
+                      - option "2XL (Rs 250)"
+                      - option "3XL (Rs 300)"
+                      - option "4XL (Rs 300)"
+                  - generic [ref=e1028]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e1029]: "1"
+                - generic [ref=e1030]:
+                  - link "Design this product" [ref=e1031] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=VRUCrLHDER3ywyqXORjw
+                  - button "Add to order" [ref=e1034]
+            - article [ref=e1035]:
+              - generic [ref=e1036]:
+                - img "Plain T-Shirt" [ref=e1037]
+                - link "Download Plain T-Shirt photo" [ref=e1038] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnemxe1p-rwvnax&name=Vibrant_Green_Plain_T_Shirt
+              - generic [ref=e1042]:
+                - generic [ref=e1043]:
+                  - heading "Vibrant Green Plain T-Shirt" [level=2] [ref=e1044]:
+                    - generic [ref=e1045]: Vibrant Green
+                    - generic [ref=e1047]: Plain T-Shirt
+                  - generic [ref=e1048]:
+                    - generic [ref=e1049]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e1050]:
+                      - button "Show front view" [ref=e1051]:
+                        - img "Plain T-Shirt front view" [ref=e1052]
+                      - button "Show back view" [ref=e1053]:
+                        - img "Plain T-Shirt back view" [ref=e1054]
+                - generic [ref=e1055]:
+                  - button "1 Yr" [ref=e1056]
+                  - button "2 Yrs" [ref=e1057]
+                  - button "4 Yrs" [ref=e1058]
+                  - button "6 Yrs" [ref=e1059]
+                  - button "8 Yrs" [ref=e1060]
+                  - button "10 Yrs" [ref=e1061]
+                  - button "12 Yrs" [ref=e1062]
+                  - button "14 Yrs" [ref=e1063]
+                  - button "XS" [ref=e1064]
+                  - button "S" [ref=e1065]
+                  - button "M" [ref=e1066]
+                  - button "L" [ref=e1067]
+                  - button "XL" [ref=e1068]
+                  - button "2XL" [ref=e1069]
+                  - button "3XL" [ref=e1070]
+                  - button "4XL" [ref=e1071]
+                - generic [ref=e1072]:
+                  - generic [ref=e1073]:
+                    - text: Size
+                    - combobox "Size" [ref=e1074]:
+                      - option "1 Yr (Rs 150)" [selected]
+                      - option "2 Yrs (Rs 150)"
+                      - option "4 Yrs (Rs 150)"
+                      - option "6 Yrs (Rs 150)"
+                      - option "8 Yrs (Rs 150)"
+                      - option "10 Yrs (Rs 150)"
+                      - option "12 Yrs (Rs 150)"
+                      - option "14 Yrs (Rs 150)"
+                      - option "XS (Rs 175)"
+                      - option "S (Rs 175)"
+                      - option "M (Rs 175)"
+                      - option "L (Rs 175)"
+                      - option "XL (Rs 175)"
+                      - option "2XL (Rs 250)"
+                      - option "3XL (Rs 300)"
+                      - option "4XL (Rs 300)"
+                  - generic [ref=e1075]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e1076]: "1"
+                - generic [ref=e1077]:
+                  - link "Design this product" [ref=e1078] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=NCZHNJ7nPUCisleW0N7k
+                  - button "Add to order" [ref=e1081]
+            - article [ref=e1082]:
+              - generic [ref=e1083]:
+                - img "Plain T-Shirt" [ref=e1084]
+                - link "Download Plain T-Shirt photo" [ref=e1085] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnemuidy-67ky9x&name=Vibrant_Apple_Green_Plain_T_Shirt
+              - generic [ref=e1089]:
+                - generic [ref=e1090]:
+                  - heading "Vibrant Apple Green Plain T-Shirt" [level=2] [ref=e1091]:
+                    - generic [ref=e1092]: Vibrant Apple Green
+                    - generic [ref=e1094]: Plain T-Shirt
+                  - generic [ref=e1095]:
+                    - generic [ref=e1096]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e1097]:
+                      - button "Show front view" [ref=e1098]:
+                        - img "Plain T-Shirt front view" [ref=e1099]
+                      - button "Show back view" [ref=e1100]:
+                        - img "Plain T-Shirt back view" [ref=e1101]
+                - generic [ref=e1102]:
+                  - button "1 Yr" [ref=e1103]
+                  - button "2 Yrs" [ref=e1104]
+                  - button "4 Yrs" [ref=e1105]
+                  - button "6 Yrs" [ref=e1106]
+                  - button "8 Yrs" [ref=e1107]
+                  - button "10 Yrs" [ref=e1108]
+                  - button "12 Yrs" [ref=e1109]
+                  - button "14 Yrs" [ref=e1110]
+                  - button "XS" [ref=e1111]
+                  - button "S" [ref=e1112]
+                  - button "M" [ref=e1113]
+                  - button "L" [ref=e1114]
+                  - button "XL" [ref=e1115]
+                  - button "2XL" [ref=e1116]
+                  - button "3XL" [ref=e1117]
+                  - button "4XL" [ref=e1118]
+                - generic [ref=e1119]:
+                  - generic [ref=e1120]:
+                    - text: Size
+                    - combobox "Size" [ref=e1121]:
+                      - option "1 Yr (Rs 150)" [selected]
+                      - option "2 Yrs (Rs 150)"
+                      - option "4 Yrs (Rs 150)"
+                      - option "6 Yrs (Rs 150)"
+                      - option "8 Yrs (Rs 150)"
+                      - option "10 Yrs (Rs 150)"
+                      - option "12 Yrs (Rs 150)"
+                      - option "14 Yrs (Rs 150)"
+                      - option "XS (Rs 175)"
+                      - option "S (Rs 175)"
+                      - option "M (Rs 175)"
+                      - option "L (Rs 175)"
+                      - option "XL (Rs 175)"
+                      - option "2XL (Rs 250)"
+                      - option "3XL (Rs 300)"
+                      - option "4XL (Rs 300)"
+                  - generic [ref=e1122]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e1123]: "1"
+                - generic [ref=e1124]:
+                  - link "Design this product" [ref=e1125] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=PyZUrIwANCmaLEOvoPHI
+                  - button "Add to order" [ref=e1128]
+            - article [ref=e1129]:
+              - generic [ref=e1130]:
+                - img "Plain T-Shirt" [ref=e1131]
+                - link "Download Plain T-Shirt photo" [ref=e1132] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnemjem7-6tzyml&name=Tea_Green_Plain_T_Shirt
+              - generic [ref=e1136]:
+                - generic [ref=e1137]:
+                  - heading "Tea Green Plain T-Shirt" [level=2] [ref=e1138]:
+                    - generic [ref=e1139]: Tea Green
+                    - generic [ref=e1141]: Plain T-Shirt
+                  - generic [ref=e1142]:
+                    - generic [ref=e1143]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e1144]:
+                      - button "Show front view" [ref=e1145]:
+                        - img "Plain T-Shirt front view" [ref=e1146]
+                      - button "Show back view" [ref=e1147]:
+                        - img "Plain T-Shirt back view" [ref=e1148]
+                - generic [ref=e1149]:
+                  - button "1 Yr" [ref=e1150]
+                  - button "2 Yrs" [ref=e1151]
+                  - button "4 Yrs" [ref=e1152]
+                  - button "6 Yrs" [ref=e1153]
+                  - button "8 Yrs" [ref=e1154]
+                  - button "10 Yrs" [ref=e1155]
+                  - button "12 Yrs" [ref=e1156]
+                  - button "14 Yrs" [ref=e1157]
+                  - button "XS" [ref=e1158]
+                  - button "S" [ref=e1159]
+                  - button "M" [ref=e1160]
+                  - button "L" [ref=e1161]
+                  - button "XL" [ref=e1162]
+                  - button "2XL" [ref=e1163]
+                  - button "3XL" [ref=e1164]
+                  - button "4XL" [ref=e1165]
+                - generic [ref=e1166]:
+                  - generic [ref=e1167]:
+                    - text: Size
+                    - combobox "Size" [ref=e1168]:
+                      - option "1 Yr (Rs 150)" [selected]
+                      - option "2 Yrs (Rs 150)"
+                      - option "4 Yrs (Rs 150)"
+                      - option "6 Yrs (Rs 150)"
+                      - option "8 Yrs (Rs 150)"
+                      - option "10 Yrs (Rs 150)"
+                      - option "12 Yrs (Rs 150)"
+                      - option "14 Yrs (Rs 150)"
+                      - option "XS (Rs 175)"
+                      - option "S (Rs 175)"
+                      - option "M (Rs 175)"
+                      - option "L (Rs 175)"
+                      - option "XL (Rs 175)"
+                      - option "2XL (Rs 250)"
+                      - option "3XL (Rs 300)"
+                      - option "4XL (Rs 300)"
+                  - generic [ref=e1169]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e1170]: "1"
+                - generic [ref=e1171]:
+                  - link "Design this product" [ref=e1172] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=XwSeKWCS9ugDkhhEtuyK
+                  - button "Add to order" [ref=e1175]
+            - article [ref=e1176]:
+              - generic [ref=e1177]:
+                - img "Plain T-Shirt" [ref=e1178]
+                - link "Download Plain T-Shirt photo" [ref=e1179] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnelz6lk-691ncy&name=Pastel_Green_Plain_T_Shirt
+              - generic [ref=e1183]:
+                - generic [ref=e1184]:
+                  - heading "Pastel Green Plain T-Shirt" [level=2] [ref=e1185]:
+                    - generic [ref=e1186]: Pastel Green
+                    - generic [ref=e1188]: Plain T-Shirt
+                  - generic [ref=e1189]:
+                    - generic [ref=e1190]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e1191]:
+                      - button "Show front view" [ref=e1192]:
+                        - img "Plain T-Shirt front view" [ref=e1193]
+                      - button "Show back view" [ref=e1194]:
+                        - img "Plain T-Shirt back view" [ref=e1195]
+                - generic [ref=e1196]:
+                  - button "1 Yr" [ref=e1197]
+                  - button "2 Yrs" [ref=e1198]
+                  - button "4 Yrs" [ref=e1199]
+                  - button "6 Yrs" [ref=e1200]
+                  - button "8 Yrs" [ref=e1201]
+                  - button "10 Yrs" [ref=e1202]
+                  - button "12 Yrs" [ref=e1203]
+                  - button "14 Yrs" [ref=e1204]
+                  - button "XS" [ref=e1205]
+                  - button "S" [ref=e1206]
+                  - button "M" [ref=e1207]
+                  - button "L" [ref=e1208]
+                  - button "XL" [ref=e1209]
+                  - button "2XL" [ref=e1210]
+                  - button "3XL" [ref=e1211]
+                  - button "4XL" [ref=e1212]
+                - generic [ref=e1213]:
+                  - generic [ref=e1214]:
+                    - text: Size
+                    - combobox "Size" [ref=e1215]:
+                      - option "1 Yr (Rs 150)" [selected]
+                      - option "2 Yrs (Rs 150)"
+                      - option "4 Yrs (Rs 150)"
+                      - option "6 Yrs (Rs 150)"
+                      - option "8 Yrs (Rs 150)"
+                      - option "10 Yrs (Rs 150)"
+                      - option "12 Yrs (Rs 150)"
+                      - option "14 Yrs (Rs 150)"
+                      - option "XS (Rs 175)"
+                      - option "S (Rs 175)"
+                      - option "M (Rs 175)"
+                      - option "L (Rs 175)"
+                      - option "XL (Rs 175)"
+                      - option "2XL (Rs 250)"
+                      - option "3XL (Rs 300)"
+                      - option "4XL (Rs 300)"
+                  - generic [ref=e1216]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e1217]: "1"
+                - generic [ref=e1218]:
+                  - link "Design this product" [ref=e1219] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=OuWeE7n6YC4aFc5mvUaY
+                  - button "Add to order" [ref=e1222]
+            - article [ref=e1223]:
+              - generic [ref=e1224]:
+                - img "Plain T-Shirt" [ref=e1225]
+                - link "Download Plain T-Shirt photo" [ref=e1226] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnelr5c4-4fw2cz&name=Purple_Plain_T_Shirt
+              - generic [ref=e1230]:
+                - generic [ref=e1231]:
+                  - heading "Purple Plain T-Shirt" [level=2] [ref=e1232]:
+                    - generic [ref=e1233]: Purple
+                    - generic [ref=e1235]: Plain T-Shirt
+                  - generic [ref=e1236]:
+                    - generic [ref=e1237]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e1238]:
+                      - button "Show front view" [ref=e1239]:
+                        - img "Plain T-Shirt front view" [ref=e1240]
+                      - button "Show back view" [ref=e1241]:
+                        - img "Plain T-Shirt back view" [ref=e1242]
+                - generic [ref=e1243]:
+                  - button "1 Yr" [ref=e1244]
+                  - button "2 Yrs" [ref=e1245]
+                  - button "4 Yrs" [ref=e1246]
+                  - button "6 Yrs" [ref=e1247]
+                  - button "8 Yrs" [ref=e1248]
+                  - button "10 Yrs" [ref=e1249]
+                  - button "12 Yrs" [ref=e1250]
+                  - button "14 Yrs" [ref=e1251]
+                  - button "XS" [ref=e1252]
+                  - button "S" [ref=e1253]
+                  - button "M" [ref=e1254]
+                  - button "L" [ref=e1255]
+                  - button "XL" [ref=e1256]
+                  - button "2XL" [ref=e1257]
+                  - button "3XL" [ref=e1258]
+                  - button "4XL" [ref=e1259]
+                - generic [ref=e1260]:
+                  - generic [ref=e1261]:
+                    - text: Size
+                    - combobox "Size" [ref=e1262]:
+                      - option "1 Yr (Rs 150)" [selected]
+                      - option "2 Yrs (Rs 150)"
+                      - option "4 Yrs (Rs 150)"
+                      - option "6 Yrs (Rs 150)"
+                      - option "8 Yrs (Rs 150)"
+                      - option "10 Yrs (Rs 150)"
+                      - option "12 Yrs (Rs 150)"
+                      - option "14 Yrs (Rs 150)"
+                      - option "XS (Rs 175)"
+                      - option "S (Rs 175)"
+                      - option "M (Rs 175)"
+                      - option "L (Rs 175)"
+                      - option "XL (Rs 175)"
+                      - option "2XL (Rs 250)"
+                      - option "3XL (Rs 300)"
+                      - option "4XL (Rs 300)"
+                  - generic [ref=e1263]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e1264]: "1"
+                - generic [ref=e1265]:
+                  - link "Design this product" [ref=e1266] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=ZJnF4V4AszmwZtChoMKi
+                  - button "Add to order" [ref=e1269]
+            - article [ref=e1270]:
+              - generic [ref=e1271]:
+                - img "Plain T-Shirt" [ref=e1272]
+                - link "Download Plain T-Shirt photo" [ref=e1273] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mneljwav-h8ccyp&name=Lemon_Yellow_Plain_T_Shirt
+              - generic [ref=e1277]:
+                - generic [ref=e1278]:
+                  - heading "Lemon Yellow Plain T-Shirt" [level=2] [ref=e1279]:
+                    - generic [ref=e1280]: Lemon Yellow
+                    - generic [ref=e1282]: Plain T-Shirt
+                  - generic [ref=e1283]:
+                    - generic [ref=e1284]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e1285]:
+                      - button "Show front view" [ref=e1286]:
+                        - img "Plain T-Shirt front view" [ref=e1287]
+                      - button "Show back view" [ref=e1288]:
+                        - img "Plain T-Shirt back view" [ref=e1289]
+                - generic [ref=e1290]:
+                  - button "1 Yr" [ref=e1291]
+                  - button "2 Yrs" [ref=e1292]
+                  - button "4 Yrs" [ref=e1293]
+                  - button "6 Yrs" [ref=e1294]
+                  - button "8 Yrs" [ref=e1295]
+                  - button "10 Yrs" [ref=e1296]
+                  - button "12 Yrs" [ref=e1297]
+                  - button "14 Yrs" [ref=e1298]
+                  - button "XS" [ref=e1299]
+                  - button "S" [ref=e1300]
+                  - button "M" [ref=e1301]
+                  - button "L" [ref=e1302]
+                  - button "XL" [ref=e1303]
+                  - button "2XL" [ref=e1304]
+                  - button "3XL" [ref=e1305]
+                  - button "4XL" [ref=e1306]
+                - generic [ref=e1307]:
+                  - generic [ref=e1308]:
+                    - text: Size
+                    - combobox "Size" [ref=e1309]:
+                      - option "1 Yr (Rs 150)" [selected]
+                      - option "2 Yrs (Rs 150)"
+                      - option "4 Yrs (Rs 150)"
+                      - option "6 Yrs (Rs 150)"
+                      - option "8 Yrs (Rs 150)"
+                      - option "10 Yrs (Rs 150)"
+                      - option "12 Yrs (Rs 150)"
+                      - option "14 Yrs (Rs 150)"
+                      - option "XS (Rs 175)"
+                      - option "S (Rs 175)"
+                      - option "M (Rs 175)"
+                      - option "L (Rs 175)"
+                      - option "XL (Rs 175)"
+                      - option "2XL (Rs 250)"
+                      - option "3XL (Rs 300)"
+                      - option "4XL (Rs 300)"
+                  - generic [ref=e1310]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e1311]: "1"
+                - generic [ref=e1312]:
+                  - link "Design this product" [ref=e1313] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=0FUFH8SvZguCIdtE1ooA
+                  - button "Add to order" [ref=e1316]
+            - article [ref=e1317]:
+              - generic [ref=e1318]:
+                - img "Plain T-Shirt" [ref=e1319]
+                - link "Download Plain T-Shirt photo" [ref=e1320] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnelguyu-7o71ru&name=Serein_Yellow_Plain_T_Shirt
+              - generic [ref=e1324]:
+                - generic [ref=e1325]:
+                  - heading "Serein Yellow Plain T-Shirt" [level=2] [ref=e1326]:
+                    - generic [ref=e1327]: Serein Yellow
+                    - generic [ref=e1329]: Plain T-Shirt
+                  - generic [ref=e1330]:
+                    - generic [ref=e1331]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e1332]:
+                      - button "Show front view" [ref=e1333]:
+                        - img "Plain T-Shirt front view" [ref=e1334]
+                      - button "Show back view" [ref=e1335]:
+                        - img "Plain T-Shirt back view" [ref=e1336]
+                - generic [ref=e1337]:
+                  - button "1 Yr" [ref=e1338]
+                  - button "2 Yrs" [ref=e1339]
+                  - button "4 Yrs" [ref=e1340]
+                  - button "6 Yrs" [ref=e1341]
+                  - button "8 Yrs" [ref=e1342]
+                  - button "10 Yrs" [ref=e1343]
+                  - button "12 Yrs" [ref=e1344]
+                  - button "14 Yrs" [ref=e1345]
+                  - button "XS" [ref=e1346]
+                  - button "S" [ref=e1347]
+                  - button "M" [ref=e1348]
+                  - button "L" [ref=e1349]
+                  - button "XL" [ref=e1350]
+                  - button "2XL" [ref=e1351]
+                  - button "3XL" [ref=e1352]
+                  - button "4XL" [ref=e1353]
+                - generic [ref=e1354]:
+                  - generic [ref=e1355]:
+                    - text: Size
+                    - combobox "Size" [ref=e1356]:
+                      - option "1 Yr (Rs 150)" [selected]
+                      - option "2 Yrs (Rs 150)"
+                      - option "4 Yrs (Rs 150)"
+                      - option "6 Yrs (Rs 150)"
+                      - option "8 Yrs (Rs 150)"
+                      - option "10 Yrs (Rs 150)"
+                      - option "12 Yrs (Rs 150)"
+                      - option "14 Yrs (Rs 150)"
+                      - option "XS (Rs 175)"
+                      - option "S (Rs 175)"
+                      - option "M (Rs 175)"
+                      - option "L (Rs 175)"
+                      - option "XL (Rs 175)"
+                      - option "2XL (Rs 250)"
+                      - option "3XL (Rs 300)"
+                      - option "4XL (Rs 300)"
+                  - generic [ref=e1357]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e1358]: "1"
+                - generic [ref=e1359]:
+                  - link "Design this product" [ref=e1360] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=PMhHNEq9U1ewSyoC75U4
+                  - button "Add to order" [ref=e1363]
+            - article [ref=e1364]:
+              - generic [ref=e1365]:
+                - img "Plain T-Shirt" [ref=e1366]
+                - link "Download Plain T-Shirt photo" [ref=e1367] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnelen4d-4c1ojj&name=Moutard_Yellow_Plain_T_Shirt
+              - generic [ref=e1371]:
+                - generic [ref=e1372]:
+                  - heading "Moutard Yellow Plain T-Shirt" [level=2] [ref=e1373]:
+                    - generic [ref=e1374]: Moutard Yellow
+                    - generic [ref=e1376]: Plain T-Shirt
+                  - generic [ref=e1377]:
+                    - generic [ref=e1378]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e1379]:
+                      - button "Show front view" [ref=e1380]:
+                        - img "Plain T-Shirt front view" [ref=e1381]
+                      - button "Show back view" [ref=e1382]:
+                        - img "Plain T-Shirt back view" [ref=e1383]
+                - generic [ref=e1384]:
+                  - button "1 Yr" [ref=e1385]
+                  - button "2 Yrs" [ref=e1386]
+                  - button "4 Yrs" [ref=e1387]
+                  - button "6 Yrs" [ref=e1388]
+                  - button "8 Yrs" [ref=e1389]
+                  - button "10 Yrs" [ref=e1390]
+                  - button "12 Yrs" [ref=e1391]
+                  - button "14 Yrs" [ref=e1392]
+                  - button "XS" [ref=e1393]
+                  - button "S" [ref=e1394]
+                  - button "M" [ref=e1395]
+                  - button "L" [ref=e1396]
+                  - button "XL" [ref=e1397]
+                  - button "2XL" [ref=e1398]
+                  - button "3XL" [ref=e1399]
+                  - button "4XL" [ref=e1400]
+                - generic [ref=e1401]:
+                  - generic [ref=e1402]:
+                    - text: Size
+                    - combobox "Size" [ref=e1403]:
+                      - option "1 Yr (Rs 150)" [selected]
+                      - option "2 Yrs (Rs 150)"
+                      - option "4 Yrs (Rs 150)"
+                      - option "6 Yrs (Rs 150)"
+                      - option "8 Yrs (Rs 150)"
+                      - option "10 Yrs (Rs 150)"
+                      - option "12 Yrs (Rs 150)"
+                      - option "14 Yrs (Rs 150)"
+                      - option "XS (Rs 175)"
+                      - option "S (Rs 175)"
+                      - option "M (Rs 175)"
+                      - option "L (Rs 175)"
+                      - option "XL (Rs 175)"
+                      - option "2XL (Rs 250)"
+                      - option "3XL (Rs 300)"
+                      - option "4XL (Rs 300)"
+                  - generic [ref=e1404]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e1405]: "1"
+                - generic [ref=e1406]:
+                  - link "Design this product" [ref=e1407] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=kvaG86V7PMkxMPDLc3uA
+                  - button "Add to order" [ref=e1410]
+            - article [ref=e1411]:
+              - generic [ref=e1412]:
+                - img "Plain T-Shirt" [ref=e1413]
+                - link "Download Plain T-Shirt photo" [ref=e1414] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mneldeud-x958b6&name=Aqua_Blue_Plain_T_Shirt
+              - generic [ref=e1418]:
+                - generic [ref=e1419]:
+                  - heading "Aqua Blue Plain T-Shirt" [level=2] [ref=e1420]:
+                    - generic [ref=e1421]: Aqua Blue
+                    - generic [ref=e1423]: Plain T-Shirt
+                  - generic [ref=e1424]:
+                    - generic [ref=e1425]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e1426]:
+                      - button "Show front view" [ref=e1427]:
+                        - img "Plain T-Shirt front view" [ref=e1428]
+                      - button "Show back view" [ref=e1429]:
+                        - img "Plain T-Shirt back view" [ref=e1430]
+                - generic [ref=e1431]:
+                  - button "1 Yr" [ref=e1432]
+                  - button "2 Yrs" [ref=e1433]
+                  - button "4 Yrs" [ref=e1434]
+                  - button "6 Yrs" [ref=e1435]
+                  - button "8 Yrs" [ref=e1436]
+                  - button "10 Yrs" [ref=e1437]
+                  - button "12 Yrs" [ref=e1438]
+                  - button "14 Yrs" [ref=e1439]
+                  - button "XS" [ref=e1440]
+                  - button "S" [ref=e1441]
+                  - button "M" [ref=e1442]
+                  - button "L" [ref=e1443]
+                  - button "XL" [ref=e1444]
+                  - button "2XL" [ref=e1445]
+                  - button "3XL" [ref=e1446]
+                  - button "4XL" [ref=e1447]
+                - generic [ref=e1448]:
+                  - generic [ref=e1449]:
+                    - text: Size
+                    - combobox "Size" [ref=e1450]:
+                      - option "1 Yr (Rs 150)" [selected]
+                      - option "2 Yrs (Rs 150)"
+                      - option "4 Yrs (Rs 150)"
+                      - option "6 Yrs (Rs 150)"
+                      - option "8 Yrs (Rs 150)"
+                      - option "10 Yrs (Rs 150)"
+                      - option "12 Yrs (Rs 150)"
+                      - option "14 Yrs (Rs 150)"
+                      - option "XS (Rs 175)"
+                      - option "S (Rs 175)"
+                      - option "M (Rs 175)"
+                      - option "L (Rs 175)"
+                      - option "XL (Rs 175)"
+                      - option "2XL (Rs 250)"
+                      - option "3XL (Rs 300)"
+                      - option "4XL (Rs 300)"
+                  - generic [ref=e1451]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e1452]: "1"
+                - generic [ref=e1453]:
+                  - link "Design this product" [ref=e1454] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=aNBY0a8dxpzrJIzcyVg3
+                  - button "Add to order" [ref=e1457]
+            - article [ref=e1458]:
+              - generic [ref=e1459]:
+                - img "Plain T-Shirt" [ref=e1460]
+                - link "Download Plain T-Shirt photo" [ref=e1461] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnekk8st-hl0h5x&name=Navy_Blue_Plain_T_Shirt
+              - generic [ref=e1465]:
+                - generic [ref=e1466]:
+                  - heading "Navy Blue Plain T-Shirt" [level=2] [ref=e1467]:
+                    - generic [ref=e1468]: Navy Blue
+                    - generic [ref=e1470]: Plain T-Shirt
+                  - generic [ref=e1471]:
+                    - generic [ref=e1472]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e1473]:
+                      - button "Show front view" [ref=e1474]:
+                        - img "Plain T-Shirt front view" [ref=e1475]
+                      - button "Show back view" [ref=e1476]:
+                        - img "Plain T-Shirt back view" [ref=e1477]
+                - generic [ref=e1478]:
+                  - button "1 Yr" [ref=e1479]
+                  - button "2 Yrs" [ref=e1480]
+                  - button "4 Yrs" [ref=e1481]
+                  - button "6 Yrs" [ref=e1482]
+                  - button "8 Yrs" [ref=e1483]
+                  - button "10 Yrs" [ref=e1484]
+                  - button "12 Yrs" [ref=e1485]
+                  - button "14 Yrs" [ref=e1486]
+                  - button "XS" [ref=e1487]
+                  - button "S" [ref=e1488]
+                  - button "M" [ref=e1489]
+                  - button "L" [ref=e1490]
+                  - button "XL" [ref=e1491]
+                  - button "2XL" [ref=e1492]
+                  - button "3XL" [ref=e1493]
+                  - button "4XL" [ref=e1494]
+                - generic [ref=e1495]:
+                  - generic [ref=e1496]:
+                    - text: Size
+                    - combobox "Size" [ref=e1497]:
+                      - option "1 Yr (Rs 150)" [selected]
+                      - option "2 Yrs (Rs 150)"
+                      - option "4 Yrs (Rs 150)"
+                      - option "6 Yrs (Rs 150)"
+                      - option "8 Yrs (Rs 150)"
+                      - option "10 Yrs (Rs 150)"
+                      - option "12 Yrs (Rs 150)"
+                      - option "14 Yrs (Rs 150)"
+                      - option "XS (Rs 175)"
+                      - option "S (Rs 175)"
+                      - option "M (Rs 175)"
+                      - option "L (Rs 175)"
+                      - option "XL (Rs 175)"
+                      - option "2XL (Rs 250)"
+                      - option "3XL (Rs 300)"
+                      - option "4XL (Rs 300)"
+                  - generic [ref=e1498]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e1499]: "1"
+                - generic [ref=e1500]:
+                  - link "Design this product" [ref=e1501] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=AdVXWMvBwGclj1uXJaiQ
+                  - button "Add to order" [ref=e1504]
+            - article [ref=e1505]:
+              - generic [ref=e1506]:
+                - img "Plain T-Shirt" [ref=e1507]
+                - link "Download Plain T-Shirt photo" [ref=e1508] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnekg5iz-4t0o1c&name=Light_Grey_Plain_T_Shirt
+              - generic [ref=e1512]:
+                - generic [ref=e1513]:
+                  - heading "Light Grey Plain T-Shirt" [level=2] [ref=e1514]:
+                    - generic [ref=e1515]: Light Grey
+                    - generic [ref=e1517]: Plain T-Shirt
+                  - generic [ref=e1518]:
+                    - generic [ref=e1519]: From Rs 150
+                    - generic "Plain T-Shirt thumbnails" [ref=e1520]:
+                      - button "Show front view" [ref=e1521]:
+                        - img "Plain T-Shirt front view" [ref=e1522]
+                      - button "Show back view" [ref=e1523]:
+                        - img "Plain T-Shirt back view" [ref=e1524]
+                - generic [ref=e1525]:
+                  - button "1 Yr" [ref=e1526]
+                  - button "2 Yrs" [ref=e1527]
+                  - button "4 Yrs" [ref=e1528]
+                  - button "6 Yrs" [ref=e1529]
+                  - button "8 Yrs" [ref=e1530]
+                  - button "10 Yrs" [ref=e1531]
+                  - button "12 Yrs" [ref=e1532]
+                  - button "14 Yrs" [ref=e1533]
+                  - button "XS" [ref=e1534]
+                  - button "S" [ref=e1535]
+                  - button "M" [ref=e1536]
+                  - button "L" [ref=e1537]
+                  - button "XL" [ref=e1538]
+                  - button "2XL" [ref=e1539]
+                  - button "3XL" [ref=e1540]
+                  - button "4XL" [ref=e1541]
+                - generic [ref=e1542]:
+                  - generic [ref=e1543]:
+                    - text: Size
+                    - combobox "Size" [ref=e1544]:
+                      - option "1 Yr (Rs 150)" [selected]
+                      - option "2 Yrs (Rs 150)"
+                      - option "4 Yrs (Rs 150)"
+                      - option "6 Yrs (Rs 150)"
+                      - option "8 Yrs (Rs 150)"
+                      - option "10 Yrs (Rs 150)"
+                      - option "12 Yrs (Rs 150)"
+                      - option "14 Yrs (Rs 150)"
+                      - option "XS (Rs 175)"
+                      - option "S (Rs 175)"
+                      - option "M (Rs 175)"
+                      - option "L (Rs 175)"
+                      - option "XL (Rs 175)"
+                      - option "2XL (Rs 250)"
+                      - option "3XL (Rs 300)"
+                      - option "4XL (Rs 300)"
+                  - generic [ref=e1545]:
+                    - text: Qty
+                    - spinbutton "Qty" [ref=e1546]: "1"
+                - generic [ref=e1547]:
+                  - link "Design this product" [ref=e1548] [cursor=pointer]:
+                    - /url: /design-studio?shopItem=NyHvK5pzuD1mR9uRKQq7
+                  - button "Add to order" [ref=e1551]
+            - article [ref=e1552]:
+              - generic [ref=e1553]:
+                - img "Baseball Cap" [ref=e1554]
+                - link "Download Baseball Cap photo" [ref=e1555] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnltg0z3-utfbtn&name=Red_Baseball_Cap
+              - generic [ref=e1559]:
+                - generic [ref=e1560]:
+                  - heading "Red Baseball Cap" [level=2] [ref=e1561]:
+                    - generic [ref=e1562]: Red
+                    - generic [ref=e1564]: Baseball Cap
+                  - generic [ref=e1565]:
+                    - generic [ref=e1566]: Rs 150
+                    - generic "Baseball Cap thumbnails" [ref=e1567]:
+                      - button "Show front view" [ref=e1568]:
+                        - img "Baseball Cap front view" [ref=e1569]
+                - generic [ref=e1571]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e1572]: "1"
+                - button "Add to order" [ref=e1574]
+            - article [ref=e1575]:
+              - generic [ref=e1576]:
+                - img "Baseball Cap" [ref=e1577]
+                - link "Download Baseball Cap photo" [ref=e1578] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnltf8hu-gnv9yu&name=Black_Baseball_Cap
+              - generic [ref=e1582]:
+                - generic [ref=e1583]:
+                  - heading "Black Baseball Cap" [level=2] [ref=e1584]:
+                    - generic [ref=e1585]: Black
+                    - generic [ref=e1587]: Baseball Cap
+                  - generic [ref=e1588]:
+                    - generic [ref=e1589]: Rs 150
+                    - generic "Baseball Cap thumbnails" [ref=e1590]:
+                      - button "Show front view" [ref=e1591]:
+                        - img "Baseball Cap front view" [ref=e1592]
+                - generic [ref=e1594]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e1595]: "1"
+                - button "Add to order" [ref=e1597]
+            - article [ref=e1598]:
+              - generic [ref=e1599]:
+                - img "Baseball Cap" [ref=e1600]
+                - link "Download Baseball Cap photo" [ref=e1601] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnltdlrp-2vgjsb&name=White_Baseball_Cap
+              - generic [ref=e1605]:
+                - generic [ref=e1606]:
+                  - heading "White Baseball Cap" [level=2] [ref=e1607]:
+                    - generic [ref=e1608]: White
+                    - generic [ref=e1610]: Baseball Cap
+                  - generic [ref=e1611]:
+                    - generic [ref=e1612]: Rs 150
+                    - generic "Baseball Cap thumbnails" [ref=e1613]:
+                      - button "Show front view" [ref=e1614]:
+                        - img "Baseball Cap front view" [ref=e1615]
+                - generic [ref=e1617]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e1618]: "1"
+                - button "Add to order" [ref=e1620]
+            - article [ref=e1621]:
+              - generic [ref=e1622]:
+                - img "Baseball Cap" [ref=e1623]
+                - link "Download Baseball Cap photo" [ref=e1624] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnltcxtu-zw1wdy&name=Off_White_Baseball_Cap
+              - generic [ref=e1628]:
+                - generic [ref=e1629]:
+                  - heading "Off-White Baseball Cap" [level=2] [ref=e1630]:
+                    - generic [ref=e1631]: Off-White
+                    - generic [ref=e1633]: Baseball Cap
+                  - generic [ref=e1634]:
+                    - generic [ref=e1635]: Rs 150
+                    - generic "Baseball Cap thumbnails" [ref=e1636]:
+                      - button "Show front view" [ref=e1637]:
+                        - img "Baseball Cap front view" [ref=e1638]
+                - generic [ref=e1640]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e1641]: "1"
+                - button "Add to order" [ref=e1643]
+            - article [ref=e1644]:
+              - generic [ref=e1645]:
+                - img "Baseball Cap" [ref=e1646]
+                - link "Download Baseball Cap photo" [ref=e1647] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnltbooe-4ycizr&name=Beige_Baseball_Cap
+              - generic [ref=e1651]:
+                - generic [ref=e1652]:
+                  - heading "Beige Baseball Cap" [level=2] [ref=e1653]:
+                    - generic [ref=e1654]: Beige
+                    - generic [ref=e1656]: Baseball Cap
+                  - generic [ref=e1657]:
+                    - generic [ref=e1658]: Rs 150
+                    - generic "Baseball Cap thumbnails" [ref=e1659]:
+                      - button "Show front view" [ref=e1660]:
+                        - img "Baseball Cap front view" [ref=e1661]
+                - generic [ref=e1663]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e1664]: "1"
+                - button "Add to order" [ref=e1666]
+            - article [ref=e1667]:
+              - generic [ref=e1668]:
+                - img "Baseball Cap" [ref=e1669]
+                - link "Download Baseball Cap photo" [ref=e1670] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnltaeo3-zkrfde&name=Grey_Baseball_Cap
+              - generic [ref=e1674]:
+                - generic [ref=e1675]:
+                  - heading "Grey Baseball Cap" [level=2] [ref=e1676]:
+                    - generic [ref=e1677]: Grey
+                    - generic [ref=e1679]: Baseball Cap
+                  - generic [ref=e1680]:
+                    - generic [ref=e1681]: Rs 150
+                    - generic "Baseball Cap thumbnails" [ref=e1682]:
+                      - button "Show front view" [ref=e1683]:
+                        - img "Baseball Cap front view" [ref=e1684]
+                - generic [ref=e1686]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e1687]: "1"
+                - button "Add to order" [ref=e1689]
+            - article [ref=e1690]:
+              - generic [ref=e1691]:
+                - img "Baseball Cap" [ref=e1692]
+                - link "Download Baseball Cap photo" [ref=e1693] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnlt98n4-2x6eix&name=Navy_Blue_Baseball_Cap
+              - generic [ref=e1697]:
+                - generic [ref=e1698]:
+                  - heading "Navy Blue Baseball Cap" [level=2] [ref=e1699]:
+                    - generic [ref=e1700]: Navy Blue
+                    - generic [ref=e1702]: Baseball Cap
+                  - generic [ref=e1703]:
+                    - generic [ref=e1704]: Rs 150
+                    - generic "Baseball Cap thumbnails" [ref=e1705]:
+                      - button "Show front view" [ref=e1706]:
+                        - img "Baseball Cap front view" [ref=e1707]
+                - generic [ref=e1709]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e1710]: "1"
+                - button "Add to order" [ref=e1712]
+            - article [ref=e1713]:
+              - generic [ref=e1714]:
+                - img "Baseball Cap" [ref=e1715]
+                - link "Download Baseball Cap photo" [ref=e1716] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnlt6ssb-tqit2z&name=Military_Green_Baseball_Cap
+              - generic [ref=e1720]:
+                - generic [ref=e1721]:
+                  - heading "Military Green Baseball Cap" [level=2] [ref=e1722]:
+                    - generic [ref=e1723]: Military Green
+                    - generic [ref=e1725]: Baseball Cap
+                  - generic [ref=e1726]:
+                    - generic [ref=e1727]: Rs 150
+                    - generic "Baseball Cap thumbnails" [ref=e1728]:
+                      - button "Show front view" [ref=e1729]:
+                        - img "Baseball Cap front view" [ref=e1730]
+                - generic [ref=e1732]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e1733]: "1"
+                - button "Add to order" [ref=e1735]
+            - article [ref=e1736]:
+              - generic [ref=e1737]:
+                - img "Baseball Cap" [ref=e1738]
+                - link "Download Baseball Cap photo" [ref=e1739] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnlt5rb3-68vovp&name=Royal_Blue_Baseball_Cap
+              - generic [ref=e1743]:
+                - generic [ref=e1744]:
+                  - heading "Royal Blue Baseball Cap" [level=2] [ref=e1745]:
+                    - generic [ref=e1746]: Royal Blue
+                    - generic [ref=e1748]: Baseball Cap
+                  - generic [ref=e1749]:
+                    - generic [ref=e1750]: Rs 150
+                    - generic "Baseball Cap thumbnails" [ref=e1751]:
+                      - button "Show front view" [ref=e1752]:
+                        - img "Baseball Cap front view" [ref=e1753]
+                - generic [ref=e1755]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e1756]: "1"
+                - button "Add to order" [ref=e1758]
+            - article [ref=e1759]:
+              - generic [ref=e1760]:
+                - img "Baseball Cap" [ref=e1761]
+                - link "Download Baseball Cap photo" [ref=e1762] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnlt4etd-ng7mn3&name=Green_Fluo_Baseball_Cap
+              - generic [ref=e1766]:
+                - generic [ref=e1767]:
+                  - heading "Green Fluo Baseball Cap" [level=2] [ref=e1768]:
+                    - generic [ref=e1769]: Green Fluo
+                    - generic [ref=e1771]: Baseball Cap
+                  - generic [ref=e1772]:
+                    - generic [ref=e1773]: Rs 150
+                    - generic "Baseball Cap thumbnails" [ref=e1774]:
+                      - button "Show front view" [ref=e1775]:
+                        - img "Baseball Cap front view" [ref=e1776]
+                - generic [ref=e1778]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e1779]: "1"
+                - button "Add to order" [ref=e1781]
+            - article [ref=e1782]:
+              - generic [ref=e1783]:
+                - img "Baseball Cap" [ref=e1784]
+                - link "Download Baseball Cap photo" [ref=e1785] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnlt31op-ddm5uz&name=Orange_Baseball_Cap
+              - generic [ref=e1789]:
+                - generic [ref=e1790]:
+                  - heading "Orange Baseball Cap" [level=2] [ref=e1791]:
+                    - generic [ref=e1792]: Orange
+                    - generic [ref=e1794]: Baseball Cap
+                  - generic [ref=e1795]:
+                    - generic [ref=e1796]: Rs 150
+                    - generic "Baseball Cap thumbnails" [ref=e1797]:
+                      - button "Show front view" [ref=e1798]:
+                        - img "Baseball Cap front view" [ref=e1799]
+                - generic [ref=e1801]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e1802]: "1"
+                - button "Add to order" [ref=e1804]
+            - article [ref=e1805]:
+              - generic [ref=e1806]:
+                - img "Baseball Cap" [ref=e1807]
+                - link "Download Baseball Cap photo" [ref=e1808] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnlt28lb-0sop24&name=Yellow_Baseball_Cap
+              - generic [ref=e1812]:
+                - generic [ref=e1813]:
+                  - heading "Yellow Baseball Cap" [level=2] [ref=e1814]:
+                    - generic [ref=e1815]: Yellow
+                    - generic [ref=e1817]: Baseball Cap
+                  - generic [ref=e1818]:
+                    - generic [ref=e1819]: Rs 150
+                    - generic "Baseball Cap thumbnails" [ref=e1820]:
+                      - button "Show front view" [ref=e1821]:
+                        - img "Baseball Cap front view" [ref=e1822]
+                - generic [ref=e1824]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e1825]: "1"
+                - button "Add to order" [ref=e1827]
+            - article [ref=e1828]:
+              - generic [ref=e1829]:
+                - img "Cotton Cap" [ref=e1830]
+                - link "Download Cotton Cap photo" [ref=e1831] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnjc78kv-1kbd2s&name=Black_Cotton_Cap
+              - generic [ref=e1835]:
+                - generic [ref=e1836]:
+                  - heading "Black Cotton Cap" [level=2] [ref=e1837]:
+                    - generic [ref=e1838]: Black
+                    - generic [ref=e1840]: Cotton Cap
+                  - generic [ref=e1841]:
+                    - generic [ref=e1842]: Rs 200
+                    - generic "Cotton Cap thumbnails" [ref=e1843]:
+                      - button "Show front view" [ref=e1844]:
+                        - img "Cotton Cap front view" [ref=e1845]
+                - generic [ref=e1847]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e1848]: "1"
+                - button "Add to order" [ref=e1850]
+            - article [ref=e1851]:
+              - generic [ref=e1852]:
+                - img "Cotton Cap" [ref=e1853]
+                - link "Download Cotton Cap photo" [ref=e1854] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnjc6iw4-bk24b2&name=White_Cotton_Cap
+              - generic [ref=e1858]:
+                - generic [ref=e1859]:
+                  - heading "White Cotton Cap" [level=2] [ref=e1860]:
+                    - generic [ref=e1861]: White
+                    - generic [ref=e1863]: Cotton Cap
+                  - generic [ref=e1864]:
+                    - generic [ref=e1865]: Rs 200
+                    - generic "Cotton Cap thumbnails" [ref=e1866]:
+                      - button "Show front view" [ref=e1867]:
+                        - img "Cotton Cap front view" [ref=e1868]
+                - generic [ref=e1870]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e1871]: "1"
+                - button "Add to order" [ref=e1873]
+            - article [ref=e1874]:
+              - generic [ref=e1875]:
+                - img "Cotton Cap" [ref=e1876]
+                - link "Download Cotton Cap photo" [ref=e1877] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnjc5psk-x799jz&name=Navy_Blue_Cotton_Cap
+              - generic [ref=e1881]:
+                - generic [ref=e1882]:
+                  - heading "Navy Blue Cotton Cap" [level=2] [ref=e1883]:
+                    - generic [ref=e1884]: Navy Blue
+                    - generic [ref=e1886]: Cotton Cap
+                  - generic [ref=e1887]:
+                    - generic [ref=e1888]: Rs 200
+                    - generic "Cotton Cap thumbnails" [ref=e1889]:
+                      - button "Show front view" [ref=e1890]:
+                        - img "Cotton Cap front view" [ref=e1891]
+                - generic [ref=e1893]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e1894]: "1"
+                - button "Add to order" [ref=e1896]
+            - article [ref=e1897]:
+              - generic [ref=e1898]:
+                - img "Cotton Cap" [ref=e1899]
+                - link "Download Cotton Cap photo" [ref=e1900] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnjc4isw-0vs4jv&name=Red_Cotton_Cap
+              - generic [ref=e1904]:
+                - generic [ref=e1905]:
+                  - heading "Red Cotton Cap" [level=2] [ref=e1906]:
+                    - generic [ref=e1907]: Red
+                    - generic [ref=e1909]: Cotton Cap
+                  - generic [ref=e1910]:
+                    - generic [ref=e1911]: Rs 200
+                    - generic "Cotton Cap thumbnails" [ref=e1912]:
+                      - button "Show front view" [ref=e1913]:
+                        - img "Cotton Cap front view" [ref=e1914]
+                - generic [ref=e1916]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e1917]: "1"
+                - button "Add to order" [ref=e1919]
+            - article [ref=e1920]:
+              - generic [ref=e1921]:
+                - img "Trucker Cap" [ref=e1922]
+                - link "Download Trucker Cap photo" [ref=e1923] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnjc34pd-zd7r8q&name=Black_Trucker_Cap
+              - generic [ref=e1927]:
+                - generic [ref=e1928]:
+                  - heading "Black Trucker Cap" [level=2] [ref=e1929]:
+                    - generic [ref=e1930]: Black
+                    - generic [ref=e1932]: Trucker Cap
+                  - generic [ref=e1933]:
+                    - generic [ref=e1934]: Rs 100
+                    - generic "Trucker Cap thumbnails" [ref=e1935]:
+                      - button "Show front view" [ref=e1936]:
+                        - img "Trucker Cap front view" [ref=e1937]
+                - generic [ref=e1939]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e1940]: "1"
+                - button "Add to order" [ref=e1942]
+            - article [ref=e1943]:
+              - generic [ref=e1944]:
+                - img "Trucker Cap" [ref=e1945]
+                - link "Download Trucker Cap photo" [ref=e1946] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnjc0q0h-if3hz9&name=Dark_Blue_Trucker_Cap
+              - generic [ref=e1950]:
+                - generic [ref=e1951]:
+                  - heading "Dark Blue Trucker Cap" [level=2] [ref=e1952]:
+                    - generic [ref=e1953]: Dark Blue
+                    - generic [ref=e1955]: Trucker Cap
+                  - generic [ref=e1956]:
+                    - generic [ref=e1957]: Rs 100
+                    - generic "Trucker Cap thumbnails" [ref=e1958]:
+                      - button "Show front view" [ref=e1959]:
+                        - img "Trucker Cap front view" [ref=e1960]
+                - generic [ref=e1962]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e1963]: "1"
+                - button "Add to order" [ref=e1965]
+            - article [ref=e1966]:
+              - generic [ref=e1967]:
+                - img "Trucker Cap" [ref=e1968]
+                - link "Download Trucker Cap photo" [ref=e1969] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnjbzit2-tqgl37&name=Red_Trucker_Cap
+              - generic [ref=e1973]:
+                - generic [ref=e1974]:
+                  - heading "Red Trucker Cap" [level=2] [ref=e1975]:
+                    - generic [ref=e1976]: Red
+                    - generic [ref=e1978]: Trucker Cap
+                  - generic [ref=e1979]:
+                    - generic [ref=e1980]: Rs 100
+                    - generic "Trucker Cap thumbnails" [ref=e1981]:
+                      - button "Show front view" [ref=e1982]:
+                        - img "Trucker Cap front view" [ref=e1983]
+                - generic [ref=e1985]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e1986]: "1"
+                - button "Add to order" [ref=e1988]
+            - article [ref=e1989]:
+              - generic [ref=e1990]:
+                - img "Trucker Cap" [ref=e1991]
+                - link "Download Trucker Cap photo" [ref=e1992] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnjbx9fa-iq2zva&name=Pink_Trucker_Cap
+              - generic [ref=e1996]:
+                - generic [ref=e1997]:
+                  - heading "Pink Trucker Cap" [level=2] [ref=e1998]:
+                    - generic [ref=e1999]: Pink
+                    - generic [ref=e2001]: Trucker Cap
+                  - generic [ref=e2002]:
+                    - generic [ref=e2003]: Rs 100
+                    - generic "Trucker Cap thumbnails" [ref=e2004]:
+                      - button "Show front view" [ref=e2005]:
+                        - img "Trucker Cap front view" [ref=e2006]
+                - generic [ref=e2008]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e2009]: "1"
+                - button "Add to order" [ref=e2011]
+            - article [ref=e2012]:
+              - generic [ref=e2013]:
+                - img "Mug" [ref=e2014]
+                - link "Download Mug photo" [ref=e2015] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnz2uq1f-48kyt9&name=White_Mug
+              - generic [ref=e2019]:
+                - generic [ref=e2020]:
+                  - heading "White Mug" [level=2] [ref=e2021]:
+                    - generic [ref=e2022]: White
+                    - generic [ref=e2024]: Mug
+                  - generic [ref=e2025]:
+                    - generic [ref=e2026]: Rs 250
+                    - generic "Mug thumbnails" [ref=e2027]:
+                      - button "Show front view" [ref=e2028]:
+                        - img "Mug front view" [ref=e2029]
+                - generic [ref=e2031]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e2032]: "1"
+                - button "Add to order" [ref=e2034]
+            - article [ref=e2035]:
+              - generic [ref=e2036]:
+                - img "Magic Mug" [ref=e2037]
+                - link "Download Magic Mug photo" [ref=e2038] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnz2rps8-pqimxd&name=Blue_Magic_Mug
+              - generic [ref=e2042]:
+                - generic [ref=e2043]:
+                  - heading "Blue Magic Mug" [level=2] [ref=e2044]:
+                    - generic [ref=e2045]: Blue
+                    - generic [ref=e2047]: Magic Mug
+                  - generic [ref=e2048]:
+                    - generic [ref=e2049]: Rs 300
+                    - generic "Magic Mug thumbnails" [ref=e2050]:
+                      - button "Show front view" [ref=e2051]:
+                        - img "Magic Mug front view" [ref=e2052]
+                - generic [ref=e2054]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e2055]: "1"
+                - button "Add to order" [ref=e2057]
+            - article [ref=e2058]:
+              - generic [ref=e2059]:
+                - img "Magic Mug" [ref=e2060]
+                - link "Download Magic Mug photo" [ref=e2061] [cursor=pointer]:
+                  - /url: /api/shops/download?url=%2Fapi%2Fshops%2Fuploads%2Fshop-mnyzc9zc-pj43jl&name=Black_Magic_Mug
+              - generic [ref=e2065]:
+                - generic [ref=e2066]:
+                  - heading "Black Magic Mug" [level=2] [ref=e2067]:
+                    - generic [ref=e2068]: Black
+                    - generic [ref=e2070]: Magic Mug
+                  - generic [ref=e2071]:
+                    - generic [ref=e2072]: Rs 300
+                    - generic "Magic Mug thumbnails" [ref=e2073]:
+                      - button "Show front view" [ref=e2074]:
+                        - img "Magic Mug front view" [ref=e2075]
+                - generic [ref=e2077]:
+                  - text: Qty
+                  - spinbutton "Qty" [ref=e2078]: "1"
+                - button "Add to order" [ref=e2080]
+        - complementary "Uniform designs" [ref=e2081]:
+          - link "6 collections Ready-made T-shirt uniform Ready-made polo uniform Ready-made hoodie uniform Uniform Designs A professional look, ready to customize Choose a proven style, add your logo, approve the mockup, and reorder it anytime. Staff Security Restaurant Sport teams Explore uniform designs" [ref=e2082] [cursor=pointer]:
+            - /url: /ready-made-uniforms
+            - generic [ref=e2083]: 6 collections
+            - generic [ref=e2090]:
+              - img "Ready-made T-shirt uniform" [ref=e2091]
+              - img "Ready-made polo uniform" [ref=e2092]
+              - img "Ready-made hoodie uniform" [ref=e2093]
+            - generic [ref=e2094]:
+              - paragraph [ref=e2095]: Uniform Designs
+              - heading "A professional look, ready to customize" [level=2] [ref=e2096]
+              - paragraph [ref=e2097]: Choose a proven style, add your logo, approve the mockup, and reorder it anytime.
+              - generic [ref=e2098]:
+                - generic [ref=e2099]: Staff
+                - generic [ref=e2100]: Security
+                - generic [ref=e2101]: Restaurant
+                - generic [ref=e2102]: Sport teams
+              - generic [ref=e2103]: Explore uniform designs
+    - button "Open order list" [ref=e2108]:
+      - generic [ref=e2109]: "0"
+      - generic [ref=e2110]: Start order
+      - generic [ref=e2111]: Rs 0.00
+    - generic:
+      - dialog:
+        - generic:
+          - generic:
+            - paragraph: Order
+            - heading [level=3]: Order list
+            - text: 0 items
+          - button: Close
+        - generic: Add colors and sizes from the cards to build your WhatsApp order.
+        - generic:
+          - generic:
+            - generic: Subtotal
+            - generic: Rs 0.00
+          - generic:
+            - generic: Total
+            - generic: Rs 0.00
+        - generic:
+          - generic:
+            - text: Delivery
+            - combobox
+        - generic:
+          - link [disabled]:
+            - /url: https://wa.me/23059883880?text=Hi!%20I'd%20like%20to%20order%3A%0ADelivery%3A%20Surinam%20pickup%0ASubtotal%3A%20Rs%200.00%0ATotal%3A%20Rs%200.00
+            - text: Send Order on WhatsApp

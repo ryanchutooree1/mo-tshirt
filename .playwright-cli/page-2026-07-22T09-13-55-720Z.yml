@@ -1,0 +1,106 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "Back to admin" [ref=e5] [cursor=pointer]:
+        - /url: /admin
+      - generic [ref=e9]:
+        - paragraph [ref=e10]: MO T-Shirt.mu
+        - paragraph [ref=e11]: Premium Design Studio
+      - generic [ref=e12]: Live preview
+  - generic [ref=e18]:
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e21]: Live customiser
+        - heading "Design it. We print it." [level=1] [ref=e25]
+        - paragraph [ref=e26]: Build a production-ready garment mockup, then send every detail to the MO T-Shirt team in one request.
+      - generic [ref=e28]:
+        - generic [ref=e29]: Step 1 of 8
+        - generic [ref=e30]: 13% complete
+    - generic [ref=e33]:
+      - button "1 Product" [ref=e34]:
+        - generic [ref=e35]: "1"
+        - text: Product
+      - button "2 Details" [ref=e36]:
+        - generic [ref=e37]: "2"
+        - text: Details
+      - button "3 Print area" [ref=e38]:
+        - generic [ref=e39]: "3"
+        - text: Print area
+      - button "4 Artwork" [ref=e40]:
+        - generic [ref=e41]: "4"
+        - text: Artwork
+      - button "5 Position" [ref=e42]:
+        - generic [ref=e43]: "5"
+        - text: Position
+      - button "6 Text" [ref=e44]:
+        - generic [ref=e45]: "6"
+        - text: Text
+      - button "7 Review" [ref=e46]:
+        - generic [ref=e47]: "7"
+        - text: Review
+      - button "8 Quote" [ref=e48]:
+        - generic [ref=e49]: "8"
+        - text: Quote
+  - main [ref=e50]:
+    - generic [ref=e52]:
+      - generic [ref=e53]:
+        - generic [ref=e54]:
+          - generic [ref=e55]:
+            - paragraph [ref=e56]: Live preview
+            - heading "T-Shirt · front" [level=2] [ref=e57]
+          - generic [ref=e58]:
+            - button "front" [ref=e59]
+            - button "back" [ref=e60]
+            - button "Reset design" [ref=e61]
+        - generic [ref=e65]: Your design area
+        - generic [ref=e68]:
+          - generic [ref=e69]:
+            - paragraph [ref=e70]: Garment
+            - paragraph [ref=e71]: T-Shirt
+          - generic [ref=e72]:
+            - paragraph [ref=e73]: Colour
+            - paragraph [ref=e74]: Jet Black
+          - generic [ref=e75]:
+            - paragraph [ref=e76]: Quantity
+            - paragraph [ref=e77]: "1"
+          - generic [ref=e78]:
+            - paragraph [ref=e79]: Estimate
+            - paragraph [ref=e80]: Rs 1,040.00
+      - complementary [ref=e81]:
+        - generic [ref=e83]:
+          - generic [ref=e84]: "1"
+          - generic [ref=e85]:
+            - heading "Choose product" [level=2] [ref=e86]
+            - paragraph [ref=e87]: Start with the garment that fits your idea.
+        - generic [ref=e89]:
+          - button "Realistic black T-Shirt T-Shirt From Rs 230.00 5–7 working days" [ref=e90]:
+            - img "Realistic black T-Shirt" [ref=e92]
+            - generic [ref=e93]:
+              - generic [ref=e94]: T-Shirt
+              - generic [ref=e95]: From Rs 230.00
+              - generic [ref=e96]: 5–7 working days
+          - button "Realistic black Polo Shirt Polo Shirt From Rs 310.00 6–8 working days" [ref=e100]:
+            - img "Realistic black Polo Shirt" [ref=e102]
+            - generic [ref=e103]:
+              - generic [ref=e104]: Polo Shirt
+              - generic [ref=e105]: From Rs 310.00
+              - generic [ref=e106]: 6–8 working days
+          - button "Realistic black Hoodie Hoodie From Rs 690.00 7–10 working days" [ref=e107]:
+            - img "Realistic black Hoodie" [ref=e109]
+            - generic [ref=e110]:
+              - generic [ref=e111]: Hoodie
+              - generic [ref=e112]: From Rs 690.00
+              - generic [ref=e113]: 7–10 working days
+        - button "Next step" [ref=e116]
+  - contentinfo [ref=e119]:
+    - generic [ref=e120]:
+      - generic [ref=e121]: Premium garments
+      - generic [ref=e126]: High-quality printing
+      - generic [ref=e135]: Reliable service
+      - generic [ref=e143]: Local pricing
+    - generic [ref=e149]:
+      - link "motshirtmauritius@gmail.com" [ref=e150] [cursor=pointer]:
+        - /url: mailto:motshirtmauritius@gmail.com
+      - generic [ref=e151]: •
+      - link "+230 5988 3880" [ref=e152] [cursor=pointer]:
+        - /url: tel:+23059883880

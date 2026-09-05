@@ -1,0 +1,110 @@
+- main [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e5]:
+      - link "Back to shop" [ref=e6] [cursor=pointer]:
+        - /url: /shop
+      - generic [ref=e10]:
+        - paragraph [ref=e11]: MO T-Shirt.mu
+        - paragraph [ref=e12]: Premium Design Studio
+      - generic [ref=e13]: Live preview
+    - generic [ref=e20]:
+      - heading "Design it. We print it." [level=1] [ref=e21]
+      - generic [ref=e23]:
+        - generic [ref=e24]: Step 1 of 8
+        - generic [ref=e25]: 13% complete
+    - generic [ref=e29]:
+      - navigation "Design steps" [ref=e30]:
+        - button "1 Step 1 Choose product" [ref=e31]:
+          - generic [ref=e32]: "1"
+          - generic [ref=e33]:
+            - generic [ref=e34]: Step 1
+            - generic [ref=e35]: Choose product
+        - button "2 Step 2 Garment details" [ref=e38]:
+          - generic [ref=e39]: "2"
+          - generic [ref=e40]:
+            - generic [ref=e41]: Step 2
+            - generic [ref=e42]: Garment details
+        - button "3 Step 3 Choose print area" [ref=e45]:
+          - generic [ref=e46]: "3"
+          - generic [ref=e47]:
+            - generic [ref=e48]: Step 3
+            - generic [ref=e49]: Choose print area
+        - button "4 Step 4 Upload artwork" [ref=e52]:
+          - generic [ref=e53]: "4"
+          - generic [ref=e54]:
+            - generic [ref=e55]: Step 4
+            - generic [ref=e56]: Upload artwork
+        - button "5 Step 5 Position design" [ref=e59]:
+          - generic [ref=e60]: "5"
+          - generic [ref=e61]:
+            - generic [ref=e62]: Step 5
+            - generic [ref=e63]: Position design
+        - button "6 Step 6 Add custom text" [ref=e66]:
+          - generic [ref=e67]: "6"
+          - generic [ref=e68]:
+            - generic [ref=e69]: Step 6
+            - generic [ref=e70]: Add custom text
+        - button "7 Step 7 Review order" [ref=e73]:
+          - generic [ref=e74]: "7"
+          - generic [ref=e75]:
+            - generic [ref=e76]: Step 7
+            - generic [ref=e77]: Review order
+        - button "8 Step 8 Request quote" [ref=e80]:
+          - generic [ref=e81]: "8"
+          - generic [ref=e82]:
+            - generic [ref=e83]: Step 8
+            - generic [ref=e84]: Request quote
+        - generic [ref=e87]:
+          - paragraph [ref=e88]: Need help?
+          - link "+230 5988 3880" [ref=e89] [cursor=pointer]:
+            - /url: tel:+23059883880
+      - generic [ref=e92]:
+        - generic [ref=e93]:
+          - generic [ref=e94]:
+            - generic [ref=e95]:
+              - paragraph [ref=e96]: Live preview
+              - heading "Plain T-Shirt · front" [level=2] [ref=e97]
+            - generic [ref=e98]:
+              - button "front" [ref=e99]
+              - button "back" [ref=e100]
+              - button "Reset design" [ref=e101]
+          - generic [ref=e106]:
+            - generic:
+              - generic:
+                - generic:
+                  - img "Realistic Plain T-Shirt front preview"
+          - generic [ref=e108]:
+            - generic [ref=e109]:
+              - paragraph [ref=e110]: Garment
+              - paragraph [ref=e111]: Plain T-Shirt
+            - generic [ref=e112]:
+              - paragraph [ref=e113]: Colour
+              - paragraph [ref=e114]: Black
+            - generic [ref=e115]:
+              - paragraph [ref=e116]: Quantity
+              - paragraph [ref=e117]: "1"
+            - generic [ref=e118]:
+              - paragraph [ref=e119]: Estimate
+              - paragraph [ref=e120]: Rs 150.00
+        - complementary [ref=e121]:
+          - generic [ref=e123]:
+            - generic [ref=e124]: "1"
+            - generic [ref=e125]:
+              - heading "Choose product" [level=2] [ref=e126]
+              - paragraph [ref=e127]: Start with the garment that fits your idea.
+          - generic [ref=e129]:
+            - generic [ref=e130]: Live products from Shops
+            - generic [ref=e134]: Loading real garments…
+          - button "Next step" [ref=e139]
+    - generic [ref=e142]:
+      - generic [ref=e143]:
+        - generic [ref=e144]: Premium garments
+        - generic [ref=e149]: High-quality printing
+        - generic [ref=e158]: Reliable service
+        - generic [ref=e166]: Local pricing
+      - generic [ref=e172]:
+        - link "motshirtmauritius@gmail.com" [ref=e173] [cursor=pointer]:
+          - /url: mailto:motshirtmauritius@gmail.com
+        - generic [ref=e174]: •
+        - link "+230 5988 3880" [ref=e175] [cursor=pointer]:
+          - /url: tel:+23059883880

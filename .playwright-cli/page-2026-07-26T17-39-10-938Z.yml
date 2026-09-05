@@ -1,0 +1,421 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "MO T-SHIRT Home" [ref=e5] [cursor=pointer]:
+        - /url: "#top"
+        - img "MO T-SHIRT logo" [ref=e6]
+      - navigation "Primary" [ref=e8]:
+        - link "Home" [ref=e9] [cursor=pointer]:
+          - /url: "#top"
+        - link "Quote Form" [ref=e10] [cursor=pointer]:
+          - /url: "#contact"
+        - link "Shop" [ref=e13] [cursor=pointer]:
+          - /url: /shop
+        - link "Our Work" [ref=e16] [cursor=pointer]:
+          - /url: "#our-work"
+        - link "Contact" [ref=e17] [cursor=pointer]:
+          - /url: "#contact"
+        - link "WhatsApp" [ref=e18] [cursor=pointer]:
+          - /url: https://wa.me/23059883880?text=Hi%2C%20i%20need%20printing.%20What%E2%80%99s%20your%20price%3F
+  - main [ref=e19]:
+    - generic [ref=e21]:
+      - 'heading "Trying to be #1 in Mauritius." [level=1] [ref=e22]'
+      - paragraph [ref=e23]: We print T‑Shirts, Poloshirts, Caps & Hoodies fast. Trusted by 80+ businesses across Mauritius and Reunion Island.
+      - generic [ref=e24]: For businesses and events
+      - generic [ref=e25]:
+        - link "WhatsApp" [ref=e26] [cursor=pointer]:
+          - /url: https://wa.me/23059883880?text=Hi%2C%20i%20need%20printing.%20What%E2%80%99s%20your%20price%3F
+        - link "Get pricing in hours" [ref=e27] [cursor=pointer]:
+          - /url: "#contact"
+      - generic [ref=e29]:
+        - generic [ref=e32]:
+          - heading "Design it. We print it." [level=2] [ref=e33]
+          - generic [ref=e35]:
+            - generic [ref=e36]: Step 1 of 8
+            - generic [ref=e37]: 13% complete
+        - generic [ref=e41]:
+          - navigation "Design steps" [ref=e42]:
+            - button "1 Step 1 Choose product" [ref=e43]:
+              - generic [ref=e44]: "1"
+              - generic [ref=e45]:
+                - generic [ref=e46]: Step 1
+                - generic [ref=e47]: Choose product
+            - button "2 Step 2 Garment details" [ref=e50]:
+              - generic [ref=e51]: "2"
+              - generic [ref=e52]:
+                - generic [ref=e53]: Step 2
+                - generic [ref=e54]: Garment details
+            - button "3 Step 3 Choose print area" [ref=e57]:
+              - generic [ref=e58]: "3"
+              - generic [ref=e59]:
+                - generic [ref=e60]: Step 3
+                - generic [ref=e61]: Choose print area
+            - button "4 Step 4 Upload artwork" [ref=e64]:
+              - generic [ref=e65]: "4"
+              - generic [ref=e66]:
+                - generic [ref=e67]: Step 4
+                - generic [ref=e68]: Upload artwork
+            - button "5 Step 5 Position design" [ref=e71]:
+              - generic [ref=e72]: "5"
+              - generic [ref=e73]:
+                - generic [ref=e74]: Step 5
+                - generic [ref=e75]: Position design
+            - button "6 Step 6 Add custom text" [ref=e78]:
+              - generic [ref=e79]: "6"
+              - generic [ref=e80]:
+                - generic [ref=e81]: Step 6
+                - generic [ref=e82]: Add custom text
+            - button "7 Step 7 Review order" [ref=e85]:
+              - generic [ref=e86]: "7"
+              - generic [ref=e87]:
+                - generic [ref=e88]: Step 7
+                - generic [ref=e89]: Review order
+            - button "8 Step 8 Request quote" [ref=e92]:
+              - generic [ref=e93]: "8"
+              - generic [ref=e94]:
+                - generic [ref=e95]: Step 8
+                - generic [ref=e96]: Request quote
+            - generic [ref=e99]:
+              - paragraph [ref=e100]: Need help?
+              - link "+230 5988 3880" [ref=e101] [cursor=pointer]:
+                - /url: tel:+23059883880
+          - generic [ref=e104]:
+            - generic [ref=e105]:
+              - generic [ref=e106]:
+                - generic [ref=e107]:
+                  - paragraph [ref=e108]: Live preview
+                  - heading "Plain T-Shirt · front" [level=2] [ref=e109]
+                - generic [ref=e110]:
+                  - button "front" [ref=e111]
+                  - button "back" [ref=e112]
+                  - button "Reset design" [ref=e113]
+              - generic [ref=e118]:
+                - generic:
+                  - generic:
+                    - img "Realistic Plain T-Shirt front preview"
+              - generic [ref=e120]:
+                - generic [ref=e121]:
+                  - paragraph [ref=e122]: Garment
+                  - paragraph [ref=e123]: Plain T-Shirt
+                - generic [ref=e124]:
+                  - paragraph [ref=e125]: Colour
+                  - paragraph [ref=e126]: Black
+                - generic [ref=e127]:
+                  - paragraph [ref=e128]: Quantity
+                  - paragraph [ref=e129]: "1"
+                - generic [ref=e130]:
+                  - paragraph [ref=e131]: Estimate
+                  - paragraph [ref=e132]: Rs 150.00
+            - complementary [ref=e133]:
+              - generic [ref=e135]:
+                - generic [ref=e136]: "1"
+                - generic [ref=e137]:
+                  - heading "Choose product" [level=2] [ref=e138]
+                  - paragraph [ref=e139]: Start with the garment that fits your idea.
+              - generic [ref=e141]:
+                - generic [ref=e142]: Live products from Shops
+                - generic [ref=e146]: Loading real garments…
+              - button "Next step" [ref=e151]
+      - generic [ref=e155]:
+        - button "Zoom T-shirt measurement guide" [ref=e156]:
+          - generic: Zoom
+          - img "T-shirt measurement guide" [ref=e157]
+        - button "Zoom Kids T-shirt measurement guide" [ref=e158]:
+          - generic: Zoom
+          - img "Kids T-shirt measurement guide" [ref=e159]
+      - region [ref=e160]:
+        - generic [ref=e161]:
+          - heading "How Direct Ordering Works" [level=2] [ref=e162]
+          - paragraph [ref=e163]: From your first idea to finished printed garments in five simple steps.
+        - list [ref=e164]:
+          - listitem [ref=e165]:
+            - article [ref=e166]:
+              - generic [ref=e167]: "1"
+              - generic [ref=e168]: 👕
+              - heading "Pick your product" [level=3] [ref=e169]
+              - paragraph [ref=e170]: Choose T-shirts, polos, hoodies or caps, then select your colours, sizes and quantities.
+          - listitem [ref=e171]:
+            - article [ref=e172]:
+              - generic [ref=e173]: "2"
+              - generic [ref=e174]: 🎨
+              - heading "Upload your design" [level=3] [ref=e175]
+              - paragraph [ref=e176]: Send your logo or artwork and choose the print position. We can help prepare your file if needed.
+          - listitem [ref=e177]:
+            - article [ref=e178]:
+              - generic [ref=e179]: "3"
+              - generic [ref=e180]: 💰
+              - heading "Review your quotation" [level=3] [ref=e181]
+              - paragraph [ref=e182]: See the mockup, print method, price and deadline, then approve when everything looks right.
+          - listitem [ref=e183]:
+            - article [ref=e184]:
+              - generic [ref=e185]: "4"
+              - generic [ref=e186]: 💳
+              - heading "Confirm payment" [level=3] [ref=e187]
+              - paragraph [ref=e188]: Pay the agreed deposit or full amount. Your payment is recorded and a receipt is provided.
+          - listitem [ref=e189]:
+            - article [ref=e190]:
+              - generic [ref=e191]: "5"
+              - generic [ref=e192]: 🚚
+              - heading "Receive your order" [level=3] [ref=e193]
+              - paragraph [ref=e194]: Collect from Surinam or choose island-wide delivery. Standard production takes 5–7 working days.
+        - paragraph [ref=e195]: Need it sooner? Ask us about available 48-hour rush production slots.
+    - generic [ref=e197]:
+      - heading "Why choose MO T-SHIRT" [level=2] [ref=e198]
+      - paragraph [ref=e199]: Craftsmanship, precision, and support for Mauritius businesses.
+      - generic [ref=e200]:
+        - generic [ref=e205]:
+          - heading "Quality T-shirts" [level=3] [ref=e206]
+          - paragraph [ref=e207]: Soft, durable tees and polos that print cleanly.
+        - generic [ref=e212]:
+          - heading "Fast turnaround" [level=3] [ref=e213]
+          - paragraph [ref=e214]: Standard 5-7 days, with 48-hour rush slots.
+        - generic [ref=e219]:
+          - heading "Built for business" [level=3] [ref=e220]
+          - paragraph [ref=e221]: Uniforms, events, and brand launches.
+        - generic [ref=e226]:
+          - heading "Made in Mauritius" [level=3] [ref=e227]
+          - paragraph [ref=e228]: Local production with island-wide delivery.
+    - generic [ref=e231]:
+      - img "Mauritius Post logo" [ref=e233]
+      - generic [ref=e234]:
+        - img "Mauritius Post delivery" [ref=e236]
+        - generic [ref=e237]:
+          - paragraph [ref=e238]: Track & Trace
+          - heading "Track your Mauritius Post parcel" [level=3] [ref=e239]
+          - paragraph [ref=e240]: Enter your tracking code. Results open on the official Mauritius Post website.
+          - generic [ref=e241]:
+            - textbox "Tracking Code e.g HH123456785MU" [ref=e242]
+            - button "Track parcel" [ref=e243]
+    - generic [ref=e245]:
+      - heading "Our Work" [level=2] [ref=e246]
+      - paragraph [ref=e247]: Recent T-shirt printing for local teams, events, and businesses in Mauritius.
+      - generic [ref=e250]:
+        - img "T-shirt printing in Mauritius example 1" [ref=e253]
+        - img "T-shirt printing in Mauritius example 2" [ref=e256]
+        - img "T-shirt printing in Mauritius example 3" [ref=e259]
+        - img "T-shirt printing in Mauritius example 4" [ref=e262]
+        - img "T-shirt printing in Mauritius example 5" [ref=e265]
+        - img "T-shirt printing in Mauritius example 6" [ref=e268]
+        - img "T-shirt printing in Mauritius example 7" [ref=e271]
+        - img "T-shirt printing in Mauritius example 8" [ref=e274]
+        - img "T-shirt printing in Mauritius example 9" [ref=e277]
+    - generic [ref=e279]:
+      - generic [ref=e280]:
+        - heading "Let’s start your order." [level=2] [ref=e281]
+        - paragraph [ref=e282]: Tell us what you need and get a fast quote. WhatsApp for rush jobs.
+      - generic [ref=e283]:
+        - generic [ref=e284]:
+          - generic [ref=e286]:
+            - paragraph [ref=e287]: Quote form
+            - heading "Get pricing in hours" [level=3] [ref=e288]
+          - generic [ref=e290]:
+            - generic [ref=e291]:
+              - generic [ref=e292]:
+                - text: Website
+                - textbox [ref=e293]
+              - generic [ref=e294]:
+                - generic [ref=e295]:
+                  - generic [ref=e296]: Name *
+                  - textbox "Your Name" [ref=e297]
+                - generic [ref=e298]:
+                  - generic [ref=e299]: Email *
+                  - textbox "you@example.com" [ref=e300]
+              - generic [ref=e301]:
+                - generic [ref=e302]:
+                  - generic [ref=e303]: Phone / WhatsApp
+                  - textbox "e.g.,+230 5988 3880" [ref=e304]
+                - generic [ref=e305]:
+                  - generic [ref=e306]: Deadline (optional)
+                  - textbox "e.g., Next Friday, Dec 20" [ref=e307]
+              - generic [ref=e308]:
+                - generic [ref=e309]:
+                  - generic [ref=e310]: Print method
+                  - combobox [ref=e311]:
+                    - option "1. DTF Printing (Price $$$)"
+                    - option "2. Vinyl Heat Press Printing (Price $$)"
+                    - option "3. Screen Printing (Price $)"
+                    - option "Not sure" [selected]
+                - generic [ref=e312]:
+                  - paragraph [ref=e313]: "Printing Methods:"
+                  - list [ref=e314]:
+                    - listitem [ref=e315]: DTF (Faster Process)
+                    - listitem [ref=e316]: Vinyl Heat Press (Fast Process)
+                    - listitem [ref=e317]: Screen Printing (Slower Process)
+              - generic [ref=e318]:
+                - generic [ref=e319]:
+                  - button [ref=e320]
+                  - button [ref=e321]
+                - generic [ref=e322]:
+                  - generic [ref=e323]:
+                    - generic [ref=e324]: Upload your logo / artwork
+                    - paragraph [ref=e325]: Add one item per product, size, logo, or print side.
+                  - generic [ref=e326]: No file chosen yet
+                - generic [ref=e327]:
+                  - generic [ref=e329]:
+                    - paragraph [ref=e330]: Item 1
+                    - paragraph [ref=e331]: Choose the exact placement, then upload the required logo.
+                  - generic [ref=e332]:
+                    - generic [ref=e333]:
+                      - generic [ref=e334]: Product
+                      - combobox [ref=e335]:
+                        - option "T-Shirt" [selected]
+                        - option "Poloshirt"
+                        - option "Hoodie"
+                        - option "Cap"
+                        - option "Other"
+                    - generic [ref=e336]:
+                      - generic [ref=e337]: Colour
+                      - button "Loading colors..." [disabled] [ref=e339]
+                    - generic [ref=e344]:
+                      - generic [ref=e345]: Size
+                      - combobox [ref=e346]:
+                        - option "1 Yr" [selected]
+                        - option "2 Yrs"
+                        - option "4 Yrs"
+                        - option "6 Yrs"
+                        - option "8 Yrs"
+                        - option "10 Yrs"
+                        - option "12 Yrs"
+                        - option "14 Yrs"
+                        - option "XS"
+                        - option "S"
+                        - option "M"
+                        - option "L"
+                        - option "XL"
+                        - option "2XL"
+                        - option "3XL"
+                        - option "4XL"
+                    - generic [ref=e347]:
+                      - generic [ref=e348]: Qty
+                      - spinbutton "2" [ref=e349]: "1"
+                    - generic [ref=e350]:
+                      - generic [ref=e351]: Print side
+                      - combobox [ref=e352]:
+                        - option "Small Front Printing only" [selected]
+                        - option "Small Back Printing only"
+                        - option "Large Front Printing only"
+                        - option "Large Back Printing only"
+                        - option "Small Front and Small Back Printing"
+                        - option "Small Front and Large Back Printing"
+                        - option "Large Front and Small Back Printing"
+                        - option "Large Front and Large Back Printing"
+                        - option "Sleeve Printing only"
+                        - option "Other / see notes"
+                  - generic [ref=e354]:
+                    - generic [ref=e356]:
+                      - paragraph [ref=e357]: Front logo
+                      - paragraph [ref=e358]: Required for selected print side.
+                    - button "Choose front logo PNG, JPG, WEBP, SVG, HEIC, or PDF. Max 5MB." [ref=e359]:
+                      - generic [ref=e363]: Choose front logo
+                      - generic [ref=e364]: PNG, JPG, WEBP, SVG, HEIC, or PDF. Max 5MB.
+                    - generic [ref=e365]:
+                      - text: Description below front logo
+                      - textbox "Description below front logo" [ref=e366]:
+                        - /placeholder: "Example: print small on left chest."
+                - button "+ Add another item / logo" [ref=e367]
+              - generic [ref=e368]:
+                - generic [ref=e369]: Notes
+                - 'textbox "Describe the print: front chest 1-color, back 2-color, sleeve logo, sizes, deadlines…" [ref=e370]'
+              - generic [ref=e371]:
+                - generic [ref=e372]: Delivery
+                - combobox [ref=e373]:
+                  - option "Surinam Pickup (Free)" [selected]
+                  - option "Post Office Postage Delivery (Rs 100)"
+                  - option "Post Office Express Delivery (Rs 150)"
+                  - option "Delivery (Need to arrange first)"
+              - generic [ref=e374]:
+                - button "Get my quote" [ref=e375]
+                - link "Or WhatsApp +230 5988 3880" [ref=e376] [cursor=pointer]:
+                  - /url: https://wa.me/23059883880?text=Hi!%20Can%20you%20quote%20me%20for%20custom%20shirts%3F
+            - paragraph [ref=e377]: By submitting, you agree we may reach you at +23059883880 / email to confirm details and pricing.
+        - img "Business owner imagining his team in branded company shirts" [ref=e379]
+      - generic [ref=e380]:
+        - generic [ref=e381]:
+          - heading "Our Location 📍" [level=2] [ref=e382]
+          - generic [ref=e384]:
+            - iframe [ref=e387]
+            - img "MO T-SHIRT on Mauritius map" [ref=e391]
+          - link "Open Google Maps" [ref=e393] [cursor=pointer]:
+            - /url: https://maps.app.goo.gl/dBwPF4mC2xnPYtP2A
+        - generic [ref=e397]:
+          - generic [ref=e398]:
+            - paragraph [ref=e399]: Email
+            - link "motshirtmauritius@gmail.com" [ref=e400] [cursor=pointer]:
+              - /url: mailto:motshirtmauritius@gmail.com
+          - generic [ref=e402]:
+            - paragraph [ref=e403]: Phone
+            - link "+230 5988 3880" [ref=e404] [cursor=pointer]:
+              - /url: tel:+23059883880
+      - generic [ref=e407]:
+        - generic [ref=e408]:
+          - paragraph [ref=e409]: FAQ
+          - heading "Fast answers for T-shirt printing in Mauritius" [level=2] [ref=e410]
+          - paragraph [ref=e411]: Everything you need to decide quickly, from rush timelines to print method choices.
+          - generic [ref=e412]:
+            - generic [ref=e413]: 5-7 day standard
+            - generic [ref=e414]: 48h rush slots
+            - generic [ref=e415]: Island-wide delivery
+          - generic [ref=e416]:
+            - paragraph [ref=e417]: Want a fast answer?
+            - paragraph [ref=e418]: Message us on WhatsApp and we’ll recommend the right print method for your logo.
+            - link "Ask on WhatsApp" [ref=e419] [cursor=pointer]:
+              - /url: https://wa.me/23059883880?text=Hi!%20I%20have%20a%20quick%20question%20about%20my%20T-shirt%20print.
+        - generic [ref=e420]:
+          - group [ref=e421]:
+            - generic "What is the turnaround time for custom T-shirt printing? +" [ref=e422] [cursor=pointer]:
+              - generic [ref=e423]: What is the turnaround time for custom T-shirt printing?
+              - generic [ref=e424]: +
+          - group [ref=e425]:
+            - generic "What is your minimum order? +" [ref=e426] [cursor=pointer]:
+              - generic [ref=e427]: What is your minimum order?
+              - generic [ref=e428]: +
+          - group [ref=e429]:
+            - generic "Do you offer delivery or collection? +" [ref=e430] [cursor=pointer]:
+              - generic [ref=e431]: Do you offer delivery or collection?
+              - generic [ref=e432]: +
+          - group [ref=e433]:
+            - 'generic "Which print method should I choose: Vinyl or DTF? +" [ref=e434] [cursor=pointer]':
+              - generic [ref=e435]: "Which print method should I choose: Vinyl or DTF?"
+              - generic [ref=e436]: +
+          - group [ref=e437]:
+            - generic "Which file formats do you accept? +" [ref=e438] [cursor=pointer]:
+              - generic [ref=e439]: Which file formats do you accept?
+              - generic [ref=e440]: +
+          - group [ref=e441]:
+            - generic "Do you print polos for teams and uniforms? +" [ref=e442] [cursor=pointer]:
+              - generic [ref=e443]: Do you print polos for teams and uniforms?
+              - generic [ref=e444]: +
+  - contentinfo [ref=e445]:
+    - generic [ref=e446]:
+      - generic [ref=e447]:
+        - generic [ref=e448]:
+          - generic [ref=e449]:
+            - generic [ref=e450]: 🇲🇺
+            - generic [ref=e451]: MO T-SHIRT Mauritius
+          - generic [ref=e452]: •
+          - link "+230 5988 3880" [ref=e453] [cursor=pointer]:
+            - /url: tel:+23059883880
+          - generic [ref=e454]: •
+          - link "motshirtmauritius@gmail.com" [ref=e455] [cursor=pointer]:
+            - /url: mailto:motshirtmauritius@gmail.com
+        - paragraph [ref=e456]: Surinam, Mauritius•Island-wide delivery via Mauritius Post
+      - generic [ref=e457]:
+        - navigation "Footer" [ref=e458]:
+          - link "Quote Form" [ref=e459] [cursor=pointer]:
+            - /url: "#contact"
+          - link "Our Work" [ref=e460] [cursor=pointer]:
+            - /url: "#our-work"
+          - link "Terms" [ref=e461] [cursor=pointer]:
+            - /url: /terms
+          - link "Privacy" [ref=e462] [cursor=pointer]:
+            - /url: /privacy
+          - link "Instagram" [ref=e463] [cursor=pointer]:
+            - /url: https://www.instagram.com/mo_tshirt_printing/
+          - link "TikTok" [ref=e464] [cursor=pointer]:
+            - /url: https://www.tiktok.com/@mo_tshirt_mauritius
+          - link "WhatsApp" [ref=e465] [cursor=pointer]:
+            - /url: https://wa.me/23059883880?text=Hi%2C%20i%20need%20printing.%20What%E2%80%99s%20your%20price%3F
+        - paragraph [ref=e466]:
+          - text: © 2026 MO T-SHIRT•
+          - link "All Rights Reserved" [ref=e467] [cursor=pointer]:
+            - /url: /login

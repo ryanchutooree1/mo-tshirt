@@ -1,0 +1,258 @@
+- generic [ref=f10e1]:
+  - main [ref=f10e2]:
+    - generic [ref=f10e3]:
+      - generic [ref=f10e5]:
+        - link "Back to shops" [ref=f10e6] [cursor=pointer]:
+          - /url: /shops
+        - generic [ref=f10e10]:
+          - paragraph [ref=f10e11]: MO T-Shirt.mu
+          - paragraph [ref=f10e12]: Premium Design Studio
+        - generic [ref=f10e13]: Live preview
+      - generic [ref=f10e19]:
+        - generic [ref=f10e20]:
+          - generic [ref=f10e21]:
+            - generic [ref=f10e22]: Live customiser
+            - heading "Design it. We print it." [level=1] [ref=f10e26]
+            - paragraph [ref=f10e27]: Build a production-ready garment mockup, then send every detail to the MO T-Shirt team in one request.
+          - generic [ref=f10e29]:
+            - generic [ref=f10e30]: Step 2 of 8
+            - generic [ref=f10e31]: 25% complete
+        - generic [ref=f10e34]:
+          - button [ref=f10e164]
+          - button "2 Details" [ref=f10e37]:
+            - generic [ref=f10e38]: "2"
+            - text: Details
+          - button "3 Print area" [ref=f10e39]:
+            - generic [ref=f10e40]: "3"
+            - text: Print area
+          - button "4 Artwork" [ref=f10e41]:
+            - generic [ref=f10e42]: "4"
+            - text: Artwork
+          - button "5 Position" [ref=f10e43]:
+            - generic [ref=f10e44]: "5"
+            - text: Position
+          - button "6 Text" [ref=f10e45]:
+            - generic [ref=f10e46]: "6"
+            - text: Text
+          - button "7 Review" [ref=f10e47]:
+            - generic [ref=f10e48]: "7"
+            - text: Review
+          - button "8 Quote" [ref=f10e49]:
+            - generic [ref=f10e50]: "8"
+            - text: Quote
+      - main [ref=f10e51]:
+        - generic [ref=f10e53]:
+          - generic [ref=f10e54]:
+            - generic [ref=f10e55]:
+              - generic [ref=f10e56]:
+                - paragraph [ref=f10e57]: Live preview
+                - heading "Plain T-Shirt · front" [level=2] [ref=f10e58]
+              - generic [ref=f10e59]:
+                - button "front" [ref=f10e60]
+                - button "back" [ref=f10e61]
+                - button "Reset design" [ref=f10e62]
+            - generic [ref=f10e67]:
+              - generic:
+                - generic:
+                  - img "Realistic Plain T-Shirt front preview"
+            - generic [ref=f10e69]:
+              - generic [ref=f10e70]:
+                - paragraph [ref=f10e71]: Garment
+                - paragraph [ref=f10e72]: Plain T-Shirt
+              - generic [ref=f10e73]:
+                - paragraph [ref=f10e74]: Colour
+                - paragraph [ref=f10e75]: Black
+              - generic [ref=f10e76]:
+                - paragraph [ref=f10e77]: Quantity
+                - paragraph [ref=f10e78]: "1"
+              - generic [ref=f10e79]:
+                - paragraph [ref=f10e80]: Estimate
+                - paragraph [ref=f10e81]: Rs 985.00
+          - complementary [ref=f10e82]:
+            - generic [ref=f10e84]:
+              - generic [ref=f10e85]: "2"
+              - generic [ref=f10e86]:
+                - heading "Garment details" [level=2] [ref=f10e167]
+                - paragraph [ref=f10e88]: Select colour, sizes and the quantity you need.
+            - generic [ref=f10e169]:
+              - generic [ref=f10e170]:
+                - generic [ref=f10e171]:
+                  - paragraph [ref=f10e172]: Choose the real shop colour
+                  - generic [ref=f10e173]: 21 available
+                - generic [ref=f10e174]:
+                  - button "Grey Plain T-Shirt Grey From Rs 150.00" [ref=f10e175]:
+                    - img "Grey Plain T-Shirt" [ref=f10e177]
+                    - generic [ref=f10e178]: Grey
+                    - generic [ref=f10e179]: From Rs 150.00
+                  - button "Bungundy Red Plain T-Shirt Bungundy Red From Rs 150.00" [ref=f10e180]:
+                    - img "Bungundy Red Plain T-Shirt" [ref=f10e182]
+                    - generic [ref=f10e183]: Bungundy Red
+                    - generic [ref=f10e184]: From Rs 150.00
+                  - button "Charcoal Grey Plain T-Shirt Charcoal Grey From Rs 150.00" [ref=f10e185]:
+                    - img "Charcoal Grey Plain T-Shirt" [ref=f10e187]
+                    - generic [ref=f10e188]: Charcoal Grey
+                    - generic [ref=f10e189]: From Rs 150.00
+                  - button "Red Plain T-Shirt Red From Rs 150.00" [ref=f10e190]:
+                    - img "Red Plain T-Shirt" [ref=f10e192]
+                    - generic [ref=f10e193]: Red
+                    - generic [ref=f10e194]: From Rs 150.00
+                  - button "White Plain T-Shirt White From Rs 150.00" [ref=f10e195]:
+                    - img "White Plain T-Shirt" [ref=f10e197]
+                    - generic [ref=f10e198]: White
+                    - generic [ref=f10e199]: From Rs 150.00
+                  - button "Black Plain T-Shirt Black From Rs 150.00" [ref=f10e200]:
+                    - img "Black Plain T-Shirt" [ref=f10e202]
+                    - generic [ref=f10e203]: Black
+                    - generic [ref=f10e204]: From Rs 150.00
+                  - button "Light Pink Plain T-Shirt Light Pink From Rs 150.00" [ref=f10e208]:
+                    - img "Light Pink Plain T-Shirt" [ref=f10e210]
+                    - generic [ref=f10e211]: Light Pink
+                    - generic [ref=f10e212]: From Rs 150.00
+                  - button "Vibrant Pink Plain T-Shirt Vibrant Pink From Rs 150.00" [ref=f10e213]:
+                    - img "Vibrant Pink Plain T-Shirt" [ref=f10e215]
+                    - generic [ref=f10e216]: Vibrant Pink
+                    - generic [ref=f10e217]: From Rs 150.00
+                  - button "Deep Red Plain T-Shirt Deep Red From Rs 150.00" [ref=f10e218]:
+                    - img "Deep Red Plain T-Shirt" [ref=f10e220]
+                    - generic [ref=f10e221]: Deep Red
+                    - generic [ref=f10e222]: From Rs 150.00
+                  - button "Military Green Plain T-Shirt Military Green From Rs 150.00" [ref=f10e223]:
+                    - img "Military Green Plain T-Shirt" [ref=f10e225]
+                    - generic [ref=f10e226]: Military Green
+                    - generic [ref=f10e227]: From Rs 150.00
+                  - button "Vibrant Green Plain T-Shirt Vibrant Green From Rs 150.00" [ref=f10e228]:
+                    - img "Vibrant Green Plain T-Shirt" [ref=f10e230]
+                    - generic [ref=f10e231]: Vibrant Green
+                    - generic [ref=f10e232]: From Rs 150.00
+                  - button "Vibrant Apple Green Plain T-Shirt Vibrant Apple Green From Rs 150.00" [ref=f10e233]:
+                    - img "Vibrant Apple Green Plain T-Shirt" [ref=f10e235]
+                    - generic [ref=f10e236]: Vibrant Apple Green
+                    - generic [ref=f10e237]: From Rs 150.00
+                  - button "Tea Green Plain T-Shirt Tea Green From Rs 150.00" [ref=f10e238]:
+                    - img "Tea Green Plain T-Shirt" [ref=f10e240]
+                    - generic [ref=f10e241]: Tea Green
+                    - generic [ref=f10e242]: From Rs 150.00
+                  - button "Pastel Green Plain T-Shirt Pastel Green From Rs 150.00" [ref=f10e243]:
+                    - img "Pastel Green Plain T-Shirt" [ref=f10e245]
+                    - generic [ref=f10e246]: Pastel Green
+                    - generic [ref=f10e247]: From Rs 150.00
+                  - button "Purple Plain T-Shirt Purple From Rs 150.00" [ref=f10e248]:
+                    - img "Purple Plain T-Shirt" [ref=f10e250]
+                    - generic [ref=f10e251]: Purple
+                    - generic [ref=f10e252]: From Rs 150.00
+                  - button "Lemon Yellow Plain T-Shirt Lemon Yellow From Rs 150.00" [ref=f10e253]:
+                    - img "Lemon Yellow Plain T-Shirt" [ref=f10e255]
+                    - generic [ref=f10e256]: Lemon Yellow
+                    - generic [ref=f10e257]: From Rs 150.00
+                  - button "Serein Yellow Plain T-Shirt Serein Yellow From Rs 150.00" [ref=f10e258]:
+                    - img "Serein Yellow Plain T-Shirt" [ref=f10e260]
+                    - generic [ref=f10e261]: Serein Yellow
+                    - generic [ref=f10e262]: From Rs 150.00
+                  - button "Moutard Yellow Plain T-Shirt Moutard Yellow From Rs 150.00" [ref=f10e263]:
+                    - img "Moutard Yellow Plain T-Shirt" [ref=f10e265]
+                    - generic [ref=f10e266]: Moutard Yellow
+                    - generic [ref=f10e267]: From Rs 150.00
+                  - button "Aqua Blue Plain T-Shirt Aqua Blue From Rs 150.00" [ref=f10e268]:
+                    - img "Aqua Blue Plain T-Shirt" [ref=f10e270]
+                    - generic [ref=f10e271]: Aqua Blue
+                    - generic [ref=f10e272]: From Rs 150.00
+                  - button "Navy Blue Plain T-Shirt Navy Blue From Rs 150.00" [ref=f10e273]:
+                    - img "Navy Blue Plain T-Shirt" [ref=f10e275]
+                    - generic [ref=f10e276]: Navy Blue
+                    - generic [ref=f10e277]: From Rs 150.00
+                  - button "Light Grey Plain T-Shirt Light Grey From Rs 150.00" [ref=f10e278]:
+                    - img "Light Grey Plain T-Shirt" [ref=f10e280]
+                    - generic [ref=f10e281]: Light Grey
+                    - generic [ref=f10e282]: From Rs 150.00
+              - generic [ref=f10e283]:
+                - generic [ref=f10e284]:
+                  - paragraph [ref=f10e285]: Available size quantities
+                  - generic [ref=f10e286]: 1 total
+                - generic [ref=f10e287]:
+                  - generic [ref=f10e288]:
+                    - generic [ref=f10e289]: 1 Yr
+                    - textbox "1 Yr quantity" [ref=f10e290]:
+                      - /placeholder: "0"
+                  - generic [ref=f10e291]:
+                    - generic [ref=f10e292]: 2 Yrs
+                    - textbox "2 Yrs quantity" [ref=f10e293]:
+                      - /placeholder: "0"
+                  - generic [ref=f10e294]:
+                    - generic [ref=f10e295]: 4 Yrs
+                    - textbox "4 Yrs quantity" [ref=f10e296]:
+                      - /placeholder: "0"
+                  - generic [ref=f10e297]:
+                    - generic [ref=f10e298]: 6 Yrs
+                    - textbox "6 Yrs quantity" [ref=f10e299]:
+                      - /placeholder: "0"
+                  - generic [ref=f10e300]:
+                    - generic [ref=f10e301]: 8 Yrs
+                    - textbox "8 Yrs quantity" [ref=f10e302]:
+                      - /placeholder: "0"
+                  - generic [ref=f10e303]:
+                    - generic [ref=f10e304]: 10 Yrs
+                    - textbox "10 Yrs quantity" [ref=f10e305]:
+                      - /placeholder: "0"
+                  - generic [ref=f10e306]:
+                    - generic [ref=f10e307]: 12 Yrs
+                    - textbox "12 Yrs quantity" [ref=f10e308]:
+                      - /placeholder: "0"
+                  - generic [ref=f10e309]:
+                    - generic [ref=f10e310]: 14 Yrs
+                    - textbox "14 Yrs quantity" [ref=f10e311]:
+                      - /placeholder: "0"
+                  - generic [ref=f10e312]:
+                    - generic [ref=f10e313]: XS
+                    - textbox "XS quantity" [ref=f10e314]:
+                      - /placeholder: "0"
+                  - generic [ref=f10e315]:
+                    - generic [ref=f10e316]: S
+                    - textbox "S quantity" [ref=f10e317]:
+                      - /placeholder: "0"
+                  - generic [ref=f10e318]:
+                    - generic [ref=f10e319]: M
+                    - textbox "M quantity" [ref=f10e320]:
+                      - /placeholder: "0"
+                      - text: "1"
+                  - generic [ref=f10e321]:
+                    - generic [ref=f10e322]: L
+                    - textbox "L quantity" [ref=f10e323]:
+                      - /placeholder: "0"
+                  - generic [ref=f10e324]:
+                    - generic [ref=f10e325]: XL
+                    - textbox "XL quantity" [ref=f10e326]:
+                      - /placeholder: "0"
+                  - generic [ref=f10e327]:
+                    - generic [ref=f10e328]: 2XL
+                    - textbox "2XL quantity" [ref=f10e329]:
+                      - /placeholder: "0"
+                  - generic [ref=f10e330]:
+                    - generic [ref=f10e331]: 3XL
+                    - textbox "3XL quantity" [ref=f10e332]:
+                      - /placeholder: "0"
+                  - generic [ref=f10e333]:
+                    - generic [ref=f10e334]: 4XL
+                    - textbox "4XL quantity" [ref=f10e335]:
+                      - /placeholder: "0"
+              - generic [ref=f10e336]:
+                - generic [ref=f10e337]:
+                  - generic [ref=f10e338]: Rush production
+                  - generic [ref=f10e339]: Adds 12% to your estimate
+                - checkbox "Rush production Adds 12% to your estimate" [ref=f10e340]
+            - generic [ref=f10e99]:
+              - button "Back" [ref=f10e341]
+              - button "Next step" [active] [ref=f10e100]
+      - generic [ref=f10e103]:
+        - generic [ref=f10e104]:
+          - generic [ref=f10e105]: Premium garments
+          - generic [ref=f10e110]: High-quality printing
+          - generic [ref=f10e119]: Reliable service
+          - generic [ref=f10e127]: Local pricing
+        - generic [ref=f10e133]:
+          - link "motshirtmauritius@gmail.com" [ref=f10e134] [cursor=pointer]:
+            - /url: mailto:motshirtmauritius@gmail.com
+          - generic [ref=f10e135]: •
+          - link "+230 5988 3880" [ref=f10e136] [cursor=pointer]:
+            - /url: tel:+23059883880
+  - button "Open Next.js Dev Tools" [ref=f10e142] [cursor=pointer]
+  - alert [ref=f10e146]

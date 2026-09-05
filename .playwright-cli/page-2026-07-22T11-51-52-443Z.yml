@@ -1,0 +1,108 @@
+- generic [ref=f10e1]:
+  - main [ref=f10e2]:
+    - generic [ref=f10e3]:
+      - generic [ref=f10e5]:
+        - link "Back to shops" [ref=f10e6] [cursor=pointer]:
+          - /url: /shops
+        - generic [ref=f10e10]:
+          - paragraph [ref=f10e11]: MO T-Shirt.mu
+          - paragraph [ref=f10e12]: Premium Design Studio
+        - generic [ref=f10e13]: Live preview
+      - generic [ref=f10e19]:
+        - generic [ref=f10e20]:
+          - generic [ref=f10e21]:
+            - generic [ref=f10e22]: Live customiser
+            - heading "Design it. We print it." [level=1] [ref=f10e26]
+            - paragraph [ref=f10e27]: Build a production-ready garment mockup, then send every detail to the MO T-Shirt team in one request.
+          - generic [ref=f10e29]:
+            - generic [ref=f10e30]: Step 1 of 8
+            - generic [ref=f10e31]: 13% complete
+        - generic [ref=f10e34]:
+          - button "1 Product" [active] [ref=f10e347]:
+            - generic [ref=f10e36]: "1"
+            - text: Product
+          - button "2 Details" [ref=f10e37]:
+            - generic [ref=f10e38]: "2"
+            - text: Details
+          - button "3 Print area" [ref=f10e39]:
+            - generic [ref=f10e40]: "3"
+            - text: Print area
+          - button "4 Artwork" [ref=f10e41]:
+            - generic [ref=f10e42]: "4"
+            - text: Artwork
+          - button "5 Position" [ref=f10e43]:
+            - generic [ref=f10e44]: "5"
+            - text: Position
+          - button "6 Text" [ref=f10e45]:
+            - generic [ref=f10e46]: "6"
+            - text: Text
+          - button "7 Review" [ref=f10e47]:
+            - generic [ref=f10e48]: "7"
+            - text: Review
+          - button "8 Quote" [ref=f10e49]:
+            - generic [ref=f10e50]: "8"
+            - text: Quote
+      - main [ref=f10e51]:
+        - generic [ref=f10e53]:
+          - generic [ref=f10e54]:
+            - generic [ref=f10e55]:
+              - generic [ref=f10e56]:
+                - paragraph [ref=f10e57]: Live preview
+                - heading "Plain T-Shirt · front" [level=2] [ref=f10e58]
+              - generic [ref=f10e59]:
+                - button "front" [ref=f10e60]
+                - button "back" [ref=f10e61]
+                - button "Reset design" [ref=f10e62]
+            - generic [ref=f10e67]:
+              - generic:
+                - generic:
+                  - img "Realistic Plain T-Shirt front preview"
+            - generic [ref=f10e69]:
+              - generic [ref=f10e70]:
+                - paragraph [ref=f10e71]: Garment
+                - paragraph [ref=f10e72]: Plain T-Shirt
+              - generic [ref=f10e73]:
+                - paragraph [ref=f10e74]: Colour
+                - paragraph [ref=f10e75]: Bungundy Red
+              - generic [ref=f10e76]:
+                - paragraph [ref=f10e77]: Quantity
+                - paragraph [ref=f10e78]: "1"
+              - generic [ref=f10e79]:
+                - paragraph [ref=f10e80]: Estimate
+                - paragraph [ref=f10e81]: Rs 960.00
+          - complementary [ref=f10e82]:
+            - generic [ref=f10e84]:
+              - generic [ref=f10e85]: "1"
+              - generic [ref=f10e86]:
+                - heading "Choose product" [level=2] [ref=f10e348]
+                - paragraph [ref=f10e88]: Start with the garment that fits your idea.
+            - generic [ref=f10e350]:
+              - generic [ref=f10e351]: Live products from Shops
+              - generic [ref=f10e355]:
+                - button "Plain T-Shirt from Shops Plain T-Shirt From Rs 150.00 21 shop colours" [ref=f10e356]:
+                  - img "Plain T-Shirt from Shops" [ref=f10e358]
+                  - generic [ref=f10e359]:
+                    - generic [ref=f10e360]: Plain T-Shirt
+                    - generic [ref=f10e361]: From Rs 150.00
+                    - generic [ref=f10e362]: 21 shop colours
+                - button "Plain Poloshirt from Shops Plain Poloshirt From Rs 450.00 12 shop colours" [ref=f10e366]:
+                  - img "Plain Poloshirt from Shops" [ref=f10e368]
+                  - generic [ref=f10e369]:
+                    - generic [ref=f10e370]: Plain Poloshirt
+                    - generic [ref=f10e371]: From Rs 450.00
+                    - generic [ref=f10e372]: 12 shop colours
+            - button "Next step" [ref=f10e100]
+      - generic [ref=f10e103]:
+        - generic [ref=f10e104]:
+          - generic [ref=f10e105]: Premium garments
+          - generic [ref=f10e110]: High-quality printing
+          - generic [ref=f10e119]: Reliable service
+          - generic [ref=f10e127]: Local pricing
+        - generic [ref=f10e133]:
+          - link "motshirtmauritius@gmail.com" [ref=f10e134] [cursor=pointer]:
+            - /url: mailto:motshirtmauritius@gmail.com
+          - generic [ref=f10e135]: •
+          - link "+230 5988 3880" [ref=f10e136] [cursor=pointer]:
+            - /url: tel:+23059883880
+  - button "Open Next.js Dev Tools" [ref=f10e142] [cursor=pointer]
+  - alert [ref=f10e146]

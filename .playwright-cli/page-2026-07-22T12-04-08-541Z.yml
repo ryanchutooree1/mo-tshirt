@@ -1,0 +1,131 @@
+- generic [active] [ref=f13e1]:
+  - main [ref=f13e2]:
+    - generic [ref=f13e3]:
+      - generic [ref=f13e5]:
+        - link "Back to shops" [ref=f13e6] [cursor=pointer]:
+          - /url: /shops
+        - generic [ref=f13e10]:
+          - paragraph [ref=f13e11]: MO T-Shirt.mu
+          - paragraph [ref=f13e12]: Premium Design Studio
+        - generic [ref=f13e13]: Live preview
+      - generic [ref=f13e19]:
+        - generic [ref=f13e20]:
+          - generic [ref=f13e21]:
+            - generic [ref=f13e22]: Live customiser
+            - heading "Design it. We print it." [level=1] [ref=f13e26]
+            - paragraph [ref=f13e27]: Build a production-ready garment mockup, then send every detail to the MO T-Shirt team in one request.
+          - generic [ref=f13e29]:
+            - generic [ref=f13e30]: Step 5 of 8
+            - generic [ref=f13e31]: 63% complete
+        - generic [ref=f13e34]:
+          - button [ref=f13e164]
+          - button [ref=f13e167]
+          - button [ref=f13e170]
+          - button [ref=f13e249]
+          - button "5 Position" [ref=f13e43]:
+            - generic [ref=f13e44]: "5"
+            - text: Position
+          - button "6 Text" [ref=f13e45]:
+            - generic [ref=f13e46]: "6"
+            - text: Text
+          - button "7 Review" [ref=f13e47]:
+            - generic [ref=f13e48]: "7"
+            - text: Review
+          - button "8 Quote" [ref=f13e49]:
+            - generic [ref=f13e50]: "8"
+            - text: Quote
+      - main [ref=f13e51]:
+        - generic [ref=f13e53]:
+          - generic [ref=f13e54]:
+            - generic [ref=f13e55]:
+              - generic [ref=f13e56]:
+                - paragraph [ref=f13e57]: Live preview
+                - heading "Plain T-Shirt · front" [level=2] [ref=f13e58]
+              - generic [ref=f13e59]:
+                - button "front" [ref=f13e60]
+                - button "back" [ref=f13e61]
+                - button "Reset design" [ref=f13e62]
+            - generic [ref=f13e67]:
+              - generic:
+                - generic:
+                  - img "Realistic Plain T-Shirt front preview"
+              - generic [ref=f13e228]:
+                - img "front artwork on garment"
+            - generic [ref=f13e69]:
+              - generic [ref=f13e70]:
+                - paragraph [ref=f13e71]: Garment
+                - paragraph [ref=f13e72]: Plain T-Shirt
+              - generic [ref=f13e73]:
+                - paragraph [ref=f13e74]: Colour
+                - paragraph [ref=f13e75]: Black
+              - generic [ref=f13e76]:
+                - paragraph [ref=f13e77]: Quantity
+                - paragraph [ref=f13e78]: "1"
+              - generic [ref=f13e79]:
+                - paragraph [ref=f13e80]: Estimate
+                - paragraph [ref=f13e81]: Rs 985.00
+          - complementary [ref=f13e82]:
+            - generic [ref=f13e84]:
+              - generic [ref=f13e85]: "5"
+              - generic [ref=f13e86]:
+                - heading "Position design" [level=2] [ref=f13e252]
+                - paragraph [ref=f13e88]: Resize, move and fine-tune the artwork.
+            - generic [ref=f13e254]:
+              - generic [ref=f13e255]:
+                - paragraph [ref=f13e256]: Artwork side
+                - generic [ref=f13e257]:
+                  - button "front Artwork ready" [ref=f13e258]:
+                    - generic [ref=f13e259]: front
+                    - generic [ref=f13e264]: Artwork ready
+                  - button "back No artwork" [ref=f13e265]:
+                    - generic [ref=f13e266]: back
+                    - generic [ref=f13e269]: No artwork
+              - generic [ref=f13e270]:
+                - img "front artwork preview" [ref=f13e272]
+                - generic [ref=f13e273]:
+                  - generic [ref=f13e274]: Editing front
+                  - generic [ref=f13e275]: Screenshot 2026-07-22 at 16.01.10.png
+              - generic [ref=f13e276]:
+                - button "Left chest" [ref=f13e277]
+                - button "Centre" [ref=f13e282]
+                - button "Lower" [ref=f13e291]
+              - generic [ref=f13e299]:
+                - generic [ref=f13e300]:
+                  - generic [ref=f13e301]: Artwork size
+                  - generic [ref=f13e305]: 34%
+                - slider "Artwork size 34%" [ref=f13e306]: "34"
+              - generic [ref=f13e307]:
+                - generic [ref=f13e308]:
+                  - generic [ref=f13e309]: Horizontal
+                  - generic [ref=f13e315]: "0"
+                - slider "Horizontal 0" [ref=f13e316]: "0"
+              - generic [ref=f13e317]:
+                - generic [ref=f13e318]:
+                  - generic [ref=f13e319]: Vertical
+                  - generic [ref=f13e325]: "-8"
+                - slider "Vertical -8" [ref=f13e326]: "-8"
+              - generic [ref=f13e327]:
+                - generic [ref=f13e328]:
+                  - generic [ref=f13e329]: Rotation
+                  - generic [ref=f13e333]: 0°
+                - slider "Rotation 0°" [ref=f13e334]: "0"
+              - button "Snap to centre ON" [ref=f13e335]:
+                - generic [ref=f13e336]: Snap to centre
+                - generic [ref=f13e341]: "ON"
+            - generic [ref=f13e99]:
+              - button "Back" [ref=f13e224]
+              - button "Next step" [ref=f13e100]
+      - generic [ref=f13e103]:
+        - generic [ref=f13e104]:
+          - generic [ref=f13e105]: Premium garments
+          - generic [ref=f13e110]: High-quality printing
+          - generic [ref=f13e119]: Reliable service
+          - generic [ref=f13e127]: Local pricing
+        - generic [ref=f13e133]:
+          - link "motshirtmauritius@gmail.com" [ref=f13e134] [cursor=pointer]:
+            - /url: mailto:motshirtmauritius@gmail.com
+          - generic [ref=f13e135]: •
+          - link "+230 5988 3880" [ref=f13e136] [cursor=pointer]:
+            - /url: tel:+23059883880
+  - button "Open Next.js Dev Tools" [ref=f13e160] [cursor=pointer]
+  - alert [ref=f13e137]

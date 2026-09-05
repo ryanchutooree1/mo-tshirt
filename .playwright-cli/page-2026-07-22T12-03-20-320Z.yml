@@ -1,0 +1,95 @@
+- generic [active] [ref=f13e1]:
+  - main [ref=f13e2]:
+    - generic [ref=f13e3]:
+      - generic [ref=f13e5]:
+        - link "Back to shops" [ref=f13e6] [cursor=pointer]:
+          - /url: /shops
+        - generic [ref=f13e10]:
+          - paragraph [ref=f13e11]: MO T-Shirt.mu
+          - paragraph [ref=f13e12]: Premium Design Studio
+        - generic [ref=f13e13]: Live preview
+      - generic [ref=f13e19]:
+        - generic [ref=f13e20]:
+          - generic [ref=f13e21]:
+            - generic [ref=f13e22]: Live customiser
+            - heading "Design it. We print it." [level=1] [ref=f13e26]
+            - paragraph [ref=f13e27]: Build a production-ready garment mockup, then send every detail to the MO T-Shirt team in one request.
+          - generic [ref=f13e29]:
+            - generic [ref=f13e30]: Step 1 of 8
+            - generic [ref=f13e31]: 13% complete
+        - generic [ref=f13e34]:
+          - button "1 Product" [ref=f13e35]:
+            - generic [ref=f13e36]: "1"
+            - text: Product
+          - button "2 Details" [ref=f13e37]:
+            - generic [ref=f13e38]: "2"
+            - text: Details
+          - button "3 Print area" [ref=f13e39]:
+            - generic [ref=f13e40]: "3"
+            - text: Print area
+          - button "4 Artwork" [ref=f13e41]:
+            - generic [ref=f13e42]: "4"
+            - text: Artwork
+          - button "5 Position" [ref=f13e43]:
+            - generic [ref=f13e44]: "5"
+            - text: Position
+          - button "6 Text" [ref=f13e45]:
+            - generic [ref=f13e46]: "6"
+            - text: Text
+          - button "7 Review" [ref=f13e47]:
+            - generic [ref=f13e48]: "7"
+            - text: Review
+          - button "8 Quote" [ref=f13e49]:
+            - generic [ref=f13e50]: "8"
+            - text: Quote
+      - main [ref=f13e51]:
+        - generic [ref=f13e53]:
+          - generic [ref=f13e54]:
+            - generic [ref=f13e55]:
+              - generic [ref=f13e56]:
+                - paragraph [ref=f13e57]: Live preview
+                - heading "Plain T-Shirt · front" [level=2] [ref=f13e58]
+              - generic [ref=f13e59]:
+                - button "front" [ref=f13e60]
+                - button "back" [ref=f13e61]
+                - button "Reset design" [ref=f13e62]
+            - generic [ref=f13e67]:
+              - generic:
+                - generic:
+                  - img "Realistic Plain T-Shirt front preview"
+            - generic [ref=f13e69]:
+              - generic [ref=f13e70]:
+                - paragraph [ref=f13e71]: Garment
+                - paragraph [ref=f13e72]: Plain T-Shirt
+              - generic [ref=f13e73]:
+                - paragraph [ref=f13e74]: Colour
+                - paragraph [ref=f13e75]: Black
+              - generic [ref=f13e76]:
+                - paragraph [ref=f13e77]: Quantity
+                - paragraph [ref=f13e78]: "1"
+              - generic [ref=f13e79]:
+                - paragraph [ref=f13e80]: Estimate
+                - paragraph [ref=f13e81]: Rs 960.00
+          - complementary [ref=f13e82]:
+            - generic [ref=f13e84]:
+              - generic [ref=f13e85]: "1"
+              - generic [ref=f13e86]:
+                - heading "Choose product" [level=2] [ref=f13e87]
+                - paragraph [ref=f13e88]: Start with the garment that fits your idea.
+            - generic [ref=f13e90]:
+              - generic [ref=f13e91]: Live products from Shops
+              - generic [ref=f13e95]: Loading real garments…
+            - button "Next step" [ref=f13e100]
+      - generic [ref=f13e103]:
+        - generic [ref=f13e104]:
+          - generic [ref=f13e105]: Premium garments
+          - generic [ref=f13e110]: High-quality printing
+          - generic [ref=f13e119]: Reliable service
+          - generic [ref=f13e127]: Local pricing
+        - generic [ref=f13e133]:
+          - link "motshirtmauritius@gmail.com" [ref=f13e134] [cursor=pointer]:
+            - /url: mailto:motshirtmauritius@gmail.com
+          - generic [ref=f13e135]: •
+          - link "+230 5988 3880" [ref=f13e136] [cursor=pointer]:
+            - /url: tel:+23059883880
+  - alert [ref=f13e137]

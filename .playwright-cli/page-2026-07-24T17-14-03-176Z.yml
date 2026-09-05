@@ -1,0 +1,84 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e5]:
+    - banner [ref=f1e6]:
+      - button "Open administrator navigation" [ref=f1e7]
+      - generic [ref=f1e9]:
+        - generic [ref=f1e10]: Operations
+        - generic [ref=f1e11]: Inventory Photo Log
+      - generic [ref=f1e12]:
+        - button "Switch to dark mode" [ref=f1e13]
+        - button "Open profile menu for Ryan Chutooree" [ref=f1e16]
+    - main [ref=f1e20]:
+      - generic [ref=f1e21]:
+        - generic [ref=f1e22]:
+          - generic [ref=f1e23]: Quick capture
+          - heading "Inventory Photo Log" [level=1] [ref=f1e27]
+        - button "Refresh" [ref=f1e28]
+      - generic [ref=f1e36]:
+        - generic [ref=f1e37]:
+          - generic [ref=f1e44]:
+            - heading "Add a product photo" [level=2] [ref=f1e45]
+            - paragraph [ref=f1e46]: The photo saves as soon as it is selected.
+          - generic [ref=f1e47]:
+            - generic [ref=f1e48]: Quick product name (optional)
+            - textbox "Quick product name (optional)" [ref=f1e49]:
+              - /placeholder: Leave blank for Unsorted Item 001
+        - generic [ref=f1e50]:
+          - button "Take a product photo" [ref=f1e51]
+          - button "Upload a product photo" [ref=f1e52]
+          - button "Take photo" [ref=f1e53]
+          - button "Upload" [ref=f1e57]
+      - generic [ref=f1e61]:
+        - generic [ref=f1e62]:
+          - generic [ref=f1e63]: All photos
+          - generic [ref=f1e69]: "2"
+        - generic [ref=f1e70]:
+          - generic [ref=f1e71]: Need details
+          - generic [ref=f1e76]: "2"
+        - generic [ref=f1e77]:
+          - generic [ref=f1e78]: Stock In
+          - generic [ref=f1e82]: "0"
+        - generic [ref=f1e83]:
+          - generic [ref=f1e84]: Stock Out
+          - generic [ref=f1e88]: "0"
+      - generic [ref=f1e89]:
+        - generic [ref=f1e90]:
+          - generic [ref=f1e91]:
+            - button "Pending (2)" [ref=f1e199]
+            - button "History (2)" [ref=f1e200]
+          - textbox "Search inventory photo log" [ref=f1e95]:
+            - /placeholder: Search photo log…
+        - generic [ref=f1e96]:
+          - article [ref=f1e201]:
+            - button "Edit Quick Test Polo" [ref=f1e202]:
+              - img "Inventory photo for Quick Test Polo" [ref=f1e203]
+              - generic [ref=f1e204]: Pending
+            - generic [ref=f1e205]:
+              - heading "Quick Test Polo" [level=3] [ref=f1e207]
+              - generic [ref=f1e208]: Category pending•Quantity pending•Price pending
+              - generic [ref=f1e209]:
+                - generic [ref=f1e215]:
+                  - generic [ref=f1e216]: Photo time (EXIF)
+                  - generic [ref=f1e217]: Not available
+                - generic [ref=f1e222]:
+                  - generic [ref=f1e223]: Server upload
+                  - generic [ref=f1e224]: 24 Jul 2026, 09:20
+            - button "Add details" [ref=f1e225]
+          - article [ref=f1e111]:
+            - button "Edit Unsorted Item 001" [ref=f1e112]:
+              - img "Inventory photo for Unsorted Item 001" [ref=f1e113]
+              - generic [ref=f1e114]: Pending
+            - generic [ref=f1e115]:
+              - heading "Unsorted Item 001" [level=3] [ref=f1e117]
+              - generic [ref=f1e118]: Category pending•Quantity pending•Price pending
+              - generic [ref=f1e119]:
+                - generic [ref=f1e125]:
+                  - generic [ref=f1e126]: Photo time (EXIF)
+                  - generic [ref=f1e127]: 24 Jul 2026, 09:15
+                - generic [ref=f1e132]:
+                  - generic [ref=f1e133]: Server upload
+                  - generic [ref=f1e134]: 24 Jul 2026, 09:18
+            - button "Add details" [ref=f1e135]
+      - status [ref=f1e229]: Quick Test Polo saved. Details can be added anytime.
+  - button "Open Next.js Dev Tools" [ref=f1e105] [cursor=pointer]
+  - alert [ref=f1e139]

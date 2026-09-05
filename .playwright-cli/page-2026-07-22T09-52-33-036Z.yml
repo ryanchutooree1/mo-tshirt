@@ -1,0 +1,132 @@
+- generic [ref=f4e1]:
+  - main [ref=f4e2]:
+    - generic [ref=f4e3]:
+      - generic [ref=f4e5]:
+        - link "Back to admin" [ref=f4e152] [cursor=pointer]:
+          - /url: /admin
+        - generic [ref=f4e9]:
+          - paragraph [ref=f4e10]: MO T-Shirt.mu
+          - paragraph [ref=f4e11]: Premium Design Studio
+        - generic [ref=f4e12]: Live preview
+      - generic [ref=f4e18]:
+        - generic [ref=f4e19]:
+          - generic [ref=f4e20]: Live customiser
+          - heading "Design it. We print it." [level=1] [ref=f4e24]
+          - paragraph [ref=f4e25]: Build a production-ready garment mockup, then send every detail to the MO T-Shirt team in one request.
+        - generic [ref=f4e27]:
+          - generic [ref=f4e28]: Step 1 of 8
+          - generic [ref=f4e29]: 13% complete
+      - main [ref=f4e49]:
+        - generic [ref=f4e50]:
+          - navigation "Design steps" [ref=f4e155]:
+            - button "1 Step 1 Choose product" [ref=f4e156]:
+              - generic [ref=f4e157]: "1"
+              - generic [ref=f4e158]:
+                - generic [ref=f4e159]: Step 1
+                - generic [ref=f4e160]: Choose product
+            - button "2 Step 2 Garment details" [ref=f4e163]:
+              - generic [ref=f4e164]: "2"
+              - generic [ref=f4e165]:
+                - generic [ref=f4e166]: Step 2
+                - generic [ref=f4e167]: Garment details
+            - button "3 Step 3 Choose print area" [ref=f4e170]:
+              - generic [ref=f4e171]: "3"
+              - generic [ref=f4e172]:
+                - generic [ref=f4e173]: Step 3
+                - generic [ref=f4e174]: Choose print area
+            - button "4 Step 4 Upload artwork" [ref=f4e177]:
+              - generic [ref=f4e178]: "4"
+              - generic [ref=f4e179]:
+                - generic [ref=f4e180]: Step 4
+                - generic [ref=f4e181]: Upload artwork
+            - button "5 Step 5 Position design" [ref=f4e184]:
+              - generic [ref=f4e185]: "5"
+              - generic [ref=f4e186]:
+                - generic [ref=f4e187]: Step 5
+                - generic [ref=f4e188]: Position design
+            - button "6 Step 6 Add custom text" [ref=f4e191]:
+              - generic [ref=f4e192]: "6"
+              - generic [ref=f4e193]:
+                - generic [ref=f4e194]: Step 6
+                - generic [ref=f4e195]: Add custom text
+            - button "7 Step 7 Review order" [ref=f4e198]:
+              - generic [ref=f4e199]: "7"
+              - generic [ref=f4e200]:
+                - generic [ref=f4e201]: Step 7
+                - generic [ref=f4e202]: Review order
+            - button "8 Step 8 Request quote" [ref=f4e205]:
+              - generic [ref=f4e206]: "8"
+              - generic [ref=f4e207]:
+                - generic [ref=f4e208]: Step 8
+                - generic [ref=f4e209]: Request quote
+            - generic [ref=f4e212]:
+              - paragraph [ref=f4e213]: Need help?
+              - link "+230 5988 3880" [ref=f4e214] [cursor=pointer]:
+                - /url: tel:+23059883880
+          - generic [ref=f4e51]:
+            - generic [ref=f4e52]:
+              - generic [ref=f4e53]:
+                - generic [ref=f4e54]:
+                  - paragraph [ref=f4e55]: Live preview
+                  - heading "Hoodie · front" [level=2] [ref=f4e227]
+                - generic [ref=f4e57]:
+                  - button "front" [ref=f4e58]
+                  - button "back" [ref=f4e59]
+                  - button "Reset design" [ref=f4e60]
+              - generic [ref=f4e65]:
+                - generic:
+                  - generic:
+                    - img "Realistic Hoodie preview"
+              - generic [ref=f4e67]:
+                - generic [ref=f4e68]:
+                  - paragraph [ref=f4e69]: Garment
+                  - paragraph [ref=f4e70]: Hoodie
+                - generic [ref=f4e71]:
+                  - paragraph [ref=f4e72]: Colour
+                  - paragraph [ref=f4e73]: Jet Black
+                - generic [ref=f4e74]:
+                  - paragraph [ref=f4e75]: Quantity
+                  - paragraph [ref=f4e76]: "1"
+                - generic [ref=f4e77]:
+                  - paragraph [ref=f4e78]: Estimate
+                  - paragraph [ref=f4e79]: Rs 1,500.00
+            - complementary [ref=f4e80]:
+              - generic [ref=f4e82]:
+                - generic [ref=f4e83]: "1"
+                - generic [ref=f4e84]:
+                  - heading "Choose product" [level=2] [ref=f4e85]
+                  - paragraph [ref=f4e86]: Start with the garment that fits your idea.
+              - generic [ref=f4e88]:
+                - button "Realistic black T-Shirt T-Shirt From Rs 230.00 5–7 working days" [ref=f4e89]:
+                  - img "Realistic black T-Shirt" [ref=f4e91]
+                  - generic [ref=f4e92]:
+                    - generic [ref=f4e93]: T-Shirt
+                    - generic [ref=f4e94]: From Rs 230.00
+                    - generic [ref=f4e95]: 5–7 working days
+                - button "Realistic black Polo Shirt Polo Shirt From Rs 310.00 6–8 working days" [ref=f4e99]:
+                  - img "Realistic black Polo Shirt" [ref=f4e101]
+                  - generic [ref=f4e102]:
+                    - generic [ref=f4e103]: Polo Shirt
+                    - generic [ref=f4e104]: From Rs 310.00
+                    - generic [ref=f4e105]: 6–8 working days
+                - button "Realistic black Hoodie Hoodie From Rs 690.00 7–10 working days" [active] [ref=f4e106]:
+                  - img "Realistic black Hoodie" [ref=f4e108]
+                  - generic [ref=f4e109]:
+                    - generic [ref=f4e110]: Hoodie
+                    - generic [ref=f4e111]: From Rs 690.00
+                    - generic [ref=f4e112]: 7–10 working days
+              - button "Next step" [ref=f4e115]
+      - generic [ref=f4e118]:
+        - generic [ref=f4e119]:
+          - generic [ref=f4e120]: Premium garments
+          - generic [ref=f4e125]: High-quality printing
+          - generic [ref=f4e134]: Reliable service
+          - generic [ref=f4e142]: Local pricing
+        - generic [ref=f4e148]:
+          - link "motshirtmauritius@gmail.com" [ref=f4e149] [cursor=pointer]:
+            - /url: mailto:motshirtmauritius@gmail.com
+          - generic [ref=f4e150]: •
+          - link "+230 5988 3880" [ref=f4e151] [cursor=pointer]:
+            - /url: tel:+23059883880
+  - button "Open Next.js Dev Tools" [ref=f4e222] [cursor=pointer]
+  - alert [ref=f4e226]

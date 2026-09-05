@@ -1,0 +1,96 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - link "MO T-SHIRT home" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - strong [ref=e6]: MO
+        - text: T-SHIRT.
+      - navigation "Shop navigation" [ref=e7]:
+        - link "Home" [ref=e8] [cursor=pointer]:
+          - /url: /
+        - link "Shop" [ref=e9] [cursor=pointer]:
+          - /url: /shop
+        - link "Design studio" [ref=e10] [cursor=pointer]:
+          - /url: /design-studio
+        - link "Track parcel ↗" [ref=e11] [cursor=pointer]:
+          - /url: /#track-parcel
+      - button "Your order 0" [ref=e12]:
+        - text: Your order
+        - generic [ref=e13]: "0"
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - paragraph [ref=e16]: THE MO SHOP · MAURITIUS
+        - heading "Choose it. Make it yours." [level=1] [ref=e17]: Choose it.Make it yours.
+      - generic [ref=e18]:
+        - paragraph [ref=e19]: Plain apparel. Everyday essentials.Ready for your next idea.
+        - link "Create your design" [ref=e20] [cursor=pointer]:
+          - /url: /design-studio
+        - generic [ref=e23]: ONE PIECE OR A FULL RUN
+    - main [ref=e24]:
+      - generic "Product collections" [ref=e25]:
+        - button "Plain products 0" [pressed] [ref=e26]
+        - button "Uniform designs 6" [ref=e27]
+      - generic [ref=e29]:
+        - generic [ref=e30]:
+          - paragraph [ref=e31]: Filters
+          - button "Clear filters ↗" [ref=e32]
+        - generic [ref=e33]:
+          - generic [ref=e34]:
+            - text: Product
+            - combobox "Product" [ref=e35]:
+              - option "All products" [selected]
+          - generic [ref=e36]:
+            - text: Color
+            - combobox "Color" [ref=e37]:
+              - option "All colors" [selected]
+      - generic [ref=e38]:
+        - status [ref=e39]: Loading live products…
+        - generic [ref=e40]:
+          - generic [ref=e41]:
+            - generic [ref=e42]:
+              - paragraph [ref=e43]: Plain Shop
+              - heading "Find your fit." [level=2] [ref=e44]
+            - generic [ref=e45]: 0 products
+          - region "Plain apparel products"
+    - contentinfo [ref=e46]:
+      - link [ref=e47] [cursor=pointer]:
+        - /url: /
+        - strong [ref=e48]: MO
+        - text: T-SHIRT.
+      - paragraph [ref=e49]: Made in Mauritius. Made for you.
+      - generic [ref=e50]:
+        - link "Get a print quote ↗" [ref=e51] [cursor=pointer]:
+          - /url: /#order
+        - link "Terms" [ref=e52] [cursor=pointer]:
+          - /url: /terms
+        - link "Privacy" [ref=e53] [cursor=pointer]:
+          - /url: /privacy
+    - button "Open order list" [ref=e54]:
+      - generic [ref=e55]: "0"
+      - generic [ref=e56]: Start order
+      - generic [ref=e57]: Rs 0.00
+    - generic [aria-hidden]:
+      - dialog:
+        - generic:
+          - generic:
+            - paragraph: Order
+            - heading [level=3]: Order list
+            - text: 0 items
+          - button: Close
+        - generic: Add colors and sizes from the cards to build your WhatsApp order.
+        - generic:
+          - generic:
+            - generic: Subtotal
+            - generic: Rs 0.00
+          - generic:
+            - generic: Total
+            - generic: Rs 0.00
+        - generic:
+          - generic:
+            - text: Delivery
+            - combobox
+        - generic:
+          - link [disabled]:
+            - /url: https://wa.me/23059883880?text=Hi!%20I'd%20like%20to%20order%3A%0ADelivery%3A%20Surinam%20pickup%0ASubtotal%3A%20Rs%200.00%0ATotal%3A%20Rs%200.00
+            - text: Send Order on WhatsApp
+  - button "Open Next.js Dev Tools" [ref=e63] [cursor=pointer]

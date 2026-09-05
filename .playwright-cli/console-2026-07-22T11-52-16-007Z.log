@@ -1,0 +1,26 @@
+[     115ms] [LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[    1436ms] [LOG] [Fast Refresh] done in 1423ms @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[    1582ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[    1598ms] [LOG] [HMR] connected @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[    1763ms] [ERROR] Failed to load resource: the server responded with a status of 403 (Forbidden) @ http://127.0.0.1:3100/api/analytics/track:0
+[    1943ms] [LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[    2245ms] [LOG] [Fast Refresh] done in 403ms @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[    6666ms] [WARNING] Image with src "/api/shops/uploads/shop-mnluoiyc-wbi00g" was detected as the Largest Contentful Paint (LCP). Please add the `loading="eager"` property if this image is above the fold.
+Read more: https://nextjs.org/docs/app/api-reference/components/image#loading @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[   25496ms] [LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[   25714ms] [LOG] [Fast Refresh] done in 318ms @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[   27948ms] [ERROR] Failed to load resource: the server responded with a status of 403 (Forbidden) @ http://127.0.0.1:3100/api/analytics/track:0
+[   83307ms] [LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[   83884ms] [LOG] [Fast Refresh] done in 641ms @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[   97687ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=_t7y8-BbWqJ6tMK7DLRUN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13299
+[   98689ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=_t7y8-BbWqJ6tMK7DLRUN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13299
+[   99692ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=_t7y8-BbWqJ6tMK7DLRUN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13299
+[  100694ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=_t7y8-BbWqJ6tMK7DLRUN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13299
+[  101696ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=_t7y8-BbWqJ6tMK7DLRUN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13299
+[  106698ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=_t7y8-BbWqJ6tMK7DLRUN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13299
+[  111700ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=_t7y8-BbWqJ6tMK7DLRUN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13299
+[  116703ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=_t7y8-BbWqJ6tMK7DLRUN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13299
+[  121707ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=_t7y8-BbWqJ6tMK7DLRUN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13299
+[  126713ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=_t7y8-BbWqJ6tMK7DLRUN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13299
+[  131721ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=_t7y8-BbWqJ6tMK7DLRUN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13299
+[  136730ms] [ERROR] WebSocket connection to 'ws://127.0.0.1:3100/_next/webpack-hmr?id=_t7y8-BbWqJ6tMK7DLRUN' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://127.0.0.1:3100/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13299

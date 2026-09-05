@@ -1,0 +1,83 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e364]:
+      - generic [ref=e366]:
+        - link "Back to shop" [ref=e367] [cursor=pointer]:
+          - /url: /shop
+        - generic [ref=e371]:
+          - paragraph [ref=e372]: MO T-Shirt.mu
+          - paragraph [ref=e373]: Premium Design Studio
+        - generic [ref=e374]: Live preview
+      - generic [ref=e380]:
+        - generic [ref=e381]:
+          - heading "Design it. We print it." [level=1] [ref=e382]
+          - generic [ref=e384]:
+            - generic [ref=e385]: Step 8 of 8
+            - generic [ref=e386]: 100% complete
+        - generic [ref=e389]:
+          - button [ref=e492]
+          - button [ref=e495]
+          - button [ref=e498]
+          - button [ref=e630]
+          - button [ref=e633]
+          - button [ref=e636]
+          - button [ref=e639]
+          - button "8 Quote" [ref=e404]:
+            - generic [ref=e405]: "8"
+            - text: Quote
+      - generic [ref=e408]:
+        - generic [ref=e409]:
+          - generic [ref=e410]:
+            - generic [ref=e411]:
+              - paragraph [ref=e412]: Live preview
+              - heading "Plain T-Shirt · back" [level=2] [ref=e593]
+            - generic [ref=e414]:
+              - button "front" [ref=e415]
+              - button "back" [ref=e416]
+              - button "Reset design" [ref=e417]
+          - generic [ref=e422]:
+            - generic:
+              - generic:
+                - img "Realistic Plain T-Shirt back preview"
+            - generic [ref=e556]:
+              - img "back artwork on garment"
+          - generic [ref=e424]:
+            - generic [ref=e425]:
+              - paragraph [ref=e426]: Garment
+              - paragraph [ref=e427]: Plain T-Shirt
+            - generic [ref=e428]:
+              - paragraph [ref=e429]: Colour
+              - paragraph [ref=e430]: Black
+            - generic [ref=e431]:
+              - paragraph [ref=e432]: Quantity
+              - paragraph [ref=e433]: "1"
+            - generic [ref=e434]:
+              - paragraph [ref=e435]: Estimate
+              - paragraph [ref=e436]: Rs 1,020.00
+        - complementary [ref=e437]:
+          - generic [ref=e439]:
+            - generic [ref=e440]: "8"
+            - generic [ref=e441]:
+              - heading "Request quote" [level=2] [ref=e642]
+              - paragraph [ref=e443]: Tell us where to send the final price.
+          - generic [ref=e685]:
+            - heading "Thank you!" [level=3] [ref=e689]
+            - paragraph [ref=e690]: Browser verification complete.
+            - generic [ref=e691]:
+              - paragraph [ref=e692]: What happens next
+              - paragraph [ref=e693]: We will review your design and confirm the final price within 24 hours.
+            - button "Create another design" [ref=e694]
+      - generic [ref=e458]:
+        - generic [ref=e459]:
+          - generic [ref=e460]: Premium garments
+          - generic [ref=e465]: High-quality printing
+          - generic [ref=e474]: Reliable service
+          - generic [ref=e482]: Local pricing
+        - generic [ref=e488]:
+          - link "motshirtmauritius@gmail.com" [ref=e489] [cursor=pointer]:
+            - /url: mailto:motshirtmauritius@gmail.com
+          - generic [ref=e490]: •
+          - link "+230 5988 3880" [ref=e491] [cursor=pointer]:
+            - /url: tel:+23059883880
+  - button "Open Next.js Dev Tools" [ref=e153] [cursor=pointer]
+  - alert [ref=e157]: Design Studio | Custom T-Shirts Mauritius

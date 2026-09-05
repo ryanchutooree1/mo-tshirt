@@ -1,0 +1,123 @@
+- generic [ref=f1e1]:
+  - main [ref=f1e2]:
+    - generic [ref=f1e3]:
+      - generic [ref=f1e5]:
+        - link [ref=f1e433] [cursor=pointer]:
+          - /url: /admin
+        - generic [ref=f1e10]:
+          - paragraph [ref=f1e11]: MO T-Shirt.mu
+          - paragraph [ref=f1e12]: Premium Design Studio
+      - generic [ref=f1e19]:
+        - generic [ref=f1e20]:
+          - generic [ref=f1e21]:
+            - generic [ref=f1e22]: Live customiser
+            - heading "Design it. We print it." [level=1] [ref=f1e26]
+            - paragraph [ref=f1e27]: Build a production-ready garment mockup, then send every detail to the MO T-Shirt team in one request.
+          - generic [ref=f1e29]:
+            - generic [ref=f1e30]: Step 4 of 8
+            - generic [ref=f1e31]: 50% complete
+        - generic [ref=f1e34]:
+          - button [ref=f1e164]
+          - button [ref=f1e167]
+          - button [ref=f1e170]
+          - button "4 Artwork" [active] [ref=f1e437]:
+            - generic [ref=f1e42]: "4"
+            - text: Artwork
+          - button "5 Position" [ref=f1e43]:
+            - generic [ref=f1e44]: "5"
+            - text: Position
+          - button "6 Text" [ref=f1e45]:
+            - generic [ref=f1e46]: "6"
+            - text: Text
+          - button "7 Review" [ref=f1e47]:
+            - generic [ref=f1e48]: "7"
+            - text: Review
+          - button "8 Quote" [ref=f1e49]:
+            - generic [ref=f1e50]: "8"
+            - text: Quote
+      - main [ref=f1e51]:
+        - generic [ref=f1e53]:
+          - generic [ref=f1e54]:
+            - generic [ref=f1e55]:
+              - generic [ref=f1e56]:
+                - paragraph [ref=f1e57]: Live preview
+                - heading "T-Shirt · front" [level=2] [ref=f1e340]
+              - generic [ref=f1e59]:
+                - button "front" [ref=f1e60]
+                - button "back" [ref=f1e61]
+                - button "Reset design" [ref=f1e62]
+            - generic [ref=f1e227]:
+              - img "front artwork on garment"
+            - generic [ref=f1e69]:
+              - generic [ref=f1e70]:
+                - paragraph [ref=f1e71]: Garment
+                - paragraph [ref=f1e72]: T-Shirt
+              - generic [ref=f1e73]:
+                - paragraph [ref=f1e74]: Colour
+                - paragraph [ref=f1e75]: Jet Black
+              - generic [ref=f1e76]:
+                - paragraph [ref=f1e77]: Quantity
+                - paragraph [ref=f1e78]: "1"
+              - generic [ref=f1e79]:
+                - paragraph [ref=f1e80]: Estimate
+                - paragraph [ref=f1e81]: Rs 1,075.00
+          - complementary [ref=f1e82]:
+            - generic [ref=f1e84]:
+              - generic [ref=f1e85]: "4"
+              - generic [ref=f1e86]:
+                - heading "Upload artwork" [level=2] [ref=f1e438]
+                - paragraph [ref=f1e88]: Upload a high-quality logo or illustration.
+            - generic [ref=f1e440]:
+              - generic [ref=f1e448]:
+                - paragraph [ref=f1e449]: One file for each print side
+                - paragraph [ref=f1e450]: Upload separate artwork for the front and back. You can add either side or both.
+              - region "Front artwork upload" [ref=f1e451]:
+                - generic [ref=f1e452]:
+                  - generic [ref=f1e457]:
+                    - heading "Front artwork" [level=3] [ref=f1e458]
+                    - paragraph [ref=f1e459]: Printed on the front
+                  - generic [ref=f1e460]: Ready
+                - generic [ref=f1e464]:
+                  - generic [ref=f1e465]:
+                    - img "Front artwork preview" [ref=f1e467]
+                    - generic [ref=f1e468]:
+                      - paragraph [ref=f1e469]: tshirt-realistic.png
+                      - paragraph [ref=f1e470]: 0.94 MB · Uploaded separately
+                      - generic [ref=f1e471]:
+                        - button "Replace" [ref=f1e472]
+                        - button "Remove" [ref=f1e473]
+                  - button "Position front artwork" [ref=f1e477]
+              - region "Back artwork upload" [ref=f1e481]:
+                - generic [ref=f1e482]:
+                  - generic [ref=f1e487]:
+                    - heading "Back artwork" [level=3] [ref=f1e488]
+                    - paragraph [ref=f1e489]: Printed on the back
+                  - generic [ref=f1e490]: Ready
+                - generic [ref=f1e494]:
+                  - generic [ref=f1e495]:
+                    - img "Back artwork preview" [ref=f1e497]
+                    - generic [ref=f1e498]:
+                      - paragraph [ref=f1e499]: polo-realistic.png
+                      - paragraph [ref=f1e500]: 1.07 MB · Uploaded separately
+                      - generic [ref=f1e501]:
+                        - button "Replace" [ref=f1e502]
+                        - button "Remove" [ref=f1e503]
+                  - button "Position back artwork" [ref=f1e507]
+              - generic [ref=f1e511]: PNG, JPG, WEBP or SVG · 5MB per file
+            - generic [ref=f1e116]:
+              - button "Back" [ref=f1e224]
+              - button "Next step" [ref=f1e117]
+      - generic [ref=f1e120]:
+        - generic [ref=f1e121]:
+          - generic [ref=f1e122]: Premium garments
+          - generic [ref=f1e127]: High-quality printing
+          - generic [ref=f1e136]: Reliable service
+          - generic [ref=f1e144]: Local pricing
+        - generic [ref=f1e150]:
+          - link "motshirtmauritius@gmail.com" [ref=f1e151] [cursor=pointer]:
+            - /url: mailto:motshirtmauritius@gmail.com
+          - generic [ref=f1e152]: •
+          - link "+230 5988 3880" [ref=f1e153] [cursor=pointer]:
+            - /url: tel:+23059883880
+  - button "Open Next.js Dev Tools" [ref=f1e159] [cursor=pointer]
+  - alert [ref=f1e163]
