@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ImgHTMLAttributes, type SyntheticEvent } from "react";
+import styles from "./LoadingImage.module.css";
 
 type LoadingImageStatus = "loading" | "loaded" | "error";
 
@@ -13,6 +14,7 @@ type LoadingImageProps = ImgHTMLAttributes<HTMLImageElement> & {
   inViewRootMargin?: string;
   pollMs?: number;
   compactStatus?: boolean;
+  statusVariant?: "badge" | "progress";
 };
 
 export default function LoadingImage({
@@ -24,6 +26,7 @@ export default function LoadingImage({
   inViewRootMargin = "200px",
   pollMs = 300,
   compactStatus = false,
+  statusVariant = "badge",
   src,
   alt,
   className,
@@ -126,7 +129,17 @@ export default function LoadingImage({
 
   return (
     <div ref={wrapperRef} className={`relative ${wrapperClassName || ""}`} aria-busy={status === "loading"}>
-      {showStatus && compactStatus && (
+      {showStatus && statusVariant === "progress" && (
+        <div className={styles.progressPanel}>
+          <span className={styles.progressLabel} role="status">{statusTextLabel}</span>
+          {status === "loading" && (
+            <div className={styles.progressTrack} role="progressbar" aria-label={statusText}>
+              <span className={styles.progressFill} />
+            </div>
+          )}
+        </div>
+      )}
+      {showStatus && statusVariant === "badge" && compactStatus && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-white/75 backdrop-blur-[2px]">
           {status === "loading" ? (
             <span className="inline-flex h-7 w-7 animate-spin rounded-full border-[3px] border-slate-200 border-t-[#ff5a0a]" />
@@ -136,7 +149,7 @@ export default function LoadingImage({
           <span className="sr-only">{statusTextLabel}</span>
         </div>
       )}
-      {showStatus && !compactStatus && (
+      {showStatus && statusVariant === "badge" && !compactStatus && (
         <div className="absolute bottom-3 right-3 z-10 flex items-center gap-2 rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 backdrop-blur">
           <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-slate-300 border-t-slate-500 animate-spin" />
           <span>{statusTextLabel}</span>

@@ -1,4 +1,4 @@
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { Timestamp, collection, getDocs, orderBy, query } from "firebase/firestore";
 import {
   readyMadeUniforms,
   type ReadyMadeUniform,
@@ -11,8 +11,8 @@ export type ReadyMadeUniformItem = ReadyMadeUniform & {
   id: string;
   position: number;
   isActive: boolean;
-  createdAt?: unknown;
-  updatedAt?: unknown;
+  createdAt?: number | null;
+  updatedAt?: number | null;
 };
 
 export type ReadyMadeUniformInput = Omit<
@@ -54,6 +54,18 @@ export const READY_MADE_UNIFORM_ACCENT_OPTIONS = [
     badgeClass: "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700",
   },
 ] as const;
+
+// Firestore Timestamp instances cannot cross the Server/Client Component boundary.
+function timestampMillis(value: unknown): number | null {
+  const millis = value instanceof Timestamp
+    ? value.toMillis()
+    : value instanceof Date
+      ? value.getTime()
+      : typeof value === "number"
+        ? value
+        : null;
+  return millis !== null && Number.isFinite(millis) ? millis : null;
+}
 
 function cleanString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -150,8 +162,8 @@ export function mapReadyMadeUniformDoc(
       `Hi! I want the ready-made uniform ${code}. Can you customize it with my logo?`,
     position: parsePosition(data.position, fallback?.position ?? 0),
     isActive: parseBoolean(data.isActive, fallback?.isActive ?? true),
-    createdAt: data.createdAt,
-    updatedAt: data.updatedAt,
+    createdAt: timestampMillis(data.createdAt),
+    updatedAt: timestampMillis(data.updatedAt),
   };
 }
 

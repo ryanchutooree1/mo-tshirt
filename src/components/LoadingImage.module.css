@@ -1,0 +1,52 @@
+.progressPanel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 10;
+  width: min(240px, calc(100% - 32px));
+  padding: 20px 24px;
+  transform: translate(-50%, -50%);
+  border: 1px solid #e2e6ec;
+  border-radius: 16px;
+  background: rgb(255 255 255 / 95%);
+  box-shadow: 0 8px 28px rgb(17 19 24 / 8%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.progressLabel {
+  display: block;
+  color: #303640;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.progressTrack {
+  height: 8px;
+  margin-top: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e5e9ef;
+}
+
+.progressFill {
+  display: block;
+  width: 40%;
+  height: 100%;
+  border-radius: inherit;
+  background: #ff3b22;
+  animation: loading-progress 1.3s ease-in-out infinite;
+}
+
+@keyframes loading-progress {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progressFill {
+    animation: none;
+    transform: translateX(75%);
+  }
+}

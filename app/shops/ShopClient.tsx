@@ -1,5 +1,6 @@
 "use client";
 
+import styles from "./shop.module.css";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -136,20 +137,6 @@ type ProductThumbnailRailProps = {
   item: ShopItem;
 };
 
-function ShopsLoading() {
-  return (
-    <main className="grid min-h-screen place-items-center bg-[#f7f7fb] text-neutral-900">
-      <div className="flex flex-col items-center gap-3" role="status" aria-live="polite">
-        <span
-          className="h-10 w-10 animate-spin rounded-full border-4 border-neutral-200 border-t-[#FF6600]"
-          aria-hidden="true"
-        />
-        <p className="text-sm font-medium text-neutral-600">Loading…</p>
-      </div>
-    </main>
-  );
-}
-
 function ShopProductImage({ src, alt }: ShopProductImageProps) {
   const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
   const [retryNonce, setRetryNonce] = useState(0);
@@ -194,7 +181,7 @@ function ShopProductImage({ src, alt }: ShopProductImageProps) {
       {status === "loading" && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-[2px]">
           <span
-            className="inline-flex h-10 w-10 animate-spin rounded-full border-4 border-neutral-200 border-t-[#FF6600]"
+            className="inline-flex h-10 w-10 animate-spin rounded-full border-4 border-neutral-200 border-t-[#ff3b22]"
             aria-hidden="true"
           />
         </div>
@@ -269,6 +256,7 @@ function ProductThumbnailRail({
 }
 
 export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformItem[] }) {
+  const [catalogView, setCatalogView] = useState<"plain" | "uniforms">("plain");
   const [items, setItems] = useState<ShopItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -555,58 +543,31 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
     setOrderLines([]);
   }
 
-  if (loading) {
-    return <ShopsLoading />;
-  }
-
   return (
-    <div className="min-h-screen bg-[#f7f7fb] text-neutral-900">
+    <div className={styles.shop}>
       <div className="relative overflow-x-clip">
-        <div className="pointer-events-none absolute -left-32 top-[-12rem] h-72 w-72 rounded-full bg-slate-200/70 blur-3xl" />
-        <div className="pointer-events-none absolute right-[-6rem] top-12 h-80 w-80 rounded-full bg-zinc-200/60 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-[-8rem] left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-slate-100/70 blur-3xl" />
-
-        <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
-          <Link href="/" className="flex shrink-0 items-center justify-center gap-2 sm:justify-start" aria-label="MO T-SHIRT Home">
-            <Image
-              src="/logo_transparent.webp"
-              alt="MO T-SHIRT logo"
-              width={150}
-              height={60}
-              priority
-              className="h-10 w-auto sm:h-12"
-            />
-          </Link>
-          <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
-            <nav className="flex w-max min-w-full items-center justify-start gap-2 pb-1 text-xs font-semibold text-neutral-600 sm:w-auto sm:min-w-0 sm:justify-end sm:gap-4 sm:pb-0 sm:text-sm" aria-label="Shop navigation">
-              <Link href="/" className="whitespace-nowrap rounded-full border border-neutral-200 bg-white px-3 py-2 transition hover:border-black hover:text-black sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">Home</Link>
-              <Link href="/shop" className="whitespace-nowrap rounded-full border border-transparent bg-[#FF6600] px-3 py-2 text-white shadow-sm hover:bg-orange-600 sm:px-3 sm:py-1">
-                Shop
-              </Link>
-              <Link href="/#our-work" className="whitespace-nowrap rounded-full border border-neutral-200 bg-white px-3 py-2 transition hover:border-black hover:text-black sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">Our Work</Link>
-              <Link href="/#contact" className="whitespace-nowrap rounded-full border border-neutral-200 bg-white px-3 py-2 transition hover:border-black hover:text-black sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">Contact</Link>
-              <TrackedWhatsAppLink
-                href={getWhatsAppUrl()}
-                trackingLocation="shops_header"
-                trackingSource="shops_page"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="whitespace-nowrap rounded-full border border-neutral-200 bg-white px-3 py-2 transition hover:border-black hover:text-black sm:border-0 sm:bg-transparent sm:px-0 sm:py-0"
-              >
-                WhatsApp
-              </TrackedWhatsAppLink>
-            </nav>
-          </div>
-        </div>
+        <header className={styles.header}>
+          <Link href="/" className={styles.wordmark} aria-label="MO T-SHIRT home"><strong>MO</strong> T-SHIRT<span>.</span></Link>
+          <nav aria-label="Shop navigation">
+            <Link href="/">Home</Link><Link href="/shop" aria-current="page">Shop</Link>
+            <Link href="/design-studio">Design studio</Link><Link href="/#track-parcel">Track parcel ↗</Link>
+          </nav>
+          <button type="button" onClick={() => setIsOrderOpen(true)}>Your order <span>{totalQty}</span></button>
         </header>
-
-        <main className="relative z-10 mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-          <div id="plain-apparel" className="space-y-8">
-            <section className="flex flex-col gap-4 rounded-[28px] border border-neutral-200 bg-white/80 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <section className={styles.hero}>
+          <div><p className={styles.eyebrow}>THE MO SHOP · MAURITIUS</p><h1>Choose it.<br/><span>Make it yours.</span></h1></div>
+          <div className={styles.heroAside}><p>Plain apparel. Everyday essentials.<br/>Ready for your next idea.</p><Link href="/design-studio">Create your design <FiArrowRight aria-hidden="true" /></Link><span>ONE PIECE OR A FULL RUN</span></div>
+        </section>
+        <main className={styles.main}>
+          <div className={styles.catalogTabs} aria-label="Product collections">
+            <button type="button" aria-pressed={catalogView === "plain"} onClick={() => setCatalogView("plain")}>Plain products <span>{items.length}</span></button>
+            <button type="button" aria-pressed={catalogView === "uniforms"} onClick={() => setCatalogView("uniforms")}>Uniform designs <span>{uniforms.length}</span></button>
+          </div>
+          <div id="plain-apparel" hidden={catalogView !== "plain"} className="space-y-8">
+            <section className={styles.filters}>
               <div>
                 <p className="text-sm font-medium text-neutral-800">Filters</p>
-                <p className="text-xs text-neutral-500">Refine by product, color, or size.</p>
+                <button type="button" className={styles.reset} onClick={() => {setSelectedProduct("all");setSelectedColor("all");setSelectedSize("all");}}>Clear filters ↗</button>
               </div>
               <div
                 className={`grid w-full gap-3 sm:w-auto ${
@@ -664,26 +625,26 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
             )}
         </div>
 
-        <div className="mt-10 grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] xl:items-start">
-          <div className="min-w-0">
+        <div className={styles.catalog}>
+          {loading && catalogView === "plain" && <p role="status" className="py-8 text-sm text-neutral-500">Loading live products…</p>}
+          <div className="min-w-0" hidden={catalogView !== "plain"}>
             <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#d45400]">Plain Shop</p>
-                <h1 className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-neutral-950">Plain apparel catalog</h1>
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#d52c16]">Plain Shop</p>
+                <h2 className={styles.catalogTitle}>Find your fit.</h2>
               </div>
               <span className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-600 shadow-sm">
                 {filtered.length} products
               </span>
             </div>
 
-            <section className="grid gap-6 sm:grid-cols-2" aria-label="Plain apparel products">
+            <section className={styles.productGrid} aria-label="Plain apparel products">
               {filtered.map((item) => {
             const sizes = getSizes(item);
             const sizePrices = getSizePrices(item);
             const isOneSizeItem =
               sizePrices.length === 1 && isOneSizeLabel(sizePrices[0]?.size || "");
             const hasMultipleColors = item.colors.length > 1;
-            const hasMultipleSizes = sizePrices.length > 1;
             const priceValues = sizePrices
               .map((entry) => entry.price)
               .filter((price) => Number.isFinite(price)) as number[];
@@ -698,7 +659,7 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
             const imageViews = getShopImageViews(item);
             const displayPhotoUrl = selectedImageUrls[item.id] || imageViews[0]?.url || item.photoUrl;
             return (
-              <article key={item.id} className="group rounded-[28px] border border-neutral-200 bg-white/90 p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+              <article key={item.id} className={styles.productCard}>
                 <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-neutral-100">
                   {displayPhotoUrl ? (
                     <ShopProductImage src={displayPhotoUrl} alt={item.title} />
@@ -761,6 +722,8 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
                       sizePrices.map((entry) => (
                         <button
                           key={entry.size}
+                          aria-pressed={selection.size === entry.size}
+                          title={`${formatSizeLabel(entry.size)} · ${formatDisplayWholeMoney(entry.price)}`}
                           type="button"
                           onClick={() => updateSelection(item.id, { size: entry.size })}
                           className={`rounded-full border px-3 py-1 transition ${
@@ -793,22 +756,6 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
                         </select>
                       </label>
                     )}
-                    {hasMultipleSizes && !isOneSizeItem && (
-                      <label className="flex flex-col gap-2">
-                        Size
-                        <select
-                          value={selection.size}
-                          onChange={(e) => updateSelection(item.id, { size: e.target.value })}
-                          className="rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
-                        >
-                          {sizes.map((size) => (
-                            <option key={size} value={size}>
-                              {`${formatSizeLabel(size)} (${formatDisplayWholeMoney(getSizePrice(item, size))})`}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    )}
                     <label className="flex flex-col gap-2 sm:col-span-2">
                       Qty
                       <input
@@ -832,7 +779,7 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
                     {getShopDesignProductId(item.title) && item.inStock ? (
                       <Link
                         href={`/design-studio?shopItem=${encodeURIComponent(item.id)}`}
-                        className="inline-flex items-center justify-center gap-2 rounded-full bg-[#FF6600] px-4 py-2 text-xs font-semibold text-white transition hover:bg-orange-600"
+                        className="inline-flex items-center justify-center gap-2 rounded-full bg-[#ff3b22] px-4 py-2 text-xs font-semibold text-white transition hover:bg-orange-600"
                       >
                         <FiEdit3 className="h-3.5 w-3.5" />
                         Design this product
@@ -853,14 +800,14 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
               })}
             </section>
 
-            {!filtered.length && !error && (
+            {!loading && !filtered.length && !error && (
               <div className="mt-12 rounded-[24px] border border-neutral-200 bg-neutral-50 px-6 py-10 text-center text-sm text-neutral-600">
                 No items match those filters yet.
               </div>
             )}
           </div>
 
-          <aside className="min-w-0" aria-label="Uniform products">
+          <aside className="min-w-0" hidden={catalogView !== "uniforms"} aria-label="Uniform products">
             <div className="flex items-end justify-between gap-4">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#e65500]">Uniform Shop</p>
@@ -875,7 +822,7 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
               </Link>
             </div>
 
-            <section className="mt-4 grid gap-6 sm:grid-cols-2 xl:grid-cols-1" aria-label="Ready-made uniform products">
+            <section className={styles.productGrid} aria-label="Ready-made uniform products">
               {uniforms.map((uniform) => {
                 const gallery = [uniform.imageSrc, ...(uniform.imageGallery || [])].filter(Boolean);
 
@@ -916,7 +863,7 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
                       <ul className="mt-4 grid gap-2 text-xs font-medium text-neutral-700">
                         {uniform.features.slice(0, 3).map((feature) => (
                           <li key={feature} className="flex items-start gap-2">
-                            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#FF6600]" aria-hidden="true" />
+                            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#ff3b22]" aria-hidden="true" />
                             <span>{feature}</span>
                           </li>
                         ))}
@@ -929,7 +876,7 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
                           trackingSource="shop"
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center rounded-full bg-[#FF6600] px-4 py-3 text-sm font-semibold text-white transition hover:bg-orange-600"
+                          className="inline-flex items-center justify-center rounded-full bg-[#ff3b22] px-4 py-3 text-sm font-semibold text-white transition hover:bg-orange-600"
                         >
                           Order {uniform.code}
                         </TrackedWhatsAppLink>
@@ -956,6 +903,7 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
           </aside>
         </div>
       </main>
+      <footer className={styles.footer}><Link href="/" className={styles.wordmark}><strong>MO</strong> T-SHIRT.</Link><p>Made in Mauritius. Made for you.</p><div><Link href="/#order">Get a print quote ↗</Link><Link href="/terms">Terms</Link><Link href="/privacy">Privacy</Link></div></footer>
 
       <button
         type="button"
@@ -975,6 +923,7 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
       <div
         className={`fixed inset-0 z-50 ${isOrderOpen ? "pointer-events-auto" : "pointer-events-none"}`}
         aria-hidden={!isOrderOpen}
+        inert={!isOrderOpen}
       >
         <div
           className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${isOrderOpen ? "opacity-100" : "opacity-0"}`}
@@ -1089,24 +1038,28 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
                 value={deliveryInfo.name}
                 onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, name: e.target.value }))}
                 className="w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+                aria-label="Your Name"
                 placeholder="Your Name"
               />
               <input
                 value={deliveryInfo.address}
                 onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, address: e.target.value }))}
                 className="w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+                aria-label="Your Address"
                 placeholder="Your Address"
               />
               <input
                 value={deliveryInfo.postCode || ""}
                 onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, postCode: e.target.value }))}
                 className="w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+                aria-label="Post Code (optional)"
                 placeholder="Post Code (optional)"
               />
               <input
                 value={deliveryInfo.phone}
                 onChange={(e) => setDeliveryInfo((prev) => ({ ...prev, phone: e.target.value }))}
                 className="w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+                aria-label="Your Phone Number"
                 placeholder="Your Phone Number"
               />
             </div>
@@ -1119,7 +1072,7 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
               rel="noopener noreferrer"
               className={`inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${
                 canOrder
-                  ? "bg-[#FF6600] text-white hover:bg-orange-600"
+                  ? "bg-[#ff3b22] text-white hover:bg-orange-600"
                   : "cursor-not-allowed bg-neutral-200 text-neutral-500"
               }`}
               aria-disabled={!canOrder}

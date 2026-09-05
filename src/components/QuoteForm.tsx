@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { Check, ChevronDown, FileText, UploadCloud } from "lucide-react";
+import { ArrowUpRight, Check, ChevronDown, FileText, Plus, UploadCloud } from "lucide-react";
 import {
   useEffect,
+  useId,
   useRef,
   useState,
   type ChangeEvent,
@@ -32,6 +33,7 @@ import {
 type QuoteFormProps = {
   source?: string;
   className?: string;
+  appearance?: "default" | "editorial";
 };
 
 type FormState = {
@@ -221,12 +223,14 @@ function ColorSelect({
   options,
   placeholder,
   disabled,
+  id,
   onChange,
 }: {
   value: string;
   options: string[];
   placeholder: string;
   disabled?: boolean;
+  id?: string;
   onChange: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -264,6 +268,7 @@ function ColorSelect({
   return (
     <div ref={rootRef} className="relative mt-1">
       <button
+        id={id}
         type="button"
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
@@ -513,7 +518,10 @@ function ArtworkFilePreview({ file }: { file: File | null }) {
   );
 }
 
-export default function QuoteForm({ source = "Website", className }: QuoteFormProps) {
+export default function QuoteForm({ source = "Website", className, appearance = "default" }: QuoteFormProps) {
+  const formId = useId();
+  const isEditorial = appearance === "editorial";
+  const MethodGuide = isEditorial ? "details" : "div";
   const [form, setForm] = useState<FormState>({
     name: "",
     email: "",
@@ -972,7 +980,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
 
   return (
     <div className={className}>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4" aria-label="Request a quote" aria-busy={loading}>
         <div className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
           <label htmlFor="quote-website">Website</label>
           <input
@@ -985,11 +993,15 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           />
         </div>
 
+        {isEditorial ? <div data-quote-part="section-heading"><h3>Your details</h3><span>Let’s keep in touch.</span></div> : null}
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Name *</label>
+            <label htmlFor={`${formId}-name`} className="block text-sm font-medium text-neutral-700">Name *</label>
             <input
               required
+              id={`${formId}-name`}
+              autoComplete="name"
               value={form.name}
               onChange={(e) => update("name", e.target.value)}
               className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
@@ -997,10 +1009,13 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Email *</label>
+            <label htmlFor={`${formId}-email`} className="block text-sm font-medium text-neutral-700">Email *</label>
             <input
               required
               type="email"
+              id={`${formId}-email`}
+              autoComplete="email"
+              aria-invalid={Boolean(emailError)}
               value={form.email}
               onChange={handleEmailChange}
               className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none ${
@@ -1014,8 +1029,12 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Phone / WhatsApp</label>
+            <label htmlFor={`${formId}-phone`} className="block text-sm font-medium text-neutral-700">Phone / WhatsApp</label>
             <input
+              id={`${formId}-phone`}
+              type="tel"
+              autoComplete="tel"
+              aria-invalid={Boolean(phoneError)}
               value={form.phone}
               onChange={(e) => handlePhoneChange(e.target.value)}
               className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none ${
@@ -1026,8 +1045,9 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
             {phoneError && <p className="mt-1 text-xs text-red-600">{phoneError}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Deadline (optional)</label>
+            <label htmlFor={`${formId}-deadline`} className="block text-sm font-medium text-neutral-700">Deadline (optional)</label>
             <input
+              id={`${formId}-deadline`}
               value={form.deadline}
               onChange={(e) => update("deadline", e.target.value)}
               className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
@@ -1036,10 +1056,13 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           </div>
         </div>
 
-        <div className={`grid grid-cols-1 gap-4 ${selectedPrintMethodInfo ? "sm:grid-cols-2" : ""}`}>
+        {isEditorial ? <div data-quote-part="section-heading"><h3>Your order</h3><span>The garment. The print. The details.</span></div> : null}
+
+        <div data-quote-part="method" className={`grid grid-cols-1 gap-4 ${selectedPrintMethodInfo ? "sm:grid-cols-2" : ""}`}>
           <div>
-            <label className="block text-sm font-medium text-neutral-700">Print method</label>
+            <label htmlFor={`${formId}-method`} className="block text-sm font-medium text-neutral-700">Print method</label>
             <select
+              id={`${formId}-method`}
               value={printMethod}
               onChange={(e) => setPrintMethod(e.target.value)}
               className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
@@ -1050,7 +1073,9 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
             </select>
           </div>
           {selectedPrintMethodInfo ? (
-            <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-700">
+            <MethodGuide data-quote-part="method-guide" className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-700">
+              {isEditorial ? <summary>Printing guide <Plus size={14} aria-hidden="true" /></summary> : null}
+              <div data-quote-part="guide-copy">
               <p className="font-semibold text-neutral-900">{selectedPrintMethodInfo.title}</p>
               {selectedPrintMethodInfo.description ? (
                 <p className="mt-2">{selectedPrintMethodInfo.description}</p>
@@ -1065,7 +1090,8 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
               {selectedPrintMethodInfo.note ? (
                 <p className="mt-2 text-xs text-neutral-500">{selectedPrintMethodInfo.note}</p>
               ) : null}
-            </div>
+              </div>
+            </MethodGuide>
           ) : null}
         </div>
 
@@ -1081,7 +1107,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           </div>
         )}
 
-        <div className="space-y-3">
+        <div data-quote-part="artwork-section" className="space-y-3">
           <div className="sr-only" aria-hidden="true">
             {artworkItems.flatMap((item) =>
               (["front", "back"] as ArtworkSlot[]).map((slot) => (
@@ -1118,17 +1144,17 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
             </button>
           ) : (
             <>
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <div data-quote-part="artwork-heading" className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700">Upload your logo / artwork</label>
+                  <label className="block text-sm font-medium text-neutral-700">{isEditorial ? "Garments & artwork" : "Upload your logo / artwork"}</label>
                   <p className="mt-1 text-xs text-neutral-500">
-                    Add one item per product, size, logo, or print side.
+                    {isEditorial ? "Add an item for each garment, size or design." : "Add one item per product, size, logo, or print side."}
                   </p>
                 </div>
                 <div className="inline-flex items-center rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-semibold text-neutral-500">
                   {uploadedArtworkCount
                     ? `${uploadedArtworkCount} file${uploadedArtworkCount === 1 ? "" : "s"} added`
-                    : "No file chosen yet"}
+                    : isEditorial ? "Artwork pending" : "No file chosen yet"}
                 </div>
               </div>
               {!loadingColors && !availableColors.length ? (
@@ -1153,11 +1179,11 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                       ? "Select color"
                       : "No colors available";
                 return (
-                <div key={item.id} className="rounded-[24px] border border-neutral-200 bg-neutral-50/80 p-4 shadow-[0_20px_45px_-40px_rgba(15,23,42,0.55)]">
+                <div key={item.id} data-quote-part="item" className="rounded-[24px] border border-neutral-200 bg-neutral-50/80 p-4 shadow-[0_20px_45px_-40px_rgba(15,23,42,0.55)]">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-base font-semibold text-neutral-900">Item {index + 1}</p>
-                      <p className="mt-1 text-xs text-neutral-500">Choose the exact placement, then upload the required logo.</p>
+                      {!isEditorial ? <p className="mt-1 text-xs text-neutral-500">Choose the exact placement, then upload the required logo.</p> : null}
                     </div>
                     {artworkItems.length > 1 ? (
                       <button
@@ -1170,7 +1196,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                     ) : null}
                   </div>
 
-                  <div className="mt-3 flex flex-wrap items-end gap-3">
+                  <div data-quote-part="item-fields" className="mt-3 flex flex-wrap items-end gap-3">
                     <div
                       className="w-full sm:w-[var(--field-width)]"
                       style={
@@ -1179,8 +1205,9 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                         } as CSSProperties
                       }
                     >
-                      <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Product</label>
+                      <label htmlFor={`${formId}-${item.id}-product`} className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Product</label>
                       <select
+                        id={`${formId}-${item.id}-product`}
                         value={line.garment}
                         onChange={(e) => {
                           const nextGarment = e.target.value;
@@ -1214,8 +1241,9 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                         } as CSSProperties
                       }
                     >
-                      <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Colour</label>
+                      <label htmlFor={`${formId}-${item.id}-color`} className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Colour</label>
                       <ColorSelect
+                        id={`${formId}-${item.id}-color`}
                         value={line.color}
                         options={colorOptions}
                         placeholder={colorPlaceholder}
@@ -1227,8 +1255,9 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                       />
                     </div>
                     <div className="w-[5.5rem] shrink-0">
-                      <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Size</label>
+                      <label htmlFor={`${formId}-${item.id}-size`} className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Size</label>
                       <select
+                        id={`${formId}-${item.id}-size`}
                         value={line.size}
                         onChange={(e) => {
                           updateGarmentLine(index, { size: e.target.value });
@@ -1244,11 +1273,12 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                       </select>
                     </div>
                     <div className="w-[5.5rem] shrink-0">
-                      <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Qty</label>
+                      <label htmlFor={`${formId}-${item.id}-quantity`} className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Qty</label>
                       <input
                         type="number"
                         min={1}
                         required
+                        id={`${formId}-${item.id}-quantity`}
                         value={line.quantity}
                         onChange={(e) => {
                           updateGarmentLine(index, { quantity: e.target.value });
@@ -1272,8 +1302,9 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                         } as CSSProperties
                       }
                     >
-                      <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Print side</label>
+                      <label htmlFor={`${formId}-${item.id}-placement`} className="block text-xs font-semibold uppercase tracking-[0.08em] text-neutral-600">Print side</label>
                       <select
+                        id={`${formId}-${item.id}-placement`}
                         value={item.printPlacement}
                         onChange={(e) =>
                           updateArtworkItem(index, {
@@ -1292,12 +1323,12 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                   </div>
 
                   {logoSlots.length ? (
-                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <div data-quote-part="logo-grid" className="mt-3 grid gap-3 md:grid-cols-2">
                       {logoSlots.map((slot) => {
                       const file = getArtworkSlotFile(item, slot);
                       const slotLabel = getArtworkSlotLabel(slot);
                       return (
-                        <div key={slot} className="rounded-2xl border border-neutral-200 bg-white p-3">
+                        <div key={slot} data-quote-part="logo" className="rounded-2xl border border-neutral-200 bg-white p-3">
                           <div className="flex flex-wrap items-start justify-between gap-2">
                             <div>
                               <p className="text-sm font-semibold text-neutral-900">{slotLabel}</p>
@@ -1346,6 +1377,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                             </div>
                           ) : (
                             <button
+                              data-quote-part="upload"
                               type="button"
                               onClick={() => openArtworkPicker(item.id, slot)}
                               className="mt-3 flex min-h-32 w-full flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 px-4 py-5 text-center transition hover:border-emerald-500 hover:bg-emerald-50/40 focus:outline-none focus:ring-2 focus:ring-emerald-200"
@@ -1361,7 +1393,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                           )}
 
                           <label className="mt-3 block text-xs font-semibold uppercase tracking-[0.06em] text-neutral-600">
-                            Description below {slotLabel.toLowerCase()}
+                            {isEditorial ? "Placement notes (optional)" : `Description below ${slotLabel.toLowerCase()}`}
                             <textarea
                               value={slot === "front" ? item.frontLogoDescription : item.backLogoDescription}
                               onChange={(e) =>
@@ -1397,18 +1429,21 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
               <button
                 type="button"
                 onClick={addOrderItem}
+                data-quote-part="add-item"
                 className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 px-4 py-2 text-xs font-semibold text-white shadow-[0_12px_24px_-16px_rgba(249,115,22,0.75)] transition hover:from-orange-600 hover:via-amber-500 hover:to-orange-700"
               >
-                + Add another item / logo
+                {isEditorial ? <><Plus size={15} aria-hidden="true" /> Add another item</> : "+ Add another item / logo"}
               </button>
             </>
           )}
         </div>
 
+        {isEditorial ? <div data-quote-part="section-heading"><h3>Delivery & notes</h3></div> : null}
         <div>
-          <label className="block text-sm font-medium text-neutral-700">Notes</label>
+          <label htmlFor={`${formId}-notes`} className="block text-sm font-medium text-neutral-700">Notes {isEditorial ? <span>(optional)</span> : null}</label>
           <textarea
-            value={form.notes}
+            id={`${formId}-notes`}
+              value={form.notes}
             onChange={(e) => update("notes", e.target.value)}
             className="mt-1 h-[86px] w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
             placeholder="Describe the print: front chest 1-color, back 2-color, sleeve logo, sizes, deadlines…"
@@ -1416,9 +1451,10 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-neutral-700">Delivery</label>
+          <label htmlFor={`${formId}-delivery`} className="block text-sm font-medium text-neutral-700">Delivery</label>
           <select
-            value={form.delivery}
+            id={`${formId}-delivery`}
+              value={form.delivery}
             onChange={(e) => update("delivery", e.target.value)}
             className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-black focus:outline-none"
           >
@@ -1433,7 +1469,8 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
             <p className="text-sm font-semibold text-neutral-800">Delivery Info</p>
             <div className="mt-3 grid gap-3">
               <input
-                value={form.deliveryName}
+                id={`${formId}-deliveryName`}
+              value={form.deliveryName}
                 onChange={(e) => update("deliveryName", e.target.value)}
                 className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
                 placeholder="Your Full Name"
@@ -1441,7 +1478,8 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
               <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_200px]">
                 <div>
                   <input
-                    value={form.deliveryAddress}
+                    id={`${formId}-deliveryAddress`}
+              value={form.deliveryAddress}
                     onChange={(e) => update("deliveryAddress", e.target.value)}
                     className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm focus:border-black focus:outline-none"
                     placeholder="Your Delivery Address"
@@ -1449,7 +1487,8 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                 </div>
                 <div>
                   <input
-                    value={form.deliveryPostCode}
+                    id={`${formId}-deliveryPostCode`}
+              value={form.deliveryPostCode}
                     onChange={(e) => handleDeliveryPostCodeChange(e.target.value)}
                     className={`w-full rounded-lg border bg-white px-3 py-2 text-sm focus:outline-none ${
                       deliveryPostCodeError ? "border-red-400 focus:border-red-500" : "border-neutral-200 focus:border-black"
@@ -1460,7 +1499,8 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
                 </div>
               </div>
               <input
-                value={form.deliveryPhone}
+                id={`${formId}-deliveryPhone`}
+              value={form.deliveryPhone}
                 onChange={(e) => handleDeliveryPhoneChange(e.target.value)}
                 className={`w-full rounded-lg border bg-white px-3 py-2 text-sm focus:outline-none ${
                   deliveryPhoneError ? "border-red-400 focus:border-red-500" : "border-neutral-200 focus:border-black"
@@ -1472,13 +1512,14 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div data-quote-part="actions" className="flex flex-wrap items-center gap-3">
           <button
             type="submit"
             disabled={loading || Boolean(emailError)}
             className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 px-6 py-3 text-sm font-semibold text-white shadow-[0_20px_38px_-18px_rgba(249,115,22,0.9)] transition hover:-translate-y-0.5 hover:from-orange-600 hover:via-amber-500 hover:to-orange-700 disabled:translate-y-0 disabled:opacity-60"
           >
             {loading ? submitStatus : "Get my quote"}
+            {isEditorial ? <ArrowUpRight size={18} aria-hidden="true" /> : null}
           </button>
           <TrackedWhatsAppLink
             href={getWhatsAppUrl("Hi! Can you quote me for custom shirts?")}
@@ -1488,7 +1529,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
             rel="noreferrer"
             className="inline-flex items-center justify-center rounded-full border border-neutral-300 px-4 py-2 text-sm font-semibold text-black transition hover:border-black"
           >
-            Or WhatsApp {CONTACT_PHONE_DISPLAY}
+            {isEditorial ? "Prefer WhatsApp?" : `Or WhatsApp ${CONTACT_PHONE_DISPLAY}`}
           </TrackedWhatsAppLink>
         </div>
 
@@ -1503,7 +1544,7 @@ export default function QuoteForm({ source = "Website", className }: QuoteFormPr
       </form>
 
       <p className="mt-4 text-xs text-neutral-500">
-        By submitting, you agree we may reach you at {CONTACT_TEL} / email to confirm details and pricing.
+        {isEditorial ? "We’ll confirm your artwork, price and timing before printing." : <>By submitting, you agree we may reach you at {CONTACT_TEL} / email to confirm details and pricing.</>}
       </p>
     </div>
   );
