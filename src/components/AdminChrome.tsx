@@ -105,7 +105,6 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Commerce",
     paths: [
       "/admin/quotation-approval",
-      "/admin/contracts",
       "/admin/shops",
       "/admin/ready-made-uniforms",
       "/admin/design-studio",
