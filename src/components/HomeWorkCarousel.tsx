@@ -51,11 +51,9 @@ export default function HomeWorkCarousel() {
       // Respect a change to the visitor's reduced-motion preference immediately.
       const position = swiper.getTranslate();
       swiper.autoplay.stop();
-      swiper.setTransition(0);
-      swiper.setTranslate(position);
+      swiper.translateTo(position, 0, false);
       swiper.animating = false;
-      swiper.updateActiveIndex();
-      swiper.updateSlidesClasses();
+      swiper.update();
     }
   }, [reducedMotion, shouldAutoplay]);
 

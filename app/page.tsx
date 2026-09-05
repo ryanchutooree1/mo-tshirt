@@ -5,16 +5,19 @@ import {
   ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
+  Truck,
+  UsersRound,
   Plus,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import HomeWorkCarousel from "@/components/HomeWorkCarousel";
 import HomeMobileMenu from "@/components/HomeMobileMenu";
+import HomeOrderWorkspace from "@/components/HomeOrderWorkspace";
 import HomeSizeGuide from "@/components/HomeSizeGuide";
 import HomeLocation from "@/components/HomeLocation";
-import HomeOrderForm from "@/components/HomeOrderForm";
+import HomeParcelTracking from "@/components/HomeParcelTracking";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
-import { getWhatsAppUrl } from "@/data/work";
+import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
 import { buildPageMetadata } from "@/lib/seo";
 import styles from "./founder-home.module.css";
 import editorial from "./home.module.css";
@@ -98,7 +101,15 @@ export default function HomePage() {
         </Link>
         <nav className={styles.desktopNav} aria-label="Main navigation">
           <a href="#services">What we print</a>
+          <Link href="/shop">Shop</Link>
           <a href="#process">How it works</a>
+          <a href="#track-parcel">
+            Track your parcel
+            <Truck size={20} strokeWidth={1.6} color="#ff3b22" aria-hidden="true">
+              <rect x={5} y={8} width={6} height={5} rx={0.5} />
+              <path d="M8 8v2" />
+            </Truck>
+          </a>
         </nav>
         <a className={styles.headerCta} href="#order">
           Start an order{" "}
@@ -121,18 +132,18 @@ export default function HomePage() {
           <div className={styles.heroContent}>
             <p className={styles.eyebrow}>CUSTOM T-SHIRT PRINTING</p>
             <h1 id="hero-title">
-              MAKE
+              Trying to be
               <br />
-              IT
+              <span className={styles.heroRank}>#1</span> in
               <br />
-              <em>HAPPEN.</em>
+              Mauritius.
             </h1>
             <p className={styles.heroCopy}>
               Your idea should not stay on a screen. We turn it into a T-shirt
               people are proud to wear.
             </p>
             <div className={styles.heroActions}>
-              <a className={styles.primaryButton} href="#order">
+              <a className={styles.primaryButton} href="#quote-form">
                 Get your price <ArrowRight size={20} aria-hidden="true" />
               </a>
               <TrackedWhatsAppLink
@@ -148,6 +159,11 @@ export default function HomePage() {
                 <ArrowUpRight size={22} className={styles.whatsappArrow} aria-hidden="true" />
               </TrackedWhatsAppLink>
             </div>
+            <a className={styles.heroTrust} href="#printed-for">
+              <UsersRound size={18} aria-hidden="true" />
+              <span>Trusted by <strong>80+ businesses</strong></span>
+              <ArrowUpRight size={14} aria-hidden="true" />
+            </a>
           </div>
           <div className={styles.heroNote}>
             <span>PRINTED LOCALLY</span>
@@ -174,7 +190,7 @@ export default function HomePage() {
                 <p className={editorial.eyebrow}>HOW TO ORDER</p>
                 <h2 id="process-title">Order in 4 steps.</h2>
               </div>
-              <a href="#order" className={editorial.textButton}>
+              <a href="#quote-form" className={editorial.textButton}>
                 Get a quote <ArrowUpRight size={17} />
               </a>
             </div>
@@ -199,6 +215,7 @@ export default function HomePage() {
           </section>
 
           <section
+            id="printed-for"
             className={editorial.brandStrip}
             aria-label="A few of the businesses we have printed for"
           >
@@ -234,6 +251,7 @@ export default function HomePage() {
         </div>
 
         <HomeSizeGuide />
+        <HomeOrderWorkspace />
 
         <section className={styles.services} id="services">
           <div className={styles.sectionHeading}>
@@ -274,41 +292,51 @@ export default function HomePage() {
             <em>DELIVERED.</em>
           </h2>
         </section>
-
-        <section
-          className={styles.order}
-          id="order"
-          aria-labelledby="order-title"
-        >
-          <div className={styles.orderCopy}>
-            <p className={`${styles.sectionKicker} ${styles.light}`}>
-              START HERE
-            </p>
-            <h2 id="order-title">
-              Tell us what
-              <br />
-              you need.
-            </h2>
-            <p>
-              Send the basics. We will review the job and come back with the
-              right next step.
-            </p>
-            <div className={styles.orderMeta}>
-              <span>MAURITIUS</span>
-              <span>BUSINESS • EVENT • BRAND • PERSONAL</span>
-            </div>
-          </div>
-          <HomeOrderForm />
-        </section>
+        <HomeParcelTracking />
         <HomeLocation />
       </main>
 
       <footer className={styles.footer}>
-        <Link className={styles.logo} href="#top">
-          <Wordmark />
-        </Link>
-        <p>Ideas made wearable in Mauritius.</p>
-        <a href="#top">Back to top ↑</a>
+        <div className={styles.footerMain}>
+          <div className={styles.footerBrand}>
+            <Link className={styles.logo} href="#top" aria-label="MO T-Shirt home">
+              <Wordmark />
+            </Link>
+            <p>Ideas made wearable in Mauritius.</p>
+            <address className={styles.footerContact}>
+              <a href={`tel:${CONTACT_TEL}`}>{CONTACT_PHONE_DISPLAY}</a>
+              <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+              <a href="#location">Surinam, Mauritius <ArrowUpRight size={14} aria-hidden="true" /></a>
+            </address>
+          </div>
+          <nav className={styles.footerLinks} aria-label="Footer order links">
+            <h2>GET STARTED</h2>
+            <a href="#quote-form">Get a quote</a>
+            <a href="#order">Design studio</a>
+            <a href="#our-work">Our work</a>
+            <a href="#track-parcel">Track your parcel</a>
+          </nav>
+          <nav className={styles.footerLinks} aria-label="Footer social links">
+            <h2>STAY CONNECTED</h2>
+            <TrackedWhatsAppLink href={getWhatsAppUrl()} trackingLocation="home_footer" trackingSource="homepage" target="_blank" rel="noopener noreferrer">
+              WhatsApp <ArrowUpRight size={14} aria-hidden="true" />
+            </TrackedWhatsAppLink>
+            <a href="https://www.instagram.com/mo_tshirt_printing/" target="_blank" rel="noopener noreferrer">Instagram <ArrowUpRight size={14} aria-hidden="true" /></a>
+            <a href="https://www.tiktok.com/@mo_tshirt_mauritius" target="_blank" rel="noopener noreferrer">TikTok <ArrowUpRight size={14} aria-hidden="true" /></a>
+          </nav>
+        </div>
+        <div className={styles.footerBottom}>
+          <p className={styles.copyright}>
+            <span>© {new Date().getFullYear()} MO T-SHIRT</span>
+            <span className={styles.copyrightDivider} aria-hidden="true">/</span>
+            <Link href="/login" prefetch={false}>All Rights Reserved</Link>
+          </p>
+          <nav className={styles.footerLegal} aria-label="Footer legal links">
+            <Link href="/terms">Terms</Link>
+            <Link href="/privacy">Privacy</Link>
+            <a href="#top">Back to top ↑</a>
+          </nav>
+        </div>
       </footer>
     </div>
   );
