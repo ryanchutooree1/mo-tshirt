@@ -2,10 +2,11 @@
 
 import { useState, type FormEvent } from "react";
 import { ArrowRight, Check } from "lucide-react";
-import { trackQuoteSubmit } from "@/lib/analytics";
+import { useJourneyTracking } from "@/hooks/useJourneyTracking";
 import styles from "../../app/founder-home.module.css";
 
 export default function HomeOrderForm() {
+  const journey = useJourneyTracking("quote", "Homepage");
   const [pending, setPending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
@@ -40,6 +41,7 @@ export default function HomeOrderForm() {
     setPending(true);
     setError("");
     try {
+      journey.attach(payload);
       const response = await fetch("/api/contact", {
         method: "POST",
         body: payload,
@@ -52,7 +54,7 @@ export default function HomeOrderForm() {
         return;
       }
       setSent(true);
-      trackQuoteSubmit({
+      journey.complete(result.quoteId, {
         form_source: "Homepage",
         total_quantity: Number(payload.get("quantity")),
       });
@@ -81,7 +83,7 @@ export default function HomeOrderForm() {
   }
 
   return (
-    <form
+    <form onChangeCapture={() => journey.start()}
       className={styles.quoteForm}
       onSubmit={handleSubmit}
       aria-busy={pending}

@@ -8,7 +8,7 @@ import { FiArrowRight, FiDownload, FiEdit3, FiLayers } from "react-icons/fi";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { READY_MADE_UNIFORMS_PATH } from "@/data/ready-made-uniforms";
 import { getWhatsAppUrl } from "@/data/work";
-import { trackShopOrderSubmit, trackWhatsAppClick } from "@/lib/analytics";
+import { trackProductInterest, trackWhatsAppClick } from "@/lib/analytics";
 import { formatMoney as formatDisplayMoney, formatWholeMoney as formatDisplayWholeMoney } from "@/lib/money";
 import type { ReadyMadeUniformItem } from "@/lib/ready-made-uniforms-store";
 import {
@@ -659,7 +659,7 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
             const imageViews = getShopImageViews(item);
             const displayPhotoUrl = selectedImageUrls[item.id] || imageViews[0]?.url || item.photoUrl;
             return (
-              <article key={item.id} className={styles.productCard}>
+              <article key={item.id} onClickCapture={() => trackProductInterest(item.id, item.title)} onChangeCapture={() => trackProductInterest(item.id, item.title)} className={styles.productCard}>
                 <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-neutral-100">
                   {displayPhotoUrl ? (
                     <ShopProductImage src={displayPhotoUrl} alt={item.title} />
@@ -1086,14 +1086,7 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
                   location: "shops_order_send",
                   source: "shops_page",
                 });
-                trackShopOrderSubmit({
-                  line_items: orderLines.length,
-                  total_quantity: totalQty,
-                  delivery_method: deliveryMethod,
-                  delivery_required: deliveryInfoRequired,
-                  value: totalPrice,
-                  currency: "MUR",
-                });
+
               }}
             >
               Send Order on WhatsApp

@@ -1,5 +1,7 @@
 "use client";
 
+import { isLocalTrackingHost } from "@/lib/tracking-insights";
+
 type AnalyticsPrimitive = string | number | boolean;
 
 type AnalyticsParams = Record<string, AnalyticsPrimitive | null | undefined>;
@@ -20,7 +22,7 @@ function sanitizeParams(params: AnalyticsParams = {}) {
   );
 }
 
-function getTrackingSessionId() {
+export function getTrackingSessionId() {
   if (typeof window === "undefined") return "";
 
   try {
@@ -70,7 +72,8 @@ function sendToFirstParty(name: string, params: AnalyticsParams = {}) {
 export function trackEvent(name: string, params: AnalyticsParams = {}) {
   if (typeof window === "undefined") return;
 
-  const cleanParams = sanitizeParams(params);
+  if (isLocalTrackingHost(window.location.hostname) || window.location.pathname.startsWith("/admin") || window.location.pathname === "/login") return;
+  const cleanParams = sanitizeParams({ ...getTrafficAttribution(), ...params });
   sendToFirstParty(name, cleanParams);
   window.gtag?.("event", name, cleanParams);
 }
@@ -101,4 +104,31 @@ export function trackServicePageView(params: AnalyticsParams = {}) {
 
 export function trackShopOrderSubmit(params: AnalyticsParams = {}) {
   trackEvent("shop_order_submit", params);
+}
+
+export function getTrafficAttribution(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    const saved = sessionStorage.getItem("website-tracking-attribution");
+    if (saved) return JSON.parse(saved);
+    const query = new URLSearchParams(window.location.search);
+    let referrer = "";
+    try { referrer = new URL(document.referrer).hostname; } catch {}
+    const attribution = {
+      traffic_source: (query.get("utm_source") || (referrer && referrer !== location.hostname ? referrer : "Direct")).slice(0, 120),
+      traffic_medium: (query.get("utm_medium") || "").slice(0, 120),
+      traffic_campaign: (query.get("utm_campaign") || "").slice(0, 120),
+    };
+    sessionStorage.setItem("website-tracking-attribution", JSON.stringify(attribution));
+    return attribution;
+  } catch { return { traffic_source: "Unknown" }; }
+}
+
+export function trackProductInterest(productId: string, productName: string) {
+  try {
+    const key = `product-interest:${productId}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+  } catch {}
+  trackEvent('product_interest', { product_id: productId, product_name: productName });
 }

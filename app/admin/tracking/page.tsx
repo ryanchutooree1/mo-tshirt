@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import TrackingInsights from '@/components/admin/TrackingInsights';
+import { isLocalTrackingHost } from '@/lib/tracking-insights';
 import { useEffect, useMemo, useState } from 'react';
 import { format, subDays } from 'date-fns';
 import {
@@ -19,6 +21,10 @@ import { collection, getDocs, limit, orderBy, query, Timestamp, where } from 'fi
 import { db } from '@/lib/firebase';
 
 type TrackingEventName =
+  | 'quote_start'
+  | 'design_start'
+  | 'design_progress'
+  | 'product_interest'
   | 'page_view'
   | 'whatsapp_click'
   | 'generate_lead'
@@ -53,14 +59,22 @@ type GmailQuotationStats = {
 };
 
 const EVENT_LABELS: Record<TrackingEventName, string> = {
+  quote_start: 'Quote started',
+  design_start: 'Design started',
+  design_progress: 'Design activity',
+  product_interest: 'Product interest',
   page_view: 'Page View',
-  whatsapp_click: 'WhatsApp Click',
+  whatsapp_click: 'WhatsApp open',
   generate_lead: 'Quote Submit',
   service_page_view: 'Service View',
-  shop_order_submit: 'Shop Order',
+  shop_order_submit: 'WhatsApp order open (legacy)',
 };
 
 const EVENT_COLORS: Record<TrackingEventName, string> = {
+  quote_start: '#475569',
+  design_start: '#0891b2',
+  design_progress: '#0e7490',
+  product_interest: '#be123c',
   page_view: '#111827',
   whatsapp_click: '#16a34a',
   generate_lead: '#ea580c',
@@ -92,6 +106,7 @@ function asDate(value: unknown) {
 function asName(value: unknown): TrackingEventName {
   const safe = String(value || '');
   if (
+    safe === 'quote_start' || safe === 'design_start' || safe === 'design_progress' || safe === 'product_interest' ||
     safe === 'page_view' ||
     safe === 'whatsapp_click' ||
     safe === 'generate_lead' ||
@@ -167,6 +182,8 @@ function formatTrackingDetail(event: TrackingEventDoc) {
       event.params.form_source ||
       event.params.source ||
       event.referrer ||
+      event.params.product_name ||
+      event.params.step ||
       event.params.page_title ||
       event.params.page_location ||
       ''
@@ -267,7 +284,9 @@ export default function TrackingPage() {
           } satisfies TrackingEventDoc;
         });
 
-        setEvents(mapped);
+        setEvents(mapped.filter(event => {
+          try { return !isLocalTrackingHost(new URL(String(event.params.page_location || '')).hostname); } catch { return true; }
+        }));
       } catch (nextError) {
         console.error(nextError);
         if (!cancelled) {
@@ -383,9 +402,9 @@ export default function TrackingPage() {
   const eventMix = useMemo(
     () => [
       { name: 'Page Views', count: metrics.pageViews, fill: EVENT_COLORS.page_view },
-      { name: 'WhatsApp', count: metrics.whatsappClicks, fill: EVENT_COLORS.whatsapp_click },
+      { name: 'WhatsApp opens', count: metrics.whatsappClicks, fill: EVENT_COLORS.whatsapp_click },
       { name: 'Quote Leads', count: metrics.quoteSubmits, fill: EVENT_COLORS.generate_lead },
-      { name: 'Shop Orders', count: metrics.shopOrders, fill: EVENT_COLORS.shop_order_submit },
+      { name: 'WhatsApp order opens (legacy)', count: metrics.shopOrders, fill: EVENT_COLORS.shop_order_submit },
     ],
     [metrics.pageViews, metrics.quoteSubmits, metrics.shopOrders, metrics.whatsappClicks]
   );
@@ -460,7 +479,7 @@ export default function TrackingPage() {
                 Website tracking dashboard
               </h1>
               <p className="mt-3 max-w-3xl text-sm text-[#6a6a6a] sm:text-base">
-                Follow public page views, WhatsApp clicks, quote submits, service-page visits, and shop-order sends in one place.
+                Follow customer journeys, product interest, traffic sources, and linked CRM orders.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -497,11 +516,14 @@ export default function TrackingPage() {
           </div>
         ) : null}
 
+        <TrackingInsights events={events} start={range.start} end={range.end} />
+        <p className="text-xs text-slate-500">Event charts below use at most the latest 1,000 events in the selected period. Localhost page views with recorded local URLs are excluded; older unidentified test activity may remain.</p>
+
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <MetricCard label="Page Views" value={String(metrics.pageViews)} helper={`${metrics.sessions} tracked sessions`} />
-          <MetricCard label="WhatsApp Clicks" value={String(metrics.whatsappClicks)} helper={`${metrics.whatsappRate}% of page views`} />
+          <MetricCard label="WhatsApp opens" value={String(metrics.whatsappClicks)} helper={`${metrics.whatsappRate}% of page views`} />
           <MetricCard label="Quote Leads" value={String(metrics.quoteSubmits)} helper={`${metrics.quoteRate}% of page views`} />
-          <MetricCard label="Shop Orders" value={String(metrics.shopOrders)} helper={`${metrics.serviceViews} service-page visits`} />
+          <MetricCard label="WhatsApp order opens (legacy)" value={String(metrics.shopOrders)} helper={`${metrics.serviceViews} service-page visits`} />
           <MetricCard label="Gmail Quotations" value={gmailMetric.value} helper={gmailMetric.helper} />
         </section>
 
@@ -624,7 +646,7 @@ export default function TrackingPage() {
                   <span className="truncate font-medium text-[#222222]">{row.label}</span>
                   <span className="font-semibold text-[#6a6a6a]">{row.count}</span>
                 </div>
-              )) : <p className="text-sm text-[#6a6a6a]">No WhatsApp clicks yet.</p>}
+              )) : <p className="text-sm text-[#6a6a6a]">No WhatsApp opens yet.</p>}
             </div>
           </div>
 

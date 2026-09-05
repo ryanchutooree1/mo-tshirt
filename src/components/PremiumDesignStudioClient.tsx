@@ -1,4 +1,6 @@
 "use client";
+import { useJourneyTracking } from "@/hooks/useJourneyTracking";
+import { trackProductInterest } from "@/lib/analytics";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -188,6 +190,7 @@ export default function PremiumDesignStudioClient({
   initialShopItemId,
   requestSource = "Premium Admin Design Studio",
 }: PremiumDesignStudioClientProps) {
+  const journey = useJourneyTracking("design", requestSource);
   const [step, setStep] = useState<StudioStep>(1);
   const [productId, setProductId] = useState<ProductId>("tshirt");
   const [shopItems, setShopItems] = useState<ShopItem[]>([]);
@@ -352,6 +355,7 @@ export default function PremiumDesignStudioClient({
 
   function selectProduct(nextProductId: ProductId) {
     const nextItem = getPreferredShopItem(shopItems, nextProductId);
+    trackProductInterest(nextItem?.id || nextProductId, nextItem?.title || nextProductId);
     setProductId(nextProductId);
     if (nextItem) {
       setSelectedShopItemId(nextItem.id);
@@ -365,6 +369,7 @@ export default function PremiumDesignStudioClient({
   function selectShopItem(item: ShopItem) {
     const nextProductId = getShopDesignProductId(item.title);
     if (!nextProductId) return;
+    trackProductInterest(item.id, item.title);
     setProductId(nextProductId);
     setSelectedShopItemId(item.id);
     setSizes(createSizeQuantities(item));
@@ -699,8 +704,10 @@ export default function PremiumDesignStudioClient({
         ...uploadedMockups.map(({ side, file, attachment }) => ({ role: "final-mockup", label: `${side[0].toUpperCase()}${side.slice(1)} final mockup`, description: `${product.label} ${side} view with the client's complete design`, url: attachment.url, filename: attachment.name, contentType: attachment.contentType || file.type, size: attachment.size ?? file.size })),
         ...uploadedArtworks.map(({ side, file, attachment }) => ({ role: "print-artwork", label: `${side[0].toUpperCase()}${side.slice(1)} print artwork`, description: `Original ${side} artwork supplied for production`, url: attachment.url, filename: attachment.name, contentType: attachment.contentType || file.type, size: attachment.size ?? file.size })),
       ]));
+      journey.attach(payload);
       const response = await fetch("/api/contact", { method: "POST", body: payload });
-      const body = (await response.json()) as { message?: string; error?: string };
+      const body = (await response.json()) as { message?: string; error?: string; quoteId?: string };
+      if (response.ok) journey.complete(body.quoteId);
       setResult(response.ok ? { ok: true, text: body.message || "Your design has been submitted successfully." } : { ok: false, text: body.error || "Could not send the request." });
     } catch (error) {
       setResult({ ok: false, text: error instanceof Error ? error.message : "Network error. Please try again or use WhatsApp." });
@@ -747,7 +754,7 @@ export default function PremiumDesignStudioClient({
             <div className="mt-3 rounded-2xl bg-[#f6f5f1] p-4"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#8a8982]">Need help?</p><a href={`tel:${CONTACT_TEL}`} className="mt-2 flex items-center gap-2 text-xs font-bold"><MessageCircle className="h-4 w-4 text-[#ff5a0a]" />{CONTACT_PHONE_DISPLAY}</a></div>
           </nav>
 
-          <form data-studio-part="form" onSubmit={submitQuote} className="relative grid h-full min-w-0 gap-0 overflow-hidden sm:h-auto sm:gap-5 sm:overflow-visible lg:grid-cols-[minmax(0,1.35fr)_minmax(330px,.8fr)] xl:h-full xl:min-h-0 xl:overflow-hidden">
+          <form onChangeCapture={() => journey.start(STEPS.find(item => item.id === step)?.label)} onClickCapture={() => journey.start(STEPS.find(item => item.id === step)?.label)} data-studio-part="form" onSubmit={submitQuote} className="relative grid h-full min-w-0 gap-0 overflow-hidden sm:h-auto sm:gap-5 sm:overflow-visible lg:grid-cols-[minmax(0,1.35fr)_minmax(330px,.8fr)] xl:h-full xl:min-h-0 xl:overflow-hidden">
             <input ref={artworkInput} type="file" accept=".png,.jpg,.jpeg,.webp,.svg" onClick={(event) => { event.currentTarget.value = ""; }} onChange={handleArtwork} className="hidden" />
             <section data-studio-part="preview" className="absolute inset-0 flex min-h-0 flex-col overflow-hidden border-y border-[#dfded8] bg-[#fff] pb-[78px] shadow-none sm:static sm:block sm:rounded-[26px] sm:border sm:pb-0 sm:shadow-[0_18px_55px_rgba(32,30,24,0.07)] xl:flex xl:h-full">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#ecebe6] px-3 py-2.5 sm:gap-3 sm:px-5 sm:py-3.5"><div><p className="text-[8px] font-bold uppercase tracking-[0.16em] text-[#99978f] sm:text-[9px]">Live preview</p><h2 className="mt-0.5 text-base font-bold tracking-[-0.025em] sm:text-lg">{product.label} · {activeSide}</h2></div><div data-studio-part="view-switch" className="flex items-center gap-1">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" aria-pressed={activeSide === side} onClick={() => changeSide(side)} className={`min-h-10 rounded-xl px-3 text-[11px] font-bold capitalize sm:px-4 sm:py-2 sm:text-xs ${activeSide === side ? (appearance === "editorial" ? "text-[#181613]" : "studio-primary bg-[#ff5a0a] !text-white") : "bg-[#f4f3ef] text-[#686761]"}`}>{side}</button>)}<button type="button" onClick={() => { setDesigns({ front: createDesign(), back: createDesign() }); setSelectedLayer(null); setSelectedArtworkCopyId(null); setSelectedTextCopyId(null); }} className="ml-0.5 flex h-10 w-10 items-center justify-center rounded-xl border border-[#e1e0da] text-[#66655f]" aria-label="Reset design"><RotateCcw className="h-4 w-4" /></button></div></div>

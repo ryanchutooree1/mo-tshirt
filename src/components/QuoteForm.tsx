@@ -13,7 +13,7 @@ import {
 } from "react";
 import TrackedWhatsAppLink from "@/components/TrackedWhatsAppLink";
 import { CONTACT_PHONE_DISPLAY, CONTACT_TEL, getWhatsAppUrl } from "@/data/work";
-import { trackQuoteSubmit } from "@/lib/analytics";
+import { useJourneyTracking } from "@/hooks/useJourneyTracking";
 import {
   canAutomaticallyRemoveBackground,
   removeBackgroundAutomatically,
@@ -519,6 +519,7 @@ function ArtworkFilePreview({ file }: { file: File | null }) {
 }
 
 export default function QuoteForm({ source = "Website", className, appearance = "default" }: QuoteFormProps) {
+  const journey = useJourneyTracking("quote", source);
   const formId = useId();
   const isEditorial = appearance === "editorial";
   const MethodGuide = isEditorial ? "details" : "div";
@@ -933,13 +934,14 @@ export default function QuoteForm({ source = "Website", className, appearance = 
     }
 
     try {
+      journey.attach(payload);
       const res = await fetch("/api/contact", {
         method: "POST",
         body: payload,
       });
       const body = await res.json();
       if (res.ok) {
-        trackQuoteSubmit({
+        journey.complete(body.quoteId, {
           form_source: source,
           print_method: printMethod,
           garment_lines: garmentLines.length,
@@ -980,7 +982,7 @@ export default function QuoteForm({ source = "Website", className, appearance = 
 
   return (
     <div className={className}>
-      <form onSubmit={handleSubmit} className="space-y-4" aria-label="Request a quote" aria-busy={loading}>
+      <form onChangeCapture={() => journey.start()} onSubmit={handleSubmit} className="space-y-4" aria-label="Request a quote" aria-busy={loading}>
         <div className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
           <label htmlFor="quote-website">Website</label>
           <input
