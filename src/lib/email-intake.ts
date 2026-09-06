@@ -22,12 +22,17 @@ export async function syncEmailIntake() {
   const state = await runTransaction(db, async tx => {
     const old = (await tx.get(stateRef())).data() || {};
     if (Number(old.lockUntil) > Date.now()) return null;
+    if (Number(old.nextAllowedAt) > Date.now()) return { cooldown: true, nextAllowedAt: old.nextAllowedAt };
     tx.set(stateRef(), { lockOwner: owner, lockUntil: Date.now() + 240000 }, { merge: true });
     return old;
   });
   if (!state) return { busy: true, processed: 0 };
+  if (state.cooldown) return { cooldown: true, nextCheckAt: state.nextAllowedAt, processed: 0 };
   let processed = 0;
   let failures = 0;
+  let analysisStarted = 0;
+  let deferred = false;
+  let nextAllowedAt = 0;
   try {
     const get = await createGmailConnection();
     const search = `newer_than:90d -in:spam -in:trash -from:${INBOX_EMAIL} -subject:"New Website Quotation"`;
@@ -56,6 +61,8 @@ export async function syncEmailIntake() {
           const messages = inbound.filter(m => mailboxAddress(m.replyTo || m.from) === sender);
           const version = createHash("sha256").update(messages.map(m => m.id).join(":")).digest("hex").slice(0, 24);
           if (previous?.version === version && previous.status !== "error") return;
+          if (analysisStarted >= 4) { deferred = true; return; }
+          analysisStarted++;
           const analysis = await analyseEmailEnquiry(messages);
           const lastMessage = messages[messages.length - 1];
           const originalText = messages.map(m => `${m.date}\n${plainClientText(m)}`).join("\n\n---\n\n").slice(0, 80000);
@@ -83,19 +90,21 @@ export async function syncEmailIntake() {
           processed++;
         } catch (error) {
           failures++;
+          const retryAfterMs = (error as Error & { retryAfterMs?: number }).retryAfterMs;
+          if (retryAfterMs) { nextAllowedAt = Math.max(nextAllowedAt, Date.now() + retryAfterMs); analysisStarted = 4; }
           // Preserve previously extracted information when an external service fails.
           await setDoc(stateRef(), { error: error instanceof Error ? error.message.slice(0, 250) : "An enquiry could not be analysed." }, { merge: true });
         }
       }));
     }
-    await setDoc(stateRef(), { pageToken: failures ? state.pageToken || "" : backlog.nextPageToken || "", lastSyncAt: new Date().toISOString(), ...(!failures ? { error: "" } : {}) }, { merge: true });
+    await setDoc(stateRef(), { pageToken: failures || deferred ? state.pageToken || "" : backlog.nextPageToken || "", lastSyncAt: new Date().toISOString(), ...(!failures ? { error: "" } : {}) }, { merge: true });
     return { processed, failures, scanned: ids.length };
   } catch (error) {
     await setDoc(stateRef(), { error: error instanceof Error ? error.message : "Email sync failed." }, { merge: true });
     throw error;
   } finally {
     await runTransaction(db, async tx => {
-      if ((await tx.get(stateRef())).data()?.lockOwner === owner) tx.set(stateRef(), { lockUntil: 0 }, { merge: true });
+      if ((await tx.get(stateRef())).data()?.lockOwner === owner) tx.set(stateRef(), { lockUntil: 0, nextAllowedAt: Math.max(nextAllowedAt, analysisStarted ? Date.now() + 65000 : 0) }, { merge: true });
     });
   }
 }

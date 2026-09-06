@@ -14,7 +14,7 @@ The Send questions button sends precisely the displayed English/French email to 
 - `EMAIL_INTAKE_CRON_SECRET` in GitHub must equal production `CRON_SECRET` in Vercel. The protected endpoint is `/api/cron/email-intake`.
 - Vercel has a daily fallback at 04:00 UTC.
 - Visible admin sessions with Inbox and Quotes permissions also request a sync every two minutes. A Firestore lease prevents overlapping syncs.
-- Each run checks the latest six conversations plus six older conversations, advancing a persistent cursor. Initial backfill takes several runs. Errors and the last successful check appear in the queue.
+- Each run checks the latest six conversations plus six older conversations, analysing at most four changed conversations and advancing a persistent cursor when that batch is finished. Runs that invoke analysis are spaced at least 65 seconds apart; rate limits trigger an automatic cooldown. Initial backfill takes several runs. Errors and the last successful check appear in the queue.
 
 ## Configuration
 

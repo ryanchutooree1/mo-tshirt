@@ -59,7 +59,15 @@ export async function analyseEmailEnquiry(messages: InboxMessage[]): Promise<Int
       generationConfig: { temperature: 0, responseMimeType: "application/json", responseSchema: schema, maxOutputTokens: 6000, thinkingConfig: { thinkingBudget: 0 } },
     }),
   });
-  if (!response.ok) throw new Error(`Email analysis is temporarily unavailable (${response.status}). Please retry.`);
+  if (!response.ok) {
+    const error = new Error(response.status === 429 ? "Email analysis is cooling down after a rate limit. Checking will resume automatically." : `Email analysis is temporarily unavailable (${response.status}). Checking will retry automatically.`) as Error & { retryAfterMs?: number };
+    if (response.status === 429) {
+      const details = await response.json().catch(() => ({}));
+      const retry = details.error?.details?.find((d: { retryDelay?: string }) => d.retryDelay)?.retryDelay;
+      error.retryAfterMs = Math.max(65000, (Number.parseFloat(retry || "65") || 65) * 1000);
+    }
+    throw error;
+  }
   const body = await response.json();
   const text = body.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text || "").join("") || "";
   return normalizeIntakeAnalysis(JSON.parse(text), messages);

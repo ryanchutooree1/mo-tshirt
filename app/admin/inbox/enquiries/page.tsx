@@ -37,7 +37,7 @@ export default function EnquiriesPage() {
       const response = await fetch("/api/admin/inbox/intake", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, id: intake?.id, version: intake?.version }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Please try again.");
-      setNotice(action === "ask" ? "Questions sent. We’ll check the client’s reply automatically." : data.busy ? "Email checking is already running. New results will appear here." : "Email check complete.");
+      setNotice(action === "ask" ? "Questions sent. We’ll check the client’s reply automatically." : data.cooldown ? "The next check will start shortly. Requests are spaced to respect email-analysis limits." : data.busy ? "Email checking is already running. New results will appear here." : "Email check complete.");
       await load();
     } catch (e) { await load(); setError(e instanceof Error ? e.message : "Please try again."); }
     finally { setBusy(""); }
