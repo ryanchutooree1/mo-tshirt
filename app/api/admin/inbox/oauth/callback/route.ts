@@ -21,6 +21,7 @@ export async function GET(request: Request) {
   if (!expected || !/^[A-Za-z0-9_-]{43}$/.test(received) || Buffer.byteLength(expected) !== Buffer.byteLength(received) || !timingSafeEqual(Buffer.from(expected), Buffer.from(received))) return finish("invalid_state");
   const code = params.get("code");
   if (params.get("error") || !code || code.length > 4096) return finish("cancelled");
+  let stage = "token_exchange";
   try {
     const clientId = (process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_GMAIL_CLIENT_ID || "").trim();
     const clientSecret = (process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_GMAIL_CLIENT_SECRET || "").trim();
@@ -29,11 +30,13 @@ export async function GET(request: Request) {
     const token = await exchange.json();
     if (!exchange.ok || !token.access_token || !token.refresh_token) return finish("exchange_failed");
     if (!String(token.scope || "").split(" ").includes("https://www.googleapis.com/auth/gmail.readonly")) return finish("scope_required");
+    stage = "account_check";
     const profileResponse = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", { cache: "no-store", signal: AbortSignal.timeout(15000), headers: { Authorization: `Bearer ${token.access_token}` } });
     const profile = await profileResponse.json();
     if (!profileResponse.ok || profile.emailAddress?.toLowerCase() !== INBOX_EMAIL) return finish("wrong_account");
     const lifetime = Number(token.refresh_token_expires_in);
+    stage = "save_connection";
     await saveGmailConnection({ refreshToken: token.refresh_token, clientId, email: INBOX_EMAIL, connectedAt: new Date().toISOString(), expiresAt: Number.isFinite(lifetime) && lifetime > 0 ? new Date(Date.now() + lifetime * 1000).toISOString() : null });
     return finish("connected");
-  } catch { return finish("connection_failed"); }
+  } catch (error) { console.error("gmail-oauth-callback", { stage, name: error instanceof Error ? error.name : "UnknownError" }); return finish("connection_failed"); }
 }

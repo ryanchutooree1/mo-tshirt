@@ -3,7 +3,7 @@ import { db } from "@/lib/firebase";
 import { decryptGmailConnection, encryptGmailConnection, type SavedGmailConnection } from "./gmail-token-crypto";
 import { INBOX_EMAIL } from "./gmail-inbox";
 const ref = () => doc(db, "integrations", "gmail-oauth");
-function encryptionSecret() { return (process.env.GMAIL_TOKEN_ENCRYPTION_KEY || process.env.ADMIN_SESSION_SECRET || process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_GMAIL_CLIENT_SECRET || "").trim(); }
+function encryptionSecret() { return (process.env.GMAIL_TOKEN_ENCRYPTION_KEY || process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_GMAIL_CLIENT_SECRET || "").trim(); }
 export async function readSavedGmailConnection(): Promise<SavedGmailConnection | null> {
   const record = (await getDoc(ref())).data();
   if (!record?.encrypted) return null;
