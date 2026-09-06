@@ -1398,7 +1398,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
   if (quote.quote) {
     const storedLines: QuoteLine[] = (quote.quote.lines || []).map((line, index) => {
       const storedAmount = safeNumber(line.unitPrice, 0);
-      const automaticAmount = safeNumber(automaticPricing.lines[index]?.unitPrice, 0);
+      const automaticAmount = quote.source === "Gmail" ? 0 : safeNumber(automaticPricing.lines[index]?.unitPrice, 0);
       const savedSource = getPriceSource(line.priceSource);
       const shouldRefreshAutomaticPrice =
         storedAmount <= 0 && automaticAmount > 0;
@@ -1418,7 +1418,7 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
             : undefined);
       return {
         description: line.description || automaticPricing.lines[index]?.description || "",
-        quantity: safeNumber(line.quantity, 0),
+        quantity: quote.source === "Gmail" && line.quantity === "" ? "" : safeNumber(line.quantity, 0),
         unitPrice: resolvedAmount > 0 ? resolvedAmount : "",
         includeInTotals: true,
         ...(priceSource ? { priceSource } : {}),

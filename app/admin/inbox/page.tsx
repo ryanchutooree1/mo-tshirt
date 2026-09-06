@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Mail, RefreshCw, Search } from "lucide-react";
+import EmailQuoteImport from "@/components/admin/EmailQuoteImport";
 import type { InboxMessage } from "@/lib/gmail-inbox";
 
 export default function InboxPage() {
@@ -50,7 +51,7 @@ export default function InboxPage() {
       </section>
       <section aria-label="Email reader" className={`${selected ? "" : "hidden lg:block"} min-w-0 p-5 sm:p-8`}>
         {selected && <button className={`${button} mb-5 lg:hidden`} onClick={() => setSelected(null)}><ArrowLeft size={16} /> Back to inbox</button>}
-        {reading && selected ? <p role="status">Loading email…</p> : readError ? <p role="alert">{readError}</p> : message && selected ? <article><h2 className="break-words text-xl font-semibold">{message.subject}</h2><div className="my-5 space-y-1 break-words border-b border-gray-100 pb-5 text-sm text-gray-500"><p>From: {message.from}</p><p>To: {message.to}</p><p>{message.date}</p></div><div className="whitespace-pre-wrap break-words text-sm leading-7">{message.text}</div><p className="mt-8 text-xs text-gray-400">Text view · Attachments are not displayed · Reading here does not change Gmail’s unread status.</p></article> : <div className="py-24 text-center text-gray-400"><Mail className="mx-auto mb-4" size={36} /><p>Select an email to read it here.</p></div>}
+        {reading && selected ? <p role="status">Loading email…</p> : readError ? <p role="alert">{readError}</p> : message && selected ? <article><EmailQuoteImport key={message.id} messageId={message.id} /><h2 className="break-words text-xl font-semibold">{message.subject}</h2><div className="my-5 space-y-1 break-words border-b border-gray-100 pb-5 text-sm text-gray-500"><p>From: {message.from}</p><p>To: {message.to}</p><p>{message.date}</p></div><div className="whitespace-pre-wrap break-words text-sm leading-7">{message.text}</div><p className="mt-8 text-xs text-gray-400">Text view · Attachments are not displayed · Reading here does not change Gmail’s unread status.</p></article> : <div className="py-24 text-center text-gray-400"><Mail className="mx-auto mb-4" size={36} /><p>Select an email to read it here.</p></div>}
       </section>
     </div>}
   </main>;

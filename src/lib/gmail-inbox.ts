@@ -1,8 +1,8 @@
 // Server-side Gmail access. Never expose OAuth credentials to the browser.
 export const INBOX_EMAIL = "motshirtmauritius@gmail.com";
-export type InboxMessage = { id: string; subject: string; from: string; to: string; date: string; snippet: string; unread: boolean; text?: string };
+export type InboxMessage = { id: string; threadId?: string; replyTo?: string; attachmentNames?: string[]; subject: string; from: string; to: string; date: string; snippet: string; unread: boolean; text?: string };
 type Part = { mimeType?: string; filename?: string; body?: { data?: string }; headers?: { name: string; value: string }[]; parts?: Part[] };
-type Message = { id: string; labelIds?: string[]; internalDate?: string; snippet?: string; payload?: Part };
+type Message = { id: string; threadId?: string; labelIds?: string[]; internalDate?: string; snippet?: string; payload?: Part };
 export class InboxError extends Error {
   status: number;
   configured: boolean;
@@ -33,9 +33,10 @@ async function connection() {
 }
 export function normalizeInboxMessage(message: Message, includeBody = false): InboxMessage {
   const header = (name: string) => message.payload?.headers?.find(h => h.name.toLowerCase() === name)?.value || "";
-  const plain: string[] = [], html: string[] = [];
+  const plain: string[] = [], html: string[] = [], attachmentNames: string[] = [];
   const walk = (part?: Part) => {
-    if (!part || part.filename) return;
+    if (!part) return;
+    if (part.filename) { attachmentNames.push(part.filename); return; }
     if (part.body?.data) {
       const text = Buffer.from(part.body.data, "base64url").toString("utf8");
       if (part.mimeType === "text/plain") plain.push(text);
@@ -46,7 +47,7 @@ export function normalizeInboxMessage(message: Message, includeBody = false): In
   if (includeBody) walk(message.payload);
   // Always render as text: email HTML must never execute in the admin origin.
   const text = plain.length ? plain.join("\n\n") : html.join("\n").replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, "").replace(/<br\s*\/?\s*>|<\/(p|div|tr)>/gi, "\n").replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&").trim();
-  return { id: message.id, subject: header("subject") || "(No subject)", from: header("from"), to: header("to"), date: header("date"), snippet: message.snippet || "", unread: Boolean(message.labelIds?.includes("UNREAD")), ...(includeBody ? { text: text || message.snippet || "This message has no text content." } : {}) };
+  return { id: message.id, threadId: message.threadId || message.id, replyTo: header("reply-to"), ...(includeBody ? { attachmentNames } : {}), subject: header("subject") || "(No subject)", from: header("from"), to: header("to"), date: header("date"), snippet: message.snippet || "", unread: Boolean(message.labelIds?.includes("UNREAD")), ...(includeBody ? { text: text || message.snippet || "This message has no text content." } : {}) };
 }
 export async function listInbox(search: string, pageToken: string) {
   const get = await connection();
