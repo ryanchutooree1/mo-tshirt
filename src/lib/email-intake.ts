@@ -47,6 +47,7 @@ export async function syncEmailIntake(options: { maxAnalyses?: number } = {}) {
     }
     const ids = [...new Set([...(latest.threads || []), ...(backlog.threads || [])].map(t => t.id))];
     for (let index = 0; index < ids.length; index += 1) {
+      if (analysisStarted >= maxAnalyses) { deferred = true; break; }
       await Promise.all(ids.slice(index, index + 1).map(async threadId => {
         const id = `gmail-${threadId}`;
         try {

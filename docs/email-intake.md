@@ -10,6 +10,9 @@ The Send questions button sends precisely the displayed English/French email to 
 
 ## Scheduling
 
+- Primary scheduler: [cron-job.org job 8394531](https://console.cron-job.org/jobs/8394531), account `motshirtmauritius@gmail.com`, every five minutes. It invokes `https://www.mo-tshirt.mu/api/cron/email-intake?batch=1` with a 30-second request timeout and stores aggregate responses for diagnosis. One changed enquiry is analysed per tick; the backlog cursor is preserved until the page is finished. No email text or Gmail credentials are given to the scheduler.
+- Its Bearer credential is the hexadecimal HMAC-SHA256 of `mo-tshirt:email-intake:v1` keyed by the production `CRON_SECRET`. This derived credential works only on the email-intake endpoint. After rotating `CRON_SECRET`, update both this job’s header and the GitHub secret. Account recovery uses the business mailbox.
+
 - GitHub Actions `Check client email enquiries` is configured every five minutes in `email-enquiries.yml` and supports manual dispatch. Scheduled runs can be delayed; public-repository schedules may be disabled by GitHub after 60 days of repository inactivity. Check Actions if the last-sync time becomes stale.
 - `EMAIL_INTAKE_CRON_SECRET` in GitHub must equal production `CRON_SECRET` in Vercel. The protected endpoint is `/api/cron/email-intake`.
 - Vercel has a daily fallback at 04:00 UTC.
