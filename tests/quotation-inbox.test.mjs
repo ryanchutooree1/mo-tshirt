@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mergeQuotationInbox, requestSource, enquiryStage} from '../src/lib/quotation-inbox.ts';
+const email={id:'gmail-1',threadId:'1',draft:{name:'Client',phone:''},email:'client@example.com',subject:'20 polos',status:'needs_details',lastReplyAt:'2026-09-06T12:00:00Z'};
+test('form, studio and incomplete email share one chronological client list',()=>{const rows=mergeQuotationInbox([{id:'form',name:'Form',source:'Website',createdAt:new Date('2026-09-05')},{id:'studio',name:'Studio',source:'Design Studio',createdAt:new Date('2026-09-04')}],[email]);assert.deepEqual(rows.map(r=>r.id),['gmail-1','form','studio']);assert.equal(rows[0].intake.status,'needs_details');});
+test('an email becoming a quote replaces its pending entry without duplicate rows or losing the selected id',()=>{const quote={id:'gmail-1',source:'Gmail',createdAt:new Date()};const rows=mergeQuotationInbox([quote],[email]);assert.equal(rows.length,1);assert.equal(rows[0],quote);assert.equal(rows[0].intake,undefined);});
+test('quote ids also deduplicate imported conversations and ignored mail stays out',()=>{assert.equal(mergeQuotationInbox([{id:'imported'}],[{...email,quoteId:'imported'},{...email,id:'ignored',status:'ignored'}]).length,1);});
+test('keeps the request visible while the completed quote snapshot is loading',()=>{assert.equal(mergeQuotationInbox([],[{...email,status:'ready'}])[0].id,email.id);});
+test('source labels distinguish existing channels, including future WhatsApp intake',()=>{assert.equal(requestSource('Design Studio'),'studio');assert.equal(requestSource('Gmail'),'email');assert.equal(requestSource('WhatsApp'),'whatsapp');assert.equal(requestSource('Mo Admin'),'team');assert.equal(requestSource('Homepage'),'form');});
+test('missing details and waiting are lifecycle stages of the same email request',()=>{assert.equal(enquiryStage(email),'needs_details');assert.equal(enquiryStage({...email,status:'waiting'}),'waiting');assert.equal(enquiryStage({...email,status:'review'}),'review');});

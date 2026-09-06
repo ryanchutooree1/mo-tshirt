@@ -95,6 +95,10 @@ import {
   type PrintPartnerId,
 } from "@/lib/partners";
 import { useAdminTheme } from "@/admin/AdminThemeContext";
+import EmailEnquiryDetails, { ENQUIRY_LABELS } from "@/components/admin/EmailEnquiryDetails";
+import { useEmailEnquiries } from "@/components/admin/useEmailEnquiries";
+import { mergeQuotationInbox, requestSource, REQUEST_SOURCE_LABELS, enquiryStage, type RequestSource } from "@/lib/quotation-inbox";
+import type { EmailIntake } from "@/lib/email-intake-model";
 import QuoteActivityStatus from "@/components/admin/QuoteActivityStatus";
 import {
   canAutomaticallyRemoveBackground,
@@ -396,6 +400,7 @@ function getSentPartnerLabel(entry: { partnerName?: unknown; emails?: unknown })
 }
 
 type QuoteRecord = {
+  intake?: EmailIntake;
   id: string;
   name: string;
   email: string;
@@ -919,7 +924,7 @@ function QuotationInboxCard({
 }) {
   const status = quote.status || "new";
   const docType = getQuoteDocumentType(quote);
-  const primaryStatus = getPrimaryStatusMeta(status, docType);
+  const primaryStatus = quote.intake ? { label: ENQUIRY_LABELS[quote.intake.status], tone: "border-orange-300/40 bg-orange-400/10 text-orange-600" } : getPrimaryStatusMeta(status, docType);
   const paymentStatus = getPaymentStatusMeta(quote);
   const totalPieces = (quote.garments || []).reduce(
     (sum, entry) => sum + safeNumber(entry.quantity, 0),
@@ -976,15 +981,15 @@ function QuotationInboxCard({
             </span>
           </div>
           <p className={`mt-2 text-xs leading-5 ${isDark ? "text-white/55" : "text-[#6a6a6a]"}`}>
-            {garmentPreview || "No product line yet"}
+            {quote.intake?.subject || garmentPreview || quote.message || "No product line yet"}
             {totalPieces > 0 ? ` • ${totalPieces} pc${totalPieces > 1 ? "s" : ""}` : ""}
           </p>
-          <QuoteActivityStatus quote={quote} />
-          <span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${paymentStatus.tone}`}>
+          {!quote.intake && <QuoteActivityStatus quote={quote} />}
+          {quote.intake ? <p className={`mt-2 text-xs ${isDark ? "text-white/60" : "text-slate-500"}`}>{quote.intake.status === "needs_details" ? `${quote.intake.missing.length} details to request` : quote.intake.status === "waiting" ? "Reply will update this request" : "Review before pricing"}</p> : <span className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${paymentStatus.tone}`}>
             Payment: {paymentStatus.shortLabel}
-          </span>
+          </span>}
           <div className={`mt-3 flex items-center justify-between gap-3 text-[11px] ${isDark ? "text-white/35" : "text-[#717171]"}`}>
-            <span className="min-w-0 truncate">{quote.source || "Website"}</span>
+            <span className="min-w-0 truncate">{REQUEST_SOURCE_LABELS[requestSource(quote.source)]}</span>
             <span>
               {quote.createdAt
                 ? formatDistanceToNow(quote.createdAt, { addSuffix: true })
@@ -1940,7 +1945,10 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(initialQuoteId || null);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<QuoteStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<QuoteStatus | "all" | "needs_details" | "waiting">("all");
+  const [sourceFilter, setSourceFilter] = useState<RequestSource | "all">("all");
+  const emailIntake = useEmailEnquiries(!embedded && documentAuthReady);
+  const inboxRecords: QuoteRecord[] = useMemo(() => mergeQuotationInbox(quotes, emailIntake.enquiries), [quotes, emailIntake.enquiries]);
   const [draft, setDraft] = useState<QuoteDraft | null>(null);
   const [savedDraft, setSavedDraft] = useState("");
   const draftIsDirty = Boolean(draft && JSON.stringify(draft) !== savedDraft);
@@ -2227,23 +2235,24 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
   }, [documentAuthReady]);
 
   useEffect(() => {
-    if (!quotes.length) {
+    if (!inboxRecords.length) {
       setSelectedId(null);
       return;
     }
     if (requestedQuoteId) {
-      setSelectedId(quotes.some((q) => q.id === requestedQuoteId) ? requestedQuoteId : null);
+      setSelectedId(inboxRecords.some((q) => q.id === requestedQuoteId) ? requestedQuoteId : null);
       return;
     }
-    if (!selectedId || !quotes.find((q) => q.id === selectedId)) {
-      setSelectedId(quotes[0].id);
+    if (!selectedId || !inboxRecords.find((q) => q.id === selectedId)) {
+      setSelectedId(inboxRecords[0].id);
     }
-  }, [quotes, requestedQuoteId, selectedId]);
+  }, [inboxRecords, requestedQuoteId, selectedId]);
 
   const selected = useMemo(
     () => quotes.find((quote) => quote.id === selectedId) || null,
     [quotes, selectedId]
   );
+  const selectedIntake = inboxRecords.find(record => record.id === selectedId)?.intake;
   const printPartnerById = useMemo(
     () => new Map(printPartners.map((partner) => [partner.id, partner])),
     [printPartners]
@@ -2726,33 +2735,19 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
     );
   }
 
-  const filtered = useMemo(() => {
-    return quotes.filter((quote) => {
-      if (statusFilter !== "all" && quote.status !== statusFilter) return false;
-      if (!search) return true;
-      const query = search.toLowerCase();
-      return (
-        quote.name?.toLowerCase().includes(query) ||
-        quote.email?.toLowerCase().includes(query) ||
-        quote.phone?.toLowerCase().includes(query) ||
-        quote.source?.toLowerCase().includes(query)
-      );
-    });
-  }, [quotes, search, statusFilter]);
-
-  const groupedInboxQuotes = useMemo(
-    () => groupQuotationsByAge(filtered, quotationAgeReference),
-    [filtered, quotationAgeReference]
-  );
-
+  const sourceRecords = useMemo(() => inboxRecords.filter(record => sourceFilter === "all" || requestSource(record.source) === sourceFilter), [inboxRecords, sourceFilter]);
+  const filtered = useMemo(() => sourceRecords.filter(record => {
+    const stage = record.intake ? enquiryStage(record.intake) : record.status || "new";
+    if (statusFilter !== "all" && stage !== statusFilter) return false;
+    const term = search.trim().toLowerCase();
+    return !term || [record.name, record.email, record.phone, record.message, record.intake?.subject, record.source, REQUEST_SOURCE_LABELS[requestSource(record.source)]].some(value => value?.toLowerCase().includes(term));
+  }), [sourceRecords, search, statusFilter]);
+  const groupedInboxQuotes = useMemo(() => groupQuotationsByAge(filtered, quotationAgeReference), [filtered, quotationAgeReference]);
   const stats = useMemo(() => {
-    const base = { total: quotes.length, new: 0, review: 0, approved: 0, sent: 0 };
-    quotes.forEach((quote) => {
-      const status = quote.status || "new";
-      base[status] += 1;
-    });
+    const base = { total: sourceRecords.length, new: 0, review: 0, approved: 0, sent: 0, needs_details: 0, waiting: 0 };
+    sourceRecords.forEach(record => { base[record.intake ? enquiryStage(record.intake) : record.status || "new"] += 1; });
     return base;
-  }, [quotes]);
+  }, [sourceRecords]);
 
   const totals = useMemo(() => {
     if (!draft) {
@@ -4136,6 +4131,7 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
                 >
                   Quotes & invoices
                 </h1>
+                {!embedded && <p className={`mt-2 text-sm ${isDark ? "text-white/60" : "text-slate-500"}`}>Quote form, design studio and email — one client list, from first enquiry to invoice.</p>}
                 <div className="mt-4 flex flex-wrap gap-2">
                   <span
                     className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${
@@ -4145,7 +4141,7 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
                     }`}
                   >
                     <span className="h-2 w-2 rounded-full bg-emerald-300" />
-                    {stats.total} active quotes
+                    {stats.total} client requests
                   </span>
                   <span
                     className={`rounded-full border px-4 py-2 text-sm font-semibold ${
@@ -4154,12 +4150,13 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
                         : "border-[#ebebeb] bg-white text-[#484848]"
                     }`}
                   >
-                    {stats.new + stats.review} need action
+                    {stats.new + stats.review + stats.needs_details} need action
                   </span>
                 </div>
               </div>
 
               <div className="flex min-w-0 flex-wrap gap-2 xl:justify-end">
+                {!embedded && <button type="button" onClick={emailIntake.check} disabled={emailIntake.checking} className={secondaryButtonClass}><FiMail className="h-4 w-4" />{emailIntake.checking ? "Checking…" : "Check new email"}</button>}
                 <button
                   type="button"
                   onClick={createAdminQuote}
@@ -4180,6 +4177,11 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
               </div>
             </div>
 
+            {!embedded && <div className="mt-5 flex flex-wrap items-center gap-2" aria-label="Request sources">
+              {(["all", "form", "studio", "email", "whatsapp", "team"] as const).filter(source => source !== "whatsapp" && source !== "team" || inboxRecords.some(record => requestSource(record.source) === source)).map(source => <button key={source} aria-pressed={sourceFilter === source} onClick={() => setSourceFilter(source)} className={`rounded-full border px-3 py-2 text-xs font-semibold ${sourceFilter === source ? "border-orange-300 bg-orange-400/10 text-orange-600" : isDark ? "border-white/10 text-white/60" : "border-slate-200 text-slate-500"}`}>{source === "all" ? "All sources" : REQUEST_SOURCE_LABELS[source]} <span className="ml-1 opacity-70">{source === "all" ? inboxRecords.length : inboxRecords.filter(record => requestSource(record.source) === source).length}</span></button>)}
+              {emailIntake.lastSync && <span className={`text-xs sm:ml-auto ${isDark ? "text-white/40" : "text-slate-500"}`}>Email checked {formatDistanceToNow(new Date(emailIntake.lastSync), { addSuffix: true })}</span>}
+            </div>}
+            {emailIntake.error && <p role="alert" className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Email check: {emailIntake.error}</p>}
           </header>
 
           <div className="quotation-mobile-navigation mt-4 lg:hidden">
@@ -4194,10 +4196,10 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
               <button
                 type="button"
                 onClick={() => setMobilePanel("quote")}
-                disabled={!selected}
+                disabled={!selected && !selectedIntake}
                 className={`${mobilePanelButtonClass(mobilePanel === "quote")} disabled:opacity-50`}
               >
-                {selected ? draft?.documentNumber || "Document" : "Document"}
+                {selectedIntake ? "Request details" : selected ? draft?.documentNumber || "Document" : "Document"}
               </button>
             </div>
           </div>
@@ -4229,6 +4231,8 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
                 {([
                   { key: "all", label: "All", count: stats.total },
                   { key: "new", label: STATUS_LABELS.new, count: stats.new },
+                  { key: "needs_details", label: "Needs details", count: stats.needs_details },
+                  { key: "waiting", label: "Waiting for client", count: stats.waiting },
                   { key: "review", label: STATUS_LABELS.review, count: stats.review },
                   { key: "approved", label: STATUS_LABELS.approved, count: stats.approved },
                   { key: "sent", label: STATUS_LABELS.sent, count: stats.sent },
@@ -4262,7 +4266,7 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
                     Inbox
                   </p>
                   <p className="mt-1 text-sm text-[#6a6a6a]">
-                    {filtered.length} visible quotation{filtered.length === 1 ? "" : "s"}
+                    {filtered.length} visible request{filtered.length === 1 ? "" : "s"}
                   </p>
                 </div>
                 {loading ? <span className="text-xs text-[#717171]">Loading...</span> : null}
@@ -4282,6 +4286,7 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
                     selected={selectedId === quote.id}
                     isDark={isDark}
                     onSelect={() => {
+                      setRequestedQuoteId(null);
                       setSelectedId(quote.id);
                       setMobilePanel("quote");
                     }}
@@ -4301,7 +4306,7 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
                           {label}
                         </p>
                         <p className={`mt-0.5 text-[11px] ${isDark ? "text-white/40" : "text-[#717171]"}`}>
-                          {groupedQuotes.length} quotation{groupedQuotes.length === 1 ? "" : "s"}
+                          {groupedQuotes.length} request{groupedQuotes.length === 1 ? "" : "s"}
                         </p>
                       </div>
                       <FiChevronDown
@@ -4319,6 +4324,7 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
                           selected={selectedId === quote.id}
                           isDark={isDark}
                           onSelect={() => {
+                            setRequestedQuoteId(null);
                             setSelectedId(quote.id);
                             setMobilePanel("quote");
                           }}
@@ -4330,7 +4336,7 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
 
                 {!filtered.length && !loading ? (
                   <div className="rounded-[26px] border border-dashed border-[#d9d9d9] bg-[#f7f7f7] px-5 py-10 text-center text-sm text-[#717171]">
-                    No quotations match these filters.
+                    No client requests match these filters.
                   </div>
                 ) : null}
               </div>
@@ -4416,7 +4422,7 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
                   </div>
                 ) : null}
               </div>
-              {selected && draft ? (
+              {selectedIntake ? <><button type="button" onClick={() => setMobilePanel("inbox")} className={`${secondaryButtonClass} lg:hidden`}><FiChevronLeft /> Back to client list</button><EmailEnquiryDetails key={selectedIntake.id} intake={selectedIntake} isDark={isDark} onUpdated={emailIntake.refresh} /></> : selected && draft ? (
                 <div className="flex flex-col gap-6">
                   <button
                     type="button"
@@ -4445,7 +4451,7 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
                             <span className="min-w-0 truncate">{draft.contactPhone || "No phone yet"}</span>
                           </span>
                           <span className={`max-w-full rounded-full border px-3 py-1.5 text-xs ${isDark ? "border-white/10 bg-white/[0.05] text-white/65" : "border-[#ebebeb] bg-[#f7f7f7] text-[#484848]"}`}>
-                            Source: {selected.source || "Website"}
+                            Source: {REQUEST_SOURCE_LABELS[requestSource(selected.source)]}
                           </span>
                           {selected.delivery ? (
                             <span className={`max-w-full rounded-full border px-3 py-1.5 text-xs ${isDark ? "border-white/10 bg-white/[0.05] text-white/65" : "border-[#ebebeb] bg-[#f7f7f7] text-[#484848]"}`}>
