@@ -1,6 +1,6 @@
 # Email enquiries
 
-The admin enquiry queue is at `/admin/inbox/enquiries`. Client conversations from the last 90 days are checked using read-only Gmail access. Gemini extracts grounded details in English or French. Website quotation copies, automatic notifications and supplier pitches are excluded. Ambiguous buying intent stays in Review.
+The admin enquiry queue is at `/admin/inbox/enquiries`. Client conversations from the last 90 days are checked using read-only Gmail access. Groq’s GPT-OSS 120B model extracts grounded details in English or French. Website quotation copies, automatic notifications and supplier pitches are excluded. Ambiguous buying intent stays in Review.
 
 An enquiry requires a contact name, phone, product, quantity, colour, sizes (where applicable), personalisation, artwork/placement for personalised items, deadline and collection/delivery details. Company registration and VAT numbers are copied when supplied but are optional. Unknown facts remain blank. Attachments are named but not read; artwork needs a client brief or explicit reference to their attached design.
 
@@ -10,15 +10,15 @@ The Send questions button sends precisely the displayed English/French email to 
 
 ## Scheduling
 
-- GitHub Actions `Check client email enquiries` runs every five minutes and supports manual dispatch. Scheduled runs can be delayed; public-repository schedules may be disabled by GitHub after 60 days of repository inactivity. Check Actions if the last-sync time becomes stale.
+- GitHub Actions `Check client email enquiries` is configured every five minutes in `email-enquiries.yml` and supports manual dispatch. Scheduled runs can be delayed; public-repository schedules may be disabled by GitHub after 60 days of repository inactivity. Check Actions if the last-sync time becomes stale.
 - `EMAIL_INTAKE_CRON_SECRET` in GitHub must equal production `CRON_SECRET` in Vercel. The protected endpoint is `/api/cron/email-intake`.
 - Vercel has a daily fallback at 04:00 UTC.
 - Visible admin sessions with Inbox and Quotes permissions also request a sync every two minutes. A Firestore lease prevents overlapping syncs.
-- Each run checks the latest six conversations plus six older conversations, analysing at most four changed conversations and advancing a persistent cursor when that batch is finished. Runs that invoke analysis are spaced at least 65 seconds apart; rate limits trigger an automatic cooldown. Initial backfill takes several runs. Errors and the last successful check appear in the queue.
+- Each run checks the latest six conversations plus six older conversations, analysing at most four changed conversations and advancing a persistent cursor when that batch is finished. Runs that invoke analysis are spaced at least 65 seconds apart; rate limits trigger an automatic cooldown. Initial backfill takes several runs. Errors and the last attempted check appear in the queue. Partial analysis failures return HTTP 503 so schedulers correctly flag them; lease/cooldown skips remain HTTP 200. Requests are serial so a rate limit stops the remaining analysis calls.
 
 ## Configuration
 
-Existing `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN` must belong to `motshirtmauritius@gmail.com`. `GEMINI_API_KEY` or `GOOGLE_API_KEY` supplies Gemini access; `GMAIL_INTAKE_MODEL` optionally overrides `gemini-2.5-flash`. Sending uses existing `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`.
+Existing `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN` must belong to `motshirtmauritius@gmail.com`. `GROQ_API_KEY` supplies the Groq free-plan credential. Email extraction uses the fixed `openai/gpt-oss-120b` model with strict JSON Schema output; there is no Google or paid fallback. The free plan is quota-limited (currently 1,000 requests/day, 200,000 tokens/day and 8,000 tokens/minute); hitting a limit pauses processing until the provider’s retry time. No payment method was added. Conversations exceeding the 8,000-character text budget go to Review because unseen replies may contain corrections. Sending uses existing `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`.
 
 The Google OAuth app is In production. The owner can use **Reconnect Gmail** in `/admin/inbox` to renew access. Google must allow the redirect `https://www.mo-tshirt.mu/api/admin/inbox/oauth/callback`. The server verifies the owner session, OAuth state, read-only scope and exact mailbox before saving the new refresh token encrypted with AES-256-GCM in `integrations/gmail-oauth`. Encryption uses `GMAIL_TOKEN_ENCRYPTION_KEY` or the existing Gmail client secret; it never relies on the admin login secret. Keep that key stable; changing it requires reconnecting. Tokens never appear in browser responses. The saved connection takes precedence over the original Vercel refresh-token variable. Google can still revoke tokens; reconnect if the admin reports expiration.
 

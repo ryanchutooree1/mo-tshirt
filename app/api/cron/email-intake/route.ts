@@ -8,6 +8,9 @@ export async function GET(request: Request) {
   const expected = Buffer.from(`Bearer ${process.env.CRON_SECRET || ""}`);
   const provided = Buffer.from(request.headers.get("authorization") || "");
   if (!process.env.CRON_SECRET || provided.length !== expected.length || !timingSafeEqual(provided, expected)) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  try { return NextResponse.json(await syncEmailIntake(), { headers: { "Cache-Control": "no-store" } }); }
+  try {
+    const result = await syncEmailIntake();
+    return NextResponse.json(result, { status: "failures" in result && Number(result.failures) > 0 ? 503 : 200, headers: { "Cache-Control": "no-store" } });
+  }
   catch { return NextResponse.json({ error: "Email intake sync failed. Check the admin enquiry queue." }, { status: 502 }); }
 }

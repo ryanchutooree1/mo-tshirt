@@ -45,8 +45,8 @@ export async function syncEmailIntake() {
       catch { backlog = latest; }
     }
     const ids = [...new Set([...(latest.threads || []), ...(backlog.threads || [])].map(t => t.id))];
-    for (let index = 0; index < ids.length; index += 3) {
-      await Promise.all(ids.slice(index, index + 3).map(async threadId => {
+    for (let index = 0; index < ids.length; index += 1) {
+      await Promise.all(ids.slice(index, index + 1).map(async threadId => {
         const id = `gmail-${threadId}`;
         try {
           const previous = (await getDoc(caseRef(id))).data() as EmailIntake | undefined;

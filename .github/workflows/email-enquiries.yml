@@ -1,7 +1,7 @@
 name: Check client email enquiries
 on:
   schedule:
-    - cron: '2-59/5 * * * *'
+    - cron: '3,8,13,18,23,28,33,38,43,48,53,58 * * * *'
   workflow_dispatch:
 permissions: {}
 concurrency:
@@ -20,6 +20,6 @@ jobs:
             echo "Email intake secret is missing."
             exit 1
           fi
-          curl --fail --silent --show-error --max-time 290 \
+          curl --fail-with-body --silent --show-error --max-time 290 \
             --header "Authorization: Bearer $CRON_SECRET" \
             https://www.mo-tshirt.mu/api/cron/email-intake
