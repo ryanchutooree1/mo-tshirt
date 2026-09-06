@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/mob-photo-retention",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/email-intake",
+      "schedule": "0 4 * * *"
     }
   ]
 }

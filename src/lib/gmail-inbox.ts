@@ -1,6 +1,6 @@
 // Server-side Gmail access. Never expose OAuth credentials to the browser.
 export const INBOX_EMAIL = "motshirtmauritius@gmail.com";
-export type InboxMessage = { id: string; threadId?: string; replyTo?: string; attachmentNames?: string[]; subject: string; from: string; to: string; date: string; snippet: string; unread: boolean; text?: string };
+export type InboxMessage = { id: string; threadId?: string; messageIdHeader?: string; receivedAtMs?: number; labels?: string[]; autoSubmitted?: string; listId?: string; replyTo?: string; attachmentNames?: string[]; subject: string; from: string; to: string; date: string; snippet: string; unread: boolean; text?: string };
 type Part = { mimeType?: string; filename?: string; body?: { data?: string }; headers?: { name: string; value: string }[]; parts?: Part[] };
 type Message = { id: string; threadId?: string; labelIds?: string[]; internalDate?: string; snippet?: string; payload?: Part };
 export class InboxError extends Error {
@@ -8,7 +8,7 @@ export class InboxError extends Error {
   configured: boolean;
   constructor(message: string, status = 502, configured = true) { super(message); this.status = status; this.configured = configured; }
 }
-async function connection() {
+export async function createGmailConnection() {
   const env = (key: string) => (process.env[`GMAIL_${key}`] || process.env[`GOOGLE_GMAIL_${key}`] || "").trim();
   if (!env("CLIENT_ID") || !env("CLIENT_SECRET") || !env("REFRESH_TOKEN")) {
     throw new InboxError("Gmail is not connected yet. Ask the website owner to configure read-only Gmail access for motshirtmauritius@gmail.com.", 503, false);
@@ -47,10 +47,10 @@ export function normalizeInboxMessage(message: Message, includeBody = false): In
   if (includeBody) walk(message.payload);
   // Always render as text: email HTML must never execute in the admin origin.
   const text = plain.length ? plain.join("\n\n") : html.join("\n").replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, "").replace(/<br\s*\/?\s*>|<\/(p|div|tr)>/gi, "\n").replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&").trim();
-  return { id: message.id, threadId: message.threadId || message.id, replyTo: header("reply-to"), ...(includeBody ? { attachmentNames } : {}), subject: header("subject") || "(No subject)", from: header("from"), to: header("to"), date: header("date"), snippet: message.snippet || "", unread: Boolean(message.labelIds?.includes("UNREAD")), ...(includeBody ? { text: text || message.snippet || "This message has no text content." } : {}) };
+  return { id: message.id, threadId: message.threadId || message.id, messageIdHeader: header("message-id"), receivedAtMs: Number(message.internalDate) || 0, labels: message.labelIds || [], autoSubmitted: header("auto-submitted"), listId: header("list-id"), replyTo: header("reply-to"), ...(includeBody ? { attachmentNames } : {}), subject: header("subject") || "(No subject)", from: header("from"), to: header("to"), date: header("date"), snippet: message.snippet || "", unread: Boolean(message.labelIds?.includes("UNREAD")), ...(includeBody ? { text: text || message.snippet || "This message has no text content." } : {}) };
 }
 export async function listInbox(search: string, pageToken: string) {
-  const get = await connection();
+  const get = await createGmailConnection();
   const list = await get<{ messages?: { id: string }[]; nextPageToken?: string }>("/messages", { labelIds: "INBOX", maxResults: "20", ...(search ? { q: search } : {}), ...(pageToken ? { pageToken } : {}) });
   const messages: InboxMessage[] = [];
   for (let i = 0; i < (list.messages?.length || 0); i += 5) {
@@ -59,6 +59,11 @@ export async function listInbox(search: string, pageToken: string) {
   return { configured: true, email: INBOX_EMAIL, messages, nextPageToken: list.nextPageToken || null };
 }
 export async function readInboxMessage(id: string) {
-  const get = await connection();
+  const get = await createGmailConnection();
   return normalizeInboxMessage(await get<Message>(`/messages/${encodeURIComponent(id)}`, { format: "full" }), true);
+}
+
+export async function readGmailThread(get: Awaited<ReturnType<typeof createGmailConnection>>, threadId: string) {
+  const thread = await get<{ messages?: Message[] }>(`/threads/${encodeURIComponent(threadId)}`, { format: "full" });
+  return (thread.messages || []).map(message => normalizeInboxMessage(message, true)).sort((a, b) => (a.receivedAtMs || 0) - (b.receivedAtMs || 0));
 }

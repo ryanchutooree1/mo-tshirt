@@ -1,5 +1,6 @@
 "use client";
 
+import EmailIntakeAutoSync from "@/components/admin/EmailIntakeAutoSync";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -703,6 +704,7 @@ export default function AdminChrome({
 
   return (
     <div className={`flex min-h-dvh w-full max-w-full overflow-x-clip ${isDark ? "bg-[#050806] text-white" : "bg-[#f7f8fa] text-slate-950"}`}>
+      {session && ["/admin/inbox", "/admin/quotation-approval"].every(path => session.isOwner || session.allowedPages.includes(path as AdminPagePath)) && <EmailIntakeAutoSync />}
       <div className="sticky top-0 hidden h-dvh shrink-0 self-start lg:block">{sidebar}</div>
 
       {mobileOpen ? (

@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Mail, RefreshCw, Search } from "lucide-react";
 import EmailQuoteImport from "@/components/admin/EmailQuoteImport";
@@ -43,6 +44,7 @@ export default function InboxPage() {
   const button = "inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 disabled:opacity-40";
   return <main className="mx-auto max-w-7xl p-4 text-gray-900 sm:p-8">
     <header className="mb-6 flex flex-wrap items-center justify-between gap-4"><div><h1 className="flex items-center gap-2 text-2xl font-semibold"><Mail size={25} /> Inbox</h1><p className="mt-1 text-sm text-gray-500">motshirtmauritius@gmail.com</p></div><button className={button} disabled={loading} onClick={() => setRevision(r => r + 1)}><RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Refresh</button></header>
+    <Link href="/admin/inbox/enquiries" className="mb-5 flex items-center justify-between rounded-xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-900">Automatic enquiries · Missing details &amp; quote creation <span>Open →</span></Link>
     <form className="mb-5 flex gap-2" onSubmit={event => { event.preventDefault(); setQuery(draft.trim()); setPages([""]); setRevision(r => r + 1); }}><input aria-label="Search inbox" maxLength={500} className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-4 py-3 text-gray-900" value={draft} onChange={event => setDraft(event.target.value)} placeholder="Search inbox by sender, subject or words…" /><button className={button} type="submit"><Search size={16} /> Search</button></form>
     {error ? <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-6"><h2 className="font-semibold">Inbox unavailable</h2><p className="mt-2 text-sm">{error}</p><button className={`${button} mt-4`} onClick={() => setRevision(r => r + 1)}>Try again</button></div> : <div className="grid overflow-hidden rounded-xl border border-gray-200 bg-white lg:grid-cols-[380px_minmax(0,1fr)]">
       <section aria-label="Email list" className={`${selected ? "hidden lg:block" : ""} border-r border-gray-200`}>

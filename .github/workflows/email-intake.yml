@@ -1,0 +1,25 @@
+name: Check client email enquiries
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: email-intake
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Check Gmail and prepare complete quotes
+        env:
+          CRON_SECRET: ${{ secrets.EMAIL_INTAKE_CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Email intake secret is missing."
+            exit 1
+          fi
+          curl --fail --silent --show-error --max-time 290 \
+            --header "Authorization: Bearer $CRON_SECRET" \
+            https://www.mo-tshirt.mu/api/cron/email-intake
