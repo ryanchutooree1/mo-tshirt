@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 // @ts-expect-error nodemailer is used without separate type declarations in this project.
 import nodemailer from "nodemailer";
 import { collection, doc, getDoc, getDocs, limit, query, runTransaction, serverTimestamp, setDoc, where } from "firebase/firestore";
+import { getSavedGmailToken } from "./gmail-connection-store";
 import { db } from "@/lib/firebase";
 import { createGmailConnection, INBOX_EMAIL, readGmailThread } from "./gmail-inbox";
 import { buildEmailQuoteRecord, isWebsiteQuotationCopy } from "./email-quote";
@@ -34,7 +35,7 @@ export async function syncEmailIntake() {
   let deferred = false;
   let nextAllowedAt = 0;
   try {
-    const get = await createGmailConnection();
+    const get = await createGmailConnection(await getSavedGmailToken());
     const search = `newer_than:90d -in:spam -in:trash -from:${INBOX_EMAIL} -subject:"New Website Quotation"`;
     const params = { q: search, maxResults: "6" };
     const latest = await get<{ threads?: { id: string }[]; nextPageToken?: string }>("/threads", params);

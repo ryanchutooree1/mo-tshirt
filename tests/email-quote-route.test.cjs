@@ -13,6 +13,7 @@ function setup({allowed=['/admin/inbox','/admin/quotation-approval'],subject='Or
  'next/server':{NextResponse:{json:(body,options)=>Response.json(body,options)}},
  'firebase/firestore':{doc:(_db,c,id)=>c+'/'+id,getDoc:async ref=>{reads++;return snap(ref);},serverTimestamp:()=>123,runTransaction:async(_db,fn)=>{if(race) records.set('quotes/gmail-thread',{name:'Already saved'});return fn({get:async ref=>snap(ref),set:(ref,value)=>records.set(ref,value)});}},
  '@/lib/firebase':{db:{}},
+ '@/lib/gmail-connection-store':{getSavedGmailToken:async()=>undefined},
  '@/lib/admin-request':{getAdminRequestSession:async()=>({userId:'owner',allowedPages:allowed,isOwner:false})},
  '@/lib/admin-access':{hasAdminPageAccess:(pages,path)=>pages.includes(path)},
  '@/lib/gmail-inbox':{readInboxMessage:async()=>message,InboxError:class extends Error{}},

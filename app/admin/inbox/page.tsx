@@ -6,6 +6,12 @@ import EmailQuoteImport from "@/components/admin/EmailQuoteImport";
 import type { InboxMessage } from "@/lib/gmail-inbox";
 
 export default function InboxPage() {
+  const [canReconnect, setCanReconnect] = useState(false);
+  const [connectionNotice, setConnectionNotice] = useState("");
+  useEffect(() => {
+    const result = new URLSearchParams(window.location.search).get("gmail");
+    if (result) setConnectionNotice(result === "connected" ? "Gmail reconnected successfully. Your updated connection is saved securely." : result === "wrong_account" ? "Select motshirtmauritius@gmail.com to connect this inbox." : "Gmail was not reconnected. Please retry using the website owner account.");
+  }, []);
   const [draft, setDraft] = useState("");
   const [query, setQuery] = useState("");
   const [pages, setPages] = useState<string[]>([""]);
@@ -23,7 +29,7 @@ export default function InboxPage() {
     const controller = new AbortController();
     setLoading(true); setError(""); setMessages([]); setNextPage(null); setSelected(null);
     fetch(`/api/admin/inbox?${new URLSearchParams({ q: query, pageToken: page })}`, { cache: "no-store", signal: controller.signal })
-      .then(async response => { const data = await response.json(); if (!response.ok) throw new Error(data.error || "Unable to load inbox."); return data; })
+      .then(async response => { const data = await response.json(); setCanReconnect(Boolean(data.canReconnect)); if (!response.ok) throw new Error(data.error || "Unable to load inbox."); return data; })
       .then(data => { setMessages(data.messages); setNextPage(data.nextPageToken); })
       .catch(error => { if (!controller.signal.aborted) setError(error.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
@@ -45,6 +51,7 @@ export default function InboxPage() {
   return <main className="mx-auto max-w-7xl p-4 text-gray-900 sm:p-8">
     <header className="mb-6 flex flex-wrap items-center justify-between gap-4"><div><h1 className="flex items-center gap-2 text-2xl font-semibold"><Mail size={25} /> Inbox</h1><p className="mt-1 text-sm text-gray-500">motshirtmauritius@gmail.com</p></div><button className={button} disabled={loading} onClick={() => setRevision(r => r + 1)}><RefreshCw size={16} className={loading ? "animate-spin" : ""} /> Refresh</button></header>
     <Link href="/admin/inbox/enquiries" className="mb-5 flex items-center justify-between rounded-xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-900">Automatic enquiries · Missing details &amp; quote creation <span>Open →</span></Link>
+    {canReconnect && <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-sm"><span className="text-gray-500">{connectionNotice || "Gmail connection managed securely by the website."}</span><a href="/api/admin/inbox/oauth" className="font-semibold text-emerald-800">Reconnect Gmail</a></div>}
     <form className="mb-5 flex gap-2" onSubmit={event => { event.preventDefault(); setQuery(draft.trim()); setPages([""]); setRevision(r => r + 1); }}><input aria-label="Search inbox" maxLength={500} className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-4 py-3 text-gray-900" value={draft} onChange={event => setDraft(event.target.value)} placeholder="Search inbox by sender, subject or words…" /><button className={button} type="submit"><Search size={16} /> Search</button></form>
     {error ? <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-6"><h2 className="font-semibold">Inbox unavailable</h2><p className="mt-2 text-sm">{error}</p><button className={`${button} mt-4`} onClick={() => setRevision(r => r + 1)}>Try again</button></div> : <div className="grid overflow-hidden rounded-xl border border-gray-200 bg-white lg:grid-cols-[380px_minmax(0,1fr)]">
       <section aria-label="Email list" className={`${selected ? "hidden lg:block" : ""} border-r border-gray-200`}>

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { doc, getDoc, runTransaction, serverTimestamp } from "firebase/firestore";
+import { getSavedGmailToken } from "@/lib/gmail-connection-store";
 import { db } from "@/lib/firebase";
 import { getAdminRequestSession } from "@/lib/admin-request";
 import { hasAdminPageAccess } from "@/lib/admin-access";
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
     let body;
     try { body = JSON.parse(text); } catch { return json({ error: "Invalid request." }, 400); }
     if (!body || typeof body.id !== "string" || !/^[a-zA-Z0-9_-]{1,128}$/.test(body.id) || !["preview", "create"].includes(body.action)) return json({ error: "Invalid request." }, 400);
-    const message = await readInboxMessage(body.id);
+    const message = await readInboxMessage(body.id, await getSavedGmailToken());
     if (isWebsiteQuotationCopy(message)) return json({ error: "This is a website quotation notification. Its enquiry already belongs in Quotes & invoices; do not import the email copy." }, 409);
     const quoteId = emailQuoteId(message);
     const ref = doc(db, "quotes", quoteId);

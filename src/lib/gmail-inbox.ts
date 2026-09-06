@@ -8,15 +8,15 @@ export class InboxError extends Error {
   configured: boolean;
   constructor(message: string, status = 502, configured = true) { super(message); this.status = status; this.configured = configured; }
 }
-export async function createGmailConnection() {
+export async function createGmailConnection(savedRefreshToken?: string) {
   const env = (key: string) => (process.env[`GMAIL_${key}`] || process.env[`GOOGLE_GMAIL_${key}`] || "").trim();
-  if (!env("CLIENT_ID") || !env("CLIENT_SECRET") || !env("REFRESH_TOKEN")) {
+  if (!env("CLIENT_ID") || !env("CLIENT_SECRET") || !(savedRefreshToken || env("REFRESH_TOKEN"))) {
     throw new InboxError("Gmail is not connected yet. Ask the website owner to configure read-only Gmail access for motshirtmauritius@gmail.com.", 503, false);
   }
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST", cache: "no-store", signal: AbortSignal.timeout(15000),
     headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ client_id: env("CLIENT_ID"), client_secret: env("CLIENT_SECRET"), refresh_token: env("REFRESH_TOKEN"), grant_type: "refresh_token" }),
+    body: new URLSearchParams({ client_id: env("CLIENT_ID"), client_secret: env("CLIENT_SECRET"), refresh_token: savedRefreshToken || env("REFRESH_TOKEN"), grant_type: "refresh_token" }),
   });
   const token = await response.json();
   if (!response.ok || !token.access_token) throw new InboxError("The Gmail connection has expired or is invalid. Ask the website owner to reconnect Gmail.");
@@ -49,8 +49,8 @@ export function normalizeInboxMessage(message: Message, includeBody = false): In
   const text = plain.length ? plain.join("\n\n") : html.join("\n").replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, "").replace(/<br\s*\/?\s*>|<\/(p|div|tr)>/gi, "\n").replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&").trim();
   return { id: message.id, threadId: message.threadId || message.id, messageIdHeader: header("message-id"), receivedAtMs: Number(message.internalDate) || 0, labels: message.labelIds || [], autoSubmitted: header("auto-submitted"), listId: header("list-id"), replyTo: header("reply-to"), ...(includeBody ? { attachmentNames } : {}), subject: header("subject") || "(No subject)", from: header("from"), to: header("to"), date: header("date"), snippet: message.snippet || "", unread: Boolean(message.labelIds?.includes("UNREAD")), ...(includeBody ? { text: text || message.snippet || "This message has no text content." } : {}) };
 }
-export async function listInbox(search: string, pageToken: string) {
-  const get = await createGmailConnection();
+export async function listInbox(search: string, pageToken: string, savedRefreshToken?: string) {
+  const get = await createGmailConnection(savedRefreshToken);
   const list = await get<{ messages?: { id: string }[]; nextPageToken?: string }>("/messages", { labelIds: "INBOX", maxResults: "20", ...(search ? { q: search } : {}), ...(pageToken ? { pageToken } : {}) });
   const messages: InboxMessage[] = [];
   for (let i = 0; i < (list.messages?.length || 0); i += 5) {
@@ -58,8 +58,8 @@ export async function listInbox(search: string, pageToken: string) {
   }
   return { configured: true, email: INBOX_EMAIL, messages, nextPageToken: list.nextPageToken || null };
 }
-export async function readInboxMessage(id: string) {
-  const get = await createGmailConnection();
+export async function readInboxMessage(id: string, savedRefreshToken?: string) {
+  const get = await createGmailConnection(savedRefreshToken);
   return normalizeInboxMessage(await get<Message>(`/messages/${encodeURIComponent(id)}`, { format: "full" }), true);
 }
 
