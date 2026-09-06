@@ -18,7 +18,8 @@ export async function listEmailIntake() {
   ]);
   return { enquiries: records.docs.map(d => d.data() as EmailIntake).sort((a, b) => b.lastReplyAt.localeCompare(a.lastReplyAt)), lastSyncAt: state.data()?.lastSyncAt || null, error: state.data()?.error || "" };
 }
-export async function syncEmailIntake() {
+export async function syncEmailIntake(options: { maxAnalyses?: number } = {}) {
+  const maxAnalyses = options.maxAnalyses === 1 ? 1 : 4;
   const owner = randomUUID();
   const state = await runTransaction(db, async tx => {
     const old = (await tx.get(stateRef())).data() || {};
@@ -62,7 +63,7 @@ export async function syncEmailIntake() {
           const messages = inbound.filter(m => mailboxAddress(m.replyTo || m.from) === sender);
           const version = createHash("sha256").update(messages.map(m => m.id).join(":")).digest("hex").slice(0, 24);
           if (previous?.version === version && previous.status !== "error") return;
-          if (analysisStarted >= 4) { deferred = true; return; }
+          if (analysisStarted >= maxAnalyses) { deferred = true; return; }
           analysisStarted++;
           const analysis = await analyseEmailEnquiry(messages);
           const lastMessage = messages[messages.length - 1];
@@ -92,7 +93,7 @@ export async function syncEmailIntake() {
         } catch (error) {
           failures++;
           const retryAfterMs = (error as Error & { retryAfterMs?: number }).retryAfterMs;
-          if (retryAfterMs) { nextAllowedAt = Math.max(nextAllowedAt, Date.now() + retryAfterMs); analysisStarted = 4; }
+          if (retryAfterMs) { nextAllowedAt = Math.max(nextAllowedAt, Date.now() + retryAfterMs); analysisStarted = maxAnalyses; }
           // Preserve previously extracted information when an external service fails.
           await setDoc(stateRef(), { error: error instanceof Error ? error.message.slice(0, 250) : "An enquiry could not be analysed." }, { merge: true });
         }
