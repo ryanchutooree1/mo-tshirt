@@ -117,13 +117,13 @@ test('email failure preserves the saved proof and successful client response', a
   assert.equal((await response.json()).quote.amountReceived, 0);
 });
 
-test('notification goes to Ryan with an admin review link and no claim of verified payment', () => {
+test('notification goes to the business inbox with an admin review link and no claim of verified payment', () => {
   const notifier = load('src/lib/payment-proof-notification.ts', {
     '@/lib/seo': {SITE_URL: 'https://www.mo-tshirt.mu'},
     '@/lib/quotation-payment': payment,
   });
   const mail = notifier.buildPaymentProofNotification({quoteId: 'test id', quoteData: {name: 'Test Client', email: 'client@example.com', quote: {documentNumber:'Q-TEST',total:500}},filename:'proof.png',contentType:'image/png',buffer:Buffer.from('proof')});
-  assert.equal(mail.to, 'ryanchutooree@gmail.com');
+  assert.equal(mail.to, 'motshirtmauritius@gmail.com');
   assert.match(mail.subject, /Q-TEST/);
   assert.match(mail.text, /Test Client/);
   assert.match(mail.text, /awaiting your verification/);

@@ -1,7 +1,7 @@
 import { SITE_URL } from "@/lib/seo";
 import { quotationPaymentSummary } from "@/lib/quotation-payment";
 
-const RECIPIENT = "ryanchutooree@gmail.com";
+const RECIPIENT = "motshirtmauritius@gmail.com";
 
 type PaymentProofNotification = {
   quoteId: string;
