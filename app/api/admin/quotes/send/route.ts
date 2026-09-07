@@ -205,12 +205,11 @@ export async function POST(req: Request) {
       ? `<div style="margin-top:22px;padding:18px;border-radius:12px;background:#f6f7f8;">
   <p style="margin:0 0 10px;font-weight:700;">Please respond to this quotation:</p>
   ${responseButton("Accept quotation", responseLinks.accept, "#16803c")}
-  ${responseButton("Request changes", responseLinks.changes, "#c56a00")}
-  ${responseButton("Reject quotation", responseLinks.reject, "#a62929")}
+  <p style="margin:12px 0 0;font-size:13px;"><a href="${escapeHtml(responseLinks.changes)}" style="color:#76511a;">Request changes</a> &nbsp;·&nbsp; <a href="${escapeHtml(responseLinks.reject)}" style="color:#8b3030;">Reject quotation</a></p>
 </div>`
       : "";
     const paymentInstructions = responseLinks
-      ? buildQuotationPaymentInstructions(payload.quote || {}, payload.quoteId, payload.clientName)
+      ? buildQuotationPaymentInstructions(payload.quote || {}, payload.quoteId)
       : null;
     const plainTextMessage = responseLinks
       ? `${message}\n\n${paymentInstructions!.text}\n\nAccept quotation: ${responseLinks.accept}\nRequest changes: ${responseLinks.changes}\nReject quotation: ${responseLinks.reject}`

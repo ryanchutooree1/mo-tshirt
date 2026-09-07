@@ -49,7 +49,7 @@ type Props = {
 const ACTION_COPY = {
   accept: {
     title: "Accept quotation",
-    description: "After paying in full, upload your payment screenshot below. We will check it before confirming your payment.",
+    description: "Send your payment proof using either option below.",
     icon: CheckCircle2,
     tone: "text-emerald-700 bg-emerald-50",
   },
@@ -168,15 +168,61 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
                 <Image src={JUICE_LOGO_PATH} alt="MCB Juice" width={56} height={56} className="rounded-xl" />
                 <div><h2 className="font-bold">Pay in full with MCB Juice</h2><p className="mt-1 text-2xl font-bold tracking-wide">{JUICE_PHONE}</p></div>
               </div>
-              <p className="mt-4 text-sm leading-6">{balance === 0 ? "No balance remains to pay." : "Full payment is required before production. Pay the balance shown above, then send us your payment screenshot."}</p>
-              <p className="mt-3 text-sm leading-6">Upload it below, or send it on WhatsApp to <strong>{PAYMENT_WHATSAPP_PHONE}</strong>. Include your quotation reference <strong>{quote.documentNumber || quoteId.slice(-8).toUpperCase()}</strong> or your name.</p>
-              <a href={paymentWhatsAppUrl(quote.documentNumber || quoteId.slice(-8).toUpperCase(), quote.clientName)} target="_blank" rel="noopener noreferrer" className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-3 text-center text-sm font-bold text-white hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200">
-                <MessageSquareText className="h-5 w-5 shrink-0" /> Send payment proof on WhatsApp
-              </a>
-              <p className="mt-3 text-xs leading-5 text-black/55">Sending proof on WhatsApp does not submit this form. Our team will match it to your quotation and confirm receipt.</p>
+              <p className="mt-4 text-sm leading-6">{balance === 0 ? "No balance remains to pay." : "Pay the full balance above before production."}</p>
             </section>
           ) : null}
 
+          <p className="mb-5 text-sm leading-6 text-black/60">{actionCopy.description}</p>
+
+          {success ? (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-900">
+              <div className="flex gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" /><div><p className="font-semibold">Response received</p><p className="mt-1 text-sm leading-6">{success}</p></div></div>
+              <button type="button" onClick={() => setSuccess("")} className="mt-4 rounded-lg border border-emerald-300 bg-white px-3 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100">
+                Submit another {action === "accept" ? "payment screenshot" : "response"}
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={submit} className="space-y-5">
+              {action === "accept" ? (
+                <label className="block cursor-pointer rounded-2xl border-2 border-dashed border-black/15 p-6 text-center transition hover:border-black/35">
+                  <FileImage className="mx-auto h-8 w-8 text-black/45" />
+                  <span className="mt-3 block text-sm font-semibold">Upload payment screenshot</span>
+                  <span className="mt-1 block text-xs text-black/45">JPG, PNG or WebP · maximum 8 MB</span>
+                  <input name="paymentScreenshot" type="file" accept="image/jpeg,image/png,image/webp" required className="mt-4 block w-full text-xs" />
+                </label>
+              ) : (
+                <label className="block text-sm font-semibold">
+                  {action === "changes" ? "What should we change?" : "Reason for rejection"}
+                  <textarea name="comment" required rows={5} maxLength={4000} className="mt-2 w-full resize-y rounded-xl border border-black/15 px-4 py-3 font-normal outline-none focus:border-black/45" placeholder={action === "changes" ? "Example: Please change the quantity to 50…" : "Please share a short reason…"} />
+                </label>
+              )}
+
+              {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+              <button
+                type="submit"
+                disabled={submitting}
+                className={`flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold text-white transition focus-visible:outline-none focus-visible:ring-4 disabled:cursor-wait disabled:opacity-55 ${
+                  action === "reject"
+                    ? "bg-red-600 hover:bg-red-700 focus-visible:ring-red-200"
+                    : "bg-black hover:bg-black/85 focus-visible:ring-black/20"
+                }`}
+              >
+                {submitting && <LoaderCircle className="h-4 w-4 animate-spin" />}
+                {submitting ? "Submitting…" : action === "accept" ? "Submit payment proof" : action === "changes" ? "Send change request" : "Reject quotation"}
+              </button>
+              {action === "accept" && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 text-xs font-semibold text-black/40"><span className="h-px flex-1 bg-black/10" />OR<span className="h-px flex-1 bg-black/10" /></div>
+                  <a href={paymentWhatsAppUrl(quote.documentNumber || quoteId.slice(-8).toUpperCase(), quote.clientName)} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 rounded-xl border border-emerald-700 px-4 py-3 text-center text-sm font-bold text-emerald-800 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200">
+                    <MessageSquareText className="h-5 w-5 shrink-0" /> Send payment proof on WhatsApp
+                  </a>
+                  <p className="text-center text-xs leading-5 text-black/50">WhatsApp {PAYMENT_WHATSAPP_PHONE} with your quotation reference or name. Choose one option; we will verify your payment.</p>
+                </div>
+              )}
+            </form>
+          )}
+
+          <div className="mt-7">
           {quote.quotationDocument?.url ? (
             <section className="mb-7 overflow-hidden rounded-2xl border border-black/10 bg-[#f7f7f5]">
               <button
@@ -265,47 +311,7 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
             </section>
           ) : null}
 
-          <p className="mb-5 text-sm leading-6 text-black/60">{actionCopy.description}</p>
-
-          {success ? (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-900">
-              <div className="flex gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" /><div><p className="font-semibold">Response received</p><p className="mt-1 text-sm leading-6">{success}</p></div></div>
-              <button type="button" onClick={() => setSuccess("")} className="mt-4 rounded-lg border border-emerald-300 bg-white px-3 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100">
-                Submit another {action === "accept" ? "payment screenshot" : "response"}
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={submit} className="space-y-5">
-              {action === "accept" ? (
-                <label className="block cursor-pointer rounded-2xl border-2 border-dashed border-black/15 p-6 text-center transition hover:border-black/35">
-                  <FileImage className="mx-auto h-8 w-8 text-black/45" />
-                  <span className="mt-3 block text-sm font-semibold">Upload payment screenshot</span>
-                  <span className="mt-1 block text-xs text-black/45">JPG, PNG or WebP · maximum 8 MB</span>
-                  <input name="paymentScreenshot" type="file" accept="image/jpeg,image/png,image/webp" required className="mt-4 block w-full text-xs" />
-                </label>
-              ) : (
-                <label className="block text-sm font-semibold">
-                  {action === "changes" ? "What should we change?" : "Reason for rejection"}
-                  <textarea name="comment" required rows={5} maxLength={4000} className="mt-2 w-full resize-y rounded-xl border border-black/15 px-4 py-3 font-normal outline-none focus:border-black/45" placeholder={action === "changes" ? "Example: Please change the quantity to 50…" : "Please share a short reason…"} />
-                </label>
-              )}
-
-              {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
-              <button
-                type="submit"
-                disabled={submitting}
-                className={`flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold text-white transition focus-visible:outline-none focus-visible:ring-4 disabled:cursor-wait disabled:opacity-55 ${
-                  action === "reject"
-                    ? "bg-red-600 hover:bg-red-700 focus-visible:ring-red-200"
-                    : "bg-black hover:bg-black/85 focus-visible:ring-black/20"
-                }`}
-              >
-                {submitting && <LoaderCircle className="h-4 w-4 animate-spin" />}
-                {submitting ? "Submitting…" : action === "accept" ? "Accept and send payment proof" : action === "changes" ? "Send change request" : "Reject quotation"}
-              </button>
-              {action === "accept" && <p className="text-center text-xs leading-5 text-black/45">Your payment stays awaiting verification until MO T-SHIRT checks and confirms it.</p>}
-            </form>
-          )}
+          </div>
         </section>
       </div>
       {attachmentPreview ? (

@@ -22,12 +22,13 @@ test('email asks for the full total, includes Juice and both proof options', () 
   for (const part of [email.text, email.html]) {
     assert.match(part, /Rs 1,150.00/);
     assert.match(part, /57701144/);
-    assert.match(part, /59883880/);
     assert.match(part, /Q-2A1W6/);
     assert.match(part, /Accept quotation/);
-    assert.match(part, /verify your payment/);
+    assert.match(part, /our website/);
   }
   assert.match(email.html, /cid:mcb-juice/);
+  assert.ok(!email.html.includes('<a '));
+  assert.ok(!email.text.includes('https://wa.me/'));
 });
 
 test('credited payments are subtracted and paid orders are not asked to pay again', () => {
