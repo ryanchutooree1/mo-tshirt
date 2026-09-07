@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { CheckCircle2, ChevronDown, FileImage, FileText, History, LoaderCircle, MessageSquareText, X, XCircle } from "lucide-react";
 import type { QuoteResponseAction } from "@/lib/quote-response-links";
+import { JUICE_LOGO_PATH, JUICE_PHONE, PAYMENT_WHATSAPP_PHONE, paymentWhatsAppUrl } from "@/lib/quotation-payment";
 
 type QuoteResponseHistoryEntry = {
   id: string;
@@ -48,7 +49,7 @@ type Props = {
 const ACTION_COPY = {
   accept: {
     title: "Accept quotation",
-    description: "Upload your payment screenshot to confirm your order.",
+    description: "After paying in full, upload your payment screenshot below. We will check it before confirming your payment.",
     icon: CheckCircle2,
     tone: "text-emerald-700 bg-emerald-50",
   },
@@ -160,6 +161,21 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
             <div><p className="text-black/45">Quotation</p><p className="mt-1 font-semibold">{quote.documentNumber || quoteId.slice(-8).toUpperCase()}</p></div>
             <div><p className="text-black/45">{action === "accept" ? "Balance to pay" : "Total"}</p><p className="mt-1 font-semibold">{balance === null ? "See attached PDF" : `${quote.currency} ${balance.toLocaleString("en-MU", { minimumFractionDigits: 2 })}`}</p></div>
           </div>
+
+          {action === "accept" ? (
+            <section className="mb-7 rounded-2xl border border-rose-100 bg-rose-50/50 p-5" aria-label="Payment details">
+              <div className="flex items-center gap-3">
+                <Image src={JUICE_LOGO_PATH} alt="MCB Juice" width={56} height={56} className="rounded-xl" />
+                <div><h2 className="font-bold">Pay in full with MCB Juice</h2><p className="mt-1 text-2xl font-bold tracking-wide">{JUICE_PHONE}</p></div>
+              </div>
+              <p className="mt-4 text-sm leading-6">{balance === 0 ? "No balance remains to pay." : "Full payment is required before production. Pay the balance shown above, then send us your payment screenshot."}</p>
+              <p className="mt-3 text-sm leading-6">Upload it below, or send it on WhatsApp to <strong>{PAYMENT_WHATSAPP_PHONE}</strong>. Include your quotation reference <strong>{quote.documentNumber || quoteId.slice(-8).toUpperCase()}</strong> or your name.</p>
+              <a href={paymentWhatsAppUrl(quote.documentNumber || quoteId.slice(-8).toUpperCase(), quote.clientName)} target="_blank" rel="noopener noreferrer" className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-3 text-center text-sm font-bold text-white hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-200">
+                <MessageSquareText className="h-5 w-5 shrink-0" /> Send payment proof on WhatsApp
+              </a>
+              <p className="mt-3 text-xs leading-5 text-black/55">Sending proof on WhatsApp does not submit this form. Our team will match it to your quotation and confirm receipt.</p>
+            </section>
+          ) : null}
 
           {quote.quotationDocument?.url ? (
             <section className="mb-7 overflow-hidden rounded-2xl border border-black/10 bg-[#f7f7f5]">
@@ -287,7 +303,7 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
                 {submitting && <LoaderCircle className="h-4 w-4 animate-spin" />}
                 {submitting ? "Submitting…" : action === "accept" ? "Accept and send payment proof" : action === "changes" ? "Send change request" : "Reject quotation"}
               </button>
-              {action === "accept" && <p className="text-center text-xs leading-5 text-black/45">Submit your screenshot only. MO T-SHIRT will check the payment details in the admin system.</p>}
+              {action === "accept" && <p className="text-center text-xs leading-5 text-black/45">Your payment stays awaiting verification until MO T-SHIRT checks and confirms it.</p>}
             </form>
           )}
         </section>

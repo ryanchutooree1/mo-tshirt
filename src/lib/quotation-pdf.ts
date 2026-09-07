@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf";
 import { CONTACT_PHONE_DISPLAY } from "@/data/work";
 import { formatMoney } from "@/lib/money";
+import { FULL_PAYMENT_TERM, JUICE_PHONE, PAYMENT_WHATSAPP_PHONE } from "@/lib/quotation-payment";
 
 type FirestoreRecord = Record<string, unknown>;
 
@@ -8,6 +9,8 @@ const DEFAULT_TERMS = [
   "This quotation is provided for information purposes only and is valid for a limited period.",
   "Prices are subject to change if quantities, specifications, or timelines are modified.",
   "Production will commence only after written acceptance of this quotation.",
+  FULL_PAYMENT_TERM,
+  `Upload payment proof through the Accept quotation link, or WhatsApp ${PAYMENT_WHATSAPP_PHONE} with your quotation reference or name.`,
   "Acceptance confirms agreement with MO T-SHIRT terms and conditions.",
   "MO T-SHIRT is not VAT-registered. This quotation is not subject to VAT.",
 ].join("\n");
@@ -210,9 +213,9 @@ export function buildSavedQuotationPdf(data: FirestoreRecord) {
   y += 16;
   doc.setFont("helvetica", "normal");
   doc.setTextColor(40);
-  doc.text("Payee: Manavshree Chutooree", margin, y);
-  doc.text("Bank: SBM BANK", margin, y + 14);
-  doc.text("Account No: 50300001273751", margin, y + 28);
+  doc.text(`MCB Juice: ${JUICE_PHONE}`, margin, y);
+  doc.text(`Payment proof on WhatsApp: ${PAYMENT_WHATSAPP_PHONE}`, margin, y + 14);
+  doc.text(`Reference: ${documentNumber}`, margin, y + 28);
 
   return Buffer.from(doc.output("arraybuffer"));
 }

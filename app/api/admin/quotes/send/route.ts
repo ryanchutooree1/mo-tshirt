@@ -5,6 +5,9 @@ import { hasAdminSession } from "@/lib/admin-auth";
 import { db } from "@/lib/firebase";
 import { buildQuoteResponseUrl } from "@/lib/quote-response-links";
 import { storePublicUploadBuffer } from "@/lib/public-upload-store";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { buildQuotationPaymentInstructions } from "@/lib/quotation-payment";
 
 type SendPayload = {
   quoteId: string;
@@ -206,8 +209,11 @@ export async function POST(req: Request) {
   ${responseButton("Reject quotation", responseLinks.reject, "#a62929")}
 </div>`
       : "";
+    const paymentInstructions = responseLinks
+      ? buildQuotationPaymentInstructions(payload.quote || {}, payload.quoteId, payload.clientName)
+      : null;
     const plainTextMessage = responseLinks
-      ? `${message}\n\nAccept quotation: ${responseLinks.accept}\nRequest changes: ${responseLinks.changes}\nReject quotation: ${responseLinks.reject}`
+      ? `${message}\n\n${paymentInstructions!.text}\n\nAccept quotation: ${responseLinks.accept}\nRequest changes: ${responseLinks.changes}\nReject quotation: ${responseLinks.reject}`
       : message;
     const pdfFilename = `${documentSlug}-${payload.quoteId}.pdf`;
     const quotationDocument = responseLinks
@@ -230,9 +236,17 @@ export async function POST(req: Request) {
       text: plainTextMessage,
       html: `<div style="font-family:Arial,Helvetica,sans-serif; font-size:14px; color:#111;line-height:1.5;">
   <p>${escapeHtml(message).replace(/\n/g, "<br/>")}</p>
+  ${paymentInstructions?.html || ""}
   ${responseButtons}
 </div>`,
       attachments: [
+        ...(paymentInstructions ? [{
+          filename: "mcb-juice.png",
+          content: await readFile(path.join(process.cwd(), "public/payments/mcb-juice.png")),
+          contentType: "image/png",
+          cid: "mcb-juice",
+          contentDisposition: "inline",
+        }] : []),
         {
           filename: pdfFilename,
           content: buffer,

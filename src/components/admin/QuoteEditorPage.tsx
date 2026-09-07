@@ -29,6 +29,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { formatMoney as formatDisplayMoney } from "@/lib/money";
+import { FULL_PAYMENT_TERM, JUICE_PHONE, PAYMENT_WHATSAPP_PHONE } from "@/lib/quotation-payment";
 import {
   assessPaymentEvidence,
   comparePaymentAmount,
@@ -665,7 +666,7 @@ const BUSINESS_INFO = {
   brn: "I20009899",
 };
 
-const QUOTATION_TERMS = [
+const LEGACY_QUOTATION_TERMS = [
   "This quotation is provided for information purposes only and is valid for a limited period.",
   "Prices are subject to change if quantities, specifications, or timelines are modified.",
   "Production will commence only after written acceptance of this quotation.",
@@ -673,10 +674,15 @@ const QUOTATION_TERMS = [
   "Note: MO T-SHIRT is not VAT-registered. This quotation is not subject to VAT.",
 ].join("\n");
 
+const QUOTATION_TERMS = [
+  LEGACY_QUOTATION_TERMS,
+  FULL_PAYMENT_TERM,
+  `Upload payment proof through the Accept quotation link, or WhatsApp ${PAYMENT_WHATSAPP_PHONE} with your quotation reference or name.`,
+].join("\n");
+
 const INVOICE_TERMS = [
-  "A 50% advance payment is required to confirm the order and start production.",
-  "The remaining 50% balance must be settled prior to delivery or collection.",
-  "Orders are processed only after receipt of the required advance payment.",
+  FULL_PAYMENT_TERM,
+  "Orders are processed only after full payment has been verified.",
   "Late payment may result in delays to production or delivery.",
   "Note: MO T-SHIRT is not VAT-registered. This invoice is not subject to VAT.",
 ].join("\n");
@@ -1480,7 +1486,8 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
       amountReceived: safeNumber(quote.quote.amountReceived, 0),
       notes: quote.quote.notes || "",
       validUntil: quote.quote.validUntil || validUntilFallback,
-      terms: quote.quote.terms || getDefaultTerms(documentType),
+      terms: documentType === "quotation" && (!quote.quote.terms || quote.quote.terms === LEGACY_QUOTATION_TERMS)
+        ? QUOTATION_TERMS : quote.quote.terms || getDefaultTerms(documentType),
     };
   }
 
@@ -1903,11 +1910,11 @@ function buildPdfDoc(quote: QuoteRecord, draft: QuoteDraft, logo: LogoAsset | nu
   y += 16;
   doc.setFont("helvetica", "normal");
   doc.setTextColor(40);
-  doc.text(`Payee: ${PAYMENT_DETAILS.payee}`, margin, y);
+  doc.text(draft.documentType === "quotation" ? `MCB Juice: ${JUICE_PHONE}` : `Payee: ${PAYMENT_DETAILS.payee}`, margin, y);
   y += 14;
-  doc.text(`Bank: ${PAYMENT_DETAILS.bankName}`, margin, y);
+  doc.text(draft.documentType === "quotation" ? `Payment proof on WhatsApp: ${PAYMENT_WHATSAPP_PHONE}` : `Bank: ${PAYMENT_DETAILS.bankName}`, margin, y);
   y += 14;
-  doc.text(`Account No: ${PAYMENT_DETAILS.accountNumber}`, margin, y);
+  doc.text(draft.documentType === "quotation" ? `Reference: ${draft.documentNumber || quote.id}` : `Account No: ${PAYMENT_DETAILS.accountNumber}`, margin, y);
 
   y += 22;
   doc.setFont("helvetica", "normal");
