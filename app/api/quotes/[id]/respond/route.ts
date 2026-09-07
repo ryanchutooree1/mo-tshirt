@@ -15,6 +15,9 @@ import {
 } from "@/lib/request-safety";
 import { storePublicUploadBuffer } from "@/lib/public-upload-store";
 import { normalizeQuotationUploadUrl } from "@/lib/quotation-upload-paths";
+import { sendPaymentProofNotification } from "@/lib/payment-proof-notification";
+
+export const maxDuration = 60;
 
 const MAX_PAYMENT_SCREENSHOT_BYTES = 8 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -277,8 +280,9 @@ async function acceptWithPaymentEvidence({
     return json({ error: "Please upload a JPG, PNG or WebP screenshot." }, 400);
   }
 
+  const buffer = Buffer.from(await file.arrayBuffer());
   const upload = await storePublicUploadBuffer({
-    buffer: Buffer.from(await file.arrayBuffer()),
+    buffer,
     filename: file.name,
     contentType: file.type,
     size: file.size,
@@ -327,6 +331,23 @@ async function acceptWithPaymentEvidence({
     paymentEvidence,
     clientResponseHistory: [...getStoredResponseHistory(quoteData), ...getHistoryEntriesToAppend(quoteData, historyEntry)],
   };
+
+  // The proof is already saved. Email failures must never undo the upload or
+  // make the client submit their payment screenshot again.
+  let notificationStatus = "sent";
+  try {
+    await sendPaymentProofNotification({ quoteId, quoteData, filename: upload.filename, contentType: upload.contentType, buffer });
+  } catch (error) {
+    notificationStatus = "failed";
+    console.error("quotes:payment-proof:email", { quoteId, uploadId: upload.uploadId }, error);
+  }
+  try {
+    await updateDoc(quoteRef, {
+      paymentProofEmail: { uploadId: upload.uploadId, status: notificationStatus, attemptedAtIso: new Date().toISOString() },
+    });
+  } catch (error) {
+    console.error("quotes:payment-proof:email-status", { quoteId }, error);
+  }
 
   return json({
     ok: true,

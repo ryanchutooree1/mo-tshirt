@@ -47,7 +47,8 @@ test('reference and client name cannot inject email HTML or break WhatsApp links
   assert.ok(link.searchParams.get('text').includes(reference));
 });
 
-function responseRoute(valid = true) {
+function responseRoute(valid = true, mailFails = false) {
+  const notifications = [];
   const writes = [];
   const modules = {
     'next/server': {NextResponse: {json: (body, options) => Response.json(body, options)}},
@@ -56,6 +57,7 @@ function responseRoute(valid = true) {
       updateDoc: async (_ref, data) => writes.push(data), arrayUnion: (...values) => values, serverTimestamp: () => 123,
     },
     '@/lib/firebase': {db: {}},
+    '@/lib/payment-proof-notification': {sendPaymentProofNotification: async (input) => { assert.ok(writes[0]?.paymentEvidence); notifications.push(input); if(mailFails) throw new Error('SMTP test failure'); }},
     '@/lib/quote-response-links': {isQuoteResponseAction: (a) => ['accept', 'changes', 'reject'].includes(a), verifyQuoteResponseLink: () => valid},
     '@/lib/request-safety': {CONTACT_RATE_LIMIT: {}, evaluateRequestRateLimit: () => ({allowed: true}), getRateLimitHeaders: () => ({}), isContentLengthWithinLimit: () => true, isRequestOriginAllowed: () => true},
     '@/lib/public-upload-store': {storePublicUploadBuffer: async () => ({uploadId: 'proof', url: '/api/quotation-uploads/proof', filename: 'demo.png', contentType: 'image/png', size: 100})},
@@ -68,16 +70,18 @@ function responseRoute(valid = true) {
     if (file) body.set('paymentScreenshot', file);
     return route.POST(new Request('https://site.test/api/quotes/demo/respond', {method: 'POST', body}), {params: Promise.resolve({id: 'demo'})});
   };
-  return {send, writes};
+  return {send, writes, notifications};
 }
 
 test('acceptance requires a valid signed link and payment screenshot', async () => {
   const invalid = responseRoute(false);
   assert.equal((await invalid.send()).status, 403);
   assert.equal(invalid.writes.length, 0);
+  assert.equal(invalid.notifications.length, 0);
   const missing = responseRoute();
   assert.equal((await missing.send()).status, 400);
   assert.equal(missing.writes.length, 0);
+  assert.equal(missing.notifications.length, 0);
 });
 
 test('uploaded proof is linked to the quote and awaits review without crediting money', async () => {
@@ -91,4 +95,38 @@ test('uploaded proof is linked to the quote and awaits review without crediting 
   assert.equal(write.amountReceived, undefined);
   assert.equal(write.paymentStatus, undefined);
   assert.equal((await response.json()).quote.amountReceived, 0);
+});
+
+
+test('a saved upload sends one notification with the screenshot', async () => {
+  const route = responseRoute();
+  const response = await route.send(new File(['proof bytes'], 'proof.png', {type: 'image/png'}));
+  assert.equal(response.status, 200);
+  assert.equal(route.notifications.length, 1);
+  assert.equal(route.notifications[0].quoteId, 'demo');
+  assert.equal(route.notifications[0].buffer.toString(), 'proof bytes');
+  assert.equal(route.writes[1].paymentProofEmail.status, 'sent');
+});
+
+test('email failure preserves the saved proof and successful client response', async () => {
+  const route = responseRoute(true, true);
+  const response = await route.send(new File(['proof'], 'proof.png', {type: 'image/png'}));
+  assert.equal(response.status, 200);
+  assert.equal(route.writes[0].paymentEvidence.verificationStatus, 'pending_manual_confirmation');
+  assert.equal(route.writes[1].paymentProofEmail.status, 'failed');
+  assert.equal((await response.json()).quote.amountReceived, 0);
+});
+
+test('notification goes to Ryan with an admin review link and no claim of verified payment', () => {
+  const notifier = load('src/lib/payment-proof-notification.ts', {
+    '@/lib/seo': {SITE_URL: 'https://www.mo-tshirt.mu'},
+    '@/lib/quotation-payment': payment,
+  });
+  const mail = notifier.buildPaymentProofNotification({quoteId: 'test id', quoteData: {name: 'Test Client', email: 'client@example.com', quote: {documentNumber:'Q-TEST',total:500}},filename:'proof.png',contentType:'image/png',buffer:Buffer.from('proof')});
+  assert.equal(mail.to, 'ryanchutooree@gmail.com');
+  assert.match(mail.subject, /Q-TEST/);
+  assert.match(mail.text, /Test Client/);
+  assert.match(mail.text, /awaiting your verification/);
+  assert.match(mail.text, /quotation-approval\?quoteId=test%20id/);
+  assert.equal(mail.attachments[0].content.toString(), 'proof');
 });
