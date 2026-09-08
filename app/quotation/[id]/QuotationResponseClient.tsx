@@ -40,6 +40,7 @@ type QuoteSummary = {
 };
 
 type Props = {
+  preview?: boolean;
   quoteId: string;
   action: QuoteResponseAction | "";
   expires: string;
@@ -67,13 +68,13 @@ const ACTION_COPY = {
   },
 } as const;
 
-export default function QuotationResponseClient({ quoteId, action, expires, token }: Props) {
+export default function QuotationResponseClient({ quoteId, action, expires, token, preview = false }: Props) {
   const [quote, setQuote] = useState<QuoteSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [quotationOpen, setQuotationOpen] = useState(false);
+  const [quotationOpen, setQuotationOpen] = useState(preview);
   const [attachmentPreview, setAttachmentPreview] = useState<AttachmentPreview | null>(null);
   const actionCopy = action ? ACTION_COPY[action] : null;
 
@@ -135,6 +136,32 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
   const Icon = actionCopy.icon;
   const balance = quote.total === null ? null : Math.max(0, quote.total - quote.amountReceived);
 
+  const pdfPreview = quote.quotationDocument?.url ? (
+            <section className="mb-7 overflow-hidden rounded-2xl border border-black/10 bg-[#f7f7f5]">
+              <button
+                type="button"
+                onClick={() => setQuotationOpen((open) => !open)}
+                aria-expanded={quotationOpen}
+                aria-controls="quotation-pdf-preview"
+                className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-black/[0.03] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-black/10"
+              >
+                <FileText className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 flex-1 truncate text-sm font-bold">Quotation PDF · {quote.quotationDocument.filename}</span>
+                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white shadow-sm" aria-hidden="true">
+                  <ChevronDown className={`h-4 w-4 transition-transform ${quotationOpen ? "rotate-180" : ""}`} />
+                </span>
+              </button>
+              {quotationOpen ? (
+                <iframe
+                  id="quotation-pdf-preview"
+                  src={quote.quotationDocument.url}
+                  title={`Quotation PDF ${quote.quotationDocument.filename}`}
+                  className="h-[520px] w-full border-0 border-t border-black/10 bg-white"
+                />
+              ) : null}
+            </section>
+          ) : null;
+
   return (
     <main className="min-h-screen bg-[#f5f3ef] px-4 py-10 text-[#171717] sm:py-16">
       <div className="mx-auto max-w-xl overflow-hidden rounded-3xl bg-white shadow-[0_20px_70px_rgba(40,30,15,0.12)]">
@@ -161,6 +188,8 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
             <div><p className="text-black/45">Quotation</p><p className="mt-1 font-semibold">{quote.documentNumber || quoteId.slice(-8).toUpperCase()}</p></div>
             <div><p className="text-black/45">{action === "accept" ? "Balance to pay" : "Total"}</p><p className="mt-1 font-semibold">{balance === null ? "See attached PDF" : `${quote.currency} ${balance.toLocaleString("en-MU", { minimumFractionDigits: 2 })}`}</p></div>
           </div>
+
+          {preview ? pdfPreview : null}
 
           {action === "accept" ? (
             <section className="mb-7 rounded-2xl border border-rose-100 bg-rose-50/50 p-5" aria-label="Payment details">
@@ -223,31 +252,7 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
           )}
 
           <div className="mt-7">
-          {quote.quotationDocument?.url ? (
-            <section className="mb-7 overflow-hidden rounded-2xl border border-black/10 bg-[#f7f7f5]">
-              <button
-                type="button"
-                onClick={() => setQuotationOpen((open) => !open)}
-                aria-expanded={quotationOpen}
-                aria-controls="quotation-pdf-preview"
-                className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-black/[0.03] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-black/10"
-              >
-                <FileText className="h-4 w-4 shrink-0" />
-                <span className="min-w-0 flex-1 truncate text-sm font-bold">Quotation PDF · {quote.quotationDocument.filename}</span>
-                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white shadow-sm" aria-hidden="true">
-                  <ChevronDown className={`h-4 w-4 transition-transform ${quotationOpen ? "rotate-180" : ""}`} />
-                </span>
-              </button>
-              {quotationOpen ? (
-                <iframe
-                  id="quotation-pdf-preview"
-                  src={quote.quotationDocument.url}
-                  title={`Quotation PDF ${quote.quotationDocument.filename}`}
-                  className="h-[520px] w-full border-0 border-t border-black/10 bg-white"
-                />
-              ) : null}
-            </section>
-          ) : null}
+          {!preview ? pdfPreview : null}
 
           {quote.responseHistory.length ? (
             <section className="mb-7 rounded-2xl border border-black/10 p-4 sm:p-5">

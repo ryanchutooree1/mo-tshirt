@@ -22,6 +22,7 @@ export default async function QuotationResponsePage({ params, searchParams }: Pa
 
   return (
     <QuotationResponseClient
+      preview={first(query.preview) === "1"}
       quoteId={id}
       action={isQuoteResponseAction(actionValue) ? actionValue : ""}
       expires={first(query.expires)}

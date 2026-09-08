@@ -29,6 +29,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { formatMoney as formatDisplayMoney } from "@/lib/money";
+import { normalizeWhatsAppPhone } from "@/lib/quotation-whatsapp";
 import { FULL_PAYMENT_TERM, JUICE_PHONE, PAYMENT_WHATSAPP_PHONE } from "@/lib/quotation-payment";
 import {
   assessPaymentEvidence,
@@ -1982,6 +1983,8 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
   const [creatingQuote, setCreatingQuote] = useState(false);
   const [deletingQuote, setDeletingQuote] = useState(false);
   const [sending, setSending] = useState(false);
+  const [preparingWhatsApp, setPreparingWhatsApp] = useState(false);
+  const [whatsappReadyUrl, setWhatsappReadyUrl] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [partnerRoutePopup, setPartnerRoutePopup] =
     useState<PartnerRoutePopup | null>(null);
@@ -3890,6 +3893,48 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
     }
   };
 
+  useEffect(() => { setWhatsappReadyUrl(""); }, [selected?.id]);
+
+  const handleSendWhatsApp = async () => {
+    if (!selected || !draft) return;
+    const validation = validateDraftBeforeSend(draft);
+    if (validation || !normalizeWhatsAppPhone(draft.contactPhone)) {
+      setNotice(validation || "Add a valid client WhatsApp number first.");
+      return;
+    }
+    // Open during the click so browsers do not block the prepared message.
+    const popup = window.open("about:blank", "_blank");
+    if (popup) popup.opener = null;
+    setPreparingWhatsApp(true);
+    setWhatsappReadyUrl("");
+    setNotice(null);
+    try {
+      let pdf;
+      try { pdf = buildPdfDoc(selected, draft, logo).output("blob"); }
+      catch { pdf = buildPdfDoc(selected, draft, null).output("blob"); }
+      const form = new FormData();
+      form.set("quoteId", selected.id);
+      form.set("clientPhone", draft.contactPhone);
+      form.set("clientName", draft.contactName);
+      form.set("clientEmail", draft.contactEmail);
+      form.set("quote", JSON.stringify(buildStoredQuotePayload(draft)));
+      form.set("pdf", pdf, "quotation.pdf");
+      const response = await fetch("/api/admin/quotes/whatsapp", { method: "POST", body: form });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Could not prepare WhatsApp.");
+      const url = new URL(body.whatsappUrl);
+      if (url.origin !== "https://wa.me") throw new Error("Invalid WhatsApp link.");
+      if (popup && !popup.closed) popup.location.href = url.toString();
+      else setWhatsappReadyUrl(url.toString());
+      setNotice("Quotation saved. Press Send in WhatsApp to send the prepared message to the client.");
+    } catch (error) {
+      popup?.close();
+      setNotice(error instanceof Error ? error.message : "Could not prepare WhatsApp.");
+    } finally {
+      setPreparingWhatsApp(false);
+    }
+  };
+
   const handleAttachmentUpload = async (files: File[]) => {
     if (!selected) return;
     if (!files.length) return;
@@ -4983,6 +5028,17 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
                             ? "Resend quotation"
                             : "Send quotation"}
                       </button>
+                      {draft.documentType === "quotation" ? <button
+                        type="button"
+                        onClick={handleSendWhatsApp}
+                        disabled={preparingWhatsApp || sending || Boolean(sendValidationError) || !normalizeWhatsAppPhone(draft.contactPhone)}
+                        title={!normalizeWhatsAppPhone(draft.contactPhone) ? "Add a valid client WhatsApp number first." : sendValidationError || "Open the prepared message in WhatsApp."}
+                        className={`${secondaryButtonClass} !border-emerald-700 !text-emerald-700`}
+                      >
+                        <FiPhone className="h-4 w-4" />
+                        {preparingWhatsApp ? "Preparing…" : "Send on WhatsApp"}
+                      </button> : null}
+                      {whatsappReadyUrl ? <a href={whatsappReadyUrl} target="_blank" rel="noopener noreferrer" className={secondaryButtonClass}>Open WhatsApp message</a> : null}
                       <button
                         type="button"
                         onClick={approveAndMoveToOrders}
