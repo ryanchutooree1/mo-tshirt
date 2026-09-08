@@ -154,7 +154,7 @@ export default function QuotationResponseClient({ quoteId, action, expires, toke
               {quotationOpen ? (
                 <iframe
                   id="quotation-pdf-preview"
-                  src={quote.quotationDocument.url}
+                  src={`${quote.quotationDocument.url}#view=FitH&navpanes=0`}
                   title={`Quotation PDF ${quote.quotationDocument.filename}`}
                   className="h-[520px] w-full border-0 border-t border-black/10 bg-white"
                 />
