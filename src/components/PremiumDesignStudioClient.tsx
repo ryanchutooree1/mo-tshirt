@@ -63,6 +63,8 @@ import {
 } from "@/lib/design-studio-mockup";
 import { MobileStudioDock, type MobileStudioTool } from "@/components/MobileStudioDock";
 import LoadingImage from "@/components/LoadingImage";
+import { StudioSizeQuantities } from "@/components/StudioSizeQuantities";
+import { getStudioSizeSelection, reconcileSizeQuantities } from "@/lib/design-studio-sizes";
 import uploadStyles from "./ArtworkUploadSlot.module.css";
 import {
   getMinSizePrice,
@@ -144,14 +146,6 @@ type PremiumDesignStudioClientProps = {
   requestSource?: string;
 };
 
-function createSizeQuantities(item?: ShopItem | null) {
-  const available = item ? getSizes(item) : DEFAULT_SIZES;
-  const defaultSize = available.includes("M") ? "M" : available[0];
-  return available.reduce<Record<string, number>>((quantities, size) => {
-    quantities[size] = size === defaultSize ? 1 : 0;
-    return quantities;
-  }, {});
-}
 
 function getPreferredShopItem(items: ShopItem[], productId: ProductId) {
   const variants = items.filter((item) => getShopDesignProductId(item.title) === productId);
@@ -201,7 +195,8 @@ export default function PremiumDesignStudioClient({
   const [activeSide, setActiveSide] = useState<Side>("front");
   const [loadedPreviewImage, setLoadedPreviewImage] = useState<string | null>(null);
   const [designs, setDesigns] = useState<Record<Side, SideDesign>>({ front: createDesign(), back: createDesign() });
-  const [sizes, setSizes] = useState<Record<string, number>>(() => createSizeQuantities());
+  const [sizes, setSizes] = useState<Record<string, number>>(() => reconcileSizeQuantities(DEFAULT_SIZES));
+  const [sizeNotice, setSizeNotice] = useState("");
   const [previewZoom, setPreviewZoom] = useState(100);
   const [snap, setSnap] = useState(true);
   const [selectedLayer, setSelectedLayer] = useState<Layer | null>(null);
@@ -253,7 +248,7 @@ export default function PremiumDesignStudioClient({
           const initialProductId = getShopDesignProductId(initialItem.title);
           if (initialProductId) setProductId(initialProductId);
           setSelectedShopItemId(initialItem.id);
-          setSizes(createSizeQuantities(initialItem));
+          setSizes(current => reconcileSizeQuantities(getSizes(initialItem), current));
           setShopError(null);
         } else {
           setShopError("No active plain T-shirts or poloshirts are available in Shops yet.");
@@ -303,8 +298,9 @@ export default function PremiumDesignStudioClient({
     ? { label: "Left chest", artwork: { x: -28, y: -38 }, text: { x: -20, y: -18 } }
     : { label: "Upper back", artwork: { x: 0, y: -38 }, text: { x: 0, y: -32 } };
   const printZone = PRINT_ZONES[productId];
-  const totalQty = availableSizes.reduce((sum, size) => sum + (sizes[size] || 0), 0);
-  const selectedSizes = availableSizes.filter((size) => sizes[size] > 0).map((size) => `${size} × ${sizes[size]}`).join(", ") || "None";
+  const sizeSelection = getStudioSizeSelection(availableSizes, sizes);
+  const totalQty = sizeSelection.total;
+  const selectedSizes = sizeSelection.label;
   const decoratedSides = (["front", "back"] as Side[]).filter((side) => (designs[side].artwork.enabled && artworkUrls[side]) || (designs[side].text.enabled && designs[side].text.value.trim()) || designs[side].textCopies.some((copy) => copy.enabled && copy.value.trim())).length;
   const hasCustomization = decoratedSides > 0;
   const artworkSides = (["front", "back"] as Side[]).filter((side) => artworkFiles[side]).map((side) => `${side[0].toUpperCase()}${side.slice(1)}`).join(" + ") || (hasCustomization ? "Text only" : "None");
@@ -353,16 +349,33 @@ export default function PremiumDesignStudioClient({
     setSelectedTextCopyId(null);
   }
 
+  function updateAvailableSizes(available: string[]) {
+    const removed = Object.keys(sizes).filter(size => sizes[size] > 0 && !available.includes(size));
+    setSizeNotice(removed.length ? `${removed.join(", ")} is not available for this garment. Please review your size quantities.` : "");
+    setSizes(current => reconcileSizeQuantities(available, current));
+  }
+
+  function changeSizeQuantity(size: string, quantity: number) {
+    setSizes(current => ({ ...current, [size]: quantity }));
+  }
+
+  function editSizes() {
+    setStep(3);
+    setMobileTool("fabric");
+    setMobileProductPanel("quantity");
+    setMobileToolExpanded(true);
+  }
+
   function selectProduct(nextProductId: ProductId) {
     const nextItem = getPreferredShopItem(shopItems, nextProductId);
     trackProductInterest(nextItem?.id || nextProductId, nextItem?.title || nextProductId);
     setProductId(nextProductId);
     if (nextItem) {
       setSelectedShopItemId(nextItem.id);
-      setSizes(createSizeQuantities(nextItem));
+      updateAvailableSizes(getSizes(nextItem));
     } else {
       setSelectedShopItemId(null);
-      setSizes(createSizeQuantities());
+      updateAvailableSizes(DEFAULT_SIZES);
     }
   }
 
@@ -372,7 +385,7 @@ export default function PremiumDesignStudioClient({
     trackProductInterest(item.id, item.title);
     setProductId(nextProductId);
     setSelectedShopItemId(item.id);
-    setSizes(createSizeQuantities(item));
+    updateAvailableSizes(getSizes(item));
   }
 
   function openArtworkPicker(side: Side) {
@@ -674,9 +687,7 @@ export default function PremiumDesignStudioClient({
       const hasSideArtwork = (side: Side) => Boolean(
         artworkFiles[side] && [designs[side].artwork, ...designs[side].artworkCopies].some((artwork) => artwork.enabled)
       );
-      const selectedSizeRows = availableSizes
-        .filter((size) => sizes[size] > 0)
-        .map((size) => ({ size, quantity: sizes[size] }));
+      const selectedSizeRows = sizeSelection.rows;
 
       setSubmissionStatus("Sending quote request…");
 
@@ -687,10 +698,10 @@ export default function PremiumDesignStudioClient({
       payload.append("message", "Premium Design Studio request submitted via mo-tshirt.mu");
       payload.append("garment", product.label);
       payload.append("color", selectedColor);
-      payload.append("size", availableSizes.find((size) => sizes[size] > 0) || "Mixed");
+      payload.append("size", sizeSelection.size);
       payload.append("printMethod", printMethodLabel);
       payload.append("quantity", String(totalQty));
-      payload.append("garments", JSON.stringify(availableSizes.filter((size) => sizes[size] > 0).map((size) => ({ garment: product.label, color: selectedColor, size, quantity: sizes[size] }))));
+      payload.append("garments", JSON.stringify(selectedSizeRows.map(row => ({ garment: product.label, color: selectedColor, ...row }))));
       payload.append("deadline", client.deadline);
       payload.append("notes", client.notes);
       payload.append("source", requestSource);
@@ -800,6 +811,7 @@ export default function PremiumDesignStudioClient({
                           <SummaryRow label="Print" value={printMethodLabel} />
                           <SummaryRow label="Sizes" value={selectedSizes} />
                         </dl>
+                        <button type="button" onClick={editSizes} className="mt-3 min-h-11 text-xs font-bold underline">Edit sizes & quantities</button>
                       </div>
                       <div className="studio-dark rounded-2xl bg-[#171714] p-5 !text-white">
                         <div className="flex justify-between text-xs text-[#aaa9a2]"><span>Total quantity</span><span>{totalQty}</span></div>
@@ -820,12 +832,13 @@ export default function PremiumDesignStudioClient({
               ) : (
                 <>
                   {mobileTool === "fabric" ? (
-                    <MobileWorkspace eyebrow="Product" title="Set up your garment" description="Choose one section. Your shirt stays visible behind this panel.">
+                    <MobileWorkspace eyebrow="Product" title="Set up your garment" description="Choose your garment, then add sizes and quantities.">
                       <div className="grid grid-cols-3 rounded-xl bg-[#f0efeb] p-1">
                         {([{ id: "garment", label: "Garment" }, { id: "quantity", label: `Sizes · ${totalQty}` }, { id: "print", label: "Print" }] as const).map((panel) => <button key={panel.id} type="button" onClick={() => setMobileProductPanel(panel.id)} className={`min-h-10 rounded-lg px-2 text-[10px] font-extrabold ${mobileProductPanel === panel.id ? "bg-white text-[#ff5a0a] shadow-sm" : "text-[#74736d]"}`}>{panel.label}</button>)}
                       </div>
-                      {mobileProductPanel === "garment" ? <div className="space-y-4"><div className="grid grid-cols-2 gap-2">{MOBILE_FABRIC_PRODUCTS.map((option) => <button key={option.id} type="button" onClick={() => selectProduct(option.id as ProductId)} className={`rounded-xl border p-3 text-xs font-extrabold ${productId === option.id ? "border-[#ff5a0a] bg-[#fff7f1] text-[#d74705]" : "border-[#e2e1dc]"}`}>{option.label}</button>)}</div><div><div className="flex items-center justify-between"><Label>Colour</Label><span className="text-[10px] font-bold text-[#77766f]">{selectedColor}</span></div><div className="mt-3 flex gap-3 overflow-x-auto px-1 pb-2">{productVariants.map((item) => { const colour = item.colors.join(", ") || "Default"; const selected = item.id === selectedShopItemId; return <button key={item.id} type="button" onClick={() => selectShopItem(item)} aria-label={`Choose ${colour}`} aria-pressed={selected} title={colour} style={{ backgroundColor: getStudioColour(colour) }} className={`relative h-12 w-12 shrink-0 rounded-full border-2 ${selected ? "border-[#249cf0] ring-2 ring-[#249cf0] ring-offset-2" : "border-[#d8d7d1]"}`}>{selected ? <Check className={`absolute inset-0 m-auto h-5 w-5 ${colour.toLowerCase().includes("white") ? "text-[#171714]" : "text-white"}`} /> : null}</button>; })}</div></div></div> : null}
-                      {mobileProductPanel === "quantity" ? <div><div className="flex items-center justify-between"><Label>Size quantities</Label><span className="studio-dark rounded-full bg-[#171714] px-2.5 py-1 text-[9px] font-bold !text-white">{totalQty} total</span></div><div className="mt-3 grid grid-cols-4 gap-2">{availableSizes.map((size) => <label key={size} className={`rounded-xl border p-2 text-center ${sizes[size] ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e4e3de]"}`}><span className="block text-[10px] font-extrabold">{size}</span><input inputMode="numeric" value={sizes[size] || ""} onChange={(event) => { const value = event.target.value; if (/^\d*$/.test(value)) setSizes((current) => ({ ...current, [size]: Number(value) || 0 })); }} className="studio-field mt-1 h-9 w-full rounded-lg bg-white text-center text-xs font-bold outline-none" placeholder="0" aria-label={`${size} quantity`} /></label>)}</div></div> : null}
+                      {sizeNotice ? <p role="status" className="rounded-xl bg-amber-50 p-3 text-xs text-amber-900">{sizeNotice}</p> : null}
+                      {mobileProductPanel === "garment" ? <div className="space-y-4"><div className="grid grid-cols-2 gap-2">{MOBILE_FABRIC_PRODUCTS.map((option) => <button key={option.id} type="button" onClick={() => selectProduct(option.id as ProductId)} className={`rounded-xl border p-3 text-xs font-extrabold ${productId === option.id ? "border-[#ff5a0a] bg-[#fff7f1] text-[#d74705]" : "border-[#e2e1dc]"}`}>{option.label}</button>)}</div><div><div className="flex items-center justify-between"><Label>Colour</Label><span className="text-[10px] font-bold text-[#77766f]">{selectedColor}</span></div><div className="mt-3 flex gap-3 overflow-x-auto px-1 pb-2">{productVariants.map((item) => { const colour = item.colors.join(", ") || "Default"; const selected = item.id === selectedShopItemId; return <button key={item.id} type="button" onClick={() => selectShopItem(item)} aria-label={`Choose ${colour}`} aria-pressed={selected} title={colour} style={{ backgroundColor: getStudioColour(colour) }} className={`relative h-12 w-12 shrink-0 rounded-full border-2 ${selected ? "border-[#249cf0] ring-2 ring-[#249cf0] ring-offset-2" : "border-[#d8d7d1]"}`}>{selected ? <Check className={`absolute inset-0 m-auto h-5 w-5 ${colour.toLowerCase().includes("white") ? "text-[#171714]" : "text-white"}`} /> : null}</button>; })}</div></div><button type="button" onClick={() => setMobileProductPanel("quantity")} className="studio-primary flex min-h-11 w-full items-center justify-center rounded-xl bg-[#ff5a0a] text-xs font-bold !text-white">Choose sizes & quantities</button></div> : null}
+                      {mobileProductPanel === "quantity" ? <StudioSizeQuantities availableSizes={availableSizes} quantities={sizes} onChange={changeSizeQuantity} /> : null}
                       {mobileProductPanel === "print" ? <div className="space-y-3"><div className="grid grid-cols-2 gap-2">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-xl border p-3 text-xs font-extrabold capitalize ${activeSide === side ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e2e1dc]"}`}>{side} side</button>)}</div>{METHODS.map((option) => <label key={option.id} className={`flex gap-3 rounded-xl border p-3 ${methodId === option.id ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e4e3de]"}`}><input type="radio" name="mobile-method" checked={methodId === option.id} onChange={() => setMethodId(option.id)} className="accent-[#ff5a0a]" /><span><span className="block text-xs font-extrabold">{option.label}</span><span className="mt-1 block text-[10px] text-[#85847d]">{option.note}</span></span></label>)}<button type="button" onClick={() => { setDesigns({ front: createDesign(), back: createDesign() }); setSelectedLayer(null); setSelectedArtworkCopyId(null); setSelectedTextCopyId(null); }} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#e2e1dc] text-xs font-bold text-[#77766f]"><RotateCcw className="h-4 w-4" />Reset design</button></div> : null}
                     </MobileWorkspace>
                   ) : null}
@@ -918,6 +931,7 @@ export default function PremiumDesignStudioClient({
 
                 {step === 3 ? (
                   <div data-studio-part="quantities" className="space-y-6">
+                    {sizeNotice ? <p role="status" className="rounded-xl bg-amber-50 p-3 text-xs text-amber-900">{sizeNotice}</p> : null}
                     <div data-studio-part="selected-garment" className="flex items-center gap-3 rounded-xl border border-[#d6dbe2] bg-[#f5f6f8] p-3">
                       <span className="h-16 w-14 shrink-0 overflow-hidden rounded-lg bg-white">
                         <LoadingImage
@@ -942,25 +956,7 @@ export default function PremiumDesignStudioClient({
                         <Label>Available size quantities</Label>
                         <span aria-live="polite" className="studio-dark shrink-0 rounded-full bg-[#171714] px-3 py-1.5 text-[11px] font-bold !text-white">{totalQty} total</span>
                       </div>
-                      <div data-studio-part="size-grid" className="mt-4 grid grid-cols-4 gap-2">
-                        {availableSizes.map((size) => (
-                          <label key={size} data-selected={Boolean(sizes[size])} className={`rounded-xl border p-2 text-center ${sizes[size] ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#d6dbe2] bg-white"}`}>
-                            <span className="block text-xs font-bold">{size}</span>
-                            <input
-                              inputMode="numeric"
-                              value={sizes[size] || ""}
-                              onChange={(event) => {
-                                const value = event.target.value;
-                                if (/^\d*$/.test(value)) setSizes((current) => ({ ...current, [size]: Number(value) || 0 }));
-                              }}
-                              className="studio-field mt-2 h-12 w-full rounded-lg bg-white text-center text-sm font-bold outline-none"
-                              placeholder="0"
-                              aria-label={`${size} quantity`}
-                            />
-                          </label>
-                        ))}
-                      </div>
-                      <p className="mt-3 text-xs leading-5 text-[#626a76]">Enter a quantity for each size you need. Leave the rest at 0.</p>
+                      <div className="mt-4"><StudioSizeQuantities availableSizes={availableSizes} quantities={sizes} onChange={changeSizeQuantity} /></div>
                     </div>
                   </div>
                 ) : null}
@@ -973,7 +969,7 @@ export default function PremiumDesignStudioClient({
 
                 {step === 7 ? <div className="space-y-5"><label className="flex items-center justify-between rounded-2xl border border-[#e2e1dc] p-4"><span className="flex items-center gap-2 text-sm font-bold"><TypeIcon className="h-4 w-4 text-[#ff5a0a]" />Custom text</span><input type="checkbox" checked={activeText.enabled} onChange={(event) => patchText({ enabled: event.target.checked })} className="h-5 w-5 accent-[#ff5a0a]" /></label><Field label="Your text"><input value={activeText.value} onChange={(event) => patchText({ value: event.target.value, enabled: true })} className="studio-field" placeholder="e.g. Team Mauritius" /></Field><div className="grid grid-cols-[1fr_72px] gap-3"><Field label="Font"><select value={activeText.font} onChange={(event) => patchText({ font: event.target.value })} className="studio-field"><option value="Arial, sans-serif">Modern sans</option><option value="Impact, sans-serif">Impact</option><option value="Georgia, serif">Classic serif</option><option value="cursive">Signature</option></select></Field><Field label="Colour"><input type="color" value={activeText.color} onChange={(event) => patchText({ color: event.target.value })} className="studio-field p-1.5" /></Field></div><RangeControl icon={<TypeIcon />} label="Text size" value={activeText.size} min={TEXT_SIZE_MIN} max={TEXT_SIZE_MAX} onChange={(value) => patchText({ size: value })} /><RangeControl icon={<RotateCcw />} label="Rotation" value={activeText.rotate} min={-180} max={180} suffix="°" onChange={(value) => patchText({ rotate: value })} /><div className="grid grid-cols-3 gap-2"><PresetButton icon={<Crosshair />} label={upperPlacement.label} onClick={() => patchText(upperPlacement.text)} /><PresetButton icon={<Focus />} label="Centre" onClick={() => patchText({ x: 0, y: 0 })} /><PresetButton icon={<Move />} label="Lower" onClick={() => patchText({ x: 0, y: 24 })} /></div></div> : null}
 
-                {step === 8 ? <div className="space-y-4"><div className="rounded-2xl border border-[#e2e1dc] p-4"><Label>Order summary</Label><dl className="mt-3 space-y-3"><SummaryRow label="Product" value={product.label} /><SummaryRow label="Shop colour" value={selectedColor} /><SummaryRow label="Artwork files" value={artworkSides} /><SummaryRow label="Print method" value={printMethodLabel} /><SummaryRow label="Sizes" value={selectedSizes} /><SummaryRow label="Lead time" value={product.lead} /></dl></div><div className="studio-dark rounded-2xl bg-[#171714] p-5 !text-white"><div className="flex justify-between text-xs text-[#aaa9a2]"><span>Total quantity</span><span>{totalQty}</span></div><div className="mt-3 flex items-end justify-between"><span className="text-xs text-[#aaa9a2]">Estimated total</span><span className="text-2xl font-extrabold">{formatMoney(totalPrice)}</span></div><p className="mt-3 border-t border-white/10 pt-3 text-[9px] leading-4 text-[#888780]">Garment pricing and available sizes come directly from Shops. Final printing price is confirmed after artwork review.</p></div><Field label="Order notes"><textarea value={client.notes} onChange={(event) => setClient((current) => ({ ...current, notes: event.target.value }))} className="studio-field min-h-24 resize-none py-3" placeholder="Special instructions, placement details..." /></Field></div> : null}
+                {step === 8 ? <div className="space-y-4"><div className="rounded-2xl border border-[#e2e1dc] p-4"><Label>Order summary</Label><dl className="mt-3 space-y-3"><SummaryRow label="Product" value={product.label} /><SummaryRow label="Shop colour" value={selectedColor} /><SummaryRow label="Artwork files" value={artworkSides} /><SummaryRow label="Print method" value={printMethodLabel} /><SummaryRow label="Sizes" value={selectedSizes} /><SummaryRow label="Lead time" value={product.lead} /></dl><button type="button" onClick={editSizes} className="mt-3 min-h-11 text-xs font-bold underline">Edit sizes & quantities</button></div><div className="studio-dark rounded-2xl bg-[#171714] p-5 !text-white"><div className="flex justify-between text-xs text-[#aaa9a2]"><span>Total quantity</span><span>{totalQty}</span></div><div className="mt-3 flex items-end justify-between"><span className="text-xs text-[#aaa9a2]">Estimated total</span><span className="text-2xl font-extrabold">{formatMoney(totalPrice)}</span></div><p className="mt-3 border-t border-white/10 pt-3 text-[9px] leading-4 text-[#888780]">Garment pricing and available sizes come directly from Shops. Final printing price is confirmed after artwork review.</p></div><Field label="Order notes"><textarea value={client.notes} onChange={(event) => setClient((current) => ({ ...current, notes: event.target.value }))} className="studio-field min-h-24 resize-none py-3" placeholder="Special instructions, placement details..." /></Field></div> : null}
 
                 {step === 9 ? result?.ok ? <Success message={result.text} onReset={() => { setResult(null); setStep(1); }} /> : <div className="space-y-4"><Field label="Client name *"><input required value={client.name} onChange={(event) => setClient((current) => ({ ...current, name: event.target.value }))} className="studio-field" placeholder="Full name" /></Field><div className="grid gap-3 2xl:grid-cols-2"><Field label="Email"><input type="email" value={client.email} onChange={(event) => setClient((current) => ({ ...current, email: event.target.value }))} className="studio-field" placeholder="you@example.com" /></Field><Field label="Phone / WhatsApp"><input type="tel" value={client.phone} onChange={(event) => setClient((current) => ({ ...current, phone: event.target.value }))} className="studio-field" placeholder="+230 5..." /></Field></div><Field label="Preferred deadline"><input type="date" min={today} value={client.deadline} onChange={(event) => setClient((current) => ({ ...current, deadline: event.target.value }))} className="studio-field" /></Field><Field label="Delivery"><select value={delivery} onChange={(event) => setDelivery(event.target.value)} className="studio-field">{DELIVERY_OPTIONS.map((option) => <option key={option}>{option}</option>)}</select></Field>{needsDelivery ? <div className="space-y-3 rounded-2xl bg-[#f5f4f0] p-4"><Field label="Delivery name *"><input value={client.deliveryName} onChange={(event) => setClient((current) => ({ ...current, deliveryName: event.target.value }))} className="studio-field" /></Field><Field label="Address *"><input value={client.address} onChange={(event) => setClient((current) => ({ ...current, address: event.target.value }))} className="studio-field" /></Field><div className="grid grid-cols-2 gap-2"><input value={client.postCode} onChange={(event) => setClient((current) => ({ ...current, postCode: event.target.value }))} className="studio-field" placeholder="Post code" /><input value={client.deliveryPhone} onChange={(event) => setClient((current) => ({ ...current, deliveryPhone: event.target.value }))} className="studio-field" placeholder="Phone" /></div></div> : null}<div className="rounded-2xl border border-[#ffd2bd] bg-[#fff7f1] p-4"><div className="flex items-center justify-between"><span className="text-xs font-bold text-[#8b5d47]">{hasCustomization ? "Estimated total" : "Garment total"}</span><span className="text-xl font-extrabold text-[#dd4904]">{formatMoney(totalPrice)}</span></div>{!hasCustomization ? <p className="mt-2 text-[10px] text-[#9a725f]">Printing and setup charges begin only after artwork or custom text is added.</p> : null}</div>{result && !result.ok ? <p className="rounded-xl bg-[#fff1f1] p-3 text-xs text-[#b91c1c]">{result.text}</p> : null}</div> : null}
               </motion.div>
