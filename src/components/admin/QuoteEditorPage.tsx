@@ -1,5 +1,7 @@
 "use client";
 
+import QuoteProductEditor from "@/components/admin/QuoteProductEditor";
+import { canonical } from "@/lib/quote-product-edit";
 import {
   type CSSProperties,
   type InputHTMLAttributes,
@@ -129,6 +131,7 @@ type AdminSessionSummary = {
 };
 
 type QuoteLine = {
+  productLineId?: string;
   description: string;
   quantity: EditableNumber;
   unitPrice: EditableNumber;
@@ -402,6 +405,7 @@ function getSentPartnerLabel(entry: { partnerName?: unknown; emails?: unknown })
 }
 
 type QuoteRecord = {
+  editHistorySequence?: number;
   intake?: EmailIntake;
   id: string;
   name: string;
@@ -1413,10 +1417,10 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
       const automaticAmount = quote.source === "Gmail" ? 0 : safeNumber(automaticPricing.lines[index]?.unitPrice, 0);
       const savedSource = getPriceSource(line.priceSource);
       const shouldRefreshAutomaticPrice =
-        storedAmount <= 0 && automaticAmount > 0;
+        savedSource !== "manual" && storedAmount <= 0 && automaticAmount > 0;
       const resolvedAmount = shouldRefreshAutomaticPrice
         ? automaticAmount
-        : storedAmount > 0
+        : storedAmount > 0 || savedSource === "manual"
           ? storedAmount
           : automaticAmount;
       const matchesAutomaticPrice =
@@ -1429,9 +1433,10 @@ const buildDraftFromQuote = (quote: QuoteRecord): QuoteDraft => {
             ? "manual"
             : undefined);
       return {
+        ...(line.productLineId ? { productLineId: line.productLineId } : {}),
         description: line.description || automaticPricing.lines[index]?.description || "",
         quantity: quote.source === "Gmail" && line.quantity === "" ? "" : safeNumber(line.quantity, 0),
-        unitPrice: resolvedAmount > 0 ? resolvedAmount : "",
+        unitPrice: resolvedAmount > 0 || savedSource === "manual" ? resolvedAmount : "",
         includeInTotals: true,
         ...(priceSource ? { priceSource } : {}),
         ...(line.priceSetById ? { priceSetById: line.priceSetById } : {}),
@@ -1961,6 +1966,7 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
   const [savedDraft, setSavedDraft] = useState("");
   const draftIsDirty = Boolean(draft && JSON.stringify(draft) !== savedDraft);
   const draftIsDirtyRef = useRef(false);
+  const draftBaseQuoteRef = useRef(canonical(undefined));
   const draftQuoteIdRef = useRef<string | null>(null);
   useEffect(() => { draftIsDirtyRef.current = draftIsDirty; onDirtyChange?.(draftIsDirty); }, [draftIsDirty, onDirtyChange]);
   const [quotationPreviewUrl, setQuotationPreviewUrl] = useState<string | null>(null);
@@ -2668,6 +2674,7 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
     // Background updates must not replace an operator's unsaved document edits.
     if (draftQuoteIdRef.current === selected.id && draftIsDirtyRef.current) return;
     const nextDraft = buildDraftFromQuote(selected);
+    draftBaseQuoteRef.current = canonical(selected.quote);
     draftQuoteIdRef.current = selected.id;
     setSavedDraft(JSON.stringify(nextDraft));
     setDraft(nextDraft);
@@ -3087,6 +3094,7 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
       showTotals: baseDraft.showTotals,
       currency: baseDraft.currency,
       lines: baseDraft.lines.map((line) => ({
+        ...(line.productLineId ? { productLineId: line.productLineId } : {}),
         description: line.description,
         quantity: safeNumber(line.quantity, 0),
         unitPrice: safeNumber(line.unitPrice, 0),
@@ -3263,49 +3271,21 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
     if (showNotice) setNotice(null);
     try {
       const payload = buildStoredQuotePayload(draft);
-      const changedAtIso = new Date().toISOString();
-      const previousLines = selected.quote?.lines || [];
-      const priceAuditEntries: PriceAuditEntry[] = draft.lines.flatMap((line, index) => {
-        const previousValue = safeNumber(previousLines[index]?.unitPrice, 0);
-        const value = safeNumber(line.unitPrice, 0);
-        if (Math.abs(previousValue - value) < 0.01) return [];
-
-        const source = line.priceSource || "manual";
-        const setByName =
-          line.priceSetByName ||
-          (source === "automatic"
-            ? "Website pricing"
-            : currentAdmin?.displayName || draft.preparedBy || "Administrator");
-        return [{
-          lineIndex: index,
-          description: line.description,
-          previousValue,
-          value,
-          source,
-          ...(line.priceSetById || currentAdmin?.userId
-            ? { setById: line.priceSetById || currentAdmin?.userId }
-            : {}),
-          setByName,
-          changedAtIso: line.priceSetAtIso || changedAtIso,
-        }];
+      const response = await fetch(`/api/admin/quotes/${encodeURIComponent(selected.id)}/products`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "save-document", operationId: crypto.randomUUID(),
+          expectedQuote: draftBaseQuoteRef.current, quote: payload,
+          status: nextStatus || selected.status || "review", name: draft.contactName.trim() || "Walk-in client",
+          email: draft.contactEmail.trim(), phone: draft.contactPhone.trim() }),
       });
-      const updatePayload: Record<string, unknown> = {
-        status: nextStatus || selected.status || "review",
-        name: draft.contactName.trim() || "Walk-in client",
-        email: draft.contactEmail.trim(),
-        phone: draft.contactPhone.trim(),
-        quote: payload,
-        updatedAt: serverTimestamp(),
-      };
-      if (priceAuditEntries.length) {
-        updatePayload.priceAuditHistory = arrayUnion(...priceAuditEntries);
-      }
-      await updateDoc(doc(db, "quotes", selected.id), updatePayload);
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Failed to save document.");
+      draftBaseQuoteRef.current = result.expectedQuote;
       setSavedDraft(JSON.stringify(draft));
       if (showNotice) setNotice("Document saved.");
       return true;
-    } catch {
-      setNotice("Failed to save document.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Failed to save document.");
       return false;
     } finally {
       setSaving(false);
@@ -3843,6 +3823,7 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
       setNotice("Add a client email before sending.");
       return;
     }
+    if (!(await saveDraft(undefined, { showNotice: false }))) return;
     setSending(true);
     setNotice(null);
     try {
@@ -3909,6 +3890,7 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
     setWhatsappReadyUrl("");
     setNotice(null);
     try {
+      if (!(await saveDraft(undefined, { showNotice: false }))) { popup?.close(); return; }
       let pdf;
       try { pdf = buildPdfDoc(selected, draft, logo).output("blob"); }
       catch { pdf = buildPdfDoc(selected, draft, null).output("blob"); }
@@ -3995,6 +3977,7 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
       setNotice(draftValidation);
       return null;
     }
+    if (!(await saveDraft(undefined, { showNotice: false }))) return null;
     setMovingToOrders(true);
     if (showNotice) setNotice(null);
     try {
@@ -4087,7 +4070,6 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
         name: draft.contactName.trim() || "Walk-in client",
         email: draft.contactEmail.trim(),
         phone: draft.contactPhone.trim(),
-        quote: payload,
         orderTransactionId: transactionId,
         movedToOrdersAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -5399,33 +5381,8 @@ export default function QuotationApprovalPage({ initialQuoteId, embedded = false
                     className="-order-3 scroll-mt-24 grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]"
                   >
                     <div className={`${surfaceClass} order-2 p-5`}>
-                      <p className={labelClass}>Product details</p>
+                      <QuoteProductEditor key={selected.id} quoteId={selected.id} revision={selected.editHistorySequence || 0} userId={currentAdmin?.userId} blocked={draftIsDirty} />
                       <div className="mt-4 space-y-3 text-sm leading-6 text-[#484848]">
-                        <p>
-                          <span className="font-semibold text-[#222222]">Product</span>
-                          <br />
-                          {selectedDesignBrief?.product || selected.garments?.[0]?.garment || "n/a"}
-                        </p>
-                        <p>
-                          <span className="font-semibold text-[#222222]">Garments</span>
-                          <br />
-                          {selectedGarmentRows.join(", ") || "n/a"}
-                        </p>
-                        <p>
-                          <span className="font-semibold text-[#222222]">Print</span>
-                          <br />
-                          {selectedDesignBrief?.printMethod || selected.printMethod || "n/a"}
-                        </p>
-                        <p>
-                          <span className="font-semibold text-[#222222]">Color</span>
-                          <br />
-                          {selectedRequestedColors.join(", ") || "n/a"}
-                        </p>
-                        <p>
-                          <span className="font-semibold text-[#222222]">Total quantity</span>
-                          <br />
-                          {selectedTotalQty > 0 ? selectedTotalQty : "n/a"}
-                        </p>
                         {selectedDesignRows.length ? (
                           <p>
                             <span className="font-semibold text-[#222222]">Design</span>

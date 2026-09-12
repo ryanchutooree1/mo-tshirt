@@ -1,5 +1,6 @@
+import { activeEditLock, documentContentVersion } from "@/lib/quote-product-edit";
 import { NextResponse } from "next/server";
-import { doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { doc, getDoc, runTransaction, serverTimestamp } from "firebase/firestore";
 import { getAdminRequestSession } from "@/lib/admin-request";
 import { hasAdminPageAccess } from "@/lib/admin-access";
 import { db } from "@/lib/firebase";
@@ -29,17 +30,19 @@ export async function POST(request: Request) {
     const ref = doc(db, "quotes", id);
     const existing = await getDoc(ref);
     if (!existing.exists()) return json({ error: "Quotation not found." }, 404);
+    if (activeEditLock(existing.data(), Date.now()) || documentContentVersion(existing.data().quote) !== documentContentVersion(quote)) return json({ error: "The quotation changed or is being edited. Save the latest document before sharing." }, 409);
     const quotationUrl = new URL(buildQuoteResponseUrl(id, "accept"));
     quotationUrl.searchParams.set("preview", "1");
     const name = clean(form.get("clientName")) || clean(existing.data().name);
     const whatsappUrl = buildQuotationWhatsAppUrl(phone, name, clean(quote.documentNumber) || id, quotationUrl.toString());
     const quotationDocument = await storePublicUploadBuffer({ buffer: Buffer.from(await pdf.arrayBuffer()), filename: `${clean(quote.documentNumber) || id}.pdf`, contentType: "application/pdf", size: pdf.size, sessionId: id, sessionPrefix: "quotation-document", source: "quotation-whatsapp-document", maxUploadBytes: MAX_PDF_BYTES });
-    await updateDoc(ref, {
-      quote, quotationDocument, phone,
-      ...(name ? { name } : {}),
-      ...(clean(form.get("clientEmail"), 254) ? { email: clean(form.get("clientEmail"), 254) } : {}),
-      whatsappPreparedAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    const attached = await runTransaction(db, async transaction => {
+      const latest = await transaction.get(ref);
+      if (!latest.exists() || activeEditLock(latest.data(), Date.now()) || documentContentVersion(latest.data().quote) !== documentContentVersion(quote)) return false;
+      transaction.update(ref, {quotationDocument, whatsappPreparedAt: serverTimestamp(), updatedAt: serverTimestamp()});
+      return true;
     });
+    if (!attached) return json({error:"The quotation changed while preparing the PDF. Save the latest document and try again."},409);
     // Opening WhatsApp prepares a message; only the admin can confirm sending it.
     return json({ whatsappUrl });
   } catch (error) {

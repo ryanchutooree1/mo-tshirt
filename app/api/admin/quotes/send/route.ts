@@ -1,6 +1,7 @@
+import { activeEditLock, documentContentVersion } from "@/lib/quote-product-edit";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { doc, getDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { hasAdminSession } from "@/lib/admin-auth";
 import { db } from "@/lib/firebase";
 import { buildQuoteResponseUrl } from "@/lib/quote-response-links";
@@ -166,6 +167,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "The quotation PDF is too large." }, { status: 413 });
     }
 
+    const saved = await getDoc(doc(db, "quotes", payload.quoteId));
+    if (!saved.exists()) return NextResponse.json({ error: "Quotation not found." }, { status: 404 });
+    if (activeEditLock(saved.data(), Date.now()) || documentContentVersion(saved.data().quote) !== documentContentVersion(payload.quote || {})) return NextResponse.json({ error: "The quotation changed or is being edited. Save the latest document before sending." }, { status: 409 });
+
     const host = process.env.SMTP_HOST;
     const port = Number(process.env.SMTP_PORT || 465);
     const secure = String(process.env.SMTP_SECURE || "true") === "true";
@@ -267,9 +272,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: getPublicSendError(error) }, { status: 502 });
     }
 
-    const cleanClientName = (payload.clientName || "").trim();
-    const cleanClientEmail = (payload.clientEmail || "").trim();
-    const cleanClientPhone = (payload.clientPhone || "").trim();
     let warning = "";
     try {
       await updateDoc(doc(db, "quotes", payload.quoteId), {
@@ -277,10 +279,6 @@ export async function POST(req: Request) {
         approvedAt: serverTimestamp(),
         sentAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        quote: payload.quote || null,
-        ...(cleanClientName ? { name: cleanClientName } : {}),
-        ...(cleanClientEmail ? { email: cleanClientEmail } : {}),
-        ...(cleanClientPhone ? { phone: cleanClientPhone } : {}),
         lastEmailTo: payload.to,
         lastEmailSubject: subject,
         ...(quotationDocument ? { quotationDocument } : {}),
