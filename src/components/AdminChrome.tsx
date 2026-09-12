@@ -35,6 +35,7 @@ import {
   Layers3,
   LogOut,
   Mail,
+  MessageCircle,
   Menu,
   MonitorCog,
   Moon,
@@ -97,7 +98,7 @@ type NavGroup = {
 const SIDEBAR_COLLAPSED_KEY = "admin-sidebar-collapsed-v1";
 const SIDEBAR_GROUPS_KEY = "admin-sidebar-groups-v2";
 
-const DAILY_PATHS: AdminPagePath[] = ["/admin", "/admin/inbox", "/admin/quotation-approval", "/admin/orders", "/admin/inventory", "/admin/clients"];
+const DAILY_PATHS: AdminPagePath[] = ["/admin", "/admin/inbox", "/admin/whatsapp", "/admin/quotation-approval", "/admin/orders", "/admin/inventory", "/admin/clients"];
 const NAV_GROUPS: NavGroup[] = [
   { id: "daily", label: "Your work", paths: DAILY_PATHS },
   {
@@ -176,6 +177,7 @@ const LABEL_OVERRIDES: Partial<Record<AdminPagePath, string>> = {
 
 const PAGE_ICONS: Partial<Record<AdminPagePath, LucideIcon>> = {
   "/admin/inbox": Mail,
+  "/admin/whatsapp": MessageCircle,
   "/admin": LayoutDashboard,
   "/admin/orders": ShoppingBag,
   "/admin/pos": CreditCard,

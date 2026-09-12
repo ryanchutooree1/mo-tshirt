@@ -1,5 +1,6 @@
 export type AdminPagePath =
   | "/admin"
+  | "/admin/whatsapp"
   | "/admin/inbox"
   | "/admin/orders"
   | "/admin/pos"
@@ -66,6 +67,7 @@ export type AdminPageOption = {
 };
 
 export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
+  { path: "/admin/whatsapp", label: "WhatsApp insights", description: "Owner-only enquiry, demand and response analytics.", group: "Sales" },
   { path: "/admin/inbox", label: "Inbox", description: "Read the MO T-SHIRT Gmail inbox.", group: "Sales" },
   {
     path: "/admin",
@@ -377,6 +379,7 @@ const ADMIN_PATHS_BY_LENGTH = [...ALL_ADMIN_PAGE_PATHS].sort(
 );
 
 export const DEFAULT_TOP_NAV_PATHS: AdminPagePath[] = [
+  "/admin/whatsapp",
   "/admin/inbox",
   "/admin/pos",
   "/admin/clients",
@@ -472,6 +475,7 @@ export function resolveAdminPagePath(pathname: string) {
 }
 
 export function resolveAdminApiPermission(pathname: string) {
+  if (pathname === "/api/admin/whatsapp" || pathname.startsWith("/api/admin/whatsapp/")) return "/admin/whatsapp" as AdminPagePath;
   if (pathname === "/api/admin/inbox" || pathname.startsWith("/api/admin/inbox/")) return "/admin/inbox" as AdminPagePath;
   if (pathname.startsWith("/api/admin/mob")) return "/admin/inventory-photo-log" as AdminPagePath;
   if (pathname.startsWith("/api/admin/inventory-photo-log")) return "/admin/inventory-photo-log" as AdminPagePath;
@@ -496,6 +500,7 @@ export function hasAdminPageAccess(
   options?: { isOwner?: boolean }
 ) {
   if (options?.isOwner) return true;
+  if (pathname === "/admin/whatsapp" || pathname.startsWith("/admin/whatsapp/")) return false;
 
   const requiredPage = resolveAdminPagePath(pathname);
   if (!requiredPage) return false;
@@ -520,6 +525,7 @@ export function hasAdminApiAccess(
   options?: { isOwner?: boolean }
 ) {
   if (options?.isOwner) return true;
+  if (pathname === "/api/admin/whatsapp" || pathname.startsWith("/api/admin/whatsapp/")) return false;
 
   const requiredPage = resolveAdminApiPermission(pathname);
   if (!requiredPage) return true;
