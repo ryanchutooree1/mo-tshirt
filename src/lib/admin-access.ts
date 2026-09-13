@@ -349,7 +349,7 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
   },
   {
     path: "/admin/tanvi-home",
-    label: "Tanvi",
+    label: "Food Planning",
     description: "Daily food planning, email schedule, recipients, and send controls.",
     group: "Our Home",
   },

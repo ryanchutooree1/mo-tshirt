@@ -77,13 +77,13 @@ test("home tools share an Our Home permission group", () => {
     homeOptions.map(({ path, label, group }) => ({ path, label, group })),
     [
       { path: "/admin/couple-goals", label: "Couple Goals", group: "Our Home" },
-      { path: "/admin/tanvi-home", label: "Tanvi", group: "Our Home" },
+      { path: "/admin/tanvi-home", label: "Food Planning", group: "Our Home" },
       { path: "/admin/house-inventory", label: "House Inventory", group: "Our Home" },
     ]
   );
 });
 
-test("Tanvi food email controls have their own page and API permission", () => {
+test("Food Planning controls have their own page and API permission", () => {
   assert.equal(resolveAdminPagePath("/admin/tanvi-home"), "/admin/tanvi-home");
   assert.equal(
     resolveAdminApiPermission("/api/admin/couple-goals/food-email"),

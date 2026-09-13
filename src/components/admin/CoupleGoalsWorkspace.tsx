@@ -828,7 +828,7 @@ export default function CoupleGoalsWorkspace({
                 {isFoodView ? "Food & email controls" : "Mauritius timezone by default"}
               </div>
               <h1 className="text-2xl font-black tracking-tight md:text-4xl">
-                {isFoodView ? "Tanvi" : "Couple Goals"}
+                {isFoodView ? "Food Planning" : "Couple Goals"}
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 md:text-base">
                 {isFoodView
@@ -1367,7 +1367,7 @@ export default function CoupleGoalsWorkspace({
 
         {loading && (
           <div className="fixed inset-x-0 bottom-4 mx-auto w-fit rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-xl">
-            {isFoodView ? "Loading Tanvi food planner..." : "Loading Couple Goals..."}
+            {isFoodView ? "Loading Food Planning..." : "Loading Couple Goals..."}
           </div>
         )}
       </div>
