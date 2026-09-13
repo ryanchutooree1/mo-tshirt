@@ -57,6 +57,9 @@ export function normalizeWhatsAppNumber(value: unknown) {
   if (typeof value !== "string") return "";
   const normalized = value.trim().replace(/^whatsapp:/i, "").replace(/[\s()-]/g, "");
   if (!PHONE_RE.test(normalized)) return "";
+  if (!normalized.startsWith("+") && /^\d{8}$/.test(normalized)) {
+    return `+230${normalized}`;
+  }
   return normalized.startsWith("+") ? normalized : `+${normalized}`;
 }
 

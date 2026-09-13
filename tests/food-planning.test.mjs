@@ -21,6 +21,7 @@ test("Mauritius clock returns the local day at the 08:00 reminder time", () => {
 });
 
 test("food planning values are normalized safely", () => {
+  assert.equal(normalizeWhatsAppNumber("59041294"), "+23059041294");
   assert.equal(normalizeWhatsAppNumber("230 5 123 4567"), "+23051234567");
   assert.equal(normalizeWhatsAppNumber("not-a-phone"), "");
   assert.deepEqual(normalizeRecipients([" Owner@Example.com ", "owner@example.com", "bad"]), [
