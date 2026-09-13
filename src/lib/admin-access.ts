@@ -48,7 +48,6 @@ export type AdminPagePath =
   | "/admin/our-dream"
   | "/admin/couple-goals"
   | "/admin/tanvi-home"
-  | "/admin/cleaning"
   | "/admin/house-inventory"
   | "/admin/settings";
 
@@ -355,12 +354,6 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
     group: "Our Home",
   },
   {
-    path: "/admin/cleaning",
-    label: "Cleaning Planning",
-    description: "Sunday cleaning visits, pickup, payment, and the household checklist.",
-    group: "Our Home",
-  },
-  {
     path: "/admin/house-inventory",
     label: "House Inventory",
     description: "Household stock levels and the shared shopping list.",
@@ -438,7 +431,6 @@ export const DEFAULT_TOP_NAV_PATHS: AdminPagePath[] = [
   "/admin/our-dream",
   "/admin/couple-goals",
   "/admin/tanvi-home",
-  "/admin/cleaning",
   "/admin/house-inventory",
 ];
 
@@ -457,7 +449,6 @@ export const SHARED_FIREBASE_AUTH_PAGE_PATHS: AdminPagePath[] = [
   "/admin/quotation-approval",
   "/admin/couple-goals",
   "/admin/tanvi-home",
-  "/admin/cleaning",
 ];
 
 export function normalizeAdminAllowedPages(value: unknown) {
