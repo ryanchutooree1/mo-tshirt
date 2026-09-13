@@ -8,6 +8,7 @@ import {
   normalizeFoodName,
   normalizeRecipients,
   normalizeWhatsAppNumber,
+  omitUndefinedValues,
 } from "../src/lib/food-planning.ts";
 
 test("Mauritius clock returns the local day at the 08:00 reminder time", () => {
@@ -27,6 +28,7 @@ test("food planning values are normalized safely", () => {
   ]);
   assert.equal(normalizeFoodName("  Chicken   curry  "), "Chicken curry");
   assert.equal(getFoodForDay({ Sunday: " Agneau Salmi " }, "Sunday"), "Agneau Salmi");
+  assert.deepEqual(omitUndefinedValues({ enabled: true, lastReminder: undefined }), { enabled: true });
 });
 
 test("messages include the preset meal and escape email HTML", () => {

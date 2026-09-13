@@ -17,6 +17,7 @@ import {
   Utensils,
 } from "lucide-react";
 import { db } from "@/lib/firebase";
+import { omitUndefinedValues } from "@/lib/food-planning";
 
 type ShiftKey = "first" | "second" | "third" | "m" | "rest";
 type MShiftChoice = "not-confirmed" | Exclude<ShiftKey, "m">;
@@ -531,6 +532,7 @@ function statusColor(status: GoalStatus) {
 function savePayload(data: CoupleData) {
   return {
     ...data,
+    settings: omitUndefinedValues(data.settings),
     updatedAt: new Date().toISOString(),
   };
 }

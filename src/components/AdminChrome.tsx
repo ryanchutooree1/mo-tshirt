@@ -15,6 +15,7 @@ import {
   Building2,
   Calculator,
   Camera,
+  BrushCleaning,
   ChevronDown,
   ChevronRight,
   CircleUserRound,
@@ -162,6 +163,7 @@ const NAV_GROUPS: NavGroup[] = [
       "/admin/house-inventory",
       "/admin/couple-goals",
       "/admin/tanvi-home",
+      "/admin/cleaning",
     ],
   },
   {
@@ -232,6 +234,7 @@ const PAGE_ICONS: Partial<Record<AdminPagePath, LucideIcon>> = {
   "/admin/our-dream": UsersRound,
   "/admin/couple-goals": HeartHandshake,
   "/admin/tanvi-home": Utensils,
+  "/admin/cleaning": BrushCleaning,
   "/admin/house-inventory": House,
   "/admin/docker-postgres": Database,
   "/admin/settings": Settings,

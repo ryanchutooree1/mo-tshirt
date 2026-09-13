@@ -15,6 +15,12 @@ export type FoodWeekday = (typeof WEEK_DAYS)[number];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^\+?[1-9]\d{7,14}$/;
 
+export function omitUndefinedValues<T extends object>(value: T): T {
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).filter(([, entry]) => entry !== undefined)
+  ) as T;
+}
+
 export function getMauritiusClock(now = new Date()) {
   const formatter = new Intl.DateTimeFormat("en-GB", {
     timeZone: MAURITIUS_TIMEZONE,
