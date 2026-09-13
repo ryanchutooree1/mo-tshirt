@@ -50,6 +50,11 @@ export type AdminPagePath =
   | "/admin/tanvi-home"
   | "/admin/cleaning"
   | "/admin/house-inventory"
+  | "/admin/home-overview"
+  | "/admin/home-bills"
+  | "/admin/home-maintenance"
+  | "/admin/home-calendar"
+  | "/admin/home-documents"
   | "/admin/settings";
 
 export type AdminPermissionGroup =
@@ -343,9 +348,21 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
     group: "Planning",
   },
   {
+    path: "/admin/home-overview",
+    label: "Home Overview",
+    description: "Household priorities, upcoming dates, and quick access.",
+    group: "Our Home",
+  },
+  {
     path: "/admin/couple-goals",
     label: "Couple Goals",
     description: "Shared availability, goals, and little wins.",
+    group: "Our Home",
+  },
+  {
+    path: "/admin/home-calendar",
+    label: "Home Calendar",
+    description: "Household appointments, deliveries, visitors, and reminders.",
     group: "Our Home",
   },
   {
@@ -364,6 +381,24 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
     path: "/admin/house-inventory",
     label: "House Inventory",
     description: "Household stock levels and the shared shopping list.",
+    group: "Our Home",
+  },
+  {
+    path: "/admin/home-bills",
+    label: "Bills & Utilities",
+    description: "Providers, amounts, due dates, frequency, and payment status.",
+    group: "Our Home",
+  },
+  {
+    path: "/admin/home-maintenance",
+    label: "Maintenance & Repairs",
+    description: "Repairs, servicing, priorities, contacts, and recurring work.",
+    group: "Our Home",
+  },
+  {
+    path: "/admin/home-documents",
+    label: "Home Documents",
+    description: "Warranties, policies, references, locations, and expiry dates.",
     group: "Our Home",
   },
   {
@@ -440,6 +475,11 @@ export const DEFAULT_TOP_NAV_PATHS: AdminPagePath[] = [
   "/admin/tanvi-home",
   "/admin/cleaning",
   "/admin/house-inventory",
+  "/admin/home-overview",
+  "/admin/home-bills",
+  "/admin/home-maintenance",
+  "/admin/home-calendar",
+  "/admin/home-documents",
 ];
 
 export const DEFAULT_MORE_NAV_PATHS: AdminPagePath[] = [
@@ -458,6 +498,11 @@ export const SHARED_FIREBASE_AUTH_PAGE_PATHS: AdminPagePath[] = [
   "/admin/couple-goals",
   "/admin/tanvi-home",
   "/admin/cleaning",
+  "/admin/home-overview",
+  "/admin/home-bills",
+  "/admin/home-maintenance",
+  "/admin/home-calendar",
+  "/admin/home-documents",
 ];
 
 export function normalizeAdminAllowedPages(value: unknown) {

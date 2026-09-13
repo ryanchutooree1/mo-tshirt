@@ -6,7 +6,13 @@ export const PRODUCTION_MANAGER_ALLOWED_PAGES: AdminPagePath[] = [
   "/admin/quotation-approval",
   "/admin/couple-goals",
   "/admin/tanvi-home",
+  "/admin/cleaning",
   "/admin/house-inventory",
+  "/admin/home-overview",
+  "/admin/home-bills",
+  "/admin/home-maintenance",
+  "/admin/home-calendar",
+  "/admin/home-documents",
 ];
 
 function getProductionManagerPassword() {
