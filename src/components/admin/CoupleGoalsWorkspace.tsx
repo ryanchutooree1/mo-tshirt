@@ -3,9 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import {
+  BriefcaseBusiness,
+  CalendarCheck2,
   CalendarDays,
   CheckCircle2,
   Clock3,
+  Coffee,
   Heart,
   Mail,
   Plus,
@@ -14,6 +17,7 @@ import {
   Trash2,
   Trophy,
   Utensils,
+  X,
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { getMauritiusPlanningWeekKey, omitUndefinedValues } from "@/lib/food-planning";
@@ -1083,53 +1087,81 @@ export default function CoupleGoalsWorkspace({
               <Legend color="bg-amber-500" label="Unconfirmed M shift" />
             </div>
 
-            <div className="grid grid-cols-7 gap-2">
-              {WEEK_DAYS.map((day) => (
-                <div key={day} className="hidden rounded-lg bg-slate-100 py-2 text-center text-xs font-black uppercase tracking-wide text-slate-500 sm:block">
-                  {day.slice(0, 3)}
-                </div>
-              ))}
-              {days.map((date) => {
-                const key = formatDateKey(date);
-                const analysis = analysisByKey.get(key)!;
-                const isSelected = key === selectedKey;
-                const isCurrentMonth = date.getMonth() === month;
-                const isToday = key === todayKey();
-                return (
-                  <button
-                    key={key}
-                    onClick={() => openDayDetail(key)}
-                    className={[
-                      "min-h-32 rounded-xl border p-2 text-left transition hover:-translate-y-0.5 hover:shadow-md",
-                      isSelected ? "border-slate-950 ring-2 ring-slate-950/10" : "border-slate-200",
-                      isCurrentMonth ? "bg-white" : "bg-slate-50 text-slate-400",
-                    ].join(" ")}
-                  >
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className={`grid h-7 w-7 place-items-center rounded-full text-sm font-black ${isToday ? "bg-slate-950 text-white" : "bg-slate-100"}`}>
-                        {date.getDate()}
-                      </span>
-                      {analysis.mUnconfirmed && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">M</span>}
-                    </div>
-                    <div className="space-y-1">
-                      {analysis.restDay && <MiniPill className="bg-slate-100 text-slate-600" label="Rest together" />}
-                      {analysis.blocks.some((block) => block.owner === "me") && <MiniPill className="bg-sky-100 text-sky-700" label="Me 08:30-17:00" />}
-                      {analysis.blocks.some((block) => block.owner === "her" && !block.uncertain) && (
-                        <MiniPill className={analysis.overnight ? "bg-violet-100 text-violet-700" : "bg-pink-100 text-pink-700"} label={SHIFT_LABELS[analysis.effectiveHerShift]} />
-                      )}
-                      {analysis.mUnconfirmed && <MiniPill className="bg-amber-100 text-amber-800" label="M pending" />}
-                      {analysis.bestSlot && <MiniPill className="bg-emerald-100 text-emerald-700" label={`Best ${slotLabel(analysis.bestSlot)}`} />}
-                    </div>
-                  </button>
-                );
-              })}
+            <div className="-mx-4 overflow-x-auto px-4 pb-2">
+              <div className="grid min-w-[900px] grid-cols-7 gap-2.5">
+                {WEEK_DAYS.map((day) => (
+                  <div key={day} className="rounded-xl bg-slate-100/80 py-2.5 text-center text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">
+                    {day.slice(0, 3)}
+                  </div>
+                ))}
+                {days.map((date) => {
+                  const key = formatDateKey(date);
+                  const analysis = analysisByKey.get(key)!;
+                  const isSelected = key === selectedKey;
+                  const isCurrentMonth = date.getMonth() === month;
+                  const isToday = key === todayKey();
+                  const herResting = analysis.effectiveHerShift === "rest";
+                  const accent = analysis.mUnconfirmed
+                    ? "bg-amber-400"
+                    : herResting
+                      ? "bg-slate-400"
+                      : analysis.overnight
+                        ? "bg-violet-500"
+                        : "bg-pink-500";
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => openDayDetail(key)}
+                      aria-label={`${analysis.dayName}, ${date.toLocaleDateString("en-US", { month: "long", day: "numeric" })}. ${analysis.herLabel}`}
+                      className={[
+                        "group relative min-h-[156px] overflow-hidden rounded-2xl border p-3 text-left transition duration-200 hover:-translate-y-1 hover:border-slate-300 hover:shadow-lg",
+                        isSelected ? "border-slate-950 shadow-md ring-2 ring-slate-950/10" : "border-slate-200",
+                        isCurrentMonth ? "bg-white" : "bg-slate-50/70 text-slate-400 opacity-65",
+                      ].join(" ")}
+                    >
+                      <span className={`absolute inset-x-0 top-0 h-1 ${accent}`} />
+                      <div className="mb-3 flex items-center justify-between pt-1">
+                        <span className={`grid h-8 w-8 place-items-center rounded-xl text-sm font-black ${isToday ? "bg-slate-950 text-white shadow-sm" : "bg-slate-100 text-slate-800"}`}>
+                          {date.getDate()}
+                        </span>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 transition group-hover:text-slate-600">
+                          {analysis.dayName.slice(0, 3)}
+                        </span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {herResting && (
+                          <MiniPill
+                            className="bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200"
+                            label={analysis.restDay ? "Rest together" : "Her Rest Day"}
+                          />
+                        )}
+                        {analysis.blocks.some((block) => block.owner === "me") && (
+                          <MiniPill className="bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-100" label="Me 08:30-17:00" />
+                        )}
+                        {!herResting && analysis.blocks.some((block) => block.owner === "her" && !block.uncertain) && (
+                          <MiniPill
+                            className={analysis.overnight ? "bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-100" : "bg-pink-50 text-pink-700 ring-1 ring-inset ring-pink-100"}
+                            label={SHIFT_LABELS[analysis.effectiveHerShift]}
+                          />
+                        )}
+                        {analysis.mUnconfirmed && (
+                          <MiniPill className="bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200" label="M Pending" />
+                        )}
+                        {analysis.bestSlot && (
+                          <MiniPill className="bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-100" label={`Best ${slotLabel(analysis.bestSlot)}`} />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </section>
 
         {dayModalOpen && (
           <div
-            className="fixed inset-0 z-40 flex items-end justify-center bg-slate-950/50 px-3 py-4 sm:items-center"
+            className="fixed inset-0 z-40 flex items-end justify-center bg-slate-950/60 px-3 py-3 backdrop-blur-sm sm:items-center sm:py-6"
             role="dialog"
             aria-modal="true"
             aria-labelledby="couple-day-detail-title"
@@ -1137,34 +1169,91 @@ export default function CoupleGoalsWorkspace({
               if (event.target === event.currentTarget) setDayModalOpen(false);
             }}
           >
-            <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl sm:p-5">
-              <div className="mb-4 flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-wide text-slate-400">Selected day</p>
-                  <h3 id="couple-day-detail-title" className="mt-1 text-2xl font-black">
-                    {selectedAnalysis.date.toLocaleDateString("en-US", {
-                      weekday: "long",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </h3>
+            <div className="max-h-[94vh] w-full max-w-3xl overflow-hidden rounded-[28px] border border-white/20 bg-white shadow-[0_30px_90px_rgba(15,23,42,0.35)]">
+              <header className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 px-5 py-5 text-white sm:px-7 sm:py-6">
+                <div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full bg-cyan-400/10 blur-2xl" />
+                <div className="pointer-events-none absolute -bottom-20 left-1/3 h-40 w-40 rounded-full bg-pink-500/10 blur-2xl" />
+                <div className="relative flex items-start justify-between gap-4">
+                  <div>
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Selected day</p>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
+                          selectedAnalysis.mUnconfirmed
+                            ? "bg-amber-400/20 text-amber-200 ring-1 ring-inset ring-amber-300/20"
+                            : selectedAnalysis.effectiveHerShift === "rest"
+                              ? "bg-white/10 text-slate-200 ring-1 ring-inset ring-white/10"
+                              : "bg-pink-400/15 text-pink-200 ring-1 ring-inset ring-pink-300/20"
+                        }`}
+                      >
+                        {selectedAnalysis.mUnconfirmed
+                          ? "M Pending"
+                          : SHIFT_LABELS[selectedAnalysis.effectiveHerShift]}
+                      </span>
+                    </div>
+                    <h3 id="couple-day-detail-title" className="text-2xl font-black tracking-tight sm:text-3xl">
+                      {selectedAnalysis.date.toLocaleDateString("en-US", {
+                        weekday: "long",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </h3>
+                    <p className="mt-1 text-sm font-medium text-slate-400">Your schedules and best time together, at a glance.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDayModalOpen(false)}
+                    className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-slate-200 ring-1 ring-inset ring-white/10 transition hover:rotate-90 hover:bg-white/20 hover:text-white"
+                    aria-label="Close day details"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setDayModalOpen(false)}
-                  className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-black text-slate-600 hover:bg-slate-50"
-                >
-                  Close
-                </button>
-              </div>
+              </header>
 
-              <div className="space-y-3">
-                <DetailRow label="My working hours" value={selectedAnalysis.mineLabel} />
-                <DetailRow label="Her shift type" value={SHIFT_LABELS[selectedAnalysis.herShift]} />
-                <DetailRow label="Her working hours" value={selectedAnalysis.herLabel} />
-                <label className="block rounded-xl border border-slate-200 p-3 text-sm font-black">
-                  Her shift override
+              <div className="max-h-[calc(94vh-128px)] space-y-5 overflow-y-auto p-4 sm:p-6">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 to-white p-4 shadow-sm">
+                    <div className="mb-3 grid h-9 w-9 place-items-center rounded-xl bg-sky-100 text-sky-700">
+                      <BriefcaseBusiness className="h-4 w-4" />
+                    </div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-sky-600">My schedule</p>
+                    <p className="mt-1 text-base font-black text-slate-900">{selectedAnalysis.mineLabel}</p>
+                  </div>
+                  <div className={`rounded-2xl border p-4 shadow-sm ${selectedAnalysis.effectiveHerShift === "rest" ? "border-slate-200 bg-gradient-to-br from-slate-100 to-white" : "border-pink-100 bg-gradient-to-br from-pink-50 to-white"}`}>
+                    <div className={`mb-3 grid h-9 w-9 place-items-center rounded-xl ${selectedAnalysis.effectiveHerShift === "rest" ? "bg-slate-200 text-slate-700" : "bg-pink-100 text-pink-700"}`}>
+                      {selectedAnalysis.effectiveHerShift === "rest" ? <Coffee className="h-4 w-4" /> : <CalendarCheck2 className="h-4 w-4" />}
+                    </div>
+                    <p className={`text-[10px] font-black uppercase tracking-[0.16em] ${selectedAnalysis.effectiveHerShift === "rest" ? "text-slate-500" : "text-pink-600"}`}>Her schedule</p>
+                    <p className="mt-1 text-base font-black text-slate-900">{selectedAnalysis.herLabel}</p>
+                  </div>
+                  <div className={`rounded-2xl border p-4 shadow-sm ${selectedAnalysis.mUnconfirmed ? "border-amber-200 bg-gradient-to-br from-amber-50 to-white" : "border-emerald-100 bg-gradient-to-br from-emerald-50 to-white"}`}>
+                    <div className={`mb-3 grid h-9 w-9 place-items-center rounded-xl ${selectedAnalysis.mUnconfirmed ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}>
+                      <Sparkles className="h-4 w-4" />
+                    </div>
+                    <p className={`text-[10px] font-black uppercase tracking-[0.16em] ${selectedAnalysis.mUnconfirmed ? "text-amber-600" : "text-emerald-600"}`}>Best shared time</p>
+                    <p className="mt-1 text-base font-black text-slate-900">
+                      {selectedAnalysis.mUnconfirmed
+                        ? "Awaiting M shift"
+                        : selectedAnalysis.bestSlot
+                          ? slotLabel(selectedAnalysis.bestSlot)
+                          : "No shared slot"}
+                    </p>
+                  </div>
+                </div>
+
+                <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5">
+                  <div className="mb-3 flex items-start gap-3">
+                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-200">
+                      <CalendarCheck2 className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-slate-900">Her shift override</h4>
+                      <p className="text-xs font-medium text-slate-500">Change only this date, or leave it on the repeating rotation.</p>
+                    </div>
+                  </div>
                   <select
+                    aria-label="Her shift override"
                     value={
                       selectedAnalysis.postThirdRest
                         ? "rest"
@@ -1176,7 +1265,7 @@ export default function CoupleGoalsWorkspace({
                         event.target.value as "pattern" | ShiftKey
                       )
                     }
-                    className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800 shadow-sm outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-200/70"
                   >
                     <option value="pattern">Use rotation pattern</option>
                     <option value="first">First Shift</option>
@@ -1185,51 +1274,62 @@ export default function CoupleGoalsWorkspace({
                     <option value="m">M Pending</option>
                     <option value="rest">Rest Day</option>
                   </select>
-                </label>
+                </section>
+
                 {selectedAnalysis.herShift === "m" && (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-                    <p className="mb-2 text-sm font-black text-amber-900">Confirm M Shift</p>
-                    <div className="grid gap-2">
+                  <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5">
+                    <div className="mb-3">
+                      <p className="text-sm font-black text-amber-950">Confirm M shift when it is known</p>
+                      <p className="mt-0.5 text-xs font-medium text-amber-800">Until then, shared time remains pending.</p>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
                       {M_CHOICES.map((choice) => (
-                        <label key={choice} className="flex items-center gap-2 text-sm font-semibold text-amber-950">
+                        <label key={choice} className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-amber-200 bg-white/70 px-3 py-2.5 text-sm font-bold text-amber-950 transition hover:bg-white">
                           <input
                             type="radio"
                             checked={(data.mShiftOverrides[selectedAnalysis.key] || "not-confirmed") === choice}
                             onChange={() => setMShift(selectedAnalysis.key, choice)}
+                            className="h-4 w-4 accent-amber-600"
                           />
                           {SHIFT_LABELS[choice]}
                         </label>
                       ))}
                     </div>
-                  </div>
+                  </section>
                 )}
-                <div>
-                  <p className="mb-2 text-sm font-black">Shared available time slots</p>
+
+                <section>
+                  <div className="mb-3 flex items-center gap-2">
+                    <Clock3 className="h-4 w-4 text-emerald-600" />
+                    <h4 className="font-black text-slate-900">Shared available time</h4>
+                  </div>
                   {selectedAnalysis.mUnconfirmed ? (
-                    <p className="rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">
+                    <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
                       Waiting for M shift confirmation before calculating shared free time.
                     </p>
                   ) : selectedAnalysis.sharedFree.length ? (
-                    <div className="space-y-2">
+                    <div className="grid gap-2 sm:grid-cols-2">
                       {selectedAnalysis.sharedFree.map((slot) => (
-                        <div key={slotLabel(slot)} className="flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2 text-sm">
-                          <span className="font-black text-emerald-900">{slotLabel(slot)}</span>
-                          <span className="font-semibold text-emerald-700">{durationLabel(slot)}</span>
+                        <div key={slotLabel(slot)} className="flex items-center justify-between rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-sm">
+                          <span className="font-black text-emerald-950">{slotLabel(slot)}</span>
+                          <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-emerald-700 shadow-sm">{durationLabel(slot)}</span>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="rounded-xl bg-slate-100 p-3 text-sm font-semibold text-slate-600">No clean common slot found.</p>
+                    <p className="rounded-2xl bg-slate-100 p-4 text-sm font-semibold text-slate-600">No clean common slot found.</p>
                   )}
-                </div>
-                <label className="block text-sm font-black">
-                  Notes
+                </section>
+
+                <label className="block rounded-2xl border border-slate-200 p-4 sm:p-5">
+                  <span className="font-black text-slate-900">Notes</span>
+                  <span className="ml-2 text-xs font-medium text-slate-400">Saved when you leave the field</span>
                   <textarea
                     value={data.dayNotes[selectedAnalysis.key] || ""}
                     onChange={(event) => updateDayNote(selectedAnalysis.key, event.target.value)}
                     onBlur={() => persist(undefined, "Day notes saved")}
                     rows={4}
-                    className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium"
+                    className="mt-3 w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100"
                     placeholder="Plans, reminders, date ideas, errands..."
                   />
                 </label>
@@ -1515,14 +1615,5 @@ function Legend({ color, label }: { color: string; label: string }) {
 }
 
 function MiniPill({ className, label }: { className: string; label: string }) {
-  return <div className={`truncate rounded-md px-2 py-1 text-[11px] font-black ${className}`}>{label}</div>;
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl bg-slate-50 p-3">
-      <p className="text-xs font-black uppercase tracking-wide text-slate-400">{label}</p>
-      <p className="mt-1 text-sm font-black text-slate-800">{value}</p>
-    </div>
-  );
+  return <div className={`truncate rounded-lg px-2.5 py-1.5 text-[11px] font-black ${className}`}>{label}</div>;
 }
