@@ -24,6 +24,7 @@ type CoupleSettings = {
 type CoupleData = {
   settings?: CoupleSettings;
   foodPlan?: Record<string, unknown>;
+  eatOutside?: Record<string, unknown>;
 };
 
 const STORAGE_DOC = doc(db, "coupleGoals", "workspace");
@@ -53,10 +54,18 @@ function resolveFromAddress(rawFrom: string | undefined, smtpUser: string) {
   return EMAIL_RE.test(raw) ? raw : formatFrom(raw, safeFallback);
 }
 
-function buildWeeklyPlannerEmail(foodPlan: Record<string, unknown> | undefined) {
+function buildWeeklyPlannerEmail(
+  foodPlan: Record<string, unknown> | undefined,
+  eatOutside: Record<string, unknown> | undefined
+) {
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const rows = days.map((day) => {
-    const food = typeof foodPlan?.[day] === "string" && foodPlan[day].trim() ? foodPlan[day].trim() : "Not planned";
+    const food =
+      eatOutside?.[day] === true
+        ? "Eat Outside"
+        : typeof foodPlan?.[day] === "string" && foodPlan[day].trim()
+          ? foodPlan[day].trim()
+          : "Not planned";
     return { day, food };
   });
   const textPlan = rows.map(({ day, food }) => `${day}: ${food}`).join("\n");
@@ -115,7 +124,7 @@ async function sendWeeklyPlannerEmail(action: "manual" | "cron") {
     return { sent: false, reason: "Email delivery is not configured.", status: 503 };
   }
 
-  const message = buildWeeklyPlannerEmail(data.foodPlan);
+  const message = buildWeeklyPlannerEmail(data.foodPlan, data.eatOutside);
   // @ts-expect-error nodemailer does not ship local declarations in this project.
   const nodemailer = await import("nodemailer");
   const transporter = nodemailer.createTransport({

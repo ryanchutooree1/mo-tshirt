@@ -58,6 +58,7 @@ type CoupleData = {
   dayNotes: Record<string, string>;
   goals: Goal[];
   foodPlan: Record<string, string>;
+  eatOutside: Record<string, boolean>;
 };
 
 type WorkBlock = {
@@ -428,6 +429,7 @@ function defaultData(): CoupleData {
       },
     ],
     foodPlan: DEFAULT_FOOD_PLAN,
+    eatOutside: {},
   };
 }
 
@@ -486,6 +488,12 @@ function normalizeData(raw: unknown): CoupleData {
         : {},
     goals: Array.isArray(input.goals) ? input.goals.map(normalizeGoal) : fallback.goals,
     foodPlan: { ...DEFAULT_FOOD_PLAN, ...(input.foodPlan || {}) },
+    eatOutside:
+      input.eatOutside && typeof input.eatOutside === "object"
+        ? Object.fromEntries(
+            Object.entries(input.eatOutside).filter(([, value]) => typeof value === "boolean")
+          )
+        : {},
   };
 }
 
@@ -749,6 +757,15 @@ export default function CoupleGoalsWorkspace({
       ...current,
       foodPlan: { ...current.foodPlan, [day]: value },
     }));
+  }
+
+  function setEatOutside(day: string, checked: boolean) {
+    const next = {
+      ...data,
+      eatOutside: { ...data.eatOutside, [day]: checked },
+    };
+    setData(next);
+    persist(next, checked ? `${day} set to Eat Outside` : `${day} meal enabled`);
   }
 
   async function sendWeeklyPlannerEmail() {
@@ -1285,16 +1302,28 @@ export default function CoupleGoalsWorkspace({
           <div className="grid gap-4 lg:grid-cols-[1fr_0.8fr]">
             <div className="grid gap-3 sm:grid-cols-2">
               {WEEK_DAYS.map((day) => (
-                <label key={day} className="rounded-xl border border-slate-200 p-3 text-sm font-black">
-                  <span className="text-slate-700">{day}</span>
+                <div key={day} className={`rounded-xl border p-3 text-sm font-black ${data.eatOutside[day] ? "border-emerald-300 bg-emerald-50" : "border-slate-200"}`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-slate-700">{day}</span>
+                    <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-emerald-700">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(data.eatOutside[day])}
+                        onChange={(event) => setEatOutside(day, event.target.checked)}
+                        className="h-4 w-4 accent-emerald-600"
+                      />
+                      Eat Outside
+                    </label>
+                  </div>
                   <input
                     value={data.foodPlan[day] || ""}
                     onChange={(event) => updateFood(day, event.target.value)}
                     onBlur={() => persist(data, `${day} food saved`)}
-                    className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold"
-                    placeholder="Food planned"
+                    disabled={Boolean(data.eatOutside[day])}
+                    className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold disabled:bg-white/60 disabled:text-slate-400"
+                    placeholder={data.eatOutside[day] ? "No meal needed" : "Food planned"}
                   />
-                </label>
+                </div>
               ))}
             </div>
 
@@ -1310,7 +1339,9 @@ export default function CoupleGoalsWorkspace({
                   {WEEK_DAYS.map((day) => (
                     <div key={day} className="flex items-center justify-between gap-3 border-b border-slate-200 pb-2 last:border-0">
                       <span className="font-bold text-slate-700">{day}</span>
-                      <span className="truncate text-right">{data.foodPlan[day] || "Not planned"}</span>
+                      <span className={`truncate text-right ${data.eatOutside[day] ? "font-bold text-emerald-700" : ""}`}>
+                        {data.eatOutside[day] ? "Eat Outside" : data.foodPlan[day] || "Not planned"}
+                      </span>
                     </div>
                   ))}
                 </div>
