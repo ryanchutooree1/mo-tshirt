@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import {
   CalendarDays,
@@ -102,7 +102,7 @@ const WEEK_DAYS = [
   "Sunday",
 ] as const;
 const GOAL_STATUSES: GoalStatus[] = ["Not Started", "In Progress", "Completed"];
-const PATTERN: ShiftKey[] = ["first", "third", "second", "m", "first", "third", "second", "rest"];
+const PATTERN: ShiftKey[] = ["first", "third", "m", "second", "first", "third", "second", "rest"];
 const ACTUAL_CALENDAR_ALIASES = [
   "First = First Shift",
   "2nd = Second Shift",
@@ -256,7 +256,12 @@ function resolveHerShift(date: Date, data: CoupleData): ShiftKey | "not-confirme
 }
 
 function isPostThirdRestDay(date: Date, data: CoupleData) {
-  if (data.herShiftOverrides[formatDateKey(date)]) return false;
+  if (
+    data.herShiftOverrides[formatDateKey(date)] ||
+    getScheduledHerShift(date, data) === "m"
+  ) {
+    return false;
+  }
   return resolveHerShift(addDays(date, -1), data) === "third";
 }
 
@@ -275,7 +280,7 @@ function getHerBlocksForDay(date: Date, data: CoupleData): WorkBlock[] {
       end: 7 * 60 + 15,
       overnight: true,
     });
-    return blocks;
+    if (!data.herShiftOverrides[key] && shift !== "m") return blocks;
   }
 
   if (shift === "m" && effective === "not-confirmed") {
@@ -583,6 +588,10 @@ export default function CoupleGoalsWorkspace({
   const [weeklyEmailState, setWeeklyEmailState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [confirmationState, setConfirmationState] = useState<"idle" | "saving" | "error">("idle");
   const [toast, setToast] = useState<string | null>(null);
+  const dataRef = useRef(data);
+  const foodSaveTimerRef = useRef<number | null>(null);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const latestSaveRequestRef = useRef(0);
 
   useEffect(() => {
     let ignore = false;
@@ -591,7 +600,9 @@ export default function CoupleGoalsWorkspace({
       try {
         const snapshot = await getDoc(STORAGE_DOC);
         if (!ignore && snapshot.exists()) {
-          setData(normalizeData(snapshot.data()));
+          const nextData = normalizeData(snapshot.data());
+          dataRef.current = nextData;
+          setData(nextData);
         }
       } catch {
         if (!ignore) setSaveState("error");
@@ -604,6 +615,10 @@ export default function CoupleGoalsWorkspace({
     return () => {
       ignore = true;
     };
+  }, []);
+
+  useEffect(() => () => {
+    if (foodSaveTimerRef.current) window.clearTimeout(foodSaveTimerRef.current);
   }, []);
 
   const days = useMemo(() => monthDays(year, month), [month, year]);
@@ -638,21 +653,32 @@ export default function CoupleGoalsWorkspace({
     setTimeout(() => setToast(null), 2200);
   }
 
-  async function persist(nextData = data, message = "Saved") {
+  async function persist(nextData: CoupleData | undefined = undefined, message = "Saved") {
+    const snapshot = nextData || dataRef.current;
+    const requestId = latestSaveRequestRef.current + 1;
+    latestSaveRequestRef.current = requestId;
     setSaveState("saving");
+    const write = saveQueueRef.current
+      .catch(() => undefined)
+      .then(() => setDoc(STORAGE_DOC, savePayload(snapshot), { merge: true }));
+    saveQueueRef.current = write;
     try {
-      await setDoc(STORAGE_DOC, savePayload(nextData), { merge: true });
+      await write;
+      if (requestId !== latestSaveRequestRef.current) return;
       setSaveState("saved");
       showToast(message);
       setTimeout(() => setSaveState("idle"), 1600);
     } catch {
+      if (requestId !== latestSaveRequestRef.current) return;
       setSaveState("error");
       showToast("Save failed");
     }
   }
 
   function updateData(mutator: (current: CoupleData) => CoupleData) {
-    setData((current) => mutator(current));
+    const next = mutator(dataRef.current);
+    dataRef.current = next;
+    setData(next);
   }
 
   function updateSetting<K extends keyof CoupleSettings>(key: K, value: CoupleSettings[K]) {
@@ -663,20 +689,23 @@ export default function CoupleGoalsWorkspace({
   }
 
   function setMShift(dateKey: string, value: MShiftChoice) {
+    const current = dataRef.current;
     const next = {
-      ...data,
+      ...current,
       mShiftOverrides: {
-        ...data.mShiftOverrides,
+        ...current.mShiftOverrides,
         [dateKey]: value,
       },
     };
+    dataRef.current = next;
     setData(next);
     persist(next, "M shift updated");
   }
 
   function setHerShiftOverride(dateKey: string, value: "pattern" | ShiftKey) {
-    const overrides = { ...data.herShiftOverrides };
-    const mShiftOverrides = { ...data.mShiftOverrides };
+    const current = dataRef.current;
+    const overrides = { ...current.herShiftOverrides };
+    const mShiftOverrides = { ...current.mShiftOverrides };
     if (value === "pattern") {
       delete overrides[dateKey];
     } else {
@@ -688,10 +717,11 @@ export default function CoupleGoalsWorkspace({
       delete mShiftOverrides[dateKey];
     }
     const next = {
-      ...data,
+      ...current,
       herShiftOverrides: overrides,
       mShiftOverrides,
     };
+    dataRef.current = next;
     setData(next);
     persist(next, "Her shift updated");
   }
@@ -727,10 +757,12 @@ export default function CoupleGoalsWorkspace({
 
   function deleteGoal(goalId: string) {
     if (!window.confirm("Delete this goal and all its Little Wins?")) return;
+    const current = dataRef.current;
     const next = {
-      ...data,
-      goals: data.goals.filter((goal) => goal.id !== goalId),
+      ...current,
+      goals: current.goals.filter((goal) => goal.id !== goalId),
     };
+    dataRef.current = next;
     setData(next);
     persist(next, "Goal deleted");
   }
@@ -769,46 +801,68 @@ export default function CoupleGoalsWorkspace({
 
   function deleteWin(goalId: string, winId: string) {
     if (!window.confirm("Delete this Little Win?")) return;
+    const current = dataRef.current;
     const next = {
-      ...data,
-      goals: data.goals.map((goal) =>
+      ...current,
+      goals: current.goals.map((goal) =>
         goal.id === goalId
           ? { ...goal, wins: goal.wins.filter((win) => win.id !== winId) }
           : goal
       ),
     };
+    dataRef.current = next;
     setData(next);
     persist(next, "Little Win deleted");
   }
 
   function updateFood(day: string, value: string) {
-    updateData((current) => ({
+    const current = dataRef.current;
+    const next = {
       ...current,
       foodPlan: { ...current.foodPlan, [day]: value },
-    }));
+    };
+    dataRef.current = next;
+    setData(next);
+    if (foodSaveTimerRef.current) window.clearTimeout(foodSaveTimerRef.current);
+    foodSaveTimerRef.current = window.setTimeout(() => {
+      foodSaveTimerRef.current = null;
+      void persist(undefined, "Food plan saved");
+    }, 650);
+  }
+
+  function flushFoodSave(message = "Food plan saved") {
+    if (foodSaveTimerRef.current) {
+      window.clearTimeout(foodSaveTimerRef.current);
+      foodSaveTimerRef.current = null;
+    }
+    void persist(undefined, message);
   }
 
   function setEatOutside(day: string, checked: boolean) {
+    const current = dataRef.current;
     const next = {
-      ...data,
-      eatOutside: { ...data.eatOutside, [day]: checked },
+      ...current,
+      eatOutside: { ...current.eatOutside, [day]: checked },
     };
+    dataRef.current = next;
     setData(next);
     persist(next, checked ? `${day} set to Eat Outside` : `${day} meal enabled`);
   }
 
   async function confirmWeeklyPlan() {
     const weekKey = getMauritiusPlanningWeekKey();
+    const current = dataRef.current;
     const next = {
-      ...data,
+      ...current,
       settings: {
-        ...data.settings,
+        ...current.settings,
         weeklyPlanConfirmedWeekKey: weekKey,
       },
     };
     setConfirmationState("saving");
     try {
       await setDoc(STORAGE_DOC, savePayload(next), { merge: true });
+      dataRef.current = next;
       setData(next);
       setSaveState("saved");
       setConfirmationState("idle");
@@ -821,11 +875,12 @@ export default function CoupleGoalsWorkspace({
   }
 
   async function sendWeeklyPlannerEmail() {
-    if (!EMAIL_RE.test(data.settings.weeklyPlannerEmail)) {
+    const latestData = dataRef.current;
+    if (!EMAIL_RE.test(latestData.settings.weeklyPlannerEmail)) {
       showToast("Add a valid weekly planner email first");
       return;
     }
-    await persist(data, "Food plan saved");
+    await persist(latestData, "Food plan saved");
     setWeeklyEmailState("sending");
     try {
       const response = await fetch("/api/admin/couple-goals/food-email", {
@@ -919,7 +974,7 @@ export default function CoupleGoalsWorkspace({
                     type="email"
                     value={data.settings.weeklyPlannerEmail}
                     onChange={(event) => updateSetting("weeklyPlannerEmail", event.target.value)}
-                    onBlur={() => persist(data, "Weekly planner email saved")}
+                    onBlur={() => persist(undefined, "Weekly planner email saved")}
                     className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                     placeholder="name@example.com"
                   />
@@ -929,10 +984,12 @@ export default function CoupleGoalsWorkspace({
                     type="checkbox"
                     checked={data.settings.weeklyEmailEnabled}
                     onChange={(event) => {
+                      const current = dataRef.current;
                       const next = {
-                        ...data,
-                        settings: { ...data.settings, weeklyEmailEnabled: event.target.checked },
+                        ...current,
+                        settings: { ...current.settings, weeklyEmailEnabled: event.target.checked },
                       };
+                      dataRef.current = next;
                       setData(next);
                       persist(next, event.target.checked ? "Sunday email enabled" : "Sunday email paused");
                     }}
@@ -948,7 +1005,7 @@ export default function CoupleGoalsWorkspace({
                   type="date"
                   value={data.settings.rotationStartDate}
                   onChange={(event) => updateSetting("rotationStartDate", event.target.value)}
-                  onBlur={() => persist(data, "Rotation saved")}
+                  onBlur={() => persist(undefined, "Rotation saved")}
                   className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                 />
               </label>
@@ -1172,7 +1229,7 @@ export default function CoupleGoalsWorkspace({
                   <textarea
                     value={data.dayNotes[selectedAnalysis.key] || ""}
                     onChange={(event) => updateDayNote(selectedAnalysis.key, event.target.value)}
-                    onBlur={() => persist(data, "Day notes saved")}
+                    onBlur={() => persist(undefined, "Day notes saved")}
                     rows={4}
                     className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium"
                     placeholder="Plans, reminders, date ideas, errands..."
@@ -1212,7 +1269,7 @@ export default function CoupleGoalsWorkspace({
                     <input
                       value={goal.title}
                       onChange={(event) => updateGoal(goal.id, { title: event.target.value })}
-                      onBlur={() => persist(data, "Goal saved")}
+                      onBlur={() => persist(undefined, "Goal saved")}
                       className="w-full rounded-lg border border-transparent bg-slate-50 px-3 py-2 text-lg font-black focus:border-slate-300 focus:outline-none"
                     />
                     <button onClick={() => deleteGoal(goal.id)} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600" aria-label="Delete goal">
@@ -1222,7 +1279,7 @@ export default function CoupleGoalsWorkspace({
                   <textarea
                     value={goal.description}
                     onChange={(event) => updateGoal(goal.id, { description: event.target.value })}
-                    onBlur={() => persist(data, "Goal saved")}
+                    onBlur={() => persist(undefined, "Goal saved")}
                     rows={2}
                     className="mb-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                     placeholder="Description"
@@ -1234,7 +1291,7 @@ export default function CoupleGoalsWorkspace({
                         type="date"
                         value={goal.targetDate}
                         onChange={(event) => updateGoal(goal.id, { targetDate: event.target.value })}
-                        onBlur={() => persist(data, "Goal saved")}
+                        onBlur={() => persist(undefined, "Goal saved")}
                         className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm normal-case tracking-normal"
                       />
                     </label>
@@ -1243,7 +1300,7 @@ export default function CoupleGoalsWorkspace({
                       <select
                         value={goal.status}
                         onChange={(event) => updateGoal(goal.id, { status: event.target.value as GoalStatus })}
-                        onBlur={() => persist(data, "Goal saved")}
+                        onBlur={() => persist(undefined, "Goal saved")}
                         className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm normal-case tracking-normal"
                       >
                         {GOAL_STATUSES.map((status) => (
@@ -1264,7 +1321,7 @@ export default function CoupleGoalsWorkspace({
                   <textarea
                     value={goal.notes}
                     onChange={(event) => updateGoal(goal.id, { notes: event.target.value })}
-                    onBlur={() => persist(data, "Goal saved")}
+                    onBlur={() => persist(undefined, "Goal saved")}
                     rows={2}
                     className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                     placeholder="Goal notes"
@@ -1288,20 +1345,20 @@ export default function CoupleGoalsWorkspace({
                               type="checkbox"
                               checked={win.completed}
                               onChange={(event) => updateWin(goal.id, win.id, { completed: event.target.checked })}
-                              onBlur={() => persist(data, "Little Win saved")}
+                              onBlur={() => persist(undefined, "Little Win saved")}
                               className="h-4 w-4"
                             />
                             <input
                               value={win.title}
                               onChange={(event) => updateWin(goal.id, win.id, { title: event.target.value })}
-                              onBlur={() => persist(data, "Little Win saved")}
+                              onBlur={() => persist(undefined, "Little Win saved")}
                               className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold"
                             />
                             <input
                               type="date"
                               value={win.dueDate}
                               onChange={(event) => updateWin(goal.id, win.id, { dueDate: event.target.value })}
-                              onBlur={() => persist(data, "Little Win saved")}
+                              onBlur={() => persist(undefined, "Little Win saved")}
                               className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
                             />
                             <button onClick={() => deleteWin(goal.id, win.id)} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600" aria-label="Delete Little Win">
@@ -1311,7 +1368,7 @@ export default function CoupleGoalsWorkspace({
                           <input
                             value={win.notes}
                             onChange={(event) => updateWin(goal.id, win.id, { notes: event.target.value })}
-                            onBlur={() => persist(data, "Little Win saved")}
+                            onBlur={() => persist(undefined, "Little Win saved")}
                             className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                             placeholder="Little Win notes"
                           />
@@ -1338,7 +1395,7 @@ export default function CoupleGoalsWorkspace({
               <p className="text-sm text-slate-500">The first email arrives Sunday at 08:00 Mauritius time. If the week is not confirmed, reminders continue every hour until Tanvi confirms.</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => persist(data, "Food plan saved")} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold hover:bg-slate-50">
+              <button onClick={() => flushFoodSave()} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold hover:bg-slate-50">
                 Save food plan
               </button>
               <button
@@ -1383,7 +1440,7 @@ export default function CoupleGoalsWorkspace({
                   <input
                     value={data.foodPlan[day] || ""}
                     onChange={(event) => updateFood(day, event.target.value)}
-                    onBlur={() => persist(data, `${day} food saved`)}
+                    onBlur={() => flushFoodSave(`${day} food saved`)}
                     disabled={Boolean(data.eatOutside[day])}
                     className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold disabled:bg-white/60 disabled:text-slate-400"
                     placeholder={data.eatOutside[day] ? "No meal needed" : "Food planned"}
