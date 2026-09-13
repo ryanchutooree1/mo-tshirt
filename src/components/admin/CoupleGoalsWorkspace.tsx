@@ -50,6 +50,7 @@ type CoupleSettings = {
   lastFoodEmailDayKey?: string;
   lastWeeklyPlannerEmailDayKey?: string;
   lastWeeklyPlannerEmailHourKey?: string;
+  lastWeeklyPlannerEmailWeekKey?: string;
   weeklyPlanConfirmedWeekKey?: string;
 };
 
@@ -474,6 +475,10 @@ function normalizeData(raw: unknown): CoupleData {
         typeof input.settings?.lastWeeklyPlannerEmailHourKey === "string"
           ? input.settings.lastWeeklyPlannerEmailHourKey
           : undefined,
+      lastWeeklyPlannerEmailWeekKey:
+        typeof input.settings?.lastWeeklyPlannerEmailWeekKey === "string"
+          ? input.settings.lastWeeklyPlannerEmailWeekKey
+          : undefined,
       weeklyPlanConfirmedWeekKey:
         typeof input.settings?.weeklyPlanConfirmedWeekKey === "string"
           ? input.settings.weeklyPlanConfirmedWeekKey
@@ -624,7 +629,7 @@ export default function CoupleGoalsWorkspace({
   const restTogetherCount = monthAnalyses.filter((day) => day.restDay).length;
   const completedWins = data.goals.flatMap((goal) => goal.wins).filter((win) => win.completed).length;
   const totalWins = data.goals.flatMap((goal) => goal.wins).length;
-  const foodPlanConfirmedToday =
+  const foodPlanConfirmedThisWeek =
     data.settings.weeklyPlanConfirmedWeekKey === getMauritiusPlanningWeekKey();
 
   function showToast(message: string) {
@@ -1318,7 +1323,7 @@ export default function CoupleGoalsWorkspace({
                 <Utensils className="h-5 w-5 text-rose-500" />
                 Weekly Food Planner
               </h2>
-              <p className="text-sm text-slate-500">The first email arrives Sunday at 08:00 Mauritius time. If the week is not confirmed, another reminder arrives every hour.</p>
+              <p className="text-sm text-slate-500">The first email arrives Sunday at 08:00 Mauritius time. If the week is not confirmed, reminders continue every hour until Tanvi confirms.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <button onClick={() => persist(data, "Food plan saved")} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold hover:bg-slate-50">
@@ -1334,13 +1339,13 @@ export default function CoupleGoalsWorkspace({
               </button>
               <button
                 onClick={confirmWeeklyPlan}
-                disabled={confirmationState === "saving" || foodPlanConfirmedToday}
-                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-white disabled:cursor-default ${foodPlanConfirmedToday ? "bg-emerald-600" : "bg-slate-950 hover:bg-slate-800"}`}
+                disabled={confirmationState === "saving" || foodPlanConfirmedThisWeek}
+                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-white disabled:cursor-default ${foodPlanConfirmedThisWeek ? "bg-emerald-600" : "bg-slate-950 hover:bg-slate-800"}`}
               >
                 <CheckCircle2 className="h-4 w-4" />
                 {confirmationState === "saving"
                   ? "Confirming..."
-                  : foodPlanConfirmedToday
+                  : foodPlanConfirmedThisWeek
                     ? "This Week Is Confirmed"
                     : "Confirm This Week's Plan"}
               </button>

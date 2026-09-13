@@ -21,6 +21,7 @@ type CoupleSettings = {
   recipients?: unknown;
   lastWeeklyPlannerEmailDayKey?: string;
   lastWeeklyPlannerEmailHourKey?: string;
+  lastWeeklyPlannerEmailWeekKey?: string;
   weeklyPlanConfirmedWeekKey?: string;
 };
 
@@ -109,15 +110,17 @@ async function sendWeeklyPlannerEmail(action: "manual" | "cron") {
   const hour = Number(clock.hhmm.slice(0, 2));
   const hourKey = `${clock.dayKey}T${String(hour).padStart(2, "0")}`;
   const weekKey = getMauritiusPlanningWeekKey(now);
+  const reminderSeriesStarted = settings.lastWeeklyPlannerEmailWeekKey === weekKey;
 
   if (action === "cron" && !enabled) {
     return { sent: false, reason: "Weekly food-planning email is paused." };
   }
-  if (action === "cron" && clock.weekday !== "Sunday") {
-    return { sent: false, reason: "Weekly food-planning email is only sent on Sunday." };
-  }
-  if (action === "cron" && hour < 8) {
-    return { sent: false, reason: "Sunday food-planning emails begin at 08:00 Mauritius time." };
+  if (
+    action === "cron" &&
+    !reminderSeriesStarted &&
+    (clock.weekday !== "Sunday" || hour < 8)
+  ) {
+    return { sent: false, reason: "The next reminder series begins Sunday at 08:00 Mauritius time." };
   }
   if (action === "cron" && settings.weeklyPlanConfirmedWeekKey === weekKey) {
     return { sent: false, reason: "This week's food plan is confirmed." };
@@ -139,7 +142,7 @@ async function sendWeeklyPlannerEmail(action: "manual" | "cron") {
     return { sent: false, reason: "Email delivery is not configured.", status: 503 };
   }
 
-  const isReminder = settings.lastWeeklyPlannerEmailDayKey === clock.dayKey;
+  const isReminder = reminderSeriesStarted;
   const message = buildWeeklyPlannerEmail(data.foodPlan, data.eatOutside, isReminder);
   // @ts-expect-error nodemailer does not ship local declarations in this project.
   const nodemailer = await import("nodemailer");
@@ -171,6 +174,7 @@ async function sendWeeklyPlannerEmail(action: "manual" | "cron") {
         weeklyPlannerEmail: recipient,
         lastWeeklyPlannerEmailDayKey: clock.dayKey,
         lastWeeklyPlannerEmailHourKey: hourKey,
+        lastWeeklyPlannerEmailWeekKey: weekKey,
         lastWeeklyPlannerEmailSentAt: serverTimestamp(),
       },
     },
