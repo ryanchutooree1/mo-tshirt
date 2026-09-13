@@ -56,7 +56,7 @@ type CoupleSettings = {
 
 type CoupleData = {
   settings: CoupleSettings;
-  herShiftOverrides: Record<string, Exclude<ShiftKey, "m">>;
+  herShiftOverrides: Record<string, ShiftKey>;
   mShiftOverrides: Record<string, MShiftChoice>;
   dayNotes: Record<string, string>;
   goals: Goal[];
@@ -109,7 +109,7 @@ const ACTUAL_CALENDAR_ALIASES = [
   "Last = Third Shift",
   "Off duty = Rest Day",
 ];
-const ACTUAL_CALENDAR_IMPORT: Record<string, Exclude<ShiftKey, "m">> = {
+const ACTUAL_CALENDAR_IMPORT: Record<string, ShiftKey> = {
   "2026-07-06": "third",
   "2026-07-07": "rest",
   "2026-07-08": "rest",
@@ -256,6 +256,7 @@ function resolveHerShift(date: Date, data: CoupleData): ShiftKey | "not-confirme
 }
 
 function isPostThirdRestDay(date: Date, data: CoupleData) {
+  if (data.herShiftOverrides[formatDateKey(date)]) return false;
   return resolveHerShift(addDays(date, -1), data) === "third";
 }
 
@@ -492,7 +493,7 @@ function normalizeData(raw: unknown): CoupleData {
       input.herShiftOverrides && typeof input.herShiftOverrides === "object"
         ? {
             ...ACTUAL_CALENDAR_IMPORT,
-            ...(input.herShiftOverrides as Record<string, Exclude<ShiftKey, "m">>),
+            ...(input.herShiftOverrides as Record<string, ShiftKey>),
           }
         : ACTUAL_CALENDAR_IMPORT,
     dayNotes:
@@ -673,14 +674,24 @@ export default function CoupleGoalsWorkspace({
     persist(next, "M shift updated");
   }
 
-  function setHerShiftOverride(dateKey: string, value: "pattern" | Exclude<ShiftKey, "m">) {
+  function setHerShiftOverride(dateKey: string, value: "pattern" | ShiftKey) {
     const overrides = { ...data.herShiftOverrides };
+    const mShiftOverrides = { ...data.mShiftOverrides };
     if (value === "pattern") {
       delete overrides[dateKey];
     } else {
       overrides[dateKey] = value;
     }
-    const next = { ...data, herShiftOverrides: overrides };
+    if (value === "m") {
+      mShiftOverrides[dateKey] = "not-confirmed";
+    } else {
+      delete mShiftOverrides[dateKey];
+    }
+    const next = {
+      ...data,
+      herShiftOverrides: overrides,
+      mShiftOverrides,
+    };
     setData(next);
     persist(next, "Her shift updated");
   }
@@ -1107,7 +1118,7 @@ export default function CoupleGoalsWorkspace({
                     onChange={(event) =>
                       setHerShiftOverride(
                         selectedAnalysis.key,
-                        event.target.value as "pattern" | Exclude<ShiftKey, "m">
+                        event.target.value as "pattern" | ShiftKey
                       )
                     }
                     className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold"
@@ -1116,6 +1127,7 @@ export default function CoupleGoalsWorkspace({
                     <option value="first">First Shift</option>
                     <option value="second">Second Shift</option>
                     <option value="third">Third Shift</option>
+                    <option value="m">M Pending</option>
                     <option value="rest">Rest Day</option>
                   </select>
                 </label>
