@@ -4,7 +4,7 @@ import type { AdminPagePath } from "@/lib/admin-access";
 export const ADMIN_AUTH_COOKIE = "admin-auth";
 
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
-const REMEMBERED_SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
+const REMEMBERED_SESSION_TTL_SECONDS = 60 * 60 * 24 * 400;
 const SESSION_VERSION = 2;
 const encoder = new TextEncoder();
 
@@ -21,6 +21,7 @@ export type AdminSession = {
   email: string;
   allowedPages: AdminPagePath[];
   isOwner: boolean;
+  rememberMe: boolean;
 };
 
 type AdminSessionSeed = {
@@ -132,6 +133,7 @@ export async function createAdminSessionToken(
     email: seed.email,
     allowedPages: seed.allowedPages,
     isOwner: seed.isOwner,
+    rememberMe: options?.rememberMe === true,
   } satisfies AdminSession;
 
   const serializedPayload = JSON.stringify(payload);
@@ -167,16 +169,26 @@ export async function readAdminSessionToken(token: string | null | undefined) {
     if (typeof payload.email !== "string") return null;
     if (!Array.isArray(payload.allowedPages)) return null;
     if (typeof payload.isOwner !== "boolean") return null;
+    if (payload.rememberMe !== undefined && typeof payload.rememberMe !== "boolean") {
+      return null;
+    }
+
+    const expiresAt = Number(payload.expiresAt);
+    const rememberMe =
+      payload.rememberMe === true ||
+      (payload.rememberMe === undefined &&
+        expiresAt - getNowUnix() > SESSION_TTL_SECONDS);
 
     return {
       version: SESSION_VERSION,
-      expiresAt: Number(payload.expiresAt),
+      expiresAt,
       nonce: payload.nonce,
       userId: payload.userId,
       displayName: payload.displayName,
       email: payload.email,
       allowedPages: payload.allowedPages as AdminPagePath[],
       isOwner: payload.isOwner,
+      rememberMe,
     } satisfies AdminSession;
   } catch {
     return null;
@@ -205,6 +217,28 @@ export function applyAdminSessionCookie(
       ? { maxAge: REMEMBERED_SESSION_TTL_SECONDS }
       : {}),
   });
+}
+
+export async function refreshRememberedAdminSession(
+  response: NextResponse,
+  session: AdminSession
+) {
+  if (!session.rememberMe) return;
+
+  const token = await createAdminSessionToken(
+    {
+      userId: session.userId,
+      displayName: session.displayName,
+      email: session.email,
+      allowedPages: session.allowedPages,
+      isOwner: session.isOwner,
+    },
+    { rememberMe: true }
+  );
+
+  if (token) {
+    applyAdminSessionCookie(response, token, { rememberMe: true });
+  }
 }
 
 export function clearAdminSessionCookie(response: NextResponse) {

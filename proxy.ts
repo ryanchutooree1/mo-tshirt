@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { readAdminSession } from "@/lib/admin-auth";
+import {
+  readAdminSession,
+  refreshRememberedAdminSession,
+} from "@/lib/admin-auth";
 import {
   getAdminLandingPath,
   hasAdminApiAccess,
@@ -124,6 +127,8 @@ export async function proxy(req: NextRequest) {
           NextResponse.json({ error: "Forbidden." }, { status: 403 })
         );
       }
+
+      await refreshRememberedAdminSession(response, session);
     }
 
     return applySecurityHeaders(response);
@@ -131,6 +136,10 @@ export async function proxy(req: NextRequest) {
 
   if (isPartnerDeskRoute(pathname)) {
     const response = NextResponse.next();
+    const session = await readAdminSession(req.cookies);
+    if (session) {
+      await refreshRememberedAdminSession(response, session);
+    }
     response.headers.set("X-Robots-Tag", "noindex, nofollow");
     return applySecurityHeaders(response);
   }
@@ -178,7 +187,9 @@ export async function proxy(req: NextRequest) {
       const url = req.nextUrl.clone();
       url.pathname = mobHost ? "/photo-log" : "/mob/photo-log";
       url.search = "";
-      return applySecurityHeaders(NextResponse.redirect(url));
+      const response = NextResponse.redirect(url);
+      await refreshRememberedAdminSession(response, session);
+      return applySecurityHeaders(response);
     }
     if (
       internalPath === "/mob/photo-log" &&
@@ -196,9 +207,13 @@ export async function proxy(req: NextRequest) {
     if (mobHost) {
       const url = req.nextUrl.clone();
       url.pathname = internalPath;
-      return applySecurityHeaders(NextResponse.rewrite(url));
+      const response = NextResponse.rewrite(url);
+      await refreshRememberedAdminSession(response, session);
+      return applySecurityHeaders(response);
     }
-    return applySecurityHeaders(NextResponse.next());
+    const response = NextResponse.next();
+    await refreshRememberedAdminSession(response, session);
+    return applySecurityHeaders(response);
   }
 
   // Protect all /admin routes and the standalone IoT command deck.
@@ -220,7 +235,9 @@ export async function proxy(req: NextRequest) {
       isOwner: session.isOwner,
     })
   ) {
-    return applySecurityHeaders(NextResponse.next());
+    const response = NextResponse.next();
+    await refreshRememberedAdminSession(response, session);
+    return applySecurityHeaders(response);
   }
 
   const fallbackPath = getAdminLandingPath(session.allowedPages, {

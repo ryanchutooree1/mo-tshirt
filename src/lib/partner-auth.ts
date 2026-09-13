@@ -11,7 +11,7 @@ import {
 export const PARTNER_AUTH_COOKIE = "partner-auth";
 
 const SESSION_TTL_SECONDS = 60 * 60 * 12;
-const REMEMBERED_SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
+const REMEMBERED_SESSION_TTL_SECONDS = 60 * 60 * 24 * 400;
 const SESSION_VERSION = 1;
 const encoder = new TextEncoder();
 

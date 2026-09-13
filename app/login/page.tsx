@@ -246,7 +246,7 @@ function LoginInner() {
                   <span>
                     <span className="font-medium text-neutral-900">Remember me</span>
                     <span className="mt-0.5 block text-xs text-neutral-500">
-                      Stay signed in for 30 days on this device.
+                      Stay signed in on this device until you sign out.
                     </span>
                   </span>
                 </label>
