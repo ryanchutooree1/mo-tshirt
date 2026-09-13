@@ -6,6 +6,7 @@ import {
   escapeHtml,
   FOOD_REMINDER_TIME,
   getMauritiusClock,
+  getMauritiusPlanningWeekKey,
   normalizeRecipients,
 } from "@/lib/food-planning";
 import { getProductionManager } from "@/lib/partner-registry";
@@ -19,6 +20,8 @@ type CoupleSettings = {
   weeklyPlannerEmail?: string;
   recipients?: unknown;
   lastWeeklyPlannerEmailDayKey?: string;
+  lastWeeklyPlannerEmailHourKey?: string;
+  weeklyPlanConfirmedWeekKey?: string;
 };
 
 type CoupleData = {
@@ -56,7 +59,8 @@ function resolveFromAddress(rawFrom: string | undefined, smtpUser: string) {
 
 function buildWeeklyPlannerEmail(
   foodPlan: Record<string, unknown> | undefined,
-  eatOutside: Record<string, unknown> | undefined
+  eatOutside: Record<string, unknown> | undefined,
+  isReminder: boolean
 ) {
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const rows = days.map((day) => {
@@ -77,14 +81,15 @@ function buildWeeklyPlannerEmail(
     .join("");
 
   return {
-    subject: "Please plan this week's meals",
-    text: `Good morning Tanvi,\n\nPlease open Food Planning and fill or update the meals for the whole week.\n\nCurrent plan:\n${textPlan}\n\nOpen Food Planning: ${FOOD_PLANNING_URL}\n\nIf your remembered login has expired, sign in and you will be returned directly to Food Planning.`,
+    subject: isReminder ? "Reminder: Confirm this week's meals" : "Plan this week's meals",
+    text: `Good morning Tanvi,\n\nPlease fill or update the food plan for the whole week. When the plan is ready, press Confirm This Week's Plan on the website to stop the hourly reminders.\n\nCurrent plan:\n${textPlan}\n\nReview and confirm Food Planning: ${FOOD_PLANNING_URL}\n\nIf your remembered login has expired, sign in and you will be returned directly to Food Planning.`,
     html: `<div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:#111827;max-width:600px;margin:auto">
-  <h1 style="font-size:25px;margin:0 0 12px">Plan this week&apos;s meals</h1>
+  <h1 style="font-size:25px;margin:0 0 12px">${isReminder ? "Reminder: confirm this week&apos;s meals" : "Plan this week&apos;s meals"}</h1>
   <p>Good morning Tanvi,</p>
   <p>Please fill or update the food plan for the whole week.</p>
+  <p>When the plan is ready, press <strong>Confirm This Week&apos;s Plan</strong> on the website to stop the hourly reminders.</p>
   <table style="width:100%;border-collapse:collapse;margin:20px 0;border:1px solid #e5e7eb;border-radius:12px">${htmlPlan}</table>
-  <p style="margin:26px 0"><a href="${FOOD_PLANNING_URL}" style="display:inline-block;padding:13px 22px;border-radius:10px;background:#059669;color:#fff;text-decoration:none;font-weight:700">Open Food Planning</a></p>
+  <p style="margin:26px 0"><a href="${FOOD_PLANNING_URL}" style="display:inline-block;padding:13px 22px;border-radius:10px;background:#059669;color:#fff;text-decoration:none;font-weight:700">Review and Confirm Food Plan</a></p>
   <p style="font-size:13px;color:#6b7280">If your remembered login has expired, sign in and you will be returned directly to Food Planning.</p>
 </div>`,
   };
@@ -98,8 +103,12 @@ async function loadCoupleData() {
 async function sendWeeklyPlannerEmail(action: "manual" | "cron") {
   const data = await loadCoupleData();
   const settings = data.settings || {};
-  const clock = getMauritiusClock();
+  const now = new Date();
+  const clock = getMauritiusClock(now);
   const enabled = settings.weeklyEmailEnabled ?? settings.emailEnabled ?? true;
+  const hour = Number(clock.hhmm.slice(0, 2));
+  const hourKey = `${clock.dayKey}T${String(hour).padStart(2, "0")}`;
+  const weekKey = getMauritiusPlanningWeekKey(now);
 
   if (action === "cron" && !enabled) {
     return { sent: false, reason: "Weekly food-planning email is paused." };
@@ -107,8 +116,14 @@ async function sendWeeklyPlannerEmail(action: "manual" | "cron") {
   if (action === "cron" && clock.weekday !== "Sunday") {
     return { sent: false, reason: "Weekly food-planning email is only sent on Sunday." };
   }
-  if (action === "cron" && settings.lastWeeklyPlannerEmailDayKey === clock.dayKey) {
-    return { sent: false, reason: "This Sunday's food-planning email was already sent." };
+  if (action === "cron" && hour < 8) {
+    return { sent: false, reason: "Sunday food-planning emails begin at 08:00 Mauritius time." };
+  }
+  if (action === "cron" && settings.weeklyPlanConfirmedWeekKey === weekKey) {
+    return { sent: false, reason: "This week's food plan is confirmed." };
+  }
+  if (action === "cron" && settings.lastWeeklyPlannerEmailHourKey === hourKey) {
+    return { sent: false, reason: "The reminder for this hour was already sent." };
   }
 
   const manager = await getProductionManager();
@@ -124,7 +139,8 @@ async function sendWeeklyPlannerEmail(action: "manual" | "cron") {
     return { sent: false, reason: "Email delivery is not configured.", status: 503 };
   }
 
-  const message = buildWeeklyPlannerEmail(data.foodPlan, data.eatOutside);
+  const isReminder = settings.lastWeeklyPlannerEmailDayKey === clock.dayKey;
+  const message = buildWeeklyPlannerEmail(data.foodPlan, data.eatOutside, isReminder);
   // @ts-expect-error nodemailer does not ship local declarations in this project.
   const nodemailer = await import("nodemailer");
   const transporter = nodemailer.createTransport({
@@ -154,13 +170,14 @@ async function sendWeeklyPlannerEmail(action: "manual" | "cron") {
         weeklyEmailEnabled: enabled,
         weeklyPlannerEmail: recipient,
         lastWeeklyPlannerEmailDayKey: clock.dayKey,
+        lastWeeklyPlannerEmailHourKey: hourKey,
         lastWeeklyPlannerEmailSentAt: serverTimestamp(),
       },
     },
     { merge: true }
   );
 
-  return { sent: true, day: clock.weekday };
+  return { sent: true, day: clock.weekday, reminder: isReminder };
 }
 
 export async function GET(req: Request) {

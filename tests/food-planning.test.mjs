@@ -5,6 +5,7 @@ import {
   buildFoodReminderMessage,
   getFoodForDay,
   getMauritiusClock,
+  getMauritiusPlanningWeekKey,
   normalizeFoodName,
   normalizeRecipients,
   normalizeWhatsAppNumber,
@@ -18,6 +19,12 @@ test("Mauritius clock returns the local day at the 08:00 reminder time", () => {
     weekday: "Sunday",
     hhmm: "08:00",
   });
+});
+
+test("Sunday planning and the following weekdays share one planning week key", () => {
+  assert.equal(getMauritiusPlanningWeekKey(new Date("2026-09-13T04:00:00.000Z")), "2026-09-14");
+  assert.equal(getMauritiusPlanningWeekKey(new Date("2026-09-16T08:00:00.000Z")), "2026-09-14");
+  assert.equal(getMauritiusPlanningWeekKey(new Date("2026-09-20T04:00:00.000Z")), "2026-09-21");
 });
 
 test("food planning values are normalized safely", () => {

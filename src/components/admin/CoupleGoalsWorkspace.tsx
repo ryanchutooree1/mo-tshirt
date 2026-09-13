@@ -16,7 +16,7 @@ import {
   Utensils,
 } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { omitUndefinedValues } from "@/lib/food-planning";
+import { getMauritiusPlanningWeekKey, omitUndefinedValues } from "@/lib/food-planning";
 
 type ShiftKey = "first" | "second" | "third" | "m" | "rest";
 type MShiftChoice = "not-confirmed" | Exclude<ShiftKey, "m">;
@@ -49,6 +49,8 @@ type CoupleSettings = {
   recipients: string[];
   lastFoodEmailDayKey?: string;
   lastWeeklyPlannerEmailDayKey?: string;
+  lastWeeklyPlannerEmailHourKey?: string;
+  weeklyPlanConfirmedWeekKey?: string;
 };
 
 type CoupleData = {
@@ -468,6 +470,14 @@ function normalizeData(raw: unknown): CoupleData {
         typeof input.settings?.lastWeeklyPlannerEmailDayKey === "string"
           ? input.settings.lastWeeklyPlannerEmailDayKey
           : undefined,
+      lastWeeklyPlannerEmailHourKey:
+        typeof input.settings?.lastWeeklyPlannerEmailHourKey === "string"
+          ? input.settings.lastWeeklyPlannerEmailHourKey
+          : undefined,
+      weeklyPlanConfirmedWeekKey:
+        typeof input.settings?.weeklyPlanConfirmedWeekKey === "string"
+          ? input.settings.weeklyPlanConfirmedWeekKey
+          : undefined,
     },
     mShiftOverrides:
       input.mShiftOverrides && typeof input.mShiftOverrides === "object"
@@ -565,6 +575,7 @@ export default function CoupleGoalsWorkspace({
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [weeklyEmailState, setWeeklyEmailState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [confirmationState, setConfirmationState] = useState<"idle" | "saving" | "error">("idle");
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -613,6 +624,8 @@ export default function CoupleGoalsWorkspace({
   const restTogetherCount = monthAnalyses.filter((day) => day.restDay).length;
   const completedWins = data.goals.flatMap((goal) => goal.wins).filter((win) => win.completed).length;
   const totalWins = data.goals.flatMap((goal) => goal.wins).length;
+  const foodPlanConfirmedToday =
+    data.settings.weeklyPlanConfirmedWeekKey === getMauritiusPlanningWeekKey();
 
   function showToast(message: string) {
     setToast(message);
@@ -768,6 +781,29 @@ export default function CoupleGoalsWorkspace({
     persist(next, checked ? `${day} set to Eat Outside` : `${day} meal enabled`);
   }
 
+  async function confirmWeeklyPlan() {
+    const weekKey = getMauritiusPlanningWeekKey();
+    const next = {
+      ...data,
+      settings: {
+        ...data.settings,
+        weeklyPlanConfirmedWeekKey: weekKey,
+      },
+    };
+    setConfirmationState("saving");
+    try {
+      await setDoc(STORAGE_DOC, savePayload(next), { merge: true });
+      setData(next);
+      setSaveState("saved");
+      setConfirmationState("idle");
+      showToast("This week's food plan is confirmed");
+      setTimeout(() => setSaveState("idle"), 1600);
+    } catch {
+      setConfirmationState("error");
+      showToast("Confirmation failed");
+    }
+  }
+
   async function sendWeeklyPlannerEmail() {
     if (!EMAIL_RE.test(data.settings.weeklyPlannerEmail)) {
       showToast("Add a valid weekly planner email first");
@@ -824,7 +860,7 @@ export default function CoupleGoalsWorkspace({
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 md:text-base">
                 {isFoodView
-                  ? "Every Sunday morning, Tanvi gets an email button that opens this page to plan the whole week."
+                  ? "Every Sunday morning, Tanvi gets an email button that opens this page. Reminders repeat hourly until she confirms the week."
                   : "A shared command center for free time, Little Wins, and shared goals."}
               </p>
             </div>
@@ -1282,7 +1318,7 @@ export default function CoupleGoalsWorkspace({
                 <Utensils className="h-5 w-5 text-rose-500" />
                 Weekly Food Planner
               </h2>
-              <p className="text-sm text-slate-500">Every Sunday at 08:00 Mauritius time, Tanvi receives an email button to open Food Planning and fill the whole week.</p>
+              <p className="text-sm text-slate-500">The first email arrives Sunday at 08:00 Mauritius time. If the week is not confirmed, another reminder arrives every hour.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <button onClick={() => persist(data, "Food plan saved")} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold hover:bg-slate-50">
@@ -1295,6 +1331,18 @@ export default function CoupleGoalsWorkspace({
               >
                 <Mail className="h-4 w-4" />
                 {weeklyEmailState === "sending" ? "Sending..." : "Send Sunday email now"}
+              </button>
+              <button
+                onClick={confirmWeeklyPlan}
+                disabled={confirmationState === "saving" || foodPlanConfirmedToday}
+                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold text-white disabled:cursor-default ${foodPlanConfirmedToday ? "bg-emerald-600" : "bg-slate-950 hover:bg-slate-800"}`}
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                {confirmationState === "saving"
+                  ? "Confirming..."
+                  : foodPlanConfirmedToday
+                    ? "This Week Is Confirmed"
+                    : "Confirm This Week's Plan"}
               </button>
             </div>
           </div>
@@ -1346,7 +1394,7 @@ export default function CoupleGoalsWorkspace({
                   ))}
                 </div>
                 <div className="mt-5 inline-flex rounded-lg bg-emerald-600 px-4 py-2 font-bold text-white">
-                  Open Food Planning
+                  Review and Confirm Food Plan
                 </div>
                 <p className="mt-4 text-xs">
                   The button opens Tanvi&apos;s Food Planning page. If sign-in is needed, she returns here immediately after logging in.

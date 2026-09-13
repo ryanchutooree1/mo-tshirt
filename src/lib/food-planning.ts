@@ -42,6 +42,15 @@ export function getMauritiusClock(now = new Date()) {
   };
 }
 
+export function getMauritiusPlanningWeekKey(now = new Date()) {
+  const clock = getMauritiusClock(now);
+  const [year, month, day] = clock.dayKey.split("-").map(Number);
+  const weekdayIndex = WEEK_DAYS.indexOf(clock.weekday);
+  const daysFromMonday = weekdayIndex === 6 ? 1 : -weekdayIndex;
+  const monday = new Date(Date.UTC(year, month - 1, day + daysFromMonday));
+  return monday.toISOString().slice(0, 10);
+}
+
 export function normalizeRecipients(value: unknown) {
   if (!Array.isArray(value)) return [];
   return Array.from(
