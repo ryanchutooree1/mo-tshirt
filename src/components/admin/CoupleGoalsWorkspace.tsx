@@ -8,6 +8,7 @@ import {
   Clock3,
   Heart,
   Mail,
+  MessageCircle,
   Plus,
   Save,
   Sparkles,
@@ -43,8 +44,11 @@ type CoupleSettings = {
   rotationStartDate: string;
   sendTime: string;
   emailEnabled: boolean;
+  whatsappEnabled: boolean;
+  whatsappNumber: string;
   recipients: string[];
   lastFoodEmailDayKey?: string;
+  lastFoodReminderDayKey?: string;
 };
 
 type CoupleData = {
@@ -387,8 +391,10 @@ function defaultData(): CoupleData {
   return {
     settings: {
       rotationStartDate: "2026-07-06",
-      sendTime: "07:00",
+      sendTime: "08:00",
       emailEnabled: true,
+      whatsappEnabled: true,
+      whatsappNumber: "",
       recipients: [],
     },
     herShiftOverrides: ACTUAL_CALENDAR_IMPORT,
@@ -434,18 +440,27 @@ function normalizeData(raw: unknown): CoupleData {
         typeof input.settings?.rotationStartDate === "string" && input.settings.rotationStartDate
           ? input.settings.rotationStartDate
           : fallback.settings.rotationStartDate,
-      sendTime:
-        typeof input.settings?.sendTime === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(input.settings.sendTime)
-          ? input.settings.sendTime
-          : "07:00",
+      sendTime: "08:00",
       emailEnabled:
         typeof input.settings?.emailEnabled === "boolean" ? input.settings.emailEnabled : true,
+      whatsappEnabled:
+        typeof input.settings?.whatsappEnabled === "boolean"
+          ? input.settings.whatsappEnabled
+          : typeof input.settings?.emailEnabled === "boolean"
+            ? input.settings.emailEnabled
+            : true,
+      whatsappNumber:
+        typeof input.settings?.whatsappNumber === "string" ? input.settings.whatsappNumber : "",
       recipients: Array.isArray(input.settings?.recipients)
         ? input.settings.recipients.filter((email) => typeof email === "string" && EMAIL_RE.test(email))
         : [],
       lastFoodEmailDayKey:
         typeof input.settings?.lastFoodEmailDayKey === "string"
           ? input.settings.lastFoodEmailDayKey
+          : undefined,
+      lastFoodReminderDayKey:
+        typeof input.settings?.lastFoodReminderDayKey === "string"
+          ? input.settings.lastFoodReminderDayKey
           : undefined,
     },
     mShiftOverrides:
@@ -537,7 +552,7 @@ export default function CoupleGoalsWorkspace({
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [recipientDraft, setRecipientDraft] = useState("");
-  const [mailState, setMailState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [reminderState, setReminderState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -775,28 +790,32 @@ export default function CoupleGoalsWorkspace({
     }));
   }
 
-  async function sendFoodEmail(action: "manual" | "test") {
+  async function sendWhatsAppReminder() {
+    if (!/^\+?[1-9]\d{7,14}$/.test(data.settings.whatsappNumber.replace(/[\s()-]/g, ""))) {
+      showToast("Add a valid WhatsApp number first");
+      return;
+    }
     const invalidEmail = data.settings.recipients.find((email) => !EMAIL_RE.test(email));
     if (invalidEmail || data.settings.recipients.length === 0) {
       showToast("Add at least one valid recipient first");
       return;
     }
     await persist(data, "Food plan saved");
-    setMailState("sending");
+    setReminderState("sending");
     try {
       const response = await fetch("/api/admin/couple-goals/food-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action: "manual" }),
       });
-      const result = (await response.json().catch(() => ({}))) as { error?: string };
-      if (!response.ok) throw new Error(result.error || "Email failed");
-      setMailState("sent");
-      showToast(action === "test" ? "Test email sent" : "Today's food email sent");
-      setTimeout(() => setMailState("idle"), 2000);
+      const result = (await response.json().catch(() => ({}))) as { error?: string; reason?: string };
+      if (!response.ok) throw new Error(result.error || result.reason || "WhatsApp reminder failed");
+      setReminderState("sent");
+      showToast("Today's confirmation link sent on WhatsApp");
+      setTimeout(() => setReminderState("idle"), 2000);
     } catch (error) {
-      setMailState("error");
-      showToast(error instanceof Error ? error.message : "Email failed");
+      setReminderState("error");
+      showToast(error instanceof Error ? error.message : "WhatsApp reminder failed");
     }
   }
 
@@ -825,14 +844,14 @@ export default function CoupleGoalsWorkspace({
             <div>
               <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-cyan-100">
                 {isFoodView ? <Utensils className="h-3.5 w-3.5" /> : <Heart className="h-3.5 w-3.5" />}
-                {isFoodView ? "Food & email controls" : "Mauritius timezone by default"}
+                {isFoodView ? "WhatsApp & email controls" : "Mauritius timezone by default"}
               </div>
               <h1 className="text-2xl font-black tracking-tight md:text-4xl">
                 {isFoodView ? "Food Planning" : "Couple Goals"}
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 md:text-base">
                 {isFoodView
-                  ? "Plan the weekly food menu and control when and where the daily email is sent."
+                  ? "Plan the week, send her a daily WhatsApp confirmation link, then receive the final choice by email."
                   : "A shared command center for free time, Little Wins, and shared goals."}
               </p>
             </div>
@@ -840,8 +859,8 @@ export default function CoupleGoalsWorkspace({
             <div className="grid grid-cols-2 gap-3">
               {isFoodView ? (
                 <>
-                  <StatCard label="Morning email" value={data.settings.emailEnabled ? "On" : "Paused"} icon={<Mail />} />
-                  <StatCard label="Recipients" value={data.settings.recipients.length} icon={<CheckCircle2 />} />
+                  <StatCard label="WhatsApp reminder" value={data.settings.whatsappEnabled ? "On" : "Paused"} icon={<MessageCircle />} />
+                  <StatCard label="Email recipients" value={data.settings.recipients.length} icon={<Mail />} />
                 </>
               ) : (
                 <>
@@ -856,34 +875,45 @@ export default function CoupleGoalsWorkspace({
         </header>
 
         <section className="mb-5 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_auto] md:items-end">
-          <div className={`grid gap-3 ${isFoodView ? "md:grid-cols-2" : ""}`}>
+          <div className={`grid gap-3 ${isFoodView ? "md:grid-cols-3" : ""}`}>
             {isFoodView ? (
               <>
                 <label className="text-sm font-semibold text-slate-700">
-                  Food email time
+                  WhatsApp reminder time
                   <input
                     type="time"
                     value={data.settings.sendTime}
-                    onChange={(event) => updateSetting("sendTime", event.target.value)}
-                    onBlur={() => persist(data, "Email time saved")}
+                    readOnly
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+                  />
+                  <span className="mt-1 block text-xs font-medium text-slate-400">Mauritius time</span>
+                </label>
+                <label className="text-sm font-semibold text-slate-700">
+                  Her WhatsApp number
+                  <input
+                    type="tel"
+                    value={data.settings.whatsappNumber}
+                    onChange={(event) => updateSetting("whatsappNumber", event.target.value)}
+                    onBlur={() => persist(data, "WhatsApp number saved")}
                     className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    placeholder="+230 5XXX XXXX"
                   />
                 </label>
                 <label className="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700">
                   <input
                     type="checkbox"
-                    checked={data.settings.emailEnabled}
+                    checked={data.settings.whatsappEnabled}
                     onChange={(event) => {
                       const next = {
                         ...data,
-                        settings: { ...data.settings, emailEnabled: event.target.checked },
+                        settings: { ...data.settings, whatsappEnabled: event.target.checked },
                       };
                       setData(next);
-                      persist(next, event.target.checked ? "Morning email enabled" : "Morning email paused");
+                      persist(next, event.target.checked ? "WhatsApp reminder enabled" : "WhatsApp reminder paused");
                     }}
                     className="h-4 w-4"
                   />
-                  Morning food email enabled
+                  Daily WhatsApp reminder enabled
                 </label>
               </>
             ) : (
@@ -918,7 +948,7 @@ export default function CoupleGoalsWorkspace({
               : saveState === "saved"
                 ? "Saved"
                 : isFoodView
-                  ? "Save email settings"
+                  ? "Save reminder settings"
                   : "Save all"}
           </button>
         </section>
@@ -1279,19 +1309,19 @@ export default function CoupleGoalsWorkspace({
                 <Utensils className="h-5 w-5 text-rose-500" />
                 Daily Food Planner
               </h2>
-              <p className="text-sm text-slate-500">Plan the week once, then send the morning food email manually or by cron.</p>
+              <p className="text-sm text-slate-500">At 08:00 she receives today&apos;s preset meal by WhatsApp. Her confirmation sends the final choice by email.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <button onClick={() => persist(data, "Food plan saved")} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold hover:bg-slate-50">
                 Save food plan
               </button>
-              <button onClick={() => sendFoodEmail("test")} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold hover:bg-slate-50">
-                <Mail className="h-4 w-4" />
-                Send test
-              </button>
-              <button onClick={() => sendFoodEmail("manual")} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700">
-                <CheckCircle2 className="h-4 w-4" />
-                {mailState === "sending" ? "Sending..." : "Send today"}
+              <button
+                onClick={sendWhatsAppReminder}
+                disabled={reminderState === "sending"}
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60"
+              >
+                <MessageCircle className="h-4 w-4" />
+                {reminderState === "sending" ? "Sending..." : "Send link now"}
               </button>
             </div>
           </div>
@@ -1313,7 +1343,8 @@ export default function CoupleGoalsWorkspace({
             </div>
 
             <div className="rounded-xl border border-slate-200 p-3">
-              <h3 className="mb-2 font-black">Email recipients</h3>
+              <h3 className="mb-1 font-black">Dinner confirmation email recipients</h3>
+              <p className="mb-3 text-xs text-slate-500">These addresses receive the final meal only after she confirms.</p>
               <div className="mb-3 flex gap-2">
                 <input
                   value={recipientDraft}
@@ -1353,10 +1384,10 @@ export default function CoupleGoalsWorkspace({
                 ))}
               </div>
               <div className="mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
-                <p className="font-black text-slate-800">Email preview</p>
-                <p className="mt-2">Subject: Today&apos;s Food Plan</p>
+                <p className="font-black text-slate-800">Confirmation email preview</p>
+                <p className="mt-2">Subject: Tonight&apos;s dinner: {data.foodPlan[getMauritiusDateParts().weekday] || "Not planned"}</p>
                 <p className="mt-1">
-                  Today is {getMauritiusDateParts().weekday}. Food planned for today:{" "}
+                  Dinner has been confirmed for tonight. {getMauritiusDateParts().weekday}:{" "}
                   <strong>{data.foodPlan[getMauritiusDateParts().weekday] || "Not planned"}</strong>.
                 </p>
               </div>

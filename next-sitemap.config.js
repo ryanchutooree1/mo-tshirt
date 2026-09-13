@@ -32,6 +32,7 @@ module.exports = {
     "/admin/*",
     "/cbe",
     "/design-studio",
+    "/food-confirmation",
     "/iot",
     "/our-dream",
     "/icon.png",

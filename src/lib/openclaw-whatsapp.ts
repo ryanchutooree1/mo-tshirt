@@ -28,6 +28,13 @@ export type DispatchResult = {
   messageId: string | null;
 };
 
+export type WhatsAppTemplate = {
+  twilioContentSid?: string;
+  metaTemplateName?: string;
+  metaLanguageCode?: string;
+  parameters: string[];
+};
+
 export function readOpenClawWhatsAppConfig() {
   return {
     triggerMessage: process.env.OPENCLAW_WHATSAPP_TRIGGER_MESSAGE || OPENCLAW_WHATSAPP_TRIGGER_MESSAGE,
@@ -204,18 +211,33 @@ export async function dispatchWhatsAppReply({
   replyText: string;
   enableTypingIndicator: boolean;
 }): Promise<DispatchResult> {
-  const preferredProvider = String(process.env.OPENCLAW_WHATSAPP_PROVIDER || "").trim().toLowerCase();
-
-  if (shouldUseTwilio(preferredProvider) && incoming.from) {
-    if (enableTypingIndicator && incoming.messageSid) {
-      await sendTwilioTypingIndicator(incoming.messageSid);
-    }
-
-    return sendTwilioReply(incoming.from, replyText);
+  if (incoming.from && enableTypingIndicator && incoming.messageSid && shouldUseTwilio(readPreferredProvider())) {
+    await sendTwilioTypingIndicator(incoming.messageSid);
   }
 
-  if (shouldUseMeta(preferredProvider) && incoming.from) {
-    return sendMetaReply(incoming.from, replyText);
+  return dispatchWhatsAppMessage({
+    to: incoming.from || "",
+    text: replyText,
+  });
+}
+
+export async function dispatchWhatsAppMessage({
+  to,
+  text,
+  template,
+}: {
+  to: string;
+  text: string;
+  template?: WhatsAppTemplate;
+}): Promise<DispatchResult> {
+  const preferredProvider = readPreferredProvider();
+
+  if (shouldUseTwilio(preferredProvider) && to) {
+    return sendTwilioMessage(to, text, template);
+  }
+
+  if (shouldUseMeta(preferredProvider) && to) {
+    return sendMetaMessage(to, text, template);
   }
 
   return {
@@ -223,6 +245,10 @@ export async function dispatchWhatsAppReply({
     simulated: true,
     messageId: null,
   };
+}
+
+function readPreferredProvider() {
+  return String(process.env.OPENCLAW_WHATSAPP_PROVIDER || "").trim().toLowerCase();
 }
 
 function shouldUseTwilio(preferredProvider: string) {
@@ -248,7 +274,11 @@ function shouldUseMeta(preferredProvider: string) {
   );
 }
 
-async function sendTwilioReply(to: string, replyText: string): Promise<DispatchResult> {
+async function sendTwilioMessage(
+  to: string,
+  text: string,
+  template?: WhatsAppTemplate
+): Promise<DispatchResult> {
   const accountSid = process.env.TWILIO_ACCOUNT_SID || "";
   const authToken = process.env.TWILIO_AUTH_TOKEN || "";
   const from = process.env.TWILIO_WHATSAPP_FROM || "";
@@ -256,8 +286,16 @@ async function sendTwilioReply(to: string, replyText: string): Promise<DispatchR
   const body = new URLSearchParams({
     To: ensureTwilioWhatsAppAddress(to),
     From: ensureTwilioWhatsAppAddress(from),
-    Body: replyText,
   });
+  if (template?.twilioContentSid) {
+    body.set("ContentSid", template.twilioContentSid);
+    body.set(
+      "ContentVariables",
+      JSON.stringify(Object.fromEntries(template.parameters.map((value, index) => [String(index + 1), value])))
+    );
+  } else {
+    body.set("Body", text);
+  }
 
   const response = await fetch(endpoint, {
     method: "POST",
@@ -271,7 +309,7 @@ async function sendTwilioReply(to: string, replyText: string): Promise<DispatchR
   const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
   if (!response.ok) {
     throw new Error(
-      `Twilio WhatsApp reply failed (${response.status}): ${readString(payload.message) || "Unknown error."}`
+      `Twilio WhatsApp message failed (${response.status}): ${readString(payload.message) || "Unknown error."}`
     );
   }
 
@@ -307,7 +345,11 @@ async function sendTwilioTypingIndicator(messageSid: string) {
   }
 }
 
-async function sendMetaReply(to: string, replyText: string): Promise<DispatchResult> {
+async function sendMetaMessage(
+  to: string,
+  text: string,
+  template?: WhatsAppTemplate
+): Promise<DispatchResult> {
   const token = process.env.WHATSAPP_CLOUD_API_TOKEN || "";
   const phoneNumberId = process.env.WHATSAPP_CLOUD_PHONE_NUMBER_ID || "";
   const endpoint = `https://graph.facebook.com/v23.0/${encodeURIComponent(phoneNumberId)}/messages`;
@@ -317,19 +359,35 @@ async function sendMetaReply(to: string, replyText: string): Promise<DispatchRes
       authorization: `Bearer ${token}`,
       "content-type": "application/json",
     },
-    body: JSON.stringify({
-      messaging_product: "whatsapp",
-      to: normalizeMetaRecipient(to),
-      type: "text",
-      text: {
-        body: replyText,
-      },
-    }),
+    body: JSON.stringify(
+      template?.metaTemplateName
+        ? {
+            messaging_product: "whatsapp",
+            to: normalizeMetaRecipient(to),
+            type: "template",
+            template: {
+              name: template.metaTemplateName,
+              language: { code: template.metaLanguageCode || "en" },
+              components: [
+                {
+                  type: "body",
+                  parameters: template.parameters.map((value) => ({ type: "text", text: value })),
+                },
+              ],
+            },
+          }
+        : {
+            messaging_product: "whatsapp",
+            to: normalizeMetaRecipient(to),
+            type: "text",
+            text: { body: text },
+          }
+    ),
   });
 
   const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
   if (!response.ok) {
-    throw new Error(`Meta WhatsApp reply failed (${response.status}).`);
+    throw new Error(`Meta WhatsApp message failed (${response.status}).`);
   }
 
   const messages = Array.isArray(payload.messages) ? (payload.messages as Record<string, unknown>[]) : [];
@@ -342,7 +400,9 @@ async function sendMetaReply(to: string, replyText: string): Promise<DispatchRes
 }
 
 function ensureTwilioWhatsAppAddress(value: string) {
-  return value.startsWith("whatsapp:") ? value : `whatsapp:${value}`;
+  if (value.startsWith("whatsapp:")) return value;
+  const normalized = value.replace(/[^\d+]/g, "");
+  return `whatsapp:${normalized.startsWith("+") ? normalized : `+${normalized}`}`;
 }
 
 function normalizeMetaRecipient(value: string) {
