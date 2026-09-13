@@ -7,20 +7,23 @@ import {
   AlertTriangle,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
+  ChevronUp,
   CircleDollarSign,
-  Clock3,
   FileText,
   FolderOpen,
   Gauge,
   Hammer,
   Home,
   LoaderCircle,
+  Pencil,
   Plus,
   ReceiptText,
   Save,
   Search,
   ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
   Trash2,
   Utensils,
@@ -101,12 +104,12 @@ const VIEW_META: Record<
   },
 };
 
-const VIEW_LINKS: Array<{ view: HomeWorkspaceView; href: string }> = [
-  { view: "overview", href: "/admin/home-overview" },
-  { view: "bills", href: "/admin/home-bills" },
-  { view: "maintenance", href: "/admin/home-maintenance" },
-  { view: "calendar", href: "/admin/home-calendar" },
-  { view: "documents", href: "/admin/home-documents" },
+const VIEW_LINKS: Array<{ view: HomeWorkspaceView; href: string; label: string }> = [
+  { view: "overview", href: "/admin/home-overview", label: "Home Overview" },
+  { view: "bills", href: "/admin/home-bills", label: "Bills & Utilities" },
+  { view: "maintenance", href: "/admin/home-maintenance", label: "Maintenance" },
+  { view: "calendar", href: "/admin/home-calendar", label: "Home Calendar" },
+  { view: "documents", href: "/admin/home-documents", label: "Documents" },
 ];
 
 const HOME_SHORTCUTS = [
@@ -158,6 +161,7 @@ export default function HomeManagementWorkspace({ view }: { view: HomeWorkspaceV
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState("");
+  const [recordFilter, setRecordFilter] = useState(view === "documents" ? "all" : "active");
   const [connectedSummary, setConnectedSummary] = useState(EMPTY_CONNECTED_SUMMARY);
   const todayKey = useMemo(mauritiusTodayKey, []);
   const meta = VIEW_META[view];
@@ -316,22 +320,51 @@ export default function HomeManagementWorkspace({ view }: { view: HomeWorkspaceV
 
   const query = search.trim().toLowerCase();
   const filteredBills = useMemo(
-    () => data.bills.filter((item) => !query || `${item.name} ${item.provider} ${item.category} ${item.notes}`.toLowerCase().includes(query)),
-    [data.bills, query]
+    () => data.bills.filter((item) => {
+      const matchesSearch = !query || `${item.name} ${item.provider} ${item.category} ${item.notes}`.toLowerCase().includes(query);
+      const matchesFilter = recordFilter === "all"
+        || (recordFilter === "active" && !["paid", "paused"].includes(item.status))
+        || (recordFilter === "completed" && item.status === "paid")
+        || (recordFilter === "overdue" && item.status === "overdue");
+      return matchesSearch && matchesFilter;
+    }),
+    [data.bills, query, recordFilter]
   );
   const filteredMaintenance = useMemo(
-    () => data.maintenance.filter((item) => !query || `${item.title} ${item.area} ${item.provider} ${item.notes}`.toLowerCase().includes(query)),
-    [data.maintenance, query]
+    () => data.maintenance.filter((item) => {
+      const matchesSearch = !query || `${item.title} ${item.area} ${item.provider} ${item.notes}`.toLowerCase().includes(query);
+      const matchesFilter = recordFilter === "all"
+        || (recordFilter === "active" && item.status !== "done")
+        || (recordFilter === "completed" && item.status === "done")
+        || (recordFilter === "urgent" && item.priority === "urgent" && item.status !== "done");
+      return matchesSearch && matchesFilter;
+    }),
+    [data.maintenance, query, recordFilter]
   );
   const filteredEvents = useMemo(
     () => [...data.events]
-      .filter((item) => !query || `${item.title} ${item.type} ${item.who} ${item.notes}`.toLowerCase().includes(query))
+      .filter((item) => {
+        const matchesSearch = !query || `${item.title} ${item.type} ${item.who} ${item.notes}`.toLowerCase().includes(query);
+        const distance = dateDistanceInDays(item.date, todayKey);
+        const matchesFilter = recordFilter === "all"
+          || (recordFilter === "active" && item.status === "planned")
+          || (recordFilter === "completed" && item.status === "done")
+          || (recordFilter === "upcoming" && item.status === "planned" && distance !== null && distance >= 0 && distance <= 30);
+        return matchesSearch && matchesFilter;
+      })
       .sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999")),
-    [data.events, query]
+    [data.events, query, recordFilter, todayKey]
   );
   const filteredDocuments = useMemo(
-    () => data.documents.filter((item) => !query || `${item.title} ${item.category} ${item.provider} ${item.reference} ${item.notes}`.toLowerCase().includes(query)),
-    [data.documents, query]
+    () => data.documents.filter((item) => {
+      const matchesSearch = !query || `${item.title} ${item.category} ${item.provider} ${item.reference} ${item.notes}`.toLowerCase().includes(query);
+      const distance = dateDistanceInDays(item.expiryDate, todayKey);
+      const matchesFilter = recordFilter === "all"
+        || (recordFilter === "expiring" && distance !== null && distance >= 0 && distance <= 60)
+        || (recordFilter === "no-expiry" && !item.expiryDate);
+      return matchesSearch && matchesFilter;
+    }),
+    [data.documents, query, recordFilter, todayKey]
   );
 
   const overview = useMemo(() => {
@@ -362,6 +395,81 @@ export default function HomeManagementWorkspace({ view }: { view: HomeWorkspaceV
     ];
     return { unpaidBills, openMaintenance, upcomingEvents, expiringDocuments, attention };
   }, [data, todayKey]);
+
+  const workspaceStats = useMemo(() => {
+    if (view === "bills") {
+      const unpaid = data.bills.filter((bill) => !["paid", "paused"].includes(bill.status));
+      const amountDue = unpaid.reduce((total, bill) => total + (Number(bill.amount) || 0), 0);
+      return [
+        { label: "Amount outstanding", value: `Rs ${amountDue.toLocaleString("en-MU")}`, detail: `${unpaid.length} active bill${unpaid.length === 1 ? "" : "s"}`, tone: "emerald" },
+        { label: "Overdue", value: String(data.bills.filter((bill) => bill.status === "overdue").length), detail: "Needs attention", tone: "rose" },
+        { label: "Paid", value: String(data.bills.filter((bill) => bill.status === "paid").length), detail: "Payment history", tone: "slate" },
+        { label: "Automatic payments", value: String(data.bills.filter((bill) => bill.autoPay && bill.status !== "paused").length), detail: "Autopay enabled", tone: "indigo" },
+      ];
+    }
+    if (view === "maintenance") {
+      const open = data.maintenance.filter((task) => task.status !== "done");
+      const estimatedCost = open.reduce((total, task) => total + (Number(task.estimatedCost) || 0), 0);
+      return [
+        { label: "Open work", value: String(open.length), detail: "Current tasks", tone: "orange" },
+        { label: "Urgent", value: String(open.filter((task) => task.priority === "urgent").length), detail: "Highest priority", tone: "rose" },
+        { label: "Scheduled", value: String(open.filter((task) => task.status === "scheduled").length), detail: "Visits arranged", tone: "indigo" },
+        { label: "Open estimate", value: `Rs ${estimatedCost.toLocaleString("en-MU")}`, detail: `${data.maintenance.filter((task) => task.status === "done").length} completed`, tone: "emerald" },
+      ];
+    }
+    if (view === "calendar") {
+      const planned = data.events.filter((event) => event.status === "planned");
+      const thisWeek = planned.filter((event) => {
+        const distance = dateDistanceInDays(event.date, todayKey);
+        return distance !== null && distance >= 0 && distance <= 7;
+      });
+      return [
+        { label: "Planned", value: String(planned.length), detail: "Upcoming and undated", tone: "indigo" },
+        { label: "Next 7 days", value: String(thisWeek.length), detail: "Coming up soon", tone: "rose" },
+        { label: "Repeating", value: String(planned.filter((event) => event.repeat !== "Does not repeat").length), detail: "Recurring events", tone: "orange" },
+        { label: "Completed", value: String(data.events.filter((event) => event.status === "done").length), detail: "Event history", tone: "emerald" },
+      ];
+    }
+    if (view === "documents") {
+      const expiring = data.documents.filter((document) => {
+        const distance = dateDistanceInDays(document.expiryDate, todayKey);
+        return distance !== null && distance >= 0 && distance <= 60;
+      });
+      return [
+        { label: "Documents", value: String(data.documents.length), detail: "Total records", tone: "cyan" },
+        { label: "Expiring soon", value: String(expiring.length), detail: "Within 60 days", tone: "rose" },
+        { label: "No expiry date", value: String(data.documents.filter((document) => !document.expiryDate).length), detail: "Permanent or incomplete", tone: "slate" },
+        { label: "Digital links", value: String(data.documents.filter((document) => safeDocumentUrl(document.url)).length), detail: "Quickly accessible", tone: "indigo" },
+      ];
+    }
+    return [];
+  }, [data, todayKey, view]);
+
+  const filterOptions = useMemo(() => {
+    if (view === "bills") return [
+      { value: "active", label: `Active (${data.bills.filter((bill) => !["paid", "paused"].includes(bill.status)).length})` },
+      { value: "overdue", label: `Overdue (${data.bills.filter((bill) => bill.status === "overdue").length})` },
+      { value: "completed", label: `Paid (${data.bills.filter((bill) => bill.status === "paid").length})` },
+      { value: "all", label: `All records (${data.bills.length})` },
+    ];
+    if (view === "maintenance") return [
+      { value: "active", label: `Active (${data.maintenance.filter((task) => task.status !== "done").length})` },
+      { value: "urgent", label: `Urgent (${data.maintenance.filter((task) => task.priority === "urgent" && task.status !== "done").length})` },
+      { value: "completed", label: `Completed (${data.maintenance.filter((task) => task.status === "done").length})` },
+      { value: "all", label: `All records (${data.maintenance.length})` },
+    ];
+    if (view === "calendar") return [
+      { value: "active", label: `Planned (${data.events.filter((event) => event.status === "planned").length})` },
+      { value: "upcoming", label: "Next 30 days" },
+      { value: "completed", label: `Completed (${data.events.filter((event) => event.status === "done").length})` },
+      { value: "all", label: `All events (${data.events.length})` },
+    ];
+    return [
+      { value: "all", label: `All documents (${data.documents.length})` },
+      { value: "expiring", label: "Expiring in 60 days" },
+      { value: "no-expiry", label: "No expiry date" },
+    ];
+  }, [data, view]);
 
   const addCollection = view === "bills" ? "bills" : view === "maintenance" ? "maintenance" : view === "calendar" ? "events" : view === "documents" ? "documents" : null;
 
@@ -408,7 +516,7 @@ export default function HomeManagementWorkspace({ view }: { view: HomeWorkspaceV
                 className={`inline-flex shrink-0 items-center gap-2 rounded-xl border px-3.5 py-2.5 text-sm font-bold transition lg:justify-center lg:px-2 ${active ? "border-slate-900 bg-slate-950 text-white shadow-sm" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-950"}`}
               >
                 <ItemIcon className="h-4 w-4" />
-                {itemMeta.title}
+                {item.label}
               </Link>
             );
           })}
@@ -425,16 +533,31 @@ export default function HomeManagementWorkspace({ view }: { view: HomeWorkspaceV
           <Overview data={data} overview={overview} connected={connectedSummary} />
         ) : (
           <section className="mt-5">
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <label className="relative block w-full sm:max-w-md">
-                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm font-semibold outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-200/60"
-                  placeholder={`Search ${meta.title.toLowerCase()}…`}
-                />
-              </label>
+            <WorkspaceStats stats={workspaceStats} />
+            <div className="mb-5 mt-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row">
+                <label className="relative block w-full sm:max-w-md">
+                  <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm font-semibold outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-200/60"
+                    placeholder={`Search ${meta.title.toLowerCase()}…`}
+                  />
+                </label>
+                <label className="relative block sm:w-52">
+                  <SlidersHorizontal className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <select
+                    value={recordFilter}
+                    onChange={(event) => setRecordFilter(event.target.value)}
+                    aria-label="Filter records"
+                    className="w-full appearance-none rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-9 text-sm font-bold text-slate-700 outline-none transition focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-200/60"
+                  >
+                    {filterOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                </label>
+              </div>
               {addCollection && (
                 <button
                   type="button"
@@ -497,6 +620,31 @@ type OverviewResult = {
   expiringDocuments: HomeDocument[];
   attention: Array<{ id: string; title: string; detail: string; href: string; tone: string }>;
 };
+
+function WorkspaceStats({ stats }: { stats: Array<{ label: string; value: string; detail: string; tone: string }> }) {
+  const toneClasses: Record<string, string> = {
+    emerald: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+    rose: "bg-rose-50 text-rose-700 ring-rose-100",
+    orange: "bg-orange-50 text-orange-700 ring-orange-100",
+    indigo: "bg-indigo-50 text-indigo-700 ring-indigo-100",
+    cyan: "bg-cyan-50 text-cyan-700 ring-cyan-100",
+    slate: "bg-slate-100 text-slate-700 ring-slate-200",
+  };
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {stats.map((stat) => (
+        <article key={stat.label} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ring-1 ring-inset ${toneClasses[stat.tone] || toneClasses.slate}`}><Gauge className="h-5 w-5" /></div>
+          <div className="min-w-0">
+            <p className="truncate text-lg font-black leading-tight text-slate-900">{stat.value}</p>
+            <p className="truncate text-xs font-black uppercase tracking-wide text-slate-500">{stat.label}</p>
+            <p className="truncate text-xs font-medium text-slate-400">{stat.detail}</p>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
 
 function Overview({ data, overview, connected }: { data: HomeManagementData; overview: OverviewResult; connected: ConnectedHomeSummary }) {
   const totalDue = overview.unpaidBills.reduce((total, bill) => total + (Number(bill.amount) || 0), 0);
@@ -601,9 +749,9 @@ function Overview({ data, overview, connected }: { data: HomeManagementData; ove
 function BillsWorkspace({ bills, update, save, remove, onAdd }: { bills: UtilityBill[]; update: (id: string, patch: Partial<UtilityBill>) => void; save: () => void; remove: (id: string, label: string) => void; onAdd: () => void }) {
   if (!bills.length) return <EmptyState icon={<ReceiptText />} title="No bills yet" description="Add electricity, water, internet, mobile, insurance, or any recurring household payment." action="Add first bill" onAction={onAdd} />;
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
+    <div className="grid gap-4 2xl:grid-cols-2">
       {bills.map((bill) => (
-        <RecordCard key={bill.id} icon={<ReceiptText />} eyebrow={bill.category} title={bill.name} meta={`${money(bill.amount)} · ${friendlyDate(bill.dueDate)}`} status={bill.status} onDelete={() => remove(bill.id, bill.name)}>
+        <RecordCard key={bill.id} icon={<ReceiptText />} eyebrow={bill.category} title={bill.name} meta={`${money(bill.amount)} · ${friendlyDate(bill.dueDate)}`} status={bill.status} summaryItems={[bill.provider || "Provider not set", bill.frequency, bill.autoPay ? "Autopay" : "Manual payment"]} onDelete={() => remove(bill.id, bill.name)}>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Bill name"><input value={bill.name} onChange={(event) => update(bill.id, { name: event.target.value })} onBlur={save} /></Field>
             <Field label="Category"><select value={bill.category} onChange={(event) => { update(bill.id, { category: event.target.value }); }} onBlur={save}>{["Electricity", "Water", "Internet", "Mobile", "Insurance", "Subscription", "Municipal", "Other"].map((value) => <option key={value}>{value}</option>)}</select></Field>
@@ -625,9 +773,9 @@ function BillsWorkspace({ bills, update, save, remove, onAdd }: { bills: Utility
 function MaintenanceWorkspace({ tasks, update, save, remove, onAdd }: { tasks: MaintenanceTask[]; update: (id: string, patch: Partial<MaintenanceTask>) => void; save: () => void; remove: (id: string, label: string) => void; onAdd: () => void }) {
   if (!tasks.length) return <EmptyState icon={<Wrench />} title="No maintenance tasks" description="Add repairs, appliance servicing, painting, plumbing, pest control, or recurring checks." action="Add first task" onAction={onAdd} />;
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
+    <div className="grid gap-4 2xl:grid-cols-2">
       {tasks.map((task) => (
-        <RecordCard key={task.id} icon={<Hammer />} eyebrow={task.area} title={task.title} meta={`${task.priority} priority · ${friendlyDate(task.dueDate)}`} status={task.status} onDelete={() => remove(task.id, task.title)}>
+        <RecordCard key={task.id} icon={<Hammer />} eyebrow={task.area} title={task.title} meta={`${task.priority} priority · ${friendlyDate(task.dueDate)}`} status={task.status} priority={task.priority} summaryItems={[task.provider || "Provider not set", money(task.estimatedCost), task.recurringMonths ? `Every ${task.recurringMonths} months` : "One-time task"]} onDelete={() => remove(task.id, task.title)}>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Task"><input value={task.title} onChange={(event) => update(task.id, { title: event.target.value })} onBlur={save} /></Field>
             <Field label="Area"><select value={task.area} onChange={(event) => update(task.id, { area: event.target.value })} onBlur={save}>{["General", "Kitchen", "Bathroom", "Bedroom", "Living room", "Garden", "Roof", "Electrical", "Plumbing", "Appliance", "Vehicle"].map((value) => <option key={value}>{value}</option>)}</select></Field>
@@ -648,9 +796,9 @@ function MaintenanceWorkspace({ tasks, update, save, remove, onAdd }: { tasks: M
 function CalendarWorkspace({ events, update, save, remove, onAdd }: { events: HomeCalendarEvent[]; update: (id: string, patch: Partial<HomeCalendarEvent>) => void; save: () => void; remove: (id: string, label: string) => void; onAdd: () => void }) {
   if (!events.length) return <EmptyState icon={<CalendarDays />} title="No home events" description="Add appointments, deliveries, visitors, rubbish collection, birthdays, or household reminders." action="Add first event" onAction={onAdd} />;
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
+    <div className="grid gap-4 2xl:grid-cols-2">
       {events.map((event) => (
-        <RecordCard key={event.id} icon={<CalendarDays />} eyebrow={event.type} title={event.title} meta={`${friendlyDate(event.date)}${event.time ? ` · ${event.time}` : ""}`} status={event.status} onDelete={() => remove(event.id, event.title)}>
+        <RecordCard key={event.id} icon={<CalendarDays />} eyebrow={event.type} title={event.title} meta={`${friendlyDate(event.date)}${event.time ? ` · ${event.time}` : ""}`} status={event.status} summaryItems={[event.who, event.repeat, event.reminder]} onDelete={() => remove(event.id, event.title)}>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Event"><input value={event.title} onChange={(input) => update(event.id, { title: input.target.value })} onBlur={save} /></Field>
             <Field label="Type"><select value={event.type} onChange={(input) => update(event.id, { type: input.target.value })} onBlur={save}>{["Reminder", "Appointment", "Delivery", "Visitor", "Collection", "Birthday", "Home task", "Other"].map((value) => <option key={value}>{value}</option>)}</select></Field>
@@ -671,11 +819,11 @@ function CalendarWorkspace({ events, update, save, remove, onAdd }: { events: Ho
 function DocumentsWorkspace({ documents, update, save, remove, onAdd }: { documents: HomeDocument[]; update: (id: string, patch: Partial<HomeDocument>) => void; save: () => void; remove: (id: string, label: string) => void; onAdd: () => void }) {
   if (!documents.length) return <EmptyState icon={<FolderOpen />} title="No home documents" description="Register insurance policies, warranties, receipts, manuals, contracts, and important household references." action="Add first document" onAction={onAdd} />;
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
+    <div className="grid gap-4 2xl:grid-cols-2">
       {documents.map((document) => {
         const url = safeDocumentUrl(document.url);
         return (
-          <RecordCard key={document.id} icon={<FileText />} eyebrow={document.category} title={document.title} meta={document.expiryDate ? `Expires ${friendlyDate(document.expiryDate)}` : document.storageLocation || "Location not set"} status={document.expiryDate ? "tracked" : "no expiry"} onDelete={() => remove(document.id, document.title)} action={url ? <a href={url} target="_blank" rel="noreferrer" className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-black text-slate-600 hover:bg-slate-50">Open</a> : null}>
+          <RecordCard key={document.id} icon={<FileText />} eyebrow={document.category} title={document.title} meta={document.expiryDate ? `Expires ${friendlyDate(document.expiryDate)}` : document.storageLocation || "Location not set"} status={document.expiryDate ? "tracked" : "no expiry"} summaryItems={[document.provider || "Issuer not set", document.reference || "No reference", document.storageLocation || "Location not set"]} onDelete={() => remove(document.id, document.title)} action={url ? <a href={url} target="_blank" rel="noreferrer" className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-black text-slate-600 hover:bg-slate-50">Open</a> : null}>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Document"><input value={document.title} onChange={(event) => update(document.id, { title: event.target.value })} onBlur={save} /></Field>
               <Field label="Category"><select value={document.category} onChange={(event) => update(document.id, { category: event.target.value })} onBlur={save}>{["Warranty", "Insurance", "Receipt", "Manual", "Contract", "Property", "Identity", "Medical", "Other"].map((value) => <option key={value}>{value}</option>)}</select></Field>
@@ -693,25 +841,68 @@ function DocumentsWorkspace({ documents, update, save, remove, onAdd }: { docume
   );
 }
 
-function RecordCard({ icon, eyebrow, title, meta, status, onDelete, action, children }: { icon: ReactNode; eyebrow: string; title: string; meta: string; status: string; onDelete: () => void; action?: ReactNode; children: ReactNode }) {
+function RecordCard({ icon, eyebrow, title, meta, status, priority, summaryItems = [], onDelete, action, children }: { icon: ReactNode; eyebrow: string; title: string; meta: string; status: string; priority?: string; summaryItems?: string[]; onDelete: () => void; action?: ReactNode; children: ReactNode }) {
+  const [expanded, setExpanded] = useState(title.startsWith("New "));
+  const completed = ["done", "paid", "cancelled"].includes(status);
+  const attention = status === "overdue" || priority === "urgent";
+  const statusTone = attention
+    ? "bg-rose-50 text-rose-700 ring-rose-200"
+    : completed
+      ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+      : status === "scheduled" || status === "in-progress" || status === "planned"
+        ? "bg-indigo-50 text-indigo-700 ring-indigo-200"
+        : "bg-slate-100 text-slate-600 ring-slate-200";
+  const iconTone = attention
+    ? "bg-rose-50 text-rose-600 ring-rose-100"
+    : completed
+      ? "bg-emerald-50 text-emerald-600 ring-emerald-100"
+      : "bg-slate-100 text-slate-700 ring-slate-200";
+  const statusLabel = status.replaceAll("-", " ");
   return (
-    <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md">
-      <header className="flex items-start justify-between gap-3 border-b border-slate-100 bg-slate-50/60 p-4 sm:p-5">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 [&_svg]:h-5 [&_svg]:w-5">{icon}</div>
-          <div className="min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">{eyebrow}</p>
-            <h2 className="truncate text-base font-black text-slate-950">{title}</h2>
+    <article className={`relative overflow-hidden rounded-2xl border bg-white shadow-sm transition duration-200 hover:border-slate-300 hover:shadow-md ${attention ? "border-rose-200" : "border-slate-200"} ${expanded ? "2xl:col-span-2" : ""}`}>
+      <span className={`absolute inset-y-0 left-0 w-1 ${attention ? "bg-rose-500" : completed ? "bg-emerald-500" : "bg-slate-300"}`} />
+      <header className="flex items-start justify-between gap-3 p-4 pl-5 sm:p-5 sm:pl-6">
+        <div className="flex min-w-0 items-start gap-3.5">
+          <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ring-1 ring-inset [&_svg]:h-5 [&_svg]:w-5 ${iconTone}`}>{icon}</div>
+          <div className="min-w-0 pt-0.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{eyebrow}</p>
+              {priority && <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${priority === "urgent" ? "bg-rose-100 text-rose-700" : priority === "high" ? "bg-orange-100 text-orange-700" : "bg-slate-100 text-slate-500"}`}>{priority}</span>}
+            </div>
+            <h2 className="mt-0.5 break-words text-base font-black leading-tight text-slate-950 sm:text-lg">{title}</h2>
             <p className="truncate text-xs font-semibold text-slate-500">{meta}</p>
+            {!expanded && summaryItems.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {summaryItems.filter(Boolean).slice(0, 3).map((item) => <span key={item} className="max-w-44 truncate rounded-lg bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-500 ring-1 ring-inset ring-slate-100">{item}</span>)}
+              </div>
+            )}
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <span className="hidden rounded-full bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500 ring-1 ring-slate-200 sm:inline">{status}</span>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className={`hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ring-1 ring-inset sm:inline-flex ${statusTone}`}>
+            {completed && <CheckCircle2 className="h-3 w-3" />}
+            {statusLabel}
+          </span>
           {action}
-          <button type="button" onClick={onDelete} aria-label={`Delete ${title}`} className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
+          <button type="button" onClick={() => setExpanded((current) => !current)} aria-expanded={expanded} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-black text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950">
+            {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+            <span className="hidden sm:inline">{expanded ? "Close" : "Edit"}</span>
+          </button>
+          <button type="button" onClick={onDelete} aria-label={`Delete ${title}`} className="grid h-9 w-9 place-items-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
         </div>
       </header>
-      <div className="p-4 sm:p-5">{children}</div>
+      {expanded && (
+        <div className="border-t border-slate-100 bg-slate-50/40 p-4 sm:p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Edit record</p>
+              <p className="text-xs font-medium text-slate-500">Changes save when you leave a field.</p>
+            </div>
+            <button type="button" onClick={() => setExpanded(false)} className="rounded-lg bg-slate-950 px-3 py-2 text-xs font-black text-white hover:bg-slate-800">Done editing</button>
+          </div>
+          {children}
+        </div>
+      )}
     </article>
   );
 }
