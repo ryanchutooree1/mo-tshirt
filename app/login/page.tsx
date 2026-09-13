@@ -216,9 +216,6 @@ function LoginInner() {
                     autoFocus
                     required
                   />
-                  <p className="mt-2 text-xs text-neutral-500">
-                    Team members can use the username assigned by the administrator or their Firebase email.
-                  </p>
                 </div>
               )}
               <div>
