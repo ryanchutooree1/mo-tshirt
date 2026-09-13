@@ -11,6 +11,7 @@ import {
 export const PARTNER_AUTH_COOKIE = "partner-auth";
 
 const SESSION_TTL_SECONDS = 60 * 60 * 12;
+const REMEMBERED_SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
 const SESSION_VERSION = 1;
 const encoder = new TextEncoder();
 
@@ -110,12 +111,25 @@ export async function verifyPartnerPassword(
   return verifyRegisteredPartnerPassword(partnerId, password);
 }
 
-export async function createPartnerSessionToken(partnerId: PrintPartnerId) {
+type PartnerSessionOptions = {
+  rememberMe?: boolean;
+};
+
+function getSessionTtlSeconds(options?: PartnerSessionOptions) {
+  return options?.rememberMe
+    ? REMEMBERED_SESSION_TTL_SECONDS
+    : SESSION_TTL_SECONDS;
+}
+
+export async function createPartnerSessionToken(
+  partnerId: PrintPartnerId,
+  options?: PartnerSessionOptions
+) {
   const partner = await getPrintPartnerById(partnerId);
   if (!partner) throw new Error("Unknown partner.");
   const payload = {
     version: SESSION_VERSION,
-    expiresAt: getNowUnix() + SESSION_TTL_SECONDS,
+    expiresAt: getNowUnix() + getSessionTtlSeconds(options),
     nonce: createNonce(),
     partnerId,
     displayName: partner.name,
@@ -177,13 +191,23 @@ export async function hasPartnerSessionFor(
   return session?.partnerId === partnerId;
 }
 
-export function applyPartnerSessionCookie(response: NextResponse, token: string) {
+export function applyPartnerSessionCookie(
+  response: NextResponse,
+  token: string,
+  options?: PartnerSessionOptions
+) {
   response.cookies.set(PARTNER_AUTH_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: SESSION_TTL_SECONDS,
+    ...(options === undefined || options.rememberMe
+      ? {
+          maxAge: options?.rememberMe
+            ? REMEMBERED_SESSION_TTL_SECONDS
+            : SESSION_TTL_SECONDS,
+        }
+      : {}),
   });
 }
 

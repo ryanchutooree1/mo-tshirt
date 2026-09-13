@@ -54,6 +54,8 @@ function LoginInner() {
   const params = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
+  const [useEmailLogin, setUseEmailLogin] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const requestedNext = params.get("next") || "";
@@ -79,7 +81,11 @@ function LoginInner() {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email: useEmailLogin ? email : "",
+          password,
+          rememberMe,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       const firebaseLoginEmail = typeof data?.email === "string" ? data.email : email;
@@ -111,7 +117,7 @@ function LoginInner() {
 
         if (requiresSharedStorageAuth) {
           try {
-            await signInAdminWithFirebase(email, password);
+            await signInAdminWithFirebase(firebaseLoginEmail, password, rememberMe);
           } catch {
             await signOutAdminFromFirebase().catch(() => null);
           }
@@ -150,7 +156,7 @@ function LoginInner() {
 
       if (requiresSharedStorageAuth) {
         try {
-          await signInAdminWithFirebase(firebaseLoginEmail, password);
+          await signInAdminWithFirebase(firebaseLoginEmail, password, rememberMe);
         } catch {
           await fetch("/api/logout", { method: "POST" }).catch(() => null);
           setError(
@@ -194,23 +200,35 @@ function LoginInner() {
             </div>
 
             <form onSubmit={onSubmit} className="mt-8 space-y-6" aria-describedby={error ? "login-error" : undefined}>
-              <div>
-                <label htmlFor="email" className="text-sm font-medium text-neutral-800">
-                  Username or email
-                </label>
-                <input
-                  id="email"
-                  type="text"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-[#EAEAEA] bg-white px-4 py-3 text-sm text-black shadow-sm focus:border-black focus:outline-none focus:ring-2 focus:ring-black/5"
-                  placeholder="team@mo-tshirt.mu"
-                  autoComplete="username"
-                />
-                <p className="mt-2 text-xs text-neutral-500">
-                  Use the username assigned by the administrator or your Firebase email.
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+                <p className="text-sm font-medium text-emerald-950">
+                  Ryan and Tanvi: enter your password only.
+                </p>
+                <p className="mt-1 text-xs leading-5 text-emerald-800">
+                  Your account is recognized securely from your password.
                 </p>
               </div>
+              {useEmailLogin && (
+                <div>
+                  <label htmlFor="email" className="text-sm font-medium text-neutral-800">
+                    Username or email
+                  </label>
+                  <input
+                    id="email"
+                    type="text"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-[#EAEAEA] bg-white px-4 py-3 text-sm text-black shadow-sm focus:border-black focus:outline-none focus:ring-2 focus:ring-black/5"
+                    placeholder="team@mo-tshirt.mu"
+                    autoComplete="username"
+                    autoFocus
+                    required
+                  />
+                  <p className="mt-2 text-xs text-neutral-500">
+                    Team members can use the username assigned by the administrator or their Firebase email.
+                  </p>
+                </div>
+              )}
               <div>
                 <label htmlFor="password" className="text-sm font-medium text-neutral-800">
                   Password
@@ -224,8 +242,35 @@ function LoginInner() {
                   placeholder="••••••••"
                   autoComplete="current-password"
                   required
-                  autoFocus
+                  autoFocus={!useEmailLogin}
                 />
+              </div>
+              <div className="flex items-start justify-between gap-4">
+                <label htmlFor="remember-me" className="flex cursor-pointer items-start gap-3 text-sm text-neutral-700">
+                  <input
+                    id="remember-me"
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-neutral-300 accent-black"
+                  />
+                  <span>
+                    <span className="font-medium text-neutral-900">Remember me</span>
+                    <span className="mt-0.5 block text-xs text-neutral-500">
+                      Stay signed in for 30 days on this device.
+                    </span>
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUseEmailLogin((current) => !current);
+                    setError(null);
+                  }}
+                  className="shrink-0 text-xs font-medium text-neutral-500 underline decoration-neutral-300 underline-offset-4 transition hover:text-black"
+                >
+                  {useEmailLogin ? "Password only" : "Other account"}
+                </button>
               </div>
               {error && (
                 <p id="login-error" role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">

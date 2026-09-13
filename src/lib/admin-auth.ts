@@ -4,6 +4,7 @@ import type { AdminPagePath } from "@/lib/admin-access";
 export const ADMIN_AUTH_COOKIE = "admin-auth";
 
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
+const REMEMBERED_SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
 const SESSION_VERSION = 2;
 const encoder = new TextEncoder();
 
@@ -105,13 +106,26 @@ function createNonce() {
   return toBase64Url(bytes);
 }
 
-export async function createAdminSessionToken(seed: AdminSessionSeed) {
+type AdminSessionOptions = {
+  rememberMe?: boolean;
+};
+
+function getSessionTtlSeconds(options?: AdminSessionOptions) {
+  return options?.rememberMe
+    ? REMEMBERED_SESSION_TTL_SECONDS
+    : SESSION_TTL_SECONDS;
+}
+
+export async function createAdminSessionToken(
+  seed: AdminSessionSeed,
+  options?: AdminSessionOptions
+) {
   const secret = getAdminSessionSecret();
   if (!secret) return null;
 
   const payload = {
     version: SESSION_VERSION,
-    expiresAt: getNowUnix() + SESSION_TTL_SECONDS,
+    expiresAt: getNowUnix() + getSessionTtlSeconds(options),
     nonce: createNonce(),
     userId: seed.userId,
     displayName: seed.displayName,
@@ -177,13 +191,19 @@ export async function hasAdminSession(cookieStore: CookieReader) {
   return Boolean(await readAdminSession(cookieStore));
 }
 
-export function applyAdminSessionCookie(response: NextResponse, token: string) {
+export function applyAdminSessionCookie(
+  response: NextResponse,
+  token: string,
+  options?: AdminSessionOptions
+) {
   response.cookies.set(ADMIN_AUTH_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: SESSION_TTL_SECONDS,
+    ...(options?.rememberMe
+      ? { maxAge: REMEMBERED_SESSION_TTL_SECONDS }
+      : {}),
   });
 }
 

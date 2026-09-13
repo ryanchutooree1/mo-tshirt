@@ -40,6 +40,7 @@ export async function POST(req: Request) {
     const identifier = String(body?.email ?? "").trim().toLowerCase();
     const email = identifier;
     const password = String(body?.password ?? "");
+    const rememberMe = body?.rememberMe === true;
     const expected = getAdminPasswordFromEnv();
 
     if (password.length > MAX_PASSWORD_LENGTH || email.length > MAX_EMAIL_LENGTH) {
@@ -48,13 +49,16 @@ export async function POST(req: Request) {
 
     if (verifyProductionManagerPassword(password)) {
       const manager = await getProductionManager();
-      const sessionToken = await createAdminSessionToken({
-        userId: "production-manager",
-        displayName: manager.name || "Tanvi",
-        email: email || manager.email || "tanvi@mo.local",
-        allowedPages: PRODUCTION_MANAGER_ALLOWED_PAGES,
-        isOwner: false,
-      });
+      const sessionToken = await createAdminSessionToken(
+        {
+          userId: "production-manager",
+          displayName: manager.name || "Tanvi",
+          email: email || manager.email || "tanvi@mo.local",
+          allowedPages: PRODUCTION_MANAGER_ALLOWED_PAGES,
+          isOwner: false,
+        },
+        { rememberMe }
+      );
 
       if (!sessionToken) {
         return NextResponse.json(
@@ -69,15 +73,16 @@ export async function POST(req: Request) {
           displayName: manager.name || "Tanvi",
           path: PRODUCTION_MANAGER_PATH,
         },
+        email: manager.email || undefined,
       });
-      applyAdminSessionCookie(res, sessionToken);
+      applyAdminSessionCookie(res, sessionToken, { rememberMe });
       clearPartnerSessionCookie(res);
       return res;
     }
 
     const partner = await getPartnerByPassword(password);
     if (partner) {
-      const token = await createPartnerSessionToken(partner.id);
+      const token = await createPartnerSessionToken(partner.id, { rememberMe });
       const res = NextResponse.json({
         ok: true,
         partner: {
@@ -86,7 +91,7 @@ export async function POST(req: Request) {
           path: partner.path,
         },
       });
-      applyPartnerSessionCookie(res, token);
+      applyPartnerSessionCookie(res, token, { rememberMe });
       clearAdminSessionCookie(res);
       return res;
     }
@@ -105,13 +110,16 @@ export async function POST(req: Request) {
       firebaseEmail =
         process.env.NEXT_PUBLIC_FIREBASE_ADMIN_EMAIL?.trim().toLowerCase() ||
         "motshirtmauritius@gmail.com";
-      sessionToken = await createAdminSessionToken({
-        userId: "owner",
-        displayName: "Ryan Chutooree",
-        email: email || process.env.SMTP_USER || "owner@mo.local",
-        allowedPages: getOwnerAllowedPages(),
-        isOwner: true,
-      });
+      sessionToken = await createAdminSessionToken(
+        {
+          userId: "owner",
+          displayName: "Ryan Chutooree",
+          email: email || process.env.SMTP_USER || "owner@mo.local",
+          allowedPages: getOwnerAllowedPages(),
+          isOwner: true,
+        },
+        { rememberMe }
+      );
     } else {
       const managedUser = identifier
         ? await verifyManagedAdminCredentials(identifier, password)
@@ -122,13 +130,16 @@ export async function POST(req: Request) {
       }
       firebaseEmail = managedUser.email;
 
-      sessionToken = await createAdminSessionToken({
-        userId: managedUser.email,
-        displayName: managedUser.displayName,
-        email: managedUser.email,
-        allowedPages: managedUser.allowedPages,
-        isOwner: false,
-      });
+      sessionToken = await createAdminSessionToken(
+        {
+          userId: managedUser.email,
+          displayName: managedUser.displayName,
+          email: managedUser.email,
+          allowedPages: managedUser.allowedPages,
+          isOwner: false,
+        },
+        { rememberMe }
+      );
     }
 
     if (!sessionToken) {
@@ -139,7 +150,7 @@ export async function POST(req: Request) {
     }
 
     const res = NextResponse.json({ ok: true, email: firebaseEmail || undefined });
-    applyAdminSessionCookie(res, sessionToken);
+    applyAdminSessionCookie(res, sessionToken, { rememberMe });
     clearPartnerSessionCookie(res);
     return res;
   } catch {

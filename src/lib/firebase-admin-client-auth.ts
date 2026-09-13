@@ -2,6 +2,7 @@
 
 import {
   browserLocalPersistence,
+  browserSessionPersistence,
   onAuthStateChanged,
   setPersistence,
   signInWithEmailAndPassword,
@@ -41,8 +42,15 @@ async function waitForFirebaseAuthState() {
   });
 }
 
-export async function signInAdminWithFirebase(loginEmail: string, password: string) {
-  await setPersistence(auth, browserLocalPersistence);
+export async function signInAdminWithFirebase(
+  loginEmail: string,
+  password: string,
+  rememberMe = false
+) {
+  await setPersistence(
+    auth,
+    rememberMe ? browserLocalPersistence : browserSessionPersistence
+  );
   await signInWithEmailAndPassword(
     auth,
     resolveFirebaseAdminEmail(loginEmail),
