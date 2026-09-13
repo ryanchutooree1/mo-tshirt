@@ -5,10 +5,6 @@
       "schedule": "0 1 * * *"
     },
     {
-      "path": "/api/admin/couple-goals/food-email",
-      "schedule": "0 4-19 * * 0"
-    },
-    {
       "path": "/api/cron/mob-photo-retention",
       "schedule": "0 2 * * *"
     },
