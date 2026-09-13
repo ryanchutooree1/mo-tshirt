@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  ADMIN_PAGE_GROUPS,
+  ADMIN_PAGE_OPTIONS,
   hasAdminPageAccess,
   resolveAdminApiPermission,
   resolveAdminPagePath,
@@ -61,5 +63,20 @@ test("Tanvi access includes the separate house inventory page and API", () => {
   assert.equal(
     resolveAdminApiPermission("/api/admin/tanvi/house-inventory"),
     "/admin/house-inventory"
+  );
+});
+
+test("home tools share an Our Home permission group", () => {
+  const homeOptions = ADMIN_PAGE_OPTIONS.filter((option) =>
+    ["/admin/couple-goals", "/admin/house-inventory"].includes(option.path)
+  );
+
+  assert.equal(ADMIN_PAGE_GROUPS.includes("Our Home"), true);
+  assert.deepEqual(
+    homeOptions.map(({ path, label, group }) => ({ path, label, group })),
+    [
+      { path: "/admin/couple-goals", label: "Tanvi", group: "Our Home" },
+      { path: "/admin/house-inventory", label: "House Inventory", group: "Our Home" },
+    ]
   );
 });

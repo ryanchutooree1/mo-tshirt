@@ -152,9 +152,12 @@ const NAV_GROUPS: NavGroup[] = [
       "/admin/his-dream-life",
       "/admin/her-dream-life",
       "/admin/our-dream",
-      "/admin/couple-goals",
-      "/admin/house-inventory",
     ],
+  },
+  {
+    id: "our-home",
+    label: "Our Home",
+    paths: ["/admin/house-inventory", "/admin/couple-goals"],
   },
   {
     id: "system",

@@ -57,6 +57,7 @@ export type AdminPermissionGroup =
   | "Operations"
   | "Insights"
   | "Planning"
+  | "Our Home"
   | "Administration";
 
 export type AdminPageOption = {
@@ -341,15 +342,15 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
   },
   {
     path: "/admin/couple-goals",
-    label: "Couple Goals",
-    description: "Shared availability, goals, little wins, and food planning.",
-    group: "Planning",
+    label: "Tanvi",
+    description: "Shared availability, goals, daily food planning, and food email controls.",
+    group: "Our Home",
   },
   {
     path: "/admin/house-inventory",
     label: "House Inventory",
     description: "Household stock levels and the shared shopping list.",
-    group: "Planning",
+    group: "Our Home",
   },
   {
     path: "/admin/settings",
@@ -366,6 +367,7 @@ export const ADMIN_PAGE_GROUPS: AdminPermissionGroup[] = [
   "Operations",
   "Insights",
   "Planning",
+  "Our Home",
   "Administration",
 ];
 
