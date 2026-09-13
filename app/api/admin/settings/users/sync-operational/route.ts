@@ -23,6 +23,7 @@ export async function POST() {
           "/admin/tanvi",
           "/admin/quotation-approval",
           "/admin/couple-goals",
+          "/admin/tanvi-home",
           "/admin/house-inventory",
         ],
         isActive: true,

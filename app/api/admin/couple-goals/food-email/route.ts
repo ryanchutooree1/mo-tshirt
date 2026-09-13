@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import { hasAdminSession } from "@/lib/admin-auth";
+import { isAdminRequest } from "@/lib/admin-request";
 import { db } from "@/lib/firebase";
 
 export const runtime = "nodejs";
@@ -212,8 +211,8 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  if (!(await hasAdminSession(await cookies()))) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  if (!(await isAdminRequest("/api/admin/couple-goals/food-email"))) {
+    return NextResponse.json({ error: "Admin access required." }, { status: 403 });
   }
 
   try {

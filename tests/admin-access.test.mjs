@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   ADMIN_PAGE_GROUPS,
   ADMIN_PAGE_OPTIONS,
+  canUseSharedStorageAuth,
   hasAdminPageAccess,
   resolveAdminApiPermission,
   resolveAdminPagePath,
@@ -68,15 +69,32 @@ test("Tanvi access includes the separate house inventory page and API", () => {
 
 test("home tools share an Our Home permission group", () => {
   const homeOptions = ADMIN_PAGE_OPTIONS.filter((option) =>
-    ["/admin/couple-goals", "/admin/house-inventory"].includes(option.path)
+    ["/admin/couple-goals", "/admin/tanvi-home", "/admin/house-inventory"].includes(option.path)
   );
 
   assert.equal(ADMIN_PAGE_GROUPS.includes("Our Home"), true);
   assert.deepEqual(
     homeOptions.map(({ path, label, group }) => ({ path, label, group })),
     [
-      { path: "/admin/couple-goals", label: "Tanvi", group: "Our Home" },
+      { path: "/admin/couple-goals", label: "Couple Goals", group: "Our Home" },
+      { path: "/admin/tanvi-home", label: "Tanvi", group: "Our Home" },
       { path: "/admin/house-inventory", label: "House Inventory", group: "Our Home" },
     ]
   );
+});
+
+test("Tanvi food email controls have their own page and API permission", () => {
+  assert.equal(resolveAdminPagePath("/admin/tanvi-home"), "/admin/tanvi-home");
+  assert.equal(
+    resolveAdminApiPermission("/api/admin/couple-goals/food-email"),
+    "/admin/tanvi-home"
+  );
+  assert.equal(
+    hasAdminPageAccess(["/admin/tanvi-home"], "/admin/tanvi-home", {
+      isOwner: false,
+    }),
+    true
+  );
+  assert.equal(canUseSharedStorageAuth(["/admin/tanvi-home"]), true);
+  assert.equal(canUseSharedStorageAuth(["/admin/couple-goals"]), true);
 });

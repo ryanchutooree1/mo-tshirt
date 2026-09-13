@@ -64,6 +64,7 @@ import {
   UserRoundCog,
   Users,
   UsersRound,
+  Utensils,
   Warehouse,
   Workflow,
   X,
@@ -157,7 +158,11 @@ const NAV_GROUPS: NavGroup[] = [
   {
     id: "our-home",
     label: "Our Home",
-    paths: ["/admin/house-inventory", "/admin/couple-goals"],
+    paths: [
+      "/admin/house-inventory",
+      "/admin/couple-goals",
+      "/admin/tanvi-home",
+    ],
   },
   {
     id: "system",
@@ -226,6 +231,7 @@ const PAGE_ICONS: Partial<Record<AdminPagePath, LucideIcon>> = {
   "/admin/her-dream-life": Heart,
   "/admin/our-dream": UsersRound,
   "/admin/couple-goals": HeartHandshake,
+  "/admin/tanvi-home": Utensils,
   "/admin/house-inventory": House,
   "/admin/docker-postgres": Database,
   "/admin/settings": Settings,

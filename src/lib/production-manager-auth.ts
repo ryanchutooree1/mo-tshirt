@@ -5,6 +5,7 @@ export const PRODUCTION_MANAGER_ALLOWED_PAGES: AdminPagePath[] = [
   "/admin/tanvi",
   "/admin/quotation-approval",
   "/admin/couple-goals",
+  "/admin/tanvi-home",
   "/admin/house-inventory",
 ];
 

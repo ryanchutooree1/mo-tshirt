@@ -47,6 +47,7 @@ export type AdminPagePath =
   | "/admin/her-dream-life"
   | "/admin/our-dream"
   | "/admin/couple-goals"
+  | "/admin/tanvi-home"
   | "/admin/house-inventory"
   | "/admin/settings";
 
@@ -342,8 +343,14 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
   },
   {
     path: "/admin/couple-goals",
+    label: "Couple Goals",
+    description: "Shared availability, goals, and little wins.",
+    group: "Our Home",
+  },
+  {
+    path: "/admin/tanvi-home",
     label: "Tanvi",
-    description: "Shared availability, goals, daily food planning, and food email controls.",
+    description: "Daily food planning, email schedule, recipients, and send controls.",
     group: "Our Home",
   },
   {
@@ -423,6 +430,7 @@ export const DEFAULT_TOP_NAV_PATHS: AdminPagePath[] = [
   "/admin/her-dream-life",
   "/admin/our-dream",
   "/admin/couple-goals",
+  "/admin/tanvi-home",
   "/admin/house-inventory",
 ];
 
@@ -439,6 +447,8 @@ export const DEFAULT_MORE_NAV_PATHS: AdminPagePath[] = [
 export const SHARED_FIREBASE_AUTH_PAGE_PATHS: AdminPagePath[] = [
   "/admin/dms",
   "/admin/quotation-approval",
+  "/admin/couple-goals",
+  "/admin/tanvi-home",
 ];
 
 export function normalizeAdminAllowedPages(value: unknown) {
@@ -482,6 +492,7 @@ export function resolveAdminApiPermission(pathname: string) {
   if (pathname.startsWith("/api/admin/mob")) return "/admin/inventory-photo-log" as AdminPagePath;
   if (pathname.startsWith("/api/admin/inventory-photo-log")) return "/admin/inventory-photo-log" as AdminPagePath;
   if (pathname.startsWith("/api/admin/tanvi/house-inventory")) return "/admin/house-inventory" as AdminPagePath;
+  if (pathname.startsWith("/api/admin/couple-goals/food-email")) return "/admin/tanvi-home" as AdminPagePath;
   if (pathname.startsWith("/api/admin/tanvi")) return "/admin/tanvi" as AdminPagePath;
   if (pathname.startsWith("/api/admin/settings")) return "/admin/settings" as AdminPagePath;
   if (pathname.startsWith("/api/admin/partners")) return "/admin/partners" as AdminPagePath;
