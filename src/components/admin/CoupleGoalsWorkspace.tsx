@@ -17,8 +17,12 @@ import {
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { getMauritiusPlanningWeekKey, omitUndefinedValues } from "@/lib/food-planning";
+import {
+  getCoupleRotationShift,
+  type CoupleShiftKey,
+} from "@/lib/couple-shift-rotation";
 
-type ShiftKey = "first" | "second" | "third" | "m" | "rest";
+type ShiftKey = CoupleShiftKey;
 type MShiftChoice = "not-confirmed" | Exclude<ShiftKey, "m">;
 type GoalStatus = "Not Started" | "In Progress" | "Completed";
 
@@ -102,7 +106,6 @@ const WEEK_DAYS = [
   "Sunday",
 ] as const;
 const GOAL_STATUSES: GoalStatus[] = ["Not Started", "In Progress", "Completed"];
-const PATTERN: ShiftKey[] = ["first", "third", "m", "second", "first", "third", "second", "rest"];
 const ACTUAL_CALENDAR_ALIASES = [
   "First = First Shift",
   "2nd = Second Shift",
@@ -157,7 +160,6 @@ const DEFAULT_FOOD_PLAN: Record<string, string> = {
 };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DEFAULT_WEEKLY_PLANNER_EMAIL = "tanvihulooman0212@gmail.com";
-const DAY_MS = 24 * 60 * 60 * 1000;
 const WAKING_START = 6 * 60;
 const WAKING_END = 23 * 60 + 30;
 
@@ -233,14 +235,10 @@ function getMineLabel(date: Date) {
 }
 
 function getPatternShift(date: Date, rotationStartDate: string) {
-  const start = parseDateKey(rotationStartDate || todayKey());
-  const diff = Math.floor(
-    (Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) -
-      Date.UTC(start.getFullYear(), start.getMonth(), start.getDate())) /
-      DAY_MS
+  return getCoupleRotationShift(
+    formatDateKey(date),
+    rotationStartDate || todayKey()
   );
-  const index = ((diff % PATTERN.length) + PATTERN.length) % PATTERN.length;
-  return PATTERN[index];
 }
 
 function getScheduledHerShift(date: Date, data: CoupleData): ShiftKey {
