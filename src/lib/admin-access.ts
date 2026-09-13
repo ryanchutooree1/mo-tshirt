@@ -502,6 +502,7 @@ export function resolveAdminApiPermission(pathname: string) {
   if (pathname.startsWith("/api/admin/inventory-photo-log")) return "/admin/inventory-photo-log" as AdminPagePath;
   if (pathname.startsWith("/api/admin/tanvi/house-inventory")) return "/admin/house-inventory" as AdminPagePath;
   if (pathname.startsWith("/api/admin/couple-goals/food-email")) return "/admin/tanvi-home" as AdminPagePath;
+  if (pathname.startsWith("/api/admin/cleaning")) return "/admin/cleaning" as AdminPagePath;
   if (pathname.startsWith("/api/admin/tanvi")) return "/admin/tanvi" as AdminPagePath;
   if (pathname.startsWith("/api/admin/settings")) return "/admin/settings" as AdminPagePath;
   if (pathname.startsWith("/api/admin/partners")) return "/admin/partners" as AdminPagePath;

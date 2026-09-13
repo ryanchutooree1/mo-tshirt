@@ -420,6 +420,14 @@
   padding: 23px 24px 20px;
 }
 
+.headingActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .counter {
   padding: 7px 10px;
   border-radius: 999px;
@@ -427,6 +435,277 @@
   background: var(--canvas);
   font-size: 0.75rem;
   font-weight: 750;
+}
+
+.reminderTrigger,
+.addTaskButton,
+.emptyTasks button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 11px;
+  border-radius: 12px;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.reminderTrigger {
+  border: 1px solid var(--line);
+  color: var(--navy);
+  background: var(--paper);
+}
+
+.addTaskButton,
+.emptyTasks button {
+  border: 1px solid var(--navy);
+  color: #fff;
+  background: var(--navy);
+}
+
+.emailPanel,
+.taskEditor {
+  margin: 0 20px 20px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--canvas);
+}
+
+.emailPanel {
+  display: grid;
+  grid-template-columns: minmax(190px, 1.2fr) minmax(190px, 1fr) auto auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.panelIntro {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.panelIcon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 13px;
+  color: var(--navy);
+  background: var(--mint);
+}
+
+.panelIntro strong,
+.panelIntro small {
+  display: block;
+}
+
+.panelIntro strong {
+  font-size: 0.86rem;
+}
+
+.panelIntro small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.emailPanel label,
+.emailPanel legend,
+.editorFields label {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.emailPanel input,
+.editorFields input {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 6px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  outline: none;
+  color: var(--ink);
+  background: var(--paper);
+  font: inherit;
+  font-size: 0.82rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.emailPanel fieldset {
+  min-width: 135px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.senderOptions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  min-height: 42px;
+  margin-top: 6px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--paper);
+}
+
+.senderOptions button {
+  padding: 5px 9px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.74rem;
+  font-weight: 750;
+}
+
+.senderOptions button[data-selected="true"] {
+  color: #fff;
+  background: var(--navy);
+}
+
+.sendButton {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 13px;
+  border: 1px solid var(--mint-deep);
+  border-radius: 11px;
+  color: #fff;
+  background: var(--mint-deep);
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.sendButton:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.emailMessage {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 10px;
+  color: var(--mint-deep);
+  background: rgb(24 122 85 / 0.08);
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.emailMessage[data-state="error"] {
+  color: #b33828;
+  background: rgb(179 56 40 / 0.08);
+}
+
+.taskEditor {
+  padding: 0;
+  overflow: hidden;
+}
+
+.editorHeading,
+.editorFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+}
+
+.editorHeading {
+  border-bottom: 1px solid var(--line);
+}
+
+.editorHeading > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.editorHeading strong {
+  font-size: 0.88rem;
+}
+
+.editorHeading > button,
+.taskActions button {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  background: var(--paper);
+}
+
+.editorFields {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(220px, 1.2fr);
+  gap: 12px;
+  padding: 16px;
+}
+
+.editorFooter {
+  border-top: 1px solid var(--line);
+}
+
+.priorityChoice {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.priorityChoice input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--mint-deep);
+}
+
+.editorFooter > div {
+  display: flex;
+  gap: 8px;
+}
+
+.cancelButton,
+.saveTaskButton {
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 11px;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.cancelButton {
+  border: 1px solid var(--line);
+  color: var(--muted);
+  background: var(--paper);
+}
+
+.saveTaskButton {
+  border: 1px solid var(--navy);
+  color: #fff;
+  background: var(--navy);
+}
+
+.saveTaskButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .taskList {
@@ -437,7 +716,7 @@
   display: grid;
   width: 100%;
   min-height: 76px;
-  grid-template-columns: 36px 44px minmax(0, 1fr) auto;
+  grid-template-columns: 36px 44px minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 12px;
   padding: 10px 24px;
@@ -477,6 +756,16 @@
   border-radius: 14px;
   color: var(--navy-soft);
   background: var(--canvas);
+}
+
+.taskToggle {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
 }
 
 .task[data-checked="true"] .taskIcon {
@@ -531,6 +820,61 @@
 
 .task[data-checked="true"] .taskStatus {
   color: var(--mint-deep);
+}
+
+.taskActions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 3px;
+}
+
+.taskActions button {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  transition: 140ms ease;
+}
+
+.taskActions button:hover:not(:disabled) {
+  color: var(--navy);
+  border-color: #bdcbc5;
+}
+
+.taskActions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.28;
+}
+
+.taskActions .deleteTaskButton:hover {
+  color: #bd392c;
+  border-color: #edbcb5;
+  background: #fff4f2;
+}
+
+.emptyTasks {
+  display: grid;
+  min-height: 240px;
+  place-items: center;
+  place-content: center;
+  gap: 8px;
+  padding: 30px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.emptyTasks strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.emptyTasks span {
+  max-width: 320px;
+  font-size: 0.8rem;
+}
+
+.emptyTasks button {
+  margin-top: 8px;
 }
 
 .routineFooter {
@@ -656,7 +1000,7 @@
   font-size: 0.7rem;
 }
 
-.page :is(button, a, textarea):focus-visible {
+.page :is(button, a, input, textarea):focus-visible {
   outline: 3px solid var(--orange);
   outline-offset: 3px;
 }
@@ -707,6 +1051,10 @@
   .overview,
   .workspace {
     grid-template-columns: 1fr;
+  }
+
+  .emailPanel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .arrivalCard {
@@ -811,7 +1159,33 @@
   }
 
   .sectionHeading {
+    align-items: flex-start;
+    flex-direction: column;
     padding: 19px;
+  }
+
+  .headingActions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .emailPanel,
+  .taskEditor {
+    margin: 0 12px 14px;
+  }
+
+  .emailPanel,
+  .editorFields {
+    grid-template-columns: 1fr;
+  }
+
+  .editorFooter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .editorFooter > div {
+    justify-content: flex-end;
   }
 
   .task {
@@ -822,6 +1196,13 @@
 
   .taskStatus {
     display: none;
+  }
+
+  .taskActions {
+    grid-column: 2 / -1;
+    justify-content: flex-end;
+    margin: 0;
+    padding-bottom: 2px;
   }
 
   .taskCopy small {
@@ -857,5 +1238,15 @@
 
   .taskTitleLine em {
     display: none;
+  }
+
+  .counter {
+    width: 100%;
+    text-align: center;
+  }
+
+  .reminderTrigger,
+  .addTaskButton {
+    flex: 1;
   }
 }

@@ -10,17 +10,26 @@ import {
   CarFront,
   Check,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Clock3,
   Droplets,
+  ListPlus,
+  Mail,
   MapPin,
   MessageCircle,
   PanelsTopLeft,
+  Pencil,
   Phone,
+  Plus,
   RotateCcw,
   ScanLine,
+  Send,
   Shirt,
   Sparkles,
+  Trash2,
   Utensils,
+  X,
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import styles from "./cleaning-planning.module.css";
@@ -33,11 +42,27 @@ type SundayPlan = {
   completedAt?: string;
 };
 
+type RoutineTask = {
+  id: string;
+  title: string;
+  detail: string;
+  priority: boolean;
+};
+
+type CleaningSettings = {
+  recipientEmail: string;
+  lastReminderAt?: string;
+  lastReminderBy?: string;
+};
+
 type CleaningData = {
   weeks: Record<string, SundayPlan>;
+  routineTasks: RoutineTask[];
+  settings: CleaningSettings;
 };
 
 type SaveState = "loading" | "idle" | "saving" | "saved" | "offline";
+type EmailState = "idle" | "sending" | "sent" | "error";
 
 const STORAGE_DOC = doc(db, "homePlanning", "cleaning");
 const LOCAL_STORAGE_KEY = "mo-cleaning-planning-v1";
@@ -48,81 +73,130 @@ const EMPTY_PLAN: SundayPlan = {
   notes: "",
 };
 
-const TASKS = [
+const DEFAULT_TASKS: RoutineTask[] = [
   {
     id: "ironing",
     title: "Iron working clothes",
     detail: "Do this first so weekday outfits are ready to wear.",
-    icon: Shirt,
     priority: true,
   },
   {
     id: "floors",
     title: "Clean the floors",
     detail: "Sweep and mop all living areas.",
-    icon: Droplets,
     priority: false,
   },
   {
     id: "mirrors",
     title: "Clean the mirrors",
     detail: "Leave glass clear and streak-free.",
-    icon: ScanLine,
     priority: false,
   },
   {
     id: "tables",
     title: "Wipe the tables",
     detail: "Clear surfaces, dust, then wipe down.",
-    icon: PanelsTopLeft,
     priority: false,
   },
   {
     id: "bathroom",
     title: "Clean the bathroom",
     detail: "Wash and refresh the full bathroom.",
-    icon: Bath,
     priority: false,
   },
   {
     id: "bed",
     title: "Make the bed",
     detail: "Finish with a tidy, ready bedroom.",
-    icon: BedDouble,
     priority: false,
   },
   {
     id: "dishes",
     title: "Wash the dishes",
     detail: "Clear the sink and leave the kitchen reset.",
-    icon: Utensils,
     priority: false,
   },
 ] as const;
 
-function normalizePlan(value: unknown): SundayPlan {
+const DEFAULT_SETTINGS: CleaningSettings = {
+  recipientEmail: "",
+};
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const TASK_ICON_BY_ID = {
+  ironing: Shirt,
+  floors: Droplets,
+  mirrors: ScanLine,
+  tables: PanelsTopLeft,
+  bathroom: Bath,
+  bed: BedDouble,
+  dishes: Utensils,
+} as const;
+
+function newTaskId() {
+  return `task-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeRoutineTasks(value: unknown) {
+  if (!Array.isArray(value)) return DEFAULT_TASKS.map((task) => ({ ...task }));
+  const seen = new Set<string>();
+  const tasks = value.flatMap((entry) => {
+    if (!entry || typeof entry !== "object") return [];
+    const raw = entry as Partial<RoutineTask>;
+    const id = typeof raw.id === "string" ? raw.id.trim().slice(0, 100) : "";
+    const title = typeof raw.title === "string" ? raw.title.trim().slice(0, 160) : "";
+    if (!id || !title || seen.has(id)) return [];
+    seen.add(id);
+    return [{
+      id,
+      title,
+      detail: typeof raw.detail === "string" ? raw.detail.trim().slice(0, 500) : "",
+      priority: raw.priority === true,
+    }];
+  });
+  return tasks;
+}
+
+function normalizePlan(value: unknown, validTaskIds: Set<string>): SundayPlan {
   if (!value || typeof value !== "object") return { ...EMPTY_PLAN };
   const plan = value as Partial<SundayPlan>;
-  const validTaskIds = new Set(TASKS.map((task) => task.id));
-  return {
+  const normalized: SundayPlan = {
     tasks: Array.isArray(plan.tasks)
-      ? plan.tasks.filter((task): task is string => typeof task === "string" && validTaskIds.has(task as never))
+      ? plan.tasks.filter((task): task is string => typeof task === "string" && validTaskIds.has(task))
       : [],
     pickupReady: plan.pickupReady === true,
     cashReady: plan.cashReady === true,
     notes: typeof plan.notes === "string" ? plan.notes : "",
-    completedAt: typeof plan.completedAt === "string" ? plan.completedAt : undefined,
   };
+  if (typeof plan.completedAt === "string") normalized.completedAt = plan.completedAt;
+  return normalized;
 }
 
 function normalizeData(value: unknown): CleaningData {
-  if (!value || typeof value !== "object") return { weeks: {} };
-  const rawWeeks = (value as { weeks?: unknown }).weeks;
-  if (!rawWeeks || typeof rawWeeks !== "object") return { weeks: {} };
+  if (!value || typeof value !== "object") {
+    return { weeks: {}, routineTasks: DEFAULT_TASKS.map((task) => ({ ...task })), settings: { ...DEFAULT_SETTINGS } };
+  }
+  const raw = value as { weeks?: unknown; routineTasks?: unknown; settings?: unknown };
+  const routineTasks = normalizeRoutineTasks(raw.routineTasks);
+  const validTaskIds = new Set(routineTasks.map((task) => task.id));
+  const rawWeeks = raw.weeks;
+  const rawSettings = raw.settings && typeof raw.settings === "object"
+    ? raw.settings as Partial<CleaningSettings>
+    : {};
+  const settings: CleaningSettings = {
+    recipientEmail: typeof rawSettings.recipientEmail === "string" ? rawSettings.recipientEmail.trim().slice(0, 320) : "",
+  };
+  if (typeof rawSettings.lastReminderAt === "string") settings.lastReminderAt = rawSettings.lastReminderAt;
+  if (typeof rawSettings.lastReminderBy === "string") settings.lastReminderBy = rawSettings.lastReminderBy;
   return {
-    weeks: Object.fromEntries(
-      Object.entries(rawWeeks as Record<string, unknown>).map(([key, plan]) => [key, normalizePlan(plan)])
-    ),
+    weeks: rawWeeks && typeof rawWeeks === "object"
+      ? Object.fromEntries(
+        Object.entries(rawWeeks as Record<string, unknown>).map(([key, plan]) => [key, normalizePlan(plan, validTaskIds)])
+      )
+      : {},
+    routineTasks,
+    settings,
   };
 }
 
@@ -153,21 +227,33 @@ function getMauritiusSunday() {
 
 export default function CleaningPlanningPage() {
   const sunday = useMemo(() => getMauritiusSunday(), []);
-  const [data, setData] = useState<CleaningData>({ weeks: {} });
+  const [data, setData] = useState<CleaningData>(() => normalizeData({}));
   const [saveState, setSaveState] = useState<SaveState>("loading");
+  const [taskEditorOpen, setTaskEditorOpen] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [taskDraft, setTaskDraft] = useState({ title: "", detail: "", priority: false });
+  const [emailPanelOpen, setEmailPanelOpen] = useState(false);
+  const [senderName, setSenderName] = useState<"Ryan" | "Tanvi">("Ryan");
+  const [emailState, setEmailState] = useState<EmailState>("idle");
+  const [emailMessage, setEmailMessage] = useState("");
   const plan = data.weeks[sunday.key] || EMPTY_PLAN;
+  const routineTasks = data.routineTasks;
   const completedTasks = plan.tasks.length;
   const completedSteps = completedTasks + Number(plan.pickupReady) + Number(plan.cashReady);
-  const totalSteps = TASKS.length + 2;
+  const totalSteps = routineTasks.length + 2;
   const progress = Math.round((completedSteps / totalSteps) * 100);
-  const readyToFinish = completedTasks === TASKS.length && plan.pickupReady && plan.cashReady;
+  const readyToFinish = completedTasks === routineTasks.length && plan.pickupReady && plan.cashReady;
   const isComplete = Boolean(plan.completedAt);
+  const priorityTask = routineTasks.find((task) => task.priority) || routineTasks[0];
+  const PriorityIcon = priorityTask
+    ? TASK_ICON_BY_ID[priorityTask.id as keyof typeof TASK_ICON_BY_ID] || Sparkles
+    : ListPlus;
 
   useEffect(() => {
     let ignore = false;
 
     async function load() {
-      let localData: CleaningData = { weeks: {} };
+      let localData: CleaningData = normalizeData({});
       try {
         const saved = window.localStorage.getItem(LOCAL_STORAGE_KEY);
         if (saved) {
@@ -232,7 +318,7 @@ export default function CleaningPlanningPage() {
   function completeSunday() {
     const nextPlan: SundayPlan = {
       ...plan,
-      tasks: TASKS.map((task) => task.id),
+      tasks: routineTasks.map((task) => task.id),
       pickupReady: true,
       cashReady: true,
       completedAt: new Date().toISOString(),
@@ -243,6 +329,124 @@ export default function CleaningPlanningPage() {
   function resetSunday() {
     if (!window.confirm("Reset this Sunday’s cleaning checklist?")) return;
     void persist({ ...data, weeks: { ...data.weeks, [sunday.key]: { ...EMPTY_PLAN } } });
+  }
+
+  function openAddTask() {
+    setEditingTaskId(null);
+    setTaskDraft({ title: "", detail: "", priority: routineTasks.length === 0 });
+    setTaskEditorOpen(true);
+  }
+
+  function openEditTask(task: RoutineTask) {
+    setEditingTaskId(task.id);
+    setTaskDraft({ title: task.title, detail: task.detail, priority: task.priority });
+    setTaskEditorOpen(true);
+  }
+
+  function closeTaskEditor() {
+    setTaskEditorOpen(false);
+    setEditingTaskId(null);
+    setTaskDraft({ title: "", detail: "", priority: false });
+  }
+
+  function saveTask() {
+    const title = taskDraft.title.trim();
+    if (!title) return;
+    const id = editingTaskId || newTaskId();
+    const updatedTask: RoutineTask = {
+      id,
+      title,
+      detail: taskDraft.detail.trim(),
+      priority: taskDraft.priority,
+    };
+    let tasks = editingTaskId
+      ? routineTasks.map((task) => task.id === id ? updatedTask : task)
+      : [...routineTasks, updatedTask];
+    if (updatedTask.priority) {
+      tasks = [updatedTask, ...tasks.filter((task) => task.id !== id).map((task) => ({ ...task, priority: false }))];
+    }
+    const weeks = { ...data.weeks };
+    if (!editingTaskId && weeks[sunday.key]) {
+      const currentWeek = { ...weeks[sunday.key] };
+      delete currentWeek.completedAt;
+      weeks[sunday.key] = currentWeek;
+    }
+    void persist({ ...data, weeks, routineTasks: tasks });
+    closeTaskEditor();
+  }
+
+  function deleteTask(task: RoutineTask) {
+    if (!window.confirm(`Delete “${task.title}” from the Sunday routine?`)) return;
+    const weeks = Object.fromEntries(Object.entries(data.weeks).map(([key, week]) => {
+      const nextWeek = { ...week, tasks: week.tasks.filter((taskId) => taskId !== task.id) };
+      delete nextWeek.completedAt;
+      return [key, nextWeek];
+    }));
+    void persist({
+      ...data,
+      weeks,
+      routineTasks: routineTasks.filter((entry) => entry.id !== task.id),
+    });
+  }
+
+  function moveTask(index: number, direction: -1 | 1) {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= routineTasks.length) return;
+    const tasks = [...routineTasks];
+    [tasks[index], tasks[nextIndex]] = [tasks[nextIndex], tasks[index]];
+    void persist({ ...data, routineTasks: tasks });
+  }
+
+  function saveRecipientEmail(recipientEmail: string) {
+    void persist({ ...data, settings: { ...data.settings, recipientEmail: recipientEmail.trim() } });
+  }
+
+  async function sendReminder(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const recipient = data.settings.recipientEmail.trim().toLowerCase();
+    if (!EMAIL_RE.test(recipient)) {
+      setEmailState("error");
+      setEmailMessage("Add a valid email address first.");
+      return;
+    }
+    if (!routineTasks.length) {
+      setEmailState("error");
+      setEmailMessage("Add at least one cleaning task first.");
+      return;
+    }
+
+    setEmailState("sending");
+    setEmailMessage("");
+    try {
+      const response = await fetch("/api/admin/cleaning/reminder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipient,
+          senderName,
+          sundayLabel: sunday.label,
+          tasks: routineTasks.map(({ title, detail }) => ({ title, detail })),
+          notes: plan.notes,
+        }),
+      });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(result.error || "The reminder could not be sent.");
+      const nextData: CleaningData = {
+        ...data,
+        settings: {
+          ...data.settings,
+          recipientEmail: recipient,
+          lastReminderAt: new Date().toISOString(),
+          lastReminderBy: senderName,
+        },
+      };
+      await persist(nextData);
+      setEmailState("sent");
+      setEmailMessage(`Task reminder sent to ${recipient}.`);
+    } catch (error) {
+      setEmailState("error");
+      setEmailMessage(error instanceof Error ? error.message : "The reminder could not be sent.");
+    }
   }
 
   const syncLabel =
@@ -336,24 +540,107 @@ export default function CleaningPlanningPage() {
                 <span className={styles.sectionKicker}>In this order</span>
                 <h2 id="routine-title">Sunday routine</h2>
               </div>
-              <span className={styles.counter}>{completedTasks} of {TASKS.length} done</span>
+              <div className={styles.headingActions}>
+                <span className={styles.counter}>{completedTasks} of {routineTasks.length} done</span>
+                <button type="button" className={styles.reminderTrigger} onClick={() => setEmailPanelOpen((open) => !open)} aria-expanded={emailPanelOpen}>
+                  <Mail size={16} /> Send reminder
+                </button>
+                <button type="button" className={styles.addTaskButton} onClick={openAddTask}>
+                  <Plus size={17} /> Add task
+                </button>
+              </div>
             </div>
 
+            {emailPanelOpen ? (
+              <form className={styles.emailPanel} onSubmit={sendReminder}>
+                <div className={styles.panelIntro}>
+                  <span className={styles.panelIcon}><Send size={18} /></span>
+                  <div><strong>Email Adel’s task list</strong><small>The current order and Sunday notes will be included.</small></div>
+                </div>
+                <label>
+                  Adel’s email
+                  <input
+                    type="email"
+                    value={data.settings.recipientEmail}
+                    onChange={(event) => setData((current) => ({
+                      ...current,
+                      settings: { ...current.settings, recipientEmail: event.target.value },
+                    }))}
+                    onBlur={(event) => saveRecipientEmail(event.target.value)}
+                    placeholder="adel@example.com"
+                    autoComplete="email"
+                  />
+                </label>
+                <fieldset>
+                  <legend>Sent by</legend>
+                  <div className={styles.senderOptions}>
+                    {(["Ryan", "Tanvi"] as const).map((name) => (
+                      <button key={name} type="button" data-selected={senderName === name} onClick={() => setSenderName(name)}>{name}</button>
+                    ))}
+                  </div>
+                </fieldset>
+                <button type="submit" className={styles.sendButton} disabled={emailState === "sending"}>
+                  <Mail size={17} /> {emailState === "sending" ? "Sending…" : "Send task email"}
+                </button>
+                {emailMessage ? <p className={styles.emailMessage} data-state={emailState} role="status">{emailMessage}</p> : null}
+              </form>
+            ) : null}
+
+            {taskEditorOpen ? (
+              <form className={styles.taskEditor} onSubmit={(event) => { event.preventDefault(); saveTask(); }}>
+                <div className={styles.editorHeading}>
+                  <div><ListPlus size={18} /><strong>{editingTaskId ? "Edit task" : "Add a cleaning task"}</strong></div>
+                  <button type="button" onClick={closeTaskEditor} aria-label="Close task editor"><X size={18} /></button>
+                </div>
+                <div className={styles.editorFields}>
+                  <label>
+                    Task name
+                    <input
+                      value={taskDraft.title}
+                      onChange={(event) => setTaskDraft((current) => ({ ...current, title: event.target.value }))}
+                      placeholder="e.g. Dust the shelves"
+                      maxLength={160}
+                      autoFocus
+                    />
+                  </label>
+                  <label>
+                    Instructions
+                    <input
+                      value={taskDraft.detail}
+                      onChange={(event) => setTaskDraft((current) => ({ ...current, detail: event.target.value }))}
+                      placeholder="Add a short note for Adel"
+                      maxLength={500}
+                    />
+                  </label>
+                </div>
+                <div className={styles.editorFooter}>
+                  <label className={styles.priorityChoice}>
+                    <input type="checkbox" checked={taskDraft.priority} onChange={(event) => setTaskDraft((current) => ({ ...current, priority: event.target.checked }))} />
+                    Make this the first priority
+                  </label>
+                  <div>
+                    <button type="button" className={styles.cancelButton} onClick={closeTaskEditor}>Cancel</button>
+                    <button type="submit" className={styles.saveTaskButton} disabled={!taskDraft.title.trim()}>{editingTaskId ? "Save changes" : "Add task"}</button>
+                  </div>
+                </div>
+              </form>
+            ) : null}
+
             <div className={styles.taskList}>
-              {TASKS.map((task, index) => {
+              {routineTasks.map((task, index) => {
                 const checked = plan.tasks.includes(task.id);
-                const Icon = task.icon;
+                const Icon = TASK_ICON_BY_ID[task.id as keyof typeof TASK_ICON_BY_ID] || Sparkles;
                 return (
-                  <button
+                  <div
                     key={task.id}
-                    type="button"
                     className={styles.task}
                     data-checked={checked}
                     data-priority={task.priority || undefined}
-                    onClick={() => toggleTask(task.id)}
                   >
                     <span className={styles.taskNumber}>{String(index + 1).padStart(2, "0")}</span>
-                    <span className={styles.taskIcon}>{checked ? <Check size={20} /> : <Icon size={20} />}</span>
+                    <button type="button" className={styles.taskToggle} onClick={() => toggleTask(task.id)} aria-label={`${checked ? "Mark incomplete" : "Mark complete"}: ${task.title}`} aria-pressed={checked}>
+                      <span className={styles.taskIcon}>{checked ? <Check size={20} /> : <Icon size={20} />}</span>
+                    </button>
                     <span className={styles.taskCopy}>
                       <span className={styles.taskTitleLine}>
                         <strong>{task.title}</strong>
@@ -362,9 +649,23 @@ export default function CleaningPlanningPage() {
                       <small>{task.detail}</small>
                     </span>
                     <span className={styles.taskStatus}>{checked ? "Done" : "To do"}</span>
-                  </button>
+                    <span className={styles.taskActions}>
+                      <button type="button" onClick={() => moveTask(index, -1)} disabled={index === 0} aria-label={`Move ${task.title} up`}><ChevronUp size={16} /></button>
+                      <button type="button" onClick={() => moveTask(index, 1)} disabled={index === routineTasks.length - 1} aria-label={`Move ${task.title} down`}><ChevronDown size={16} /></button>
+                      <button type="button" onClick={() => openEditTask(task)} aria-label={`Edit ${task.title}`}><Pencil size={16} /></button>
+                      <button type="button" className={styles.deleteTaskButton} onClick={() => deleteTask(task)} aria-label={`Delete ${task.title}`}><Trash2 size={16} /></button>
+                    </span>
+                  </div>
                 );
               })}
+              {!routineTasks.length ? (
+                <div className={styles.emptyTasks}>
+                  <ListPlus size={24} />
+                  <strong>No cleaning tasks yet</strong>
+                  <span>Add the first task to build Adel’s Sunday routine.</span>
+                  <button type="button" onClick={openAddTask}><Plus size={16} /> Add first task</button>
+                </div>
+              ) : null}
             </div>
 
             <div className={styles.routineFooter}>
@@ -377,10 +678,10 @@ export default function CleaningPlanningPage() {
 
           <aside className={styles.sideColumn}>
             <section className={styles.focusCard}>
-              <div className={styles.focusIcon}><Shirt size={23} /></div>
+              <div className={styles.focusIcon}><PriorityIcon size={23} /></div>
               <span className={styles.sectionKicker}>The one non-negotiable</span>
-              <h2>Weekday clothes first</h2>
-              <p>Keep shirts, trousers and work outfits together before Adel arrives. Ironing starts before the rest of the cleaning.</p>
+              <h2>{priorityTask?.title || "Choose the first task"}</h2>
+              <p>{priorityTask?.detail || "Add a task and mark it as first priority so Adel always knows where to begin."}</p>
               <div className={styles.focusFooter}><Clock3 size={16} /><span>Start at 8:30 AM</span></div>
             </section>
 
