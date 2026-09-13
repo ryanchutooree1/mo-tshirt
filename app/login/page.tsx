@@ -118,7 +118,11 @@ function LoginInner() {
         } else {
           await signOutAdminFromFirebase().catch(() => null);
         }
-        router.push(next.startsWith("/admin/quotation-approval") ? next : data.manager.path);
+        const managerDestination =
+          next.startsWith("/admin/quotation-approval") || next === "/admin/tanvi-home"
+            ? next
+            : data.manager.path;
+        router.push(managerDestination);
         return;
       }
 

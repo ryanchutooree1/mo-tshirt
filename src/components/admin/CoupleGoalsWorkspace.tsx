@@ -8,7 +8,6 @@ import {
   Clock3,
   Heart,
   Mail,
-  MessageCircle,
   Plus,
   Save,
   Sparkles,
@@ -45,11 +44,11 @@ type CoupleSettings = {
   rotationStartDate: string;
   sendTime: string;
   emailEnabled: boolean;
-  whatsappEnabled: boolean;
-  whatsappNumber: string;
+  weeklyEmailEnabled: boolean;
+  weeklyPlannerEmail: string;
   recipients: string[];
   lastFoodEmailDayKey?: string;
-  lastFoodReminderDayKey?: string;
+  lastWeeklyPlannerEmailDayKey?: string;
 };
 
 type CoupleData = {
@@ -153,6 +152,7 @@ const DEFAULT_FOOD_PLAN: Record<string, string> = {
   Sunday: "Agneau Salmi",
 };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const DEFAULT_WEEKLY_PLANNER_EMAIL = "tanvihulooman0212@gmail.com";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WAKING_START = 6 * 60;
 const WAKING_END = 23 * 60 + 30;
@@ -394,8 +394,8 @@ function defaultData(): CoupleData {
       rotationStartDate: "2026-07-06",
       sendTime: "08:00",
       emailEnabled: true,
-      whatsappEnabled: true,
-      whatsappNumber: "",
+      weeklyEmailEnabled: true,
+      weeklyPlannerEmail: DEFAULT_WEEKLY_PLANNER_EMAIL,
       recipients: [],
     },
     herShiftOverrides: ACTUAL_CALENDAR_IMPORT,
@@ -435,6 +435,9 @@ function normalizeData(raw: unknown): CoupleData {
   const fallback = defaultData();
   if (!raw || typeof raw !== "object") return fallback;
   const input = raw as Partial<CoupleData>;
+  const recipients = Array.isArray(input.settings?.recipients)
+    ? input.settings.recipients.filter((email) => typeof email === "string" && EMAIL_RE.test(email))
+    : [];
   return {
     settings: {
       rotationStartDate:
@@ -444,24 +447,24 @@ function normalizeData(raw: unknown): CoupleData {
       sendTime: "08:00",
       emailEnabled:
         typeof input.settings?.emailEnabled === "boolean" ? input.settings.emailEnabled : true,
-      whatsappEnabled:
-        typeof input.settings?.whatsappEnabled === "boolean"
-          ? input.settings.whatsappEnabled
+      weeklyEmailEnabled:
+        typeof input.settings?.weeklyEmailEnabled === "boolean"
+          ? input.settings.weeklyEmailEnabled
           : typeof input.settings?.emailEnabled === "boolean"
             ? input.settings.emailEnabled
             : true,
-      whatsappNumber:
-        typeof input.settings?.whatsappNumber === "string" ? input.settings.whatsappNumber : "",
-      recipients: Array.isArray(input.settings?.recipients)
-        ? input.settings.recipients.filter((email) => typeof email === "string" && EMAIL_RE.test(email))
-        : [],
+      weeklyPlannerEmail:
+        typeof input.settings?.weeklyPlannerEmail === "string" && EMAIL_RE.test(input.settings.weeklyPlannerEmail)
+          ? input.settings.weeklyPlannerEmail
+          : DEFAULT_WEEKLY_PLANNER_EMAIL,
+      recipients,
       lastFoodEmailDayKey:
         typeof input.settings?.lastFoodEmailDayKey === "string"
           ? input.settings.lastFoodEmailDayKey
           : undefined,
-      lastFoodReminderDayKey:
-        typeof input.settings?.lastFoodReminderDayKey === "string"
-          ? input.settings.lastFoodReminderDayKey
+      lastWeeklyPlannerEmailDayKey:
+        typeof input.settings?.lastWeeklyPlannerEmailDayKey === "string"
+          ? input.settings.lastWeeklyPlannerEmailDayKey
           : undefined,
     },
     mShiftOverrides:
@@ -553,8 +556,7 @@ export default function CoupleGoalsWorkspace({
   const [dayModalOpen, setDayModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [recipientDraft, setRecipientDraft] = useState("");
-  const [reminderState, setReminderState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [weeklyEmailState, setWeeklyEmailState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -742,49 +744,6 @@ export default function CoupleGoalsWorkspace({
     persist(next, "Little Win deleted");
   }
 
-  function addRecipient() {
-    const email = recipientDraft.trim().toLowerCase();
-    if (!EMAIL_RE.test(email)) {
-      showToast("Enter a valid email address");
-      return;
-    }
-    if (data.settings.recipients.includes(email)) {
-      showToast("Recipient already exists");
-      return;
-    }
-    const next = {
-      ...data,
-      settings: {
-        ...data.settings,
-        recipients: [...data.settings.recipients, email],
-      },
-    };
-    setData(next);
-    setRecipientDraft("");
-    persist(next, "Recipient added");
-  }
-
-  function updateRecipient(index: number, value: string) {
-    updateData((current) => {
-      const recipients = current.settings.recipients.slice();
-      recipients[index] = value;
-      return { ...current, settings: { ...current.settings, recipients } };
-    });
-  }
-
-  function removeRecipient(index: number) {
-    if (!window.confirm("Remove this email recipient?")) return;
-    const next = {
-      ...data,
-      settings: {
-        ...data.settings,
-        recipients: data.settings.recipients.filter((_, i) => i !== index),
-      },
-    };
-    setData(next);
-    persist(next, "Recipient removed");
-  }
-
   function updateFood(day: string, value: string) {
     updateData((current) => ({
       ...current,
@@ -792,18 +751,13 @@ export default function CoupleGoalsWorkspace({
     }));
   }
 
-  async function sendWhatsAppReminder() {
-    if (!/^\+?[1-9]\d{7,14}$/.test(data.settings.whatsappNumber.replace(/[\s()-]/g, ""))) {
-      showToast("Add a valid WhatsApp number first");
-      return;
-    }
-    const invalidEmail = data.settings.recipients.find((email) => !EMAIL_RE.test(email));
-    if (invalidEmail || data.settings.recipients.length === 0) {
-      showToast("Add at least one valid recipient first");
+  async function sendWeeklyPlannerEmail() {
+    if (!EMAIL_RE.test(data.settings.weeklyPlannerEmail)) {
+      showToast("Add a valid weekly planner email first");
       return;
     }
     await persist(data, "Food plan saved");
-    setReminderState("sending");
+    setWeeklyEmailState("sending");
     try {
       const response = await fetch("/api/admin/couple-goals/food-email", {
         method: "POST",
@@ -811,13 +765,13 @@ export default function CoupleGoalsWorkspace({
         body: JSON.stringify({ action: "manual" }),
       });
       const result = (await response.json().catch(() => ({}))) as { error?: string; reason?: string };
-      if (!response.ok) throw new Error(result.error || result.reason || "WhatsApp reminder failed");
-      setReminderState("sent");
-      showToast("Today's confirmation link sent on WhatsApp");
-      setTimeout(() => setReminderState("idle"), 2000);
+      if (!response.ok) throw new Error(result.error || result.reason || "Weekly email failed");
+      setWeeklyEmailState("sent");
+      showToast("Weekly Food Planning email sent");
+      setTimeout(() => setWeeklyEmailState("idle"), 2000);
     } catch (error) {
-      setReminderState("error");
-      showToast(error instanceof Error ? error.message : "WhatsApp reminder failed");
+      setWeeklyEmailState("error");
+      showToast(error instanceof Error ? error.message : "Weekly email failed");
     }
   }
 
@@ -846,14 +800,14 @@ export default function CoupleGoalsWorkspace({
             <div>
               <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-cyan-100">
                 {isFoodView ? <Utensils className="h-3.5 w-3.5" /> : <Heart className="h-3.5 w-3.5" />}
-                {isFoodView ? "WhatsApp & email controls" : "Mauritius timezone by default"}
+                {isFoodView ? "Weekly email controls" : "Mauritius timezone by default"}
               </div>
               <h1 className="text-2xl font-black tracking-tight md:text-4xl">
                 {isFoodView ? "Food Planning" : "Couple Goals"}
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 md:text-base">
                 {isFoodView
-                  ? "Plan the week, send her a daily WhatsApp confirmation link, then receive the final choice by email."
+                  ? "Every Sunday morning, Tanvi gets an email button that opens this page to plan the whole week."
                   : "A shared command center for free time, Little Wins, and shared goals."}
               </p>
             </div>
@@ -861,8 +815,8 @@ export default function CoupleGoalsWorkspace({
             <div className="grid grid-cols-2 gap-3">
               {isFoodView ? (
                 <>
-                  <StatCard label="WhatsApp reminder" value={data.settings.whatsappEnabled ? "On" : "Paused"} icon={<MessageCircle />} />
-                  <StatCard label="Email recipients" value={data.settings.recipients.length} icon={<Mail />} />
+                  <StatCard label="Sunday email" value={data.settings.weeklyEmailEnabled ? "On" : "Paused"} icon={<Mail />} />
+                  <StatCard label="Delivery time" value="08:00" icon={<Clock3 />} />
                 </>
               ) : (
                 <>
@@ -881,7 +835,7 @@ export default function CoupleGoalsWorkspace({
             {isFoodView ? (
               <>
                 <label className="text-sm font-semibold text-slate-700">
-                  WhatsApp reminder time
+                  Sunday email time
                   <input
                     type="time"
                     value={data.settings.sendTime}
@@ -891,31 +845,31 @@ export default function CoupleGoalsWorkspace({
                   <span className="mt-1 block text-xs font-medium text-slate-400">Mauritius time</span>
                 </label>
                 <label className="text-sm font-semibold text-slate-700">
-                  Her WhatsApp number
+                  Her planning email
                   <input
-                    type="tel"
-                    value={data.settings.whatsappNumber}
-                    onChange={(event) => updateSetting("whatsappNumber", event.target.value)}
-                    onBlur={() => persist(data, "WhatsApp number saved")}
+                    type="email"
+                    value={data.settings.weeklyPlannerEmail}
+                    onChange={(event) => updateSetting("weeklyPlannerEmail", event.target.value)}
+                    onBlur={() => persist(data, "Weekly planner email saved")}
                     className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                    placeholder="+230 5XXX XXXX"
+                    placeholder="name@example.com"
                   />
                 </label>
                 <label className="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700">
                   <input
                     type="checkbox"
-                    checked={data.settings.whatsappEnabled}
+                    checked={data.settings.weeklyEmailEnabled}
                     onChange={(event) => {
                       const next = {
                         ...data,
-                        settings: { ...data.settings, whatsappEnabled: event.target.checked },
+                        settings: { ...data.settings, weeklyEmailEnabled: event.target.checked },
                       };
                       setData(next);
-                      persist(next, event.target.checked ? "WhatsApp reminder enabled" : "WhatsApp reminder paused");
+                      persist(next, event.target.checked ? "Sunday email enabled" : "Sunday email paused");
                     }}
                     className="h-4 w-4"
                   />
-                  Daily WhatsApp reminder enabled
+                  Weekly Sunday email enabled
                 </label>
               </>
             ) : (
@@ -950,7 +904,7 @@ export default function CoupleGoalsWorkspace({
               : saveState === "saved"
                 ? "Saved"
                 : isFoodView
-                  ? "Save reminder settings"
+                  ? "Save email settings"
                   : "Save all"}
           </button>
         </section>
@@ -1309,21 +1263,21 @@ export default function CoupleGoalsWorkspace({
             <div>
               <h2 className="flex items-center gap-2 text-lg font-black">
                 <Utensils className="h-5 w-5 text-rose-500" />
-                Daily Food Planner
+                Weekly Food Planner
               </h2>
-              <p className="text-sm text-slate-500">At 08:00 she receives today&apos;s preset meal by WhatsApp. Her confirmation sends the final choice by email.</p>
+              <p className="text-sm text-slate-500">Every Sunday at 08:00 Mauritius time, Tanvi receives an email button to open Food Planning and fill the whole week.</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <button onClick={() => persist(data, "Food plan saved")} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold hover:bg-slate-50">
                 Save food plan
               </button>
               <button
-                onClick={sendWhatsAppReminder}
-                disabled={reminderState === "sending"}
+                onClick={sendWeeklyPlannerEmail}
+                disabled={weeklyEmailState === "sending"}
                 className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60"
               >
-                <MessageCircle className="h-4 w-4" />
-                {reminderState === "sending" ? "Sending..." : "Send link now"}
+                <Mail className="h-4 w-4" />
+                {weeklyEmailState === "sending" ? "Sending..." : "Send Sunday email now"}
               </button>
             </div>
           </div>
@@ -1344,53 +1298,27 @@ export default function CoupleGoalsWorkspace({
               ))}
             </div>
 
-            <div className="rounded-xl border border-slate-200 p-3">
-              <h3 className="mb-1 font-black">Dinner confirmation email recipients</h3>
-              <p className="mb-3 text-xs text-slate-500">These addresses receive the final meal only after she confirms.</p>
-              <div className="mb-3 flex gap-2">
-                <input
-                  value={recipientDraft}
-                  onChange={(event) => setRecipientDraft(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") addRecipient();
-                  }}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                  placeholder="name@example.com"
-                />
-                <button onClick={addRecipient} className="rounded-lg bg-slate-950 px-3 py-2 text-sm font-bold text-white">
-                  Add
-                </button>
-              </div>
-              <div className="space-y-2">
-                {data.settings.recipients.length === 0 && (
-                  <p className="rounded-lg bg-slate-50 p-3 text-sm font-semibold text-slate-500">No recipients yet.</p>
-                )}
-                {data.settings.recipients.map((email, index) => (
-                  <div key={`${email}-${index}`} className="flex gap-2">
-                    <input
-                      value={email}
-                      onChange={(event) => updateRecipient(index, event.target.value)}
-                      onBlur={() => {
-                        if (!EMAIL_RE.test(data.settings.recipients[index] || "")) {
-                          showToast("Fix invalid email before saving");
-                          return;
-                        }
-                        persist(data, "Recipient saved");
-                      }}
-                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                    />
-                    <button onClick={() => removeRecipient(index)} className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600" aria-label="Remove recipient">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
-                <p className="font-black text-slate-800">Confirmation email preview</p>
-                <p className="mt-2">Subject: Tonight&apos;s dinner: {data.foodPlan[getMauritiusDateParts().weekday] || "Not planned"}</p>
-                <p className="mt-1">
-                  Dinner has been confirmed for tonight. {getMauritiusDateParts().weekday}:{" "}
-                  <strong>{data.foodPlan[getMauritiusDateParts().weekday] || "Not planned"}</strong>.
+            <div className="rounded-xl border border-slate-200 p-4">
+              <h3 className="font-black">Sunday email preview</h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Sent to <strong>{data.settings.weeklyPlannerEmail}</strong> every Sunday morning.
+              </p>
+              <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+                <p className="font-black text-slate-900">Plan this week&apos;s meals</p>
+                <p className="mt-2">Good morning Tanvi, please fill or update the food plan for the whole week.</p>
+                <div className="mt-4 space-y-2">
+                  {WEEK_DAYS.map((day) => (
+                    <div key={day} className="flex items-center justify-between gap-3 border-b border-slate-200 pb-2 last:border-0">
+                      <span className="font-bold text-slate-700">{day}</span>
+                      <span className="truncate text-right">{data.foodPlan[day] || "Not planned"}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-5 inline-flex rounded-lg bg-emerald-600 px-4 py-2 font-bold text-white">
+                  Open Food Planning
+                </div>
+                <p className="mt-4 text-xs">
+                  The button opens Tanvi&apos;s Food Planning page. If sign-in is needed, she returns here immediately after logging in.
                 </p>
               </div>
             </div>

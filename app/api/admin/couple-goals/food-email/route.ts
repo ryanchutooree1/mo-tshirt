@@ -1,24 +1,24 @@
 import { NextResponse } from "next/server";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { isAdminRequest } from "@/lib/admin-request";
-import { buildFoodConfirmationUrl } from "@/lib/food-confirmation-links";
-import {
-  buildFoodReminderMessage,
-  FOOD_REMINDER_TIME,
-  getFoodForDay,
-  getMauritiusClock,
-  normalizeWhatsAppNumber,
-} from "@/lib/food-planning";
 import { db } from "@/lib/firebase";
-import { dispatchWhatsAppMessage } from "@/lib/openclaw-whatsapp";
+import {
+  escapeHtml,
+  FOOD_REMINDER_TIME,
+  getMauritiusClock,
+  normalizeRecipients,
+} from "@/lib/food-planning";
+import { getProductionManager } from "@/lib/partner-registry";
+import { SITE_URL } from "@/lib/seo";
 
 export const runtime = "nodejs";
 
 type CoupleSettings = {
   emailEnabled?: boolean;
-  whatsappEnabled?: boolean;
-  whatsappNumber?: string;
-  lastFoodReminderDayKey?: string;
+  weeklyEmailEnabled?: boolean;
+  weeklyPlannerEmail?: string;
+  recipients?: unknown;
+  lastWeeklyPlannerEmailDayKey?: string;
 };
 
 type CoupleData = {
@@ -27,6 +27,8 @@ type CoupleData = {
 };
 
 const STORAGE_DOC = doc(db, "coupleGoals", "workspace");
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const FOOD_PLANNING_URL = `${SITE_URL}/admin/tanvi-home`;
 
 function isCronAuthorized(req: Request) {
   const secret = String(process.env.CRON_SECRET || process.env.IOT_CRON_SECRET || "").trim();
@@ -34,74 +36,122 @@ function isCronAuthorized(req: Request) {
   return req.headers.get("authorization") === `Bearer ${secret}`;
 }
 
+function formatFrom(name: string, address: string) {
+  const cleanName = name.replace(/[<>"]/g, "").trim();
+  return cleanName ? `${cleanName} <${address}>` : address;
+}
+
+function resolveFromAddress(rawFrom: string | undefined, smtpUser: string) {
+  const safeFallback = EMAIL_RE.test(smtpUser) ? smtpUser : "no-reply@example.com";
+  const raw = (rawFrom || "").trim();
+  if (!raw) return formatFrom("MO T-SHIRT", safeFallback);
+  const bracketMatch = raw.match(/^(.*)<([^>]*)>\s*$/);
+  if (bracketMatch) {
+    const address = (bracketMatch[2] || "").trim();
+    return formatFrom((bracketMatch[1] || "MO T-SHIRT").trim(), EMAIL_RE.test(address) ? address : safeFallback);
+  }
+  return EMAIL_RE.test(raw) ? raw : formatFrom(raw, safeFallback);
+}
+
+function buildWeeklyPlannerEmail(foodPlan: Record<string, unknown> | undefined) {
+  const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const rows = days.map((day) => {
+    const food = typeof foodPlan?.[day] === "string" && foodPlan[day].trim() ? foodPlan[day].trim() : "Not planned";
+    return { day, food };
+  });
+  const textPlan = rows.map(({ day, food }) => `${day}: ${food}`).join("\n");
+  const htmlPlan = rows
+    .map(
+      ({ day, food }) =>
+        `<tr><td style="padding:7px 12px;border-bottom:1px solid #e5e7eb;font-weight:700">${day}</td><td style="padding:7px 12px;border-bottom:1px solid #e5e7eb">${escapeHtml(food)}</td></tr>`
+    )
+    .join("");
+
+  return {
+    subject: "Please plan this week's meals",
+    text: `Good morning Tanvi,\n\nPlease open Food Planning and fill or update the meals for the whole week.\n\nCurrent plan:\n${textPlan}\n\nOpen Food Planning: ${FOOD_PLANNING_URL}\n\nIf your remembered login has expired, sign in and you will be returned directly to Food Planning.`,
+    html: `<div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:#111827;max-width:600px;margin:auto">
+  <h1 style="font-size:25px;margin:0 0 12px">Plan this week&apos;s meals</h1>
+  <p>Good morning Tanvi,</p>
+  <p>Please fill or update the food plan for the whole week.</p>
+  <table style="width:100%;border-collapse:collapse;margin:20px 0;border:1px solid #e5e7eb;border-radius:12px">${htmlPlan}</table>
+  <p style="margin:26px 0"><a href="${FOOD_PLANNING_URL}" style="display:inline-block;padding:13px 22px;border-radius:10px;background:#059669;color:#fff;text-decoration:none;font-weight:700">Open Food Planning</a></p>
+  <p style="font-size:13px;color:#6b7280">If your remembered login has expired, sign in and you will be returned directly to Food Planning.</p>
+</div>`,
+  };
+}
+
 async function loadCoupleData() {
   const snapshot = await getDoc(STORAGE_DOC);
   return (snapshot.exists() ? snapshot.data() : {}) as CoupleData;
 }
 
-async function sendFoodConfirmationReminder(action: "manual" | "cron") {
+async function sendWeeklyPlannerEmail(action: "manual" | "cron") {
   const data = await loadCoupleData();
   const settings = data.settings || {};
   const clock = getMauritiusClock();
-  const enabled = settings.whatsappEnabled ?? settings.emailEnabled ?? true;
-  const whatsappNumber = normalizeWhatsAppNumber(
-    settings.whatsappNumber || process.env.FOOD_PLANNING_WHATSAPP_TO
-  );
+  const enabled = settings.weeklyEmailEnabled ?? settings.emailEnabled ?? true;
 
   if (action === "cron" && !enabled) {
-    return { sent: false, reason: "Daily WhatsApp reminder is paused." };
+    return { sent: false, reason: "Weekly food-planning email is paused." };
   }
-  if (action === "cron" && settings.lastFoodReminderDayKey === clock.dayKey) {
-    return { sent: false, reason: "Today's WhatsApp reminder was already sent." };
+  if (action === "cron" && clock.weekday !== "Sunday") {
+    return { sent: false, reason: "Weekly food-planning email is only sent on Sunday." };
   }
-  if (!whatsappNumber) {
-    return { sent: false, reason: "Add a valid WhatsApp number in Food Planning.", status: 400 };
-  }
-
-  const food = getFoodForDay(data.foodPlan, clock.weekday);
-  if (!food) {
-    return { sent: false, reason: `Add a food preset for ${clock.weekday}.`, status: 400 };
+  if (action === "cron" && settings.lastWeeklyPlannerEmailDayKey === clock.dayKey) {
+    return { sent: false, reason: "This Sunday's food-planning email was already sent." };
   }
 
-  const confirmationUrl = buildFoodConfirmationUrl(clock.dayKey);
-  const text = buildFoodReminderMessage(clock.weekday, food, confirmationUrl);
-  const delivery = await dispatchWhatsAppMessage({
-    to: whatsappNumber,
-    text,
-    template: {
-      twilioContentSid: process.env.TWILIO_FOOD_REMINDER_CONTENT_SID?.trim(),
-      metaTemplateName: process.env.WHATSAPP_FOOD_REMINDER_TEMPLATE?.trim(),
-      metaLanguageCode: process.env.WHATSAPP_FOOD_REMINDER_TEMPLATE_LANGUAGE?.trim() || "en",
-      parameters: [clock.weekday, food, confirmationUrl],
-    },
+  const manager = await getProductionManager();
+  const recipient = String(settings.weeklyPlannerEmail || manager.email || "").trim().toLowerCase();
+  if (!EMAIL_RE.test(recipient)) {
+    return { sent: false, reason: "Add a valid weekly planner email in Food Planning.", status: 400 };
+  }
+
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER || "";
+  const pass = process.env.SMTP_PASS;
+  if (!host || !user || !pass) {
+    return { sent: false, reason: "Email delivery is not configured.", status: 503 };
+  }
+
+  const message = buildWeeklyPlannerEmail(data.foodPlan);
+  // @ts-expect-error nodemailer does not ship local declarations in this project.
+  const nodemailer = await import("nodemailer");
+  const transporter = nodemailer.createTransport({
+    host,
+    port: Number(process.env.SMTP_PORT || 465),
+    secure: String(process.env.SMTP_SECURE || "true") === "true",
+    auth: { user, pass },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 15_000,
   });
-
-  if (delivery.simulated) {
-    return {
-      sent: false,
-      reason: "WhatsApp delivery is not configured. Add Twilio or Meta credentials.",
-      status: 503,
-    };
-  }
+  await transporter.sendMail({
+    from: resolveFromAddress(process.env.SMTP_FROM, user),
+    to: recipient,
+    subject: message.subject,
+    text: message.text,
+    html: message.html,
+  });
 
   await setDoc(
     STORAGE_DOC,
     {
       settings: {
         ...settings,
+        recipients: normalizeRecipients(settings.recipients),
         sendTime: FOOD_REMINDER_TIME,
-        whatsappEnabled: enabled,
-        whatsappNumber,
-        lastFoodReminderDayKey: clock.dayKey,
-        lastFoodReminderSentAt: serverTimestamp(),
-        lastFoodReminderProvider: delivery.provider,
-        lastFoodReminderMessageId: delivery.messageId,
+        weeklyEmailEnabled: enabled,
+        weeklyPlannerEmail: recipient,
+        lastWeeklyPlannerEmailDayKey: clock.dayKey,
+        lastWeeklyPlannerEmailSentAt: serverTimestamp(),
       },
     },
     { merge: true }
   );
 
-  return { sent: true, day: clock.weekday, food, provider: delivery.provider };
+  return { sent: true, day: clock.weekday };
 }
 
 export async function GET(req: Request) {
@@ -109,11 +159,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized scheduler request." }, { status: 401 });
   }
   try {
-    const result = await sendFoodConfirmationReminder("cron");
+    const result = await sendWeeklyPlannerEmail("cron");
     return NextResponse.json(result, { status: result.status || 200 });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "WhatsApp reminder failed.";
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Weekly food-planning email failed." }, { status: 500 });
   }
 }
 
@@ -122,10 +171,9 @@ export async function POST() {
     return NextResponse.json({ error: "Admin access required." }, { status: 403 });
   }
   try {
-    const result = await sendFoodConfirmationReminder("manual");
+    const result = await sendWeeklyPlannerEmail("manual");
     return NextResponse.json(result, { status: result.status || 200 });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "WhatsApp reminder failed.";
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Weekly food-planning email failed." }, { status: 500 });
   }
 }
