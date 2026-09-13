@@ -200,14 +200,6 @@ function LoginInner() {
             </div>
 
             <form onSubmit={onSubmit} className="mt-8 space-y-6" aria-describedby={error ? "login-error" : undefined}>
-              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3">
-                <p className="text-sm font-medium text-emerald-950">
-                  Ryan and Tanvi: enter your password only.
-                </p>
-                <p className="mt-1 text-xs leading-5 text-emerald-800">
-                  Your account is recognized securely from your password.
-                </p>
-              </div>
               {useEmailLogin && (
                 <div>
                   <label htmlFor="email" className="text-sm font-medium text-neutral-800">
