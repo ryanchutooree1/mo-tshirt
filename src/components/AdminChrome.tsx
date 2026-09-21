@@ -36,6 +36,7 @@ import {
   Landmark,
   LayoutDashboard,
   Layers3,
+  ListChecks,
   LogOut,
   Mail,
   MessageCircle,
@@ -103,13 +104,13 @@ type NavGroup = {
 const SIDEBAR_COLLAPSED_KEY = "admin-sidebar-collapsed-v1";
 const SIDEBAR_GROUPS_KEY = "admin-sidebar-groups-v2";
 
-const DAILY_PATHS: AdminPagePath[] = ["/admin", "/admin/inbox", "/admin/whatsapp", "/admin/quotation-approval", "/admin/orders", "/admin/inventory", "/admin/clients"];
+const DAILY_PATHS: AdminPagePath[] = ["/admin", "/admin/inbox", "/admin/whatsapp", "/admin/quotation-approval", "/admin/orders", "/admin/inventory", "/admin/clients", "/admin/x5-execution"];
 const NAV_GROUPS: NavGroup[] = [
   { id: "daily", label: "Your work", paths: DAILY_PATHS },
   {
     id: "core",
     label: "Core",
-    paths: ["/admin", "/admin/orders", "/admin/pos", "/admin/clients"],
+    paths: ["/admin", "/admin/orders", "/admin/pos", "/admin/clients", "/admin/x5-execution"],
   },
   {
     id: "commerce",
@@ -200,6 +201,7 @@ const PAGE_ICONS: Partial<Record<AdminPagePath, LucideIcon>> = {
   "/admin/orders": ShoppingBag,
   "/admin/pos": CreditCard,
   "/admin/clients": Users,
+  "/admin/x5-execution": ListChecks,
   "/admin/quotation-approval": ReceiptText,
   "/admin/contracts": FileSignature,
   "/admin/shops": Store,

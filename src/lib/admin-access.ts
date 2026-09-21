@@ -5,6 +5,7 @@ export type AdminPagePath =
   | "/admin/orders"
   | "/admin/pos"
   | "/admin/clients"
+  | "/admin/x5-execution"
   | "/admin/contracts"
   | "/admin/shops"
   | "/admin/ready-made-uniforms"
@@ -99,6 +100,12 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
     path: "/admin/clients",
     label: "Clients",
     description: "Customer records and relationship notes.",
+    group: "Sales",
+  },
+  {
+    path: "/admin/x5-execution",
+    label: "X5 Execution",
+    description: "Move ideas through execution, verification, and reusable learning.",
     group: "Sales",
   },
   {
@@ -434,6 +441,7 @@ export const DEFAULT_TOP_NAV_PATHS: AdminPagePath[] = [
   "/admin/inbox",
   "/admin/pos",
   "/admin/clients",
+  "/admin/x5-execution",
   "/admin/ai-assistant",
   "/admin/contracts",
   "/admin/shops",
