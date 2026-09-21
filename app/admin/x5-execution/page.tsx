@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   Circle,
   Clock3,
+  Landmark,
   Lightbulb,
   ListChecks,
   Plus,
@@ -31,6 +32,7 @@ import {
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import UnsavedChangesGuard from "@/components/admin/UnsavedChangesGuard";
+import X5FreedomPlanPanel from "@/components/admin/X5FreedomPlan";
 import {
   calculateX5ExecutionProgress,
   createX5ExecutionSteps,
@@ -131,6 +133,7 @@ function StatusBadge({ status }: { status: X5ExecutionStatus }) {
 }
 
 export default function X5ExecutionPage() {
+  const [activeWorkspace, setActiveWorkspace] = useState<"execution" | "freedom">("execution");
   const [projects, setProjects] = useState<ExecutionProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -324,6 +327,15 @@ export default function X5ExecutionPage() {
     setSelectedId(projectId);
   }
 
+  async function openWorkspace(workspace: "execution" | "freedom") {
+    if (workspace === activeWorkspace) return;
+    if (activeWorkspace === "execution" && dirty) {
+      const saved = await saveProject();
+      if (!saved) return;
+    }
+    setActiveWorkspace(workspace);
+  }
+
   async function removeProject() {
     if (!selectedProject) return;
     if (!window.confirm(`Delete “${selectedProject.title}”? This cannot be undone.`)) return;
@@ -367,7 +379,7 @@ export default function X5ExecutionPage() {
               Turn every idea into one clear execution project with only the actions Ryan needs to handle.
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-2 sm:min-w-[390px]">
+          {activeWorkspace === "execution" ? <div className="grid grid-cols-3 gap-2 sm:min-w-[390px]">
             {[
               { label: "Projects", value: projects.length },
               { label: "Done", value: summary.done },
@@ -380,9 +392,37 @@ export default function X5ExecutionPage() {
                 </div>
               </div>
             ))}
-          </div>
+          </div> : null}
         </header>
 
+        <nav aria-label="X5 Execution workspaces" className="inline-flex w-full gap-1 rounded-2xl border border-slate-200 bg-white p-1 sm:w-auto">
+          <button
+            type="button"
+            onClick={() => void openWorkspace("execution")}
+            aria-current={activeWorkspace === "execution" ? "page" : undefined}
+            className={`inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition sm:flex-none ${
+              activeWorkspace === "execution"
+                ? "bg-[#141921] text-white"
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+            }`}
+          >
+            <ListChecks className="h-4 w-4" /> Execution Projects
+          </button>
+          <button
+            type="button"
+            onClick={() => void openWorkspace("freedom")}
+            aria-current={activeWorkspace === "freedom" ? "page" : undefined}
+            className={`inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition sm:flex-none ${
+              activeWorkspace === "freedom"
+                ? "bg-[#141921] text-white"
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+            }`}
+          >
+            <Landmark className="h-4 w-4" /> Freedom Plan
+          </button>
+        </nav>
+
+        <div className={activeWorkspace === "execution" ? "space-y-5" : "hidden"}>
         <section className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
           <label className="grid gap-1.5 text-xs font-bold text-slate-600">
             Capture a new idea
@@ -670,6 +710,11 @@ export default function X5ExecutionPage() {
             </div>
           )}
         </section>
+        </div>
+
+        <div className={activeWorkspace === "freedom" ? "block" : "hidden"}>
+          <X5FreedomPlanPanel />
+        </div>
       </div>
     </main>
   );
