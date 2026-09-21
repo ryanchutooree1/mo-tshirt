@@ -1,3 +1,13 @@
+export type X5FreedomMoneyRule = "MOTHER" | "CHILD";
+
+export type X5FreedomGoal = {
+  id: string;
+  name: string;
+  target: string;
+  actual: string;
+  rule: X5FreedomMoneyRule;
+};
+
 export type X5FreedomPlan = {
   vision: string;
   personalMonthlyCost: string;
@@ -12,6 +22,7 @@ export type X5FreedomPlan = {
   targetWeeklyHours: string;
   targetDate: string;
   notes: string;
+  goals: X5FreedomGoal[];
 };
 
 export const EMPTY_X5_FREEDOM_PLAN: X5FreedomPlan = {
@@ -28,6 +39,7 @@ export const EMPTY_X5_FREEDOM_PLAN: X5FreedomPlan = {
   targetWeeklyHours: "",
   targetDate: "",
   notes: "",
+  goals: [],
 };
 
 export function normalizeX5FreedomPlan(value: unknown): X5FreedomPlan {
@@ -35,12 +47,67 @@ export function normalizeX5FreedomPlan(value: unknown): X5FreedomPlan {
     ? (value as Record<string, unknown>)
     : {};
 
-  return Object.fromEntries(
-    Object.keys(EMPTY_X5_FREEDOM_PLAN).map((key) => [
-      key,
-      typeof record[key] === "string" ? record[key] : "",
-    ])
-  ) as X5FreedomPlan;
+  const stringValues = Object.fromEntries(
+    Object.keys(EMPTY_X5_FREEDOM_PLAN)
+      .filter((key) => key !== "goals")
+      .map((key) => [
+        key,
+        typeof record[key] === "string" ? record[key] : "",
+      ])
+  ) as Omit<X5FreedomPlan, "goals">;
+
+  const goals = Array.isArray(record.goals)
+    ? record.goals.flatMap((entry) => {
+        if (!entry || typeof entry !== "object") return [];
+        const goal = entry as Record<string, unknown>;
+        if (typeof goal.id !== "string" || !goal.id) return [];
+        return [{
+          id: goal.id,
+          name: typeof goal.name === "string" ? goal.name : "",
+          target: typeof goal.target === "string" ? goal.target : "",
+          actual: typeof goal.actual === "string" ? goal.actual : "",
+          rule: goal.rule === "CHILD" ? "CHILD" as const : "MOTHER" as const,
+        }];
+      })
+    : [];
+
+  return { ...stringValues, goals };
+}
+
+export function calculateX5FreedomGoal(goal: X5FreedomGoal) {
+  const target = toNumber(goal.target);
+  const actual = toNumber(goal.actual);
+  return {
+    target,
+    actual,
+    progressPercent: target ? Math.min(Math.round((actual / target) * 100), 100) : 0,
+    remaining: Math.max(target - actual, 0),
+  };
+}
+
+export function calculateX5FreedomGoalSummary(goals: X5FreedomGoal[]) {
+  let motherProtected = 0;
+  let childUsable = 0;
+  let totalTarget = 0;
+  let totalActual = 0;
+
+  for (const goal of goals) {
+    const amounts = calculateX5FreedomGoal(goal);
+    totalTarget += amounts.target;
+    totalActual += amounts.actual;
+    if (goal.rule === "CHILD") childUsable += amounts.actual;
+    else motherProtected += amounts.actual;
+  }
+
+  return {
+    motherProtected,
+    childUsable,
+    totalTarget,
+    totalActual,
+    overallProgressPercent: totalTarget
+      ? Math.min(Math.round((totalActual / totalTarget) * 100), 100)
+      : 0,
+  };
 }
 
 function toNumber(value: string) {

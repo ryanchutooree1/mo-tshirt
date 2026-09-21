@@ -5,19 +5,27 @@ import { doc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
 import {
   Banknote,
   CalendarDays,
+  ChartNoAxesColumnIncreasing,
   Clock3,
   Gauge,
   Landmark,
+  Plus,
   Save,
+  ShieldCheck,
   Sparkles,
+  Sprout,
   Target,
+  Trash2,
   WalletCards,
 } from "lucide-react";
 import { db } from "@/lib/firebase";
 import {
+  calculateX5FreedomGoal,
+  calculateX5FreedomGoalSummary,
   calculateX5FreedomPlan,
   EMPTY_X5_FREEDOM_PLAN,
   normalizeX5FreedomPlan,
+  type X5FreedomGoal,
   type X5FreedomPlan,
 } from "@/lib/x5-freedom";
 
@@ -99,6 +107,10 @@ export default function X5FreedomPlanPanel() {
   }, []);
 
   const calculations = useMemo(() => calculateX5FreedomPlan(plan), [plan]);
+  const goalSummary = useMemo(
+    () => calculateX5FreedomGoalSummary(plan.goals),
+    [plan.goals]
+  );
 
   const savePlan = useCallback(async () => {
     if (!loaded.current || !dirty || saving) return true;
@@ -141,6 +153,34 @@ export default function X5FreedomPlanPanel() {
     setPlan((current) => ({ ...current, [key]: value }));
     setDirty(true);
     setNotice("");
+  }
+
+  function addGoal() {
+    const goal: X5FreedomGoal = {
+      id: crypto.randomUUID(),
+      name: "",
+      target: "",
+      actual: "",
+      rule: "MOTHER",
+    };
+    update("goals", [...plan.goals, goal]);
+  }
+
+  function updateGoal<K extends keyof Omit<X5FreedomGoal, "id">>(
+    goalId: string,
+    key: K,
+    value: X5FreedomGoal[K]
+  ) {
+    update(
+      "goals",
+      plan.goals.map((goal) =>
+        goal.id === goalId ? { ...goal, [key]: value } : goal
+      )
+    );
+  }
+
+  function removeGoal(goalId: string) {
+    update("goals", plan.goals.filter((goal) => goal.id !== goalId));
   }
 
   const outputCards = [
@@ -210,6 +250,167 @@ export default function X5FreedomPlanPanel() {
             </div>
           </div>
         ))}
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 p-4 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h3 className="flex items-center gap-2 text-base font-bold text-slate-900">
+                <ChartNoAxesColumnIncreasing className="h-5 w-5 text-[#f0442a]" /> Freedom buckets
+              </h3>
+              <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
+                Add any goal, then enter its target and actual value. The graph updates automatically.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={addGoal}
+              className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#141921] px-4 text-xs font-bold text-white transition hover:bg-[#252c36]"
+            >
+              <Plus className="h-4 w-4" /> Add bucket
+            </button>
+          </div>
+
+          <div className="mt-5 grid gap-3 lg:grid-cols-[1fr_1fr_1.4fr]">
+            <div className="rounded-xl border border-sky-200 bg-sky-50 p-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-sky-800">
+                <ShieldCheck className="h-4 w-4" /> Mother · protected
+              </div>
+              <div className="mt-2 text-lg font-bold text-slate-950">{formatMoney(goalSummary.motherProtected)}</div>
+              <p className="mt-1 text-[11px] leading-4 text-slate-500">Stays inside the business and keeps producing.</p>
+            </div>
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-800">
+                <Sprout className="h-4 w-4" /> Child · usable
+              </div>
+              <div className="mt-2 text-lg font-bold text-slate-950">{formatMoney(goalSummary.childUsable)}</div>
+              <p className="mt-1 text-[11px] leading-4 text-slate-500">Money produced by the Mother. This is what you can use.</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">
+                <span>All buckets</span>
+                <span>{goalSummary.overallProgressPercent}%</span>
+              </div>
+              <div className="mt-3 h-3 overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className="h-full rounded-full bg-[#f0442a] transition-[width] duration-300"
+                  style={{ width: `${goalSummary.overallProgressPercent}%` }}
+                />
+              </div>
+              <div className="mt-2 flex justify-between gap-3 text-[11px] text-slate-500">
+                <span>Actual {formatMoney(goalSummary.totalActual)}</span>
+                <span>Target {formatMoney(goalSummary.totalTarget)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3 p-4 sm:p-6">
+          {plan.goals.length ? plan.goals.map((goal) => {
+            const amounts = calculateX5FreedomGoal(goal);
+            const isMother = goal.rule === "MOTHER";
+            return (
+              <div key={goal.id} className="rounded-2xl border border-slate-200 p-4">
+                <div className="grid gap-3 lg:grid-cols-[minmax(180px,1.3fr)_160px_1fr_1fr_auto] lg:items-end">
+                  <label className="grid gap-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                    Bucket name
+                    <input
+                      value={goal.name}
+                      onChange={(event) => updateGoal(goal.id, "name", event.target.value)}
+                      placeholder="e.g. Emergency fund"
+                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold normal-case tracking-normal text-slate-900 outline-none focus:border-[#f0442a] focus:ring-4 focus:ring-[#f0442a]/10"
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                    Money rule
+                    <select
+                      value={goal.rule}
+                      onChange={(event) => updateGoal(goal.id, "rule", event.target.value as X5FreedomGoal["rule"])}
+                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 outline-none focus:border-[#f0442a] focus:ring-4 focus:ring-[#f0442a]/10"
+                    >
+                      <option value="MOTHER">Mother · protect</option>
+                      <option value="CHILD">Child · usable</option>
+                    </select>
+                  </label>
+                  <label className="grid gap-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                    Actual
+                    <span className="flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 focus-within:border-[#f0442a] focus-within:ring-4 focus-within:ring-[#f0442a]/10">
+                      <span className="mr-2 text-xs text-slate-400">Rs</span>
+                      <input
+                        type="number"
+                        min="0"
+                        inputMode="decimal"
+                        value={goal.actual}
+                        onChange={(event) => updateGoal(goal.id, "actual", event.target.value)}
+                        placeholder="0"
+                        className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-normal text-slate-900 outline-none"
+                      />
+                    </span>
+                  </label>
+                  <label className="grid gap-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                    Target
+                    <span className="flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 focus-within:border-[#f0442a] focus-within:ring-4 focus-within:ring-[#f0442a]/10">
+                      <span className="mr-2 text-xs text-slate-400">Rs</span>
+                      <input
+                        type="number"
+                        min="0"
+                        inputMode="decimal"
+                        value={goal.target}
+                        onChange={(event) => updateGoal(goal.id, "target", event.target.value)}
+                        placeholder="0"
+                        className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm font-normal text-slate-900 outline-none"
+                      />
+                    </span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => removeGoal(goal.id)}
+                    aria-label={`Delete ${goal.name || "bucket"}`}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="mt-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                    <div className="flex items-center gap-2">
+                      <span className={`rounded-full px-2 py-1 font-bold ${isMother ? "bg-sky-100 text-sky-700" : "bg-emerald-100 text-emerald-700"}`}>
+                        {isMother ? "MOTHER · DO NOT USE" : "CHILD · AVAILABLE TO USE"}
+                      </span>
+                      <span className="text-slate-400">{formatMoney(amounts.remaining)} remaining</span>
+                    </div>
+                    <span className="font-bold text-slate-700">{amounts.progressPercent}%</span>
+                  </div>
+                  <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className={`h-full rounded-full transition-[width] duration-300 ${isMother ? "bg-sky-500" : "bg-emerald-500"}`}
+                      style={{ width: `${amounts.progressPercent}%` }}
+                    />
+                  </div>
+                  <div className="mt-2 flex justify-between text-[11px] text-slate-400">
+                    <span>Actual {formatMoney(amounts.actual)}</span>
+                    <span>Target {formatMoney(amounts.target)}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          }) : (
+            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-10 text-center">
+              <ChartNoAxesColumnIncreasing className="mx-auto h-8 w-8 text-slate-300" />
+              <h4 className="mt-3 text-sm font-bold text-slate-700">Create your first money bucket</h4>
+              <p className="mt-1 text-xs text-slate-400">Start with “Emergency fund,” then add its target and actual value.</p>
+              <button
+                type="button"
+                onClick={addGoal}
+                className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#141921] px-4 text-xs font-bold text-white"
+              >
+                <Plus className="h-4 w-4" /> Add first bucket
+              </button>
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="grid gap-5 xl:grid-cols-2">
