@@ -9,15 +9,16 @@ export function getWhatsAppUrl(message: string = WHATSAPP_TEXT, phone: string = 
   return `https://wa.me/${phone}?text=${text}`;
 }
 
-// Gallery images (put placeholders in /public/work)
+// High-quality, display-sized gallery copies keep the public pages fast without
+// changing the full-resolution source photos in /public/work.
 export const workImages: string[] = [
-  "/work/work-01.webp",
-  "/work/work-02.webp",
-  "/work/work-03.webp",
-  "/work/work-04.webp",
-  "/work/work-05.webp",
-  "/work/work-06.webp",
-  "/work/work-07.webp",
-  "/work/work-08.webp",
-  "/work/work-09.webp",
+  "/optimized/work-v2-01.webp",
+  "/optimized/work-v2-02.webp",
+  "/optimized/work-v2-03.webp",
+  "/optimized/work-v2-04.webp",
+  "/optimized/work-v2-05.webp",
+  "/optimized/work-v2-06.webp",
+  "/optimized/work-v2-07.webp",
+  "/optimized/work-v2-08.webp",
+  "/optimized/work-v2-09.webp",
 ];

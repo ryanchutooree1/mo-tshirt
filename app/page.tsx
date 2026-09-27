@@ -122,7 +122,7 @@ export default function HomePage() {
         <section className={styles.hero} id="top" aria-labelledby="hero-title">
           <Image
             className={styles.heroImage}
-            src="/editorial/hero-founder.png"
+            src="/optimized/hero-founder-v2.webp"
             alt="Black T-shirt with MO T-SHIRT chest print"
             fill
             priority
@@ -195,7 +195,7 @@ export default function HomePage() {
               </a>
             </div>
             <Image
-              src="/editorial/buying-flow-v2.png"
+              src="/optimized/buying-flow-v3.webp"
               alt="A custom T-shirt and design tablet, quotation clipboard, payment terminal and delivery box connected by orange arrows."
               width={1983}
               height={793}
