@@ -26,13 +26,13 @@ test("prices a website DTF placement and includes it in the quotation line", () 
     delivery: "Post Office Express Delivery (Rs 150)",
   });
 
-  assert.equal(result.lines[0].unitPrice, 565);
+  assert.equal(result.lines[0].unitPrice, 500);
   assert.equal(result.lines[0].unitCost, 350);
-  assert.equal(result.lines[0].unitProfit, 215);
+  assert.equal(result.lines[0].unitProfit, 150);
   assert.match(result.lines[0].description, /Small Front and Large Back Printing/);
-  assert.equal(result.subtotal, 6780);
+  assert.equal(result.subtotal, 6000);
   assert.equal(result.deliveryFee, 150);
-  assert.equal(result.total, 6930);
+  assert.equal(result.total, 6150);
   assert.equal(result.requiresReview, false);
 });
 
@@ -57,20 +57,38 @@ test("supports all standard front and back placement combinations", () => {
   });
 });
 
-test("applies competitive quantity discounts without using bulk pricing for short runs", () => {
+test("keeps one-side DTF T-shirts at Rs 450 for every quantity", () => {
   const garment = { garment: "T-Shirt", size: "M" };
-  const priceFor = (quantity) =>
+  const priceFor = (quantity, printPlacement = "small_front_only") =>
     getAutomaticUnitPrice({
       garment: { ...garment, quantity },
       printMethod: "DTF",
-      printPlacement: "small_front_only",
+      printPlacement,
     });
 
   assert.equal(priceFor(2), 450);
-  assert.equal(priceFor(8), 430);
-  assert.equal(priceFor(20), 405);
-  assert.equal(priceFor(40), 385);
-  assert.equal(priceFor(60), 360);
+  assert.equal(priceFor(8), 450);
+  assert.equal(priceFor(20), 450);
+  assert.equal(priceFor(40), 450);
+  assert.equal(priceFor(60), 450);
+  assert.equal(priceFor(1, "large_front_only"), 450);
+  assert.equal(priceFor(1, "small_back_only"), 450);
+  assert.equal(priceFor(1, "back_only"), 450);
+});
+
+test("keeps front-and-back DTF T-shirts at Rs 500", () => {
+  const garment = { garment: "T-Shirt", size: "M", quantity: 7 };
+  for (const printPlacement of [
+    "small_front_back",
+    "small_front_large_back",
+    "large_front_small_back",
+    "front_back",
+  ]) {
+    assert.equal(
+      getAutomaticUnitPrice({ garment, printMethod: "DTF", printPlacement }),
+      500
+    );
+  }
 });
 
 test("leaves unsupported products and placements for manual review", () => {
@@ -94,8 +112,8 @@ test("backfills an older request with no saved size from its known placement", (
     fallbackPrintPlacement: "small_front_only",
   });
 
-  assert.equal(result.lines[0].unitPrice, 405);
-  assert.equal(result.subtotal, 8505);
+  assert.equal(result.lines[0].unitPrice, 450);
+  assert.equal(result.subtotal, 9450);
   assert.equal(result.requiresReview, false);
 });
 
@@ -127,8 +145,8 @@ test("prices an older MO AI order using reviewed defaults", () => {
     fallbackPrintPlacement: "large_front_only",
   });
 
-  assert.equal(result.lines[0].unitPrice, 525);
-  assert.equal(result.total, 1050);
+  assert.equal(result.lines[0].unitPrice, 450);
+  assert.equal(result.total, 900);
   assert.equal(result.requiresReview, false);
 });
 
@@ -159,7 +177,7 @@ test("prices the display labels submitted by both design studios", () => {
 
 test("fills unspecified standard garments with a clearly labelled placement estimate", () => {
   const result = buildAutomaticQuotePricing({ garments: [{ garment: "T-Shirt", size: "M", quantity: 2 }], printMethod: "Not sure" });
-  assert.equal(result.lines[0].unitPrice, 525);
+  assert.equal(result.lines[0].unitPrice, 450);
   assert.match(result.lines[0].description, /Estimated placement/);
 });
 

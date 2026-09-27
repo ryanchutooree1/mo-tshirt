@@ -98,6 +98,15 @@ const PRINT_OPTION_ADD = {
   FRONT_LARGE_BACK_LARGE: 225,
 };
 
+const TSHIRT_DTF_PLACEMENT_PRICES = {
+  FRONT_SMALL: 450,
+  FRONT_LARGE: 450,
+  FRONT_SMALL_BACK_SMALL: 500,
+  FRONT_SMALL_BACK_LARGE: 500,
+  FRONT_LARGE_BACK_SMALL: 500,
+  FRONT_LARGE_BACK_LARGE: 500,
+};
+
 const QUANTITY_PRICE_FACTORS = [
   { min: 50, factor: 0.8 },
   { min: 30, factor: 0.85 },
@@ -157,6 +166,10 @@ function getPriceBookPrice({ itemType, sizeBand, method, printOption, quantity =
   const sizeKey = SIZE_BAND_KEYS[sizeBand] || SIZE_BAND_KEYS[`${sizeBand}`] || "XS_XL";
   const methodKey = METHOD_KEYS[method] || METHOD_KEYS[`${method}`] || "SCREEN";
   const printKey = printOption || "FRONT_SMALL";
+  if (itemKey === "TSHIRT" && methodKey === "DTF") {
+    const fixedPlacementPrice = TSHIRT_DTF_PLACEMENT_PRICES[printKey];
+    if (fixedPlacementPrice) return fixedPlacementPrice;
+  }
   const retailPrice = (
     PRICE_BOOK?.[itemKey]?.[sizeKey]?.[methodKey]?.[printKey] ||
     0
@@ -337,6 +350,7 @@ module.exports = {
   DTF_PACKAGE_FRONT,
   DTF_PACKAGE_FRONT_BACK,
   QUANTITY_PRICE_FACTORS,
+  TSHIRT_DTF_PLACEMENT_PRICES,
   roundUpToNearest5,
   getPrintOptionConfig,
   getBlankOptions,

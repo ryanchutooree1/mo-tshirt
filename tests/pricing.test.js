@@ -1,6 +1,21 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { computeQuote, getVinylCosts } = require("../src/lib/pricing");
+const { computeQuote, getPriceBookPrice, getVinylCosts } = require("../src/lib/pricing");
+
+test("DTF T-shirts use the fixed one-side and two-side prices", () => {
+  for (const printOption of ["FRONT_SMALL", "FRONT_LARGE"]) {
+    assert.equal(
+      getPriceBookPrice({ itemType: "T-Shirt", sizeBand: "XS-XL", method: "DTF", printOption, quantity: 60 }),
+      450
+    );
+  }
+  for (const printOption of ["FRONT_SMALL_BACK_LARGE", "FRONT_LARGE_BACK_LARGE"]) {
+    assert.equal(
+      getPriceBookPrice({ itemType: "T-Shirt", sizeBand: "XS-XL", method: "DTF", printOption, quantity: 60 }),
+      500
+    );
+  }
+});
 
 test("vinyl price book mode uses current retail pricing and excludes overhead from cost", () => {
   const vinyl = getVinylCosts({ rollPrice: 469, wasteFactor: 1.2 });
