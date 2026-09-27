@@ -45,7 +45,7 @@ export type HomeCalendarEvent = {
   type: string;
   who: string;
   repeat: string;
-  reminder: string;
+  reminders: string[];
   status: HomeEventStatus;
   notes: string;
 };
@@ -138,7 +138,7 @@ export function createBlankHomeEvent(): HomeCalendarEvent {
     type: "Reminder",
     who: "Both",
     repeat: "Does not repeat",
-    reminder: "1 day before",
+    reminders: ["1 day before"],
     status: "planned",
     notes: "",
   };
@@ -186,18 +186,36 @@ export function normalizeHomeManagementData(value: unknown): HomeManagementData 
       recurringMonths: stringValue(item.recurringMonths),
       notes: stringValue(item.notes),
     })),
-    events: recordList(source.events).map((item) => ({
-      id: stringValue(item.id) || newHomeRecordId("event"),
-      title: stringValue(item.title) || "Untitled event",
-      date: stringValue(item.date),
-      time: stringValue(item.time),
-      type: stringValue(item.type) || "Reminder",
-      who: stringValue(item.who) || "Both",
-      repeat: stringValue(item.repeat) || "Does not repeat",
-      reminder: stringValue(item.reminder) || "1 day before",
-      status: enumValue(item.status, ["planned", "done", "cancelled"] as const, "planned"),
-      notes: stringValue(item.notes),
-    })),
+    events: recordList(source.events).map((item) => {
+      const reminderValues = item.reminders;
+      const hasSavedReminders = Array.isArray(reminderValues);
+      const savedReminders = hasSavedReminders
+        ? reminderValues.filter((reminder): reminder is string => typeof reminder === "string" && reminder !== "No reminder")
+        : [];
+      const legacyReminder = stringValue(item.reminder);
+      const reminders = [...new Set<string>(
+        hasSavedReminders
+          ? savedReminders
+          : legacyReminder && legacyReminder !== "No reminder"
+            ? [legacyReminder]
+            : legacyReminder === "No reminder"
+              ? []
+              : ["1 day before"],
+      )];
+
+      return {
+        id: stringValue(item.id) || newHomeRecordId("event"),
+        title: stringValue(item.title) || "Untitled event",
+        date: stringValue(item.date),
+        time: stringValue(item.time),
+        type: stringValue(item.type) || "Reminder",
+        who: stringValue(item.who) || "Both",
+        repeat: stringValue(item.repeat) || "Does not repeat",
+        reminders,
+        status: enumValue(item.status, ["planned", "done", "cancelled"] as const, "planned"),
+        notes: stringValue(item.notes),
+      };
+    }),
     documents: recordList(source.documents).map((item) => ({
       id: stringValue(item.id) || newHomeRecordId("document"),
       title: stringValue(item.title) || "Untitled document",

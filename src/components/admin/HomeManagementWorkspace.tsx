@@ -119,6 +119,14 @@ const HOME_SHORTCUTS = [
   { href: "/admin/house-inventory", label: "House Inventory", note: "Stock and shopping", icon: Gauge, tone: "bg-violet-50 text-violet-700" },
 ];
 
+const REMINDER_OPTIONS = [
+  "At event time",
+  "1 hour before",
+  "1 day before",
+  "3 days before",
+  "1 week before",
+];
+
 function mauritiusTodayKey() {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Indian/Mauritius",
@@ -798,7 +806,7 @@ function CalendarWorkspace({ events, update, save, remove, onAdd }: { events: Ho
   return (
     <div className="grid gap-4 2xl:grid-cols-2">
       {events.map((event) => (
-        <RecordCard key={event.id} icon={<CalendarDays />} eyebrow={event.type} title={event.title} meta={`${friendlyDate(event.date)}${event.time ? ` · ${event.time}` : ""}`} status={event.status} summaryItems={[event.who, event.repeat, event.reminder]} onDelete={() => remove(event.id, event.title)}>
+        <RecordCard key={event.id} icon={<CalendarDays />} eyebrow={event.type} title={event.title} meta={`${friendlyDate(event.date)}${event.time ? ` · ${event.time}` : ""}`} status={event.status} summaryItems={[event.who, event.repeat, event.reminders.length ? `${event.reminders.length} reminder${event.reminders.length === 1 ? "" : "s"}` : "No reminder"]} onDelete={() => remove(event.id, event.title)}>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Event"><input value={event.title} onChange={(input) => update(event.id, { title: input.target.value })} onBlur={save} /></Field>
             <Field label="Type"><select value={event.type} onChange={(input) => update(event.id, { type: input.target.value })} onBlur={save}>{["Reminder", "Appointment", "Delivery", "Visitor", "Collection", "Birthday", "Home task", "Other"].map((value) => <option key={value}>{value}</option>)}</select></Field>
@@ -807,12 +815,71 @@ function CalendarWorkspace({ events, update, save, remove, onAdd }: { events: Ho
             <Field label="Who"><select value={event.who} onChange={(input) => update(event.id, { who: input.target.value })} onBlur={save}><option>Both</option><option>Ryan</option><option>Tanvi</option><option>Family</option></select></Field>
             <Field label="Status"><select value={event.status} onChange={(input) => update(event.id, { status: input.target.value as HomeCalendarEvent["status"] })} onBlur={save}><option value="planned">Planned</option><option value="done">Done</option><option value="cancelled">Cancelled</option></select></Field>
             <Field label="Repeat"><select value={event.repeat} onChange={(input) => update(event.id, { repeat: input.target.value })} onBlur={save}>{["Does not repeat", "Daily", "Weekly", "Monthly", "Yearly"].map((value) => <option key={value}>{value}</option>)}</select></Field>
-            <Field label="Reminder"><select value={event.reminder} onChange={(input) => update(event.id, { reminder: input.target.value })} onBlur={save}>{["No reminder", "At event time", "1 hour before", "1 day before", "3 days before", "1 week before"].map((value) => <option key={value}>{value}</option>)}</select></Field>
+            <ReminderFields event={event} update={update} save={save} />
           </div>
           <Notes value={event.notes} onChange={(value) => update(event.id, { notes: value })} onBlur={save} />
         </RecordCard>
       ))}
     </div>
+  );
+}
+
+function ReminderFields({ event, update, save }: { event: HomeCalendarEvent; update: (id: string, patch: Partial<HomeCalendarEvent>) => void; save: () => void }) {
+  const displayedReminders = event.reminders.length ? event.reminders : ["No reminder"];
+
+  function changeReminder(index: number, value: string) {
+    if (value === "No reminder") {
+      update(event.id, { reminders: [] });
+      return;
+    }
+    const next = [...event.reminders];
+    next[index] = value;
+    update(event.id, { reminders: [...new Set(next)] });
+  }
+
+  function addReminder() {
+    const nextReminder = REMINDER_OPTIONS.find((option) => !event.reminders.includes(option));
+    if (!nextReminder) return;
+    update(event.id, { reminders: [...event.reminders, nextReminder] });
+    save();
+  }
+
+  function removeReminder(index: number) {
+    update(event.id, { reminders: event.reminders.filter((_, reminderIndex) => reminderIndex !== index) });
+    save();
+  }
+
+  return (
+    <fieldset className="rounded-xl border border-slate-200 bg-white p-3 sm:col-span-2">
+      <legend className="px-1 text-xs font-black uppercase tracking-wide text-slate-500">Reminders</legend>
+      <div className="grid gap-2 sm:grid-cols-3">
+        {displayedReminders.map((reminder, index) => (
+          <div key={`${reminder}-${index}`} className="flex items-center gap-2">
+            <select
+              value={reminder}
+              aria-label={`Reminder ${index + 1}`}
+              onChange={(input) => changeReminder(index, input.target.value)}
+              onBlur={save}
+              className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+            >
+              <option value="No reminder">No reminder</option>
+              {REMINDER_OPTIONS.map((value) => <option key={value} value={value} disabled={value !== reminder && event.reminders.includes(value)}>{value}</option>)}
+            </select>
+            {event.reminders.length > 0 && (
+              <button type="button" onClick={() => removeReminder(index)} aria-label={`Remove reminder ${index + 1}`} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-400 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600">
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-medium normal-case tracking-normal text-slate-400">Add multiple alerts for the same event.</p>
+        <button type="button" onClick={addReminder} disabled={event.reminders.length >= REMINDER_OPTIONS.length} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-3 py-2 text-xs font-black normal-case tracking-normal text-indigo-700 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50">
+          <Plus className="h-3.5 w-3.5" /> Add reminder
+        </button>
+      </div>
+    </fieldset>
   );
 }
 
