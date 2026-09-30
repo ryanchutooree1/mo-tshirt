@@ -104,7 +104,7 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
   },
   {
     path: "/admin/x5-execution",
-    label: "X5 Execution",
+    label: "X5 Aura Farming",
     description: "Move ideas through execution, verification, and reusable learning.",
     group: "Sales",
   },

@@ -22,7 +22,7 @@ test("registered nested routes resolve to their owning module", () => {
   assert.equal(resolveAdminPagePath("/admin/partners/example"), "/admin/partners");
 });
 
-test("X5 Execution is a registered permission-scoped admin page", () => {
+test("X5 Aura Farming is a registered permission-scoped admin page", () => {
   assert.equal(resolveAdminPagePath("/admin/x5-execution"), "/admin/x5-execution");
   assert.equal(
     hasAdminPageAccess(["/admin/x5-execution"], "/admin/x5-execution", {
@@ -32,7 +32,7 @@ test("X5 Execution is a registered permission-scoped admin page", () => {
   );
   assert.equal(
     ADMIN_PAGE_OPTIONS.find((option) => option.path === "/admin/x5-execution")?.label,
-    "X5 Execution"
+    "X5 Aura Farming"
   );
 });
 

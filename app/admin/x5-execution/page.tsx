@@ -364,7 +364,7 @@ export default function X5ExecutionPage() {
         isSaving={saving}
         onSave={saveProject}
         title="Save this execution project?"
-        message="Your idea, outcome, notes, or results changed. Save them before leaving X5 Execution."
+        message="Your idea, outcome, notes, or results changed. Save them before leaving X5 Aura Farming."
       />
       <div className="mx-auto max-w-[1500px] space-y-5">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -373,7 +373,7 @@ export default function X5ExecutionPage() {
               <Sparkles className="h-4 w-4" /> Idea to verified result
             </div>
             <h1 className="mt-2 text-2xl font-bold tracking-[-0.04em] text-slate-950 sm:text-3xl">
-              X5 Execution
+              X5 Aura Farming
             </h1>
             <p data-admin-description className="mt-1 text-sm text-slate-500">
               Turn every idea into one clear execution project with only the actions Ryan needs to handle.
@@ -395,7 +395,7 @@ export default function X5ExecutionPage() {
           </div> : null}
         </header>
 
-        <nav aria-label="X5 Execution workspaces" className="inline-flex w-full gap-1 rounded-2xl border border-slate-200 bg-white p-1 sm:w-auto">
+        <nav aria-label="X5 Aura Farming workspaces" className="inline-flex w-full gap-1 rounded-2xl border border-slate-200 bg-white p-1 sm:w-auto">
           <button
             type="button"
             onClick={() => void openWorkspace("execution")}
