@@ -24,7 +24,9 @@
     "test:ai-assistant": "node --no-warnings --test tests/ai-assistant.test.mjs",
     "test:pricing": "node --test tests/pricing.test.js tests/design-studio-pricing.test.js",
     "postbuild": "next-sitemap",
-    "test:admin-workbench": "node --test tests/admin-workbench.test.cjs tests/admin-order-completion.test.cjs"
+    "test:admin-workbench": "node --test tests/admin-workbench.test.cjs tests/admin-order-completion.test.cjs",
+    "test:aura": "node --test tests/aura.test.mjs tests/x5-execution.test.mjs tests/x5-freedom.test.mjs tests/admin-access.test.mjs",
+    "test:aura-ui": "node tests/aura-ui.test.cjs"
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",
@@ -54,12 +56,14 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^22",
     "@types/qrcode.react": "^1.0.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
+    "jsdom": "^30.1.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

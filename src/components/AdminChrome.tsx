@@ -911,7 +911,7 @@ export default function AdminChrome({
         ) : null}
 
         <div className="min-w-0">
-          <div className={`${pathname === "/admin" || pathname === "/admin/workspace" ? "" : "admin-page-shell admin-minimal p-3 sm:p-5 lg:p-6"} min-h-[calc(100dvh-4rem)]`}>
+          <div className={`${pathname === "/admin" || pathname === "/admin/workspace" || pathname === "/admin/x5-execution" ? "" : "admin-page-shell admin-minimal p-3 sm:p-5 lg:p-6"} min-h-[calc(100dvh-4rem)]`}>
             {children}
           </div>
         </div>
