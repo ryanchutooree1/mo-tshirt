@@ -206,7 +206,7 @@ export default function PrintJobWorkspace({ requestedQuoteId, openSetup = false 
   return <div className={`${styles.workspace} ${styles.simpleWorkspace}`} data-theme={theme}>
     <div hidden={focusView || setupOpen}>
       <header className={styles.header}><div><p className={styles.eyebrow}>MO T-SHIRT · QUOTATIONS</p><h1>Quotes & invoices<span>.</span></h1><p>Choose the design. Confirm price, check payment, send to production.</p></div><div className={styles.headerActions}>{data?.canInbox && <button className={styles.secondary} onClick={() => void checkEmail()} disabled={checking || panelBusy}><Mail size={16} />{checking ? "Checking…" : "Check email"}</button>}<button className={styles.primary} onClick={() => openEditor("quote")} disabled={!data?.canQuotes || panelBusy}><Plus size={17} />New quotation</button></div></header>
-      {(error || data?.warnings?.length) && <div className={styles.warning} role="alert"><CircleAlert size={17} /><span>{error || data?.warnings.join(" ")}</span><button onClick={() => void refresh()}>Retry</button></div>}
+      {Boolean(error || data?.warnings?.length) && <div className={styles.warning} role="alert"><CircleAlert size={17} /><span>{error || data?.warnings.join(" ")}</span><button onClick={() => void refresh()}>Retry</button></div>}
       {notice && <p className={styles.notice} role="status">{notice}</p>}
       <div className={styles.simpleDesk}>
         <aside className={`${styles.clientQueue} ${selected ? styles.clientQueueSelected : ""}`} aria-label="Client design list">
