@@ -2014,6 +2014,11 @@ export default function AuraWorkspace() {
                 </button>
               ))}
             </div>
+            <Link className={styles.earningsLink} href="/admin/x5-execution/ai-earnings" aria-label="AI Earnings">
+              <BriefcaseBusiness size={14} />
+              <span>AI Earnings</span>
+              <ArrowUpRight size={13} />
+            </Link>
             <Link href="/admin/x5-execution/saved-work">
               <Archive size={14} />
               <span>Earlier saved work</span>

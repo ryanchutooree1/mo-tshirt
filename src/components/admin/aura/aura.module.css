@@ -2869,3 +2869,18 @@
     font-size: 13px;
   }
 }
+
+/* Keep the personal earnings entry point discoverable on phone layouts. */
+.tabs > a.earningsLink {
+  display: flex;
+  color: var(--gold);
+  white-space: nowrap;
+}
+.tabs > a.earningsLink > span {
+  display: inline;
+}
+@media (max-width: 600px) {
+  .tabs { flex-wrap: wrap; }
+  .tabs > div { width: 100%; justify-content: space-between; }
+  .tabs > a.earningsLink { padding: 0 0 14px; font-size: 11px; }
+}

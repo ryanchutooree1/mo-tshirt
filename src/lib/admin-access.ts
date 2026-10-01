@@ -549,6 +549,7 @@ export function resolveAdminPagePath(pathname: string) {
 }
 
 export function resolveAdminApiPermission(pathname: string) {
+  if (pathname === "/api/admin/ai-earnings" || pathname.startsWith("/api/admin/ai-earnings/")) return "/admin/x5-execution" as AdminPagePath;
   if (pathname === "/api/admin/aura" || pathname.startsWith("/api/admin/aura/")) return "/admin/x5-execution" as AdminPagePath;
   if (pathname === "/api/admin/whatsapp" || pathname.startsWith("/api/admin/whatsapp/")) return "/admin/whatsapp" as AdminPagePath;
   if (pathname === "/api/admin/inbox" || pathname.startsWith("/api/admin/inbox/")) return "/admin/inbox" as AdminPagePath;
