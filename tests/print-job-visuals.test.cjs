@@ -102,3 +102,28 @@ test('concise garment summaries use structured facts, collapse repeated products
 test('malformed sources safely produce empty collections', () => {
   for (const value of [undefined, null, [], 'quote', { attachments: [null, 9, 'file'], designBrief: [] }]) assert.deepEqual(visuals(value), { mockups: [], artworks: [] });
 });
+
+test('saved variants pair original first and transparent second without changing primary consumers', () => {
+  const quote = { attachments: [
+    image('/back-clean.png', { side: 'back', originalUrl: '/back-source.jpg', originalFilename: 'back-source.jpg', originalContentType: 'image/jpeg', backgroundRemovalMethod: 'ai' }),
+    image('/front-clean.png', { side: 'front', originalUrl: '/front-source.png', originalFilename: 'front-source.png', originalContentType: 'image/png', backgroundRemovalMethod: 'solid-color' }),
+  ] };
+  const before = JSON.stringify(quote), result = visuals(quote);
+  assert.deepEqual(result.artworks.map(file => [file.side, file.url, file.processed.url, file.processed.transparent]), [
+    ['front', '/front-source.png', '/front-clean.png', true], ['back', '/back-source.jpg', '/back-clean.png', true],
+  ]);
+  assert.equal(JSON.stringify(quote), before);
+});
+
+test('unrelated artworks and mockups never become original/transparent variant pairs', () => {
+  const result = visuals({ attachments: [image('/bird-front.png', { side: 'front' }), image('/bird-with-text-back.png', { side: 'back' }), image('/shirt-new.png', { role: 'final-mockup', originalUrl: '/shirt-old.png', backgroundRemovalMethod: 'ai' })] });
+  assert.ok(result.artworks.every(file => !file.processed));
+  assert.equal(result.mockups[0].url, '/shirt-new.png'); assert.equal(result.mockups[0].processed, undefined);
+});
+
+test('processed previews require independently valid distinct URLs and transparent provenance', () => {
+  const base = { originalUrl: '/source.png', originalFilename: 'source.png', originalContentType: 'image/png' };
+  for (const method of ['ai', 'solid-color', 'already-transparent']) assert.equal(visuals({ attachment: image('/derived.png', { ...base, backgroundRemovalMethod: method }) }).artworks[0].processed.transparent, true);
+  for (const fields of [{}, { backgroundRemovedAt: '2026-01-01' }, { backgroundRemovalMethod: 'unknown' }]) assert.equal(visuals({ attachment: image('/derived.png', { ...base, ...fields }) }).artworks[0].processed.transparent, false);
+  for (const file of [image('/source.png', base), image('javascript:alert(1)', base), image('/derived.pdf', { ...base, contentType: 'application/pdf' }), image('/derived.png', { ...base, originalUrl: '/source.pdf', originalFilename: 'source.pdf', originalContentType: 'application/pdf' })]) assert.equal(visuals({ attachment: file }).artworks[0].processed, undefined);
+});

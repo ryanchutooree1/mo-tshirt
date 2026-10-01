@@ -214,11 +214,11 @@ function addEnquiry() { enquiries = [{ id: "synthetic-intake", subject: "Synthet
     await openJob("Delta Confirmed"); assert.equal(handoff().dataset.quoteId, "delta");
     assert.equal(Boolean(screen.queryByRole("textbox", { name: "Search jobs" })), false);
     await user.click(within(overview()).getByRole("button", { name: "Client list" }));
-    assert.equal(screen.getByRole("textbox", { name: "Search jobs" }).value, "ORDER-DELTA"); assert.deepEqual(rowNames(), ["Delta Confirmed"]);
+    await waitFor(() => assert.equal(screen.getByRole("textbox", { name: "Search jobs" }).value, "ORDER-DELTA")); assert.deepEqual(rowNames(), ["Delta Confirmed"]);
     await user.fill(search, "No-such-client"); assert.ok(screen.getByRole("heading", { name: "No matching clients" }));
     await user.fill(search, ""); await status("completed"); assert.deepEqual(rowNames(), ["Golf Completed"]);
     await openJob("Golf Completed"); await user.click(within(overview()).getByRole("button", { name: "Client list" }));
-    assert.equal(screen.getByRole("combobox", { name: "Job status" }).value, "completed"); assert.deepEqual(rowNames(), ["Golf Completed"]);
+    await waitFor(() => assert.equal(screen.getByRole("combobox", { name: "Job status" }).value, "completed")); assert.deepEqual(rowNames(), ["Golf Completed"]);
   });
 
   await test("client list displays saved mockups and print artwork; selected design shows front and back", async () => {
@@ -232,13 +232,27 @@ function addEnquiry() { enquiries = [{ id: "synthetic-intake", subject: "Synthet
     assert.ok(within(overview()).getByRole("heading", { name: "Finished product" }));
     assert.ok(within(overview()).getByRole("heading", { name: "Logos & print artwork" }));
     assert.equal(within(overview()).getAllByRole("img").length, 3);
-    const gallery = overview().querySelector(".visualOverview");
-    assert.deepEqual(Array.from(gallery.children).map(node => node.className), ["garmentGallery", "logoGallery"]);
-    assert.equal(gallery.querySelector(".garmentGallery").querySelectorAll("img").length, 2);
-    assert.equal(gallery.querySelector(".logoGallery").querySelectorAll("img").length, 1);
     assert.equal(handoff().dataset.quoteId, "echo");
     assert.equal(Boolean(screen.queryByRole("region", { name: "Synthetic quote editor" })), false);
     assert.ok(document.activeElement === overview()); assert.equal(patches().length, 0);
+  });
+
+  await test("same-asset artwork variants render transparent left and original right below finished garments", async () => {
+    const attachment = quoteRecords.find(entry => entry.id === "echo").data.attachments[2];
+    Object.assign(attachment, { originalUrl: "https://synthetic.example.test/original-logo.jpg", originalFilename: "Original logo.jpg", originalContentType: "image/jpeg", backgroundRemovalMethod: "ai" });
+    await mount();
+    const row = screen.getByRole("button", { name: "Open job for Echo Production, In production" });
+    const pair = within(row).getByRole("group", { name: "Front artwork versions" });
+    assert.deepEqual(within(pair).getAllByRole("img").map(image => [image.alt, image.getAttribute("src")]), [["Print artwork · Front · Transparent", "https://synthetic.example.test/synthetic-logo.png"], ["Print artwork · Front · Original", "https://synthetic.example.test/original-logo.jpg"]]);
+    await openJob("Echo Production");
+    const detailPair = within(overview()).getByRole("group", { name: "Front artwork versions" });
+    assert.deepEqual(within(detailPair).getAllByRole("img").map(image => image.alt), ["Print artwork · Front · Transparent", "Print artwork · Front · Original"]);
+    assert.equal(within(overview()).getAllByRole("img", { name: /^Finished product/ }).length, 2);
+    const gallery = overview().querySelector(".visualOverview");
+    const sections = Array.from(gallery.children);
+    assert.ok(sections.indexOf(gallery.querySelector(".finishedProducts")) < sections.indexOf(gallery.querySelector(".printArtworks")));
+    assert.equal(gallery.querySelector(".garmentGallery"), null);
+    assert.equal(patches().length, 0);
   });
 
   await test("missing, non-image and failed image previews remain readable and recover after refresh", async () => {
