@@ -9,7 +9,6 @@ import { type RequestSource } from "@/lib/quotation-inbox";
 import type { EmailIntake } from "@/lib/email-intake-model";
 import EmailEnquiryDetails from "@/components/admin/EmailEnquiryDetails";
 import TanviHandoffPanel, { HandoffSettingsPanel } from "./TanviHandoffPanel";
-import type { PrintJobVisual } from "@/lib/print-job-visuals";
 import JobOrderDetails, { JobListSummary } from "./JobOrderDetails";
 import styles from "./print-jobs.module.css";
 
@@ -249,14 +248,12 @@ export default function PrintJobWorkspace({ requestedQuoteId, openSetup = false 
 
 function JobVisuals({item,compact=false}:{item:PrintJob;compact?:boolean}) {
   const mockups=item.mockups||[];const artworks=item.artworks||[];
-  const renderImage=(visual:PrintJobVisual,index:number)=>{
+  const renderImage=(visual:{url:string;name:string;side:string;kind:string},index:number)=>{
     const label=visual.side==="front"?"Front":visual.side==="back"?"Back":visual.name||"Preview";
-    const figure=(url:string,variant?:string)=><figure key={url} data-kind={visual.kind}><VisualImage url={url} label={`${visual.kind==="mockup"?"Finished product":"Print artwork"} · ${label}${variant?` · ${variant}`:""}`}/>{(!compact||variant)&&<figcaption>{compact?variant:[label,variant].filter(Boolean).join(" · ")}</figcaption>}</figure>;
-    // Variants are paired only by saved provenance, never by adjacent thumbnails.
-    return visual.processed ? <span key={`${visual.url}-${index}`} className={styles.artworkPair} role="group" aria-label={`${label} artwork versions`}>{figure(visual.url,"Original")}{figure(visual.processed.url,visual.processed.transparent?"Transparent":"Processed")}</span> : figure(visual.url);
+    return <figure key={`${visual.url}-${index}`} data-kind={visual.kind}><VisualImage url={visual.url} label={`${visual.kind==="mockup"?"Finished product":"Print artwork"} · ${label}`}/>{!compact&&<figcaption>{label}</figcaption>}</figure>;
   };
   if(compact)return <span className={styles.queueVisuals}><span className={styles.queueMockups}>{mockups.length?mockups.slice(0,2).map(renderImage):<span className={styles.visualPlaceholder}><FileImage size={19}/><span>Mockup not saved</span></span>}</span>{artworks.length>0&&<span className={styles.queueArtworks}>{artworks.slice(0,4).map(renderImage)}{artworks.length>4&&<span>+{artworks.length-4}</span>}</span>}</span>;
-  return <div className={styles.visualOverview}><div className={styles.visualSectionTitle}><h3>Finished product</h3><span>Client’s saved design</span></div><div className={styles.finishedProducts}>{mockups.length?mockups.map(renderImage):<div className={styles.visualPlaceholder}><FileImage size={28}/><p>No finished-product mockup is saved for this request.</p></div>}</div><div className={styles.visualSectionTitle}><h3>Logos & print artwork</h3><span>{artworks.length} artwork{artworks.length===1?"":"s"}</span></div><div className={styles.printArtworks}>{artworks.length?artworks.map(renderImage):<p className={styles.help}>{item.artwork.length?"The supplied files have no image preview. Open them in the files section below.":"No print artwork attached yet."}</p>}</div></div>;
+  return <div className={styles.visualOverview}><div className={styles.garmentGallery}><div className={styles.visualSectionTitle}><h3>Finished product</h3><span>Client’s saved design</span></div><div className={styles.finishedProducts}>{mockups.length?mockups.map(renderImage):<div className={styles.visualPlaceholder}><FileImage size={28}/><p>No finished-product mockup is saved for this request.</p></div>}</div></div><div className={styles.logoGallery}><div className={styles.visualSectionTitle}><h3>Logos & print artwork</h3><span>{artworks.length} image{artworks.length===1?"":"s"}</span></div><div className={styles.printArtworks}>{artworks.length?artworks.map(renderImage):<p className={styles.help}>{item.artwork.length?"The supplied files have no image preview. Open them in the files section below.":"No print artwork attached yet."}</p>}</div></div></div>;
 }
 function VisualImage({url,label}:{url:string;label:string}) {
   const [failed,setFailed]=useState(false);
