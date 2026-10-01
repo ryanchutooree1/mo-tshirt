@@ -73,13 +73,19 @@ export async function syncEmailIntake(options: { maxAnalyses?: number } = {}) {
           const status: EmailIntake["status"] = analysis.classification === "other" ? "ignored" : analysis.classification === "uncertain" ? "review" : analysis.missing.length ? "needs_details" : "ready";
           const record: EmailIntake = { ...analysis, id, threadId, version, subject: messages[0].subject, email: sender, lastMessage: { ...lastMessage, text: (lastMessage.text || "").slice(0, 20000) }, status, updatedAtIso: new Date().toISOString(), lastReplyAt: new Date(lastMessage.receivedAtMs || Date.now()).toISOString(), originalText, attachmentNames };
           await runTransaction(db, async tx => {
-            const current = (await tx.get(caseRef(id))).data() as EmailIntake | undefined;
+            const current = (await tx.get(caseRef(id))).data() as (EmailIntake & { printJobWorkflow?: unknown; printJobWorkflowHistory?: unknown }) | undefined;
+            // Staff workflow is independent of inbox analysis. Preserve the latest
+            // transaction snapshot, and carry it forward when an enquiry becomes a quote.
+            const workflowMetadata = {
+              ...(current?.printJobWorkflow ? { printJobWorkflow: current.printJobWorkflow } : {}),
+              ...(Array.isArray(current?.printJobWorkflowHistory) ? { printJobWorkflowHistory: current.printJobWorkflowHistory } : {}),
+            };
             const quoteRef = doc(db, "quotes", id);
             const existingQuote = await tx.get(quoteRef);
             if (existingQuote.exists()) { record.status = "ready"; record.quoteId = id; }
             else if (status === "ready") {
               const source = { ...lastMessage, text: originalText, attachmentNames };
-              tx.set(quoteRef, { ...buildEmailQuoteRecord(source, analysis.draft, "email-intake"), createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+              tx.set(quoteRef, { ...buildEmailQuoteRecord(source, analysis.draft, "email-intake"), ...workflowMetadata, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
               record.quoteId = id;
             }
             if (current?.sentVersion === version && current.sendState) {
@@ -88,7 +94,7 @@ export async function syncEmailIntake(options: { maxAnalyses?: number } = {}) {
               if (current.outboundMessageId) record.outboundMessageId = current.outboundMessageId;
               if (record.status === "needs_details" && current.sendState === "sent") record.status = "waiting";
             }
-            tx.set(caseRef(id), clean(record));
+            tx.set(caseRef(id), clean({ ...record, ...workflowMetadata }));
           });
           processed++;
         } catch (error) {

@@ -32,7 +32,15 @@ export async function POST(request: Request) {
     const record = buildEmailQuoteRecord(message, draft, session.userId);
     const created = await runTransaction(db, async transaction => {
       if ((await transaction.get(ref)).exists()) return false;
-      transaction.set(ref, { ...record, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+      const intakeRef = doc(db, "emailIntake", quoteId);
+      const intakeSnapshot = await transaction.get(intakeRef);
+      const intake = intakeSnapshot.exists() ? intakeSnapshot.data() : undefined;
+      const workflowMetadata = {
+        ...(intake?.printJobWorkflow ? { printJobWorkflow: intake.printJobWorkflow } : {}),
+        ...(Array.isArray(intake?.printJobWorkflowHistory) ? { printJobWorkflowHistory: intake.printJobWorkflowHistory } : {}),
+      };
+      transaction.set(ref, { ...record, ...workflowMetadata, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+      if (intake) transaction.set(intakeRef, { quoteId, status: "ready" }, { merge: true });
       return true;
     });
     return json({ quoteId, existing: !created });
