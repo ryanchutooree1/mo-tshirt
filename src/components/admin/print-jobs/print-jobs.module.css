@@ -16,3 +16,5 @@
 /* Compact queues retain the next action instead of hiding it on smaller screens. */
 @container printdesk (max-width:1120px){.row>.nextStep{display:flex;grid-column:1/-1;grid-row:2;flex-direction:row;align-items:baseline;gap:9px;padding-left:43px}.row>.nextStep>strong{font-size:10px}.row>.nextStep>span{font-size:9px;-webkit-line-clamp:1}.row>.customer{grid-row:1}.row>.rowStage{grid-row:1;grid-column:2}.row>.value{grid-row:1;grid-column:3}}
 @media(max-width:650px){.row>.rowStage{grid-row:2;grid-column:1}.row>.value{grid-row:1/3;grid-column:2}.row>.nextStep{grid-row:3;padding-left:43px;align-items:flex-start;flex-wrap:wrap;gap:3px 9px}.row>.nextStep>span{font-size:8px}}
+@container printdesk (max-width:800px){.rail{flex-wrap:wrap;overflow:visible}.rail>.navGroup{display:contents}.rail>button,.navGroup>button{flex-shrink:0}}
+@media(max-width:650px){.rail{flex-wrap:nowrap;overflow-x:auto;padding-bottom:7px}.rail>.navGroup{display:contents}}
