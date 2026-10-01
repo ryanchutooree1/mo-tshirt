@@ -8,7 +8,7 @@ function load(relative) {
   const filename = path.resolve(__dirname, relative), m = new Module(filename, module);
   m.filename = filename; m.paths = module.paths;
   const original = m.require.bind(m);
-  m.require = name => name === './quotation-inbox' ? load('../src/lib/quotation-inbox.ts') : original(name);
+  m.require = name => name === './quotation-inbox' ? load('../src/lib/quotation-inbox.ts') : name === './print-job-visuals' ? load('../src/lib/print-job-visuals.ts') : original(name);
   m._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText, filename);
   return m.exports;
 }
@@ -66,7 +66,7 @@ test('pending enquiry workflow closure survives normalization',()=>{
 });
 test('amount, quantity, summary, dates and safe artwork normalize without price invention',()=>{
  const [job]=buildPrintJobs([q('q',{garments:[{garment:'Polo',color:'Blue',size:'L',quantity:4}],quote:{lines:[],total:0},deadline:'2026-09-30',attachments:[{url:'javascript:alert(1)'},{url:'/\\evil.test'},{url:'https://example.test/art.pdf'}]})],[],now);
- assert.equal(job.quantity,4);assert.equal(job.total,null);assert.equal(job.garmentSummary,'Polo');assert.equal(job.overdue,true);assert.equal(job.artwork.length,1);
+ assert.equal(job.quantity,4);assert.equal(job.total,null);assert.equal(job.garmentSummary,'Polo · Blue · L × 4');assert.equal(job.overdue,true);assert.equal(job.artwork.length,1);
  const [legacy]=buildPrintJobs([],[o('o',{products:[{product:'Polo',quantity:3,price:1350},{product:'Tee',quantity:2,unitPrice:200}]})],now);assert.equal(legacy.total,1750);
 });
 test('safe links reject dangerous browser-normalized URLs and credentials',()=>{

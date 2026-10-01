@@ -62,11 +62,15 @@ export default function QuoteProductEditor({
   revision,
   userId,
   blocked,
+  onUpdated,
+  onDirtyChange,
 }: {
   quoteId: string;
   revision: number;
   userId?: string;
   blocked: boolean;
+  onUpdated?: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const [editor, setEditor] = useState<Editor | null>(null),
     [rows, setRows] = useState<ProductEditRow[]>([]),
@@ -78,6 +82,7 @@ export default function QuoteProductEditor({
     [error, setError] = useState(""),
     [history, setHistory] = useState<HistoryEntry[]>([]),
     [cursor, setCursor] = useState<number | null>(null);
+  useEffect(() => { onDirtyChange?.(Boolean(token)); }, [token, onDirtyChange]);
   const endpoint = `/api/admin/quotes/${encodeURIComponent(quoteId)}/products`;
   const load = useCallback(
     async (before?: number) => {
@@ -173,6 +178,7 @@ export default function QuoteProductEditor({
       );
       setToken("");
       await load();
+      onUpdated?.();
     } catch (cause) {
       setError((cause as Error).message);
     } finally {

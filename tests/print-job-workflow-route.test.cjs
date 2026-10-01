@@ -4,9 +4,10 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const ts=require('typescript');
 const compile=file=>ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-const domain={};const inbox={};
+const domain={};const inbox={};const visuals={};
+vm.runInNewContext(compile('src/lib/print-job-visuals.ts'),{exports:visuals,URL});
 vm.runInNewContext(compile('src/lib/quotation-inbox.ts'),{exports:inbox});
-vm.runInNewContext(compile('src/lib/print-job-workflow.ts'),{exports:domain,require:name=>name==='./quotation-inbox'?inbox:null,Date,Intl,URL});
+vm.runInNewContext(compile('src/lib/print-job-workflow.ts'),{exports:domain,require:name=>name==='./quotation-inbox'?inbox:name==='./print-job-visuals'?visuals:null,Date,Intl,URL});
 function setup({allowed=['/admin','/admin/quotation-approval','/admin/orders','/admin/inbox'],signedIn=true,email=[],failCollection='',records:initial={}}={}){
  const records=new Map(Object.entries(initial));const reads=[];const writes=[];let inboxReads=0;
  const snapshot=ref=>({exists:()=>records.has(ref),data:()=>records.get(ref)});

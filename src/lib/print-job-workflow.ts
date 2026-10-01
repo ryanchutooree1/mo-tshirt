@@ -1,4 +1,5 @@
 import { requestSource, type RequestSource } from "./quotation-inbox";
+import { buildPrintJobVisuals, buildPrintJobGarmentSummary, type PrintJobVisual } from "./print-job-visuals";
 import type { EmailIntake } from "./email-intake-model";
 
 /** Operational stages are intentionally independent of client decisions and payment. */
@@ -38,7 +39,7 @@ export type PrintJob = {
   deadline: string; followUpDate: string; createdAt: number; lastActivity: number;
   email: string; phone: string; delivery: string; address: string; message: string;
   total: number | null; currency: string; quantity: number; garmentSummary: string; lines: PrintJobLine[];
-  payment: PrintJobPayment; artwork: { name: string; url: string }[]; thumbnail: { name: string; url: string } | null; documents: PrintJobDocument[];
+  payment: PrintJobPayment; artwork: { name: string; url: string }[]; thumbnail: { name: string; url: string } | null; mockups: PrintJobVisual[]; artworks: PrintJobVisual[]; documents: PrintJobDocument[];
   workflow: PrintJobWorkflow | null; workflowOverridden: boolean; history: PrintJobHistoryEntry[]; productionNote: string;
   editable: boolean; automaticPrice: boolean;
 };
@@ -268,6 +269,7 @@ export function buildPrintJobs(quotes: PrintJobSource[], orders: PrintJobSource[
     const lineTotal = order && lines.length && lines.every((line) => line.unitPrice !== null) ? lines.reduce((sum, line) => sum + line.quantity * (line.unitPrice || 0), 0) : null;
     let total = number(o.amount) ?? (order ? lineTotal : number(draft.total));
     if (!order && total === 0 && ["new", "review"].includes(string(q.status)) && !string(q.clientDecision)) total = null;
+    const visuals = buildPrintJobVisuals(q);
     const rawArtwork = Array.isArray(q.attachments) && q.attachments.length ? q.attachments : q.attachment ? [q.attachment] : [];
     const artwork = rawArtwork.map((entry) => { const file = object(entry); return { name: string(file.filename) || string(file.name) || "Artwork", url: safePrintJobUrl(file.url) || safePrintJobUrl(file.originalUrl) }; }).filter((file) => file.url);
     const events = history(quote, order), createdAt = Math.max(millis(q.createdAt), millis(o.transactionDate)), sentAt = millis(q.sentAt);
@@ -286,8 +288,8 @@ export function buildPrintJobs(quotes: PrintJobSource[], orders: PrintJobSource[
       email: string(o.email) || string(q.email), phone: string(o.phoneNumber) || string(q.phone), delivery: string(o.deliveryMethod) || string(q.delivery),
       address: string(o.address) || string(q.deliveryAddress) || string(draft.clientAddress), message: string(q.message) || string(q.notes),
       total, currency: string(draft.currency) || string(profile.currency) || "Rs", quantity,
-      garmentSummary: [...new Set(lines.map((line) => line.description))].slice(0, 3).join(" · ") || "Garments to confirm", lines,
-      payment: payment(q, o), artwork, thumbnail: artworkThumbnail(rawArtwork), documents: documents(quote, order), workflow, workflowOverridden, history: events,
+      garmentSummary: buildPrintJobGarmentSummary(q) || [...new Set(lines.map((line) => line.description))].slice(0, 3).join(" · ") || "Garments to confirm", lines,
+      payment: payment(q, o), artwork, thumbnail: artworkThumbnail(rawArtwork), mockups: visuals.mockups, artworks: visuals.artworks, documents: documents(quote, order), workflow, workflowOverridden, history: events,
       productionNote: order ? `Production record: ${string(o.status) || "status not recorded"}. Changing this workspace stage leaves the production order unchanged.` : "",
       editable: Boolean(quote) && !Object.keys(intake).length,
       automaticPrice: Boolean(string(object(q.automaticPricing).source) || number(object(q.automaticPricing).pricedLineCount) !== null),
