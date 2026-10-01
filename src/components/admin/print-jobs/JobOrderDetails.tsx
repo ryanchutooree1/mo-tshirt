@@ -36,7 +36,7 @@ export default function JobOrderDetails({ item }: { item: PrintJob }) {
   const pricingCurrency = details?.pricingCurrency || item.currency;
   const quantity = details?.garmentQuantity ?? null;
   const notes = details?.notes || (item.message ? [{ label: "Customer message", text: item.message }] : []);
-  const attachments = details?.attachments || item.artwork.map(file => ({ ...file, originalName: "", originalUrl: "", description: "" }));
+  const attachments: NonNullable<PrintJob["details"]>["attachments"] = details?.attachments || item.artwork.map(file => ({ ...file, originalName: "", originalUrl: "", description: "" }));
   return <section className={styles.details} aria-label="Job order details">
     <div className={styles.heading}><div><span>ORDER INFORMATION</span><h3>Customer, products & print details</h3></div><span>{item.reference}</span></div>
     <div className={styles.contactGrid}>
@@ -58,7 +58,7 @@ export default function JobOrderDetails({ item }: { item: PrintJob }) {
     </section>
     <div className={styles.contactGrid}>
       <section className={styles.card} aria-label="Notes and instructions"><h4>Notes & instructions</h4>{notes.length ? <div className={styles.notes}>{notes.map((note, index) => <div key={index}><h5>{note.label}</h5><p>{note.text}</p></div>)}</div> : <p className={styles.empty}>{missing}</p>}</section>
-      <section className={styles.card} aria-label="Attachments"><div className={styles.sectionHeading}><h4>Attachments</h4><span>{attachments.length} recorded</span></div>{attachments.length ? <ul className={styles.attachments}>{attachments.map((file, index) => <li key={index}>{file.url || file.originalUrl ? <a href={file.url || file.originalUrl} target="_blank" rel="noopener noreferrer">{file.name}<span aria-hidden="true">↗</span></a> : <strong>{file.name}</strong>}{file.description ? <p>{file.description}</p> : null}{file.originalUrl && file.originalUrl !== file.url ? <a className={styles.original} href={file.originalUrl} target="_blank" rel="noopener noreferrer">Original: {file.originalName || file.name}<span aria-hidden="true">↗</span></a> : null}{!file.url && !file.originalUrl ? <small>File link not provided</small> : null}</li>)}</ul> : <p className={styles.empty}>{missing}</p>}</section>
+      <section className={styles.card} aria-label="Attachments"><div className={styles.sectionHeading}><h4>Attachments</h4><span>{attachments.length} recorded</span></div>{attachments.length ? <ul className={styles.attachments}>{attachments.map((file, index) => <li key={index}>{file.url || file.originalUrl ? <a href={file.url || file.originalUrl} target="_blank" rel="noopener noreferrer">{file.name}<span aria-hidden="true">↗</span></a> : <strong>{file.name}</strong>}{file.description ? <p>{file.description}</p> : null}{file.originalUrl && file.originalUrl !== file.url ? <a className={styles.original} href={file.originalUrl} target="_blank" rel="noopener noreferrer">{file.originalProvenance === "client-upload" ? "Original upload" : "Saved source"}: {file.originalName || file.name}<span aria-hidden="true">↗</span></a> : null}{!file.url && !file.originalUrl ? <small>File link not provided</small> : null}</li>)}</ul> : <p className={styles.empty}>{missing}</p>}</section>
     </div>
   </section>;
 }

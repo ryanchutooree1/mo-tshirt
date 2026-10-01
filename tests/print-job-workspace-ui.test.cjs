@@ -237,22 +237,47 @@ function addEnquiry() { enquiries = [{ id: "synthetic-intake", subject: "Synthet
     assert.ok(document.activeElement === overview()); assert.equal(patches().length, 0);
   });
 
-  await test("same-asset artwork variants render transparent left and original right below finished garments", async () => {
+  await test("same-asset artwork variants show transparent left and unverified saved source right below garments", async () => {
     const attachment = quoteRecords.find(entry => entry.id === "echo").data.attachments[2];
     Object.assign(attachment, { originalUrl: "https://synthetic.example.test/original-logo.jpg", originalFilename: "Original logo.jpg", originalContentType: "image/jpeg", backgroundRemovalMethod: "ai" });
     await mount();
     const row = screen.getByRole("button", { name: "Open job for Echo Production, In production" });
     const pair = within(row).getByRole("group", { name: "Front artwork versions" });
-    assert.deepEqual(within(pair).getAllByRole("img").map(image => [image.alt, image.getAttribute("src")]), [["Print artwork · Front · Transparent", "https://synthetic.example.test/synthetic-logo.png"], ["Print artwork · Front · Original", "https://synthetic.example.test/original-logo.jpg"]]);
+    assert.deepEqual(within(pair).getAllByRole("img").map(image => [image.alt, image.getAttribute("src")]), [["Print artwork · Front · Transparent", "https://synthetic.example.test/synthetic-logo.png"], ["Print artwork · Front · Saved source", "https://synthetic.example.test/original-logo.jpg"]]);
     await openJob("Echo Production");
     const detailPair = within(overview()).getByRole("group", { name: "Front artwork versions" });
-    assert.deepEqual(within(detailPair).getAllByRole("img").map(image => image.alt), ["Print artwork · Front · Transparent", "Print artwork · Front · Original"]);
+    assert.ok(within(overview()).getByText("Saved source is the file received before admin cleanup. It may already have been edited."));
+    assert.equal(within(overview()).queryByText("Front · Original"), null);
+    assert.deepEqual(within(detailPair).getAllByRole("img").map(image => image.alt), ["Print artwork · Front · Transparent", "Print artwork · Front · Saved source"]);
     assert.equal(within(overview()).getAllByRole("img", { name: /^Finished product/ }).length, 2);
     const gallery = overview().querySelector(".visualOverview");
     const sections = Array.from(gallery.children);
     assert.ok(sections.indexOf(gallery.querySelector(".finishedProducts")) < sections.indexOf(gallery.querySelector(".printArtworks")));
     assert.equal(gallery.querySelector(".garmentGallery"), null);
     assert.equal(patches().length, 0);
+  });
+
+  await test("verified new originals are labelled Original upload without a legacy source warning", async () => {
+    Object.assign(quoteRecords.find(entry => entry.id === "echo").data.attachments[2], { originalUrl: "https://synthetic.example.test/raw-client.jpg", originalFilename: "raw-client.jpg", originalContentType: "image/jpeg", backgroundRemovalMethod: "ai", originalProvenance: "client-upload" });
+    await mount(); await openJob("Echo Production");
+    const pair = within(overview()).getByRole("group", { name: "Front artwork versions" });
+    assert.deepEqual(within(pair).getAllByRole("img").map(image => image.alt), ["Print artwork · Front · Transparent", "Print artwork · Front · Original upload"]);
+    assert.equal(within(overview()).queryByText("Saved source is the file received before admin cleanup. It may already have been edited."), null);
+    assert.equal(within(overview()).getByRole("link", { name: /Original upload: raw-client.jpg/ }).getAttribute("href"), "https://synthetic.example.test/raw-client.jpg");
+    assert.equal(patches().length, 0);
+  });
+
+  await test("raw-only retained original appears once without an invented transparent copy", async () => {
+    const file = quoteRecords.find(entry => entry.id === "echo").data.attachments[2];
+    Object.assign(file, { originalUrl: file.url, originalFilename: file.filename, originalContentType: file.contentType, originalProvenance: "client-upload" });
+    await mount();
+    const row = screen.getByRole("button", { name: "Open job for Echo Production, In production" });
+    assert.equal(within(row).getAllByRole("img", { name: /Print artwork/ }).length, 1);
+    assert.ok(within(row).getByRole("img", { name: "Print artwork · Front · Original upload" }));
+    assert.equal(within(row).queryByText(/may already have been edited/), null);
+    await openJob("Echo Production");
+    assert.equal(within(overview()).queryByRole("group", { name: "Front artwork versions" }), null);
+    assert.equal(within(overview()).getAllByRole("img", { name: /Print artwork/ }).length, 1);
   });
 
   await test("missing, non-image and failed image previews remain readable and recover after refresh", async () => {

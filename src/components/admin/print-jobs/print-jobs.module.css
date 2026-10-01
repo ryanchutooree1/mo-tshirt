@@ -37,7 +37,7 @@
 @media(max-width:650px){.clientCardInfo>span:first-child>strong{font-size:12px}.clientCardInfo>span:first-child>span{font-size:10px}}
 
 /* A saved original and its processed copy stay together, transparent copy on the left, original on the right. */
-.artworkPair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0;grid-column:span 2}.queueArtworks .artworkPair{display:flex;gap:6px}.queueArtworks .artworkPair figure{width:42px}.queueArtworks .artworkPair figcaption{font-size:7px;line-height:1.4;text-align:center;color:var(--muted);padding-top:4px;overflow-wrap:anywhere}.printArtworks .artworkPair figcaption{font-size:9px;line-height:1.5}
-@media(max-width:650px){.queueArtworks .artworkPair{gap:4px}.queueArtworks .artworkPair figure{width:26px}.queueArtworks .artworkPair figcaption{font-size:6px}.artworkPair{gap:7px}}
+.artworkPair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0;grid-column:span 2}.queueArtworks .artworkPair{display:flex;gap:6px}.queueArtworks figure{width:42px}.queueArtworks figcaption{font-size:7px;line-height:1.4;text-align:center;color:var(--muted);padding-top:4px;overflow-wrap:anywhere}.printArtworks .artworkPair figcaption{font-size:9px;line-height:1.5}
+@media(max-width:650px){.queueArtworks .artworkPair{gap:4px}.queueArtworks figure{width:26px}.queueArtworks figcaption{font-size:6px}.artworkPair{gap:7px}}
 
 .queueArtworks{flex-wrap:wrap}

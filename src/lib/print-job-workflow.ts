@@ -44,7 +44,7 @@ export type PrintJobDetails = {
   pricingLines: { description: string; quantity: number | null; unitPrice: number | null; lineTotal: number | null; included: boolean }[];
   deliveryFee: number | null; discount: number | null;
   notes: { label: string; text: string }[];
-  attachments: { name: string; url: string; originalName: string; originalUrl: string; description: string }[];
+  attachments: { name: string; url: string; originalName: string; originalUrl: string; description: string; originalProvenance?: "client-upload" }[];
 };
 export type PrintJob = {
   key: string; quoteId: string | null; orderId: string | null; intakeId: string | null; name: string; reference: string;
@@ -309,7 +309,7 @@ function buildPrintJobDetails(q: Record<string, unknown>, o: Record<string, unkn
   addNote("Front print instructions", brief.frontLogoDescription); addNote("Back print instructions", brief.backLogoDescription); addNote("Front text", brief.frontText); addNote("Back text", brief.backText);
   const artworkRequests = detailRows(brief.artwork).map((row, index) => ({ label: string(row.label) || `Artwork ${index + 1}`, product: detailFirst(row.product, row.garment), color: detailFirst(row.color, row.colour), size: string(row.size), quantity: detailQuantity(row.quantity), placement: detailPlacement(row.printPlacement), dimensions: detailDimensions(row), instructions: [string(row.description), string(row.frontLogoDescription) ? `Front: ${string(row.frontLogoDescription)}` : "", string(row.backLogoDescription) ? `Back: ${string(row.backLogoDescription)}` : ""].filter(Boolean).join("\n") }));
   const rawAttachments = detailRows(q.attachments).length ? detailRows(q.attachments) : q.attachment ? [object(q.attachment)] : [];
-  const attachments: PrintJobDetails["attachments"] = rawAttachments.map(file => ({ name: detailFirst(file.label, file.filename, file.name) || "Attachment", url: safePrintJobUrl(file.url), originalName: string(file.originalFilename), originalUrl: safePrintJobUrl(file.originalUrl), description: string(file.description) }));
+  const attachments: PrintJobDetails["attachments"] = rawAttachments.map(file => ({ name: detailFirst(file.label, file.filename, file.name) || "Attachment", url: safePrintJobUrl(file.url), originalName: string(file.originalFilename), originalUrl: safePrintJobUrl(file.originalUrl), description: string(file.description), ...(file.originalProvenance === "client-upload" && safePrintJobUrl(file.originalUrl) ? { originalProvenance: "client-upload" as const } : {}) }));
   const attachmentNames = Array.isArray(intake.attachmentNames) ? intake.attachmentNames : Array.isArray(object(q.emailImport).attachmentNames) ? object(q.emailImport).attachmentNames as unknown[] : [];
   for (const name of attachmentNames.map(string).filter(Boolean)) if (!attachments.some(file => file.name === name || file.originalName === name)) attachments.push({ name, url: "", originalName: "", originalUrl: "", description: "" });
   const names = detailUnique(products.map(row => row.description));

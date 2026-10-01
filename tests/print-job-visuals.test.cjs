@@ -127,3 +127,13 @@ test('processed previews require independently valid distinct URLs and transpare
   for (const fields of [{}, { backgroundRemovedAt: '2026-01-01' }, { backgroundRemovalMethod: 'unknown' }]) assert.equal(visuals({ attachment: image('/derived.png', { ...base, ...fields }) }).artworks[0].processed.transparent, false);
   for (const file of [image('/source.png', base), image('javascript:alert(1)', base), image('/derived.pdf', { ...base, contentType: 'application/pdf' }), image('/derived.png', { ...base, originalUrl: '/source.pdf', originalFilename: 'source.pdf', originalContentType: 'application/pdf' })]) assert.equal(visuals({ attachment: file }).artworks[0].processed, undefined);
 });
+
+test('only explicitly retained client sources get original-upload provenance', () => {
+  const file = image('/processed.png', { originalUrl: '/raw.jpg', originalFilename: 'raw.jpg', originalContentType: 'image/jpeg', backgroundRemovalMethod: 'ai', originalProvenance: 'client-upload' });
+  assert.equal(visuals({ attachment: file }).artworks[0].originalProvenance, 'client-upload');
+  assert.equal(visuals({ attachment: { ...file, originalProvenance: 'inferred' } }).artworks[0].originalProvenance, undefined);
+  assert.equal(visuals({ attachment: { ...file, originalUrl: 'javascript:bad()' } }).artworks[0].originalProvenance, undefined);
+  assert.equal(visuals({ attachment: { ...file, role: 'final-mockup' } }).mockups[0].originalProvenance, undefined);
+  const raw = visuals({ attachment: { ...file, url: '/raw.jpg', filename: 'raw.jpg', contentType: 'image/jpeg' } }).artworks[0];
+  assert.equal(raw.originalProvenance, 'client-upload'); assert.equal(raw.processed, undefined);
+});

@@ -17,6 +17,12 @@ import { storePublicUploadBuffer } from "@/lib/public-upload-store";
 import { buildAutomaticQuotePricing } from "@/lib/quote-auto-pricing";
 import { normalizeQuotationUploadUrl } from "@/lib/quotation-upload-paths";
 import { SITE_URL } from "@/lib/seo";
+import {
+  AttachmentProvenanceError,
+  validateContactAttachmentProvenance,
+  readContactEmailAttachments,
+  type ContactAttachmentProvenance,
+} from "@/lib/contact-attachment-provenance";
 
 type ParsedPayload = {
   tracking?: string;
@@ -53,6 +59,7 @@ type ParsedPayload = {
       }[]
     | string;
   files?: File[];
+  emailUploadedAttachments?: boolean;
   attachmentUrl?: string;
   attachmentName?: string;
   attachmentType?: string;
@@ -60,7 +67,7 @@ type ParsedPayload = {
   designBrief?: string | Record<string, unknown>;
 };
 
-type QuoteAttachment = {
+type QuoteAttachment = ContactAttachmentProvenance & {
   role?: "final-mockup" | "print-artwork";
   label?: string;
   description?: string;
@@ -140,6 +147,11 @@ function parseAttachmentList(value: unknown): QuoteAttachment[] {
     const url = typeof source.url === "string" ? source.url.trim() : "";
     const filename = typeof source.filename === "string" ? source.filename.trim() : "";
     const contentType = typeof source.contentType === "string" ? source.contentType.trim() : "";
+    const originalSize = typeof source.originalSize === "number"
+      ? source.originalSize
+      : typeof source.originalSize === "string" && source.originalSize.trim()
+        ? Number(source.originalSize)
+        : undefined;
     const rawSize = source.size;
     const parsedSize =
       typeof rawSize === "number"
@@ -148,7 +160,7 @@ function parseAttachmentList(value: unknown): QuoteAttachment[] {
           ? Number(rawSize)
           : null;
 
-    if (!role && !label && !description && !quantity && !url && !filename && !contentType && parsedSize === null) {
+    if (!role && !label && !description && !quantity && !url && !filename && !contentType && parsedSize === null && source.originalProvenance !== "client-upload") {
       return null;
     }
 
@@ -161,6 +173,12 @@ function parseAttachmentList(value: unknown): QuoteAttachment[] {
       ...(filename ? { filename } : {}),
       ...(contentType ? { contentType } : {}),
       ...(Number.isFinite(parsedSize) ? { size: parsedSize as number } : {}),
+      ...(typeof source.originalUrl === "string" ? { originalUrl: source.originalUrl.trim() } : {}),
+      ...(typeof source.originalFilename === "string" ? { originalFilename: source.originalFilename.trim() } : {}),
+      ...(typeof source.originalContentType === "string" ? { originalContentType: source.originalContentType.trim() } : {}),
+      ...(originalSize !== undefined ? { originalSize } : {}),
+      ...(typeof source.originalProvenance === "string" ? { originalProvenance: source.originalProvenance } : {}),
+      ...(typeof source.backgroundRemovalMethod === "string" ? { backgroundRemovalMethod: source.backgroundRemovalMethod } : {}),
     };
   };
 
@@ -271,6 +289,7 @@ export async function POST(req: Request) {
         garments: form.get("garments")?.toString(),
         attachments: form.get("attachments")?.toString(),
         files,
+        emailUploadedAttachments: form.get("emailUploadedAttachments") === "true",
         attachmentUrl: form.get("attachmentUrl")?.toString(),
         attachmentName: form.get("attachmentName")?.toString(),
         attachmentType: form.get("attachmentType")?.toString(),
@@ -376,8 +395,8 @@ export async function POST(req: Request) {
     }
 
     // Keep review emails limited to the exact files supplied by the client.
-    // Print-ready/background-removed derivatives belong in the admin workspace only.
-    const originalEmailAttachments: { filename: string; content: Buffer; contentType?: string }[] = [];
+    // QuoteForm may provide validated managed links to the same submitted files.
+    const submittedEmailAttachments: { filename: string; content: Buffer; contentType?: string }[] = [];
     const acceptedFiles: { file: File; buffer: Buffer }[] = [];
 
     for (const currentFile of requestFiles) {
@@ -391,7 +410,7 @@ export async function POST(req: Request) {
       }
       const buffer = Buffer.from(await currentFile.arrayBuffer());
       acceptedFiles.push({ file: currentFile, buffer });
-      originalEmailAttachments.push({
+      submittedEmailAttachments.push({
         filename: currentFile.name || "attachment",
         content: buffer,
         contentType: currentFile.type || undefined,
@@ -452,6 +471,22 @@ export async function POST(req: Request) {
     if (parsedAttachments.length > MAX_EMAIL_ATTACHMENT_COUNT) {
       return json({ error: "Too many artwork attachments." }, 400);
     }
+    let validatedAttachments: QuoteAttachment[];
+    try {
+      validatedAttachments = await validateContactAttachmentProvenance(
+        parsedAttachments, MAX_TOTAL_ATTACHMENT_BYTES - totalAttachmentBytes,
+      );
+      if (payload.emailUploadedAttachments === true) {
+        const uploadedEmailFiles = await readContactEmailAttachments(validatedAttachments);
+        if (submittedEmailAttachments.length + uploadedEmailFiles.length > MAX_EMAIL_ATTACHMENT_COUNT) {
+          return json({ error: "Too many files. Send up to 12 attachments." }, 400);
+        }
+        submittedEmailAttachments.push(...uploadedEmailFiles);
+      }
+    } catch (error) {
+      if (error instanceof AttachmentProvenanceError) return json({ error: error.message }, 400);
+      throw error;
+    }
     const uploadSessionId = `quote-${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}`;
     const uploadedRequestAttachments = await Promise.all(
       acceptedFiles.map(async ({ file: currentFile, buffer }, index) => {
@@ -475,7 +510,7 @@ export async function POST(req: Request) {
       })
     );
     const storedAttachments: QuoteAttachment[] = (() => {
-      const normalizedAttachments = parsedAttachments.map((entry, index) => {
+      const normalizedAttachments = validatedAttachments.map((entry, index) => {
         const uploadedAttachment = uploadedRequestAttachments[index];
 
         return {
@@ -534,12 +569,16 @@ export async function POST(req: Request) {
     })();
     const formatAttachmentValue = (entry: QuoteAttachment, index: number) => {
       const attachmentUrl = getAbsoluteAttachmentUrl(entry.url);
+      const originalUrl = entry.originalProvenance === "client-upload"
+        ? getAbsoluteAttachmentUrl(entry.originalUrl)
+        : "";
       const lines = [
         entry.filename || `attachment-${index + 1}`,
         entry.label ? `Label: ${entry.label}` : "",
         entry.description ? `Description: ${entry.description}` : "",
         entry.quantity ? `Qty: ${entry.quantity}` : "",
         attachmentUrl ? `URL: ${attachmentUrl}` : "URL: Attached to email",
+        originalUrl && originalUrl !== attachmentUrl ? `Original upload: ${originalUrl}` : "",
       ].filter(Boolean);
       return lines.join("\n");
     };
@@ -699,11 +738,11 @@ export async function POST(req: Request) {
 
       const cards = imageAttachments.map((entry, index) => {
         const url = getAbsoluteAttachmentUrl(entry.url);
-        const title = entry.label || (entry.role === "final-mockup" ? "Final mockup" : `Original logo ${index + 1}`);
+        const title = entry.label || (entry.role === "final-mockup" ? "Final mockup" : `Artwork ${index + 1}`);
         const typeLabel = entry.role === "final-mockup"
           ? "Complete garment preview"
           : entry.role === "print-artwork"
-            ? "Original print artwork"
+            ? "Print artwork"
             : "Client image";
         const description = entry.description
           ? `<div style="margin:5px 0 0;color:#737373;font-size:12px;line-height:1.45;">${escapeHtml(entry.description)}</div>`
@@ -785,8 +824,8 @@ export async function POST(req: Request) {
           if (safeEmail) {
             mailOptions.replyTo = safeEmail;
           }
-          if (originalEmailAttachments.length) {
-            mailOptions.attachments = originalEmailAttachments;
+          if (submittedEmailAttachments.length) {
+            mailOptions.attachments = submittedEmailAttachments;
           }
           await transporter.sendMail(mailOptions);
         } catch (error) {

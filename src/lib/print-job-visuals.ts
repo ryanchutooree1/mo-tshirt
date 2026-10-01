@@ -6,6 +6,7 @@ export type PrintJobVisual = {
   kind: "mockup" | "artwork";
   /** Same attachment only; primary URL remains the original for existing consumers. */
   processed?: { url: string; name: string; transparent: boolean };
+  originalProvenance?: "client-upload";
 };
 export const MAX_PRINT_JOB_VISUALS = 64;
 
@@ -98,7 +99,8 @@ export function buildPrintJobVisuals(rawQuote: unknown): { mockups: PrintJobVisu
     const processed = !isMockup && original && current && original !== current
       ? { url: current, name: filename || name, transparent: ["already-transparent", "solid-color", "ai"].includes(text(file.backgroundRemovalMethod)) }
       : undefined;
-    addVisual(isMockup ? mockups : artworks, { url, name, side: resolvedSide, kind, ...(processed ? { processed } : {}) });
+    const originalProvenance = !isMockup && original && url === original && file.originalProvenance === "client-upload" ? "client-upload" as const : undefined;
+    addVisual(isMockup ? mockups : artworks, { url, name, side: resolvedSide, kind, ...(processed ? { processed } : {}), ...(originalProvenance ? { originalProvenance } : {}) });
   }
   for (const side of ["front", "back"] as const) {
     // Current attachment is authoritative if a saved brief still references an

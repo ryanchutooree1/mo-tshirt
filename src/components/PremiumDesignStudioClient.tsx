@@ -51,6 +51,16 @@ import { CONTACT_EMAIL, CONTACT_PHONE_DISPLAY, CONTACT_TEL } from "@/data/work";
 import { removeBackgroundAutomatically } from "@/lib/automatic-background-removal";
 import { formatMoney } from "@/lib/money";
 import { uploadPublicArtwork } from "@/lib/public-artwork-upload";
+import {
+  applyArtworkResult,
+  selectOriginalArtwork,
+  uploadArtworkWithOriginal,
+  validateArtworkUploadBatch,
+  type ArtworkSelection,
+  type ArtworkUploadCache,
+  type BackgroundRemovalMethod,
+  type OriginalArtworkSource,
+} from "@/lib/original-artwork-upload";
 import { getMinimumOrderAdjustment } from "@/lib/design-studio-pricing";
 import {
   renderDesignStudioMockup,
@@ -202,7 +212,10 @@ export default function PremiumDesignStudioClient({
   const [selectedLayer, setSelectedLayer] = useState<Layer | null>(null);
   const [selectedArtworkCopyId, setSelectedArtworkCopyId] = useState<number | null>(null);
   const [selectedTextCopyId, setSelectedTextCopyId] = useState<number | null>(null);
-  const [artworkFiles, setArtworkFiles] = useState<Record<Side, File | null>>({ front: null, back: null });
+  const [artworkSelections, setArtworkSelections] = useState<Record<Side, ArtworkSelection | null>>({ front: null, back: null });
+  const artworkSelectionsRef = useRef(artworkSelections);
+  const artworkRequestVersions = useRef<Record<Side, number>>({ front: 0, back: 0 });
+  const artworkFiles = { front: artworkSelections.front?.file ?? null, back: artworkSelections.back?.file ?? null };
   const [artworkUrls, setArtworkUrls] = useState<Record<Side, string | null>>({ front: null, back: null });
   const [delivery, setDelivery] = useState(DELIVERY_OPTIONS[0]);
   const [client, setClient] = useState({ name: "", email: "", phone: "", deadline: "", deliveryName: "", address: "", postCode: "", deliveryPhone: "", notes: "" });
@@ -400,7 +413,9 @@ export default function PremiumDesignStudioClient({
       return;
     }
     const nextUrl = URL.createObjectURL(file);
-    setArtworkFiles((current) => ({ ...current, [side]: file }));
+    artworkRequestVersions.current[side] += 1;
+    artworkSelectionsRef.current = { ...artworkSelectionsRef.current, [side]: selectOriginalArtwork(file) };
+    setArtworkSelections(artworkSelectionsRef.current);
     setArtworkUrls((current) => ({ ...current, [side]: nextUrl }));
     setDesigns((current) => ({ ...current, [side]: { ...current[side], artwork: { enabled: true, x: 0, y: -8, scale: 34, rotate: 0 }, artworkCopies: [] } }));
     setResult(null);
@@ -421,17 +436,28 @@ export default function PremiumDesignStudioClient({
     setMobileToolExpanded(true);
   }
 
-  function replaceArtworkFile(file: File, side: Side) {
+  function beginArtworkProcessing(source: OriginalArtworkSource, side: Side) {
+    if (artworkSelectionsRef.current[side]?.source !== source) return null;
+    return ++artworkRequestVersions.current[side];
+  }
+
+  function replaceArtworkFile(file: File, source: OriginalArtworkSource, requestVersion: number, side: Side, method?: BackgroundRemovalMethod) {
+    const current = artworkSelectionsRef.current[side];
+    if (current?.source !== source || artworkRequestVersions.current[side] !== requestVersion) return false;
+    const next = applyArtworkResult(current, source, file, method);
     const nextUrl = URL.createObjectURL(file);
-    setArtworkFiles((current) => ({ ...current, [side]: file }));
+    artworkSelectionsRef.current = { ...artworkSelectionsRef.current, [side]: next };
+    setArtworkSelections(artworkSelectionsRef.current);
     setArtworkUrls((current) => ({ ...current, [side]: nextUrl }));
     setResult(null);
-    changeSide(side);
+    return true;
   }
 
   function clearArtwork(side: Side) {
+    artworkRequestVersions.current[side] += 1;
+    artworkSelectionsRef.current = { ...artworkSelectionsRef.current, [side]: null };
+    setArtworkSelections(artworkSelectionsRef.current);
     setArtworkUrls((current) => ({ ...current, [side]: null }));
-    setArtworkFiles((current) => ({ ...current, [side]: null }));
     setDesigns((current) => ({ ...current, [side]: { ...current[side], artwork: { ...current[side].artwork, enabled: false }, artworkCopies: [] } }));
     if (side === activeSide) {
       setSelectedLayer(null);
@@ -637,8 +663,8 @@ export default function PremiumDesignStudioClient({
     setSubmissionStatus("Preparing final mockups…");
     setResult(null);
     const submittedArtworks = (["front", "back"] as Side[]).flatMap((side) => {
-      const file = artworkFiles[side];
-      return file ? [{ side, file }] : [];
+      const selection = artworkSelections[side];
+      return selection ? [{ side, selection }] : [];
     });
     try {
       const mockupSides = (["front", "back"] as Side[]).filter((side) =>
@@ -663,18 +689,19 @@ export default function PremiumDesignStudioClient({
         }))
       );
 
+      validateArtworkUploadBatch(submittedArtworks.map(({ selection }) => selection), finalMockups.map(({ file }) => file));
       setSubmissionStatus("Uploading design files…");
       const uploadSessionId = `design-studio-${crypto.randomUUID().slice(0, 12)}`;
+      const uploadCache: ArtworkUploadCache = new Map();
       const [uploadedMockups, uploadedArtworks] = await Promise.all([
         Promise.all(finalMockups.map(async ({ side, file }) => ({
           side,
           file,
           attachment: (await uploadPublicArtwork({ file, filename: file.name, sessionId: uploadSessionId })).attachment,
         }))),
-        Promise.all(submittedArtworks.map(async ({ side, file }) => ({
+        Promise.all(submittedArtworks.map(async ({ side, selection }) => ({
           side,
-          file,
-          attachment: (await uploadPublicArtwork({ file, filename: `${side}-${file.name}`, sessionId: uploadSessionId })).attachment,
+          attachment: await uploadArtworkWithOriginal({ selection, sessionId: uploadSessionId, maxBytes: 5 * 1024 * 1024, uploadCache }),
         }))),
       ]);
       const finalMockupUrls = Object.fromEntries(
@@ -713,7 +740,7 @@ export default function PremiumDesignStudioClient({
       payload.append("designBrief", JSON.stringify({ product: product.label, shopItemId: selectedShopItem?.id || "", color: selectedColor, colour: selectedColor, productImages, finalMockups: finalMockupUrls, printMethod: printMethodLabel, printPlacement: mockupSides.map((side) => side[0].toUpperCase() + side.slice(1)).join(" + "), activeSide, frontLogo: hasSideArtwork("front"), backLogo: hasSideArtwork("back"), frontText: getSideText("front"), backText: getSideText("back"), front: designs.front, back: designs.back, artworkFiles: { front: artworkFiles.front?.name || "", back: artworkFiles.back?.name || "" }, sizes, selectedSizes: selectedSizeRows, totalQty, estimatedTotal: totalPrice, rush: false }));
       payload.append("attachments", JSON.stringify([
         ...uploadedMockups.map(({ side, file, attachment }) => ({ role: "final-mockup", label: `${side[0].toUpperCase()}${side.slice(1)} final mockup`, description: `${product.label} ${side} view with the client's complete design`, url: attachment.url, filename: attachment.name, contentType: attachment.contentType || file.type, size: attachment.size ?? file.size })),
-        ...uploadedArtworks.map(({ side, file, attachment }) => ({ role: "print-artwork", label: `${side[0].toUpperCase()}${side.slice(1)} print artwork`, description: `Original ${side} artwork supplied for production`, url: attachment.url, filename: attachment.name, contentType: attachment.contentType || file.type, size: attachment.size ?? file.size })),
+        ...uploadedArtworks.map(({ side, attachment }) => ({ role: "print-artwork", label: `${side[0].toUpperCase()}${side.slice(1)} print artwork`, description: `${side[0].toUpperCase()}${side.slice(1)} artwork with the untouched client upload retained`, ...attachment })),
       ]));
       journey.attach(payload);
       const response = await fetch("/api/contact", { method: "POST", body: payload });
@@ -845,7 +872,7 @@ export default function PremiumDesignStudioClient({
 
                   {mobileTool === "graphics" ? (
                     <MobileWorkspace eyebrow="Image" title="Upload & position" description="Choose a side, upload the image, then adjust it on the shirt.">
-                      {(["front", "back"] as Side[]).map((side) => <ArtworkUploadSlot key={side} side={side} file={artworkFiles[side]} url={artworkUrls[side]} active={activeSide === side} onChoose={() => openArtworkPicker(side)} onDrop={(file) => chooseArtwork(file, side)} onRemove={() => clearArtwork(side)} onBackgroundRemoved={(file) => replaceArtworkFile(file, side)} onPosition={() => changeSide(side)} />)}
+                      {(["front", "back"] as Side[]).map((side) => <ArtworkUploadSlot key={side} side={side} file={artworkFiles[side]} source={artworkSelections[side]?.source ?? null} url={artworkUrls[side]} active={activeSide === side} onChoose={() => openArtworkPicker(side)} onDrop={(file) => chooseArtwork(file, side)} onRemove={() => clearArtwork(side)} onBeginProcessing={(source) => beginArtworkProcessing(source, side)} onBackgroundRemoved={(file, source, requestVersion, method) => replaceArtworkFile(file, source, requestVersion, side, method)} onPosition={() => changeSide(side)} />)}
                       <div><Label>Edit side</Label><div className="mt-2 grid grid-cols-2 gap-2">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-xl border p-3 text-xs font-extrabold capitalize ${activeSide === side ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e2e1dc]"}`}>{side} {artworkUrls[side] ? "✓" : ""}</button>)}</div></div>
                       {activeArtworkUrl ? <div className="space-y-3"><div className="grid grid-cols-3 gap-2"><PresetButton icon={<Crosshair />} label={upperPlacement.label} onClick={() => patchArtwork(upperPlacement.artwork)} /><PresetButton icon={<Focus />} label="Centre" onClick={() => patchArtwork({ x: 0, y: 0 })} /><PresetButton icon={<Move />} label="Lower" onClick={() => patchArtwork({ x: 0, y: 52 })} /></div><RangeControl icon={<ZoomIn />} label="Artwork size" value={activeArtwork.scale} min={ARTWORK_SCALE_MIN} max={ARTWORK_SCALE_MAX} suffix="%" onChange={(value) => patchArtwork({ scale: value })} /><RangeControl icon={<Move />} label="Horizontal" value={activeArtwork.x} min={-LAYER_X_LIMIT} max={LAYER_X_LIMIT} onChange={(value) => patchArtwork({ x: value })} /><RangeControl icon={<Move className="rotate-90" />} label="Vertical" value={activeArtwork.y} min={-LAYER_Y_LIMIT} max={LAYER_Y_LIMIT} onChange={(value) => patchArtwork({ y: value })} /><RangeControl icon={<RotateCcw />} label="Rotation" value={activeArtwork.rotate} min={-180} max={180} suffix="°" onChange={(value) => patchArtwork({ rotate: value })} /><button type="button" onClick={() => setSnap((current) => !current)} className={`flex w-full items-center justify-between rounded-xl border p-3 ${snap ? "border-[#bfe9d4] bg-[#f1fbf6]" : "border-[#e2e1dc]"}`}><span className="flex items-center gap-2 text-xs font-bold"><Magnet className="h-4 w-4 text-[#16a462]" />Snap to centre</span><span className="text-[9px] font-extrabold">{snap ? "ON" : "OFF"}</span></button></div> : null}
                     </MobileWorkspace>
@@ -963,7 +990,7 @@ export default function PremiumDesignStudioClient({
 
                 {step === 4 ? <div className="space-y-6"><div><Label>Print side</Label><div className="mt-3 grid grid-cols-2 gap-3">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-2xl border p-4 text-left ${activeSide === side ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e4e3de]"}`}><div className="flex justify-between"><Layers3 className="h-5 w-5 text-[#ff5a0a]" />{activeSide === side ? <CheckCircle2 className="h-5 w-5 text-[#ff5a0a]" /> : null}</div><p className="mt-5 text-sm font-extrabold capitalize">{side}</p><p className="mt-1 text-xs text-[#85847d]">Design the {side} side.</p></button>)}</div></div><div><Label>Print method</Label><div className="mt-3 space-y-2.5">{METHODS.map((option) => <label key={option.id} className={`flex cursor-pointer gap-3 rounded-2xl border p-3.5 ${methodId === option.id ? "border-[#ff5a0a] bg-[#fff8f3]" : "border-[#e4e3de]"}`}><input type="radio" name="method" checked={methodId === option.id} onChange={() => setMethodId(option.id)} className="mt-1 accent-[#ff5a0a]" /><span><span className="block text-sm font-bold">{option.label}</span><span className="mt-1 block text-xs leading-5 text-[#85847d]">{option.note}</span></span></label>)}</div></div></div> : null}
 
-                {step === 5 ? <div className="space-y-4">{(["front", "back"] as Side[]).map((side) => <ArtworkUploadSlot key={side} side={side} file={artworkFiles[side]} url={artworkUrls[side]} active={activeSide === side} onChoose={() => openArtworkPicker(side)} onDrop={(file) => chooseArtwork(file, side)} onRemove={() => clearArtwork(side)} onBackgroundRemoved={(file) => replaceArtworkFile(file, side)} onPosition={() => { changeSide(side); setStep(6); }} />)}<div className="flex items-center justify-center gap-2 text-[9px] font-bold uppercase tracking-[0.1em] text-[#8d8b84]"><BadgeCheck className="h-4 w-4 text-[#16a462]" />PNG, JPG, WEBP or SVG · 5MB per file</div>{result && !result.ok ? <p className="rounded-xl bg-[#fff1f1] p-3 text-xs text-[#b91c1c]">{result.text}</p> : null}</div> : null}
+                {step === 5 ? <div className="space-y-4">{(["front", "back"] as Side[]).map((side) => <ArtworkUploadSlot key={side} side={side} file={artworkFiles[side]} source={artworkSelections[side]?.source ?? null} url={artworkUrls[side]} active={activeSide === side} onChoose={() => openArtworkPicker(side)} onDrop={(file) => chooseArtwork(file, side)} onRemove={() => clearArtwork(side)} onBeginProcessing={(source) => beginArtworkProcessing(source, side)} onBackgroundRemoved={(file, source, requestVersion, method) => replaceArtworkFile(file, source, requestVersion, side, method)} onPosition={() => { changeSide(side); setStep(6); }} />)}<div className="flex items-center justify-center gap-2 text-[9px] font-bold uppercase tracking-[0.1em] text-[#8d8b84]"><BadgeCheck className="h-4 w-4 text-[#16a462]" />PNG, JPG, WEBP or SVG · 5MB per file</div>{result && !result.ok ? <p className="rounded-xl bg-[#fff1f1] p-3 text-xs text-[#b91c1c]">{result.text}</p> : null}</div> : null}
 
                 {step === 6 ? <div className="space-y-4"><div><Label>Artwork side</Label><div className="mt-2 grid grid-cols-2 gap-2">{(["front", "back"] as Side[]).map((side) => <button key={side} type="button" onClick={() => changeSide(side)} className={`rounded-2xl border p-3 text-left transition ${activeSide === side ? "border-[#ff5a0a] bg-[#fff8f3] ring-2 ring-[#ff5a0a]/10" : "border-[#e2e1dc] bg-white"}`}><span className="flex items-center justify-between"><span className="text-xs font-extrabold capitalize">{side}</span>{artworkUrls[side] ? <CheckCircle2 className="h-4 w-4 text-[#16a462]" /> : <span className="h-2 w-2 rounded-full bg-[#d5d3cc]" />}</span><span className="mt-1 block text-[9px] font-bold uppercase tracking-[0.08em] text-[#96948c]">{artworkUrls[side] ? "Artwork ready" : "No artwork"}</span></button>)}</div></div>{activeArtworkUrl ? <><div className="flex items-center gap-3 rounded-2xl border border-[#c9ead8] bg-[#f4fbf7] p-3"><span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1.5 shadow-sm"><img src={activeArtworkUrl} alt={`${activeSide} artwork preview`} className="h-full w-full object-contain" /></span><span className="min-w-0 flex-1"><span className="block text-[9px] font-bold uppercase tracking-[0.1em] text-[#168455]">Editing {selectedArtworkCopyId === null ? activeSide : `duplicated ${activeSide}`}</span><span className="mt-1 block truncate text-xs font-bold">{artworkFiles[activeSide]?.name}</span></span></div><div className="grid grid-cols-3 gap-2"><PresetButton icon={<Crosshair />} label={upperPlacement.label} onClick={() => patchArtwork(upperPlacement.artwork)} /><PresetButton icon={<Focus />} label="Centre" onClick={() => patchArtwork({ x: 0, y: 0 })} /><PresetButton icon={<Move />} label="Lower" onClick={() => patchArtwork({ x: 0, y: 52 })} /></div><RangeControl icon={<ZoomIn />} label="Artwork size" value={activeArtwork.scale} min={ARTWORK_SCALE_MIN} max={ARTWORK_SCALE_MAX} suffix="%" onChange={(value) => patchArtwork({ scale: value })} /><RangeControl icon={<Move />} label="Horizontal" value={activeArtwork.x} min={-LAYER_X_LIMIT} max={LAYER_X_LIMIT} onChange={(value) => patchArtwork({ x: value })} /><RangeControl icon={<Move className="rotate-90" />} label="Vertical" value={activeArtwork.y} min={-LAYER_Y_LIMIT} max={LAYER_Y_LIMIT} onChange={(value) => patchArtwork({ y: value })} /><RangeControl icon={<RotateCcw />} label="Rotation" value={activeArtwork.rotate} min={-180} max={180} suffix="°" onChange={(value) => patchArtwork({ rotate: value })} /><button type="button" onClick={() => setSnap((current) => !current)} className={`flex w-full items-center justify-between rounded-2xl border p-4 ${snap ? "border-[#bfe9d4] bg-[#f1fbf6]" : "border-[#e2e1dc]"}`}><span className="flex items-center gap-2 text-sm font-bold"><Magnet className="h-4 w-4 text-[#16a462]" />Snap to centre</span><span className={`rounded-full px-2 py-1 text-[9px] font-bold ${snap ? "studio-success bg-[#16a462] !text-white" : "bg-[#efeee9]"}`}>{snap ? "ON" : "OFF"}</span></button></> : <div className="flex min-h-64 flex-col items-center justify-center rounded-[22px] border-2 border-dashed border-[#ddd9d1] bg-[#fafaf7] p-6 text-center"><span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-[#ff5a0a] shadow-[0_8px_25px_rgba(35,32,24,.08)]"><ImagePlus className="h-6 w-6" /></span><p className="mt-4 text-sm font-extrabold">No {activeSide} artwork yet</p><p className="mt-1 max-w-[250px] text-xs leading-5 text-[#85847d]">Upload an image for this side before positioning it, or continue to add text only.</p><button type="button" onClick={() => setStep(5)} className="studio-primary mt-4 inline-flex items-center gap-2 rounded-xl bg-[#ff5a0a] px-4 py-2.5 text-xs font-bold !text-white"><UploadCloud className="h-4 w-4" />Go to uploads</button></div>}</div> : null}
 
@@ -1001,12 +1028,14 @@ function Success({ message, onReset }: { message: string; onReset: () => void })
 type ArtworkUploadSlotProps = {
   side: Side;
   file: File | null;
+  source: OriginalArtworkSource | null;
   url: string | null;
   active: boolean;
   onChoose: () => void;
   onDrop: (file: File) => void;
   onRemove: () => void;
-  onBackgroundRemoved: (file: File) => void;
+  onBeginProcessing: (source: OriginalArtworkSource) => number | null;
+  onBackgroundRemoved: (file: File, source: OriginalArtworkSource, requestVersion: number, method?: BackgroundRemovalMethod) => boolean;
   onPosition: () => void;
 };
 
@@ -1016,11 +1045,13 @@ type BackgroundRemovalMode = "smart" | "ai";
 function ArtworkUploadSlot({
   side,
   file,
+  source,
   url,
   active,
   onChoose,
   onDrop,
   onRemove,
+  onBeginProcessing,
   onBackgroundRemoved,
   onPosition,
 }: ArtworkUploadSlotProps) {
@@ -1032,30 +1063,30 @@ function ArtworkUploadSlot({
   const [removalMessage, setRemovalMessage] = useState("");
   const [processingMode, setProcessingMode] = useState<BackgroundRemovalMode | null>(null);
   const [appliedMode, setAppliedMode] = useState<BackgroundRemovalMode | null>(null);
-  const sourceFile = useRef<File | null>(file);
-  const latestGeneratedFile = useRef<File | null>(null);
-  const generatedFiles = useRef<Partial<Record<BackgroundRemovalMode, File>>>({});
+  const localRequestVersion = useRef(0);
+  const generatedFiles = useRef<Partial<Record<BackgroundRemovalMode, { file: File; method: BackgroundRemovalMethod }>>>({});
 
   useEffect(() => {
-    if (file === latestGeneratedFile.current) return;
-    sourceFile.current = file;
-    latestGeneratedFile.current = null;
     generatedFiles.current = {};
     setRemovalState("idle");
     setRemovalProgress(0);
     setRemovalMessage("");
     setProcessingMode(null);
     setAppliedMode(null);
-  }, [file]);
+    return () => { localRequestVersion.current += 1; };
+  }, [source]);
 
   async function removeArtworkBackground(mode: BackgroundRemovalMode) {
-    const originalFile = sourceFile.current ?? file;
-    if (!originalFile || removalState === "processing") return;
+    if (!source || removalState === "processing") return;
+    const originalFile = source.file;
+    const requestVersion = onBeginProcessing(source);
+    if (requestVersion === null) return;
+    const localVersion = ++localRequestVersion.current;
+    const isCurrent = () => localVersion === localRequestVersion.current;
 
-    const cachedFile = generatedFiles.current[mode];
-    if (cachedFile) {
-      latestGeneratedFile.current = cachedFile;
-      onBackgroundRemoved(cachedFile);
+    const cached = generatedFiles.current[mode];
+    if (cached) {
+      if (!onBackgroundRemoved(cached.file, source, requestVersion, cached.method)) return;
       setAppliedMode(mode);
       setProcessingMode(mode);
       setRemovalState("done");
@@ -1077,11 +1108,16 @@ function ArtworkUploadSlot({
       const result = await removeBackgroundAutomatically(
         originalFile,
         ({ progress, label }) => {
+          if (!isCurrent()) return;
           setRemovalProgress(progress);
           setRemovalMessage(label);
         },
         mode === "ai" ? { forceAi: true } : {}
       );
+      if (!isCurrent()) return;
+      if (!result.blob.size || result.blob.size > 5 * 1024 * 1024) {
+        throw new Error("The transparent version exceeds 5MB. Your original upload has been kept.");
+      }
       const baseName = originalFile.name.replace(/\.[^.]+$/, "") || `${side}-artwork`;
       const suffix = mode === "ai" ? "free-ai-cutout" : "smart-cutout";
       const transparentFile = new File([result.blob], `${baseName}-${suffix}.png`, {
@@ -1089,9 +1125,12 @@ function ArtworkUploadSlot({
         lastModified: Date.now(),
       });
 
-      generatedFiles.current[mode] = transparentFile;
-      latestGeneratedFile.current = transparentFile;
-      onBackgroundRemoved(transparentFile);
+      if (!onBackgroundRemoved(transparentFile, source, requestVersion, result.method)) {
+        setRemovalState("idle");
+        setProcessingMode(null);
+        return;
+      }
+      generatedFiles.current[mode] = { file: transparentFile, method: result.method };
       setAppliedMode(mode);
       setRemovalProgress(1);
       setRemovalState("done");
@@ -1103,6 +1142,13 @@ function ArtworkUploadSlot({
             : "Smart result applied — try Free AI to compare"
       );
     } catch (error) {
+      if (!isCurrent()) return;
+      if (!onBackgroundRemoved(originalFile, source, requestVersion)) {
+        setRemovalState("idle");
+        setProcessingMode(null);
+        return;
+      }
+      setAppliedMode(null);
       setRemovalState("error");
       setRemovalProgress(0);
       setRemovalMessage(
@@ -1155,7 +1201,6 @@ function ArtworkUploadSlot({
                 <button
                   type="button"
                   onClick={onChoose}
-                  disabled={isRemovingBackground}
                   className="rounded-lg border border-[#dcdbd5] bg-white px-3 py-2 text-[10px] font-bold hover:border-[#ff9c6c] disabled:cursor-wait disabled:opacity-50"
                 >
                   Replace
@@ -1163,7 +1208,6 @@ function ArtworkUploadSlot({
                 <button
                   type="button"
                   onClick={onRemove}
-                  disabled={isRemovingBackground}
                   className="flex items-center gap-1 rounded-lg border border-[#f0d5d5] bg-[#fffafa] px-3 py-2 text-[10px] font-bold text-[#b94343] disabled:cursor-wait disabled:opacity-50"
                 >
                   <Trash2 className="h-3.5 w-3.5" />

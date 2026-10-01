@@ -94,6 +94,8 @@ test('attachment files retain original download links and reject unsafe URLs', (
   assert.equal(job.details.attachments[1].url, '');
   const markup = renderToStaticMarkup(React.createElement(JobOrderDetails, { item: job }));
   assert.match(markup, /href="https:\/\/example.test\/original.ai"/);
+  assert.match(markup, /Saved source: original.ai/);
+  assert.doesNotMatch(markup, />Original: /);
   assert.match(markup, /missing-file.pdf/);
   assert.doesNotMatch(markup, /href="javascript:|href="\/\//);
 });
@@ -151,4 +153,13 @@ test('legacy linked total calculated from quote lines keeps quote currency when 
   assert.equal(job.total, 30);
   assert.equal(job.currency, 'USD');
   assert.equal(job.details.pricingCurrency, 'USD');
+});
+
+
+test('new validated client provenance labels the retained download accurately', () => {
+  const job = build({ attachments: [{ filename: 'cutout.png', contentType: 'image/png', url: '/cutout.png', originalFilename: 'client.jpg', originalUrl: '/client.jpg', originalContentType: 'image/jpeg', originalProvenance: 'client-upload' }] });
+  assert.equal(job.details.attachments[0].originalProvenance, 'client-upload');
+  const markup = renderToStaticMarkup(React.createElement(JobOrderDetails, { item: job }));
+  assert.match(markup, /Original upload: client.jpg/);
+  assert.match(markup, /href="\/client.jpg"/);
 });

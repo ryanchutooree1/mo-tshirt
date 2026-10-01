@@ -20,6 +20,13 @@ import {
 } from "@/lib/automatic-background-removal";
 import { formatWholeMoney as formatDisplayWholeMoney } from "@/lib/money";
 import {
+  selectOriginalArtwork,
+  uploadArtworkWithOriginal,
+  validateArtworkUploadBatch,
+  type ArtworkSelection,
+  type ArtworkUploadCache,
+} from "@/lib/original-artwork-upload";
+import {
   PARTNER_PRINT_PLACEMENT_OPTIONS,
   type PartnerPrintPlacement,
 } from "@/lib/partners";
@@ -545,6 +552,7 @@ export default function QuoteForm({ source = "Website", className, appearance = 
   const [pendingArtworkPickerId, setPendingArtworkPickerId] = useState<number | null>(null);
   const [website, setWebsite] = useState("");
   const [loading, setLoading] = useState(false);
+  const submissionInFlight = useRef(false);
   const [submitStatus, setSubmitStatus] = useState("Sending…");
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -817,6 +825,7 @@ export default function QuoteForm({ source = "Website", className, appearance = 
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (submissionInFlight.current) return;
     const phoneOk = !form.phone || isValidPhone(form.phone);
     const deliveryPhoneOk = !form.deliveryPhone || isValidPhone(form.deliveryPhone);
     const deliveryPostCodeOk = !form.deliveryPostCode || isValidPostCode(form.deliveryPostCode);
@@ -831,6 +840,7 @@ export default function QuoteForm({ source = "Website", className, appearance = 
       return;
     }
 
+    submissionInFlight.current = true;
     setLoading(true);
     setSubmitStatus("Preparing your request…");
     setResult(null);
@@ -861,79 +871,82 @@ export default function QuoteForm({ source = "Website", className, appearance = 
     payload.append("deliveryPostCode", form.deliveryPostCode);
     payload.append("deliveryPhone", form.deliveryPhone);
 
-    const originalArtworkEntries = getArtworkUploadEntries(artworkItems);
-    const uploadedArtworkEntries = await Promise.all(
-      originalArtworkEntries.map(async (entry, index) => {
-        if (!canAutomaticallyRemoveBackground(entry.file)) return entry;
-        setSubmitStatus(
-          `Making logo ${index + 1} of ${originalArtworkEntries.length} transparent…`
-        );
-        try {
-          const result = await removeBackgroundAutomatically(entry.file, ({ label }) => {
-            setSubmitStatus(`${label}…`);
-          });
-          const baseName = entry.file.name.replace(/\.[^.]+$/, "") || `logo-${index + 1}`;
-          return {
-            ...entry,
-            file: new File([result.blob], `${baseName}-transparent.png`, {
+    try {
+      const originalArtworkEntries = getArtworkUploadEntries(artworkItems);
+      validateArtworkUploadBatch(originalArtworkEntries.map(({ file }) => selectOriginalArtwork(file)));
+      const preparedArtworkEntries = await Promise.all(
+        originalArtworkEntries.map(async (entry, index) => {
+          const selection = selectOriginalArtwork(entry.file);
+          if (!canAutomaticallyRemoveBackground(entry.file)) return { ...entry, selection };
+          setSubmitStatus(
+            `Making logo ${index + 1} of ${originalArtworkEntries.length} transparent…`
+          );
+          try {
+            const result = await removeBackgroundAutomatically(entry.file, ({ label }) => {
+              setSubmitStatus(`${label}…`);
+            });
+            if (!result.blob.size || result.blob.size > 5 * 1024 * 1024) return { ...entry, selection };
+            const baseName = entry.file.name.replace(/\.[^.]+$/, "") || `logo-${index + 1}`;
+            const file = new File([result.blob], `${baseName}-transparent.png`, {
               type: "image/png",
               lastModified: Date.now(),
-            }),
-          };
-        } catch (error) {
-          console.error("quote-form:automatic-background-removal", error);
-          return entry;
-        }
-      })
-    );
-    setSubmitStatus("Sending your request…");
-    const uploadedArtworkItems = artworkItems.filter(hasArtworkFile);
-    const firstFrontLogoDescription =
-      artworkItems.find((item) => getArtworkSlots(item.printPlacement).includes("front") && item.frontLogoDescription.trim())
-        ?.frontLogoDescription.trim() || "";
-    const firstBackLogoDescription =
-      artworkItems.find((item) => getArtworkSlots(item.printPlacement).includes("back") && item.backLogoDescription.trim())
-        ?.backLogoDescription.trim() || "";
-    payload.append(
-      "designBrief",
-      JSON.stringify({
-        product: primaryLine.garment,
-        color: primaryLine.color,
-        printMethod,
-        deadline: form.deadline,
-        totalQty: totalQuantity,
-        clientNotes: form.notes,
-        frontLogoDescription: firstFrontLogoDescription,
-        backLogoDescription: firstBackLogoDescription,
-        lineItems: garmentLines,
-        artwork: uploadedArtworkItems.map((item, index) => ({
-          label: item.label.trim() || `Logo ${index + 1}`,
-          product: item.product.trim(),
-          color: item.color.trim(),
-          size: item.size.trim(),
-          printPlacement: item.printPlacement,
-          frontLogoDescription: item.frontLogoDescription.trim(),
-          backLogoDescription: item.backLogoDescription.trim(),
-          quantity: item.quantity.trim(),
-          files: getArtworkSlots(item.printPlacement).map((slot) => ({
-            side: slot,
-            filename: getArtworkSlotFile(item, slot)?.name || "",
+            });
+            return { ...entry, selection: { ...selection, file, backgroundRemovalMethod: result.method } satisfies ArtworkSelection };
+          } catch (error) {
+            console.error("quote-form:automatic-background-removal", error);
+            return { ...entry, selection };
+          }
+        })
+      );
+      validateArtworkUploadBatch(preparedArtworkEntries.map(({ selection }) => selection));
+      setSubmitStatus("Saving original and prepared artwork…");
+      const uploadSessionId = `quote-${crypto.randomUUID().slice(0, 12)}`;
+      const uploadCache: ArtworkUploadCache = new Map();
+      const uploadedArtworkEntries = await Promise.all(preparedArtworkEntries.map(async (entry, index) => ({
+        ...buildArtworkAttachmentMetadata(entry, index),
+        ...await uploadArtworkWithOriginal({ selection: entry.selection, sessionId: uploadSessionId, maxBytes: 5 * 1024 * 1024, uploadCache }),
+      })));
+      setSubmitStatus("Sending your request…");
+      const uploadedArtworkItems = artworkItems.filter(hasArtworkFile);
+      const firstFrontLogoDescription =
+        artworkItems.find((item) => getArtworkSlots(item.printPlacement).includes("front") && item.frontLogoDescription.trim())
+          ?.frontLogoDescription.trim() || "";
+      const firstBackLogoDescription =
+        artworkItems.find((item) => getArtworkSlots(item.printPlacement).includes("back") && item.backLogoDescription.trim())
+          ?.backLogoDescription.trim() || "";
+      payload.append(
+        "designBrief",
+        JSON.stringify({
+          product: primaryLine.garment,
+          color: primaryLine.color,
+          printMethod,
+          deadline: form.deadline,
+          totalQty: totalQuantity,
+          clientNotes: form.notes,
+          frontLogoDescription: firstFrontLogoDescription,
+          backLogoDescription: firstBackLogoDescription,
+          lineItems: garmentLines,
+          artwork: uploadedArtworkItems.map((item, index) => ({
+            label: item.label.trim() || `Logo ${index + 1}`,
+            product: item.product.trim(),
+            color: item.color.trim(),
+            size: item.size.trim(),
+            printPlacement: item.printPlacement,
+            frontLogoDescription: item.frontLogoDescription.trim(),
+            backLogoDescription: item.backLogoDescription.trim(),
+            quantity: item.quantity.trim(),
+            files: getArtworkSlots(item.printPlacement).map((slot) => ({
+              side: slot,
+              filename: getArtworkSlotFile(item, slot)?.name || "",
+            })),
           })),
-        })),
-      })
-    );
-    if (uploadedArtworkEntries.length) {
-      const attachmentMetadata = uploadedArtworkEntries
-        .map((entry, index) => buildArtworkAttachmentMetadata(entry, index))
-        .filter((entry): entry is NonNullable<ReturnType<typeof buildArtworkAttachmentMetadata>> => Boolean(entry));
+        })
+      );
+      if (uploadedArtworkEntries.length) {
+        payload.append("attachments", JSON.stringify(uploadedArtworkEntries));
+        payload.append("emailUploadedAttachments", "true");
+      }
 
-      payload.append("attachments", JSON.stringify(attachmentMetadata));
-      uploadedArtworkEntries.forEach((entry) => {
-        payload.append("files", entry.file);
-      });
-    }
-
-    try {
       journey.attach(payload);
       const res = await fetch("/api/contact", {
         method: "POST",
@@ -972,9 +985,10 @@ export default function QuoteForm({ source = "Website", className, appearance = 
       } else {
         setResult({ ok: false, msg: body?.error || "Something went wrong." });
       }
-    } catch {
-      setResult({ ok: false, msg: "Network error. Please try again." });
+    } catch (error) {
+      setResult({ ok: false, msg: error instanceof Error ? error.message : "Network error. Please try again." });
     } finally {
+      submissionInFlight.current = false;
       setLoading(false);
       setSubmitStatus("Sending…");
     }
