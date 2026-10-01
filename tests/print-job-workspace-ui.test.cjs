@@ -18,7 +18,13 @@ for (const key of ["window", "document", "HTMLElement", "HTMLAnchorElement", "HT
 Object.defineProperty(global, "navigator", { value: dom.window.navigator, configurable: true });
 global.IS_REACT_ACT_ENVIRONMENT = true;
 global.requestAnimationFrame = window.requestAnimationFrame = (callback) => setTimeout(callback, 0);
-window.scrollTo = () => {};
+let syntheticScrollY = 0;
+let scrollCalls = [];
+let historyPushes = 0;
+const realPushState = window.history.pushState.bind(window.history);
+window.history.pushState = (...args) => { historyPushes++; return realPushState(...args); };
+Object.defineProperty(window, "scrollY", { configurable: true, get: () => syntheticScrollY });
+window.scrollTo = (options, y) => { const top = typeof options === "number" ? y : options?.top; if (Number.isFinite(top)) syntheticScrollY = top; scrollCalls.push(top); };
 HTMLElement.prototype.scrollIntoView = function () {};
 const { render, screen, within, waitFor, cleanup, fireEvent, act } = requireRepo("@testing-library/react");
 
@@ -55,7 +61,7 @@ function reset() {
     quote("alpha", "Alpha New", "new", { createdAt: NOW - 8000, printJobWorkflow: workflow("new", { reason: "" }) }),
     quote("bravo", "Bravo Details", "needs_details", { source: "WhatsApp", createdAt: NOW - 7000 }),
     quote("charlie", "Charlie Waiting", "awaiting_client", { source: "Design studio", createdAt: NOW - 6000 }),
-    quote("delta", "Delta Confirmed", "confirmed", { source: "Team", createdAt: NOW - 5000, orderTransactionId: "order-delta", quote: { documentNumber: "INV-DELTA", documentType: "invoice", currency: "Rs", total: 2400, paymentStatus: "Paid", lines: [{ description: "Cotton polo", quantity: 12, unitPrice: 200, color: "Navy", size: "XL" }] }, paymentReceipt: { documentNumber: "AUTO-DELTA" }, attachments: [{ filename: "Synthetic artwork.pdf", url: "https://synthetic.example.test/artwork.pdf" }], message: "Synthetic conference uniforms", delivery: "Collection", deadline: "2026-12-20" }),
+    quote("delta", "Delta Confirmed", "confirmed", { source: "Team", createdAt: NOW - 5000, orderTransactionId: "order-delta", quote: { documentNumber: "INV-DELTA", documentType: "invoice", clientAddress: "456 Synthetic Office, Test City", currency: "Rs", total: 2400, paymentStatus: "Paid", lines: [{ description: "Cotton polo", quantity: 12, unitPrice: 200, color: "Navy", size: "XL" }] }, paymentReceipt: { documentNumber: "AUTO-DELTA" }, attachments: [{ filename: "Synthetic artwork.pdf", url: "https://synthetic.example.test/artwork.pdf" }], message: "Synthetic conference uniforms", delivery: "Collection", deliveryAddress: "123 Synthetic Lane, Test City", deadline: "2026-12-20" }),
     quote("echo", "Echo Production", "production", { source: "Team", createdAt: NOW - 4000, attachments: [{ filename: "Synthetic front mockup.png", role: "final-mockup", side: "front", contentType: "image/png", url: "https://synthetic.example.test/front-mockup.png" }, { filename: "Synthetic back mockup.png", role: "final-mockup", side: "back", contentType: "image/png", url: "https://synthetic.example.test/back-mockup.png" }, { filename: "Synthetic logo.png", role: "print-artwork", side: "front", contentType: "image/png", url: "https://synthetic.example.test/synthetic-logo.png" }] }),
     quote("foxtrot", "Foxtrot Ready", "ready", { source: "Email", createdAt: NOW - 3000 }),
     quote("golf", "Golf Completed", "completed", { source: "Team", createdAt: NOW - 2000 }),
@@ -67,7 +73,7 @@ function reset() {
   failNextGet = null; failNextPatch = null; loseNextPatchResponse = false; deferredPatch = null;
   clipFailure = false; clipboardWrites = [];
   queueFlags = { canQuotes: true, canOrders: true, canInbox: false };
-  warnings = [];
+  warnings = []; syntheticScrollY = 0; scrollCalls = []; historyPushes = 0;
   window.history.replaceState({}, "", "/admin/quotation-approval");
 }
 function jobs() { return [...domain.buildPrintJobs(quoteRecords, orderRecords, NOW), ...domain.buildPendingEmailJobs(enquiries, quoteRecords.map((entry) => entry.id), NOW)]; }
@@ -131,11 +137,19 @@ const customRequire = (name) => {
   };
   if (name === "@/admin/AdminThemeContext") return { useAdminTheme: () => ({ theme: "dark" }) };
   if (name === "@/lib/print-job-workflow") return domain;
+  if (name.startsWith("@/lib/print-job")) return loadDomain(name.slice("@/lib/".length) + ".ts");
+  if (name === "./JobOrderDetails") return loadComponent("JobOrderDetails.tsx");
   if (name === "@/lib/quotation-inbox") return inbox;
   if (name === "@/components/admin/EmailEnquiryDetails") return { __esModule: true, default: ({ intake, onDirtyChange, onOpenQuote }) => React.createElement("section", { "aria-label": "Synthetic enquiry editor", "data-status": intake.status, "data-quote-id": intake.quoteId || "" }, intake.subject, React.createElement("button", { onClick: () => onDirtyChange(true) }, "Make synthetic enquiry dirty"), React.createElement("button", { onClick: () => onDirtyChange(false) }, "Mark synthetic enquiry saved"), React.createElement("button", { onClick: () => { onDirtyChange(false); onOpenQuote("synthetic-converted-quote"); } }, "Open synthetic converted quote")) };
   if (name.endsWith(".module.css")) return { __esModule: true, default: new Proxy({}, { get: (_, key) => String(key) }) };
   return requireRepo(name);
 };
+function loadComponent(file) {
+  const result = { exports: {} };
+  const source = ts.transpileModule(fs.readFileSync(root + "/src/components/admin/print-jobs/" + file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText;
+  vm.runInNewContext(source, { module: result, exports: result.exports, require: customRequire, console }, { filename: file + ".test.js" });
+  return result.exports;
+}
 const componentModule = { exports: {} };
 const code = ts.transpileModule(fs.readFileSync(root + "/src/components/admin/print-jobs/PrintJobWorkspace.tsx", "utf8"), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 },
@@ -162,13 +176,14 @@ const user = {
 function deferred() { let resolve; const promise = new Promise((done) => { resolve = done; }); return { promise, resolve }; }
 async function mount(props = {}) { const rendered = render(React.createElement(App, props)); await waitFor(() => assert.equal(Boolean(screen.queryByText("Loading client designs…")), false)); return rendered; }
 async function status(value) { await user.fill(screen.getByRole("combobox", { name: "Job status" }), value); }
-async function openJob(name = "Alpha New") { const row = screen.getByRole("button", { name: new RegExp(`^Open job for ${name},`) }); await user.click(row); return row; }
+async function openJob(name = "Alpha New") { if (!screen.queryByRole("complementary", { name: "Client design list" }) && screen.queryByRole("button", { name: "Client list", exact: true })) await user.click(screen.getByRole("button", { name: "Client list", exact: true })); await waitFor(() => assert.ok(screen.queryByRole("complementary", { name: "Client design list" }))); const row = screen.getByRole("button", { name: new RegExp(`^Open job for ${name},`) }); await user.click(row); return row; }
 async function startUpdate(name = "Alpha New", action = "Change job status") { await openJob(name); const button = within(overview()).getByRole("button", { name: action, exact: true }); await user.click(button); return button; }
 async function submitStage() { await act(async () => { fireEvent.submit(form()); }); }
 async function saved() { await waitFor(() => assert.equal(Boolean(screen.queryByRole("dialog")), false)); await act(async () => { await new Promise((resolve) => setTimeout(resolve, 8)); }); }
 async function popTo(state) { await act(async () => { window.history.replaceState(state, "", window.location.href); window.dispatchEvent(new window.PopStateEvent("popstate", { state })); }); }
 let failures = 0, passed = 0;
 async function test(name, fn) {
+  if (process.env.PRINT_UI_TEST_FILTER && !name.includes(process.env.PRINT_UI_TEST_FILTER)) return;
   reset();
   try { await fn(); passed++; console.log("PASS " + name); }
   catch (error) { failures++; console.error("FAIL " + name + "\n" + error.stack); }
@@ -184,23 +199,26 @@ function addEnquiry() { enquiries = [{ id: "synthetic-intake", subject: "Synthet
     assert.equal(Boolean(screen.queryByRole("navigation", { name: "Job categories" })), false);
     assert.equal(screen.getAllByRole("combobox").length, 1);
     assert.equal(screen.getByRole("combobox", { name: "Job status" }).value, "active");
-    assert.ok(screen.getByRole("heading", { name: "Pick the client’s design" }));
+    assert.ok(screen.getByRole("complementary", { name: "Client design list" })); assert.equal(Boolean(screen.queryByRole("region", { name: "Selected client design" })), false);
     for (const stage of domain.PRINT_JOB_STAGES) { await status(stage.id); assert.equal(rows().length, 1); assert.ok(rows()[0].getAttribute("aria-label").endsWith(stage.label)); }
     await status("all"); assert.equal(rows().length, 8);
     await status("attention"); assert.equal(rows().length, 4);
     assert.ok(rowNames().every((name) => !/Completed|Declined/.test(name))); assert.equal(patches().length, 0);
   });
 
-  await test("search filters client, contact, garment and document while keeping the selected job open", async () => {
-    await mount(); await openJob("Echo Production");
-    const search = screen.getByRole("textbox", { name: "Search jobs" });
+  await test("search and status persist when opening a full-width client detail and returning to the list", async () => {
+    await mount(); const search = screen.getByRole("textbox", { name: "Search jobs" });
     for (const term of ["Delta", "delta@synthetic.example.test", "Cotton polo", "INV-DELTA", "AUTO-DELTA", "ORDER-DELTA"]) {
       await user.fill(search, term); assert.deepEqual(rowNames(), ["Delta Confirmed"]);
-      assert.equal(handoff().dataset.quoteId, "echo");
     }
+    await openJob("Delta Confirmed"); assert.equal(handoff().dataset.quoteId, "delta");
+    assert.equal(Boolean(screen.queryByRole("textbox", { name: "Search jobs" })), false);
+    await user.click(within(overview()).getByRole("button", { name: "Client list" }));
+    assert.equal(screen.getByRole("textbox", { name: "Search jobs" }).value, "ORDER-DELTA"); assert.deepEqual(rowNames(), ["Delta Confirmed"]);
     await user.fill(search, "No-such-client"); assert.ok(screen.getByRole("heading", { name: "No matching clients" }));
     await user.fill(search, ""); await status("completed"); assert.deepEqual(rowNames(), ["Golf Completed"]);
-    assert.equal(handoff().dataset.quoteId, "echo");
+    await openJob("Golf Completed"); await user.click(within(overview()).getByRole("button", { name: "Client list" }));
+    assert.equal(screen.getByRole("combobox", { name: "Job status" }).value, "completed"); assert.deepEqual(rowNames(), ["Golf Completed"]);
   });
 
   await test("client list displays saved mockups and print artwork; selected design shows front and back", async () => {
@@ -209,7 +227,8 @@ function addEnquiry() { enquiries = [{ id: "synthetic-intake", subject: "Synthet
     assert.ok(within(row).getByRole("img", { name: "Finished product · Back" }));
     assert.ok(within(row).getByRole("img", { name: "Print artwork · Front" }));
     assert.ok(within(row).getByText("Echo Production", { exact: true }));
-    await openJob("Echo Production"); assert.equal(rows().length, 6, "Opening a client retains the left list");
+    await openJob("Echo Production"); assert.equal(Boolean(screen.queryByRole("complementary", { name: "Client design list" })), false, "Opening a client hides the list rather than retaining a narrow split");
+    assert.ok(screen.getByRole("region", { name: "Selected client design" }));
     assert.ok(within(overview()).getByRole("heading", { name: "Finished product" }));
     assert.ok(within(overview()).getByRole("heading", { name: "Logos & print artwork" }));
     assert.equal(within(overview()).getAllByRole("img").length, 3);
@@ -224,6 +243,19 @@ function addEnquiry() { enquiries = [{ id: "synthetic-intake", subject: "Synthet
     assert.ok(within(overview()).getByText("No print artwork attached yet."));
     await openJob("Delta Confirmed");
     assert.ok(within(overview()).getByText(/supplied files have no image preview/));
+    const customer = within(overview()).getByRole("region", { name: "Customer details" });
+    assert.ok(within(customer).getByText("Delta Confirmed"));
+    assert.ok(within(customer).getByText("delta@synthetic.example.test"));
+    assert.ok(within(customer).getByText("0000000000"));
+    assert.ok(within(customer).getByText("456 Synthetic Office, Test City"));
+    const delivery = within(overview()).getByRole("region", { name: "Delivery details" });
+    assert.ok(within(delivery).getByText("Collection")); assert.ok(within(delivery).getByText("123 Synthetic Lane, Test City"));
+    const products = within(overview()).getByRole("region", { name: "Products and size quantities" });
+    const productCells = within(products).getAllByRole("cell").map(cell => cell.textContent);
+    assert.deepEqual(productCells, ["Cotton polo", "Navy", "XL", "12"]);
+    const pricing = within(overview()).getByRole("region", { name: "Recorded line pricing" });
+    assert.ok(within(pricing).getByRole("columnheader", { name: "Unit price" }));
+    assert.ok(within(overview()).getByRole("region", { name: "Notes and instructions" }));
     const file = within(overview()).getByRole("link", { name: "Synthetic artwork.pdf", hidden: true });
     assert.equal(file.href, "https://synthetic.example.test/artwork.pdf"); assert.match(file.rel, /noopener/);
     await openJob("Echo Production");
@@ -234,35 +266,47 @@ function addEnquiry() { enquiries = [{ id: "synthetic-intake", subject: "Synthet
     await waitFor(() => assert.equal(within(overview()).getByRole("img", { name: "Finished product · Front" }).getAttribute("src"), "https://synthetic.example.test/revised-front.png"));
   });
 
-  await test("dirty handoff entries protect client changes, client-list close and browser navigation", async () => {
+  await test("dirty handoff protects detail dismissal and browser navigation until explicit discard", async () => {
     await mount(); await openJob(); await user.click(within(handoff()).getByRole("button", { name: "Make synthetic handoff dirty" }));
-    confirmation = false; await openJob("Echo Production"); assert.equal(handoff().dataset.quoteId, "alpha");
-    assert.match(confirmations.at(-1), /Discard your unsaved entries and open another job/);
-    await user.click(within(overview()).getByRole("button", { name: "Client list" })); assert.equal(handoff().dataset.quoteId, "alpha");
+    confirmation = false; await user.click(within(overview()).getByRole("button", { name: "Client list" })); assert.equal(handoff().dataset.quoteId, "alpha");
+    assert.match(confirmations.at(-1), /Discard your unsaved entries/);
+    assert.equal(Boolean(screen.queryByRole("complementary", { name: "Client design list" })), false);
     await popTo({}); assert.equal(handoff().dataset.quoteId, "alpha"); assert.match(confirmations.at(-1), /Discard your unsaved changes/);
     const unloading = new Event("beforeunload", { cancelable: true }); window.dispatchEvent(unloading); assert.equal(unloading.defaultPrevented, true);
     assert.equal(within(overview()).getByRole("button", { name: "Change job status" }).disabled, true);
-    confirmation = true; await openJob("Echo Production"); assert.equal(handoff().dataset.quoteId, "echo");
+    confirmation = true; await user.click(within(overview()).getByRole("button", { name: "Client list" }));
+    await openJob("Echo Production"); assert.equal(handoff().dataset.quoteId, "echo");
   });
 
-  await test("in-flight handoff prevents changing clients, new quotation, close and browser Back", async () => {
+  await test("in-flight handoff blocks detail dismissal, new quotation and browser Back", async () => {
     await mount(); await openJob(); await user.click(within(handoff()).getByRole("button", { name: "Start synthetic handoff action" }));
-    await openJob("Echo Production"); assert.equal(handoff().dataset.quoteId, "alpha");
-    assert.match(screen.getByRole("status").textContent, /Wait for the current action/);
-    assert.equal(screen.getByRole("button", { name: "New quotation" }).disabled, true);
+    assert.equal(Boolean(screen.queryByRole("complementary", { name: "Client design list" })), false);
+    assert.equal(Boolean(screen.queryByRole("button", { name: "New quotation" })), false);
     await user.click(within(overview()).getByRole("button", { name: "Client list" })); assert.equal(handoff().dataset.quoteId, "alpha");
     await popTo({}); assert.ok(screen.queryByRole("region", { name: "Synthetic Tanvi workflow" }), "Browser Back must retain an in-flight handoff");
     assert.equal(handoff().dataset.quoteId, "alpha");
     await user.click(within(handoff()).getByRole("button", { name: "Finish synthetic handoff action" }));
-    await openJob("Echo Production"); assert.equal(handoff().dataset.quoteId, "echo");
+    await user.click(within(overview()).getByRole("button", { name: "Client list" })); await openJob("Echo Production"); assert.equal(handoff().dataset.quoteId, "echo");
   });
 
-  await test("client-list close restores focus and switching clients retains a single history editor entry", async () => {
-    await mount(); await openJob(); const length = window.history.length;
-    const row = await openJob("Echo Production"); assert.equal(window.history.length, length);
-    assert.equal(window.history.state.printDeskEditor.id, "echo");
-    await user.click(within(overview()).getByRole("button", { name: "Client list" }));
-    await waitFor(() => assert.ok(document.activeElement === row)); assert.ok(screen.getByRole("heading", { name: "Pick the client’s design" }));
+  await test("repeated clicks and browser back/forward preserve list filter, scroll and detail identity", async () => {
+    await mount(); await status("production"); await user.fill(screen.getByRole("textbox", { name: "Search jobs" }), "Echo");
+    syntheticScrollY = 640; const row = rows()[0]; const pushesBefore = historyPushes;
+    await act(async () => { row.focus(); fireEvent.click(row); fireEvent.click(row); });
+    assert.equal(historyPushes - pushesBefore, 1, "Repeated clicks add only one detail history entry");
+    assert.equal(handoff().dataset.quoteId, "echo"); const detailState = window.history.state;
+    syntheticScrollY = 25; await user.click(within(overview()).getByRole("button", { name: "Client list" }));
+    await waitFor(() => assert.ok(document.activeElement === row));
+    assert.equal(syntheticScrollY, 640, "Back restores the previous full-page list position");
+    assert.equal(Boolean(window.history.state?.printDeskJob || window.history.state?.printDeskEditor), false, "The list appears only after its history boundary is active");
+    assert.equal(screen.getByRole("textbox", { name: "Search jobs" }).value, "Echo");
+    assert.equal(screen.getByRole("combobox", { name: "Job status" }).value, "production");
+    assert.equal(Boolean(screen.queryByRole("region", { name: "Selected client design" })), false);
+    await act(async () => { window.history.forward(); await new Promise(resolve => setTimeout(resolve, 15)); });
+    assert.equal(handoff().dataset.quoteId, "echo"); assert.equal(Boolean(screen.queryByRole("complementary", { name: "Client design list" })), false);
+    await popTo({}); assert.ok(screen.getByRole("complementary", { name: "Client design list" }));
+    await popTo(detailState); assert.equal(handoff().dataset.quoteId, "echo");
+    await user.click(within(overview()).getByRole("button", { name: "Client list" })); assert.deepEqual(rowNames(), ["Echo Production"]);
   });
 
   await test("waiting status needs reason and saves only workflow without customer communications", async () => {
@@ -320,13 +364,19 @@ function addEnquiry() { enquiries = [{ id: "synthetic-intake", subject: "Synthet
     const length = window.history.length;
     await user.click(screen.getByRole("button", { name: "Create synthetic blank quotation" }));
     assert.equal(handoff().dataset.quoteId, "synthetic-created-quote"); assert.equal(window.history.length, length);
-    await user.click(screen.getByRole("button", { name: "Back to clients" })); assert.ok(screen.getByRole("heading", { name: "Pick the client’s design" }));
+    assert.equal(window.history.state.printDeskJob, "quote:synthetic-created-quote");
+    await user.click(screen.getByRole("button", { name: "Back to clients" })); assert.ok(screen.getByRole("complementary", { name: "Client design list" })); assert.equal(Boolean(screen.queryByRole("region", { name: "Selected client design" })), false);
   });
 
   await test("enquiry dirty guard pins snapshot through background conversion until saved", async () => {
     addEnquiry(); await mount(); await openJob("Indigo Enquiry");
+    const intakeState = window.history.state; assert.equal(intakeState.printDeskJob, "intake:synthetic-intake");
+    await popTo({}); assert.ok(screen.getByRole("complementary", { name: "Client design list" }));
+    await popTo(intakeState); assert.ok(screen.getByRole("region", { name: "Selected client design" }));
     assert.ok(screen.getByRole("heading", { name: "Complete the enquiry first" }));
+    const intakeHistoryLength = window.history.length;
     await user.click(within(overview()).getByRole("button", { name: "Review enquiry", exact: true }));
+    assert.equal(window.history.length, intakeHistoryLength, "Review replaces the intake detail boundary");
     await user.click(screen.getByRole("button", { name: "Make synthetic enquiry dirty" }));
     confirmation = false; await user.click(screen.getByRole("button", { name: "Back to clients" })); assert.ok(screen.getByRole("region", { name: "Synthetic enquiry editor" }));
     enquiries[0] = { ...enquiries[0], status: "ready", quoteId: "converted", subject: "Synthetic refreshed enquiry" };
@@ -335,6 +385,12 @@ function addEnquiry() { enquiries = [{ id: "synthetic-intake", subject: "Synthet
     await user.click(screen.getByRole("button", { name: "Mark synthetic enquiry saved" }));
     await waitFor(() => assert.equal(screen.getByRole("region", { name: "Synthetic enquiry editor" }).dataset.status, "ready"));
     await user.click(screen.getByRole("button", { name: "Open synthetic converted quote" })); assert.equal(handoff().dataset.quoteId, "synthetic-converted-quote");
+    assert.equal(window.history.state.printDeskJob, "quote:synthetic-converted-quote");
+    assert.equal(window.history.length, intakeHistoryLength, "Conversion replaces the enquiry boundary");
+    await user.click(screen.getByRole("button", { name: "Back to clients" }));
+    assert.ok(screen.getByRole("complementary", { name: "Client design list" }));
+    await act(async () => { window.history.forward(); await new Promise(resolve => setTimeout(resolve, 15)); });
+    assert.equal(handoff().dataset.quoteId, "synthetic-converted-quote");
   });
 
   await test("test settings return to selected job, refresh the panel, and explicitly report no email sent", async () => {
@@ -357,9 +413,10 @@ function addEnquiry() { enquiries = [{ id: "synthetic-intake", subject: "Synthet
 
   await test("refresh failure retains existing list and selection, and email check cannot send client mail", async () => {
     queueFlags.canInbox = true; await mount(); await openJob(); failNextGet = 503;
-    await user.click(screen.getByRole("button", { name: "Refresh job list" })); assert.ok(screen.getByRole("alert"));
-    assert.equal(rows().length, 6); assert.equal(handoff().dataset.quoteId, "alpha");
+    await user.click(within(handoff()).getByRole("button", { name: "Refresh synthetic handoff" })); assert.ok(screen.getByRole("alert"));
+    assert.equal(Boolean(screen.queryByRole("complementary", { name: "Client design list" })), false); assert.equal(handoff().dataset.quoteId, "alpha");
     await user.click(screen.getByRole("button", { name: "Retry" }));
+    await user.click(within(overview()).getByRole("button", { name: "Client list" }));
     await user.click(screen.getByRole("button", { name: "Check email" }));
     assert.deepEqual(requests.filter((entry) => entry.method === "POST"), [{ url: "/api/admin/inbox/intake", method: "POST", body: { action: "sync" } }]);
   });
@@ -373,6 +430,6 @@ function addEnquiry() { enquiries = [{ id: "synthetic-intake", subject: "Synthet
     await act(async () => { mounted.rerender(React.createElement(App, { requestedQuoteId: "synthetic-unloaded-legacy" })); }); assert.equal(handoff().dataset.quoteId, "synthetic-unloaded-legacy");
   });
 
-  console.log(`${passed} SIMPLE PRINT JOB WORKSPACE UI TESTS PASSED; ${failures} FAILED`);
+  console.log(`${passed} LIST-FIRST PRINT JOB WORKSPACE UI TESTS PASSED; ${failures} FAILED`);
   dom.window.close(); if (failures) process.exitCode = 1;
 })().catch((error) => { console.error(error); cleanup(); dom.window.close(); process.exitCode = 1; });

@@ -2,13 +2,14 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, CircleAlert, Clock3, Copy, FileImage, FileText, Inbox, Loader2, Mail, MessageSquare, Plus, RefreshCw, Search, X, XCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CircleAlert, Clock3, Copy, FileImage, Inbox, Loader2, Mail, MessageSquare, Plus, RefreshCw, Search, X, XCircle } from "lucide-react";
 import { useAdminTheme } from "@/admin/AdminThemeContext";
 import { PRINT_JOB_STAGES, type PrintJob, type PrintJobStage, type PrintJobClosureKind, stageLabel } from "@/lib/print-job-workflow";
 import { type RequestSource } from "@/lib/quotation-inbox";
 import type { EmailIntake } from "@/lib/email-intake-model";
 import EmailEnquiryDetails from "@/components/admin/EmailEnquiryDetails";
 import TanviHandoffPanel, { HandoffSettingsPanel } from "./TanviHandoffPanel";
+import JobOrderDetails, { JobListSummary } from "./JobOrderDetails";
 import styles from "./print-jobs.module.css";
 
 const EditorLoading = () => <div className={styles.empty}><Loader2 className={styles.spin} size={24} /><p>Opening document workspace…</p></div>;
@@ -49,14 +50,16 @@ export default function PrintJobWorkspace({ requestedQuoteId, openSetup = false 
   const detailRef = useRef<HTMLDivElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
   const backRef = useRef<HTMLButtonElement>(null);
+  const listScrollRef = useRef(0);
   const editorOpenerRef = useRef<HTMLElement | null>(null);
   const checkRef = useRef(false);
   const restoredRef = useRef<string | null>(null);
-  const navigationRef = useRef({ editor, dirty, transition, dialogDirty: false, dialogSaving: false, panelBusy: false });
+  const navigationRef = useRef({ editor, dirty, transition, dialogDirty: false, dialogSaving: false, panelBusy: false, selectedKey });
   navigationRef.current.editor = editor;
   navigationRef.current.dirty = dirty;
   navigationRef.current.transition = transition;
   navigationRef.current.panelBusy = panelBusy;
+  navigationRef.current.selectedKey = selectedKey;
 
   const refresh = useCallback(async () => {
     requestRef.current?.abort();
@@ -89,8 +92,8 @@ export default function PrintJobWorkspace({ requestedQuoteId, openSetup = false 
     restoredRef.current = quoteId;
     if (item) { setView(closed(item.stage) ? item.stage : "active"); setSelectedKey(item.key); } else setSelectedKey(null);
     const next: Editor = { kind: "quote", id: quoteId, name: item?.name || "Requested quotation" };
-    const updateHistory = window.history.state?.printDeskEditor ? window.history.replaceState.bind(window.history) : window.history.pushState.bind(window.history);
-    updateHistory({ ...window.history.state, printDeskEditor: next }, "", window.location.href);
+    const updateHistory = window.history.state?.printDeskEditor || window.history.state?.printDeskJob ? window.history.replaceState.bind(window.history) : window.history.pushState.bind(window.history);
+    updateHistory({ ...window.history.state, printDeskEditor: next, printDeskJob: item?.key || null }, "", window.location.href);
     setEditor(next); setDirty(false);
   }, [data, requestedQuoteId]);
   useEffect(() => { if (selectedKey) detailRef.current?.focus({ preventScroll: true }); }, [selectedKey]);
@@ -115,16 +118,18 @@ export default function PrintJobWorkspace({ requestedQuoteId, openSetup = false 
   useEffect(() => {
     const onPop = (event: PopStateEvent) => {
       const current = navigationRef.current;
-      const hasUnsaved = current.editor && current.dirty || current.transition && current.dialogDirty;
+      const hasUnsaved = current.dirty || current.transition && current.dialogDirty;
       if (current.dialogSaving || current.panelBusy || hasUnsaved && !window.confirm("Discard your unsaved changes and go back?")) {
-        window.history.pushState({ ...window.history.state, printDeskEditor: current.editor, printDeskStage: current.transition }, "", window.location.href);
+        window.history.pushState({ ...window.history.state, printDeskEditor: current.editor, printDeskStage: current.transition, printDeskJob: current.selectedKey }, "", window.location.href);
         return;
       }
       const nextEditor = event.state?.printDeskEditor || null;
       const nextTransition = event.state?.printDeskStage || null;
       setEditor(nextEditor); setTransition(nextTransition); setDirty(false);
-      if (!nextEditor) setSelectedKey(null);
-      else if (nextEditor.kind === "quote" && nextEditor.id) setSelectedKey(`quote:${nextEditor.id}`);
+      const nextJob = event.state?.printDeskJob || (nextEditor?.kind === "quote" && nextEditor.id ? `quote:${nextEditor.id}` : null);
+      setSelectedKey(nextJob);
+      if (!nextJob && !nextEditor) requestAnimationFrame(() => { window.scrollTo({ top: listScrollRef.current, behavior: "instant" }); openerRef.current?.focus({ preventScroll: true }); });
+      else if (nextJob && nextJob !== current.selectedKey) window.scrollTo({ top: 0, behavior: "instant" });
       current.dialogDirty = false; current.dialogSaving = false;
       if (!nextEditor && !nextTransition) void refresh();
     };
@@ -157,28 +162,38 @@ export default function PrintJobWorkspace({ requestedQuoteId, openSetup = false 
   }).sort((a, b) => sort === "newest" ? b.createdAt - a.createdAt : sort === "oldest" ? a.createdAt - b.createdAt : sort === "name" ? a.name.localeCompare(b.name) : Number(b.attention) - Number(a.attention) || Number(b.overdue) - Number(a.overdue) || b.lastActivity - a.lastActivity), [items, view, source, search, sort]);
   const changeView = (next: View) => { setView(next); setVisibleCount(30); setNotice(""); };
   const openJob = (item: PrintJob) => {
+    if (navigationRef.current.selectedKey === item.key) return;
     if (panelBusy) { setNotice("Wait for the current action to finish before changing jobs."); return; }
     if (dirty && !window.confirm("Discard your unsaved entries and open another job?")) return;
+    if (!navigationRef.current.selectedKey) listScrollRef.current = window.scrollY;
+    navigationRef.current.selectedKey = item.key;
     setDirty(false); openerRef.current = document.activeElement as HTMLElement;
     setSelectedKey(item.key); setNotice("");
+    window.scrollTo({ top: 0, behavior: "instant" });
     if (item.quoteId) {
       const next: Editor = { kind: "quote", id: item.quoteId, name: item.name };
-      const updateHistory = window.history.state?.printDeskEditor ? window.history.replaceState.bind(window.history) : window.history.pushState.bind(window.history);
-      updateHistory({ ...window.history.state, printDeskEditor: next }, "", window.location.href); setEditor(next);
+      const updateHistory = window.history.state?.printDeskEditor || window.history.state?.printDeskJob ? window.history.replaceState.bind(window.history) : window.history.pushState.bind(window.history);
+      updateHistory({ ...window.history.state, printDeskEditor: next, printDeskJob: item.key }, "", window.location.href); setEditor(next);
+    } else {
+      window.history.pushState({ ...window.history.state, printDeskEditor: null, printDeskJob: item.key }, "", window.location.href); setEditor(null);
     }
   };
   const closeJob = () => {
-    if (panelBusy || dirty && !window.confirm("Discard your unsaved entries and return to the client list?")) return;
-    setDirty(false); setSelectedKey(null); setEditor(null);
-    if (window.history.state?.printDeskEditor) window.history.back();
-    requestAnimationFrame(() => openerRef.current?.focus({ preventScroll: true }));
+    if (!navigationRef.current.selectedKey || panelBusy || dirty && !window.confirm("Discard your unsaved entries and return to the client list?")) return;
+    navigationRef.current.dirty = false;
+    navigationRef.current.selectedKey = null;
+    setDirty(false);
+    // Let popstate reveal the list so a late Back event cannot erase a newer click.
+    if (window.history.state?.printDeskEditor || window.history.state?.printDeskJob) { window.history.back(); return; }
+    setSelectedKey(null); setEditor(null);
+    requestAnimationFrame(() => { window.scrollTo({ top: listScrollRef.current, behavior: "instant" }); openerRef.current?.focus({ preventScroll: true }); });
   };
   const openEditor = (kind: Editor["kind"], item?: PrintJob) => {
     if (panelBusy || dirty && !window.confirm("Discard your unsaved entries and open this view?")) return;
     editorOpenerRef.current = document.activeElement as HTMLElement;
     if (kind === "intake") setEditingIntake(data?.enquiries?.find((intake) => intake.id === item?.intakeId) || null);
     const next = { kind, id: kind === "quote" ? item?.quoteId || undefined : kind === "order" ? item?.orderId || undefined : item?.intakeId || undefined, name: item?.name || "New quotation" };
-    const updateHistory = window.history.state?.printDeskEditor ? window.history.replaceState.bind(window.history) : window.history.pushState.bind(window.history);
+    const updateHistory = window.history.state?.printDeskEditor || window.history.state?.printDeskJob ? window.history.replaceState.bind(window.history) : window.history.pushState.bind(window.history);
     updateHistory({ ...window.history.state, printDeskEditor: next }, "", window.location.href);
     setEditor(next);
     setDirty(false); window.scrollTo({ top: 0, behavior: "instant" });
@@ -205,27 +220,28 @@ export default function PrintJobWorkspace({ requestedQuoteId, openSetup = false 
 
   return <div className={`${styles.workspace} ${styles.simpleWorkspace}`} data-theme={theme}>
     <div hidden={focusView || setupOpen}>
-      <header className={styles.header}><div><p className={styles.eyebrow}>MO T-SHIRT · QUOTATIONS</p><h1>Quotes & invoices<span>.</span></h1><p>Choose the design. Confirm price, check payment, send to production.</p></div><div className={styles.headerActions}>{data?.canInbox && <button className={styles.secondary} onClick={() => void checkEmail()} disabled={checking || panelBusy}><Mail size={16} />{checking ? "Checking…" : "Check email"}</button>}<button className={styles.primary} onClick={() => openEditor("quote")} disabled={!data?.canQuotes || panelBusy}><Plus size={17} />New quotation</button></div></header>
+      <header className={styles.header} hidden={Boolean(selected)}><div><p className={styles.eyebrow}>MO T-SHIRT · QUOTATIONS</p><h1>Quotes & invoices<span>.</span></h1><p>Choose the design. Confirm price, check payment, send to production.</p></div><div className={styles.headerActions}>{data?.canInbox && <button className={styles.secondary} onClick={() => void checkEmail()} disabled={checking || panelBusy}><Mail size={16} />{checking ? "Checking…" : "Check email"}</button>}<button className={styles.primary} onClick={() => openEditor("quote")} disabled={!data?.canQuotes || panelBusy}><Plus size={17} />New quotation</button></div></header>
       {Boolean(error || data?.warnings?.length) && <div className={styles.warning} role="alert"><CircleAlert size={17} /><span>{error || data?.warnings.join(" ")}</span><button onClick={() => void refresh()}>Retry</button></div>}
       {notice && <p className={styles.notice} role="status">{notice}</p>}
       <div className={styles.simpleDesk}>
-        <aside className={`${styles.clientQueue} ${selected ? styles.clientQueueSelected : ""}`} aria-label="Client design list">
-          <div className={styles.clientTools}><div><h2>Client designs <span>{filtered.length}</span></h2><button className={styles.iconButton} onClick={() => void refresh()} disabled={refreshing} aria-label="Refresh job list"><RefreshCw size={15} className={refreshing ? styles.spin : ""} /></button></div><label className={styles.search}><Search size={16} /><input aria-label="Search jobs" placeholder="Find a client or design…" value={search} onChange={event => { setSearch(event.target.value); setVisibleCount(30); }} /></label><select className={styles.statusSelect} aria-label="Job status" value={view} onChange={event => changeView(event.target.value as View)}>{statusOptions.map(option=><option key={option.id} value={option.id}>{option.label}</option>)}</select></div>
-          <div className={styles.clientList}>{!data && !error ? <div className={styles.empty}><Loader2 className={styles.spin} size={22} /><p>Loading client designs…</p></div> : filtered.slice(0,visibleCount).map(item=><button key={item.key} className={`${styles.clientCard} ${selectedKey === item.key ? styles.clientCardActive : ""}`} onClick={()=>openJob(item)} aria-pressed={selectedKey===item.key} aria-label={`Open job for ${item.name}, ${stageLabel(item.stage)}`}><JobVisuals item={item} compact /><span className={styles.clientCardInfo}><strong>{item.quantity ? `${item.quantity} pieces · ` : ""}{item.garmentSummary}</strong><span>{item.name}</span><span className={styles.clientCardBottom}><StageBadge stage={item.stage}/><b>{money(item)}</b></span></span></button>)}{!filtered.length && data && <div className={styles.empty}><Inbox size={24}/><h3>No matching clients</h3><p>Try another search or status.</p></div>}{visibleCount<filtered.length&&<button className={styles.loadMore} onClick={()=>setVisibleCount(count=>count+30)}>Show more clients</button>}</div>
+        <aside className={styles.clientQueue} hidden={Boolean(selected)} aria-label="Client design list">
+          <div className={styles.clientTools}><div><h2>{view === "active" ? "All active jobs" : view === "all" ? "All jobs" : view === "attention" ? "Needs attention" : stageLabel(view)} <span>{filtered.length}</span></h2><button className={styles.iconButton} onClick={() => void refresh()} disabled={refreshing} aria-label="Refresh job list"><RefreshCw size={15} className={refreshing ? styles.spin : ""} /></button></div><label className={styles.search}><Search size={16} /><input aria-label="Search jobs" placeholder="Search client, design or quotation…" value={search} onChange={event => { setSearch(event.target.value); setVisibleCount(30); }} /></label><select className={styles.statusSelect} aria-label="Job status" value={view} onChange={event => changeView(event.target.value as View)}>{statusOptions.map(option=><option key={option.id} value={option.id}>{option.label}</option>)}</select></div>
+          <div className={styles.clientList}>{!data && !error ? <div className={styles.empty}><Loader2 className={styles.spin} size={22} /><p>Loading client designs…</p></div> : filtered.slice(0,visibleCount).map(item=><button key={item.key} className={`${styles.clientCard} ${selectedKey === item.key ? styles.clientCardActive : ""}`} onClick={()=>openJob(item)} aria-pressed={selectedKey===item.key} aria-label={`Open job for ${item.name}, ${stageLabel(item.stage)}`}><JobVisuals item={item} compact /><span className={styles.clientCardInfo}><JobListSummary item={item}/><span className={styles.listClientName}>{item.name}</span><span className={styles.listMetadata}>{({studio:"Design studio",form:"Website enquiry",email:"Email",whatsapp:"WhatsApp",team:"Team"})[item.source]} · {item.reference}{item.createdAt ? ` · ${new Date(item.createdAt).toLocaleDateString("en-GB", { day:"numeric", month:"short", timeZone:"Indian/Mauritius" })}` : ""}</span><span className={styles.clientCardBottom}><StageBadge stage={item.stage}/>{item.deadline&&<span>Requested {displayDate(item.deadline)}</span>}</span></span><span className={styles.listValue}><b>{money(item)}</b><span>View job <ArrowRight size={15}/></span></span></button>)}{!filtered.length && data && <div className={styles.empty}><Inbox size={24}/><h3>No matching clients</h3><p>Try another search or status.</p></div>}{visibleCount<filtered.length&&<button className={styles.loadMore} onClick={()=>setVisibleCount(count=>count+30)}>Show more clients</button>}</div>
           <p className={styles.clientFooter}>{data ? `${filtered.length} in this list` : "Connecting…"}{followUps ? ` · ${followUps} follow-ups due` : ""}</p>
         </aside>
-        <section className={styles.selectedJob} aria-label="Selected client design">
+        <section className={styles.selectedJob} hidden={!selected} aria-label="Selected client design">
           {selected ? <div ref={detailRef} tabIndex={-1} className={styles.selectedJobBody} aria-label={`Job overview for ${selected.name}`}>
-            <div className={styles.selectedHeading}><button className={styles.backToList} onClick={closeJob}><ArrowLeft size={15}/>Client list</button><div><span>{selected.reference}</span><h2>{selected.name}</h2></div><StageBadge stage={selected.stage}/></div>
-            <div className={styles.jobCanvas}><div className={styles.visualColumn}><JobVisuals item={selected}/><details className={styles.more}><summary>Request, files & contact</summary><p className={styles.contact}>{selected.email} {selected.phone}</p><p className={styles.customerNote}>{selected.message}</p>{selected.artwork.map((file,index)=><a key={index} href={file.url} target="_blank" rel="noopener noreferrer"><FileText size={14}/>{file.name}<ArrowRight size={13}/></a>)}{selected.deadline&&<p className={styles.help}>Requested date: {displayDate(selected.deadline)}</p>}</details>
+            <div className={styles.selectedHeading}><button className={styles.backToList} disabled={panelBusy} onClick={closeJob}><ArrowLeft size={15}/>Client list</button><div><span>{selected.reference}</span><h2>{selected.name}</h2></div><StageBadge stage={selected.stage}/></div>
+            <div className={styles.jobCanvas}><div className={styles.visualColumn}><JobVisuals item={selected}/>
               <div className={styles.secondaryJobActions}>{selected.editable&&<><button disabled={dirty||panelBusy} onClick={()=>openStage({item:selected,stage:"awaiting_client"})}><Clock3 size={14}/>Waiting for client</button><button disabled={dirty||panelBusy} onClick={()=>openStage({item:selected,stage:"declined"})}><XCircle size={14}/>Unable to fulfil</button><button disabled={dirty||panelBusy} onClick={()=>openStage({item:selected})}>Change job status</button></>}</div>
             </div><div className={styles.actionColumn}>{selected.quoteId ? <TanviHandoffPanel key={selected.quoteId} quoteId={selected.quoteId} refreshKey={handoffRevision} onDirtyChange={setDirty} onBusyChange={setPanelBusy} onUpdated={()=>void refresh()} onOpenSettings={()=>setSetupOpen(true)}/> : selected.intakeId ? <div className={styles.enquiryNext}><h3>Complete the enquiry first</h3><p>Review the client’s details, then prepare their quotation. Price, payment and production stay in this same workspace.</p><button className={styles.primary} onClick={()=>openEditor("intake",selected)}>Review enquiry<ArrowRight size={16}/></button></div> : <div className={styles.enquiryNext}><h3>Existing production order</h3><p>{selected.reason}</p><a className={styles.secondary} href={`/admin/orders?orderId=${encodeURIComponent(selected.orderId || "")}`}>Open order record<ArrowRight size={15}/></a></div>}</div></div>
+            <JobOrderDetails item={selected}/>
           </div> : <div className={styles.pickDesign}><FileImage size={34}/><h2>Pick the client’s design</h2><p>The finished front and back, print files and the next action appear here.</p><span>1 Price agreed · 2 Payment received · 3 Send to production</span></div>}
         </section>
       </div>
     </div>
     {setupOpen && <HandoffSettingsPanel onClose={()=>setSetupOpen(false)} onSaved={()=>{setSetupOpen(false);setHandoffRevision(value=>value+1);setNotice("Test-only delivery is configured. No email has been sent.");}}/>}
-    {focusView && !setupOpen && editor && <section className={styles.focusView}><header className={styles.focusHeader}><button ref={backRef} className={styles.secondary} disabled={panelBusy} onClick={closeEditor}><ArrowLeft size={16}/>Back to clients</button><div><p className={styles.eyebrow}>{editor.kind==="intake"?"CLIENT ENQUIRY":"QUOTATION"}</p><h2>{editor.name}</h2></div>{dirty&&<span className={styles.unsaved}>Unsaved changes</span>}</header><div className={styles.editor}>{editor.kind==="quote" ? editor.id ? <TanviHandoffPanel key={editor.id} quoteId={editor.id} onDirtyChange={setDirty} onBusyChange={setPanelBusy} onUpdated={()=>void refresh()} onOpenSettings={()=>setSetupOpen(true)} refreshKey={handoffRevision}/> : <NewQuotationDraft onCreated={id=>{const next:Editor={kind:"quote",id,name:"New quotation"};window.history.replaceState({...window.history.state,printDeskEditor:next},"",window.location.href);setEditor(next);setSelectedKey(`quote:${id}`);void refresh();}}/> : editor.kind==="order" ? <OrderEditor embedded initialOrderId={editor.id} onDirtyChange={setDirty}/> : focusedIntake ? <EmailEnquiryDetails intake={focusedIntake} isDark={theme==="dark"} onUpdated={refresh} onDirtyChange={setDirty} onOpenQuote={id=>{const next:Editor={kind:"quote",id,name:editor.name};window.history.replaceState({...window.history.state,printDeskEditor:next},"",window.location.href);setEditor(next);setSelectedKey(`quote:${id}`);setDirty(false);void refresh();}}/> : <div className={styles.empty}><p>This enquiry changed. Return to the client list and refresh.</p></div>}</div></section>}
+    {focusView && !setupOpen && editor && <section className={styles.focusView}><header className={styles.focusHeader}><button ref={backRef} className={styles.secondary} disabled={panelBusy} onClick={closeEditor}><ArrowLeft size={16}/>Back to clients</button><div><p className={styles.eyebrow}>{editor.kind==="intake"?"CLIENT ENQUIRY":"QUOTATION"}</p><h2>{editor.name}</h2></div>{dirty&&<span className={styles.unsaved}>Unsaved changes</span>}</header><div className={styles.editor}>{editor.kind==="quote" ? editor.id ? <TanviHandoffPanel key={editor.id} quoteId={editor.id} onDirtyChange={setDirty} onBusyChange={setPanelBusy} onUpdated={()=>void refresh()} onOpenSettings={()=>setSetupOpen(true)} refreshKey={handoffRevision}/> : <NewQuotationDraft onCreated={id=>{const next:Editor={kind:"quote",id,name:"New quotation"};window.history.replaceState({...window.history.state,printDeskEditor:next,printDeskJob:`quote:${id}`},"",window.location.href);setEditor(next);setSelectedKey(`quote:${id}`);void refresh();}}/> : editor.kind==="order" ? <OrderEditor embedded initialOrderId={editor.id} onDirtyChange={setDirty}/> : focusedIntake ? <EmailEnquiryDetails intake={focusedIntake} isDark={theme==="dark"} onUpdated={refresh} onDirtyChange={setDirty} onOpenQuote={id=>{const next:Editor={kind:"quote",id,name:editor.name};window.history.replaceState({...window.history.state,printDeskEditor:next,printDeskJob:`quote:${id}`},"",window.location.href);setEditor(next);setSelectedKey(`quote:${id}`);setDirty(false);void refresh();}}/> : <div className={styles.empty}><p>This enquiry changed. Return to the client list and refresh.</p></div>}</div></section>}
     {transition&&<StageDialog item={transition.item} initialStage={transition.stage} onClose={closeStage} onStateChange={(isDirty,isSaving)=>{navigationRef.current.dialogDirty=isDirty;navigationRef.current.dialogSaving=isSaving;}} onSaved={async message=>{closeStage();setNotice(message);await refresh();}}/>}
   </div>;
 }
@@ -234,10 +250,10 @@ function JobVisuals({item,compact=false}:{item:PrintJob;compact?:boolean}) {
   const mockups=item.mockups||[];const artworks=item.artworks||[];
   const renderImage=(visual:{url:string;name:string;side:string;kind:string},index:number)=>{
     const label=visual.side==="front"?"Front":visual.side==="back"?"Back":visual.name||"Preview";
-    return <figure key={`${visual.url}-${index}`}><VisualImage url={visual.url} label={`${visual.kind==="mockup"?"Finished product":"Print artwork"} · ${label}`}/>{!compact&&<figcaption>{label}</figcaption>}</figure>;
+    return <figure key={`${visual.url}-${index}`} data-kind={visual.kind}><VisualImage url={visual.url} label={`${visual.kind==="mockup"?"Finished product":"Print artwork"} · ${label}`}/>{!compact&&<figcaption>{label}</figcaption>}</figure>;
   };
   if(compact)return <span className={styles.queueVisuals}><span className={styles.queueMockups}>{mockups.length?mockups.slice(0,2).map(renderImage):<span className={styles.visualPlaceholder}><FileImage size={19}/><span>Mockup not saved</span></span>}</span>{artworks.length>0&&<span className={styles.queueArtworks}>{artworks.slice(0,4).map(renderImage)}{artworks.length>4&&<span>+{artworks.length-4}</span>}</span>}</span>;
-  return <div className={styles.visualOverview}><div className={styles.visualSectionTitle}><h3>Finished product</h3><span>Client’s saved design</span></div><div className={styles.finishedProducts}>{mockups.length?mockups.map(renderImage):<div className={styles.visualPlaceholder}><FileImage size={28}/><p>No finished-product mockup is saved for this request.</p></div>}</div><div className={styles.visualSectionTitle}><h3>Logos & print artwork</h3><span>{artworks.length} image{artworks.length===1?"":"s"}</span></div><div className={styles.printArtworks}>{artworks.length?artworks.map(renderImage):<p className={styles.help}>{item.artwork.length?"The supplied files have no image preview. Open them under Request, files & contact.":"No print artwork attached yet."}</p>}</div></div>;
+  return <div className={styles.visualOverview}><div className={styles.visualSectionTitle}><h3>Finished product</h3><span>Client’s saved design</span></div><div className={styles.finishedProducts}>{mockups.length?mockups.map(renderImage):<div className={styles.visualPlaceholder}><FileImage size={28}/><p>No finished-product mockup is saved for this request.</p></div>}</div><div className={styles.visualSectionTitle}><h3>Logos & print artwork</h3><span>{artworks.length} image{artworks.length===1?"":"s"}</span></div><div className={styles.printArtworks}>{artworks.length?artworks.map(renderImage):<p className={styles.help}>{item.artwork.length?"The supplied files have no image preview. Open them in the files section below.":"No print artwork attached yet."}</p>}</div></div>;
 }
 function VisualImage({url,label}:{url:string;label:string}) {
   const [failed,setFailed]=useState(false);

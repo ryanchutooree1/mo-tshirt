@@ -28,7 +28,7 @@
     "test:aura": "node --test tests/aura.test.mjs tests/x5-execution.test.mjs tests/x5-freedom.test.mjs tests/admin-access.test.mjs",
     "test:aura-ui": "node tests/aura-ui.test.cjs",
     "test:ai-earnings": "node --test tests/ai-earnings.test.mjs && node tests/ai-earnings-ui.test.cjs",
-    "test:print-jobs": "node --test tests/print-job-workflow.test.cjs tests/print-job-workflow-route.test.cjs tests/print-job-visuals.test.cjs tests/print-job-handoff.test.cjs && node tests/print-job-workspace-ui.test.cjs && node tests/new-quotation-draft-ui.test.cjs && node tests/tanvi-workflow-ui.test.cjs"
+    "test:print-jobs": "node --test tests/print-job-workflow.test.cjs tests/print-job-workflow-route.test.cjs tests/print-job-visuals.test.cjs tests/print-job-handoff.test.cjs tests/print-job-details.test.cjs && node tests/print-job-workspace-ui.test.cjs && node tests/new-quotation-draft-ui.test.cjs && node tests/tanvi-workflow-ui.test.cjs"
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",

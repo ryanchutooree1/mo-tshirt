@@ -31,6 +31,21 @@ export type PrintJobHistoryEntry = {
   id: string; kind: "created" | "sent" | "client" | "production" | "workflow" | "payment";
   label: string; detail: string; atIso: string; actor: string; stage?: PrintJobStage;
 };
+/** Read-only, source-backed details for the authorized admin job workspace. */
+export type PrintJobProduct = { description: string; color: string; size: string; quantity: number | null; printMethod: string; printPlacement: string; printDimensions: string };
+export type PrintJobDetails = {
+  summary: string;
+  customer: { name: string; company: string; email: string; phone: string; address: string };
+  delivery: { method: string; recipient: string; phone: string; address: string; postCode: string; deadline: string };
+  products: PrintJobProduct[]; garmentQuantity: number | null;
+  printMethod: string; printPlacement: string; printDimensions: string;
+  artworkRequests: { label: string; product: string; color: string; size: string; quantity: number | null; placement: string; dimensions: string; instructions: string }[];
+  pricingSource: "Order" | "Quotation" | ""; pricingCurrency: string;
+  pricingLines: { description: string; quantity: number | null; unitPrice: number | null; lineTotal: number | null; included: boolean }[];
+  deliveryFee: number | null; discount: number | null;
+  notes: { label: string; text: string }[];
+  attachments: { name: string; url: string; originalName: string; originalUrl: string; description: string }[];
+};
 export type PrintJob = {
   key: string; quoteId: string | null; orderId: string | null; intakeId: string | null; name: string; reference: string;
   source: RequestSource; stage: PrintJobStage; status: string; action: string; reason: string;
@@ -41,7 +56,7 @@ export type PrintJob = {
   total: number | null; currency: string; quantity: number; garmentSummary: string; lines: PrintJobLine[];
   payment: PrintJobPayment; artwork: { name: string; url: string }[]; thumbnail: { name: string; url: string } | null; mockups: PrintJobVisual[]; artworks: PrintJobVisual[]; documents: PrintJobDocument[];
   workflow: PrintJobWorkflow | null; workflowOverridden: boolean; history: PrintJobHistoryEntry[]; productionNote: string;
-  editable: boolean; automaticPrice: boolean;
+  editable: boolean; automaticPrice: boolean; details?: PrintJobDetails;
 };
 export const PRINT_JOB_STAGES: { id: PrintJobStage; label: string; description: string }[] = [
   { id: "new", label: "New enquiry", description: "Review the request and prepare a quote" },
@@ -243,6 +258,73 @@ function history(quote: PrintJobSource | undefined, order: PrintJobSource | unde
   }
   return result.sort((a, b) => millis(b.atIso) - millis(a.atIso));
 }
+const detailRows = (value: unknown): Record<string, unknown>[] => Array.isArray(value) ? value.slice(0, 200).map(object) : [];
+const detailUnique = (values: string[]) => [...new Set(values.filter(Boolean))];
+const detailFirst = (...values: unknown[]) => values.map(string).find(Boolean) || "";
+const detailQuantity = (value: unknown) => { const result = number(value); return result !== null && result >= 0 ? result : null; };
+function detailPlacement(value: unknown): string {
+  const raw = string(value);
+  const labels: Record<string, string> = { small_front_only: "Small front", small_back_only: "Small back", large_front_only: "Large front", back_only: "Large back", front_back: "Front + back", small_front_back: "Small front + small back", small_front_large_back: "Small front + large back", large_front_small_back: "Large front + small back", large_front_large_back: "Large front + large back", logo_only: "Logo only", logo_front_back: "Logo front + back", sleeve_only: "Sleeve only", custom: "Custom placement (see notes)", not_set: "" };
+  return Object.prototype.hasOwnProperty.call(labels, raw) ? labels[raw] : raw;
+}
+function detailDimensions(row: Record<string, unknown>): string {
+  // Never turn studio canvas scale, text size, garment size, or a file's byte
+  // size into physical print dimensions. Only explicitly saved print fields.
+  return detailFirst(row.printDimensions, row.printSize);
+}
+function buildPrintJobDetails(q: Record<string, unknown>, o: Record<string, unknown>): PrintJobDetails {
+  const draft = object(q.quote), profile = object(o.documentProfile), brief = object(q.designBrief), intake = object(q.intake), intakeDraft = object(intake.draft);
+  const orderProducts = detailRows(o.products), garments = detailRows(q.garments), briefLines = detailRows(brief.lineItems), selectedSizes = detailRows(brief.selectedSizes), quoteLines = detailRows(draft.lines), intakeItems = detailRows(intake.items);
+  const printMethod = detailFirst(q.printMethod, brief.printMethod, intakeDraft.printMethod);
+  const printPlacement = detailPlacement(q.printPlacement) || detailPlacement(brief.printPlacement) || detailUnique(briefLines.map(row => detailPlacement(row.printPlacement))).join(" · ");
+  const printDimensions = detailDimensions(q) || detailDimensions(brief);
+  const product = (row: Record<string, unknown>): PrintJobProduct => ({
+    description: detailFirst(row.garment, row.product, row.productName, row.description), color: detailFirst(row.color, row.colour), size: detailFirst(row.size, row.sizes), quantity: detailQuantity(row.quantity),
+    printMethod: string(row.printMethod), printPlacement: detailPlacement(row.printPlacement) || detailPlacement(row.placement), printDimensions: detailDimensions(row),
+  });
+  let products: PrintJobProduct[];
+  if (garments.length && !(garments.length === 1 && /^mixed$/i.test(string(garments[0].size)) && selectedSizes.length)) products = garments.map(product);
+  else if (selectedSizes.length) products = selectedSizes.map(row => product({ ...row, garment: detailFirst(brief.product, garments[0]?.garment), color: detailFirst(brief.color, brief.colour, garments[0]?.color) }));
+  else if (briefLines.length) products = briefLines.map(product);
+  else if (orderProducts.length) products = orderProducts.map(product);
+  else if (intakeItems.length) products = intakeItems.map(product);
+  else if (quoteLines.length) products = quoteLines.map(product);
+  else if (detailRows(intakeDraft.lines).length) products = detailRows(intakeDraft.lines).map(product);
+  else if (detailFirst(q.garment, brief.product)) products = [product({ garment: detailFirst(q.garment, brief.product), color: detailFirst(q.color, brief.color, brief.colour), size: q.size, quantity: q.quantity ?? brief.totalQty })];
+  else products = [];
+  const hasGarmentEvidence = garments.length > 0 || selectedSizes.length > 0 || briefLines.length > 0 || orderProducts.length > 0 || intakeItems.length > 0 || Boolean(detailFirst(q.garment, brief.product));
+  const garmentQuantity = hasGarmentEvidence && products.length > 0 && products.every(row => row.quantity !== null) ? products.reduce((total, row) => total + (row.quantity ?? 0), 0) : null;
+  const pricingSource = orderProducts.length || detailRows(profile.lines).length ? "Order" : quoteLines.length ? "Quotation" : "";
+  const priceRows = orderProducts.length ? orderProducts : detailRows(profile.lines).length ? detailRows(profile.lines) : quoteLines;
+  const pricingLines = priceRows.map(row => {
+    const quantity = detailQuantity(row.quantity), unitPrice = number(row.unitPrice);
+    const savedTotal = number(row.lineTotal) ?? (orderProducts.length ? number(row.price) : null);
+    const computed = quantity !== null && unitPrice !== null ? quantity * unitPrice : null;
+    const lineTotal = savedTotal ?? (computed !== null && Number.isFinite(computed) ? Math.round((computed + Number.EPSILON) * 100) / 100 : null);
+    return { description: detailFirst(row.description, row.product, row.productName, row.garment), quantity, unitPrice, lineTotal, included: row.includeInTotals !== false };
+  });
+  const notes: PrintJobDetails["notes"] = [];
+  const addNote = (label: string, value: unknown) => { const text = string(value); if (text && !notes.some(note => note.text === text)) notes.push({ label, text }); };
+  addNote("Customer message", q.message); addNote("Customer notes", q.notes); addNote("Design notes", brief.clientNotes); addNote("Quotation notes", draft.notes); addNote("Order notes", profile.notes); addNote("Order instructions", o.notes); addNote("Enquiry notes", intakeDraft.notes);
+  addNote("Front print instructions", brief.frontLogoDescription); addNote("Back print instructions", brief.backLogoDescription); addNote("Front text", brief.frontText); addNote("Back text", brief.backText);
+  const artworkRequests = detailRows(brief.artwork).map((row, index) => ({ label: string(row.label) || `Artwork ${index + 1}`, product: detailFirst(row.product, row.garment), color: detailFirst(row.color, row.colour), size: string(row.size), quantity: detailQuantity(row.quantity), placement: detailPlacement(row.printPlacement), dimensions: detailDimensions(row), instructions: [string(row.description), string(row.frontLogoDescription) ? `Front: ${string(row.frontLogoDescription)}` : "", string(row.backLogoDescription) ? `Back: ${string(row.backLogoDescription)}` : ""].filter(Boolean).join("\n") }));
+  const rawAttachments = detailRows(q.attachments).length ? detailRows(q.attachments) : q.attachment ? [object(q.attachment)] : [];
+  const attachments: PrintJobDetails["attachments"] = rawAttachments.map(file => ({ name: detailFirst(file.label, file.filename, file.name) || "Attachment", url: safePrintJobUrl(file.url), originalName: string(file.originalFilename), originalUrl: safePrintJobUrl(file.originalUrl), description: string(file.description) }));
+  const attachmentNames = Array.isArray(intake.attachmentNames) ? intake.attachmentNames : Array.isArray(object(q.emailImport).attachmentNames) ? object(q.emailImport).attachmentNames as unknown[] : [];
+  for (const name of attachmentNames.map(string).filter(Boolean)) if (!attachments.some(file => file.name === name || file.originalName === name)) attachments.push({ name, url: "", originalName: "", originalUrl: "", description: "" });
+  const names = detailUnique(products.map(row => row.description));
+  const colors = detailUnique(products.map(row => row.color));
+  const sizeSummary = detailUnique(products.filter(row => row.size).map(row => `${row.size}${row.quantity !== null ? ` × ${row.quantity}` : ""}`));
+  const concise = (values: string[], limit: number) => [...values.slice(0, limit), ...(values.length > limit ? [`+${values.length - limit} more`] : [])].join(", ");
+  return {
+    summary: [concise(names, 2), concise(colors, 3), concise(sizeSummary, 5)].filter(Boolean).join(" · "),
+    customer: { name: detailFirst(o.customerName, profile.clientName, q.name, intakeDraft.name), company: detailFirst(profile.clientCompany, draft.clientCompany, intakeDraft.company), email: detailFirst(o.email, profile.clientEmail, q.email, intakeDraft.email), phone: detailFirst(o.phoneNumber, profile.clientPhone, q.phone, intakeDraft.phone), address: detailFirst(profile.clientAddress, draft.clientAddress, o.address, intakeDraft.address) },
+    delivery: { method: detailFirst(o.deliveryMethod, q.delivery, brief.delivery, intakeDraft.delivery), recipient: string(q.deliveryName), phone: string(q.deliveryPhone), address: detailFirst(o.address, q.deliveryAddress, intakeDraft.address), postCode: string(q.deliveryPostCode), deadline: detailFirst(q.deadline, o.deadline, brief.deadline, intakeDraft.deadline) },
+    products, garmentQuantity, printMethod: printMethod || detailUnique(products.map(row => row.printMethod)).join(" · "), printPlacement: printPlacement || detailUnique([...products.map(row => row.printPlacement), ...artworkRequests.map(row => row.placement)]).join(" · "), printDimensions: printDimensions || detailUnique([...products.map(row => row.printDimensions), ...artworkRequests.map(row => row.dimensions)]).join(" · "),
+    artworkRequests, pricingSource, pricingCurrency: pricingSource === "Order" ? detailFirst(profile.currency, o.currency) || "Rs" : string(draft.currency) || "Rs", pricingLines, deliveryFee: number(pricingSource === "Order" ? profile.deliveryFee : draft.deliveryFee), discount: number(pricingSource === "Order" ? profile.discount : draft.discount), notes, attachments,
+  };
+}
+
 function todayAt(now: number) { return new Intl.DateTimeFormat("en-CA", { timeZone: "Indian/Mauritius", year: "numeric", month: "2-digit", day: "2-digit" }).format(now); }
 export function buildPrintJobs(quotes: PrintJobSource[], orders: PrintJobSource[], now = Date.now()): PrintJob[] {
   const orderMap = new Map(orders.map((entry) => [entry.id, entry])), usedOrders = new Set<string>();
@@ -268,6 +350,10 @@ export function buildPrintJobs(quotes: PrintJobSource[], orders: PrintJobSource[
     const lines = mapLines([o.products, draft.lines, q.garments, object(intake.draft).lines].find((value) => Array.isArray(value) && value.length));
     const lineTotal = order && lines.length && lines.every((line) => line.unitPrice !== null) ? lines.reduce((sum, line) => sum + line.quantity * (line.unitPrice || 0), 0) : null;
     let total = number(o.amount) ?? (order ? lineTotal : number(draft.total));
+    // Legacy linked jobs may use quote lines when no order products exist.
+    // Keep the currency with the actual amount/line source selected above.
+    const orderMoney = number(o.amount) !== null || Boolean(order && Array.isArray(o.products) && o.products.length);
+    const currency = orderMoney ? string(profile.currency) || string(o.currency) || "Rs" : string(draft.currency) || (order ? string(profile.currency) : "") || "Rs";
     if (!order && total === 0 && ["new", "review"].includes(string(q.status)) && !string(q.clientDecision)) total = null;
     const visuals = buildPrintJobVisuals(q);
     const rawArtwork = Array.isArray(q.attachments) && q.attachments.length ? q.attachments : q.attachment ? [q.attachment] : [];
@@ -287,11 +373,12 @@ export function buildPrintJobs(quotes: PrintJobSource[], orders: PrintJobSource[
       overdue, followUpDue, urgent: string(o.status).toLowerCase() === "urgent", deadline, followUpDate, createdAt, lastActivity,
       email: string(o.email) || string(q.email), phone: string(o.phoneNumber) || string(q.phone), delivery: string(o.deliveryMethod) || string(q.delivery),
       address: string(o.address) || string(q.deliveryAddress) || string(draft.clientAddress), message: string(q.message) || string(q.notes),
-      total, currency: string(draft.currency) || string(profile.currency) || "Rs", quantity,
+      total, currency, quantity,
       garmentSummary: buildPrintJobGarmentSummary(q) || [...new Set(lines.map((line) => line.description))].slice(0, 3).join(" · ") || "Garments to confirm", lines,
       payment: payment(q, o), artwork, thumbnail: artworkThumbnail(rawArtwork), mockups: visuals.mockups, artworks: visuals.artworks, documents: documents(quote, order), workflow, workflowOverridden, history: events,
       productionNote: order ? `Production record: ${string(o.status) || "status not recorded"}. Changing this workspace stage leaves the production order unchanged.` : "",
       editable: Boolean(quote) && !Object.keys(intake).length,
+      details: buildPrintJobDetails(q, o),
       automaticPrice: Boolean(string(object(q.automaticPricing).source) || number(object(q.automaticPricing).pricedLineCount) !== null),
     };
   }).sort((a, b) => Number(b.urgent) - Number(a.urgent) || Number(b.overdue) - Number(a.overdue) || Number(b.followUpDue) - Number(a.followUpDue) || Number(b.attention) - Number(a.attention) || b.lastActivity - a.lastActivity);
