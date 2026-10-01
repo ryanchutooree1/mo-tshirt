@@ -38,7 +38,7 @@ export type PrintJob = {
   deadline: string; followUpDate: string; createdAt: number; lastActivity: number;
   email: string; phone: string; delivery: string; address: string; message: string;
   total: number | null; currency: string; quantity: number; garmentSummary: string; lines: PrintJobLine[];
-  payment: PrintJobPayment; artwork: { name: string; url: string }[]; documents: PrintJobDocument[];
+  payment: PrintJobPayment; artwork: { name: string; url: string }[]; thumbnail: { name: string; url: string } | null; documents: PrintJobDocument[];
   workflow: PrintJobWorkflow | null; workflowOverridden: boolean; history: PrintJobHistoryEntry[]; productionNote: string;
   editable: boolean; automaticPrice: boolean;
 };
@@ -72,6 +72,41 @@ export function safePrintJobUrl(value: unknown): string {
   if (!raw || /[\\\u0000-\u001f\u007f]/.test(raw)) return "";
   if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
   try { const url = new URL(raw); return url.protocol === "https:" && !url.username && !url.password ? raw : ""; } catch { return ""; }
+}
+const THUMBNAIL_IMAGE_EXTENSION = /\.(?:png|jpe?g|webp|gif|avif|svg|bmp|ico|tiff?|heic|heif)$/i;
+const NON_IMAGE_EXTENSION = /\.(?:pdf|ai|eps|ps|psd|docx?|xlsx?|pptx?|txt|csv|zip|rar|7z|mp4|mov|webm)$/i;
+function imagePath(url: string): string {
+  try { return decodeURIComponent(new URL(url, "https://local.invalid").pathname); }
+  catch { return ""; }
+}
+function imageThumbnailCandidate(urlValue: unknown, filename: string, contentType: unknown): { name: string; url: string } | null {
+  const url = safePrintJobUrl(urlValue);
+  if (!url) return null;
+  const mime = string(contentType).toLowerCase().split(";", 1)[0], pathname = imagePath(url);
+  // A PDF/document must not become an <img> merely because another piece of
+  // attachment metadata mentions a logo or an image filename.
+  if (NON_IMAGE_EXTENSION.test(filename) || NON_IMAGE_EXTENSION.test(pathname)) return null;
+  if (mime && !mime.startsWith("image/") && !["application/octet-stream", "binary/octet-stream"].includes(mime)) return null;
+  if (!mime.startsWith("image/") && !THUMBNAIL_IMAGE_EXTENSION.test(filename) && !THUMBNAIL_IMAGE_EXTENSION.test(pathname)) return null;
+  return { name: filename || "Artwork", url };
+}
+function artworkThumbnail(attachments: unknown[]): { name: string; url: string } | null {
+  const candidates = attachments.flatMap((value, index) => {
+    const file = object(value);
+    const filename = string(file.filename) || string(file.name);
+    const originalFilename = string(file.originalFilename);
+    const searchable = [string(file.label), string(file.description), filename, originalFilename].join(" ");
+    const isMockup = file.role === "final-mockup" || /(?:^|[^a-z])(?:final[\s_-]*)?mockup(?:[^a-z]|$)/i.test(searchable);
+    const isLogo = /(?:^|[^a-z])(?:logo|artwork)(?:[^a-z]|$)/i.test(searchable);
+    const priority = isMockup ? 3 : file.role === "print-artwork" ? 0 : isLogo ? 1 : 2;
+    const original = imageThumbnailCandidate(file.originalUrl, originalFilename, file.originalContentType);
+    const current = imageThumbnailCandidate(file.url, filename, file.contentType);
+    const candidate = original || current;
+    return candidate ? [{ ...candidate, priority, index }] : [];
+  });
+  candidates.sort((a, b) => a.priority - b.priority || a.index - b.index);
+  const first = candidates[0];
+  return first ? { name: first.name, url: first.url } : null;
 }
 function isStage(value: unknown): value is PrintJobStage { return PRINT_JOB_STAGES.some((entry) => entry.id === value); }
 function closureKind(value: unknown): PrintJobClosureKind | null { return value === "shop_declined" || value === "client_declined" || value === "cancelled" ? value : null; }
@@ -233,7 +268,7 @@ export function buildPrintJobs(quotes: PrintJobSource[], orders: PrintJobSource[
     const lineTotal = order && lines.length && lines.every((line) => line.unitPrice !== null) ? lines.reduce((sum, line) => sum + line.quantity * (line.unitPrice || 0), 0) : null;
     let total = number(o.amount) ?? (order ? lineTotal : number(draft.total));
     if (!order && total === 0 && ["new", "review"].includes(string(q.status)) && !string(q.clientDecision)) total = null;
-    const rawArtwork = Array.isArray(q.attachments) ? q.attachments : q.attachment ? [q.attachment] : [];
+    const rawArtwork = Array.isArray(q.attachments) && q.attachments.length ? q.attachments : q.attachment ? [q.attachment] : [];
     const artwork = rawArtwork.map((entry) => { const file = object(entry); return { name: string(file.filename) || string(file.name) || "Artwork", url: safePrintJobUrl(file.url) || safePrintJobUrl(file.originalUrl) }; }).filter((file) => file.url);
     const events = history(quote, order), createdAt = Math.max(millis(q.createdAt), millis(o.transactionDate)), sentAt = millis(q.sentAt);
     const lastActivity = Math.max(createdAt, millis(q.updatedAt), millis(o.updatedAt), millis(intake.updatedAtIso), millis(q.clientDecisionAtIso), millis(workflow?.updatedAtIso), ...events.map((entry) => millis(entry.atIso)));
@@ -252,7 +287,7 @@ export function buildPrintJobs(quotes: PrintJobSource[], orders: PrintJobSource[
       address: string(o.address) || string(q.deliveryAddress) || string(draft.clientAddress), message: string(q.message) || string(q.notes),
       total, currency: string(draft.currency) || string(profile.currency) || "Rs", quantity,
       garmentSummary: [...new Set(lines.map((line) => line.description))].slice(0, 3).join(" · ") || "Garments to confirm", lines,
-      payment: payment(q, o), artwork, documents: documents(quote, order), workflow, workflowOverridden, history: events,
+      payment: payment(q, o), artwork, thumbnail: artworkThumbnail(rawArtwork), documents: documents(quote, order), workflow, workflowOverridden, history: events,
       productionNote: order ? `Production record: ${string(o.status) || "status not recorded"}. Changing this workspace stage leaves the production order unchanged.` : "",
       editable: Boolean(quote) && !Object.keys(intake).length,
       automaticPrice: Boolean(string(object(q.automaticPricing).source) || number(object(q.automaticPricing).pricedLineCount) !== null),

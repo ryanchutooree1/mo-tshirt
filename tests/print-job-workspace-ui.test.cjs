@@ -56,7 +56,7 @@ function reset() {
     quote("bravo", "Bravo Details", "needs_details", { source: "WhatsApp", createdAt: NOW - 7000 }),
     quote("charlie", "Charlie Waiting", "awaiting_client", { source: "Design studio", createdAt: NOW - 6000 }),
     quote("delta", "Delta Confirmed", "confirmed", { source: "Team", createdAt: NOW - 5000, orderTransactionId: "order-delta", quote: { documentNumber: "INV-DELTA", documentType: "invoice", currency: "Rs", total: 2400, paymentStatus: "Paid", lines: [{ description: "Cotton polo", quantity: 12, unitPrice: 200, color: "Navy", size: "XL" }] }, paymentReceipt: { documentNumber: "AUTO-DELTA" }, attachments: [{ filename: "Synthetic artwork.pdf", url: "https://example.test/artwork.pdf" }], message: "Synthetic conference uniforms", delivery: "Collection", deadline: "2026-12-20" }),
-    quote("echo", "Echo Production", "production", { source: "Team", createdAt: NOW - 4000 }),
+    quote("echo", "Echo Production", "production", { source: "Team", createdAt: NOW - 4000, attachments: [{ filename: "Synthetic logo.png", mimeType: "image/png", url: "https://example.test/synthetic-logo.png" }] }),
     quote("foxtrot", "Foxtrot Ready", "ready", { source: "Email", createdAt: NOW - 3000 }),
     quote("golf", "Golf Completed", "completed", { source: "Team", createdAt: NOW - 2000 }),
     quote("hotel", "Hotel Declined", "declined", { source: "Email", createdAt: NOW - 1000 }),
@@ -194,6 +194,73 @@ async function test(name, fn) {
     await user.fill(screen.getByRole("combobox", { name: "Sort jobs" }), "name"); assert.deepEqual(rowNames(), rowNames().slice().sort());
     await user.fill(search, "no-such-synthetic-record"); assert.ok(screen.getByRole("heading", { name: "No matching jobs" }));
     await user.click(screen.getByRole("button", { name: "View active jobs" })); assert.equal(rows().length, 6);
+  });
+
+  await test("artwork is visible before the print brief with the customer name kept as secondary text", async () => {
+    await mount();
+    const row = screen.getByRole("button", { name: "Open job for Echo Production, In production" });
+    const image = within(row).getByRole("img", { name: "Logo / artwork for Echo Production" });
+    assert.equal(image.getAttribute("src"), "https://example.test/synthetic-logo.png");
+    assert.equal(image.getAttribute("loading"), "lazy");
+    const title = within(row).getByText("12 pieces · Cotton T-shirt");
+    const customer = within(row).getByText("Echo Production", { exact: true });
+    assert.ok(image.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING, "Artwork precedes the print brief in reading order");
+    assert.ok(title.compareDocumentPosition(customer) & Node.DOCUMENT_POSITION_FOLLOWING, "Print brief precedes the secondary customer name");
+    assert.equal(title.className, "printTitle"); assert.equal(customer.className, "clientName");
+    await openJob("Echo Production");
+    assert.ok(within(overview()).getByRole("img", { name: "Logo / artwork for Echo Production" }));
+    const preview = within(overview()).getByRole("link", { name: "View full-size artwork" });
+    assert.equal(preview.href, "https://example.test/synthetic-logo.png"); assert.equal(preview.target, "_blank"); assert.match(preview.rel, /noopener/);
+  });
+
+  await test("missing, non-image and broken artwork have distinct readable fallbacks", async () => {
+    await mount();
+    const missing = screen.getByRole("button", { name: "Open job for Alpha New, New enquiry" });
+    assert.ok(within(missing).getByText("No artwork yet")); assert.equal(within(missing).queryAllByRole("img").length, 0);
+    const file = screen.getByRole("button", { name: "Open job for Delta Confirmed, Confirmed" });
+    assert.ok(within(file).getByText("Artwork file")); assert.equal(within(file).queryAllByRole("img").length, 0);
+    const row = screen.getByRole("button", { name: "Open job for Echo Production, In production" });
+    await act(async () => { fireEvent.error(within(row).getByRole("img", { name: "Logo / artwork for Echo Production" })); });
+    assert.ok(within(row).getByText("Preview unavailable")); assert.equal(within(row).queryAllByRole("img").length, 0);
+    await openJob("Echo Production");
+    await act(async () => { fireEvent.error(within(overview()).getByRole("img", { name: "Logo / artwork for Echo Production" })); });
+    assert.ok(within(overview()).getByText("Preview unavailable"));
+    assert.ok(within(overview()).getByRole("button", { name: "Update stage", exact: true }));
+  });
+
+  await test("a refreshed artwork URL recovers from a failed preview without remounting the workspace", async () => {
+    await mount();
+    let row = screen.getByRole("button", { name: "Open job for Echo Production, In production" });
+    await act(async () => { fireEvent.error(within(row).getByRole("img", { name: "Logo / artwork for Echo Production" })); });
+    assert.ok(within(row).getByText("Preview unavailable"));
+    quoteRecords.find((entry) => entry.id === "echo").data.attachments[0].url = "https://example.test/replaced-logo.png";
+    await act(async () => { window.dispatchEvent(new Event("email-intake-updated")); });
+    await waitFor(() => {
+      row = screen.getByRole("button", { name: "Open job for Echo Production, In production" });
+      assert.equal(within(row).getByRole("img", { name: "Logo / artwork for Echo Production" }).getAttribute("src"), "https://example.test/replaced-logo.png");
+    });
+  });
+
+  await test("coloured stage/action hooks retain labels while search, source filter and stage dialog still work", async () => {
+    await mount();
+    const navigation = screen.getByRole("navigation", { name: "Job categories" });
+    for (const stage of domain.PRINT_JOB_STAGES) {
+      const button = Array.from(navigation.querySelectorAll("button")).find((entry) => entry.dataset.stage === stage.id);
+      assert.ok(button, `Category ${stage.id} has its colour hook`); assert.ok(button.textContent.includes(stage.label));
+    }
+    await user.fill(screen.getByRole("textbox", { name: "Search jobs" }), "Echo");
+    await user.fill(screen.getByRole("combobox", { name: "Filter by source" }), "team");
+    assert.deepEqual(rowNames(), ["Echo Production"]);
+    const row = rows()[0];
+    assert.equal(row.querySelector(".badge").dataset.stage, "production");
+    assert.equal(row.querySelector(".rowAction").dataset.stage, "production");
+    assert.ok(row.querySelector(".rowAction").textContent.includes("Check production"));
+    await openJob("Echo Production");
+    assert.equal(overview().querySelector(".nextCard").dataset.stage, "production");
+    await user.click(within(overview()).getByRole("button", { name: "Update stage", exact: true }));
+    assert.equal(within(dialog()).getByLabelText(/Job stage/).value, "production");
+    await user.click(within(dialog()).getByRole("button", { name: "Cancel" }));
+    assert.equal(Boolean(screen.queryByRole("dialog")), false); assert.deepEqual(rowNames(), ["Echo Production"]); assert.equal(patches().length, 0);
   });
 
   await test("overview unifies documents, payment evidence, print brief and safe artwork; close restores focus", async () => {

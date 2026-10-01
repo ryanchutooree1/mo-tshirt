@@ -167,3 +167,32 @@ test('promoting an email enquiry to a quotation supersedes inherited open holds 
   assert.equal(job.stage,stage==='declined'?'declined':'new');assert.equal(job.workflowOverridden,stage!=='declined');
  }
 });
+
+test('job thumbnail prefers original print artwork over final mockup and preserves full artwork links',()=>{
+ const attachments=[{role:'final-mockup',filename:'shirt-mockup.jpg',url:'https://example.test/mockup.jpg',contentType:'image/jpeg'},{role:'print-artwork',filename:'removed-bg.png',url:'https://example.test/removed-bg.png',contentType:'image/png',originalFilename:'company-logo.jpg',originalUrl:'https://example.test/company-logo.jpg',originalContentType:'image/jpeg'},{filename:'print-guide.pdf',url:'https://example.test/guide.pdf',contentType:'application/pdf'}];
+ const [job]=buildPrintJobs([q('q',{attachments})],[],now);
+ assert.deepEqual(job.thumbnail,{name:'company-logo.jpg',url:'https://example.test/company-logo.jpg'});assert.equal(job.artwork.length,3);assert.equal(job.artwork[1].url,'https://example.test/removed-bg.png');
+});
+test('logo-labelled image outranks an ordinary photo and filename-described final mockup',()=>{
+ const [job]=buildPrintJobs([q('q',{attachments:[{filename:'final_mockup_logo.jpg',url:'https://example.test/mockup.jpg'},{filename:'shirt.jpg',url:'https://example.test/shirt.jpg'},{label:'Client logo',filename:'file.png',url:'/uploads/file.png'}]})],[],now);
+ assert.deepEqual(job.thumbnail,{name:'file.png',url:'/uploads/file.png'});
+});
+test('thumbnail identifies encoded Firebase image paths and extensionless image MIME uploads',()=>{
+ const firebase='https://firebasestorage.googleapis.com/v0/b/example/o/quotes%2Fclient-logo.png?alt=media&token=sample';
+ const [pathImage]=buildPrintJobs([q('q',{attachment:{url:firebase}})],[],now);assert.equal(pathImage.thumbnail.url,firebase);
+ const [mimeImage]=buildPrintJobs([q('q',{attachment:{url:'/api/uploads/opaque-id',contentType:'image/webp',filename:'Logo'}})],[],now);assert.deepEqual(mimeImage.thumbnail,{url:'/api/uploads/opaque-id',name:'Logo'});
+});
+test('thumbnail falls back to legacy single attachment for empty attachment arrays',()=>{
+ const [job]=buildPrintJobs([q('q',{attachments:[],attachment:{filename:'logo.png',url:'/uploads/logo.png'}})],[],now);assert.equal(job.thumbnail.url,'/uploads/logo.png');assert.equal(job.artwork.length,1);
+});
+test('PDF, non-image and unsafe links never become thumbnails; artwork documents remain available',()=>{
+ for(const attachment of [{filename:'logo.pdf',url:'https://example.test/logo.pdf',contentType:'image/png'},{filename:'logo.png',url:'https://example.test/logo.pdf'},{filename:'logo.png',url:'https://example.test/logo',contentType:'application/pdf'},{filename:'logo.eps',url:'https://example.test/logo.eps'},{filename:'logo.png',url:'javascript:alert(1)'},{url:'/api/uploads/unknown'}]){
+  const [job]=buildPrintJobs([q('q',{attachment})],[],now);assert.equal(job.thumbnail,null);
+ }
+ const [pdf]=buildPrintJobs([q('q',{attachment:{filename:'logo.pdf',url:'https://example.test/logo.pdf'}})],[],now);assert.equal(pdf.artwork.length,1);
+});
+test('non-image original does not hide a valid current image and a mockup is usable as last fallback',()=>{
+ const [converted]=buildPrintJobs([q('q',{attachment:{role:'print-artwork',originalFilename:'logo.pdf',originalUrl:'https://example.test/logo.pdf',originalContentType:'application/pdf',filename:'preview.png',url:'https://example.test/preview.png',contentType:'image/png'}})],[],now);assert.equal(converted.thumbnail.url,'https://example.test/preview.png');
+ const [mockup]=buildPrintJobs([q('q',{attachment:{role:'final-mockup',filename:'shirt.webp',url:'https://example.test/shirt.webp'}})],[],now);assert.equal(mockup.thumbnail.url,'https://example.test/shirt.webp');
+ const [empty]=buildPrintJobs([], [o('o')],now);assert.equal(empty.thumbnail,null);
+});
