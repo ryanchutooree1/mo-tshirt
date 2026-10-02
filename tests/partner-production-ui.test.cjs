@@ -212,7 +212,7 @@ async function run() {
     await waitFor(() => assert.equal(notes().value, 'OFFER-only notes'));
     // Guard Yan-only responsive class scope; JSDOM does not measure rendered geometry.
     const response = notes().closest('fieldset').parentElement;
-    assert.equal(response.parentElement.classList.contains('grid-cols-1'), true);
+    for (const cls of ['grid-cols-1', 'min-w-0', '[&_*]:min-w-0', '[&_iframe]:max-w-full', '[&_img]:max-w-full']) assert.equal(response.parentElement.classList.contains(cls), true);
     for (const token of YAN_RESPONSE_WIDTH_CLASSES) assert.equal(response.classList.contains(token), true);
     assert.equal(button('Start production').disabled, true);
     assert.equal(writes().length, 0);
@@ -476,7 +476,7 @@ async function run() {
     legacy.price = 150; legacy.completionDays = 3;
     reset([legacy]); await mount();
     const response = notes().closest('fieldset').parentElement;
-    assert.equal(response.parentElement.classList.contains('grid-cols-1'), false);
+    for (const cls of ['grid-cols-1', 'min-w-0', '[&_*]:min-w-0', '[&_iframe]:max-w-full', '[&_img]:max-w-full']) assert.equal(response.parentElement.classList.contains(cls), false);
     for (const token of YAN_RESPONSE_WIDTH_CLASSES) assert.equal(response.classList.contains(token), false);
     assert.equal(Boolean(screen.queryByRole('navigation', { name: 'Job views' })), false);
     assert.equal(Boolean(screen.queryByRole('region', { name: 'Production next action' })), false);

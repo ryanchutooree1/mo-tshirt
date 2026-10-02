@@ -1182,7 +1182,7 @@ export default function PartnerProductionPage({
               </div>
 
               {isYan && selected.production?.released && <YanProductionActions key={selected.id} order={selected} draft={draft} onDraft={update => setDraft(current => ({ ...current, ...update }))} receiptChecked={blanksReceived} onReceipt={setBlanksReceived} onStart={() => void startProduction()} onSave={update => void saveResponse(update)} saving={saving} managerName={managerName} notice={notice} />}
-              <div className={`grid gap-4 sm:gap-5 ${isYan ? 'grid-cols-1' : ''} ${isYan && selected.production?.released ? '' : '2xl:grid-cols-[minmax(0,1fr)_minmax(420px,480px)]'}`}>
+              <div className={`grid gap-4 sm:gap-5 ${isYan ? 'grid-cols-1 min-w-0 [&_*]:min-w-0 [&_iframe]:max-w-full [&_img]:max-w-full' : ''} ${isYan && selected.production?.released ? '' : '2xl:grid-cols-[minmax(0,1fr)_minmax(420px,480px)]'}`}>
                 <div className="space-y-5">
                   {!isYan && <WorkflowSteps
                     order={selected}
