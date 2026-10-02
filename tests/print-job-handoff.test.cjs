@@ -25,14 +25,14 @@ function approvedQuote(amount=500.51) {
  q.printJobHandoff={version:2,priceConfirmation:{id:'price-0001',pricingFingerprint:pricing.fingerprint,lifecycleFingerprint:domain.handoffLifecycleFingerprint(q),agreedTotal:pricing.quotedTotal,currency:pricing.currency,note:'Client agreed',actor,confirmedAtIso:new Date(now).toISOString()},payments:[{id:'payment-0001',amountReceived:amount,currency:'Rs',paymentDate:today,reference:'BANK-001',evidenceId:'proof-one',note:'Checked bank receipt',actor,confirmedAtIso:new Date(now).toISOString()}],preview:null,delivery:null};
  return q;
 }
-function setup({initialQuote=quote(),config=settings(),partners=registry(),sendFails=false,partialAccept=false,failResultWrite=false,smtp=true,signedIn=true,isOwner=false,allowed=['/admin/quotation-approval']}={}) {
+function setup({initialQuote=quote(),config=settings(),partners=registry(),sendFails=false,partialAccept=false,failResultWrite=false,smtp=true,smtpEnv={},signedIn=true,isOwner=false,allowed=['/admin/quotation-approval']}={}) {
  const records=new Map([['quotes/q',initialQuote],...(config?[['adminSettings/printJobHandoff',config]]:[]),...(partners?[['adminSettings/printPartners',partners]]:[])]), reads=[],writes=[],mails=[];
  let gate=Promise.resolve();
  const snap=key=>({exists:()=>records.has(key),data:()=>records.has(key)?structuredClone(records.get(key)):undefined});
  const firestore={doc:(_db,...parts)=>parts.join('/'),collection:(_db,name)=>name,where:(key,op,value)=>({key,value}),limit:amount=>({limit:amount}),query:(name,...clauses)=>({name,clauses}),getDocs:async query=>{reads.push(query.name);return{docs:[...records].filter(([key,value])=>key.startsWith(query.name+'/')&&query.clauses.filter(c=>c.key).every(c=>value[c.key]===c.value)).map(([key,value])=>({id:key.slice(query.name.length+1),data:()=>structuredClone(value)}))};},getDoc:async key=>{reads.push(key);return snap(key);},runTransaction:async(_db,fn)=>{const previous=gate;let release;gate=new Promise(r=>release=r);await previous;try{if(failResultWrite&&mails.length)throw new Error('Persistence unavailable');const pending=[];const result=await fn({get:async key=>{reads.push(key);return snap(key);},set:(key,value,options)=>pending.push({key,value,options}),update:(key,value)=>pending.push({key,value,options:{merge:true}})});for(const operation of pending){writes.push(operation);records.set(operation.key,operation.options?.merge?{...records.get(operation.key),...structuredClone(operation.value)}:structuredClone(operation.value));}return result;}finally{release();}}};
  const smtpModule={createTransport:()=>({sendMail:async payload=>{mails.push(payload);if(sendFails)throw new Error('SMTP timeout');return{accepted:partialAccept?[]:payload.to,rejected:[]};}})};
  const modules={'node:crypto':nodeCrypto,'firebase/firestore':firestore,'./firebase':{db:{}},'./print-job-handoff':domain,nodemailer:smtpModule};
- const store=load('src/lib/print-job-handoff-store.ts',modules,{process:{env:smtp?{SMTP_HOST:'smtp.example.test',SMTP_USER:'sender@example.test',SMTP_PASS:'fixture-only'}:{}}});
+ const store=load('src/lib/print-job-handoff-store.ts',modules,{process:{env:{...(smtp?{SMTP_HOST:'smtp.example.test',SMTP_USER:'sender@example.test',SMTP_PASS:'fixture-only'}:{}),...smtpEnv}}});
  const safety={isRequestOriginAllowed:req=>!req.headers.get('origin')||req.headers.get('origin')===new URL(req.url).origin,isContentLengthWithinLimit:(headers,max)=>!headers.get('content-length')||Number(headers.get('content-length'))<=max};
  const request=load('src/lib/print-job-handoff-request.ts',{'./print-job-handoff':domain,'./request-safety':safety});
  class NextResponse extends Response {static json(body,options){return Response.json(body,options);}}
@@ -239,4 +239,32 @@ test('an adverse response edited without a timestamp still needs a fresh workflo
  q=s.records.get('quotes/q');q.clientDecisionComment='A different adverse response';
  const view=await s.store.readJobHandoff('q',origin,false);assert.equal(view.gates.reopenRequired,true);assert.equal(view.gates.canPreview,false);
  await assert.rejects(()=>s.perform({action:'confirm-price',requestId:'renewed-without-review',expectedVersion:3,pricingFingerprint:domain.quotePricing(q).fingerprint,agreedTotal:domain.quotePricing(q).quotedTotal,note:'Attempted renewal'}),/reopened/);
+});
+
+test('handoff sender accepts configured addresses and legacy display names without inventing an identity',async()=>{
+ for(const [from,expected] of [[undefined,'sender@example.test'],['','sender@example.test'],['MO T-SHIRT <>','sender@example.test'],['MO T-SHIRT','sender@example.test'],['MO T-SHIRT <verified@example.test>','verified@example.test'],['verified@example.test','verified@example.test'],['bad@example.test,other@example.test','sender@example.test'],['Brand\r\nBcc: other@example.test','sender@example.test']]){
+  const s=setup({initialQuote:approvedQuote(),smtpEnv:{SMTP_FROM:from}});
+  const reviewed=await preview(s);const sent=await s.perform(sendBody(reviewed));
+  assert.equal(sent.handoff.state,'sent');assert.equal(s.mails.length,1);
+  assert.equal(s.mails[0].from,expected);assert.equal(s.mails[0].envelope.from,expected);
+  assert.deepEqual(Array.from(s.mails[0].to),['test-recipient@example.test']);
+  assert.deepEqual(Array.from(s.mails[0].envelope.to),['test-recipient@example.test']);
+  assert.match(s.mails[0].subject,/TEST ONLY/);assert.ok(!s.mails[0].bcc);
+ }
+});
+test('SMTP configuration errors name only invalid fields and occur before send state or payment changes',async()=>{
+ for(const [env,field] of [[{SMTP_HOST:''},'SMTP_HOST'],[{SMTP_USER:' '},'SMTP_USER'],[{SMTP_PASS:' '},'SMTP_PASS'],[{SMTP_USER:'not-an-address',SMTP_FROM:'MO T-SHIRT <>'},'SMTP_FROM'],[{SMTP_PORT:'0'},'SMTP_PORT'],[{SMTP_PORT:'65536'},'SMTP_PORT'],[{SMTP_PORT:'465.5'},'SMTP_PORT'],[{SMTP_PORT:'invalid-port-value'},'SMTP_PORT']]){
+  const s=setup({initialQuote:approvedQuote(),smtpEnv:env});const reviewed=await preview(s);
+  const before=structuredClone([...s.records]),writes=s.writes.length;
+  const response=await s.post(sendBody(reviewed));const body=await response.json();
+  assert.equal(response.status,503);assert.ok(body.error.includes(field));assert.match(body.error,/No handoff was sent/);
+  for(const value of ['fixture-only','smtp.example.test','sender@example.test','not-an-address','invalid-port-value'])assert.ok(!body.error.includes(value));
+  assert.equal(s.mails.length,0);assert.equal(s.writes.length,writes);assert.deepEqual([...s.records],before);
+ }
+});
+test('valid SMTP port bounds and explicit sender with non-email SMTP login remain supported',async()=>{
+ for(const port of ['1','465','587','65535']){
+  const s=setup({initialQuote:approvedQuote(),smtpEnv:{SMTP_USER:'smtp-login',SMTP_FROM:'Brand <verified@example.test>',SMTP_PORT:port}});
+  const reviewed=await preview(s);await s.perform(sendBody(reviewed));assert.equal(s.mails.length,1);assert.equal(s.mails[0].from,'verified@example.test');
+ }
 });

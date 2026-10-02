@@ -53,11 +53,17 @@ export async function readJobHandoff(id: string, origin: string, canManageSettin
 function assertVersion(actual: number, expected: number) { if (actual !== expected) throw new HandoffError("This job changed. Reload it before saving.", 409); }
 function smtpConfiguration() {
   const host = process.env.SMTP_HOST?.trim(), user = process.env.SMTP_USER?.trim(), pass = process.env.SMTP_PASS;
+  const missing = [!host && "SMTP_HOST", !user && "SMTP_USER", !pass?.trim() && "SMTP_PASS"].filter(Boolean);
+  if (missing.length) throw new HandoffError(`The email server is not fully configured: missing ${missing.join(", ")}. No handoff was sent.`, 503);
   const rawSender = process.env.SMTP_FROM?.trim() || user || "";
   const bracket = rawSender.match(/^[^<>\r\n]*<([^<>\r\n]+)>$/);
-  const address = emailAddress(bracket?.[1] || rawSender);
+  // Match the existing quotation sender's fallback for legacy display-name-only
+  // or empty-angle-bracket SMTP_FROM values. Use only the configured mailbox;
+  // never invent a sender address or accept multiple addresses/header content.
+  const address = emailAddress(bracket?.[1] || rawSender) || emailAddress(user);
+  if (!address) throw new HandoffError("The email server is not fully configured: SMTP_FROM must contain one valid sender email, or SMTP_USER must be an email address. No handoff was sent.", 503);
   const port = Number(process.env.SMTP_PORT || 465);
-  if (!host || !user || !pass || !address || !Number.isInteger(port) || port < 1 || port > 65535) throw new HandoffError("The email server is not fully configured. No handoff was sent.", 503);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new HandoffError("The email server is not fully configured: SMTP_PORT must be an integer from 1 to 65535. No handoff was sent.", 503);
   return { host, port, secure: String(process.env.SMTP_SECURE || "true") === "true", auth: { user, pass }, address };
 }
 async function sendPreview(preview: HandoffPreview, id: string, requestId: string) {
