@@ -6,6 +6,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import Image from "next/image";
 import type { ProductionFile, ProductionPacket } from "@/lib/production-packet";
+import YanProductionActions from "./YanProductionActions";
+import { yanQueueView, type YanQueueView } from "@/lib/yan-production-view";
 import BackgroundRemoverPage from "@/components/admin/BackgroundRemoverPage";
 import {
   FiAlertTriangle,
@@ -58,7 +60,7 @@ type FilterKey = "all" | "pending" | "accepted" | "active" | "completed" | "reje
 type SortKey = "assigned" | "deadline" | "status";
 type MobilePanel = "queue" | "order";
 
-type ResponseDraft = {
+export type ResponseDraft = {
   decision: PartnerDecision;
   productionStatus: PartnerProductionStatus;
   printPlacement: PartnerPrintPlacement;
@@ -261,6 +263,9 @@ export default function PartnerProductionPage({
 }) {
   const { theme, toggleTheme } = useAdminTheme();
   const isDark = theme === "dark";
+  const isYan = partnerId === "yan";
+  const ToolsContainer = isYan ? "details" : "div";
+  const [queueView, setQueueView] = useState<YanQueueView>("production");
   const partner = initialPartner || getPrintPartner(partnerId);
   const productionNotes = partner.productionNotes;
   const paymentDetails = partner.paymentDetails;
@@ -289,13 +294,14 @@ export default function PartnerProductionPage({
   const filteredOrders = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     const matching = orders.filter((order) => {
-      if (!orderMatchesFilter(order, filter)) return false;
+      if (isYan && yanQueueView(order) !== queueView) return false;
+      if (!isYan && !orderMatchesFilter(order, filter)) return false;
       if (!query) return true;
       return searchableOrderText(order).includes(query);
     });
 
     return sortOrders(matching, sortKey);
-  }, [filter, orders, searchTerm, sortKey]);
+  }, [filter, orders, searchTerm, sortKey, isYan, queueView]);
 
   const selected = useMemo(
     () =>
@@ -316,15 +322,16 @@ export default function PartnerProductionPage({
   const themeVars = useMemo(
     () =>
       ({
-        "--partner-bg": isDark ? "#050806" : "#f7f8fa",
-        "--partner-card": isDark ? "#101613" : "#ffffff",
-        "--partner-soft": isDark ? "#0b120e" : "#f8fafc",
-        "--partner-hover": isDark ? "#19231d" : "#f1f5f9",
+        "--partner-bg": isDark ? (isYan ? "#0b1120" : "#050806") : "#f7f8fa",
+        "--partner-card": isDark ? (isYan ? "#111827" : "#101613") : "#ffffff",
+        "--partner-soft": isDark ? (isYan ? "#0f172a" : "#0b120e") : "#f8fafc",
+        "--partner-hover": isDark ? (isYan ? "#1e293b" : "#19231d") : "#f1f5f9",
         "--partner-border": isDark ? "rgba(255,255,255,0.10)" : "#e2e8f0",
         "--partner-text": isDark ? "#f8fafc" : "#0f172a",
         "--partner-muted": isDark ? "#9ca3af" : "#64748b",
         "--partner-faint": isDark ? "#667069" : "#94a3b8",
-        "--partner-accent": "#ff6400",
+        "--partner-accent": isYan ? "#c2410c" : "#ff6400",
+        "--partner-action": "#c2410c",
         "--partner-accent-soft": isDark ? "#3a1b08" : "#fff1e8",
         "--partner-accent-text": "#ffffff",
         "--partner-success-bg": isDark ? "#052e26" : "#ecfdf5",
@@ -344,7 +351,7 @@ export default function PartnerProductionPage({
           : "0 18px 45px rgba(15,23,42,0.07)",
         colorScheme: theme,
       }) as CSSProperties,
-    [isDark, theme]
+    [isDark, theme, isYan]
   );
 
   const shellClass =
@@ -553,20 +560,21 @@ export default function PartnerProductionPage({
     setSessionState("signed_out");
   }
 
-  async function saveResponse() {
-    if (!selected) return;
-    const decision = draft.decision;
+  async function saveResponse(overrides: Partial<ResponseDraft> = {}) {
+    if (!selected || saving) return;
+    const response = { ...draft, ...overrides };
+    const decision = response.decision;
     if (decision === "accepted" && !selected.production?.released) {
-      if (!draft.completionDays.trim() || Number(draft.completionDays) <= 0) {
+      if (!response.completionDays.trim() || Number(response.completionDays) <= 0) {
         setNotice("Add how many days you need before accepting.");
         return;
       }
-      if (!draft.price.trim() || Number(draft.price) <= 0) {
+      if (!response.price.trim() || Number(response.price) <= 0) {
         setNotice("Add your price before accepting.");
         return;
       }
     }
-    if (decision === "needs_info" && !draft.missingInformation.trim()) {
+    if (decision === "needs_info" && !response.missingInformation.trim()) {
       setNotice(`Write what ${managerName} must get or fix before sending the request.`);
       return;
     }
@@ -579,12 +587,12 @@ export default function PartnerProductionPage({
         body: JSON.stringify({
           partnerId,
           decision,
-          productionStatus: draft.productionStatus,
-          printPlacement: draft.printPlacement,
-          completionDays: draft.completionDays,
-          price: draft.price,
-          comments: draft.comments,
-          missingInformation: draft.missingInformation,
+          productionStatus: response.productionStatus,
+          printPlacement: response.printPlacement,
+          completionDays: response.completionDays,
+          price: response.price,
+          comments: response.comments,
+          missingInformation: response.missingInformation,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -594,6 +602,10 @@ export default function PartnerProductionPage({
         setOrders((current) =>
           current.map((order) => (order.id === updated.id ? updated : order))
         );
+        if (isYan && selectedOrderRef.current === selected.id && yanQueueView(updated) === 'history') {
+          setSelectedId(updated.id);
+          setQueueView('history');
+        }
         // The selected-order effect refreshes its draft. A late response must not switch jobs.
       }
       if (selectedOrderRef.current === selected.id) setNotice(
@@ -840,14 +852,14 @@ export default function PartnerProductionPage({
                 {partner.name}
               </span>
               <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold text-[color:var(--partner-muted)] ${softSurfaceClass}`}>
-                Private production queue
+                {isYan ? "Production desk" : "Private production queue"}
               </span>
               <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold text-[color:var(--partner-muted)] ${softSurfaceClass}`}>
-                {filteredOrders.length} of {orders.length} orders
+                {filteredOrders.length} {isYan ? "jobs in this view" : `of ${orders.length} orders`}
               </span>
             </div>
             <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-4xl">
-              Assigned orders
+              {isYan ? "Your production jobs" : "Assigned orders"}
             </h1>
           </div>
           <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
@@ -881,7 +893,13 @@ export default function PartnerProductionPage({
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1500px] px-3 pt-3 sm:px-6 sm:pt-5 lg:px-8">
+      {isYan && <div className="mx-auto max-w-[1500px] px-3 pt-4 sm:px-6 lg:px-8">
+        <nav aria-label="Job views" className="flex flex-wrap gap-2">{([['production', 'Production'], ['offers', 'Earlier offers'], ['history', 'History']] as const).map(([view, label]) => <button key={view} type="button" aria-pressed={queueView === view} onClick={() => { setQueueView(view); setSearchTerm(''); setSelectedId(null); setMobilePanel('queue'); }} className={`${secondaryButtonClass} ${queueView === view ? '!border-[color:var(--partner-accent)] !bg-[var(--partner-accent-soft)]' : ''}`}>{label} ({orders.filter(order => yanQueueView(order) === view).length})</button>)}</nav>
+        <p className="mt-3 text-sm leading-6 text-[color:var(--partner-muted)]">{queueView === 'production' ? 'Released jobs to accept, print and prepare for collection.' : queueView === 'offers' ? 'Earlier quotation offers without a production release. These are still available; they are not ready to print.' : 'Ready, declined and closed jobs. Open a job to see its details and any blockers.'}</p>
+      </div>}
+      <ToolsContainer className="mx-auto max-w-[1500px] px-3 pt-3 sm:px-6 sm:pt-5 lg:px-8">
+        {isYan && <summary className="cursor-pointer text-sm font-semibold text-[color:var(--partner-muted)]">Tools & payment details</summary>}
+        <div className={isYan ? "mt-3" : ""}>
         {productionRulesCard || paymentDetailsCard ? (
           <div
             className={`mb-3 grid items-start gap-3 sm:mb-5 ${
@@ -913,7 +931,8 @@ export default function PartnerProductionPage({
             <BackgroundRemoverPage />
           </div>
         </details>
-      </div>
+        </div>
+      </ToolsContainer>
 
       <div className="mx-auto px-3 pt-3 sm:px-6 lg:hidden">
         <div className={`${surfaceClass} grid grid-cols-2 gap-1 p-1`}>
@@ -934,7 +953,7 @@ export default function PartnerProductionPage({
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-[1500px] gap-4 px-3 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:gap-6 sm:px-6 sm:py-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:px-8">
+      <div className={`mx-auto grid max-w-[1500px] gap-4 px-3 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:gap-6 sm:px-6 sm:py-6 ${isYan ? 'lg:grid-cols-[280px_minmax(0,1fr)]' : 'lg:grid-cols-[360px_minmax(0,1fr)]'} lg:px-8`}>
         <aside className={`${mobilePanel === "queue" ? "block" : "hidden"} space-y-4 lg:block`}>
           <div className={`${surfaceClass} p-3 sm:p-4`}>
             <div className="grid gap-3">
@@ -963,7 +982,7 @@ export default function PartnerProductionPage({
             </div>
           </div>
 
-          <div className={`${surfaceClass} p-3 sm:p-4`}>
+          {!isYan && <div className={`${surfaceClass} p-3 sm:p-4`}>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-2">
               {(
                 [
@@ -993,7 +1012,7 @@ export default function PartnerProductionPage({
                 );
               })}
             </div>
-          </div>
+          </div>}
 
           <div className={`${surfaceClass} p-2 sm:p-3`}>
             {ordersError ? (
@@ -1021,7 +1040,7 @@ export default function PartnerProductionPage({
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold">{order.code}</p>
-                        <p className={`mt-1 text-xs ${active ? "text-white/75" : "text-[color:var(--partner-muted)]"}`}>
+                        <p className={`mt-1 text-xs ${active ? (isYan ? "text-white" : "text-white/75") : "text-[color:var(--partner-muted)]"}`}>
                           {order.summary.product || "Production order"}
                         </p>
                       </div>
@@ -1046,10 +1065,10 @@ export default function PartnerProductionPage({
                         </span>
                       ) : null}
                     </div>
-                    <div className={`mt-3 grid grid-cols-3 gap-2 text-[11px] ${active ? "text-white/75" : "text-[color:var(--partner-muted)]"}`}>
+                    <div className={`mt-3 grid grid-cols-3 gap-2 text-[11px] ${active ? (isYan ? "text-white" : "text-white/75") : "text-[color:var(--partner-muted)]"}`}>
                       <span className="truncate">{order.summary.pieces ? `${order.summary.pieces} pcs` : "Qty hidden"}</span>
                       <span className="truncate">{order.summary.deadline || "No deadline"}</span>
-                      <span className="truncate">{getDetailCount(order.details)} fields</span>
+                      <span className="truncate">{isYan ? PARTNER_PRODUCTION_STATUS_LABELS[order.productionStatus] : `${getDetailCount(order.details)} fields`}</span>
                     </div>
                   </button>
                 );
@@ -1126,23 +1145,23 @@ export default function PartnerProductionPage({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-3 2xl:min-w-[720px]">
+                  <div className={`grid grid-cols-2 gap-2 sm:gap-3 ${isYan ? 'sm:grid-cols-3' : 'sm:grid-cols-5 2xl:min-w-[720px]'}`}>
                     <Metric
                       icon={<FiPackage />}
                       label="Quantity"
-                      value={selected.summary.pieces ? `${selected.summary.pieces} pcs` : "Hidden"}
+                      value={selected.production?.packet?.quantity != null ? `${selected.production.packet.quantity} pcs` : selected.summary.pieces ? `${selected.summary.pieces} pcs` : "Hidden"}
                     />
                     <Metric
                       icon={<FiCalendar />}
                       label="Deadline"
-                      value={selected.summary.deadline || "Not set"}
+                      value={isYan ? (selected.production?.packet?.deadline.label || selected.summary.deadline || "Not confirmed") : selected.summary.deadline || "Not set"}
                     />
                     <Metric
                       icon={<FiFileText />}
                       label="Print"
-                      value={selected.summary.print || "Not set"}
+                      value={selected.production?.packet?.printMethod || selected.summary.print || "Not set"}
                     />
-                    <Metric
+                    {!isYan && <><Metric
                       icon={<FiImage />}
                       label="Placement"
                       value={PARTNER_PRINT_PLACEMENT_LABELS[selected.printPlacement]}
@@ -1151,21 +1170,23 @@ export default function PartnerProductionPage({
                       icon={<FiMessageCircle />}
                       label="Client"
                       value={PARTNER_CLIENT_STATUS_LABELS[selected.clientStatus]}
-                    />
+                    /></>}
                   </div>
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:gap-5 2xl:grid-cols-[minmax(0,1fr)_minmax(420px,480px)]">
+              {isYan && selected.production?.released && <YanProductionActions key={selected.id} order={selected} draft={draft} onDraft={update => setDraft(current => ({ ...current, ...update }))} receiptChecked={blanksReceived} onReceipt={setBlanksReceived} onStart={() => void startProduction()} onSave={update => void saveResponse(update)} saving={saving} managerName={managerName} notice={notice} />}
+              <div className={`grid gap-4 sm:gap-5 ${isYan && selected.production?.released ? '' : '2xl:grid-cols-[minmax(0,1fr)_minmax(420px,480px)]'}`}>
                 <div className="space-y-5">
-                  <WorkflowSteps
+                  {!isYan && <WorkflowSteps
                     order={selected}
                     draft={draft}
                     managerName={managerName}
                     onRequestClientLogo={requestClientLogo}
                     requestingLogoKey={requestingLogoKey}
-                  />
+                  />}
 
+                  {isYan && !selected.production?.packet && <p className="rounded-xl border border-[color:var(--partner-warning-border)] bg-[var(--partner-warning-bg)] p-4 text-sm text-[color:var(--partner-warning-text)]">{selected.production?.released ? "The released production details are not fully shared. Ask the manager to share all required fields before printing." : "Quotation offer only. A current approved release is required before production."}</p>}
                   {selected.production?.packet ? (
                     <ReleasedProductionPacket packet={selected.production.packet} />
                   ) : <OrderDetails
@@ -1178,7 +1199,7 @@ export default function PartnerProductionPage({
                   />}
                 </div>
 
-                <div className={`${surfaceClass} overflow-hidden 2xl:sticky 2xl:top-5`}>
+                {!(isYan && selected.production?.released) && <div className={`${surfaceClass} overflow-hidden 2xl:sticky 2xl:top-5`}>
                   <div className="border-b border-[color:var(--partner-border)] bg-[linear-gradient(135deg,var(--partner-accent-soft),var(--partner-card))] p-4 sm:p-5">
                     <div className="flex items-start gap-3">
                       <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--partner-accent)] text-[color:var(--partner-accent-text)]">
@@ -1198,7 +1219,7 @@ export default function PartnerProductionPage({
                     </div>
                   </div>
 
-                  <div className="space-y-5 p-4 sm:p-5">
+                  <fieldset disabled={saving || (isYan && selected.production?.active === false)} className="min-w-0 space-y-5 p-4 sm:p-5">
                     <ResponseSection
                       icon={<FiFlag className="h-4 w-4" />}
                       label="Step 2"
@@ -1423,18 +1444,17 @@ export default function PartnerProductionPage({
                         {notice}
                       </p>
                     ) : null}
-                  </div>
+                  </fieldset>
 
-                </div>
+                </div>}
               </div>
             </div>
           ) : (
             <div className={`rounded-2xl border border-dashed px-6 py-16 text-center shadow-sm ${softSurfaceClass}`}>
               <FiPackage className="mx-auto h-8 w-8 text-[color:var(--partner-muted)]" />
-              <h2 className="mt-4 text-xl font-semibold">No assigned orders in this view</h2>
+              <h2 className="mt-4 text-xl font-semibold">{isYan && queueView === "production" && !searchTerm ? "No released production jobs yet" : "No assigned orders in this view"}</h2>
               <p className="mt-2 text-sm text-[color:var(--partner-muted)]">
-                Try another filter or search. New jobs will appear here when {managerName} moves an
-                order to {partner.name}.
+                {isYan && queueView === "production" ? `New jobs appear here after ${managerName} releases the approved production packet. Earlier offers remain in their own view.` : `Try another view or search. New jobs appear when ${managerName} assigns them to ${partner.name}.`}
               </p>
             </div>
           )}
@@ -1725,19 +1745,23 @@ function ResponseSection({
 }
 
 function PacketFileLink({ file, label }: { file: ProductionFile; label: string }) {
-  return <a href={getArtworkDownloadHref({ label: file.name, filename: file.name, contentType: file.contentType, url: file.url }, 0)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold underline"><FiDownload />{label}: {file.name}</a>;
+  return <a href={getArtworkDownloadHref({ label: file.name, filename: file.name, contentType: file.contentType, url: file.url }, 0)} target="_blank" rel="noreferrer" className="inline-flex max-w-full items-center gap-2 break-all text-sm font-semibold underline"><FiDownload className="shrink-0" />{label}: {file.name}</a>;
 }
 
 function ReleasedProductionPacket({ packet }: { packet: ProductionPacket }) {
-  return <div className="grid gap-5 xl:grid-cols-2">
+  return <div className="grid gap-5">
     <DetailPanel icon={<FiPackage />} title="Released garment quantities">
       <ul className="space-y-2 text-sm">{packet.products.map((row, index) => <li key={index}>{row.product} · {row.color} · {row.size} × {row.quantity}</li>)}</ul>
       <p className="mt-3 text-sm font-semibold">{packet.quantity} pieces · {packet.printMethod}</p>
       <p className="mt-2 text-sm">Deadline: {packet.deadline.label}</p>
     </DetailPanel>
+    {packet.mockups.length ? <DetailPanel icon={<FiImage />} title="Approved garment mockups · reference only">
+      <div className="grid gap-4 sm:grid-cols-2">{packet.mockups.map(mockup => <div key={mockup.key}><p className="mb-2 text-sm font-semibold capitalize">{mockup.side} · {mockup.label}</p><PacketFileLink file={mockup.file} label="Mockup reference" /><img src={mockup.file.url} alt={mockup.label} className="mt-3 max-h-72 w-full rounded-lg bg-white object-contain" /></div>)}</div>
+    </DetailPanel> : <DetailPanel icon={<FiImage />} title="Garment mockups"><p className="text-sm text-[color:var(--partner-muted)]">No approved garment mockup was included in this release. Use the approved print specifications below; ask the manager if a visual reference is needed.</p></DetailPanel>}
     <DetailPanel icon={<FiFileText />} title="Approved print files and specifications">
       <div className="space-y-4">{packet.artworks.length ? packet.artworks.map(art => <div key={art.key} className="rounded-xl border border-[color:var(--partner-border)] p-3">
-        <p className="font-semibold">{art.label}</p>
+        <p className="font-semibold capitalize">{art.side} · {art.label}</p>
+        {art.useForPrint && art.selectedFile?.contentType.startsWith('image/') && <img src={art.selectedFile.url} alt={`${art.side} approved print artwork: ${art.label}`} className="mt-3 max-h-64 w-full rounded-lg bg-white object-contain" />}
         <p className="mt-1 text-sm">{art.useForPrint ? `${art.side} · ${art.placement || "Placement missing"} · ${art.widthCm ?? "?"} × ${art.heightCm ?? "?"} cm` : "Reference attachment only"}</p>
         {art.useForPrint ? <div className="mt-2 text-xs"><p className="font-semibold">Print on these garment rows:</p><ul className="mt-1 space-y-1">{art.targetProductIndexes.map(index => packet.products[index]).filter(Boolean).map((row, index) => <li key={index}>{row.product} · {row.color} · {row.size} × {row.quantity}</li>)}</ul><p className="mt-1">{art.targetProductIndexes.reduce((sum, index) => sum + (packet.products[index]?.quantity || 0), 0)} printed pieces for this artwork</p></div> : null}
         {art.useForPrint && art.selectedFile ? <div className="mt-3"><PacketFileLink file={art.selectedFile} label={`Approved print download (${art.selectedVariant})`} /></div> : null}
@@ -1745,9 +1769,7 @@ function ReleasedProductionPacket({ packet }: { packet: ProductionPacket }) {
         {art.processed ? <div className="mt-3"><PacketFileLink file={art.processed} label="Processed version" /></div> : null}
       </div>) : <p className="text-sm">No print artwork in this packet.</p>}</div>
     </DetailPanel>
-    {packet.mockups.length ? <DetailPanel icon={<FiImage />} title="Approved garment mockups · reference only">
-      <div className="space-y-4">{packet.mockups.map(mockup => <div key={mockup.key}><p className="mb-2 text-sm font-semibold">{mockup.label}</p><PacketFileLink file={mockup.file} label="Mockup reference" /><img src={mockup.file.url} alt={mockup.label} className="mt-3 max-h-72 w-full rounded-lg bg-white object-contain" /></div>)}</div>
-    </DetailPanel> : null}
+
   </div>;
 }
 
