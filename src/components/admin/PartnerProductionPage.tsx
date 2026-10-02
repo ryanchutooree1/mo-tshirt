@@ -1182,7 +1182,7 @@ export default function PartnerProductionPage({
               </div>
 
               {isYan && selected.production?.released && <YanProductionActions key={selected.id} order={selected} draft={draft} onDraft={update => setDraft(current => ({ ...current, ...update }))} receiptChecked={blanksReceived} onReceipt={setBlanksReceived} onStart={() => void startProduction()} onSave={update => void saveResponse(update)} saving={saving} managerName={managerName} notice={notice} />}
-              <div className={`grid gap-4 sm:gap-5 ${isYan && selected.production?.released ? '' : '2xl:grid-cols-[minmax(0,1fr)_minmax(420px,480px)]'}`}>
+              <div className={`grid gap-4 sm:gap-5 ${isYan ? 'grid-cols-1' : ''} ${isYan && selected.production?.released ? '' : '2xl:grid-cols-[minmax(0,1fr)_minmax(420px,480px)]'}`}>
                 <div className="space-y-5">
                   {!isYan && <WorkflowSteps
                     order={selected}
@@ -1205,7 +1205,7 @@ export default function PartnerProductionPage({
                   />}
                 </div>
 
-                {!(isYan && selected.production?.released) && <div className={`${surfaceClass} overflow-hidden 2xl:sticky 2xl:top-5`}>
+                {!(isYan && selected.production?.released) && <div className={`${surfaceClass} overflow-hidden 2xl:sticky 2xl:top-5 ${isYan ? 'min-w-0 [&_*]:min-w-0 [&_input]:max-w-full [&_select]:max-w-full [&_textarea]:max-w-full' : ''}`}>
                   <div className="border-b border-[color:var(--partner-border)] bg-[linear-gradient(135deg,var(--partner-accent-soft),var(--partner-card))] p-4 sm:p-5">
                     <div className="flex items-start gap-3">
                       <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--partner-accent)] text-[color:var(--partner-accent-text)]">

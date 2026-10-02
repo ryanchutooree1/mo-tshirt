@@ -35,6 +35,7 @@ const ACCEPT_BLOCKER = 'Accept this released job before starting production.';
 const STALE_BLOCKER = 'The released packet changed. Reload before starting.';
 const CLOSED_BLOCKER = 'This production assignment is no longer active.';
 const REJECTED_BLOCKER = 'This job has been rejected.';
+const YAN_RESPONSE_WIDTH_CLASSES = ['min-w-0', '[&_*]:min-w-0', '[&_input]:max-w-full', '[&_select]:max-w-full', '[&_textarea]:max-w-full'];
 function fixture(id, decision = 'accepted') {
   const products = [{ product: 'Synthetic shirt', color: id === 'a' ? 'Blue' : 'White', size: 'M', quantity: 2 }];
   const file = { url: '/synthetic/original.svg', name: 'original.svg', contentType: 'image/svg+xml', sizeBytes: 123, provenance: 'client-upload' };
@@ -209,6 +210,10 @@ async function run() {
     await screen.findByRole('heading', { name: 'No released production jobs yet' });
     fireEvent.click(button('Earlier offers (1)'));
     await waitFor(() => assert.equal(notes().value, 'OFFER-only notes'));
+    // Guard Yan-only responsive class scope; JSDOM does not measure rendered geometry.
+    const response = notes().closest('fieldset').parentElement;
+    assert.equal(response.parentElement.classList.contains('grid-cols-1'), true);
+    for (const token of YAN_RESPONSE_WIDTH_CLASSES) assert.equal(response.classList.contains(token), true);
     assert.equal(button('Start production').disabled, true);
     assert.equal(writes().length, 0);
   });
@@ -470,6 +475,9 @@ async function run() {
     legacy.production = { requiresRelease: false, released: false, releaseId: null, packetFingerprint: null, packet: null, readyToStart: false, active: true, blockers: [], startedAtIso: null, blanksReceived: false };
     legacy.price = 150; legacy.completionDays = 3;
     reset([legacy]); await mount();
+    const response = notes().closest('fieldset').parentElement;
+    assert.equal(response.parentElement.classList.contains('grid-cols-1'), false);
+    for (const token of YAN_RESPONSE_WIDTH_CLASSES) assert.equal(response.classList.contains(token), false);
     assert.equal(Boolean(screen.queryByRole('navigation', { name: 'Job views' })), false);
     assert.equal(Boolean(screen.queryByRole('region', { name: 'Production next action' })), false);
     assert.equal(Boolean(screen.queryByRole('button', { name: /^(Accept job|Confirm shirts received|Start printing)$/ })), false);
