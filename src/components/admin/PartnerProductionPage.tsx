@@ -101,6 +101,12 @@ const WORKFLOW_TONE_CLASSES: Record<WorkflowTone, string> = {
     "border-[color:var(--partner-border)] bg-[var(--partner-soft)] text-[color:var(--partner-muted)]",
 };
 
+function decisionTone(decision: PartnerDecision, isYan: boolean) {
+  if (!isYan) return PARTNER_DECISION_TONES[decision];
+  const tone: Record<PartnerDecision, WorkflowTone> = { pending: 'neutral', accepted: 'success', needs_info: 'warning', rejected: 'danger' };
+  return WORKFLOW_TONE_CLASSES[tone[decision]];
+}
+
 const RESPONSE_SECTION_TONES: Record<ResponseSectionTone, string> = {
   cyan: "border-cyan-500",
   amber: "border-amber-500",
@@ -1037,9 +1043,9 @@ export default function PartnerProductionPage({
                         : "border-[color:var(--partner-border)] bg-[var(--partner-card)] text-[color:var(--partner-text)] hover:bg-[var(--partner-hover)]"
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className={`flex items-start justify-between gap-3 ${isYan ? 'flex-wrap' : ''}`}>
                       <div>
-                        <p className="text-sm font-semibold">{order.code}</p>
+                        <p className={`text-sm font-semibold ${isYan ? 'whitespace-nowrap' : ''}`}>{order.code}</p>
                         <p className={`mt-1 text-xs ${active ? (isYan ? "text-white" : "text-white/75") : "text-[color:var(--partner-muted)]"}`}>
                           {order.summary.product || "Production order"}
                         </p>
@@ -1048,7 +1054,7 @@ export default function PartnerProductionPage({
                         className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
                           active
                             ? "border-white/20 bg-white/10 text-white"
-                            : PARTNER_DECISION_TONES[order.decision]
+                            : decisionTone(order.decision, isYan)
                         }`}
                       >
                         {PARTNER_DECISION_LABELS[order.decision]}
@@ -1058,7 +1064,7 @@ export default function PartnerProductionPage({
                           className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
                             active
                               ? "border-white/20 bg-white/10 text-white"
-                              : "border-cyan-200 bg-cyan-50 text-cyan-800"
+                              : isYan ? WORKFLOW_TONE_CLASSES.info : "border-cyan-200 bg-cyan-50 text-cyan-800"
                           }`}
                         >
                           Shared
@@ -1108,7 +1114,7 @@ export default function PartnerProductionPage({
                       {selected.summary.product || "Production details"}
                     </h2>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${PARTNER_DECISION_TONES[selected.decision]}`}>
+                      <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${decisionTone(selected.decision, isYan)}`}>
                         {PARTNER_DECISION_LABELS[selected.decision]}
                       </span>
                       <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold text-[color:var(--partner-text)] ${softSurfaceClass}`}>
@@ -1118,7 +1124,7 @@ export default function PartnerProductionPage({
                         Assigned {formatDate(selected.assignedAt)}
                       </span>
                       {selected.isShared ? (
-                        <span className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-semibold text-cyan-800">
+                        <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${isYan ? WORKFLOW_TONE_CLASSES.info : 'border-cyan-200 bg-cyan-50 text-cyan-800'}`}>
                           Shared offer - first acceptance owns it
                         </span>
                       ) : null}

@@ -22,11 +22,12 @@ function load(file, modules = {}) {
 const partners = load('src/lib/partners.ts');
 const yanView = load('src/lib/yan-production-view.ts');
 const YanActions = load('src/components/admin/YanProductionActions.tsx', { '@/lib/yan-production-view': yanView });
+let currentTheme = 'light';
 const Page = load('src/components/admin/PartnerProductionPage.tsx', {
   '@/lib/partners': partners,
   '@/lib/yan-production-view': yanView,
   './YanProductionActions': YanActions,
-  '@/admin/AdminThemeContext': { useAdminTheme: () => ({ theme: 'light', toggleTheme() {} }) },
+  '@/admin/AdminThemeContext': { useAdminTheme: () => ({ theme: currentTheme, toggleTheme() {} }) },
   '@/components/admin/BackgroundRemoverPage': { default: () => null, __esModule: true },
   'next/image': { default: props => React.createElement('img', { alt: props.alt, src: typeof props.src === 'string' ? props.src : '' }), __esModule: true },
 }).default;
@@ -112,7 +113,8 @@ function openNotes() {
   const summary = screen.getByText('Questions, notes & other updates');
   if (!summary.parentElement.open) fireEvent.click(summary);
 }
-async function mount({ partnerId = [...records.values()][0].partnerId, expected = 'a' } = {}) {
+async function mount({ partnerId = [...records.values()][0].partnerId, expected = 'a', theme = 'light' } = {}) {
+  currentTheme = theme;
   render(React.createElement(Page, { partnerId, initialPartner: { id: partnerId, name: partnerId === 'yan' ? 'Synthetic Yan' : 'Synthetic Shabanaz', active: true, productionNotes: [], supportsLogoPrintPlacements: false }, managerName: 'Synthetic manager' }));
   await screen.findByRole('heading', { name: partnerId === 'yan' ? 'Your production jobs' : 'Assigned orders' });
   if (expected) await waitFor(() => assert.equal(notes().value, records.get(expected).comments));
@@ -418,6 +420,49 @@ async function run() {
     assert.equal(button('Confirm shirts received').disabled, false);
     assert.equal(records.get('a').productionStatus, 'not_started');
     assert.equal(writes().length, 1);
+  });
+
+  await check('dark Yan decision/shared badges use semantic palette while non-Yan legacy classes stay unchanged', async () => {
+    const items = ['accepted', 'pending', 'needs_info', 'rejected'].map((decision, index) => {
+      const order = fixture(String.fromCharCode(97 + index), decision); order.isShared = true; return order;
+    });
+    reset(items); await mount({ theme: 'dark' });
+    const style = document.querySelector('main').style;
+    for (const [variable, color] of Object.entries({
+      '--partner-soft': '#0f172a', '--partner-muted': '#9ca3af',
+      '--partner-success-bg': '#052e26', '--partner-success-text': '#a7f3d0',
+      '--partner-warning-bg': '#3a2705', '--partner-warning-text': '#fde68a',
+      '--partner-danger-bg': '#3b0712', '--partner-danger-text': '#fecdd3',
+      '--partner-info-bg': '#082f49', '--partner-info-text': '#bae6fd',
+    })) assert.equal(style.getPropertyValue(variable), color);
+    const detailBadge = decision => screen.getAllByText(partners.PARTNER_DECISION_LABELS[decision], { exact: true }).find(node => !node.closest('aside'));
+    const assertSemantic = (node, tone) => {
+      assert.equal(node.classList.contains(`bg-[var(--partner-${tone}-bg)]`), true);
+      assert.equal(node.classList.contains(`text-[color:var(--partner-${tone}-text)]`), true);
+      assert.equal(/(?:bg|text)-(?:slate|emerald|amber|rose|cyan)-\d+/.test(node.className), false);
+    };
+    assertSemantic(detailBadge('accepted'), 'success');
+    assertSemantic(screen.getByText('Shared offer - first acceptance owns it'), 'info');
+    assertSemantic(within(card('b')).getByText('Shared', { exact: true }), 'info');
+    const pendingBadge = within(card('b')).getByText(partners.PARTNER_DECISION_LABELS.pending, { exact: true });
+    assert.equal(pendingBadge.classList.contains('bg-[var(--partner-soft)]'), true);
+    assert.equal(pendingBadge.classList.contains('text-[color:var(--partner-muted)]'), true);
+    assertSemantic(within(card('c')).getByText(partners.PARTNER_DECISION_LABELS.needs_info, { exact: true }), 'warning');
+    fireEvent.click(button('History (1)')); await select('d');
+    assertSemantic(detailBadge('rejected'), 'danger');
+    assert.equal(writes().length, 0);
+    cleanup();
+
+    for (const item of items) item.partnerId = 'shabanaz';
+    reset(items); await mount({ theme: 'dark' });
+    for (const [id, decision] of [['a', 'accepted'], ['b', 'pending'], ['c', 'needs_info'], ['d', 'rejected']]) {
+      const badge = id === 'a' ? detailBadge(decision) : within(card(id)).getByText(partners.PARTNER_DECISION_LABELS[decision], { exact: true });
+      for (const token of partners.PARTNER_DECISION_TONES[decision].split(' ')) assert.equal(badge.classList.contains(token), true);
+      assert.equal(badge.className.includes('--partner-success'), false);
+    }
+    assert.equal(screen.getByText('Shared offer - first acceptance owns it').classList.contains('bg-cyan-50'), true);
+    assert.equal(within(card('b')).getByText('Shared', { exact: true }).classList.contains('text-cyan-800'), true);
+    assert.equal(writes().length, 0);
   });
 
   await check('non-Yan partners retain legacy decisions, quotations, statuses, and save payload', async () => {
