@@ -118,6 +118,7 @@ function MockEditor({ kind, ...props }) {
 }
 const customRequire = (name) => {
   if (name === "next/dynamic") return { __esModule: true, default: (loader) => {
+    if (String(loader).includes("SellingRulesReference")) return () => React.createElement("button", null, "Selling rules");
     if (String(loader).includes("NewQuotationDraft")) return ({ onCreated }) => React.createElement("section", { "aria-label": "Synthetic new quotation creation" }, React.createElement("button", { onClick: () => onCreated("synthetic-created-quote") }, "Create synthetic blank quotation"));
     assert.equal(String(loader).includes("QuoteEditorPage"), false, "The legacy quote editor must never mount in the simplified workflow");
     const kind = "order";

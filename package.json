@@ -28,7 +28,8 @@
     "test:aura": "node --test tests/aura.test.mjs tests/x5-execution.test.mjs tests/x5-freedom.test.mjs tests/admin-access.test.mjs",
     "test:aura-ui": "node tests/aura-ui.test.cjs",
     "test:ai-earnings": "node --test tests/ai-earnings.test.mjs && node tests/ai-earnings-ui.test.cjs",
-    "test:print-jobs": "node --test tests/print-job-workflow.test.cjs tests/print-job-workflow-route.test.cjs tests/print-job-visuals.test.cjs tests/print-job-handoff.test.cjs tests/print-job-details.test.cjs tests/contact-attachment-provenance.test.cjs tests/original-artwork-upload.test.cjs tests/production-workspace-access.test.cjs tests/production-workspace.test.mjs tests/partner-production.test.cjs tests/production-artwork-upload.test.cjs && node tests/print-job-workspace-ui.test.cjs && node tests/new-quotation-draft-ui.test.cjs && node tests/tanvi-workflow-ui.test.cjs && node tests/workspace-enquiry-ui.test.cjs && node tests/partner-production-ui.test.cjs && node --test tests/production-artwork-upload-ui.test.cjs"
+    "test:print-jobs": "node --test tests/print-job-workflow.test.cjs tests/print-job-workflow-route.test.cjs tests/print-job-visuals.test.cjs tests/print-job-handoff.test.cjs tests/print-job-details.test.cjs tests/contact-attachment-provenance.test.cjs tests/original-artwork-upload.test.cjs tests/production-workspace-access.test.cjs tests/production-workspace.test.mjs tests/partner-production.test.cjs tests/production-artwork-upload.test.cjs && node tests/print-job-workspace-ui.test.cjs && node tests/new-quotation-draft-ui.test.cjs && node tests/tanvi-workflow-ui.test.cjs && node tests/workspace-enquiry-ui.test.cjs && node tests/partner-production-ui.test.cjs && node --test tests/production-artwork-upload-ui.test.cjs",
+    "test:selling-rules": "node --test tests/selling-rules.test.mjs && node tests/selling-rules-ui.test.cjs"
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",
