@@ -694,3 +694,34 @@ body {
     padding-top: env(safe-area-inset-top);
   }
 }
+
+/* The Orders shape language is shared by admin screens only. Module fallbacks
+   preserve printed documents; artwork, tables and the design canvas keep their
+   own geometry. These tokens deliberately do not redefine Tailwind's radii. */
+@media screen {
+  .admin-root {
+    --admin-radius-card: 2rem;
+    --admin-radius-panel: 1.5rem;
+    --admin-radius-control: 1rem;
+    --admin-radius-pill: 9999px;
+    --admin-shadow-card: 0 6px 24px rgb(15 23 42 / 0.045);
+  }
+
+  /* Existing utility-based cards: opt in by their rounded, bordered surface. */
+  .admin-root :where(section, article, aside, form, fieldset, div, ul, ol, li):is(.rounded-xl, .rounded-2xl).border:not(:has(img, video, canvas, iframe, table), :has(> svg), [class*="aspect-"], .premium-studio, .premium-studio *) {
+    border-radius: var(--admin-radius-panel);
+  }
+
+  .admin-root :where(section, article, aside, form, fieldset, div, ul, ol, li).rounded-3xl.border:not(:has(img, video, canvas, iframe, table), :has(> svg), [class*="aspect-"], .premium-studio, .premium-studio *) {
+    border-radius: var(--admin-radius-card);
+  }
+
+  /* Only compact utility-based action buttons, never full-row/card buttons. */
+  .admin-root :is(button, a).inline-flex:is(.rounded, .rounded-md, .rounded-lg, .rounded-xl, .rounded-2xl):not(.premium-studio, .premium-studio *) {
+    border-radius: var(--admin-radius-pill);
+  }
+
+  .admin-root :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"]), select, textarea):is(.rounded, .rounded-md, .rounded-lg, .rounded-xl, .rounded-2xl):not(.premium-studio, .premium-studio *) {
+    border-radius: var(--admin-radius-control);
+  }
+}

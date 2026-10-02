@@ -100,7 +100,7 @@
 .focusCard,
 .notesCard {
   border: 1px solid var(--line);
-  border-radius: 24px;
+  border-radius:var(--admin-radius-card, 24px);
   background: var(--paper);
   box-shadow: 0 12px 40px rgb(20 49 39 / 0.055);
 }
@@ -241,7 +241,7 @@
   gap: 8px;
   padding: 9px 13px;
   border: 1px solid rgb(255 255 255 / 0.16);
-  border-radius: 12px;
+  border-radius:var(--admin-radius-pill, 12px);
   color: #fff;
   background: rgb(255 255 255 / 0.075);
   font-size: 0.82rem;
@@ -360,7 +360,7 @@
   gap: 12px;
   padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius:var(--admin-radius-pill, 16px);
   color: var(--ink);
   background: var(--canvas);
   text-align: left;
@@ -446,7 +446,7 @@
   justify-content: center;
   gap: 7px;
   padding: 8px 11px;
-  border-radius: 12px;
+  border-radius:var(--admin-radius-pill, 12px);
   font-size: 0.76rem;
   font-weight: 800;
 }
@@ -469,7 +469,7 @@
   margin: 0 20px 20px;
   padding: 18px;
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius:var(--admin-radius-panel, 18px);
   background: var(--canvas);
 }
 
@@ -531,7 +531,7 @@
   margin-top: 6px;
   padding: 9px 11px;
   border: 1px solid var(--line);
-  border-radius: 11px;
+  border-radius:var(--admin-radius-control, 11px);
   outline: none;
   color: var(--ink);
   background: var(--paper);
@@ -555,14 +555,14 @@
   margin-top: 6px;
   padding: 3px;
   border: 1px solid var(--line);
-  border-radius: 11px;
+  border-radius:var(--admin-radius-control, 11px);
   background: var(--paper);
 }
 
 .senderOptions button {
   padding: 5px 9px;
   border: 0;
-  border-radius: 8px;
+  border-radius:var(--admin-radius-control, 8px);
   color: var(--muted);
   background: transparent;
   font-size: 0.74rem;
@@ -582,7 +582,7 @@
   gap: 7px;
   padding: 9px 13px;
   border: 1px solid var(--mint-deep);
-  border-radius: 11px;
+  border-radius:var(--admin-radius-pill, 11px);
   color: #fff;
   background: var(--mint-deep);
   font-size: 0.78rem;
@@ -599,7 +599,7 @@
   grid-column: 1 / -1;
   margin: 0;
   padding: 9px 11px;
-  border-radius: 10px;
+  border-radius:var(--admin-radius-control, 10px);
   color: var(--mint-deep);
   background: rgb(24 122 85 / 0.08);
   font-size: 0.76rem;
@@ -646,7 +646,7 @@
   height: 34px;
   place-items: center;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius:var(--admin-radius-pill, 10px);
   color: var(--muted);
   background: var(--paper);
 }
@@ -686,7 +686,7 @@
 .saveTaskButton {
   min-height: 40px;
   padding: 8px 12px;
-  border-radius: 11px;
+  border-radius:var(--admin-radius-pill, 11px);
   font-size: 0.76rem;
   font-weight: 800;
 }
@@ -832,7 +832,7 @@
 .taskActions button {
   width: 32px;
   height: 32px;
-  border-radius: 9px;
+  border-radius:var(--admin-radius-pill, 9px);
   transition: 140ms ease;
 }
 
@@ -891,7 +891,7 @@
   justify-content: center;
   gap: 8px;
   padding: 10px 14px;
-  border-radius: 13px;
+  border-radius:var(--admin-radius-pill, 13px);
   font-size: 0.8rem;
   font-weight: 800;
 }
@@ -980,7 +980,7 @@
   padding: 14px;
   resize: vertical;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius:var(--admin-radius-control, 16px);
   outline: none;
   color: var(--ink);
   background: var(--canvas);
@@ -1102,7 +1102,7 @@
   .routineCard,
   .focusCard,
   .notesCard {
-    border-radius: 20px;
+    border-radius:var(--admin-radius-card, 20px);
   }
 
   .visitCard,

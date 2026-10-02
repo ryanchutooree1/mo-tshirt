@@ -163,7 +163,7 @@
   padding: 10px 16px;
   font-size: 11px;
   font-weight: 600;
-  border-radius: 5px;
+  border-radius:var(--admin-radius-pill, 5px);
   white-space: nowrap;
   transition:
     background 0.15s,
@@ -503,7 +503,7 @@
 .reviewPanel {
   border: 1px solid var(--border);
   background: linear-gradient(130deg, #151a11, #10140e);
-  border-radius: 7px;
+  border-radius:var(--admin-radius-card, 7px);
   overflow: hidden;
 }
 .panelHeading {
@@ -586,7 +586,7 @@
   font-weight: 400;
   color: #edbb97;
   border: 1px solid #c49c6940;
-  border-radius: 3px;
+  border-radius:var(--admin-radius-pill, 3px);
   margin-left: 7px;
   font-size: 7px;
   padding: 1px 4px;
@@ -670,7 +670,7 @@
     radial-gradient(ellipse at 100% 100%, #7863372b, transparent 80%),
     linear-gradient(120deg, #202317, #13170e);
   border: 1px solid #c2a26530;
-  border-radius: 7px;
+  border-radius:var(--admin-radius-card, 7px);
   min-height: 270px;
   display: flex;
   align-items: flex-start;
@@ -727,7 +727,7 @@
   background: linear-gradient(130deg, #141810, #10140d);
   padding: 22px 18px 17px;
   min-height: 178px;
-  border-radius: 5px;
+  border-radius:var(--admin-radius-panel, 5px);
   transition:
     border-color 0.2s,
     transform 0.2s;
@@ -779,7 +779,7 @@
   background: #d2b57a09;
   border: 1px solid #d5b07132;
   padding: 20px 22px;
-  border-radius: 6px;
+  border-radius:var(--admin-radius-panel, 6px);
   margin: -10px 0 32px;
   color: #dac293;
 }
@@ -806,7 +806,7 @@
   gap: 24px;
   background: linear-gradient(100deg, #26271a, #14190e);
   border: 1px solid #c2a56c28;
-  border-radius: 6px;
+  border-radius:var(--admin-radius-panel, 6px);
   padding: 28px;
   margin-bottom: 32px;
 }
@@ -831,7 +831,7 @@
 .areaFilters > button {
   border: 1px solid #aaa48224;
   color: #9ca48e;
-  border-radius: 4px;
+  border-radius:var(--admin-radius-pill, 4px);
   font-size: 9px;
   background: #161a11;
   padding: 8px 12px;
@@ -863,7 +863,7 @@
   font-size: 8px;
   padding: 2px 5px;
   background: #ffffff08;
-  border-radius: 3px;
+  border-radius:var(--admin-radius-pill, 3px);
 }
 .statusFilters > button.activeStatus {
   color: #e7ce99;
@@ -877,7 +877,7 @@
 }
 .goalCard {
   border: 1px solid #b2a16d30;
-  border-radius: 6px;
+  border-radius:var(--admin-radius-card, 6px);
   background: linear-gradient(140deg, #1a1e13, #10150d);
   padding: 23px 22px;
   text-align: left;
@@ -969,7 +969,7 @@
   text-align: center;
   padding: 45px 25px;
   border: 1px dashed #b3a16c33;
-  border-radius: 6px;
+  border-radius:var(--admin-radius-panel, 6px);
   margin-bottom: 24px;
 }
 .emptyState > svg {
@@ -996,7 +996,7 @@
   gap: 20px;
   border: 1px solid #b7a47729;
   background: #181d13;
-  border-radius: 6px;
+  border-radius:var(--admin-radius-panel, 6px);
   padding: 24px 27px;
   margin-top: 30px;
 }
@@ -1113,7 +1113,7 @@
   display: flex;
   justify-content: space-between;
   gap: 15px;
-  border-radius: 6px;
+  border-radius:var(--admin-radius-panel, 6px);
 }
 .loop > span {
   display: flex;
@@ -1166,7 +1166,7 @@
   padding: 25px;
   border: 1px solid #c9956652;
   background: #261e13;
-  border-radius: 6px;
+  border-radius:var(--admin-radius-panel, 6px);
   margin-bottom: 24px;
 }
 .errorPanel h2 {
@@ -1186,7 +1186,7 @@
   gap: 10px;
   border: 1px solid #d0b17435;
   padding: 12px 15px;
-  border-radius: 5px;
+  border-radius:var(--admin-radius-control, 5px);
   margin-bottom: 22px;
   font-size: 11px;
   color: #e5d2a5;
@@ -1212,7 +1212,7 @@
   place-items: center;
   min-width: 34px;
   min-height: 34px;
-  border-radius: 4px;
+  border-radius:var(--admin-radius-pill, 4px);
   flex-shrink: 0;
 }
 .iconButton:hover {
@@ -1227,7 +1227,7 @@
   width: min(680px, calc(100vw - 28px));
   max-height: calc(100dvh - 40px);
   border: 1px solid #b99e686b;
-  border-radius: 10px;
+  border-radius:var(--admin-radius-card, 10px);
   padding: 0;
   background: #11170e;
   box-shadow: 0 30px 120px #0009;
@@ -1301,7 +1301,7 @@
   border: 1px solid #b2a2723a;
   background: #0b1109;
   color: #eeeedd;
-  border-radius: 5px;
+  border-radius:var(--admin-radius-control, 5px);
   padding: 12px;
   font-size: 12px;
   line-height: 1.5;
@@ -1351,7 +1351,7 @@
   padding: 14px 12px;
   background: #192014;
   border: 1px solid #a9935c29;
-  border-radius: 6px;
+  border-radius:var(--admin-radius-control, 6px);
 }
 .actionNumber {
   font-size: 9px;
@@ -1388,7 +1388,7 @@
 .formError {
   padding: 12px 15px;
   border: 1px solid #daaa7352;
-  border-radius: 5px;
+  border-radius:var(--admin-radius-control, 5px);
   font-size: 12px;
   line-height: 1.8;
   color: #f0bd93;
@@ -1411,7 +1411,7 @@
   padding: 12px;
   background: #bca76514;
   border: 1px solid #c8ad7136;
-  border-radius: 4px;
+  border-radius:var(--admin-radius-control, 4px);
   color: #cfc19a;
 }
 .inlineNotice > button {
@@ -1444,7 +1444,7 @@
 .status {
   background: #c2ab6c17;
   border: 1px solid #c2ab6c32;
-  border-radius: 4px;
+  border-radius:var(--admin-radius-pill, 4px);
   padding: 6px 9px;
   color: #e1cc97;
 }
@@ -1459,7 +1459,7 @@
   background: #1b2216;
   border: 1px solid #b19c6536;
   padding: 20px;
-  border-radius: 6px;
+  border-radius:var(--admin-radius-panel, 6px);
   margin: 23px 0;
 }
 .successBox > p {
@@ -1548,7 +1548,7 @@
   gap: 15px;
   background: #1b2515;
   border: 1px solid #b29e652e;
-  border-radius: 5px;
+  border-radius:var(--admin-radius-panel, 5px);
   padding: 18px;
   text-align: left;
   color: #d2bc84;
@@ -2151,7 +2151,7 @@
   .modal {
     max-height: calc(100dvh - 22px);
     width: calc(100vw - 20px);
-    border-radius: 8px;
+    border-radius:var(--admin-radius-card, 8px);
   }
   .modalHead {
     padding: 21px 20px;
@@ -2273,7 +2273,7 @@
   font-size: 9px;
   color: #d4c292;
   border: 1px solid #c8af7540;
-  border-radius: 4px;
+  border-radius:var(--admin-radius-control, 4px);
   background: #b1996510;
   padding: 8px;
 }
@@ -2296,7 +2296,7 @@
   gap: 18px;
   padding: 20px;
   border: 1px solid #b59e6633;
-  border-radius: 6px;
+  border-radius:var(--admin-radius-panel, 6px);
   background: #1b2415;
 }
 .practiceSteps {
@@ -2322,7 +2322,7 @@
 .practiceCard {
   padding: 24px;
   border: 1px solid #b6a06c35;
-  border-radius: 6px;
+  border-radius:var(--admin-radius-panel, 6px);
   background: linear-gradient(130deg, #1b2316, #12180e);
 }
 .practiceCard .goalCardTop > span:last-child {
@@ -2388,7 +2388,7 @@
 .lessonCard {
   background: #12190e;
   border: 1px solid #b1a36b29;
-  border-radius: 6px;
+  border-radius:var(--admin-radius-panel, 6px);
   padding: 25px;
 }
 .lessonCard time {
