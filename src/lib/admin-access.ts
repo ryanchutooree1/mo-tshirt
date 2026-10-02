@@ -549,6 +549,7 @@ export function resolveAdminPagePath(pathname: string) {
 }
 
 export function resolveAdminApiPermission(pathname: string) {
+  if (pathname === "/api/admin/orders" || pathname.startsWith("/api/admin/orders/")) return "/admin/orders" as AdminPagePath;
   if (pathname === "/api/admin/ai-earnings" || pathname.startsWith("/api/admin/ai-earnings/")) return "/admin/x5-execution" as AdminPagePath;
   if (pathname === "/api/admin/aura" || pathname.startsWith("/api/admin/aura/")) return "/admin/x5-execution" as AdminPagePath;
   if (pathname === "/api/admin/whatsapp" || pathname.startsWith("/api/admin/whatsapp/")) return "/admin/whatsapp" as AdminPagePath;
@@ -633,11 +634,21 @@ export function canUseSharedStorageAuth(
   );
 }
 
+/** Saved enquiry and production-state operations in the quotation workspace.
+ * This deliberately does not grant mailbox, order finance, or settings access. */
+export function canUseProductionWorkspace(
+  allowedPages: AdminPagePath[],
+  options?: { isOwner?: boolean }
+) {
+  return Boolean(options?.isOwner || allowedPages.includes("/admin/tanvi"));
+}
+
 export function getAdminLandingPath(
   allowedPages: AdminPagePath[],
   options?: { isOwner?: boolean }
 ) {
   if (options?.isOwner) return "/admin";
+  if (canUseProductionWorkspace(allowedPages)) return "/admin/quotation-approval";
 
   const ordered = [...DEFAULT_MORE_NAV_PATHS, ...DEFAULT_TOP_NAV_PATHS];
   const firstAllowed = ordered.find((path) => allowedPages.includes(path));

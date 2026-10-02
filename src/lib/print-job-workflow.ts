@@ -17,7 +17,7 @@ export type PrintJobPayment = {
 export type PrintJobBasisSnapshot = {
   version: 1; derivedStage: PrintJobStage; clientDecision: string; clientEventAtIso: string;
   quoteStatus: string; sentAtIso: string; orderStatus: string | null;
-  partnerStatus: string; intakeVersion: string; intakeStatus: string;
+  partnerStatus: string; intakeVersion: string; intakeStatus: string; productionReleaseId?: string;
 };
 export type PrintJobWorkflow = {
   stage: PrintJobStage; reason: string; nextAction: string; followUpDate: string;
@@ -153,8 +153,27 @@ function payment(quote: Record<string, unknown>, order: Record<string, unknown>)
   if (recordedLabel || hasAutomaticReceipt) return { status: "unverified", label: /^(paid|cash|juice|bank transfer|card|mcb juice)$/i.test(recordedLabel) ? "Payment recorded · unverified" : recordedLabel || "Payment unverified", detail: hasAutomaticReceipt ? "An automatic receipt exists. It does not prove payment was received or verified." : "This is the document or order payment label. No verified payment evidence is recorded.", verified, evidenceUrl, recordedLabel, hasAutomaticReceipt };
   return { status: "not_recorded", label: "Payment not recorded", detail: "No verified payment evidence is recorded.", verified, evidenceUrl, recordedLabel, hasAutomaticReceipt };
 }
+/** A display projection only. The partner API rechecks the complete release before any write. */
+function confirmedProductionRelease(quote: Record<string, unknown>): Record<string, unknown> | null {
+  const release = object(quote.productionRelease), delivery = object(object(quote.printJobHandoff).delivery);
+  if (release.version !== 1 || release.state !== "released" || release.mode !== "live" || release.partnerId !== "yan" || !string(release.id) || !string(release.packetFingerprint) || delivery.state !== "sent" || delivery.mode !== "live" || delivery.releaseState === "blocked" || delivery.requestId !== release.requestId || delivery.previewFingerprint !== release.previewFingerprint || delivery.messageId !== release.messageId) return null;
+  return release;
+}
 function derived(quote: Record<string, unknown>, order?: Record<string, unknown>): { stage: PrintJobStage; reason: string; closureKind: PrintJobClosureKind | null } {
   const decision = string(quote.clientDecision), partner = object(quote.partner), intake = object(quote.intake);
+  const orderStatus = string(order?.status).toLowerCase();
+  if (orderStatus === "delivered") return { stage: "completed", reason: "The production order is marked Delivered.", closureKind: null };
+  if (["cancelled", "canceled"].includes(orderStatus)) return { stage: "declined", reason: "The production order is cancelled.", closureKind: "cancelled" };
+  const release = confirmedProductionRelease(quote);
+  if (release) {
+    if (decision === "rejected") return { stage: "declined", reason: string(quote.clientDecisionComment) || "The client declined this quotation.", closureKind: "client_declined" };
+    if (decision === "changes_requested") return { stage: "needs_details", reason: "Client changes require a renewed production approval.", closureKind: null };
+    const start = object(quote.productionStart);
+    const started = start.version === 1 && start.releaseId === release.id && start.packetFingerprint === release.packetFingerprint && start.partnerId === release.partnerId && start.blanksReceived === true && Boolean(iso(start.startedAtIso));
+    if (started && ["completed", "will_post_tomorrow", "ryan_to_collect"].includes(string(partner.productionStatus))) return { stage: "ready", reason: "Yan marked this released job ready. Customer handover still needs to be recorded.", closureKind: null };
+    if (started) return { stage: "production", reason: "Yan explicitly started the released job after checking the received garments.", closureKind: null };
+    return { stage: "confirmed", reason: "The approved production job is assigned to Yan. Printing has not been started.", closureKind: null };
+  }
   if (order) {
     const status = string(order.status).toLowerCase();
     if (status === "delivered") return { stage: "completed", reason: "The production order is marked Delivered.", closureKind: null };
@@ -178,14 +197,14 @@ function derived(quote: Record<string, unknown>, order?: Record<string, unknown>
 function readBasisSnapshot(value: unknown): PrintJobBasisSnapshot | null {
   const raw = object(value);
   if (raw.version !== 1 || !isStage(raw.derivedStage)) return null;
-  return { version: 1, derivedStage: raw.derivedStage, clientDecision: string(raw.clientDecision), clientEventAtIso: iso(raw.clientEventAtIso), quoteStatus: string(raw.quoteStatus), sentAtIso: iso(raw.sentAtIso), orderStatus: typeof raw.orderStatus === "string" ? raw.orderStatus.toLowerCase() : null, partnerStatus: string(raw.partnerStatus), intakeVersion: string(raw.intakeVersion), intakeStatus: string(raw.intakeStatus) };
+  return { version: 1, derivedStage: raw.derivedStage, clientDecision: string(raw.clientDecision), clientEventAtIso: iso(raw.clientEventAtIso), quoteStatus: string(raw.quoteStatus), sentAtIso: iso(raw.sentAtIso), orderStatus: typeof raw.orderStatus === "string" ? raw.orderStatus.toLowerCase() : null, partnerStatus: string(raw.partnerStatus), intakeVersion: string(raw.intakeVersion), intakeStatus: string(raw.intakeStatus), productionReleaseId: string(raw.productionReleaseId) };
 }
 function clientEventTime(quote: Record<string, unknown>): number {
   return Math.max(millis(quote.clientDecisionAtIso), millis(quote.clientDecisionAt), ...(Array.isArray(quote.clientResponseHistory) ? quote.clientResponseHistory.map((entry) => millis(object(entry).submittedAtIso)) : []));
 }
 function basisSnapshot(quote: Record<string, unknown>, order?: Record<string, unknown>): PrintJobBasisSnapshot {
   const intake = object(quote.intake);
-  return { version: 1, derivedStage: derived(quote, order).stage, clientDecision: string(quote.clientDecision), clientEventAtIso: iso(clientEventTime(quote)), quoteStatus: string(quote.status), sentAtIso: iso(quote.sentAt), orderStatus: order ? string(order.status).toLowerCase() : null, partnerStatus: string(object(quote.partner).productionStatus), intakeVersion: string(intake.version), intakeStatus: string(intake.status) };
+  return { version: 1, derivedStage: derived(quote, order).stage, clientDecision: string(quote.clientDecision), clientEventAtIso: iso(clientEventTime(quote)), quoteStatus: string(quote.status), sentAtIso: iso(quote.sentAt), orderStatus: order ? string(order.status).toLowerCase() : null, partnerStatus: string(object(quote.partner).productionStatus), intakeVersion: string(intake.version), intakeStatus: string(intake.status), productionReleaseId: string(confirmedProductionRelease(quote)?.id) };
 }
 const ORDER_LIFECYCLE_STATUSES = new Set(["pending", "in process", "in progress", "production", "completed", "delivered", "cancelled", "canceled", "urgent"]);
 const PARTNER_LIFECYCLE_STATUSES = new Set(["not_started", "in_progress", "in_production", "printing", "completed", "will_post_tomorrow", "ryan_to_collect"]);
@@ -196,6 +215,7 @@ function workflowWasSuperseded(workflow: PrintJobWorkflow | null, quote: Record<
   const before = workflow.basisSnapshot, now = basisSnapshot(quote, order);
   const hasClientDecision = ["accepted", "rejected", "changes_requested"].includes(now.clientDecision);
   if (before) {
+    if (now.productionReleaseId && now.productionReleaseId !== before.productionReleaseId) return true;
     if (hasClientDecision && (now.clientDecision !== before.clientDecision || Boolean(now.clientEventAtIso && millis(now.clientEventAtIso) > millis(before.clientEventAtIso)))) return true;
     // A missing order is not evidence of a change: it may be outside this user's
     // permission scope or the currently loaded window.
@@ -213,6 +233,7 @@ function workflowWasSuperseded(workflow: PrintJobWorkflow | null, quote: Record<
   // can safely establish that evidence is newer; an edited payment must not do so.
   const savedAt = millis(workflow.updatedAtIso);
   if (!savedAt) return false;
+  if (millis(confirmedProductionRelease(quote)?.releasedAtIso) > savedAt) return true;
   if (hasClientDecision && clientEventTime(quote) > savedAt) return true;
   if (now.quoteStatus === "sent" && millis(quote.sentAt) > savedAt) return true;
   const intake = object(quote.intake);

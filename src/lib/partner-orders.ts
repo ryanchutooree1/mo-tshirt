@@ -1,12 +1,17 @@
+import type { PartnerOrderAttachment, PartnerOrderDetails, PartnerOrderView } from "@/lib/production-partner-types";
 import {
   collection,
   doc,
   getDoc,
   getDocs,
+  limit,
   query,
   where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { partnerProductionState } from "./partner-production";
+import { safePrintJobUrl } from "./print-job-workflow";
+import { buildProductionPacket, productionFileFilter } from "./production-packet";
 import { normalizeQuotationUploadUrl } from "@/lib/quotation-upload-paths";
 import { getPrintPartnerById } from "@/lib/partner-registry";
 import {
@@ -21,11 +26,8 @@ import {
   PARTNER_PRODUCTION_STATUSES,
   type PartnerDecision,
   type PartnerClientStatus,
-  type PartnerOrderAttachment,
-  type PartnerOrderDetails,
   type PartnerPrintPlacement,
   type PartnerPrintPlacementSource,
-  type PartnerOrderView,
   type PartnerProductionStatus,
   type PartnerVisibleField,
   type PrintPartner,
@@ -50,6 +52,12 @@ type QuoteAttachment = {
   contentType?: string;
   size?: number | null;
   url?: string;
+  role?: string;
+  originalUrl?: string;
+  originalFilename?: string;
+  originalContentType?: string;
+  originalSize?: number | null;
+  originalProvenance?: string;
 };
 
 type QuoteLine = {
@@ -94,7 +102,7 @@ type RawPartnerAssignment = {
   responses?: unknown;
 };
 
-type RawQuote = {
+type RawQuote = Record<string, unknown> & {
   garments?: QuoteGarmentLine[];
   printMethod?: string;
   deadline?: string;
@@ -192,7 +200,7 @@ function parseDesignBrief(value: unknown): DesignBrief | null {
 function getQuoteAttachments(quote: RawQuote) {
   if (Array.isArray(quote.attachments) && quote.attachments.length) {
     return quote.attachments.filter((entry) =>
-      Boolean(entry?.filename || entry?.url || entry?.label || entry?.description)
+      Boolean(entry?.filename || entry?.url || entry?.originalFilename || entry?.originalUrl || entry?.label || entry?.description)
     );
   }
   return quote.attachment ? [quote.attachment] : [];
@@ -331,42 +339,57 @@ function canPartnerReadAssignment(partner: RawPartnerAssignment, partnerId: Prin
 
 function attachmentHasContent(attachment: QuoteAttachment) {
   return Boolean(
-    attachment.url ||
-      attachment.filename ||
+    attachment.url || attachment.originalUrl ||
+      attachment.filename || attachment.originalFilename ||
       attachment.label ||
       attachment.description
   );
 }
 
 function sanitizeAttachments(attachments: QuoteAttachment[]) {
-  const visibleAttachments = attachments.filter(attachmentHasContent);
-  const openableAttachments = visibleAttachments.filter((attachment) =>
-    Boolean(attachment.url)
-  );
-  const partnerAttachments = openableAttachments.length
-    ? openableAttachments
-    : visibleAttachments;
-
-  return partnerAttachments
+  return attachments.filter(attachmentHasContent)
+    .filter((attachment) => !/payment|receipt|proof|bank/i.test(attachment.role || ""))
     .map((attachment, index) => {
+      const url = safePrintJobUrl(normalizeQuotationUploadUrl(attachment.url));
+      const originalUrl = safePrintJobUrl(normalizeQuotationUploadUrl(attachment.originalUrl));
       return {
         label: attachment.label || attachment.description || `Artwork ${index + 1}`,
         filename: attachment.filename || `artwork-${index + 1}`,
         contentType: attachment.contentType || "",
-        ...(attachment.url ? { url: normalizeQuotationUploadUrl(attachment.url) } : {}),
-        quantity:
-          attachment.quantity === undefined || attachment.quantity === null
-            ? undefined
-            : String(attachment.quantity),
+        ...(url ? { url } : {}),
+        ...(originalUrl ? {
+          originalUrl, originalFilename: safeString(attachment.originalFilename),
+          originalContentType: safeString(attachment.originalContentType),
+          originalSize: typeof attachment.originalSize === "number" ? attachment.originalSize : null,
+          originalProvenance: safeString(attachment.originalProvenance),
+        } : {}),
+        quantity: attachment.quantity === undefined || attachment.quantity === null ? undefined : String(attachment.quantity),
       } satisfies PartnerOrderAttachment;
     });
+}
+
+export type LinkedPartnerOrder = { id: string; data: Record<string, unknown> };
+export async function readLinkedPartnerOrder(id: string, quote: RawQuote, read: typeof getDoc = getDoc): Promise<LinkedPartnerOrder | undefined> {
+  const explicit = safeString(quote.orderTransactionId);
+  if (explicit && !/[\/\\\u0000-\u001f]/.test(explicit) && explicit.length <= 180) {
+    const snap = await read(doc(db, "transactions", explicit));
+    if (snap.exists() && (!snap.data().quoteId || snap.data().quoteId === id)) return { id: explicit, data: snap.data() };
+  }
+  const matches = await getDocs(query(collection(db, "transactions"), where("quoteId", "==", id), limit(1)));
+  const reverseId = matches.docs[0]?.id;
+  if (reverseId) {
+    const snap = await read(doc(db, "transactions", reverseId));
+    if (snap.exists() && snap.data().quoteId === id) return { id: reverseId, data: snap.data() };
+  }
+  return undefined;
 }
 
 export function sanitizePartnerOrder(
   id: string,
   data: RawQuote,
   partnerId: PrintPartnerId,
-  partnerConfigOverride?: PrintPartner | null
+  partnerConfigOverride?: PrintPartner | null,
+  linkedOrder?: LinkedPartnerOrder
 ): PartnerOrderView | null {
   const partner = data.partner || {};
   if (!canPartnerReadAssignment(partner, partnerId)) return null;
@@ -376,6 +399,11 @@ export function sanitizePartnerOrder(
   const partnerResponse = getPartnerResponse(partner, partnerId);
   const partnerConfig = partnerConfigOverride || getPrintPartner(partnerId);
   const visibleFields = normalizePartnerVisibleFields(partner.visibleFields);
+  const productionState = partnerProductionState(id, data, partnerId, linkedOrder);
+  const release = productionState.release?.partnerId === partnerId ? productionState.release : null;
+  // A released packet is shared only when its existing field visibility permits all production fields.
+  const completePacketShared = ["artwork", "garments", "sizes", "colors", "print", "deadline", "design"].every(field => visibleFields.includes(field as PartnerVisibleField));
+  const releasedPacket = release && completePacketShared ? release.packet : null;
   const designBrief = parseDesignBrief(data.designBrief);
   const responsePrintPlacement = normalizePartnerPrintPlacement(
     partnerResponse?.printPlacement
@@ -432,7 +460,11 @@ export function sanitizePartnerOrder(
 
   const details: PartnerOrderDetails = {};
   if (hasVisibleField(visibleFields, "artwork")) {
-    details.artwork = sanitizeAttachments(getQuoteAttachments(data));
+    const privateFiles = productionFileFilter(data);
+    const mockups = buildProductionPacket(id, data).mockups;
+    const mockupUrls = new Set(mockups.map(mockup => mockup.file.url));
+    details.artwork = sanitizeAttachments(getQuoteAttachments(data).filter(file => privateFiles.allowed(file) && file.role !== "final-mockup" && !mockupUrls.has(safeString(file.url))));
+    details.mockups = mockups.map(mockup => ({ label: mockup.label, filename: mockup.file.name, contentType: mockup.file.contentType, url: mockup.file.url }));
   }
   if (hasVisibleField(visibleFields, "garments")) {
     details.garments = garmentRows.length ? garmentRows : fallbackLineRows;
@@ -457,6 +489,20 @@ export function sanitizePartnerOrder(
   }
   if (hasVisibleField(visibleFields, "delivery")) {
     details.delivery = designBrief?.delivery || data.delivery || "";
+  }
+
+  if (releasedPacket) {
+    details.garments = releasedPacket.products.map(row => `${row.product} · ${row.color} · ${row.size} × ${row.quantity}`);
+    details.sizes = releasedPacket.products.map(row => `${row.product} · ${row.color} · ${row.size} × ${row.quantity}`);
+    details.colors = [...new Set(releasedPacket.products.map(row => row.color))];
+    details.print = releasedPacket.printMethod;
+    details.deadline = releasedPacket.deadline.label;
+    details.design = releasedPacket.artworks.filter(file => file.useForPrint).map(file => `${file.label}: ${file.placement || "Placement missing"} · ${file.widthCm ?? "?"} × ${file.heightCm ?? "?"} cm`);
+    details.artwork = releasedPacket.artworks.filter(file => file.useForPrint && file.selectedFile).map(file => ({
+      label: `${file.label} (approved ${file.selectedVariant})`, filename: file.selectedFile!.name,
+      contentType: file.selectedFile!.contentType, url: file.selectedFile!.url,
+    }));
+    details.mockups = releasedPacket.mockups.map(mockup => ({ label: mockup.label, filename: mockup.file.name, contentType: mockup.file.contentType, url: mockup.file.url }));
   }
 
   const piecesFromBrief = safeNumber(designBrief?.totalQty, 0);
@@ -519,14 +565,23 @@ export function sanitizePartnerOrder(
       getResponseValue(partner, partnerResponse, "missingInformation")
     ),
     details,
+    production: {
+      released: Boolean(release), releaseId: release?.id || null,
+      packetFingerprint: release?.packetFingerprint || null, packet: releasedPacket,
+      readyToStart: productionState.ready && completePacketShared && decision === "accepted" && !productionState.matchingStart,
+      active: productionState.active,
+      blockers: [...(completePacketShared ? productionState.blockers : ["Ask the manager to share all released production fields before starting."]), ...(decision !== "accepted" ? ["Accept this released job before starting production."] : [])],
+      startedAtIso: productionState.start?.startedAtIso || null,
+      blanksReceived: productionState.matchingStart,
+    },
     summary: {
-      product,
+      product: releasedPacket ? [...new Set(releasedPacket.products.map(row => row.product))].join(" / ") : product,
       pieces:
         hasVisibleField(visibleFields, "sizes") || hasVisibleField(visibleFields, "garments")
-          ? piecesFromBrief || piecesFromGarments || null
+          ? releasedPacket?.quantity || piecesFromBrief || piecesFromGarments || null
           : null,
-      deadline,
-      print,
+      deadline: releasedPacket?.deadline.label || deadline,
+      print: releasedPacket?.printMethod || print,
     },
   } satisfies PartnerOrderView;
 }
@@ -544,15 +599,12 @@ export async function listPartnerOrders(partnerId: PrintPartnerId) {
     docsById.set(docSnap.id, docSnap);
   });
 
-  return [...docsById.values()]
-    .map((docSnap) =>
-      sanitizePartnerOrder(
-        docSnap.id,
-        docSnap.data() as RawQuote,
-        partnerId,
-        partnerConfig
-      )
-    )
+  const orders = await Promise.all([...docsById.values()].map(async (docSnap) => {
+    const data = docSnap.data() as RawQuote;
+    const order = await readLinkedPartnerOrder(docSnap.id, data);
+    return sanitizePartnerOrder(docSnap.id, data, partnerId, partnerConfig, order);
+  }));
+  return orders
     .filter((entry): entry is PartnerOrderView => Boolean(entry))
     .sort((left, right) => {
       const leftDate = timestampMillis(left.assignedAt || left.createdAt || left.updatedAt);
@@ -571,10 +623,11 @@ export async function readRawPartnerQuote(
   const data = snap.data() as RawQuote;
   if (!data.partner || !canPartnerReadAssignment(data.partner, partnerId)) return null;
   const partnerConfig = await getPrintPartnerById(partnerId);
+  const linkedOrder = await readLinkedPartnerOrder(snap.id, data);
 
   return {
     ref: snap.ref,
     data,
-    view: sanitizePartnerOrder(snap.id, data, partnerId, partnerConfig),
+    view: sanitizePartnerOrder(snap.id, data, partnerId, partnerConfig, linkedOrder),
   };
 }

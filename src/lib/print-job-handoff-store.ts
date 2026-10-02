@@ -2,11 +2,13 @@ import { randomUUID } from "node:crypto";
 import { collection, doc, getDoc, getDocs, limit, query, runTransaction, where } from "firebase/firestore";
 import { db } from "./firebase";
 import {
-  HandoffError, buildHandoffView, cents, emailAddress, getHandoffRecord, handoffHash, handoffLifecycleFingerprint,
+  HandoffError, buildHandoffView, productionAssignmentBlockers, cents, emailAddress, getHandoffRecord, handoffHash, handoffLifecycleFingerprint,
   mauritiusDate, parseHandoffSettings, prepareHandoffPreview, quotePricing, record, text,
   validateHandoffSettings, type HandoffAction, type HandoffActor, type HandoffDelivery,
   type HandoffPaymentRecord, type HandoffPreview, type HandoffOrder,
 } from "./print-job-handoff";
+
+import { buildProductionPacket, productionPacketFingerprint, type ProductionRelease } from "./production-packet";
 
 const settingsRef = () => doc(db, "adminSettings", "printJobHandoff");
 const registryRef = () => doc(db, "adminSettings", "printPartners");
@@ -91,6 +93,7 @@ export async function performJobHandoff(id: string, input: HandoffAction, actor:
     if (auditSnap.exists()) {
       const old = auditSnap.data();
       if (old.inputHash !== inputHash || record(old.actor).userId !== actor.userId) throw new HandoffError("This request ID has already been used for a different action.", 409);
+      if (input.action === "send" && stored.delivery?.requestId === input.requestId && stored.delivery.releaseState === "blocked") throw new HandoffError(`The email was sent, but production was not released: ${(stored.delivery.releaseBlockers || []).join(" ")} Do not send again; review the existing handoff.`, 409);
       if (input.action === "send" && stored.delivery?.requestId === input.requestId && stored.delivery.state !== "sent") throw new HandoffError("Delivery remains in progress or unconfirmed. Do not send again; check it manually.", 409);
       return { send: null as HandoffPreview | null, replayed: true };
     }
@@ -98,12 +101,21 @@ export async function performJobHandoff(id: string, input: HandoffAction, actor:
     const order = await readLinkedOrder(id, quote, transaction.get.bind(transaction) as typeof getDoc);
     const view = buildHandoffView(id, quote, settings, registry, origin, canManageSettings, now, order);
     const next = { ...stored, version: stored.version + 1 };
-    if (input.action === "confirm-price") {
+    if (input.action === "save-production-specs") {
+      assertVersion(stored.version, input.expectedVersion);
+      if (!view.gates.activeJob || view.gates.reopenRequired) throw new HandoffError("Reopen and review this job before editing production specifications.", 409);
+      if (quote.productionRelease || stored.delivery?.mode === "live" && stored.delivery.state === "sent") throw new HandoffError("This job has already been sent live. Review the existing release before changing its production specifications.", 409);
+      if (input.packetFingerprint !== view.productionPacketFingerprint) throw new HandoffError("The products or files changed. Reload the packet before saving its specifications.", 409);
+      const existing = new Map(view.productionPacket.artworks.map(file => [file.key, file]));
+      if (input.specs.artworks.length !== existing.size || input.specs.artworks.some(file => !existing.has(file.fileKey) || file.selectedVariant === "processed" && !existing.get(file.fileKey)?.processed || file.targetProductIndexes.some(index => index >= view.productionPacket.products.length))) throw new HandoffError("The saved artwork files changed or an unavailable variant was selected. Reload the packet.", 409);
+      next.preview = null;
+    } else if (input.action === "confirm-price") {
       if (view.gates.reopenRequired || !view.gates.activeJob) throw new HandoffError("This job must be explicitly reopened after reviewing its closure or client response before a new price agreement can be confirmed.", 409);
       assertVersion(stored.version, input.expectedVersion);
       const pricing = quotePricing(quote);
+      if (input.packetFingerprint !== view.productionPacketFingerprint) throw new HandoffError("The production packet changed. Review it again before confirming the client agreement.", 409);
       if (input.pricingFingerprint !== pricing.fingerprint || pricing.quotedTotal === null || pricing.quotedTotal <= 0 || cents(input.agreedTotal) !== cents(pricing.quotedTotal)) throw new HandoffError("The agreed amount must match the current quotation total. Refresh the price first.", 409);
-      next.priceConfirmation = { id: input.requestId, pricingFingerprint: pricing.fingerprint, lifecycleFingerprint: handoffLifecycleFingerprint(quote, order), workflowVersionAtAgreement: Number(record(quote.printJobWorkflow).version) || 0, agreedTotal: pricing.quotedTotal, currency: pricing.currency, note: input.note, confirmedAtIso: atIso, actor };
+      next.priceConfirmation = { id: input.requestId, pricingFingerprint: pricing.fingerprint, packetFingerprint: view.productionPacketFingerprint, lifecycleFingerprint: handoffLifecycleFingerprint(quote, order), workflowVersionAtAgreement: Number(record(quote.printJobWorkflow).version) || 0, agreedTotal: pricing.quotedTotal, currency: pricing.currency, note: input.note, confirmedAtIso: atIso, actor };
       next.preview = null;
     } else if (input.action === "verify-payment") {
       if (!view.gates.priceAgreed) throw new HandoffError("Confirm the current quotation price before recording received money.", 409);
@@ -130,25 +142,53 @@ export async function performJobHandoff(id: string, input: HandoffAction, actor:
       if (currentPreview.fingerprint !== oldPreview.fingerprint) throw new HandoffError("The job, payment, settings or recipient changed after preview. Review a new preview before sending.", 409);
       next.delivery = { state: "sending", requestId: input.requestId, previewId: oldPreview.id, previewFingerprint: oldPreview.fingerprint, mode: oldPreview.mode, recipients: oldPreview.recipients, claimedAtIso: atIso };
     }
-    transaction.update(ref, { printJobHandoff: next });
-    transaction.set(audit, { action: input.action, inputHash, actor, atIso, version: next.version, details: input.action === "confirm-price" ? next.priceConfirmation : input.action === "verify-payment" ? next.payments.at(-1) : input.action === "preview" ? next.preview : next.delivery });
+    transaction.update(ref, { printJobHandoff: next, ...(input.action === "save-production-specs" ? { productionSpecs: input.specs } : {}) });
+    transaction.set(audit, { action: input.action, inputHash, actor, atIso, version: next.version, details: input.action === "save-production-specs" ? input.specs : input.action === "confirm-price" ? next.priceConfirmation : input.action === "verify-payment" ? next.payments.at(-1) : input.action === "preview" ? next.preview : next.delivery });
     return { send: input.action === "send" ? next.preview : null, replayed: false };
   });
   if (outcome.send) {
     let state: "sent" | "unknown" = "unknown", messageId = "";
     try { messageId = await sendPreview(outcome.send, id, input.requestId); state = "sent"; }
     catch (error) { console.error("print-job-handoff:delivery-unconfirmed", error instanceof Error ? error.name : "unknown"); }
+    let releaseBlocked: string[] = [];
     try {
-      await runTransaction(db, async (transaction) => {
-        const ref = quoteRef(id), snapshot = await transaction.get(ref);
+      releaseBlocked = await runTransaction(db, async (transaction) => {
+        const ref = quoteRef(id);
+        const [snapshot, settingsSnap, registrySnap] = await Promise.all([transaction.get(ref), transaction.get(settingsRef()), transaction.get(registryRef())]);
         if (!snapshot.exists()) throw new HandoffError("Job disappeared while recording delivery.", 409);
-        const current = getHandoffRecord(snapshot.data());
+        const quote = snapshot.data(), current = getHandoffRecord(quote);
         if (current.delivery?.requestId !== input.requestId || current.delivery.state !== "sending") throw new HandoffError("The delivery lock changed unexpectedly.", 409);
-        const delivery: HandoffDelivery = { ...current.delivery, state, completedAtIso: new Date().toISOString(), ...(messageId ? { messageId } : {}) };
-        transaction.update(ref, { printJobHandoff: { ...current, version: current.version + 1, delivery } });
-        transaction.set(eventRef(id, `result-${input.requestId}`), { action: "delivery-result", actor, atIso: delivery.completedAtIso, details: delivery });
+        const order = await readLinkedOrder(id, quote, transaction.get.bind(transaction) as typeof getDoc);
+        const completedAtIso = new Date().toISOString();
+        const delivery: HandoffDelivery = { ...current.delivery, state, completedAtIso, ...(messageId ? { messageId } : {}), releaseState: "not_applicable" };
+        let release: ProductionRelease | null = null, partner: Record<string, unknown> | null = null;
+        const blockers: string[] = [];
+        if (state === "sent" && outcome.send?.mode === "live") {
+          // SMTP is outside the transaction. Revalidate everything after acceptance;
+          // an intervening edit/closure never receives a silent production release.
+          try {
+            const reviewQuote = { ...quote, printJobHandoff: { ...current, delivery: null } };
+            const approved = prepareHandoffPreview(id, reviewQuote, parseHandoffSettings(settingsSnap.data()), registrySnap.data(), origin, outcome.send.id, Date.now(), order);
+            if (approved.fingerprint !== outcome.send.fingerprint || productionPacketFingerprint(buildProductionPacket(id, quote)) !== outcome.send.packetFingerprint) blockers.push("The job, approval, payment, files, recipient or settings changed during email delivery.");
+          } catch (error) { blockers.push(error instanceof Error ? error.message : "The current production packet could not be verified."); }
+          const assignment = record(quote.partner);
+          blockers.push(...productionAssignmentBlockers(quote));
+          if (quote.productionRelease) blockers.push("A production release already exists and was preserved.");
+          if (!blockers.length) {
+            release = { version: 1, id: `release-${input.requestId}`, partnerId: "yan", state: "released", mode: "live", requestId: input.requestId, previewId: outcome.send.id, previewFingerprint: outcome.send.fingerprint, packetFingerprint: outcome.send.packetFingerprint, packet: outcome.send.packet, priceConfirmationId: outcome.send.priceConfirmationId, paymentRecordId: outcome.send.paymentRecordId, pricingFingerprint: outcome.send.pricingFingerprint, lifecycleFingerprint: outcome.send.lifecycleFingerprint, releasedAtIso: completedAtIso, messageId };
+            const visibleTo = ["yan"];
+            // Never take another partner's assignment. A reviewed Yan release
+            // restricts any prior shared offer to Yan and preserves response history.
+            partner = { ...assignment, ...(text(assignment.id) ? {} : { id: "yan", name: outcome.send.partnerName }), visibleTo, assignedAt: assignment.assignedAt || completedAtIso, updatedAt: completedAtIso, responses: { ...record(assignment.responses), yan: { ...record(record(assignment.responses).yan), requestStatus: text(record(record(assignment.responses).yan).requestStatus) || "pending", productionStatus: text(record(record(assignment.responses).yan).productionStatus) || "not_started" } } };
+            delivery.releaseState = "released";
+          } else { delivery.releaseState = "blocked"; delivery.releaseBlockers = blockers; }
+        }
+        transaction.update(ref, { printJobHandoff: { ...current, version: current.version + 1, delivery }, ...(release ? { productionRelease: release, partner } : {}) });
+        transaction.set(eventRef(id, `result-${input.requestId}`), { action: "delivery-result", actor, atIso: completedAtIso, details: delivery, ...(release ? { releaseId: release.id, packetFingerprint: release.packetFingerprint, previousAssignment: record(quote.partner) } : {}) });
+        return blockers;
       });
     } catch { throw new HandoffError("Delivery could not be recorded safely. Do not send again; check the existing handoff manually.", 502); }
+    if (releaseBlocked.length) throw new HandoffError(`The email was sent, but production was not released: ${releaseBlocked.join(" ")} Do not send again; review the existing handoff.`, 409);
     if (state === "unknown") throw new HandoffError("Delivery could not be confirmed. Do not send again; check the existing handoff manually.", 502);
   }
   const view = await readJobHandoff(id, origin, canManageSettings);

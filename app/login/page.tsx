@@ -27,7 +27,7 @@ type PartnerLoginPayload = {
 
 type ManagerLoginPayload = {
   displayName: string;
-  path: "/admin/workspace";
+  path: "/admin/quotation-approval";
 };
 
 function isPartnerLoginPayload(value: unknown): value is PartnerLoginPayload {
@@ -46,7 +46,7 @@ function isManagerLoginPayload(value: unknown): value is ManagerLoginPayload {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<ManagerLoginPayload>;
 
-  return candidate.path === "/admin/workspace" && typeof candidate.displayName === "string";
+  return candidate.path === "/admin/quotation-approval" && typeof candidate.displayName === "string";
 }
 
 function LoginInner() {

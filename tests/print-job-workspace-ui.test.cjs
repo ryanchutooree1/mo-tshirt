@@ -140,7 +140,7 @@ const customRequire = (name) => {
   if (name.startsWith("@/lib/print-job")) return loadDomain(name.slice("@/lib/".length) + ".ts");
   if (name === "./JobOrderDetails") return loadComponent("JobOrderDetails.tsx");
   if (name === "@/lib/quotation-inbox") return inbox;
-  if (name === "@/components/admin/EmailEnquiryDetails") return { __esModule: true, default: ({ intake, onDirtyChange, onOpenQuote }) => React.createElement("section", { "aria-label": "Synthetic enquiry editor", "data-status": intake.status, "data-quote-id": intake.quoteId || "" }, intake.subject, React.createElement("button", { onClick: () => onDirtyChange(true) }, "Make synthetic enquiry dirty"), React.createElement("button", { onClick: () => onDirtyChange(false) }, "Mark synthetic enquiry saved"), React.createElement("button", { onClick: () => { onDirtyChange(false); onOpenQuote("synthetic-converted-quote"); } }, "Open synthetic converted quote")) };
+  if (name === "@/components/admin/EmailEnquiryDetails") return { __esModule: true, default: ({ intake, onDirtyChange, onOpenQuote, workspaceOnly }) => React.createElement("section", { "aria-label": "Synthetic enquiry editor", "data-workspace-only": String(Boolean(workspaceOnly)), "data-status": intake.status, "data-quote-id": intake.quoteId || "" }, intake.subject, React.createElement("button", { onClick: () => onDirtyChange(true) }, "Make synthetic enquiry dirty"), React.createElement("button", { onClick: () => onDirtyChange(false) }, "Mark synthetic enquiry saved"), React.createElement("button", { onClick: () => { onDirtyChange(false); onOpenQuote("synthetic-converted-quote"); } }, "Open synthetic converted quote")) };
   if (name.endsWith(".module.css")) return { __esModule: true, default: new Proxy({}, { get: (_, key) => String(key) }) };
   return requireRepo(name);
 };
@@ -191,7 +191,7 @@ async function test(name, fn) {
 }
 
 const handoff = () => screen.getByRole("region", { name: "Synthetic Tanvi workflow" });
-function addEnquiry() { enquiries = [{ id: "synthetic-intake", subject: "Synthetic enquiry", status: "review", email: "pending@synthetic.example.test", draft: { name: "Indigo Enquiry", phone: "", lines: [] }, summary: "Sizes missing", lastReplyAt: new Date(NOW).toISOString(), updatedAtIso: new Date(NOW).toISOString() }]; }
+function addEnquiry() { queueFlags.canEnquiries = true; enquiries = [{ id: "synthetic-intake", subject: "Synthetic enquiry", status: "review", email: "pending@synthetic.example.test", draft: { name: "Indigo Enquiry", phone: "", lines: [] }, summary: "Sizes missing", lastReplyAt: new Date(NOW).toISOString(), updatedAtIso: new Date(NOW).toISOString() }]; }
 
 (async () => {
   await test("one status dropdown replaces category tabs and defaults to active clients", async () => {
@@ -471,6 +471,19 @@ function addEnquiry() { enquiries = [{ id: "synthetic-intake", subject: "Synthet
     await user.fill(screen.getByRole("textbox", { name: "Search jobs" }), "Page 36"); assert.deepEqual(rowNames(), ["Page 36"]);
     await act(async () => { mounted.rerender(React.createElement(App, { requestedQuoteId: "page-36" })); }); assert.equal(handoff().dataset.quoteId, "page-36");
     await act(async () => { mounted.rerender(React.createElement(App, { requestedQuoteId: "synthetic-unloaded-legacy" })); }); assert.equal(handoff().dataset.quoteId, "synthetic-unloaded-legacy");
+  });
+
+  await test("Tanvi sees saved enquiry editor and standalone production state without mailbox or finance controls", async () => {
+    queueFlags = { canQuotes: true, canOrders: false, canInbox: false, canEnquiries: true, canProductionWorkspace: true };
+    addEnquiry(); orderRecords.push({ id: "standalone", data: { customerName: "Standalone Job", status: "In Process", products: [{ product: "Polo", quantity: 20 }] } });
+    await mount(); assert.equal(Boolean(screen.queryByRole("button", { name: "Check email" })), false);
+    await openJob("Standalone Job"); assert.match(screen.getByText(/Production status and job details are shown here/).textContent, /Contact the order manager/);
+    assert.equal(Boolean(screen.queryByRole("link", { name: "Open order record" })), false);
+    await openJob("Indigo Enquiry"); await user.click(screen.getByRole("button", { name: "Review enquiry" }));
+    assert.equal(screen.getByRole("region", { name: "Synthetic enquiry editor" }).dataset.workspaceOnly, "true");
+    await popTo({ printDeskEditor: { kind: "order", id: "standalone", name: "Standalone Job" } });
+    assert.ok(screen.getByText("Order editor access is required."));
+    assert.equal(requests.filter(entry => entry.method !== "GET").length, 0);
   });
 
   console.log(`${passed} LIST-FIRST PRINT JOB WORKSPACE UI TESTS PASSED; ${failures} FAILED`);

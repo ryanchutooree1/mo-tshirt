@@ -196,3 +196,25 @@ test('non-image original does not hide a valid current image and a mockup is usa
  const [mockup]=buildPrintJobs([q('q',{attachment:{role:'final-mockup',filename:'shirt.webp',url:'https://example.test/shirt.webp'}})],[],now);assert.equal(mockup.thumbnail.url,'https://example.test/shirt.webp');
  const [empty]=buildPrintJobs([], [o('o')],now);assert.equal(empty.thumbnail,null);
 });
+
+function liveReleaseQuote(extra = {}) {
+ const release = {version:1,id:'release-one',state:'released',mode:'live',partnerId:'yan',requestId:'send-one',previewFingerprint:'f'.repeat(64),packetFingerprint:'a'.repeat(64),messageId:'synthetic-message',releasedAtIso:new Date(now+1000).toISOString()};
+ return {productionRelease:release,printJobHandoff:{delivery:{state:'sent',mode:'live',releaseState:'released',requestId:release.requestId,previewFingerprint:release.previewFingerprint,messageId:release.messageId}},partner:{id:'yan',productionStatus:'not_started'},...extra};
+}
+test('a confirmed live release appears assigned without rewriting WhatsApp client decisions or starting printing',()=>{
+ const source=liveReleaseQuote(); const [job]=buildPrintJobs([q('release',source)],[],now);
+ assert.equal(job.stage,'confirmed'); assert.match(job.reason,/assigned to Yan/); assert.equal(source.clientDecision,undefined);
+});
+test('explicit partner start and ready status supersede an older open transaction, but never terminal delivery or cancellation',()=>{
+ const source=liveReleaseQuote(); source.productionStart={version:1,releaseId:source.productionRelease.id,packetFingerprint:source.productionRelease.packetFingerprint,partnerId:'yan',blanksReceived:true,startedAtIso:new Date(now+2000).toISOString()}; source.partner.productionStatus='in_progress';
+ assert.equal(buildPrintJobs([q('release',source)],[o('legacy',{quoteId:'release',status:'Pending'})],now)[0].stage,'production');
+ source.partner.productionStatus='completed';
+ assert.equal(buildPrintJobs([q('release',source)],[o('legacy',{quoteId:'release',status:'In Process'})],now)[0].stage,'ready');
+ for(const [status,stage] of [['Delivered','completed'],['Cancelled','declined']]) assert.equal(buildPrintJobs([q('release',source)],[o('legacy',{quoteId:'release',status})],now)[0].stage,stage);
+});
+test('test sends, blocked assignments and partner acceptance cannot create a production stage',()=>{
+ const source=liveReleaseQuote(); source.partner.decision='accepted';
+ assert.equal(buildPrintJobs([q('release',source)],[],now)[0].stage,'confirmed');
+ source.printJobHandoff.delivery.releaseState='blocked'; assert.equal(buildPrintJobs([q('release',source)],[],now)[0].stage,'new');
+ source.printJobHandoff.delivery.releaseState='released'; source.printJobHandoff.delivery.mode='test'; assert.equal(buildPrintJobs([q('release',source)],[],now)[0].stage,'new');
+});

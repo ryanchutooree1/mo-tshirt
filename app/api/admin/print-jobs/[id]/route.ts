@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { arrayUnion, collection, doc, getDocs, limit, query, runTransaction, where } from "firebase/firestore";
 import { getAdminRequestSession } from "@/lib/admin-request";
-import { hasAdminPageAccess } from "@/lib/admin-access";
+import { canUseProductionWorkspace, hasAdminPageAccess } from "@/lib/admin-access";
 import { db } from "@/lib/firebase";
 import { isContentLengthWithinLimit, isRequestOriginAllowed } from "@/lib/request-safety";
 import { buildPrintJobWorkflowUpdate, PrintJobWorkflowError, validatePrintJobUpdate } from "@/lib/print-job-workflow";
+import { isWorkspaceEnquiry } from "@/lib/print-job-workspace-access";
+import type { EmailIntake } from "@/lib/email-intake-model";
 
 const MAX_BYTES = 16 * 1024;
 async function readBody(req: Request) {
@@ -37,14 +39,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   try {
     const input = validatePrintJobUpdate(await readBody(req));
     const isIntake = input.targetType === "intake";
-    if (isIntake && !hasAdminPageAccess(session.allowedPages, "/admin/inbox", session)) return json({ error: "Inbox access is required to update an email enquiry." }, 403);
+    const canProductionWorkspace = canUseProductionWorkspace(session.allowedPages, session);
+    const canInbox = hasAdminPageAccess(session.allowedPages, "/admin/inbox", session);
+    if (isIntake && !canInbox && !canProductionWorkspace) return json({ error: "Saved enquiry workspace access is required." }, 403);
     const quoteRef = doc(db, isIntake ? "emailIntake" : "quotes", id), updatedAtIso = new Date().toISOString();
     const updatedBy = { userId: session.userId, displayName: session.displayName || "Team", email: session.email || "" };
-    const canOrders = hasAdminPageAccess(session.allowedPages, "/admin/orders", session);
+    const canOrders = hasAdminPageAccess(session.allowedPages, "/admin/orders", session) || canProductionWorkspace;
     const result = await runTransaction(db, async (transaction) => {
       const snapshot = await transaction.get(quoteRef);
       if (!snapshot.exists()) throw new PrintJobWorkflowError("Quotation not found. Create a quotation before assigning its workflow stage.", 404);
       const quote = snapshot.data() as Record<string, unknown>;
+      if (isIntake && !canInbox && !isWorkspaceEnquiry(quote as EmailIntake)) throw new PrintJobWorkflowError("Saved client enquiry not found.", 404);
       if (isIntake && quote.quoteId) throw new PrintJobWorkflowError("This enquiry now has a quotation. Reload and update the quotation instead.", 409);
       let order: Record<string, unknown> | undefined;
       // Resolve either legacy link direction, then read the selected order inside

@@ -1,8 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type { PartnerOrderAttachment, PartnerOrderDetails, PartnerOrderView } from "@/lib/production-partner-types";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import Image from "next/image";
+import type { ProductionFile, ProductionPacket } from "@/lib/production-packet";
 import BackgroundRemoverPage from "@/components/admin/BackgroundRemoverPage";
 import {
   FiAlertTriangle,
@@ -44,9 +47,6 @@ import {
   PARTNER_PRODUCTION_STATUSES,
   SHABANAZ_PRINT_PLACEMENT_OPTIONS,
   type PartnerDecision,
-  type PartnerOrderAttachment,
-  type PartnerOrderDetails,
-  type PartnerOrderView,
   type PartnerPrintPlacement,
   type PartnerProductionStatus,
   type PrintPartner,
@@ -158,7 +158,7 @@ function getDetailCount(details: PartnerOrderDetails) {
 
 function orderHasArtwork(details: PartnerOrderDetails) {
   return Boolean(details.artwork?.some((attachment) =>
-    attachment.url || attachment.filename || attachment.label
+    attachment.originalUrl || attachment.url
   ));
 }
 
@@ -281,8 +281,10 @@ export default function PartnerProductionPage({
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("queue");
   const [draft, setDraft] = useState<ResponseDraft>(() => buildDraft(null));
   const [saving, setSaving] = useState(false);
+  const [blanksReceived, setBlanksReceived] = useState(false);
   const [requestingLogoKey, setRequestingLogoKey] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const selectedOrderRef = useRef<string | null>(null);
 
   const filteredOrders = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -302,6 +304,8 @@ export default function PartnerProductionPage({
       null,
     [filteredOrders, selectedId]
   );
+
+  selectedOrderRef.current = selected?.id || null;
 
   const selectedIndex = useMemo(
     () => (selected ? filteredOrders.findIndex((order) => order.id === selected.id) : -1),
@@ -517,8 +521,10 @@ export default function PartnerProductionPage({
 
   useEffect(() => {
     setDraft(buildDraft(selected));
-    setNotice(null);
+    setBlanksReceived(false);
   }, [selected]);
+
+  useEffect(() => { setNotice(null); }, [selected?.id]);
 
   async function login(event: React.FormEvent) {
     event.preventDefault();
@@ -549,7 +555,7 @@ export default function PartnerProductionPage({
   async function saveResponse() {
     if (!selected) return;
     const decision = draft.decision;
-    if (decision === "accepted") {
+    if (decision === "accepted" && !selected.production?.released) {
       if (!draft.completionDays.trim() || Number(draft.completionDays) <= 0) {
         setNotice("Add how many days you need before accepting.");
         return;
@@ -587,10 +593,9 @@ export default function PartnerProductionPage({
         setOrders((current) =>
           current.map((order) => (order.id === updated.id ? updated : order))
         );
-        setDraft(buildDraft(updated));
-        setSelectedId(updated.id);
+        // The selected-order effect refreshes its draft. A late response must not switch jobs.
       }
-      setNotice(
+      if (selectedOrderRef.current === selected.id) setNotice(
         data?.actionEmailSent
           ? `Saved. ${managerName} was emailed for action.`
           : data?.actionEmailWarning
@@ -598,10 +603,39 @@ export default function PartnerProductionPage({
             : "Saved."
       );
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Could not save response.");
+      if (selectedOrderRef.current === selected.id) setNotice(error instanceof Error ? error.message : "Could not save response.");
     } finally {
       setSaving(false);
     }
+  }
+
+  async function startProduction() {
+    if (!selected?.production.packet || !blanksReceived || saving) return;
+    setSaving(true);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/partners/orders/${selected.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ partnerId, action: "start-production", releaseId: selected.production.releaseId,
+          packetFingerprint: selected.production.packetFingerprint, blanksReceived: true,
+          receivedProducts: selected.production.packet.products }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Could not start production.");
+      if (data.order) {
+        setOrders(current => current.map(order => order.id === data.order.id ? data.order : order));
+        // Do not copy this response into a different order selected while it was pending.
+      }
+      if (selectedOrderRef.current === selected.id) {
+        setBlanksReceived(false);
+        setNotice("Production started. Your garment receipt check has been recorded.");
+      }
+    } catch (error) {
+      if (selectedOrderRef.current === selected.id) {
+        setBlanksReceived(false);
+        setNotice(error instanceof Error ? error.message : "Could not start production.");
+      }
+    } finally { setSaving(false); }
   }
 
   async function requestLogoUpload(
@@ -1131,14 +1165,16 @@ export default function PartnerProductionPage({
                     requestingLogoKey={requestingLogoKey}
                   />
 
-                  <OrderDetails
+                  {selected.production?.packet ? (
+                    <ReleasedProductionPacket packet={selected.production.packet} />
+                  ) : <OrderDetails
                     details={selected.details}
                     orderId={selected.id}
                     managerName={managerName}
                     onRequestLogoUpload={requestLogoUpload}
                     onRequestClientLogo={requestClientLogo}
                     requestingLogoKey={requestingLogoKey}
-                  />
+                  />}
                 </div>
 
                 <div className={`${surfaceClass} overflow-hidden 2xl:sticky 2xl:top-5`}>
@@ -1202,10 +1238,12 @@ export default function PartnerProductionPage({
                     <ResponseSection
                       icon={<FiDollarSign className="h-4 w-4" />}
                       label="Step 3"
-                      title={`Quote ${managerName} clearly`}
+                      title={selected.production?.released ? "Released job acknowledgement" : `Quote ${managerName} clearly`}
                       tone="amber"
                     >
-                      <div className="grid gap-3 xl:grid-cols-3">
+                      {selected.production?.released ? (
+                        <p className="text-sm leading-6 text-[color:var(--partner-muted)]">The approved job has already been released. Accept to acknowledge receipt of the job; a new quotation is not required. Acceptance does not start production.</p>
+                      ) : <div className="grid gap-3 xl:grid-cols-3">
                         <label className={fieldLabelClass}>
                           Completion days
                           <input
@@ -1250,7 +1288,7 @@ export default function PartnerProductionPage({
                             placeholder="Rs"
                           />
                         </label>
-                      </div>
+                      </div>}
                     </ResponseSection>
 
                     <ResponseSection
@@ -1264,6 +1302,7 @@ export default function PartnerProductionPage({
                           Print placement
                           <select
                             value={draft.printPlacement}
+                            disabled={Boolean(selected.production?.released)}
                             onChange={(event) =>
                               setDraft((current) => ({
                                 ...current,
@@ -1295,12 +1334,31 @@ export default function PartnerProductionPage({
                             className={`mt-2 normal-case tracking-normal ${inputClass}`}
                           >
                             {PARTNER_PRODUCTION_STATUSES.map((status) => (
-                              <option key={status} value={status}>
+                              <option key={status} value={status} disabled={selected.production?.startedAtIso
+                                ? status === "not_started" || status === "waiting_for_tshirts_from_ryan"
+                                : status !== "not_started" && status !== "waiting_for_tshirts_from_ryan"}>
                                 {PARTNER_PRODUCTION_STATUS_LABELS[status]}
                               </option>
                             ))}
                           </select>
                         </label>
+                        <div className={`rounded-xl border p-3 text-sm ${softSurfaceClass}`}>
+                          {selected.production?.startedAtIso ? (
+                            <p>Garments received and checked. Production started {formatDate(selected.production.startedAtIso)}.</p>
+                          ) : <>
+                            <p className="font-semibold">Start production separately</p>
+                            <p className="mt-2 text-xs leading-5 text-[color:var(--partner-muted)]">Requires the current approved live packet, verified client payment and your physical garment check.</p>
+                            {selected.production?.blockers?.length ? <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-amber-700">{selected.production.blockers.map(blocker => <li key={blocker}>{blocker}</li>)}</ul> : null}
+                            {selected.production?.packet ? <>
+                              <ul className="mt-3 space-y-1 text-xs">{selected.production.packet.products.map((row, index) => <li key={index}>{row.product} · {row.color} · {row.size} × {row.quantity}</li>)}</ul>
+                              <label className="mt-3 flex items-start gap-2 text-sm normal-case tracking-normal">
+                                <input type="checkbox" className="mt-1" checked={blanksReceived} disabled={!selected.production.readyToStart || saving} onChange={event => setBlanksReceived(event.target.checked)} />
+                                <span>I received and checked all listed garment × colour × size × quantity combinations. This records receipt only and does not change inventory stock.</span>
+                              </label>
+                            </> : null}
+                            <button type="button" onClick={() => void startProduction()} disabled={saving || !blanksReceived || !selected.production?.readyToStart} className="mt-3 w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Saving..." : "Start production"}</button>
+                          </>}
+                        </div>
                       </div>
                     </ResponseSection>
 
@@ -1421,12 +1479,13 @@ function WorkflowSteps({
   const hasArtwork = orderHasArtwork(order.details);
   const days = Number(draft.completionDays);
   const price = Number(draft.price);
+  const released = Boolean(order.production?.released);
   const hasOffer = Number.isFinite(days) && days > 0 && Number.isFinite(price) && price > 0;
   const actionNeeded = draft.decision === "needs_info" || Boolean(draft.missingInformation.trim());
   const logoRequestKey = `${order.id}:client-logo`;
   const flowStatus = actionNeeded
     ? `${managerName} action needed`
-    : hasOffer && draft.decision === "accepted"
+    : released ? order.production?.startedAtIso ? "Production started" : "Released job" : hasOffer && draft.decision === "accepted"
       ? `Ready for ${managerName}`
       : hasOffer
         ? "Quote drafted"
@@ -1442,8 +1501,8 @@ function WorkflowSteps({
   }> = [
     {
       title: "Artwork",
-      value: hasArtwork ? "Ready" : "Missing",
-      helper: hasArtwork ? "Open and check the logo before quoting." : `Ask ${managerName} before any print work starts.`,
+      value: hasArtwork ? "Files available" : "Missing files",
+      helper: hasArtwork ? released ? "Use the approved print download in the released packet." : "Open and check the file; availability is not production approval." : `Ask ${managerName} before any print work starts.`,
       icon: <FiImage />,
       tone: hasArtwork
         ? "success"
@@ -1493,8 +1552,8 @@ function WorkflowSteps({
     },
     {
       title: "Days + price",
-      value: hasOffer ? `${days}d / Rs ${price}` : "Needed",
-      helper: "Required before an acceptance can be saved.",
+      value: released ? "Already released" : hasOffer ? `${days}d / Rs ${price}` : "Needed",
+      helper: released ? "Acknowledge this approved job without quoting again." : "Required before accepting a quotation offer.",
       icon: <FiClock />,
       tone: hasOffer
         ? "success"
@@ -1527,7 +1586,7 @@ function WorkflowSteps({
     {
       title: "Production",
       value: PARTNER_PRODUCTION_STATUS_LABELS[draft.productionStatus],
-      helper: "Update this as the job moves through your shop.",
+      helper: "Accept first, then use Start production after checking the listed garments.",
       icon: <FiTruck />,
       tone:
         draft.productionStatus === "completed" ||
@@ -1539,7 +1598,7 @@ function WorkflowSteps({
     {
       title: `${managerName} action`,
       value: actionNeeded ? "Email on save" : "No block",
-      helper: actionNeeded ? `${managerName} gets the blocker when you save.` : "Nothing blocks production right now.",
+      helper: actionNeeded ? `${managerName} gets the blocker when you save.` : "Start production checks the current release and garment receipt.",
       icon: <FiAlertTriangle />,
       tone: actionNeeded
         ? "warning"
@@ -1663,6 +1722,33 @@ function ResponseSection({
   );
 }
 
+function PacketFileLink({ file, label }: { file: ProductionFile; label: string }) {
+  return <a href={getArtworkDownloadHref({ label: file.name, filename: file.name, contentType: file.contentType, url: file.url }, 0)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold underline"><FiDownload />{label}: {file.name}</a>;
+}
+
+function ReleasedProductionPacket({ packet }: { packet: ProductionPacket }) {
+  return <div className="grid gap-5 xl:grid-cols-2">
+    <DetailPanel icon={<FiPackage />} title="Released garment quantities">
+      <ul className="space-y-2 text-sm">{packet.products.map((row, index) => <li key={index}>{row.product} · {row.color} · {row.size} × {row.quantity}</li>)}</ul>
+      <p className="mt-3 text-sm font-semibold">{packet.quantity} pieces · {packet.printMethod}</p>
+      <p className="mt-2 text-sm">Deadline: {packet.deadline.label}</p>
+    </DetailPanel>
+    <DetailPanel icon={<FiFileText />} title="Approved print files and specifications">
+      <div className="space-y-4">{packet.artworks.length ? packet.artworks.map(art => <div key={art.key} className="rounded-xl border border-[color:var(--partner-border)] p-3">
+        <p className="font-semibold">{art.label}</p>
+        <p className="mt-1 text-sm">{art.useForPrint ? `${art.side} · ${art.placement || "Placement missing"} · ${art.widthCm ?? "?"} × ${art.heightCm ?? "?"} cm` : "Reference attachment only"}</p>
+        {art.useForPrint ? <div className="mt-2 text-xs"><p className="font-semibold">Print on these garment rows:</p><ul className="mt-1 space-y-1">{art.targetProductIndexes.map(index => packet.products[index]).filter(Boolean).map((row, index) => <li key={index}>{row.product} · {row.color} · {row.size} × {row.quantity}</li>)}</ul><p className="mt-1">{art.targetProductIndexes.reduce((sum, index) => sum + (packet.products[index]?.quantity || 0), 0)} printed pieces for this artwork</p></div> : null}
+        {art.useForPrint && art.selectedFile ? <div className="mt-3"><PacketFileLink file={art.selectedFile} label={`Approved print download (${art.selectedVariant})`} /></div> : null}
+        {art.source ? <div className="mt-3"><PacketFileLink file={art.source} label={art.source.provenance === "client-upload" ? "Original client upload" : "Saved source"} /><p className="mt-1 text-xs text-[color:var(--partner-muted)]">{art.source.contentType || "File type not recorded"}{art.source.sizeBytes != null ? ` · ${art.source.sizeBytes} bytes` : ""}</p></div> : <p className="mt-2 text-sm text-amber-700">Original source is missing</p>}
+        {art.processed ? <div className="mt-3"><PacketFileLink file={art.processed} label="Processed version" /></div> : null}
+      </div>) : <p className="text-sm">No print artwork in this packet.</p>}</div>
+    </DetailPanel>
+    {packet.mockups.length ? <DetailPanel icon={<FiImage />} title="Approved garment mockups · reference only">
+      <div className="space-y-4">{packet.mockups.map(mockup => <div key={mockup.key}><p className="mb-2 text-sm font-semibold">{mockup.label}</p><PacketFileLink file={mockup.file} label="Mockup reference" /><img src={mockup.file.url} alt={mockup.label} className="mt-3 max-h-72 w-full rounded-lg bg-white object-contain" /></div>)}</div>
+    </DetailPanel> : null}
+  </div>;
+}
+
 function OrderDetails({
   details,
   orderId,
@@ -1737,6 +1823,11 @@ function OrderDetails({
                         </div>
                       ) : null}
                     </div>
+                    {attachment.originalUrl ? <div className="mt-3 text-xs">
+                      <a href={getArtworkDownloadHref({ ...attachment, url: attachment.originalUrl, filename: attachment.originalFilename || attachment.filename }, index)} className="font-semibold underline" target="_blank" rel="noreferrer">Download saved original: {attachment.originalFilename || attachment.filename}</a>
+                      <p className="mt-1 text-[color:var(--partner-muted)]">{attachment.originalContentType || "File type not recorded"}{attachment.originalSize != null ? ` · ${attachment.originalSize} bytes` : ""} · {attachment.originalProvenance === "client-upload" ? "Original client upload" : "Original provenance not verified"}</p>
+                      {attachment.url && attachment.url !== attachment.originalUrl ? <p className="mt-1">The separate preview/download above is the processed file.</p> : null}
+                    </div> : null}
                     {isImage ? (
                       <img
                         src={attachment.url}
@@ -1752,11 +1843,10 @@ function OrderDetails({
                           className="h-72 w-full bg-white sm:h-96"
                         />
                       </div>
-                    ) : !attachment.url ? (
+                    ) : !attachment.url && !attachment.originalUrl ? (
                       <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-xs font-semibold text-amber-900">
                         <p>
-                          {managerName} received this file by email only. Ask {managerName} to re-upload it in
-                          Quotation Approval so you can open the artwork here.
+                          No downloadable file is saved for this entry. Ask {managerName} to upload the original artwork before production.
                         </p>
                         <button
                           type="button"
@@ -1795,6 +1885,13 @@ function OrderDetails({
           )}
         </DetailPanel>
       ) : null}
+
+      {details.mockups?.length ? <DetailPanel icon={<FiImage />} title="Garment mockups · reference only">
+        <div className="space-y-3">{details.mockups.map((file, index) => <div key={`${file.url}-${index}`}>
+          <p className="text-sm font-semibold">{file.label}</p>
+          {file.url ? <><a href={getArtworkDownloadHref(file, index)} target="_blank" rel="noreferrer" className="text-xs underline">Download mockup reference</a><img src={file.url} alt={file.label} className="mt-2 max-h-64 w-full rounded-lg bg-white object-contain" /></> : null}
+        </div>)}</div>
+      </DetailPanel> : null}
 
       {details.garments ? (
         <DetailPanel icon={<FiPackage />} title="Garments">

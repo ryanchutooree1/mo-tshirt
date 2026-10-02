@@ -3,8 +3,9 @@ import { NextResponse } from "next/server";
 import { runTransaction, serverTimestamp } from "firebase/firestore";
 import { readAdminSession } from "@/lib/admin-auth";
 import { readPartnerSession } from "@/lib/partner-auth";
-import { readRawPartnerQuote, sanitizePartnerOrder } from "@/lib/partner-orders";
+import { readRawPartnerQuote, readLinkedPartnerOrder, sanitizePartnerOrder } from "@/lib/partner-orders";
 import { db } from "@/lib/firebase";
+import { PartnerProductionError, validatePartnerProductionChange, type PartnerProductionActor } from "@/lib/partner-production";
 import {
   getPrintPartnerById,
   getProductionManager,
@@ -26,9 +27,8 @@ import {
   isRequestOriginAllowed,
 } from "@/lib/request-safety";
 
-const MAX_UPDATE_REQUEST_BYTES = 8_192;
+const MAX_UPDATE_REQUEST_BYTES = 32_768;
 const MAX_TEXT_LENGTH = 1_500;
-const FALLBACK_MANAGER_EMAIL = "ryanchutooree@gmail.com";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 class PartnerOrderUpdateError extends Error {
@@ -47,8 +47,9 @@ function cleanText(value: unknown) {
 
 function cleanOptionalNumber(value: unknown) {
   if (value === "" || value === null || value === undefined) return null;
+  if (typeof value !== "number" && typeof value !== "string") return null;
   const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 1e9) return null;
   return Math.round(parsed * 100) / 100;
 }
 
@@ -256,16 +257,14 @@ function canReadCurrentPartnerAssignment(
   return assignedPartnerIds.includes(partnerId);
 }
 
-async function canUpdatePartnerOrder(partnerId: string | null) {
-  if (!isPrintPartnerId(partnerId)) return false;
-  if (!(await getPrintPartnerById(partnerId))) return false;
-
+async function partnerOrderActor(partnerId: string): Promise<PartnerProductionActor | null> {
   const cookieStore = await cookies();
   const adminSession = await readAdminSession(cookieStore);
-  if (adminSession?.isOwner) return true;
-
+  if (adminSession?.isOwner) return { userId: adminSession.userId, displayName: adminSession.displayName, kind: "owner" };
   const partnerSession = await readPartnerSession(cookieStore);
-  return partnerSession?.partnerId === partnerId;
+  return partnerSession?.partnerId === partnerId
+    ? { userId: `partner:${partnerId}`, displayName: partnerSession.displayName, kind: "partner" }
+    : null;
 }
 
 export async function PATCH(
@@ -281,10 +280,17 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const body = await req.json().catch(() => ({}));
+  const rawBody = await req.text();
+  if (new TextEncoder().encode(rawBody).length > MAX_UPDATE_REQUEST_BYTES) {
+    return NextResponse.json({ error: "Payload too large." }, { status: 413 });
+  }
+  const body = (() => { try { return JSON.parse(rawBody); } catch { return null; } })();
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json({ error: "Invalid update." }, { status: 400 });
+  }
   const partnerId = body?.partnerId;
 
-  if (!id) {
+  if (!id || id.length > 180 || /[\/\\\u0000-\u001f]/.test(id) || id === "." || id === "..") {
     return NextResponse.json({ error: "Missing order id." }, { status: 400 });
   }
 
@@ -292,7 +298,8 @@ export async function PATCH(
     return NextResponse.json({ error: "Unknown partner." }, { status: 400 });
   }
 
-  if (!(await canUpdatePartnerOrder(partnerId))) {
+  const actor = await partnerOrderActor(partnerId);
+  if (!actor) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
@@ -300,154 +307,97 @@ export async function PATCH(
   if (!existing?.view) {
     return NextResponse.json({ error: "Order not found." }, { status: 404 });
   }
-  const existingView = existing.view;
-
-  const decision: PartnerDecision = isPartnerDecision(body?.decision)
-    ? body.decision
-    : existingView.decision;
-  const productionStatus: PartnerProductionStatus = isPartnerProductionStatus(
-    body?.productionStatus
-  )
-    ? body.productionStatus
-    : existingView.productionStatus;
-  const completionDays = cleanOptionalNumber(body?.completionDays);
-  const price = cleanOptionalNumber(body?.price);
-  const comments = cleanText(body?.comments);
-  const missingInformation = cleanText(body?.missingInformation);
-  const printPlacement: PartnerPrintPlacement = isPartnerPrintPlacement(
-    body?.printPlacement
-  )
-    ? body.printPlacement
-    : existingView.printPlacement;
-  const shouldNotifyManagerAction =
-    (decision === "needs_info" || Boolean(missingInformation)) &&
-    (decision !== existingView.decision ||
-      missingInformation !== existingView.missingInformation ||
-      comments !== existingView.comments);
-
-  const nextProductionStatus =
-    decision === "accepted" && productionStatus === "not_started"
-      ? "in_progress"
-      : productionStatus;
-  const partner = await getPrintPartnerById(partnerId);
-  if (!partner) {
-    return NextResponse.json({ error: "Unknown partner." }, { status: 400 });
+  if ((body.decision !== undefined && !isPartnerDecision(body.decision)) ||
+      (body.productionStatus !== undefined && !isPartnerProductionStatus(body.productionStatus)) ||
+      (body.action !== undefined && body.action !== "save-response" && body.action !== "start-production")) {
+    return NextResponse.json({ error: "Invalid partner decision, status or action." }, { status: 400 });
   }
-  const responseForView = {
-    requestStatus: decision,
-    productionStatus: nextProductionStatus,
-    completionDays,
-    managerPrice: existingView.managerPrice,
-    price,
-    comments,
-    missingInformation,
-    printPlacement,
-    respondedAt: new Date(),
-    updatedAt: new Date(),
-  };
-
+  const partner = await getPrintPartnerById(partnerId);
+  if (!partner || !partner.active) {
+    return NextResponse.json({ error: "Unknown or inactive partner." }, { status: 400 });
+  }
+  let shouldNotifyManagerAction = false;
   try {
     const updatedView = await runTransaction(db, async (transaction) => {
       const currentSnap = await transaction.get(existing.ref);
-      if (!currentSnap.exists()) {
-        throw new PartnerOrderUpdateError("Order not found.", 404);
-      }
-
+      if (!currentSnap.exists()) throw new PartnerOrderUpdateError("Order not found.", 404);
       const currentData = currentSnap.data() as typeof existing.data;
-      const currentPartner =
-        currentData.partner && typeof currentData.partner === "object"
-          ? (currentData.partner as Record<string, unknown>)
-          : {};
-
+      const currentPartner = currentData.partner && typeof currentData.partner === "object"
+        ? currentData.partner as Record<string, unknown> : {};
       if (!canReadCurrentPartnerAssignment(currentPartner, partnerId)) {
-        throw new PartnerOrderUpdateError(
-          "This order has already been accepted by another partner.",
-          409
-        );
+        throw new PartnerOrderUpdateError("This order has already been accepted by another partner.", 409);
       }
-
+      const linkedOrder = await readLinkedPartnerOrder(id, currentData, (ref) => transaction.get(ref));
+      const current = sanitizePartnerOrder(id, currentData, partnerId, partner, linkedOrder);
+      if (!current) throw new PartnerOrderUpdateError("Order not found.", 404);
+      // Start is independent of the response form and cannot simultaneously accept a job.
+      const starting = body.action === "start-production";
+      if (starting && !current.production.packet) {
+        throw new PartnerOrderUpdateError("Ask the manager to share the complete released packet before starting production.", 409);
+      }
+      if (current.production.released && body.printPlacement !== undefined && body.printPlacement !== current.printPlacement) {
+        throw new PartnerOrderUpdateError("The released print specifications are read-only. Ask the manager to review changes.", 409);
+      }
+      const decision: PartnerDecision = starting ? current.decision : body.decision ?? current.decision;
+      const requestedStatus: PartnerProductionStatus = starting ? "in_progress" : body.productionStatus ?? current.productionStatus;
+      const completionDays = starting || body.completionDays === undefined ? current.completionDays : cleanOptionalNumber(body.completionDays);
+      const price = starting || body.price === undefined ? current.price : cleanOptionalNumber(body.price);
+      const comments = starting || body.comments === undefined ? current.comments : cleanText(body.comments);
+      const missingInformation = starting || body.missingInformation === undefined ? current.missingInformation : cleanText(body.missingInformation);
+      const printPlacement: PartnerPrintPlacement = starting || !isPartnerPrintPlacement(body.printPlacement) ? current.printPlacement : body.printPlacement;
+      const change = validatePartnerProductionChange({
+        quoteId: id, quote: currentData, partnerId, order: linkedOrder, decision,
+        currentStatus: current.productionStatus, nextStatus: requestedStatus,
+        completionDays, price, action: body.action, releaseId: body.releaseId,
+        packetFingerprint: body.packetFingerprint, blanksReceived: body.blanksReceived,
+        receivedProducts: body.receivedProducts, actor,
+      });
+      const nextProductionStatus = change.status;
       const assignedPartnerIds = getAssignedPartnerIds(currentPartner);
       const lockedBy = getLockedPartnerId(currentPartner);
       const isUnlockedSharedAssignment = assignedPartnerIds.length > 1 && !lockedBy;
-      const shouldUpdateMainResponse =
-        decision === "accepted" || !isUnlockedSharedAssignment;
-      const responsePayload = {
-        requestStatus: decision,
-        productionStatus: nextProductionStatus,
-        completionDays,
-        managerPrice: existingView.managerPrice,
-        price,
-        comments,
-        missingInformation,
-        printPlacement,
-        respondedAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+      const shouldUpdateMainResponse = decision === "accepted" || !isUnlockedSharedAssignment;
+      const now = new Date();
+      const responseForView = {
+        requestStatus: decision, productionStatus: nextProductionStatus,
+        completionDays, managerPrice: current.managerPrice, price, comments,
+        missingInformation, printPlacement, respondedAt: now, updatedAt: now,
       };
+      const responsePayload = { ...responseForView, respondedAt: serverTimestamp(), updatedAt: serverTimestamp() };
       const updatePayload: Record<string, unknown> = {
         [`partner.responses.${partnerId}`]: responsePayload,
-        "partner.updatedAt": serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        "partner.updatedAt": serverTimestamp(), updatedAt: serverTimestamp(),
       };
-
+      if (change.writeStart) updatePayload.productionStart = change.start;
       if (shouldUpdateMainResponse) {
-        updatePayload["partner.requestStatus"] = decision;
-        updatePayload["partner.productionStatus"] = nextProductionStatus;
-        updatePayload["partner.completionDays"] = completionDays;
-        updatePayload["partner.price"] = price;
-        updatePayload["partner.comments"] = comments;
-        updatePayload["partner.missingInformation"] = missingInformation;
-        updatePayload["partner.printPlacement"] = printPlacement;
-        updatePayload["partner.respondedAt"] = serverTimestamp();
+        for (const key of ["requestStatus", "productionStatus", "completionDays", "price", "comments", "missingInformation", "printPlacement", "respondedAt"] as const) {
+          updatePayload[`partner.${key}`] = responsePayload[key];
+        }
+        if (nextProductionStatus !== current.productionStatus) {
+          updatePayload["partner.productionStatusUpdatedAtIso"] = now.toISOString();
+        }
       }
-
       if (decision === "accepted") {
         updatePayload["partner.id"] = partner.id;
         updatePayload["partner.name"] = partner.name;
         updatePayload["partner.visibleTo"] = [partner.id];
         updatePayload["partner.lockedBy"] = partner.id;
       }
-
       transaction.update(existing.ref, updatePayload);
-
-      const responses = {
-        ...getPartnerResponses(currentPartner),
-        [partnerId]: responseForView,
-      };
-      const partnerForView = {
-        ...currentPartner,
-        responses,
-        updatedAt: new Date(),
-        ...(shouldUpdateMainResponse
-          ? {
-              requestStatus: decision,
-              productionStatus: nextProductionStatus,
-              completionDays,
-              price,
-              comments,
-              missingInformation,
-              printPlacement,
-              respondedAt: new Date(),
-            }
-          : {}),
-        ...(decision === "accepted"
-          ? {
-              id: partner.id,
-              name: partner.name,
-              visibleTo: [partner.id],
-              lockedBy: partner.id,
-            }
-          : {}),
-      };
-
-      return sanitizePartnerOrder(
-        id,
-        {
-          ...currentData,
-          partner: partnerForView,
+      shouldNotifyManagerAction = !starting && (decision === "needs_info" || Boolean(missingInformation)) &&
+        (decision !== current.decision || missingInformation !== current.missingInformation || comments !== current.comments);
+      return sanitizePartnerOrder(id, {
+        ...currentData,
+        ...(change.writeStart ? { productionStart: change.start } : {}),
+        partner: {
+          ...currentPartner,
+          responses: { ...getPartnerResponses(currentPartner), [partnerId]: responseForView },
+          updatedAt: now,
+          ...(shouldUpdateMainResponse ? responseForView : {}),
+          ...(nextProductionStatus !== current.productionStatus ? { productionStatusUpdatedAtIso: now.toISOString() } : {}),
+          ...(decision === "accepted" ? { id: partner.id, name: partner.name, visibleTo: [partner.id], lockedBy: partner.id } : {}),
         },
-        partnerId,
-        partner
-      );
+      }, partnerId, partner, linkedOrder);
     });
 
     let actionEmailSent = false;
@@ -457,7 +407,8 @@ export async function PATCH(
       try {
         const manager = await getProductionManager();
         const managerEmail =
-          manager.email || process.env.PARTNER_MANAGER_EMAIL || FALLBACK_MANAGER_EMAIL;
+          manager.email?.trim() || process.env.PARTNER_MANAGER_EMAIL?.trim();
+        if (!managerEmail) throw new Error("Manager email is not configured. The response was saved, but no notification was sent.");
         await sendManagerActionEmail(
           buildManagerActionEmail({
             managerName: manager.name,
@@ -467,11 +418,11 @@ export async function PATCH(
             pieces: updatedView.summary.pieces,
             deadline: updatedView.summary.deadline,
             print: updatedView.summary.print,
-            decision,
-            completionDays,
-            price,
-            comments,
-            missingInformation,
+            decision: updatedView.decision,
+            completionDays: updatedView.completionDays,
+            price: updatedView.price,
+            comments: updatedView.comments,
+            missingInformation: updatedView.missingInformation,
           }),
           managerEmail
         );
@@ -491,7 +442,7 @@ export async function PATCH(
       ...(actionEmailWarning ? { actionEmailWarning } : {}),
     });
   } catch (error) {
-    if (error instanceof PartnerOrderUpdateError) {
+    if (error instanceof PartnerOrderUpdateError || error instanceof PartnerProductionError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
 

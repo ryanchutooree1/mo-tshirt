@@ -36,7 +36,7 @@ const TEST_RECIPIENT = 'review@synthetic.example.test';
 const REGISTRY = { partners: [{ id: 'yan', name: 'Synthetic production partner', email: 'partner@synthetic.example.test', active: true, emailNotificationsEnabled: false }] };
 let records, settings, requests, faults, pendingGates, operationResults, callbacks, owner, sendState, confirmation, confirmations;
 function fixture(id = 'synthetic-a') {
-  return { name: `Synthetic client ${id}`, email: 'client@synthetic.example.test', status: 'approved', clientDecision: 'accepted', printMethod: 'DTF',
+  return { name: `Synthetic client ${id}`, email: 'client@synthetic.example.test', status: 'approved', clientDecision: 'accepted', printMethod: 'DTF', printPlacement: 'Front chest', printDimensions: '20 x 25 cm', deadline: '2026-10-20',
     quote: { documentNumber: `Q-${id}`, documentType: 'quotation', currency: 'Rs', total: 1000, lines: [{ description: 'Synthetic cotton shirt', quantity: 10, unitPrice: 100, color: 'Blue', size: 'L' }], paymentStatus: 'Paid', amountReceived: 1000 },
     attachments: [{ filename: 'synthetic-print.png', url: 'https://assets.synthetic.example.test/print.png' }],
     paymentEvidence: { verificationStatus: 'confirmed' }, paymentReceipt: { documentNumber: 'AUTO-SYNTHETIC', amountReceived: 1000 },
@@ -52,7 +52,7 @@ function reset() {
 function getView(id) { return structuredClone(domain.buildHandoffView(id, records.get(id), settings, REGISTRY, 'https://app.synthetic.example.test', owner, NOW)); }
 function seedPrice(id = 'synthetic-a') {
   const q = records.get(id), pricing = domain.quotePricing(q);
-  q.printJobHandoff.priceConfirmation = { id: 'synthetic-price', pricingFingerprint: pricing.fingerprint, lifecycleFingerprint: domain.handoffLifecycleFingerprint(q), agreedTotal: pricing.quotedTotal, currency: pricing.currency, note: 'Synthetic client agreement', actor: ACTOR, confirmedAtIso: new Date(NOW).toISOString() };
+  q.printJobHandoff.priceConfirmation = { id: 'synthetic-price', pricingFingerprint: pricing.fingerprint, lifecycleFingerprint: domain.handoffLifecycleFingerprint(q), packetFingerprint: getView(id).productionPacketFingerprint, agreedTotal: pricing.quotedTotal, currency: pricing.currency, note: 'Synthetic client agreement', actor: ACTOR, confirmedAtIso: new Date(NOW).toISOString() };
   q.printJobHandoff.version++;
 }
 function seedPayment(amount = 500, id = 'synthetic-a') {
@@ -69,9 +69,12 @@ function applyAction(id, raw) {
   if (action.action !== 'send' && action.expectedVersion !== stored.version) throw new domain.HandoffError('Synthetic stale version. Reload before saving.', 409);
   if (action.action === 'confirm-price') {
     const pricing = domain.quotePricing(q);
-    if (action.pricingFingerprint !== pricing.fingerprint || action.agreedTotal !== pricing.quotedTotal) throw new domain.HandoffError('Synthetic stale price.', 409);
-    stored.priceConfirmation = { id: action.requestId, pricingFingerprint: action.pricingFingerprint, lifecycleFingerprint: domain.handoffLifecycleFingerprint(q), agreedTotal: action.agreedTotal, currency: pricing.currency, note: action.note, actor: ACTOR, confirmedAtIso: new Date(NOW).toISOString() };
+    if (action.pricingFingerprint !== pricing.fingerprint || action.packetFingerprint !== getView(id).productionPacketFingerprint || action.agreedTotal !== pricing.quotedTotal) throw new domain.HandoffError('Synthetic stale price.', 409);
+    stored.priceConfirmation = { id: action.requestId, pricingFingerprint: action.pricingFingerprint, lifecycleFingerprint: domain.handoffLifecycleFingerprint(q), packetFingerprint: getView(id).productionPacketFingerprint, agreedTotal: action.agreedTotal, currency: pricing.currency, note: action.note, actor: ACTOR, confirmedAtIso: new Date(NOW).toISOString() };
     stored.preview = null; stored.version++;
+  } else if (action.action === 'save-production-specs') {
+    assert.equal(action.packetFingerprint, getView(id).productionPacketFingerprint);
+    q.productionSpecs = action.specs; stored.preview = null; stored.version++;
   } else if (action.action === 'verify-payment') {
     assert.equal(getView(id).gates.priceAgreed, true, 'The fake backend also enforces current price approval');
     stored.payments.push({ id: action.requestId, amountReceived: action.amountReceived, currency: 'Rs', paymentDate: action.paymentDate, reference: action.reference, evidenceId: action.evidenceId, note: action.note, actor: ACTOR, confirmedAtIso: new Date(NOW).toISOString() });
@@ -131,10 +134,19 @@ function MockProductEditor(props) {
     React.createElement('button', { type: 'button', disabled: props.blocked, onClick: () => props.onDirtyChange(true) }, 'Edit synthetic products'),
     React.createElement('button', { type: 'button', disabled: props.blocked, onClick: () => { props.onDirtyChange(false); props.onUpdated(); } }, 'Save synthetic products'));
 }
+const uploadMod = { exports: {} };
+vm.runInNewContext(ts.transpileModule(fs.readFileSync(root + '/src/components/admin/print-jobs/ProductionArtworkUpload.tsx', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText, { module: uploadMod, exports: uploadMod.exports, console, window, document, navigator, Date: FixedDate, Intl, URL, Error, FormData: window.FormData, crypto: require('node:crypto').webcrypto,
+  require(name) { if (name === './ProductionArtworkUpload') return uploadMod.exports; if (name.endsWith('.module.css')) return { __esModule: true, default: new Proxy({}, { get: (_, key) => String(key) }) }; return requireRepo(name); },
+}, { filename: 'ProductionArtworkUpload.test.js' });
+const packetMod = { exports: {} };
+vm.runInNewContext(ts.transpileModule(fs.readFileSync(root + '/src/components/admin/print-jobs/ProductionPacketEditor.tsx', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText, { module: packetMod, exports: packetMod.exports, console, window, document, navigator, Date: FixedDate, Intl, URL, Error,
+  require(name) { if (name === './ProductionArtworkUpload') return uploadMod.exports; if (name.endsWith('.module.css')) return { __esModule: true, default: new Proxy({}, { get: (_, key) => String(key) }) }; return requireRepo(name); },
+}, { filename: 'ProductionPacketEditor.test.js' });
 const mod = { exports: {} };
 const code = ts.transpileModule(fs.readFileSync(root + '/src/components/admin/print-jobs/TanviHandoffPanel.tsx', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText;
 vm.runInNewContext(code, { module: mod, exports: mod.exports, console, window, document, navigator, Date: FixedDate, Intl, URL, Error, AbortController, AbortSignal, fetch: global.fetch, crypto: require('node:crypto').webcrypto, setTimeout, clearTimeout,
   require(name) {
+    if (name === './ProductionPacketEditor') return packetMod.exports;
     if (name === '@/components/admin/QuoteProductEditor') return { __esModule: true, default: MockProductEditor };
     if (name.endsWith('.module.css')) return { __esModule: true, default: new Proxy({}, { get: (_, key) => String(key) }) };
     return requireRepo(name);
@@ -347,6 +359,80 @@ async function test(name, run) {
 
   await test('unmount suppresses pending settings save callback', async () => {
     const rendered = await mountSettings(); const gate = deferred(); fault('PUT', SETTINGS, { gate }); await click(button('Save test-only setup')); rendered.unmount(); await act(async () => { gate.resolve(); }); assert.equal(callbacks.saved.length, 0, 'An unmounted settings panel must not call onSaved');
+  });
+
+
+  await test('production preflight is read-only on mount and shows authoritative size/colour quantities', async () => {
+    await mount();
+    assert.deepEqual(mutations(), []);
+    const products = screen.getByRole('list', { name: 'Garments for production', hidden: true });
+    assert.match(products.textContent, /Synthetic cotton shirt.*Blue.*L.*10/);
+    assert.equal(field('Confirmed print method').value, 'DTF');
+    assert.equal(field('Print width (cm)').value, '20');
+    assert.equal(field('Print height (cm)').value, '25');
+    assert.equal(button('Confirm client price').disabled, true);
+  });
+
+  await test('saving changed specifications binds the viewed packet and requires renewed client price approval', async () => {
+    ready(); await mount();
+    const prior = getView('synthetic-a').productionPacketFingerprint;
+    await fill(field('Print width (cm)'), '22');
+    assert.equal(callbacks.dirty.at(-1), true);
+    assert.equal(button('Review test email').disabled, true);
+    await act(async () => { fireEvent.submit(field('Confirmed print method').closest('form')); });
+    assert.deepEqual(actions(), ['save-production-specs']);
+    const body = posts()[0].body;
+    assert.equal(body.packetFingerprint, prior);
+    assert.equal(Object.hasOwn(body.specs, 'products'), false, 'Production specifications must not override priced garment quantities');
+    assert.equal(body.specs.artworks[0].widthCm, 22);
+    assert.equal(body.specs.artworks[0].useForPrint, true);
+    assert.equal(body.specs.artworks[0].selectedVariant, 'source');
+    assert.notEqual(getView('synthetic-a').productionPacketFingerprint, prior);
+    assert.equal(getView('synthetic-a').gates.priceAgreed, false);
+    assert.equal(amount('Verified received'), 'Rs 500');
+    assert.ok(screen.getByRole('form', { name: 'Confirm client price' }));
+    assert.equal(callbacks.dirty.at(-1), false);
+  });
+
+  await test('discarding a production draft restores its exact saved file choice and dimensions without writing', async () => {
+    await mount(); await fill(field('Print width (cm)'), '30');
+    assert.equal(priceCheck().disabled, true);
+    await click(screen.getByRole('button', { name: 'Discard changes', hidden: true }));
+    assert.equal(field('Print width (cm)').value, '20');
+    assert.equal(callbacks.dirty.at(-1), false);
+    assert.equal(priceCheck().disabled, false);
+    assert.deepEqual(mutations(), []);
+  });
+
+  await test('failed specification save keeps the draft and retries the same operation without sending', async () => {
+    await mount(); await fill(field('Print height (cm)'), '29');
+    fault('POST', endpoint(), { network: true }); await act(async () => { fireEvent.submit(field('Confirmed print method').closest('form')); });
+    assert.equal(field('Print height (cm)').value, '29');
+    assert.equal(callbacks.dirty.at(-1), true);
+    const first = posts()[0].body.requestId;
+    await act(async () => { fireEvent.submit(field('Confirmed print method').closest('form')); });
+    assert.equal(posts()[1].body.requestId, first);
+    assert.deepEqual(actions(), ['save-production-specs', 'save-production-specs']);
+    assert.equal(records.get('synthetic-a').printJobHandoff.delivery, null);
+  });
+
+  await test('mockup-only printed jobs cannot reach email preview even with verified half payment', async () => {
+    const q = records.get('synthetic-a'); q.attachments = [{ role:'final-mockup',filename:'mockup.png',url:'https://assets.synthetic.example.test/mockup.png' }];
+    ready(); await mount();
+    assert.equal(button('Review test email').disabled, true);
+    assert.match(panel().textContent, /mockup alone/);
+    assert.deepEqual(mutations(), []);
+  });
+
+  await test('confirmed email with blocked assignment is honest and offers no repeat send', async () => {
+    ready(); const q = records.get('synthetic-a');
+    q.printJobHandoff.delivery = {state:'sent',mode:'test',recipients:[TEST_RECIPIENT],releaseState:'blocked',releaseBlockers:['Synthetic specifications changed during delivery']};
+    render(React.createElement(App, props()));
+    await waitFor(() => assert.ok(screen.queryByRole('heading', { name:'Email sent · release blocked' })));
+    assert.match(panel().textContent, /email was sent, but this job was not released/);
+    assert.match(panel().textContent, /Synthetic specifications changed/);
+    assert.equal(screen.queryByRole('button', {name:'Send this test email'}), null);
+    assert.deepEqual(mutations(), []);
   });
 
   console.log(`${passed} TANVI WORKFLOW UI TESTS PASSED; ${failures} FAILED`); dom.window.close(); if (failures) process.exitCode = 1;

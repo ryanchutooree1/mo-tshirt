@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { buildPrintJobs, safePrintJobUrl } from "./print-job-workflow";
+import { approvedProductionPacket, buildProductionPacket, productionPacketFingerprint, productionPacketReadiness, productionSpecsFromPacket, validateProductionSpecs, productionQuotePricing, productionLifecycleFingerprint, productionJobEligibility, type ProductionPacket, type ProductionSpecs } from "./production-packet";
 
 export type HandoffActor = { userId: string; displayName: string; email: string };
 export type HandoffSettings = {
@@ -9,7 +9,7 @@ export type HandoffSettings = {
 };
 export type HandoffOrder = { id: string; data: Record<string, unknown> };
 export type HandoffPriceConfirmation = {
-  id: string; pricingFingerprint: string; lifecycleFingerprint?: string; workflowVersionAtAgreement?: number; agreedTotal: number; currency: string;
+  id: string; pricingFingerprint: string; packetFingerprint: string; lifecycleFingerprint?: string; workflowVersionAtAgreement?: number; agreedTotal: number; currency: string;
   note: string; confirmedAtIso: string; actor: HandoffActor;
 };
 export type HandoffPaymentRecord = {
@@ -19,20 +19,21 @@ export type HandoffPaymentRecord = {
 export type HandoffPreview = {
   id: string; fingerprint: string; pricingFingerprint: string; configVersion: number;
   mode: "test" | "live"; recipients: string[]; partnerName: string;
+  packet: ProductionPacket; packetFingerprint: string; priceConfirmationId: string; paymentRecordId: string; lifecycleFingerprint: string;
   subject: string; text: string; artwork: { name: string; url: string }[];
   createdAtIso: string; expiresAtIso: string;
 };
 export type HandoffDelivery = {
   state: "sending" | "sent" | "unknown"; requestId: string; previewId: string;
   previewFingerprint: string; mode: "test" | "live"; recipients: string[];
-  claimedAtIso: string; completedAtIso?: string; messageId?: string;
+  claimedAtIso: string; completedAtIso?: string; messageId?: string; releaseState?: "not_applicable" | "released" | "blocked"; releaseBlockers?: string[];
 };
 export type HandoffRecord = {
   version: number; priceConfirmation: HandoffPriceConfirmation | null;
   payments: HandoffPaymentRecord[]; preview: HandoffPreview | null; delivery: HandoffDelivery | null;
 };
 export type HandoffView = {
-  quoteId: string; version: number; canManageSettings: boolean; documentUrl: string;
+  quoteId: string; version: number; productionPacket: ProductionPacket; productionPacketFingerprint: string; productionSpecs: ProductionSpecs; productionReadiness: { ready: boolean; blockers: string[] }; canManageSettings: boolean; documentUrl: string;
   pricing: { fingerprint: string; quotedTotal: number | null; currency: string };
   priceConfirmation: (HandoffPriceConfirmation & { current: boolean }) | null;
   payment: { verifiedAmount: number; balance: number | null; records: HandoffPaymentRecord[]; legacyEvidenceVerified: boolean };
@@ -101,16 +102,7 @@ export function getHandoffRecord(quote: Record<string, unknown>): HandoffRecord 
 }
 /** Fingerprint only actual prices, quantities and charge terms. A receipt, payment
  * label, staff attribution or unrelated UI edit must not look like a price change. */
-export function quotePricing(quote: Record<string, unknown>) {
-  const draft = record(quote.quote);
-  const quotedTotal = finite(draft.total), currency = text(draft.currency) || "Rs";
-  const lines = Array.isArray(draft.lines) ? draft.lines.map((value) => {
-    const line = record(value);
-    return { description: text(line.description), quantity: finite(line.quantity), unitPrice: finite(line.unitPrice), includeInTotals: line.includeInTotals !== false };
-  }) : [];
-  const fingerprint = handoffHash({ currency, total: quotedTotal, lines, subtotal: finite(draft.subtotal), deliveryFee: finite(draft.deliveryFee), discount: finite(draft.discount), tax: finite(draft.tax), taxRate: finite(draft.taxRate), vatRate: finite(draft.vatRate) });
-  return { fingerprint, quotedTotal: quotedTotal !== null ? cents(quotedTotal) / 100 : null, currency };
-}
+export const quotePricing = productionQuotePricing;
 export function resolvePrivatePartner(value: unknown) {
   const raw = record(value), entries = Array.isArray(raw.partners) ? raw.partners : Object.values(record(raw.partners));
   const partner = entries.map(record).find((entry) => entry.id === "yan");
@@ -118,69 +110,29 @@ export function resolvePrivatePartner(value: unknown) {
   const valid = candidates.map(emailAddress);
   return { name: singleLine(partner?.name) || "Production partner", configured: Boolean(partner && partner.active !== false && valid.length && valid.every(Boolean) && valid.length <= 10), recipients: valid.every(Boolean) ? [...new Set(valid)] : [] };
 }
-function absoluteArtwork(quoteId: string, quote: Record<string, unknown>, origin: string) {
-  const [job] = buildPrintJobs([{ id: quoteId, data: quote }], []);
-  // Use the same source-proven visuals shown during review, plus every original
-  // download attachment (including PDFs). Never substitute blank productImages.
-  const visualLabel = (kind: string, side: string, name: string) => `${side === "front" ? "Front " : side === "back" ? "Back " : ""}${kind} · ${name}`;
+export const handoffLifecycleFingerprint = productionLifecycleFingerprint;
+export const handoffJobEligibility = productionJobEligibility;
+function absoluteArtwork(packet: ProductionPacket, origin: string) {
+  const absolute = (url: string) => url.startsWith("/") ? new URL(url, origin).href : url;
   const files = [
-    ...job.mockups.map((file) => ({ name: visualLabel("final mockup", file.side, file.name), url: file.url })),
-    ...job.artworks.map((file) => ({ name: visualLabel("print artwork", file.side, file.name), url: file.url })),
-    ...job.artwork.map((file) => ({ name: `Attachment · ${file.name}`, url: file.url })),
+    ...packet.mockups.map(row => ({ name: `${row.side === "other" ? "" : `${row.side === "front" ? "Front" : "Back"} `}final mockup · ${row.label}`, url: absolute(row.file.url) })),
+    ...packet.artworks.flatMap(row => [
+      ...(row.source ? [{ name: `${row.side === "other" ? "" : `${row.side === "front" ? "Front" : "Back"} `}print artwork source · ${row.label}`, url: absolute(row.source.url) }] : []),
+      ...(row.processed ? [{ name: `Processed artwork · ${row.label}`, url: absolute(row.processed.url) }] : []),
+    ]),
   ];
-  const seen = new Set<string>();
-  return files.flatMap((file) => {
-    const safe = safePrintJobUrl(file.url);
-    if (!safe) return [];
-    const url = safe.startsWith("/") ? new URL(safe, origin).href : safe;
-    if (!safePrintJobUrl(url) || seen.has(url)) return [];
-    seen.add(url);
-    return [{ name: singleLine(file.name), url }];
-  });
+  return files.filter((file, index) => files.findIndex(other => other.url === file.url) === index);
 }
-function requiresArtwork(quote: Record<string, unknown>) {
-  const method = text(quote.printMethod) || text(record(quote.designBrief).printMethod);
-  if (/^(?:plain|blank|none|no print(?:ing)?|sans impression|sans personnalisation)(?:\b|$)/i.test(method)) return false;
-  return /\b(?:print(?:ing)?|dtf|dtg|vinyl|screen|sublimation|embroidery|embroid|broderie|impression|sérigraphie)\b/i.test(method);
-}
-function lifecycleTime(value: unknown): string {
-  const raw = record(value);
-  try {
-    const time = typeof raw.toMillis === "function" ? (raw.toMillis as () => number).call(value) : typeof raw.seconds === "number" ? raw.seconds * 1000 : value instanceof Date ? value.getTime() : Date.parse(text(value));
-    return Number.isFinite(time) ? new Date(time).toISOString() : "";
-  } catch { return ""; }
-}
-function clientEventTime(quote: Record<string, unknown>): string {
-  return [lifecycleTime(quote.clientDecisionAtIso), lifecycleTime(quote.clientDecisionAt), ...(Array.isArray(quote.clientResponseHistory) ? quote.clientResponseHistory.map((entry) => lifecycleTime(record(entry).submittedAtIso)) : [])].filter(Boolean).sort().at(-1) || "";
-}
-/** Agreement is renewed explicitly after an adverse client response or a manual
- * lifecycle revision. Payment records and automatic receipts cannot renew it. */
-export function handoffLifecycleFingerprint(quote: Record<string, unknown>, order?: HandoffOrder) {
-  const workflow = record(quote.printJobWorkflow);
-  return handoffHash({
-    clientDecision: text(quote.clientDecision), clientDecisionAtIso: clientEventTime(quote), clientDecisionComment: text(quote.clientDecisionComment),
-    adverseResponses: (Array.isArray(quote.clientResponseHistory) ? quote.clientResponseHistory : []).map(record).filter((entry) => ["rejected", "changes_requested"].includes(text(entry.decision)) || ["reject", "changes"].includes(text(entry.action))).map((entry) => ({ id: text(entry.id), decision: text(entry.decision), action: text(entry.action), atIso: lifecycleTime(entry.submittedAtIso), comment: text(entry.comment) })),
-    workflowVersion: workflow.version ?? 0, workflowStage: text(workflow.stage), workflowAtIso: lifecycleTime(workflow.updatedAtIso),
-    orderId: order?.id || "", orderStatus: text(order?.data.status).toLowerCase(), orderStatusAtIso: lifecycleTime(order?.data.statusChangedAt) || lifecycleTime(order?.data.statusUpdatedAt) || lifecycleTime(order?.data.workflowDoneAt),
-  });
-}
-export function handoffJobEligibility(quoteId: string, quote: Record<string, unknown>, order?: HandoffOrder) {
-  const [job] = buildPrintJobs([{ id: quoteId, data: quote }], order ? [order] : []);
-  const productionClosed = ["delivered", "cancelled", "canceled"].includes(text(order?.data.status).toLowerCase());
-  const closed = productionClosed || job.stage === "completed" || job.stage === "declined";
-  const adverse = ["rejected", "changes_requested"].includes(text(quote.clientDecision));
-  const baseline = job.workflow?.basisSnapshot;
-  const responseReviewed = Boolean(job.workflow && !job.workflowOverridden && baseline?.clientDecision === text(quote.clientDecision) && baseline.clientEventAtIso === clientEventTime(quote));
-  const previousAgreement = getHandoffRecord(quote).priceConfirmation;
-  const unreviewedAdverseRevision = Boolean(adverse && previousAgreement?.lifecycleFingerprint && previousAgreement.lifecycleFingerprint !== handoffLifecycleFingerprint(quote, order) && Number(job.workflow?.version || 0) <= Number(previousAgreement.workflowVersionAtAgreement || 0));
-  const reopenRequired = closed || adverse && !responseReviewed || unreviewedAdverseRevision;
-  return { activeJob: !closed, reopenRequired };
+export function productionAssignmentBlockers(quote: Record<string, unknown>): string[] {
+  const assigned = record(quote.partner);
+  if (text(assigned.id) && assigned.id !== "yan" || text(assigned.lockedBy) && assigned.lockedBy !== "yan" || Object.entries(record(assigned.responses)).some(([id, value]) => id !== "yan" && (record(value).requestStatus === "accepted" || ["printing", "completed"].includes(text(record(value).productionStatus))))) return ["Another production partner is assigned to or has accepted this job. Resolve that assignment before sending to Yan."];
+  return [];
 }
 export function buildHandoffView(quoteId: string, quote: Record<string, unknown>, settings: HandoffSettings, registry: unknown, origin: string, canManageSettings: boolean, now = Date.now(), order?: HandoffOrder): HandoffView {
-  const stored = getHandoffRecord(quote), pricing = quotePricing(quote), partner = resolvePrivatePartner(registry), artwork = absoluteArtwork(quoteId, quote, origin);
+  const stored = getHandoffRecord(quote), pricing = quotePricing(quote), partner = resolvePrivatePartner(registry), packet = buildProductionPacket(quoteId, quote), packetFingerprint = productionPacketFingerprint(packet), productionReadiness = productionPacketReadiness(packet), artwork = absoluteArtwork(approvedProductionPacket(packet), origin);
   const eligibility = handoffJobEligibility(quoteId, quote, order);
   const price = stored.priceConfirmation;
-  const priceAgreed = Boolean(price && price.lifecycleFingerprint === handoffLifecycleFingerprint(quote, order) && !eligibility.reopenRequired && pricing.quotedTotal !== null && pricing.quotedTotal > 0 && price.pricingFingerprint === pricing.fingerprint && cents(price.agreedTotal) === cents(pricing.quotedTotal) && price.currency === pricing.currency);
+  const priceAgreed = Boolean(price && price.packetFingerprint === packetFingerprint && price.lifecycleFingerprint === handoffLifecycleFingerprint(quote, order) && !eligibility.reopenRequired && pricing.quotedTotal !== null && pricing.quotedTotal > 0 && price.pricingFingerprint === pricing.fingerprint && cents(price.agreedTotal) === cents(pricing.quotedTotal) && price.currency === pricing.currency);
   const lastPayment = stored.payments.at(-1);
   const verifiedAmount = lastPayment && lastPayment.currency === pricing.currency && Number.isFinite(lastPayment.amountReceived) && lastPayment.amountReceived >= 0 ? cents(lastPayment.amountReceived) / 100 : 0;
   const requiredAmount = settings.requiredPaymentPercent !== null && pricing.quotedTotal !== null && pricing.quotedTotal > 0 ? Math.ceil(cents(pricing.quotedTotal) * settings.requiredPaymentPercent / 100) / 100 : null;
@@ -199,23 +151,33 @@ export function buildHandoffView(quoteId: string, quote: Record<string, unknown>
   if (mode === "disabled") blockers.push("Production sending is disabled.");
   if (mode === "test" && settings.testDate !== mauritiusDate(now)) blockers.push("The test date is not today in Mauritius. Sending stays disabled until the owner changes the settings.");
   if (!recipients.length) blockers.push("No valid recipient is configured for this mode.");
-  if (requiresArtwork(quote) && !artwork.length) blockers.push("This printed job needs an accessible artwork file before handoff.");
+  blockers.push(...productionReadiness.blockers);
+  if (mode === "live") blockers.push(...productionAssignmentBlockers(quote));
+  if (mode === "live" && quote.productionRelease) blockers.push("A production release already exists. Review it before attempting another release.");
+  if (stored.delivery?.releaseState === "blocked") blockers.push(`Email was sent, but production release was blocked: ${(stored.delivery.releaseBlockers || []).join(" ")}`);
   if (stored.delivery?.state === "sending" || stored.delivery?.state === "unknown") blockers.push("A previous delivery is in progress or unconfirmed. Do not send again; check it manually.");
   if (stored.delivery?.state === "sent" && !(stored.delivery.mode === "test" && mode === "live")) blockers.push("This job has already been handed off in this mode.");
-  return { quoteId, version: stored.version, canManageSettings, documentUrl: ["quotation", "invoice"].includes(text(record(quote.quote).documentType) || "quotation") ? `/api/admin/print-jobs/${encodeURIComponent(quoteId)}/document` : "", pricing, priceConfirmation: price ? { ...price, current: priceAgreed } : null, payment: { verifiedAmount, balance: pricing.quotedTotal === null ? null : Math.max(0, cents(pricing.quotedTotal) - cents(verifiedAmount)) / 100, records: stored.payments, legacyEvidenceVerified: record(quote.paymentEvidence).verificationStatus === "confirmed" }, gates: { requiredPaymentPercent: settings.requiredPaymentPercent, requiredAmount, priceAgreed, paymentSatisfied, canPreview: blockers.length === 0, activeJob: eligibility.activeJob, jobClosed: !eligibility.activeJob, reopenRequired: eligibility.reopenRequired, blockers }, delivery: { mode, recipients, partnerName: partner.name, testDate: settings.testDate }, handoff: stored.delivery, preview: stored.preview, artwork };
+  return { quoteId, version: stored.version, productionPacket: packet, productionPacketFingerprint: packetFingerprint, productionSpecs: productionSpecsFromPacket(packet), productionReadiness, canManageSettings, documentUrl: ["quotation", "invoice"].includes(text(record(quote.quote).documentType) || "quotation") ? `/api/admin/print-jobs/${encodeURIComponent(quoteId)}/document` : "", pricing, priceConfirmation: price ? { ...price, current: priceAgreed } : null, payment: { verifiedAmount, balance: pricing.quotedTotal === null ? null : Math.max(0, cents(pricing.quotedTotal) - cents(verifiedAmount)) / 100, records: stored.payments, legacyEvidenceVerified: record(quote.paymentEvidence).verificationStatus === "confirmed" }, gates: { requiredPaymentPercent: settings.requiredPaymentPercent, requiredAmount, priceAgreed, paymentSatisfied, canPreview: blockers.length === 0, activeJob: eligibility.activeJob, jobClosed: !eligibility.activeJob, reopenRequired: eligibility.reopenRequired, blockers }, delivery: { mode, recipients, partnerName: partner.name, testDate: settings.testDate }, handoff: stored.delivery, preview: stored.preview, artwork };
 }
 export type HandoffAction =
-  | { action: "confirm-price"; expectedVersion: number; requestId: string; pricingFingerprint: string; agreedTotal: number; note: string }
+  | { action: "save-production-specs"; expectedVersion: number; requestId: string; packetFingerprint: string; specs: ProductionSpecs }
+  | { action: "confirm-price"; expectedVersion: number; requestId: string; pricingFingerprint: string; packetFingerprint: string; agreedTotal: number; note: string }
   | { action: "verify-payment"; expectedVersion: number; requestId: string; amountReceived: number; paymentDate: string; reference: string; evidenceId: string; note: string; acknowledgeBankReceipt: true }
   | { action: "preview"; expectedVersion: number; requestId: string }
   | { action: "send"; requestId: string; previewId: string; previewFingerprint: string; acknowledgeSend: true };
 export function validateHandoffAction(value: unknown, now = Date.now()): HandoffAction {
   const raw = record(value), id = requestId(raw.requestId);
+  if (raw.action === "save-production-specs") {
+    requireKeys(raw, ["action", "expectedVersion", "requestId", "packetFingerprint", "specs"]);
+    if (!/^[a-f0-9]{64}$/.test(text(raw.packetFingerprint))) throw new HandoffError("Reload the current production packet before saving.");
+    try { return { action: raw.action, expectedVersion: version(raw.expectedVersion), requestId: id, packetFingerprint: text(raw.packetFingerprint), specs: validateProductionSpecs(raw.specs) }; }
+    catch (error) { throw new HandoffError(error instanceof Error ? error.message : "Invalid production specifications."); }
+  }
   if (raw.action === "confirm-price") {
-    requireKeys(raw, ["action", "expectedVersion", "requestId", "pricingFingerprint", "agreedTotal", "note"]);
+    requireKeys(raw, ["action", "expectedVersion", "requestId", "pricingFingerprint", "packetFingerprint", "agreedTotal", "note"]);
     const amount = finite(raw.agreedTotal), fingerprint = text(raw.pricingFingerprint);
-    if (amount === null || amount <= 0 || amount > 1e9 || !/^[a-f0-9]{64}$/.test(fingerprint)) throw new HandoffError("Confirm a valid positive current quotation price.");
-    return { action: raw.action, expectedVersion: version(raw.expectedVersion), requestId: id, pricingFingerprint: fingerprint, agreedTotal: cents(amount) / 100, note: boundedString(raw.note, "client agreement note", 1500, true) };
+    if (amount === null || amount <= 0 || amount > 1e9 || !/^[a-f0-9]{64}$/.test(fingerprint) || !/^[a-f0-9]{64}$/.test(text(raw.packetFingerprint))) throw new HandoffError("Confirm a valid positive current quotation price.");
+    return { action: raw.action, expectedVersion: version(raw.expectedVersion), requestId: id, pricingFingerprint: fingerprint, packetFingerprint: text(raw.packetFingerprint), agreedTotal: cents(amount) / 100, note: boundedString(raw.note, "client agreement note", 1500, true) };
   }
   if (raw.action === "verify-payment") {
     requireKeys(raw, ["action", "expectedVersion", "requestId", "amountReceived", "paymentDate", "reference", "evidenceId", "note", "acknowledgeBankReceipt"]);
@@ -236,14 +198,22 @@ export function validateHandoffAction(value: unknown, now = Date.now()): Handoff
 export function prepareHandoffPreview(quoteId: string, quote: Record<string, unknown>, settings: HandoffSettings, registry: unknown, origin: string, id: string, now = Date.now(), order?: HandoffOrder): HandoffPreview {
   const view = buildHandoffView(quoteId, quote, settings, registry, origin, false, now, order);
   if (!view.gates.canPreview) throw new HandoffError(view.gates.blockers[0], 409);
-  const [job] = buildPrintJobs([{ id: quoteId, data: quote }], []);
+  const packet = approvedProductionPacket(view.productionPacket);
+  const stored = getHandoffRecord(quote);
   const mode = view.delivery.mode as "test" | "live";
   const prefix = mode === "test" ? "TEST ONLY — DO NOT PRODUCE: " : "Production handoff: ";
-  const subject = `${prefix}${singleLine(job.reference, 120)}`;
-  const lines = job.lines.map((line) => `- ${singleLine(line.description)}${line.color ? ` · ${singleLine(line.color)}` : ""}${line.size ? ` · ${singleLine(line.size)}` : ""}: ${line.quantity} pieces`);
-  const method = singleLine(quote.printMethod || record(quote.designBrief).printMethod) || "Confirm with the team";
-  const placement = singleLine(record(quote.partner).printPlacement || record(quote.designBrief).printPlacement) || "See the approved artwork / confirm with the team";
-  const body = [mode === "test" ? "TEST DELIVERY ONLY. This message is a workflow test; do not begin production." : "Please review this selected MO T-SHIRT production job.", "", `Job reference: ${singleLine(job.reference, 120)}`, `Quantity: ${job.quantity || "To confirm"}`, ...lines, `Print method: ${method}`, `Print placement: ${placement}`, `Requested date: ${singleLine(job.deadline) || "To confirm"}`, "", "Artwork files:", ...(view.artwork.length ? view.artwork.map((file) => `- ${file.name}: ${file.url}`) : ["No artwork files attached to this job."]), "", "Please confirm any missing production details with the team before printing."].join("\n");
-  const fingerprint = handoffHash({ quoteId, pricingFingerprint: view.pricing.fingerprint, priceId: getHandoffRecord(quote).priceConfirmation?.id, paymentId: getHandoffRecord(quote).payments.at(-1)?.id, configVersion: settings.version, requiredPaymentPercent: settings.requiredPaymentPercent, mode, testDate: settings.testDate, recipients: view.delivery.recipients, subject, text: body });
-  return { id, fingerprint, pricingFingerprint: view.pricing.fingerprint, configVersion: settings.version, mode, recipients: view.delivery.recipients, partnerName: view.delivery.partnerName, subject, text: body, artwork: view.artwork, createdAtIso: new Date(now).toISOString(), expiresAtIso: new Date(now + 15 * 60000).toISOString() };
+  const subject = `${prefix}${packet.reference}`;
+  const absolute = (url: string) => url.startsWith("/") ? new URL(url, origin).href : url;
+  const lines = packet.products.map(row => `- ${row.product} · ${row.color} · ${row.size}: ${row.quantity} pieces`);
+  const printLines = packet.artworks.filter(row => row.useForPrint).flatMap(row => [
+    `- ${row.side === "other" ? "" : row.side === "front" ? "Front " : "Back "}print artwork · ${row.label}: ${row.placement} · ${row.widthCm} × ${row.heightCm} cm`,
+    `  Garment targets: ${row.targetProductIndexes.map(index => { const target = packet.products[index]; return `Row ${index + 1}: ${target.product} · ${target.color} · ${target.size} × ${target.quantity}`; }).join("; ")}` ,
+    `  Approved print file (${row.selectedVariant}): ${row.selectedFile ? absolute(row.selectedFile.url) : "Missing"}`,
+    ...(row.source ? [`  Source: ${absolute(row.source.url)} (${row.source.name}; ${row.source.contentType || "type not recorded"}; ${row.source.sizeBytes === null ? "size not recorded" : `${row.source.sizeBytes} bytes`})`] : []),
+    ...(row.processed ? [`  Processed: ${absolute(row.processed.url)} (${row.processed.name}; ${row.processed.contentType || "type not recorded"}; ${row.processed.sizeBytes === null ? "size not recorded" : `${row.processed.sizeBytes} bytes`})`] : []),
+  ]);
+  const body = [mode === "test" ? "TEST DELIVERY ONLY. This message is a workflow test; do not begin production." : "Please review this selected MO T-SHIRT production job. Start only after the released packet is available in your production portal and the blanks have been counted.", "", `Job reference: ${packet.reference}`, `Packet fingerprint: ${view.productionPacketFingerprint}`, `Quantity: ${packet.quantity ?? "Not confirmed"}`, ...lines, `Print method: ${packet.printMethod}`, `Requested date: ${packet.deadline.label}`, "", "Selected print artwork:", ...(printLines.length ? printLines : ["No print artwork selected."]), "", "Mockups for visual reference only:", ...(packet.mockups.length ? packet.mockups.map(row => `- ${row.side === "other" ? "" : row.side === "front" ? "Front " : "Back "}final mockup · ${row.label}: ${absolute(row.file.url)}`) : ["No mockup saved."])].join("\n");
+  const priceConfirmationId = stored.priceConfirmation?.id || "", paymentRecordId = stored.payments.at(-1)?.id || "", lifecycleFingerprint = handoffLifecycleFingerprint(quote, order);
+  const fingerprint = handoffHash({ quoteId, packetFingerprint: view.productionPacketFingerprint, lifecycleFingerprint, pricingFingerprint: view.pricing.fingerprint, priceId: priceConfirmationId, paymentId: paymentRecordId, configVersion: settings.version, requiredPaymentPercent: settings.requiredPaymentPercent, mode, testDate: settings.testDate, recipients: view.delivery.recipients, subject, text: body });
+  return { id, fingerprint, packet, packetFingerprint: view.productionPacketFingerprint, priceConfirmationId, paymentRecordId, lifecycleFingerprint, pricingFingerprint: view.pricing.fingerprint, configVersion: settings.version, mode, recipients: view.delivery.recipients, partnerName: view.delivery.partnerName, subject, text: body, artwork: view.artwork, createdAtIso: new Date(now).toISOString(), expiresAtIso: new Date(now + 15 * 60000).toISOString() };
 }

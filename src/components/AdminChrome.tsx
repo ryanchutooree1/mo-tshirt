@@ -268,7 +268,7 @@ function pageLabel(path: AdminPagePath) {
 }
 
 function pageHref(path: AdminPagePath) {
-  return path === "/admin/tanvi" ? "/admin/workspace" : path;
+  return path === "/admin/tanvi" ? "/admin/quotation-approval" : path;
 }
 
 function activePagePath(pathname: string) {

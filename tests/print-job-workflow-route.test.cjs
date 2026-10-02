@@ -4,10 +4,13 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const ts=require('typescript');
 const compile=file=>ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
-const domain={};const inbox={};const visuals={};
+const domain={};const inbox={};const visuals={};const access={};const emailQuote={};const workspaceAccess={};
+vm.runInNewContext(compile('src/lib/admin-access.ts'),{exports:access});
+vm.runInNewContext(compile('src/lib/email-quote.ts'),{exports:emailQuote,Date});
 vm.runInNewContext(compile('src/lib/print-job-visuals.ts'),{exports:visuals,URL});
 vm.runInNewContext(compile('src/lib/quotation-inbox.ts'),{exports:inbox});
 vm.runInNewContext(compile('src/lib/print-job-workflow.ts'),{exports:domain,require:name=>name==='./quotation-inbox'?inbox:name==='./print-job-visuals'?visuals:null,Date,Intl,URL});
+vm.runInNewContext(compile('src/lib/print-job-workspace-access.ts'),{exports:workspaceAccess,require:name=>name==='./email-quote'?emailQuote:name==='./print-job-workflow'?domain:null});
 function setup({allowed=['/admin','/admin/quotation-approval','/admin/orders','/admin/inbox'],signedIn=true,email=[],failCollection='',records:initial={}}={}){
  const records=new Map(Object.entries(initial));const reads=[];const writes=[];let inboxReads=0;
  const snapshot=ref=>({exists:()=>records.has(ref),data:()=>records.get(ref)});
@@ -16,7 +19,8 @@ function setup({allowed=['/admin','/admin/quotation-approval','/admin/orders','/
   'firebase/firestore':{doc:(_db,c,id)=>`${c}/${id}`,collection:(_db,c)=>c,orderBy:(...args)=>args,where:(...args)=>({where:args}),limit:n=>n,query:(name,...rest)=>({name,rest}),getDocs:async q=>{reads.push(q.name);if(q.name===failCollection)throw new Error('unavailable');return{docs:[...records].filter(([k,v])=>k.startsWith(q.name+'/') && q.rest.filter(r=>r&&r.where).every(r=>v[r.where[0]]===r.where[2])).map(([k,v])=>({id:k.slice(q.name.length+1),data:()=>v}))};},arrayUnion:value=>({union:value}),runTransaction:async(_db,fn)=>fn({get:async ref=>{reads.push(ref);return snapshot(ref);},update:(ref,update)=>{writes.push({ref,update});const old=records.get(ref);const resolved={...update};for(const [k,v] of Object.entries(resolved))if(v&&v.union)resolved[k]=[...(old[k]||[]),v.union];records.set(ref,{...old,...resolved});}})},
   '@/lib/firebase':{db:{}},
   '@/lib/admin-request':{getAdminRequestSession:async()=>signedIn?{userId:'staff',email:'staff@example.test',displayName:'Staff',allowedPages:allowed,isOwner:false}:null},
-  '@/lib/admin-access':{hasAdminPageAccess:(pages,path)=>pages.includes(path)||(path==='/admin/quotation-approval'&&pages.includes('/admin/tanvi'))},
+  '@/lib/admin-access':access,
+  '@/lib/print-job-workspace-access':workspaceAccess,
   '@/lib/print-job-workflow':domain,
   '@/lib/email-intake':{listEmailIntake:async()=>{inboxReads++;return{enquiries:email,lastSyncAt:'2026-10-01',error:''};}},
   '@/lib/request-safety':{isRequestOriginAllowed:req=>!req.headers.get('origin')||req.headers.get('origin')===new URL(req.url).origin,isContentLengthWithinLimit:(headers,max)=>!headers.get('content-length')||Number(headers.get('content-length'))<=max},
@@ -27,7 +31,7 @@ function setup({allowed=['/admin','/admin/quotation-approval','/admin/orders','/
  return{get:()=>list.GET(),send,records,reads,writes,get inboxReads(){return inboxReads;}};
 }
 const quote={name:'Customer',status:'new',createdAt:1,clientDecision:'accepted',paymentReceipt:{paymentStatus:'Paid'},orderTransactionId:'o'};
-const enquiry={id:'gmail-pending',status:'needs_details',email:'client@example.test',subject:'Need shirts',draft:{name:'Sender',phone:'',lines:[]},lastReplyAt:'2026-10-01T00:00:00Z'};
+const enquiry={classification:'enquiry',threadId:'pending',version:'a'.repeat(24),updatedAtIso:'2026-10-01T00:00:00Z',items:[],missing:[],warnings:[],attachmentNames:[],lastMessage:{id:'m'},id:'gmail-pending',status:'needs_details',email:'client@example.test',subject:'Need shirts',draft:{name:'Sender',phone:'',lines:[]},lastReplyAt:'2026-10-01T00:00:00Z'};
 
 test('GET and PATCH refuse unauthenticated callers before any data access',async()=>{
  const s=setup({signedIn:false});assert.equal((await s.get()).status,401);assert.equal((await s.send()).status,401);assert.equal(s.reads.length,0);assert.equal(s.inboxReads,0);
@@ -135,6 +139,27 @@ test('missing or conflicting explicit order links fall back to reverse Delivered
  }
 });
 
-test('the existing Tanvi-to-quotation permission alias can use quote workflow without a dashboard grant',async()=>{
- const s=setup({allowed:['/admin/tanvi'],records:{'quotes/q':quote}});assert.equal((await s.get()).status,200);assert.equal((await s.send()).status,200);assert.equal(s.inboxReads,0);assert.equal(s.reads.some(r=>r.startsWith('transactions')),false);
+test('Tanvi gets saved enquiries and production state without broad inbox or order permissions',async()=>{
+ const s=setup({allowed:['/admin/tanvi'],email:[enquiry],records:{'quotes/q':quote,'transactions/o':{quoteId:'q',status:'In Process'}}});const response=await s.get();assert.equal(response.status,200);const body=await response.json();assert.equal(body.canInbox,false);assert.equal(body.canOrders,false);assert.equal(body.canEnquiries,true);assert.equal(body.canProductionWorkspace,true);assert.equal(body.items.find(j=>j.quoteId==='q').stage,'production');assert.equal(body.items.filter(j=>j.intakeId).length,1);assert.equal((await s.send({body:{reason:'Return to confirmation'}})).status,200);assert.equal(s.inboxReads,1);assert.equal(s.reads.some(r=>r.startsWith('transactions')),true);
+});
+
+test('Tanvi job DTO excludes order finance, mailbox routing fields and arbitrary private records',async()=>{
+ const privateValue='PRIVATE_FINANCIAL_SENTINEL';
+ const linked={quoteId:'q',status:'In Process',amount:99999,paymentMethod:privateValue,cost:privateValue,account:{notes:privateValue},documentProfile:{paymentStatus:privateValue,notes:privateValue,amountReceived:8888,discount:77,clientCompany:'Job company'},products:[{product:'Polo',quantity:12,color:'Navy',size:'L',unitPrice:12345,price:148140,cost:privateValue}]};
+ const pending={...enquiry,privateLedger:privateValue,lastMessage:{id:'m',to:privateValue,messageIdHeader:privateValue,replyTo:privateValue},outboundMessageId:privateValue};
+ const q={...quote,quote:{total:2500,currency:'Rs',lines:[{description:'Quoted polos',quantity:12,unitPrice:200}]}};
+ const s=setup({allowed:['/admin/tanvi'],email:[pending,{...pending,id:'gmail-private',classification:'other'}],records:{'quotes/q':q,'transactions/o':linked,'transactions/standalone':{...linked,quoteId:undefined,customerName:'Standalone'}}});
+ const result=await(await s.get()).json();const encoded=JSON.stringify(result);
+ assert.equal(encoded.includes(privateValue),false);assert.equal(encoded.includes('99999'),false);assert.equal(encoded.includes('148140'),false);
+ const job=result.items.find(j=>j.quoteId==='q');assert.equal(job.total,2500);assert.equal(job.details.pricingSource,'Quotation');assert.equal(job.details.pricingLines[0].unitPrice,200);assert.equal(job.details.products[0].description,'Polo');assert.equal(job.details.customer.company,'Job company');assert.equal(job.documents.some(d=>d.kind==='order'),false);
+ const standalone=result.items.find(j=>j.orderId==='standalone');assert.equal(standalone.total,null);assert.equal(standalone.lines[0].unitPrice,null);assert.equal(standalone.details.pricingLines[0].lineTotal,null);assert.equal(standalone.payment.recordedLabel,'');assert.equal(standalone.editable,false);
+ assert.equal(result.enquiries.length,1);assert.equal(result.enquiries[0].lastMessage.to,'');
+});
+
+test('Tanvi can organise saved enquiry workflow but cannot expose ignored non-enquiries',async()=>{
+ const s=setup({allowed:['/admin/tanvi'],records:{'emailIntake/gmail-pending':enquiry}});
+ assert.equal((await s.send({id:'gmail-pending',body:{targetType:'intake',stage:'needs_details',reason:'Confirm sizes'}})).status,200);
+ assert.deepEqual(Object.keys(s.writes[0].update).sort(),['printJobWorkflow','printJobWorkflowHistory']);
+ const denied=setup({allowed:['/admin/tanvi'],records:{'emailIntake/gmail-pending':{...enquiry,classification:'other'}}});
+ assert.equal((await denied.send({id:'gmail-pending',body:{targetType:'intake'}})).status,404);assert.equal(denied.writes.length,0);
 });
