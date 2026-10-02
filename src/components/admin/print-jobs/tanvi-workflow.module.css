@@ -5,3 +5,42 @@
 .productionDetails{margin:18px 22px 0;padding:13px;border:1px solid #e2e8df;border-radius:var(--admin-radius-panel, 8px);font-size:11px}.productionDetails>summary{display:flex;align-items:center;justify-content:space-between;gap:9px;cursor:pointer;font-weight:600;color:#59664e}.productionDetails>form{margin-top:16px}.packetBadge{border-radius:var(--admin-radius-pill, 20px);background:#fff3de;color:#8d6e33;padding:4px 7px;font-size:9px;white-space:nowrap}.packetBadge[data-ready=true]{background:#edf7e9;color:#477546}.packetHelp{font-size:10px;line-height:1.8;color:#7b8774;margin:12px 0}.packetProducts{list-style:none;padding:0;margin:14px 0;display:grid;gap:7px;color:#43513c;font-size:10px}.packetProducts li{padding:9px;background:#f6f8f1;border-radius:var(--admin-radius-control, 6px);overflow-wrap:anywhere}.packetProducts strong{white-space:nowrap}.packetArtwork{min-width:0;border:1px solid #dfe5d7;border-radius:var(--admin-radius-panel, 7px);padding:12px;margin:18px 0}.packetArtwork legend{max-width:100%;padding:0 5px;overflow-wrap:anywhere;font-weight:600;color:#536048}.packetFiles{display:grid;gap:9px;font-size:10px;color:#9a622e}.packetFiles a{display:flex;gap:6px;align-items:flex-start;overflow-wrap:anywhere}.packetFiles svg{flex-shrink:0;margin-top:2px}.field>select{width:100%;min-width:0;border:1px solid #dce3d6;background:white;color:#293528;border-radius:var(--admin-radius-control, 7px);padding:10px;font:inherit}.packetActions{display:flex;gap:8px;flex-wrap:wrap}.packetActions button{flex:1}.packetArtwork:disabled{opacity:.7}@media(max-width:650px){.productionDetails{margin:16px 17px 0}.productionDetails>summary{align-items:flex-start}.packetActions{flex-direction:column}}
 
 .packetTargets{border-block:1px solid #e5e9df;padding:10px 0;margin:12px 0}.packetTargets>p:first-child{font-size:10px;font-weight:600;color:#63705a}.packetTargets .confirm{margin:10px 0}
+
+/* The three-step workflow uses the same quiet paper and clear action hierarchy. */
+@media screen {
+  .panel,.settingsPanel { background:var(--admin-surface, #fff); color:var(--admin-ink, #17212f); border-color:var(--admin-line, #e6eaf0); box-shadow:var(--admin-shadow-card, none) }
+  .eyebrow { color:var(--admin-accent-ink, #9f360e) }
+  .steps>li,.stepBody>p,.field>span,.settingsPanel>p,.packetHelp,.safetyNote { color:var(--admin-muted, #5b6778) }
+  .steps>li>span { border-color:var(--admin-line, #e6eaf0) }
+  .steps>li[data-active=true] { color:var(--admin-accent-ink, #9f360e) }
+  .steps>li[data-active=true]>span { background:var(--admin-action, #cf4311); border-color:var(--admin-action, #cf4311) }
+  .amounts { background:var(--admin-canvas, #fafbfc); border-color:var(--admin-line, #e6eaf0) }
+  .amounts span { color:var(--admin-muted, #5b6778) }
+  .stepLabel { color:var(--admin-ink, #17212f)!important }
+  .field,.confirm,.editPrice summary,.productionDetails>summary,.packetProducts,.packetArtwork legend { color:var(--admin-ink, #17212f) }
+  .field>input,.field>select { background:var(--admin-surface, #fff); color:var(--admin-ink, #17212f); border-color:var(--admin-line, #e6eaf0) }
+  .primary { background:var(--admin-action, #cf4311); border-color:var(--admin-action, #cf4311) }
+  .primary:hover:not(:disabled) { background:var(--admin-action-hover, #b6370b); border-color:var(--admin-action-hover, #b6370b) }
+  .secondary,.iconButton { background:var(--admin-surface, #fff); border-color:var(--admin-line, #e6eaf0); color:var(--admin-ink, #17212f) }
+  .editPrice,.productionDetails,.packetArtwork,.packetTargets,.safetyNote { border-color:var(--admin-line, #e6eaf0) }
+  .packetProducts li,.emailPreview { background:var(--admin-canvas, #fafbfc); border-color:var(--admin-line, #e6eaf0) }
+  .emailPreview pre,.packetTargets>p:first-child,.textButton,.settingsLink,.reviewActions>button { color:var(--admin-muted, #5b6778) }
+  .documentLink,.packetFiles { color:var(--admin-accent-ink, #9f360e) }
+}
+
+@media screen {
+  /* Status text and fill remain a pair, including on the dark workspace. */
+  .panel .hint { color:var(--admin-muted, #5b6778); background:var(--admin-canvas, #fafbfc); border-color:var(--admin-line, #e6eaf0) }
+  .panel .notice { color:#196650; background:#e6f6ef; border-color:#b8dfcc }
+  .panel .error { color:#a13435; background:#fff0ed; border-color:#edbcb8 }
+  .steps>li[data-done=true] { color:var(--admin-success-ink, #196650) }
+  .steps>li[data-done=true]>span { color:#196650; background:#e6f6ef; border-color:#b8dfcc }
+  .blockers { color:var(--admin-warning-ink, #925606) }
+  .deliveryMode,.packetBadge { color:#925606; background:#fff3cd; border-color:#e4cd8d }
+  .deliveryMode[data-mode=live],.packetBadge[data-ready=true] { color:#196650; background:#e6f6ef; border-color:#b8dfcc }
+  .deliveryMode[data-mode=disabled] { color:var(--admin-muted, #5b6778); background:var(--admin-canvas, #fafbfc); border-color:var(--admin-line, #e6eaf0) }
+}
+
+@media screen {
+  .panel :is(button,a,input,select,textarea,summary):focus-visible,.settingsPanel :is(button,input):focus-visible { outline:3px solid var(--admin-focus, #cf4311); outline-offset:3px }
+}

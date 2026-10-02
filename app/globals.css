@@ -725,3 +725,70 @@ body {
     border-radius: var(--admin-radius-control);
   }
 }
+
+/* A crisp, readable admin palette. Shape stays shared; specialised workspaces
+   such as Aura and the garment canvas continue to own their colours. */
+@media screen {
+  .admin-root {
+    --admin-ink: #17212f;
+    --admin-muted: #5b6778;
+    --admin-line: #e6eaf0;
+    --admin-surface: #ffffff;
+    --admin-canvas: #fafbfc;
+    --admin-accent: #f36b21;
+    --admin-action: #cf4311;
+    --admin-action-hover: #b6370b;
+    --admin-accent-ink: #9f360e;
+    --admin-accent-soft: #fff3ec;
+    --admin-accent-line: #f4bf9e;
+    --admin-success-ink: #196650;
+    --admin-warning-ink: #925606;
+    --admin-shadow-card: 0 3px 16px rgb(23 33 47 / 0.045);
+  }
+
+  .admin-root.admin-dark {
+    --admin-ink: #f1f5fa;
+    --admin-muted: #aab7c8;
+    --admin-line: #344153;
+    --admin-surface: #17202b;
+    --admin-canvas: #101720;
+    --admin-accent: #ff955f;
+    --admin-accent-ink: #ffad7b;
+    --admin-accent-soft: #332319;
+    --admin-accent-line: #845036;
+    --admin-success-ink: #99e2c4;
+    --admin-warning-ink: #f4d38b;
+    --admin-shadow-card: 0 3px 16px rgb(0 0 0 / 0.12);
+  }
+
+  .admin-root.admin-light .bg-\[\#f7f8fa\] { background-color: var(--admin-canvas); }
+  .admin-root.admin-light .admin-workspace-header { background-color: #ffffff; border-color: var(--admin-line); }
+
+  /* Restore useful colour to existing compact status chips, not every panel. */
+  .admin-root.admin-light .admin-page-shell span:is(.bg-orange-50, .bg-orange-100):not(.premium-studio *) { background-color: #fff1e8 !important; color: #9f360e !important; }
+  .admin-root.admin-light .admin-page-shell span:is(.bg-amber-50, .bg-amber-100):not(.premium-studio *) { background-color: #fff3cd !important; color: #925606 !important; }
+  .admin-root.admin-light .admin-page-shell span:is(.bg-blue-50, .bg-blue-100, .bg-sky-50, .bg-sky-100, .bg-cyan-50, .bg-cyan-100):not(.premium-studio *) { background-color: #eaf2ff !important; color: #2357a2 !important; }
+  .admin-root.admin-light .admin-page-shell span:is(.bg-emerald-50, .bg-emerald-100, .bg-teal-50, .bg-teal-100):not(.premium-studio *) { background-color: #e6f6ef !important; color: #196650 !important; }
+  .admin-root.admin-light .admin-page-shell span:is(.bg-rose-50, .bg-rose-100, .bg-pink-50, .bg-pink-100):not(.premium-studio *) { background-color: #fff0ed !important; color: #a13435 !important; }
+
+  .admin-root .admin-page-shell :is(button, a).inline-flex:is(.bg-orange-500, .bg-orange-600, .bg-\[\#ff6600\], .bg-\[\#ff5a0a\]):not(.premium-studio *):not(:disabled, [aria-disabled="true"]) {
+    background-color: var(--admin-action);
+    border-color: var(--admin-action);
+    color: #ffffff;
+  }
+}
+
+@media screen {
+  .admin-root.admin-light .admin-page-shell input[aria-label="Search jobs"]::placeholder {
+    color: var(--admin-muted);
+  }
+}
+
+@media screen {
+  .admin-root { --admin-focus: #cf4311; }
+  .admin-root.admin-dark { --admin-focus: #ff955f; }
+  .admin-root .admin-page-shell :is(button, a).inline-flex:is(.bg-orange-500, .bg-orange-600, .bg-\[\#ff6600\], .bg-\[\#ff5a0a\]):not(.premium-studio *):hover:not(:disabled, [aria-disabled="true"]) {
+    background-color: var(--admin-action-hover);
+    border-color: var(--admin-action-hover);
+  }
+}

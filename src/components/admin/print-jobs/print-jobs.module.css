@@ -71,3 +71,48 @@
   .clientCard:focus-visible { outline-offset:2px }
   @media(max-width:650px) { .clientList { padding:8px; gap:8px } }
 }
+
+/* Clear hierarchy: neutral paper, readable job titles and one confident action. */
+@media screen {
+  .workspace,.workspace[data-theme=dark] {
+    --ink:var(--admin-ink, #17212f); --muted:var(--admin-muted, #5b6778);
+    --line:var(--admin-line, #e6eaf0); --paper:var(--admin-surface, #fff);
+    --canvas:var(--admin-canvas, #fafbfc); --soft:var(--admin-accent-soft, #fff3ec);
+    --accent:var(--admin-accent, #f36b21); --orange-ink:var(--admin-accent-ink, #9f360e);
+  }
+  .header .eyebrow { color:var(--orange-ink) }
+  .primary { background:var(--admin-action, #cf4311); border-color:var(--admin-action, #cf4311) }
+  .primary:hover:not(:disabled) { background:var(--admin-action-hover, #b6370b); border-color:var(--admin-action-hover, #b6370b) }
+  .clientTools { background:var(--paper) }
+  .clientTools h2>span { color:var(--orange-ink); background:var(--soft); border-color:transparent; font-weight:650 }
+  .clientList { background:var(--canvas) }
+  .clientCard { border-color:var(--line); transition:background-color .16s,border-color .16s,box-shadow .16s }
+  .clientCard:hover,.clientCard:focus-visible,.workspace .clientCardActive { background:var(--soft); border-color:var(--admin-accent-line, #f4bf9e); box-shadow:0 5px 20px rgb(23 33 47 / .07) }
+  .clientCardInfo>span:first-child>strong { color:var(--ink); font-weight:700 }
+  .clientCardInfo>.listClientName { color:var(--ink); font-weight:550 }
+  .listValue>b { color:var(--ink) }
+  .listValue>span { justify-content:center; background:var(--admin-action, #cf4311); color:#fff; padding:8px 11px; border-radius:12px; font-weight:650; line-height:1.4 }
+  .clientCard:hover .listValue>span,.clientCard:focus-visible .listValue>span { background:var(--admin-action-hover, #b6370b) }
+  .search:focus-within { border-color:var(--accent); box-shadow:0 0 0 3px var(--soft) }
+  .search input::placeholder { color:var(--muted) }
+  .badge[data-stage=new] { background:#fff1e8; color:#9f360e }
+  .badge[data-stage=needs_details] { background:#fff3cd; color:#925606 }
+  .badge[data-stage=awaiting_client] { background:#eaf2ff; color:#2357a2 }
+  .badge[data-stage=confirmed],.badge[data-stage=ready] { background:#e6f6ef; color:#196650 }
+  .badge[data-stage=production] { background:#f1eafd; color:#6840a1 }
+  .badge[data-stage=completed] { background:#edf2f7; color:#42546a }
+  .badge[data-stage=declined] { background:#fff0ed; color:#a13435 }
+  .workspace[data-theme=dark] .badge[data-stage=new] { background:#40271b; color:#ffc299 }
+  .workspace[data-theme=dark] .badge[data-stage=needs_details] { background:#382d16; color:#f4d38b }
+  .workspace[data-theme=dark] .badge[data-stage=awaiting_client] { background:#1b2d49; color:#b2d0ff }
+  .workspace[data-theme=dark] .badge[data-stage=confirmed],.workspace[data-theme=dark] .badge[data-stage=ready] { background:#163b32; color:#99e2c4 }
+  .workspace[data-theme=dark] .badge[data-stage=production] { background:#302440; color:#d4b8ff }
+  .workspace[data-theme=dark] .badge[data-stage=completed] { background:#293342; color:#c4d0df }
+  .workspace[data-theme=dark] .badge[data-stage=declined] { background:#402427; color:#ffb8b1 }
+  @media(max-width:650px) { .listValue { flex-wrap:wrap; gap:7px } .listValue>span { padding:6px 8px; min-height:30px } }
+  @media(prefers-reduced-motion:reduce) { .clientCard { transition:none } }
+}
+
+@media screen {
+  .workspace :is(button,a,input,select,textarea):focus-visible { outline-color:var(--admin-focus, #cf4311) }
+}
