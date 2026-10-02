@@ -22,6 +22,7 @@ export type PartnerOrderDetails = Omit<LegacyPartnerOrderDetails, "artwork"> & {
 export type PartnerOrderView = Omit<LegacyPartnerOrderView, "details"> & {
   details: PartnerOrderDetails;
   production: {
+    requiresRelease: boolean;
     released: boolean;
     releaseId: string | null;
     packetFingerprint: string | null;

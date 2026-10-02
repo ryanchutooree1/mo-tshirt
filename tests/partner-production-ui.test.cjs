@@ -51,8 +51,9 @@ function reset(items = [fixture('a')]) {
  };
 }
 async function mount() {
- render(React.createElement(Page, { partnerId: 'yan', initialPartner: { id: 'yan', name: 'Synthetic Yan', active: true, productionNotes: [], supportsLogoPrintPlacements: false }, managerName: 'Synthetic manager' }));
- await screen.findByText('Released garment quantities');
+ const partnerId = records.get('a').partnerId;
+ render(React.createElement(Page, { partnerId, initialPartner: { id: partnerId, name: 'Synthetic Yan', active: true, productionNotes: [], supportsLogoPrintPlacements: false }, managerName: 'Synthetic manager' }));
+ await screen.findByLabelText('Comments for Synthetic manager');
  await waitFor(() => assert.equal(screen.getByLabelText('Comments for Synthetic manager').value, records.get('a').comments));
  await act(async () => {});
 }
@@ -103,6 +104,19 @@ async function run() {
  assert.equal(screen.getByRole('button', { name: 'Start production', exact: true }).disabled, false);
  fireEvent.click(screen.getByRole('button', { name: 'Start production', exact: true }));
  await screen.findByText(failure); assert.equal(records.get('a').productionStatus, 'not_started'); cleanup();
- console.log('PASS partner UI: separate acceptance/start, canonical source + mockup downloads, exact receipt, stale rejection, deferred A/B navigation');
+ // Other partners retain their existing status workflow and do not see Yan-only release controls.
+ const legacy = fixture('a'); legacy.partnerId = 'shabanaz'; legacy.partnerName = 'Synthetic Shabanaz'; legacy.production = { requiresRelease: false, released: false, releaseId: null, packetFingerprint: null, packet: null, readyToStart: false, active: true, blockers: [], startedAtIso: null, blanksReceived: false }; legacy.price = 150; legacy.completionDays = 3;
+ reset([legacy]); await mount();
+ assert.equal(screen.queryByRole('button', { name: 'Start production', exact: true }), null);
+ assert.equal(screen.queryByText(/current release and garment receipt/), null);
+ const statusSelect = screen.getByLabelText('Production status');
+ for (const option of Array.from(statusSelect.options)) assert.equal(option.disabled, false);
+ fireEvent.change(statusSelect, { target: { value: 'completed' } });
+ fireEvent.click(screen.getByRole('button', { name: 'Save acceptance', exact: true }));
+ await waitFor(() => assert.equal(records.get('a').productionStatus, 'completed'));
+ await waitFor(() => assert.equal(screen.getByRole('button', { name: 'Save acceptance', exact: true }).disabled, false));
+ assert.equal(requests.find(r => r.body).body.productionStatus, 'completed'); cleanup();
+
+ console.log('PASS partner UI: separate acceptance/start, canonical source + mockup downloads, exact receipt, stale rejection, deferred A/B navigation, non-Yan legacy status scope');
 }
 run().catch(error => { console.error(error); cleanup(); process.exitCode = 1; });

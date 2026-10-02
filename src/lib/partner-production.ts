@@ -21,7 +21,14 @@ export class PartnerProductionError extends Error {
   constructor(message: string, public status = 409) { super(message); }
 }
 
+/** Yan owns the new release protocol. A persisted release stays guarded even if assignment changes. */
+export function requiresPartnerProductionRelease(partnerId: string, quote: Record<string, unknown>) {
+  return partnerId === "yan" || Object.prototype.hasOwnProperty.call(quote, "productionRelease");
+}
+
 export function partnerProductionState(quoteId: string, quote: Record<string, unknown>, partnerId: string, order?: LinkedOrder) {
+  const requiresRelease = requiresPartnerProductionRelease(partnerId, quote);
+  if (!requiresRelease) return { requiresRelease, release: null, ready: false, blockers: [], active: true, matchingStart: false, start: null };
   const readiness = productionReleaseReadiness(quoteId, quote, order);
   const eligibility = productionJobEligibility(quoteId, quote, order);
   const release = readiness.release;
@@ -33,6 +40,7 @@ export function partnerProductionState(quoteId: string, quote: Record<string, un
   const blockers = [...readiness.blockers];
   if (release && release.partnerId !== partnerId) blockers.push("This release belongs to another production partner.");
   return {
+    requiresRelease,
     release,
     ready: readiness.ready && release?.partnerId === partnerId,
     blockers,
@@ -51,6 +59,15 @@ export function validatePartnerProductionChange(input: {
   actor: PartnerProductionActor; now?: string;
 }) {
   const state = partnerProductionState(input.quoteId, input.quote, input.partnerId, input.order);
+  if (!state.requiresRelease) {
+    // Keep the pre-existing workflow for other partners; they have no Yan release path.
+    if (input.action === "start-production") throw new PartnerProductionError("Use the existing production status update for this partner.", 400);
+    return {
+      status: input.decision === "accepted" && input.nextStatus === "not_started" ? "in_progress" as const : input.nextStatus,
+      start: null,
+      writeStart: false,
+    };
+  }
   if (!state.active) throw new PartnerProductionError("This job is closed, cancelled or awaiting renewed client approval. Ask the manager to review it first.");
   if (state.release && !state.ready) throw new PartnerProductionError(state.blockers.join(" ") || "The released packet has changed. Ask the manager to release the current approved job.");
   if (input.decision === "accepted" && !state.release &&

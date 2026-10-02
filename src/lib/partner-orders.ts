@@ -566,11 +566,12 @@ export function sanitizePartnerOrder(
     ),
     details,
     production: {
+      requiresRelease: productionState.requiresRelease,
       released: Boolean(release), releaseId: release?.id || null,
       packetFingerprint: release?.packetFingerprint || null, packet: releasedPacket,
       readyToStart: productionState.ready && completePacketShared && decision === "accepted" && !productionState.matchingStart,
       active: productionState.active,
-      blockers: [...(completePacketShared ? productionState.blockers : ["Ask the manager to share all released production fields before starting."]), ...(decision !== "accepted" ? ["Accept this released job before starting production."] : [])],
+      blockers: productionState.requiresRelease ? [...(completePacketShared ? productionState.blockers : ["Ask the manager to share all released production fields before starting."]), ...(decision !== "accepted" ? ["Accept this released job before starting production."] : [])] : [],
       startedAtIso: productionState.start?.startedAtIso || null,
       blanksReceived: productionState.matchingStart,
     },

@@ -90,16 +90,17 @@ function setup(initial = quote(), options = {}) {
       return result;
     },
   };
-  const partner = { id: 'yan', name: 'Synthetic Yan', active: options.active !== false, productionNotes: [], supportsLogoPrintPlacements: false };
+  const partnerId = options.partnerId || 'yan';
+  const partner = { id: partnerId, name: 'Synthetic partner', active: options.active !== false, productionNotes: [], supportsLogoPrintPlacements: false };
   const modules = { 'firebase/firestore': firestore, '@/lib/firebase': { db: {} }, 'next/headers': { cookies: async () => ({}) },
-    '@/lib/partner-registry': { getPrintPartnerById: async id => id === 'yan' ? partner : null, getProductionManager: async () => { if (options.manager) return options.manager; throw new Error('No email allowed in tests'); } },
+    '@/lib/partner-registry': { getPrintPartnerById: async id => id === partnerId ? partner : null, getProductionManager: async () => { if (options.manager) return options.manager; throw new Error('No email allowed in tests'); } },
     '@/lib/admin-auth': { readAdminSession: async () => options.owner ? { isOwner: true, userId: 'owner', displayName: 'Synthetic Owner' } : null },
-    '@/lib/partner-auth': { readPartnerSession: async () => options.signedIn === false ? null : { partnerId: options.sessionPartner || 'yan', displayName: 'Synthetic Yan' } },
+    '@/lib/partner-auth': { readPartnerSession: async () => options.signedIn === false ? null : { partnerId: options.sessionPartner || partnerId, displayName: 'Synthetic Yan' } },
     'next/server': { NextResponse: { json: (body, options) => Response.json(body, options) } }, '@/lib/seo': { SITE_URL: 'https://app.synthetic.example.test' },
     '@/lib/request-safety': { isRequestOriginAllowed: req => req.headers.get('origin') === 'https://app.synthetic.example.test', isContentLengthWithinLimit: (headers, max) => !headers.get('content-length') || Number(headers.get('content-length')) <= max },
   };
   const local = loader(modules), serializer = local('src/lib/partner-orders.ts'), api = local('app/api/partners/orders/[id]/route.ts');
-  const patch = (body, extra = {}) => api.PATCH(new Request('https://app.synthetic.example.test/api/partners/orders/q', { method: 'PATCH', headers: { origin: 'https://app.synthetic.example.test', 'content-type': 'application/json', ...extra.headers }, body: extra.raw ?? JSON.stringify({ partnerId: 'yan', ...body }) }), { params: Promise.resolve({ id: 'q' }) });
+  const patch = (body, extra = {}) => api.PATCH(new Request('https://app.synthetic.example.test/api/partners/orders/q', { method: 'PATCH', headers: { origin: 'https://app.synthetic.example.test', 'content-type': 'application/json', ...extra.headers }, body: extra.raw ?? JSON.stringify({ partnerId, ...body }) }), { params: Promise.resolve({ id: 'q' }) });
   return { records, writes, reads, serializer, patch };
 }
 
@@ -162,4 +163,56 @@ test('missing configured manager email saves the response and warns without any 
   assert.equal(body.actionEmailSent,false);assert.match(body.actionEmailWarning,/Manager email is not configured/);
   assert.equal(s.records.get('quotes/q').partner.requestStatus,'needs_info');
   assert.ok(!fs.readFileSync('app/api/partners/orders/[id]/route.ts','utf8').includes('FALLBACK_MANAGER_EMAIL'));
+});
+
+test('non-Yan legacy offers retain automatic acceptance start and existing production updates', async () => {
+ for (const partnerId of ['shabanaz', 'custom-partner']) {
+  const q = quote(); q.partner = { id: partnerId, visibleTo: [partnerId], requestStatus: 'pending', productionStatus: 'not_started' };
+  const s = setup(q, { partnerId });
+  let response = await s.patch({ decision: 'accepted', completionDays: 3, price: 150 });
+  assert.equal(response.status, 200); assert.equal((await response.json()).order.productionStatus, 'in_progress');
+  assert.equal(s.records.get('quotes/q').productionStart, undefined);
+  response = await s.patch({ productionStatus: 'in_progress', comments: 'Existing synthetic progress' });
+  assert.equal(response.status, 200);
+  response = await s.patch({ productionStatus: 'completed' });
+  assert.equal(response.status, 200); assert.equal((await response.json()).order.productionStatus, 'completed');
+  assert.equal(s.records.get('quotes/q').productionStart, undefined);
+ }
+});
+
+test('non-Yan partner cannot bypass a Yan release through legacy acceptance or status updates', async () => {
+ for (const body of [{ decision: 'accepted', completionDays: 3, price: 150 }, { productionStatus: 'in_progress' }, { productionStatus: 'completed' }]) {
+  const q = releasedQuote(); q.partner = { id: 'shabanaz', visibleTo: ['yan','shabanaz'], requestStatus: 'accepted', productionStatus: 'not_started', price: 150, completionDays: 3 };
+  const s = setup(q, { partnerId: 'shabanaz' }); const response = await s.patch(body);
+  assert.equal(response.status, 409); assert.equal(s.writes.length, 0);
+ }
+});
+
+test('non-Yan malformed or null release markers never open the legacy status bypass', async () => {
+ for (const release of [{}, {version:1,mode:'test'}, null]) {
+  const q = quote(); q.productionRelease = release; q.partner = { id: 'shabanaz', visibleTo: ['shabanaz'], requestStatus: 'accepted', productionStatus: 'in_progress', price: 150, completionDays: 3 };
+  const s = setup(q, {partnerId:'shabanaz'}); assert.equal((await s.patch({productionStatus:'completed'})).status,409); assert.equal(s.writes.length,0);
+ }
+});
+
+test('non-Yan scope preserves legacy missing-term acceptance and rejects the new explicit start action', async () => {
+ const q = quote(); q.partner = {id:'shabanaz',visibleTo:['shabanaz'],requestStatus:'pending',productionStatus:'not_started'};
+ const s = setup(q,{partnerId:'shabanaz'});
+ const accepted = await s.patch({decision:'accepted'}); assert.equal(accepted.status,200); assert.equal((await accepted.json()).order.productionStatus,'in_progress');
+ const writesBeforeStart = s.writes.length;
+ assert.equal((await s.patch({action:'start-production',blanksReceived:true})).status,409);
+ const view=s.serializer.sanitizePartnerOrder('q',q,'shabanaz'); assert.equal(view.production.requiresRelease,false); assert.deepEqual(json(view.production.blockers),[]);
+ assert.equal(s.writes.length,writesBeforeStart);
+});
+
+test('historical accepted non-Yan jobs without quote terms can update progress and completion', async () => {
+ for (const partnerId of ['shabanaz','custom-partner']) {
+  const q=quote(); q.partner={id:partnerId,visibleTo:[partnerId],lockedBy:partnerId,requestStatus:'accepted',productionStatus:'in_progress',price:null,completionDays:null};
+  const s=setup(q,{partnerId});
+  for (const status of ['in_progress','completed']) {
+   const response=await s.patch({productionStatus:status,comments:'Historical synthetic status update'});
+   assert.equal(response.status,200); assert.equal((await response.json()).order.productionStatus,status);
+  }
+  assert.equal(s.records.get('quotes/q').productionStart,undefined);
+ }
 });

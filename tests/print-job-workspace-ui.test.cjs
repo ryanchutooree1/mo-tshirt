@@ -237,6 +237,34 @@ function addEnquiry() { queueFlags.canEnquiries = true; enquiries = [{ id: "synt
     assert.ok(document.activeElement === overview()); assert.equal(patches().length, 0);
   });
 
+  await test("missing mockups use honest generic garment illustrations and only point to real artwork", async () => {
+    quoteRecords.find(entry => entry.id === "delta").data.garments = [{ garment: "Plain Poloshirt", quantity: 12, size: "XL" }];
+    const artworkOnly = quoteRecords.find(entry => entry.id === "bravo");
+    artworkOnly.data.attachments = [{ filename: "Synthetic print.png", role: "print-artwork", contentType: "image/png", url: "https://synthetic.example.test/print.png" }];
+    await mount();
+    const emptyRow = screen.getByRole("button", { name: "Open job for Alpha New, New enquiry" });
+    assert.ok(within(emptyRow).getByText("No saved preview"));
+    const shirt = within(emptyRow).getByRole("img", { name: "Generic T-shirt illustration" });
+    assert.equal(shirt.tagName.toLowerCase(), "svg", "The fallback is an honest code illustration, not a fabricated customer photo");
+    assert.equal(within(emptyRow).queryByText("Artwork below"), null);
+    assert.equal(emptyRow.querySelector(".queueMockups img"), null);
+    const poloRow = screen.getByRole("button", { name: "Open job for Delta Confirmed, Confirmed" });
+    assert.ok(within(poloRow).getByRole("img", { name: "Generic polo illustration" }));
+    assert.equal(within(poloRow).queryByText("Artwork below"), null, "A non-image attachment is not artwork shown below");
+    const artworkRow = screen.getByRole("button", { name: "Open job for Bravo Details, Needs details" });
+    assert.ok(within(artworkRow).getByText("Artwork below"));
+    assert.ok(within(artworkRow).getByRole("img", { name: /^Print artwork/ }));
+    await openJob("Bravo Details");
+    assert.ok(within(overview()).getByText("No saved preview"));
+    assert.ok(within(overview()).getByText("Generic garment illustration"));
+    assert.ok(within(overview()).getByText("Artwork below"));
+    assert.equal(overview().querySelector(".finishedProducts img"), null);
+    await openJob("Alpha New");
+    assert.ok(within(overview()).getByRole("img", { name: "Generic T-shirt illustration" }));
+    assert.equal(within(overview()).queryByText("Artwork below"), null);
+    assert.equal(patches().length, 0);
+  });
+
   await test("same-asset artwork variants show transparent left and unverified saved source right below garments", async () => {
     const attachment = quoteRecords.find(entry => entry.id === "echo").data.attachments[2];
     Object.assign(attachment, { originalUrl: "https://synthetic.example.test/original-logo.jpg", originalFilename: "Original logo.jpg", originalContentType: "image/jpeg", backgroundRemovalMethod: "ai" });
@@ -282,7 +310,7 @@ function addEnquiry() { queueFlags.canEnquiries = true; enquiries = [{ id: "synt
 
   await test("missing, non-image and failed image previews remain readable and recover after refresh", async () => {
     await mount(); await openJob();
-    assert.ok(within(overview()).getByText("No finished-product mockup is saved for this request."));
+    assert.ok(within(overview()).getByText("No saved preview"));
     assert.ok(within(overview()).getByText("No print artwork attached yet."));
     await openJob("Delta Confirmed");
     assert.ok(within(overview()).getByText(/supplied files have no image preview/));

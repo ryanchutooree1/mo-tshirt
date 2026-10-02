@@ -306,6 +306,7 @@ export default function PartnerProductionPage({
   );
 
   selectedOrderRef.current = selected?.id || null;
+  const requiresProductionRelease = selected?.production?.requiresRelease ?? (partnerId === "yan" || Boolean(selected?.production?.released));
 
   const selectedIndex = useMemo(
     () => (selected ? filteredOrders.findIndex((order) => order.id === selected.id) : -1),
@@ -1334,15 +1335,15 @@ export default function PartnerProductionPage({
                             className={`mt-2 normal-case tracking-normal ${inputClass}`}
                           >
                             {PARTNER_PRODUCTION_STATUSES.map((status) => (
-                              <option key={status} value={status} disabled={selected.production?.startedAtIso
+                              <option key={status} value={status} disabled={requiresProductionRelease && (selected.production?.startedAtIso
                                 ? status === "not_started" || status === "waiting_for_tshirts_from_ryan"
-                                : status !== "not_started" && status !== "waiting_for_tshirts_from_ryan"}>
+                                : status !== "not_started" && status !== "waiting_for_tshirts_from_ryan")}>
                                 {PARTNER_PRODUCTION_STATUS_LABELS[status]}
                               </option>
                             ))}
                           </select>
                         </label>
-                        <div className={`rounded-xl border p-3 text-sm ${softSurfaceClass}`}>
+                        {requiresProductionRelease ? <div className={`rounded-xl border p-3 text-sm ${softSurfaceClass}`}>
                           {selected.production?.startedAtIso ? (
                             <p>Garments received and checked. Production started {formatDate(selected.production.startedAtIso)}.</p>
                           ) : <>
@@ -1358,7 +1359,7 @@ export default function PartnerProductionPage({
                             </> : null}
                             <button type="button" onClick={() => void startProduction()} disabled={saving || !blanksReceived || !selected.production?.readyToStart} className="mt-3 w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Saving..." : "Start production"}</button>
                           </>}
-                        </div>
+                        </div> : null}
                       </div>
                     </ResponseSection>
 
@@ -1480,6 +1481,7 @@ function WorkflowSteps({
   const days = Number(draft.completionDays);
   const price = Number(draft.price);
   const released = Boolean(order.production?.released);
+  const requiresRelease = order.production?.requiresRelease ?? (order.partnerId === "yan" || released);
   const hasOffer = Number.isFinite(days) && days > 0 && Number.isFinite(price) && price > 0;
   const actionNeeded = draft.decision === "needs_info" || Boolean(draft.missingInformation.trim());
   const logoRequestKey = `${order.id}:client-logo`;
@@ -1586,7 +1588,7 @@ function WorkflowSteps({
     {
       title: "Production",
       value: PARTNER_PRODUCTION_STATUS_LABELS[draft.productionStatus],
-      helper: "Accept first, then use Start production after checking the listed garments.",
+      helper: requiresRelease ? "Accept first, then use Start production after checking the listed garments." : "Update this as the job moves through your shop.",
       icon: <FiTruck />,
       tone:
         draft.productionStatus === "completed" ||
@@ -1598,7 +1600,7 @@ function WorkflowSteps({
     {
       title: `${managerName} action`,
       value: actionNeeded ? "Email on save" : "No block",
-      helper: actionNeeded ? `${managerName} gets the blocker when you save.` : "Start production checks the current release and garment receipt.",
+      helper: actionNeeded ? `${managerName} gets the blocker when you save.` : requiresRelease ? "Start production checks the current release and garment receipt." : "Use the production status to report progress.",
       icon: <FiAlertTriangle />,
       tone: actionNeeded
         ? "warning"

@@ -256,8 +256,27 @@ function JobVisuals({item,compact=false}:{item:PrintJob;compact?:boolean}) {
     // Variants are paired only by saved provenance, never by adjacent thumbnails.
     return visual.processed ? <span key={`${visual.url}-${index}`} className={styles.artworkPair} role="group" aria-label={`${label} artwork versions`}>{figure(visual.processed.url,visual.processed.transparent?"Transparent":"Processed")}{figure(visual.url,visual.originalProvenance==="client-upload"?"Original upload":"Saved source")}</span> : figure(visual.url,visual.originalProvenance==="client-upload"?"Original upload":undefined);
   };
-  if(compact)return <span className={styles.queueVisuals}><span className={styles.queueMockups}>{mockups.length?mockups.slice(0,2).map(renderImage):<span className={styles.visualPlaceholder}><FileImage size={19}/><span>Mockup not saved</span></span>}</span>{artworks.length>0&&<span className={styles.queueArtworks}>{artworks.slice(0,4).map(renderImage)}{artworks.length>4&&<span>+{artworks.length-4}</span>}</span>}</span>;
-  return <div className={styles.visualOverview}><div className={styles.visualSectionTitle}><h3>Finished product</h3><span>Client’s saved design</span></div><div className={styles.finishedProducts}>{mockups.length?mockups.map(renderImage):<div className={styles.visualPlaceholder}><FileImage size={28}/><p>No finished-product mockup is saved for this request.</p></div>}</div><div className={styles.visualSectionTitle}><h3>Logos & print artwork</h3><span>{artworks.length} artwork{artworks.length===1?"":"s"}</span></div><div className={styles.printArtworks}>{artworks.length?artworks.map(renderImage):<p className={styles.help}>{item.artwork.length?"The supplied files have no image preview. Open them in the files section below.":"No print artwork attached yet."}</p>}</div>{artworks.some(visual=>Boolean(visual.processed)&&visual.originalProvenance!=="client-upload")&&<p className={styles.help}>Saved source is the file received before admin cleanup. It may already have been edited.</p>}</div>;
+  if(compact)return <span className={styles.queueVisuals}><span className={styles.queueMockups}>{mockups.length?mockups.slice(0,2).map(renderImage):<MissingMockup item={item} hasArtwork={artworks.length > 0} compact />}</span>{artworks.length>0&&<span className={styles.queueArtworks}>{artworks.slice(0,4).map(renderImage)}{artworks.length>4&&<span>+{artworks.length-4}</span>}</span>}</span>;
+  return <div className={styles.visualOverview}><div className={styles.visualSectionTitle}><h3>Finished product</h3><span>{mockups.length ? "Client’s saved design" : "Generic garment illustration"}</span></div><div className={styles.finishedProducts}>{mockups.length?mockups.map(renderImage):<MissingMockup item={item} hasArtwork={artworks.length > 0} />}</div><div className={styles.visualSectionTitle}><h3>Logos & print artwork</h3><span>{artworks.length} artwork{artworks.length===1?"":"s"}</span></div><div className={styles.printArtworks}>{artworks.length?artworks.map(renderImage):<p className={styles.help}>{item.artwork.length?"The supplied files have no image preview. Open them in the files section below.":"No print artwork attached yet."}</p>}</div>{artworks.some(visual=>Boolean(visual.processed)&&visual.originalProvenance!=="client-upload")&&<p className={styles.help}>Saved source is the file received before admin cleanup. It may already have been edited.</p>}</div>;
+}
+function MissingMockup({ item, hasArtwork, compact = false }: { item: PrintJob; hasArtwork: boolean; compact?: boolean }) {
+  const productDescriptions = item.details?.products.map(product => product.description).join(" ") || item.garmentSummary || item.lines.map(line => line.description).join(" ");
+  const isPolo = /\bpolo(?:[\s-]*shirts?)?\b/i.test(productDescriptions);
+  return <span className={styles.missingMockup} data-compact={compact}>
+    <span className={styles.garmentIllustration}>
+      <svg viewBox="0 0 112 112" role="img" aria-label={`Generic ${isPolo ? "polo" : "T-shirt"} illustration`}>
+        <circle cx="56" cy="56" r="48" className={styles.garmentHalo} />
+        <ellipse cx="56" cy="94" rx="27" ry="4" className={styles.garmentShadow} />
+        <path d="M39 25 24 31 13 49 28 59 34 49v39a4 4 0 0 0 4 4h36a4 4 0 0 0 4-4V49l6 10 15-10-11-18-15-6Z" className={styles.garmentBody} />
+        {isPolo ? <g className={styles.garmentSeams}>
+          <path d="m44 25 12 10 12-10M44 25l-5 10 10 9 7-9 7 9 10-9-5-10M56 35v22" />
+          <circle cx="59" cy="44" r=".8" /><circle cx="59" cy="51" r=".8" />
+        </g> : <path d="M44 25c0 15 24 15 24 0M42 26c0 19 28 19 28 0" className={styles.garmentSeams} />}
+        <path d="m18 48 11 7m54 0 11-7M39 85h34" className={styles.garmentSeams} />
+      </svg>
+    </span>
+    <span className={styles.missingMockupCopy}><strong>No saved preview</strong>{hasArtwork && <span>Artwork below <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 2v8m-3-3 3 3 3-3" /></svg></span>}</span>
+  </span>;
 }
 function VisualImage({url,label}:{url:string;label:string}) {
   const [failed,setFailed]=useState(false);
