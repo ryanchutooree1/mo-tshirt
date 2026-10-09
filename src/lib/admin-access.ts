@@ -12,6 +12,7 @@ export type AdminPagePath =
   | "/admin/inventory"
   | "/admin/inventory-photo-log"
   | "/admin/quotation-approval"
+  | "/admin/bot-testing"
   | "/admin/tanvi"
   | "/admin/partners"
   | "/admin/design-studio"
@@ -130,6 +131,12 @@ export const ADMIN_PAGE_OPTIONS: AdminPageOption[] = [
     path: "/admin/quotation-approval",
     label: "Quotation / Invoice",
     description: "Quotes, invoices, and artwork follow-up.",
+    group: "Sales",
+  },
+  {
+    path: "/admin/bot-testing",
+    label: "Bot Testing",
+    description: "Owner-only simulation using synthetic quotes and invoices.",
     group: "Sales",
   },
   {
@@ -447,6 +454,7 @@ export const DEFAULT_TOP_NAV_PATHS: AdminPagePath[] = [
   "/admin/shops",
   "/admin/ready-made-uniforms",
   "/admin/quotation-approval",
+  "/admin/bot-testing",
   "/admin/tanvi",
   "/admin/design-studio",
   "/admin/background-remover",
@@ -573,12 +581,17 @@ export function resolveAdminApiPermission(pathname: string) {
   return null;
 }
 
+export function isBotTestingPath(pathname: string) {
+  return pathname === "/admin/bot-testing" || pathname.startsWith("/admin/bot-testing/");
+}
+
 export function hasAdminPageAccess(
   allowedPages: AdminPagePath[],
   pathname: string,
   options?: { isOwner?: boolean }
 ) {
   if (options?.isOwner) return true;
+  if (isBotTestingPath(pathname)) return false;
   if (pathname === "/admin/whatsapp" || pathname.startsWith("/admin/whatsapp/")) return false;
 
   const requiredPage = resolveAdminPagePath(pathname);
@@ -604,6 +617,7 @@ export function hasAdminApiAccess(
   options?: { isOwner?: boolean }
 ) {
   if (options?.isOwner) return true;
+  if (pathname === "/api/admin/bot-testing" || pathname.startsWith("/api/admin/bot-testing/")) return false;
   if (pathname === "/api/admin/whatsapp" || pathname.startsWith("/api/admin/whatsapp/")) return false;
 
   const requiredPage = resolveAdminApiPermission(pathname);
@@ -651,6 +665,6 @@ export function getAdminLandingPath(
   if (canUseProductionWorkspace(allowedPages)) return "/admin/quotation-approval";
 
   const ordered = [...DEFAULT_MORE_NAV_PATHS, ...DEFAULT_TOP_NAV_PATHS];
-  const firstAllowed = ordered.find((path) => allowedPages.includes(path));
+  const firstAllowed = ordered.find((path) => allowedPages.includes(path) && !isBotTestingPath(path));
   return firstAllowed || "/login";
 }

@@ -79,6 +79,7 @@ import { useAdminTheme } from "@/admin/AdminThemeContext";
 import {
   ADMIN_PAGE_OPTIONS,
   ALL_ADMIN_PAGE_PATHS,
+  isBotTestingPath,
   type AdminPagePath,
 } from "@/lib/admin-access";
 import { signOutAdminFromFirebase } from "@/lib/firebase-admin-client-auth";
@@ -104,7 +105,7 @@ type NavGroup = {
 const SIDEBAR_COLLAPSED_KEY = "admin-sidebar-collapsed-v1";
 const SIDEBAR_GROUPS_KEY = "admin-sidebar-groups-v2";
 
-const DAILY_PATHS: AdminPagePath[] = ["/admin", "/admin/inbox", "/admin/whatsapp", "/admin/quotation-approval", "/admin/orders", "/admin/inventory", "/admin/clients", "/admin/x5-execution"];
+const DAILY_PATHS: AdminPagePath[] = ["/admin", "/admin/inbox", "/admin/whatsapp", "/admin/quotation-approval", "/admin/bot-testing", "/admin/orders", "/admin/inventory", "/admin/clients", "/admin/x5-execution"];
 const NAV_GROUPS: NavGroup[] = [
   { id: "daily", label: "Your work", paths: DAILY_PATHS },
   {
@@ -117,6 +118,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Commerce",
     paths: [
       "/admin/quotation-approval",
+      "/admin/bot-testing",
       "/admin/shops",
       "/admin/ready-made-uniforms",
       "/admin/design-studio",
@@ -203,6 +205,7 @@ const PAGE_ICONS: Partial<Record<AdminPagePath, LucideIcon>> = {
   "/admin/clients": Users,
   "/admin/x5-execution": ListChecks,
   "/admin/quotation-approval": ReceiptText,
+  "/admin/bot-testing": Bot,
   "/admin/contracts": FileSignature,
   "/admin/shops": Store,
   "/admin/ready-made-uniforms": Shirt,
@@ -338,6 +341,7 @@ export default function AdminChrome({
   initialSession: AdminSessionSummary | null;
 }) {
   const pathname = usePathname();
+  const testRoute = isBotTestingPath(pathname);
   const router = useRouter();
   const { theme, toggleTheme } = useAdminTheme();
   const isDark = theme === "dark";
@@ -525,6 +529,7 @@ export default function AdminChrome({
     if (!session) return new Set<AdminPagePath>();
     if (session.isOwner) return new Set<AdminPagePath>(ALL_ADMIN_PAGE_PATHS);
     const allowed = new Set<AdminPagePath>(session.allowedPages);
+    allowed.delete("/admin/bot-testing");
     if (allowed.has("/admin/tanvi")) {
       allowed.add("/admin/quotation-approval");
       allowed.add("/admin/house-inventory");
@@ -616,7 +621,7 @@ export default function AdminChrome({
       } w-[min(300px,calc(100vw-48px))] max-w-full`}
     >
       <div className={`admin-workspace-sidebar-brand flex h-[92px] shrink-0 items-center border-b border-white/[0.07] px-5 ${sidebarCollapsed ? "lg:justify-center lg:px-2" : ""}`}>
-        <Link href="/admin" className="flex min-w-0 items-center gap-3" aria-label="MO T-SHIRT daily workspace">
+        <Link href="/admin" prefetch={testRoute ? false : undefined} className="flex min-w-0 items-center gap-3" aria-label="MO T-SHIRT daily workspace">
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.2)]">
             <Image src="/logo_transparent.webp" alt="" width={1291} height={435} className="h-auto w-10 object-contain" />
           </span>
@@ -680,6 +685,7 @@ export default function AdminChrome({
                         <Link
                           key={path}
                           href={pageHref(path)}
+                          prefetch={testRoute ? false : undefined}
                           title={sidebarCollapsed ? pageLabel(path) : undefined}
                           aria-current={active ? "page" : undefined}
                           onClick={() => setMobileOpen(false)}
@@ -733,7 +739,7 @@ export default function AdminChrome({
 
   return (
     <div className={`flex min-h-dvh w-full max-w-full overflow-x-clip ${isDark ? "bg-[#050806] text-white" : "bg-[#f7f8fa] text-slate-950"}`}>
-      {session && ["/admin/inbox", "/admin/quotation-approval"].every(path => session.isOwner || session.allowedPages.includes(path as AdminPagePath)) && <EmailIntakeAutoSync />}
+      {session && !testRoute && ["/admin/inbox", "/admin/quotation-approval"].every(path => session.isOwner || session.allowedPages.includes(path as AdminPagePath)) && <EmailIntakeAutoSync />}
       <div className="sticky top-0 hidden h-dvh shrink-0 self-start lg:block">{sidebar}</div>
 
       {mobileOpen ? (
@@ -882,8 +888,8 @@ export default function AdminChrome({
             </div>
             <div className="p-2">
               <button ref={editProfileActionRef} type="button" onClick={(event) => openProfileEditor(event.currentTarget)} aria-disabled={profileLoadState === "loading"} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold ${isDark ? "hover:bg-white/7" : "hover:bg-slate-50"}`}><Pencil className="h-4 w-4" /> {profileLoadState === "ready" ? "Edit profile" : profileLoadState === "error" ? "Retry profile" : "Loading profile…"}</button>
-              {visiblePages.has("/admin/settings") ? <Link href="/admin/settings" className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold ${isDark ? "hover:bg-white/7" : "hover:bg-slate-50"}`}><Settings className="h-4 w-4" /> Workspace settings</Link> : null}
-              <Link href="/" className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold ${isDark ? "hover:bg-white/7" : "hover:bg-slate-50"}`}><ExternalLink className="h-4 w-4" /> Visit Mauritius store</Link>
+              {visiblePages.has("/admin/settings") ? <Link href="/admin/settings" prefetch={testRoute ? false : undefined} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold ${isDark ? "hover:bg-white/7" : "hover:bg-slate-50"}`}><Settings className="h-4 w-4" /> Workspace settings</Link> : null}
+              <Link href="/" prefetch={testRoute ? false : undefined} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold ${isDark ? "hover:bg-white/7" : "hover:bg-slate-50"}`}><ExternalLink className="h-4 w-4" /> Visit Mauritius store</Link>
               <button type="button" onClick={logout} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-rose-600 ${isDark ? "hover:bg-rose-400/10" : "hover:bg-rose-50"}`}><LogOut className="h-4 w-4" /> Sign out</button>
             </div>
           </div>
