@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, CircleAlert, Clock3, Copy, FileImage, Inbox, Loader2, Mail, MessageSquare, Plus, RefreshCw, Search, X, XCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CircleAlert, Clock3, Copy, Download, FileImage, Inbox, Loader2, Mail, MessageSquare, Plus, RefreshCw, Search, X, XCircle } from "lucide-react";
 import { useAdminTheme } from "@/admin/AdminThemeContext";
 import { PRINT_JOB_STAGES, type PrintJob, type PrintJobStage, type PrintJobClosureKind, stageLabel } from "@/lib/print-job-workflow";
 import { type RequestSource } from "@/lib/quotation-inbox";
@@ -253,9 +253,12 @@ function JobVisuals({item,compact=false}:{item:PrintJob;compact?:boolean}) {
   const mockups=item.mockups||[];const artworks=item.artworks||[];
   const renderImage=(visual:PrintJobVisual,index:number)=>{
     const label=visual.side==="front"?"Front":visual.side==="back"?"Back":visual.name||"Preview";
-    const figure=(url:string,variant?:string)=><figure key={url} data-kind={visual.kind}><VisualImage url={url} label={`${visual.kind==="mockup"?"Finished product":"Print artwork"} · ${label}${variant?` · ${variant}`:""}`}/>{(!compact||variant)&&<figcaption>{compact?variant:[label,variant].filter(Boolean).join(" · ")}</figcaption>}</figure>;
+    const figure=(url:string,name:string,variant?:string)=>{
+      const imageLabel=`${visual.kind==="mockup"?"Finished product":"Print artwork"} · ${label}${variant?` · ${variant}`:""}`;
+      return <figure key={url} data-kind={visual.kind}><VisualImage url={url} label={imageLabel} name={name} downloadable={!compact}/>{(!compact||variant)&&<figcaption>{compact?variant:[label,variant].filter(Boolean).join(" · ")}</figcaption>}</figure>;
+    };
     // Variants are paired only by saved provenance, never by adjacent thumbnails.
-    return visual.processed ? <span key={`${visual.url}-${index}`} className={styles.artworkPair} role="group" aria-label={`${label} artwork versions`}>{figure(visual.processed.url,visual.processed.transparent?"Transparent":"Processed")}{figure(visual.url,visual.originalProvenance==="client-upload"?"Original upload":"Saved source")}</span> : figure(visual.url,visual.originalProvenance==="client-upload"?"Original upload":undefined);
+    return visual.processed ? <span key={`${visual.url}-${index}`} className={styles.artworkPair} role="group" aria-label={`${label} artwork versions`}>{figure(visual.processed.url,visual.processed.name,visual.processed.transparent?"Transparent":"Processed")}{figure(visual.url,visual.name,visual.originalProvenance==="client-upload"?"Original upload":"Saved source")}</span> : figure(visual.url,visual.name,visual.originalProvenance==="client-upload"?"Original upload":undefined);
   };
   if(compact)return <span className={styles.queueVisuals}><span className={styles.queueMockups}>{mockups.length?mockups.slice(0,2).map(renderImage):<MissingMockup item={item} hasArtwork={artworks.length > 0} compact />}</span>{artworks.length>0&&<span className={styles.queueArtworks}>{artworks.slice(0,4).map(renderImage)}{artworks.length>4&&<span>+{artworks.length-4}</span>}</span>}</span>;
   return <div className={styles.visualOverview}><div className={styles.visualSectionTitle}><h3>Finished product</h3><span>{mockups.length ? "Client’s saved design" : "Generic garment illustration"}</span></div><div className={styles.finishedProducts}>{mockups.length?mockups.map(renderImage):<MissingMockup item={item} hasArtwork={artworks.length > 0} />}</div><div className={styles.visualSectionTitle}><h3>Logos & print artwork</h3><span>{artworks.length} artwork{artworks.length===1?"":"s"}</span></div><div className={styles.printArtworks}>{artworks.length?artworks.map(renderImage):<p className={styles.help}>{item.artwork.length?"The supplied files have no image preview. Open them in the files section below.":"No print artwork attached yet."}</p>}</div>{artworks.some(visual=>Boolean(visual.processed)&&visual.originalProvenance!=="client-upload")&&<p className={styles.help}>Saved source is the file received before admin cleanup. It may already have been edited.</p>}</div>;
@@ -279,10 +282,14 @@ function MissingMockup({ item, hasArtwork, compact = false }: { item: PrintJob; 
     <span className={styles.missingMockupCopy}><strong>No saved preview</strong>{hasArtwork && <span>Artwork below <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 2v8m-3-3 3 3 3-3" /></svg></span>}</span>
   </span>;
 }
-function VisualImage({url,label}:{url:string;label:string}) {
+function VisualImage({url,label,name,downloadable}:{url:string;label:string;name:string;downloadable:boolean}) {
   const [failed,setFailed]=useState(false);
   useEffect(()=>setFailed(false),[url]);
-  return failed?<span className={styles.visualPlaceholder}><FileImage size={22}/><span>Preview unavailable</span></span>:<img src={url} alt={label} loading="lazy" onError={()=>setFailed(true)}/>;
+  const downloadHref=`/api/shops/download?${new URLSearchParams({url,name:name||label}).toString()}`;
+  return <span className={styles.visualImageWrap}>
+    {failed?<span className={styles.visualPlaceholder}><FileImage size={22}/><span>Preview unavailable</span></span>:<img src={url} alt={label} loading="lazy" onError={()=>setFailed(true)}/>}
+    {downloadable&&<a className={styles.visualDownload} href={downloadHref} download aria-label={`Download ${label}`} title={`Download ${label}`}><Download size={17} aria-hidden="true"/></a>}
+  </span>;
 }
 
 function StageDialog({ item, initialStage, onClose, onSaved, onStateChange }: { item: PrintJob; initialStage?: PrintJobStage; onClose: () => void; onSaved: (message: string) => Promise<void>; onStateChange: (dirty: boolean, saving: boolean) => void }) {

@@ -233,6 +233,15 @@ function addEnquiry() { queueFlags.canEnquiries = true; enquiries = [{ id: "synt
     assert.ok(within(overview()).getByRole("heading", { name: "Finished product" }));
     assert.ok(within(overview()).getByRole("heading", { name: "Logos & print artwork" }));
     assert.equal(within(overview()).getAllByRole("img").length, 3);
+    const downloads = within(overview()).getAllByRole("link", { name: /^Download / });
+    assert.equal(downloads.length, 3, "Every full-size mockup and artwork image has a quick download control");
+    assert.equal(within(row).queryByRole("link", { name: /^Download / }), null, "Compact job cards do not nest download links inside their open-job button");
+    const frontDownload = within(overview()).getByRole("link", { name: "Download Finished product · Front" });
+    const frontDownloadUrl = new URL(frontDownload.getAttribute("href"), "http://localhost:3007");
+    assert.equal(frontDownloadUrl.pathname, "/api/shops/download");
+    assert.equal(frontDownloadUrl.searchParams.get("url"), "https://synthetic.example.test/front-mockup.png");
+    assert.equal(frontDownloadUrl.searchParams.get("name"), "Synthetic front mockup.png");
+    assert.equal(frontDownload.hasAttribute("download"), true);
     assert.equal(handoff().dataset.quoteId, "echo");
     assert.equal(Boolean(screen.queryByRole("region", { name: "Synthetic quote editor" })), false);
     assert.ok(document.activeElement === overview()); assert.equal(patches().length, 0);
