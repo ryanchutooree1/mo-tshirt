@@ -24,8 +24,6 @@ function normalizeSizePrices(list: unknown) {
         return {
           size,
           price,
-          buyingPrice: toNumber(raw.buyingPrice),
-          profit: toNumber(raw.profit),
         };
       })
       .filter(Boolean) as ShopItem["sizePrices"]
