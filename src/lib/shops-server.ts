@@ -37,10 +37,13 @@ function getShopDatabase(): Firestore {
       !/^[a-z0-9-]+@[a-z0-9-]+\.iam\.gserviceaccount\.com$/.test(serviceAccount)) {
     throw new Error("Invalid shop server federation configuration.");
   }
-  const audience = `https://iam.googleapis.com/projects/${projectNumber}/locations/global/workloadIdentityPools/${pool}/providers/${provider}`;
+  // STS selects a provider by canonical resource name (no https: scheme).
+  // The separate OIDC token audience keeps the provider's HTTPS audience.
+  const stsAudience = `//iam.googleapis.com/projects/${projectNumber}/locations/global/workloadIdentityPools/${pool}/providers/${provider}`;
+  const tokenAudience = `https:${stsAudience}`;
   const authClient = ExternalAccountClient.fromJSON({
     type: "external_account",
-    audience,
+    audience: stsAudience,
     subject_token_type: "urn:ietf:params:oauth:token-type:jwt",
     token_url: "https://sts.googleapis.com/v1/token",
     service_account_impersonation_url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${serviceAccount}:generateAccessToken`,
@@ -49,7 +52,7 @@ function getShopDatabase(): Firestore {
       // access token. Never persist or log the Vercel token or Google token.
       getSubjectToken: async () => {
         try {
-          return await getVercelOidcToken({ audience });
+          return await getVercelOidcToken({ audience: tokenAudience });
         } catch (error) {
           logShopServerError("vercel-oidc", error);
           throw error;

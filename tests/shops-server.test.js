@@ -11,9 +11,9 @@ const config = {
   GCP_WORKLOAD_IDENTITY_POOL_ID: "shop-prod",
   GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID: "vercel-prod",
 };
-function setup(env = config, { nullClient = false, failToken = false } = {}) {
+function setup(env = config, { nullClient = false, failToken = false, realAuth = false } = {}) {
   const calls = { logs: [], firestore: [], tokens: [], auth: [], federation: [] };
-  const client = {};
+  let client = {};
   const modules = {
     "server-only": {},
     "@google-cloud/firestore": {
@@ -25,8 +25,12 @@ function setup(env = config, { nullClient = false, failToken = false } = {}) {
       FieldValue: { serverTimestamp: () => "server-timestamp" },
     },
     "google-auth-library": {
-      ExternalAccountClient: { fromJSON: (options) => { calls.federation.push(options); return nullClient ? null : client; } },
-      GoogleAuth: class { constructor(options) { calls.auth.push(options); } },
+      ExternalAccountClient: { fromJSON: (options) => {
+        calls.federation.push(options);
+        if (realAuth) client = require("google-auth-library").ExternalAccountClient.fromJSON(options);
+        return nullClient ? null : client;
+      } },
+      GoogleAuth: realAuth ? require("google-auth-library").GoogleAuth : class { constructor(options) { calls.auth.push(options); } },
     },
     "@vercel/oidc": { getVercelOidcToken: async (options) => {
       calls.tokens.push(options);
@@ -42,7 +46,7 @@ function setup(env = config, { nullClient = false, failToken = false } = {}) {
     assert.ok(Object.hasOwn(modules, name), `Unexpected import ${name}`);
     return modules[name];
   } });
-  return { api: exports, calls, client };
+  return { api: exports, calls, get client() { return client; } };
 }
 
 test("server initialization is lazy, uses federation, pins default database and caches only SDK clients", async () => {
@@ -58,7 +62,7 @@ test("server initialization is lazy, uses federation, pins default database and 
   assert.equal(calls.tokens.length, 0);
   const federation = calls.federation[0];
   const audience = "https://iam.googleapis.com/projects/123456789/locations/global/workloadIdentityPools/shop-prod/providers/vercel-prod";
-  assert.equal(federation.audience, audience);
+  assert.equal(federation.audience, audience.replace(/^https:/, ""));
   assert.equal(federation.token_url, "https://sts.googleapis.com/v1/token");
   assert.equal(federation.subject_token_type, "urn:ietf:params:oauth:token-type:jwt");
   assert.equal(federation.service_account_impersonation_url,
@@ -166,4 +170,34 @@ test("diagnostics terminate cycles and limit cause traversal to five objects", (
   api.logShopServerError("firestore", chain.cause);
   assert.equal(calls.logs[2][1].status, 418);
   assert.doesNotMatch(JSON.stringify(calls.logs), /SYNTHETIC_SECRET/);
+});
+
+
+test("real Google auth SDK serializes canonical STS audience separately from token audience", async () => {
+  const app = setup(config, { realAuth: true });
+  app.api.shopCollection();
+  const client = app.client;
+  assert.equal(await app.calls.firestore[0].auth.getClient(), client);
+  const requests = [];
+  const transport = { request: async (options) => {
+    requests.push(options);
+    const url = String(options.url);
+    if (url === "https://sts.googleapis.com/v1/token") {
+      assert.equal(options.data.get("audience"), "//iam.googleapis.com/projects/123456789/locations/global/workloadIdentityPools/shop-prod/providers/vercel-prod");
+      assert.equal(options.data.get("subject_token"), "synthetic-token-1");
+      assert.equal(options.data.get("scope"), "https://www.googleapis.com/auth/cloud-platform");
+      return { data: { access_token: "synthetic-sts-access", expires_in: 3600, token_type: "Bearer" } };
+    }
+    assert.equal(url, "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/shop@synthetic-project.iam.gserviceaccount.com:generateAccessToken");
+    assert.deepEqual(Array.from(options.data.scope), ["https://www.googleapis.com/auth/datastore"]);
+    return { data: { accessToken: "synthetic-impersonated-access", expireTime: new Date(Date.now() + 3600000).toISOString() } };
+  } };
+  // Stub both SDK HTTP transports before making any token request. No real
+  // credential, network call, or live service is involved in this regression.
+  client.stsCredential.transporter = transport;
+  client.transporter = transport;
+  const result = await client.getAccessToken();
+  assert.equal(result.token, "synthetic-impersonated-access");
+  assert.equal(requests.length, 2);
+  assert.equal(app.calls.tokens[0].audience, "https://iam.googleapis.com/projects/123456789/locations/global/workloadIdentityPools/shop-prod/providers/vercel-prod");
 });

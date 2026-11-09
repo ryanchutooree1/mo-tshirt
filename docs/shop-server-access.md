@@ -25,9 +25,11 @@ Set these nonsecret **server-only, production-scoped** Vercel variables:
 
 The code derives the custom audience as
 `https://iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID`
-and supplies it to both Google's external account client and Vercel's OIDC token
-provider. Google exchanges the short-lived token and impersonates the service
-account. Tokens and credentials must never be logged or saved in the repository.
+for Vercel's OIDC token provider. Google's external account client instead uses
+`//iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID`
+as the STS request audience. These are distinct fields: STS requires the canonical
+provider resource name without the `https:` scheme. Google exchanges the
+short-lived token and impersonates the service account. Tokens and credentials must never be logged or saved in the repository.
 No API key, private key, or Application Default Credentials fallback is used.
 
 Restrict the service account's Firestore IAM grant to the `(default)` database.
