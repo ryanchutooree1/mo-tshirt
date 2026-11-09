@@ -28,22 +28,25 @@ function setup({ records = [], signedIn = false, failRead = false } = {}) {
   const modules = {
     "next/server": { NextResponse: { json: (body, options) => Response.json(body, options) } },
     "next/headers": { cookies: async () => ({}) },
-    "firebase/firestore": {
-      collection: (_db, name) => name,
-      query: (collection, ...constraints) => ({ collection, constraints }),
-      where: (field, operator, value) => ({ field, operator, value }),
-      orderBy: (field, direction) => ({ field, direction }),
-      getDocs: async (query) => {
-        queries.push(query);
-        if (failRead) throw new Error("Synthetic database failure");
-        return {
-          docs: records
-            .filter((record) => query.constraints.every((c) => c.operator !== "==" || record[c.field] === c.value))
-            .map(({ id, ...data }) => ({ id, data: () => data })),
+    "@/lib/shops-server": {
+      shopCollection: () => {
+        const constraints = [];
+        const chain = {
+          where: (field, operator, value) => { constraints.push({ field, operator, value }); return chain; },
+          orderBy: (field, direction) => { constraints.push({ field, direction }); return chain; },
+          get: async () => {
+            queries.push({ collection: "shops", constraints });
+            if (failRead) throw new Error("Synthetic database failure");
+            return {
+              docs: records
+                .filter((record) => constraints.every((c) => c.operator !== "==" || record[c.field] === c.value))
+                .map(({ id, ...data }) => ({ id, data: () => data })),
+            };
+          },
         };
+        return chain;
       },
     },
-    "@/lib/firebase": { db: {} },
     "@/lib/shops": shops,
     "@/lib/shops-api": {},
     "@/lib/admin-auth": { hasAdminSession: async () => signedIn },

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { hasAdminSession } from "@/lib/admin-auth";
-import { db } from "@/lib/firebase";
+import { shopDocument, serverTimestamp } from "@/lib/shops-server";
+
+export const runtime = "nodejs";
 
 const MAX_URL_LENGTH = 4_096;
 
@@ -51,10 +52,10 @@ export async function PUT(
   }
 
   try {
-    await updateDoc(doc(db, "shops", id), patch);
+    await shopDocument(id).update(patch);
     return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error("shops:admin:studio-images", error);
+  } catch {
+    console.error("shops:admin:studio-images");
     return NextResponse.json({ error: "Failed to save studio images." }, { status: 500 });
   }
 }

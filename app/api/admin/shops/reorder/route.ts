@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { hasAdminSession } from "@/lib/admin-auth";
-import { db } from "@/lib/firebase";
+import { shopDocument, shopBatch, serverTimestamp } from "@/lib/shops-server";
+
+export const runtime = "nodejs";
 
 async function isAdmin() {
   return hasAdminSession(await cookies());
@@ -27,12 +28,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No items provided." }, { status: 400 });
     }
 
-    const batch = writeBatch(db);
+    const batch = shopBatch();
     for (const item of items) {
       if (!item.id || !Number.isFinite(item.position)) {
         return NextResponse.json({ error: "Invalid item payload." }, { status: 400 });
       }
-      batch.update(doc(db, "shops", item.id), {
+      batch.update(shopDocument(item.id), {
         position: Number(item.position),
         updatedAt: serverTimestamp(),
       });
@@ -40,8 +41,8 @@ export async function POST(req: Request) {
 
     await batch.commit();
     return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error("shops:admin:reorder", error);
+  } catch {
+    console.error("shops:admin:reorder");
     return NextResponse.json({ error: "Failed to reorder items." }, { status: 500 });
   }
 }

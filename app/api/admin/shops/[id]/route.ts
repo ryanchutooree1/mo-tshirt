@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { deleteDoc, doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { hasAdminSession } from "@/lib/admin-auth";
-import { db } from "@/lib/firebase";
+import { shopDocument, serverTimestamp } from "@/lib/shops-server";
 import { parseShopPayload } from "@/lib/shops-api";
+
+export const runtime = "nodejs";
 
 async function isAdmin() {
   return hasAdminSession(await cookies());
@@ -28,13 +29,13 @@ export async function PUT(
       return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
 
-    await updateDoc(doc(db, "shops", id), {
+    await shopDocument(id).update({
       ...parsed.data,
       updatedAt: serverTimestamp(),
     });
     return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error("shops:admin:put", error);
+  } catch {
+    console.error("shops:admin:put");
     return NextResponse.json({ error: "Failed to update shop item." }, { status: 500 });
   }
 }
@@ -52,10 +53,10 @@ export async function DELETE(
   }
 
   try {
-    await deleteDoc(doc(db, "shops", id));
+    await shopDocument(id).delete();
     return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error("shops:admin:delete", error);
+  } catch {
+    console.error("shops:admin:delete");
     return NextResponse.json({ error: "Failed to delete shop item." }, { status: 500 });
   }
 }

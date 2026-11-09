@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { addDoc, collection, getDocs, orderBy, query, serverTimestamp } from "firebase/firestore";
 import { hasAdminSession } from "@/lib/admin-auth";
-import { db } from "@/lib/firebase";
+import { shopCollection, serverTimestamp } from "@/lib/shops-server";
 import { parseShopPayload } from "@/lib/shops-api";
 import { normalizeSizeLabel, sortShopItems, sortSizes, sortSizePrices, toNumber, type ShopItem } from "@/lib/shops";
+
+export const runtime = "nodejs";
 
 async function isAdmin() {
   return hasAdminSession(await cookies());
@@ -77,11 +78,11 @@ export async function GET() {
   }
 
   try {
-    const snap = await getDocs(query(collection(db, "shops"), orderBy("createdAt", "desc")));
+    const snap = await shopCollection().orderBy("createdAt", "desc").get();
     const items = sortShopItems(snap.docs.map((doc) => mapDoc(doc.id, doc.data())));
     return NextResponse.json({ items });
-  } catch (error) {
-    console.error("shops:admin:get", error);
+  } catch {
+    console.error("shops:admin:get");
     return NextResponse.json({ error: "Failed to load shops." }, { status: 500 });
   }
 }
@@ -104,10 +105,10 @@ export async function POST(req: Request) {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
-    const ref = await addDoc(collection(db, "shops"), payload);
+    const ref = await shopCollection().add(payload);
     return NextResponse.json({ id: ref.id });
-  } catch (error) {
-    console.error("shops:admin:post", error);
+  } catch {
+    console.error("shops:admin:post");
     return NextResponse.json({ error: "Failed to save shop item." }, { status: 500 });
   }
 }

@@ -23,7 +23,7 @@
     "firestore:migrate-quotation-uploads": "node scripts/migrate-quotation-uploads.mjs",
     "test:ai-assistant": "node --no-warnings --test tests/ai-assistant.test.mjs",
     "test:pricing": "node --test tests/pricing.test.js tests/quote-auto-pricing.test.js tests/design-studio-pricing.test.js",
-    "test:shops": "node --test tests/shops-public-pricing.test.js",
+    "test:shops": "node --test tests/shops-public-pricing.test.js tests/shops-server.test.js tests/shops-server-emulator.test.js",
     "postbuild": "next-sitemap",
     "test:admin-workbench": "node --test tests/admin-workbench.test.cjs tests/admin-order-completion.test.cjs",
     "test:bot-testing": "node --test tests/bot-testing.test.mjs && node tests/bot-testing-ui.test.cjs",
@@ -34,12 +34,15 @@
     "test:selling-rules": "node --test tests/selling-rules.test.mjs && node tests/selling-rules-ui.test.cjs"
   },
   "dependencies": {
+    "@google-cloud/firestore": "^9.4.0",
     "@imgly/background-removal": "^1.7.0",
     "@types/pg": "^8.20.0",
+    "@vercel/oidc": "^4.0.8",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "firebase": "^12.2.1",
     "framer-motion": "^12.23.12",
+    "google-auth-library": "^11.3.4",
     "heic2any": "^0.0.4",
     "jspdf": "^3.0.2",
     "lucide": "^0.542.0",
@@ -54,6 +57,7 @@
     "react-dom": "19.2.4",
     "react-icons": "^5.5.0",
     "recharts": "^3.1.2",
+    "server-only": "^0.0.1",
     "sharp": "^0.34.5",
     "swiper": "^11.2.10",
     "tesseract.js": "^7.0.0"

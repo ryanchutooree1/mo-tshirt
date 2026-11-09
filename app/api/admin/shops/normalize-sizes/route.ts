@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { collection, doc, getDocs, serverTimestamp, writeBatch } from "firebase/firestore";
 import { hasAdminSession } from "@/lib/admin-auth";
-import { db } from "@/lib/firebase";
+import { shopCollection, shopDocument, shopBatch, serverTimestamp } from "@/lib/shops-server";
 import { normalizeSizeLabel, sortSizePrices, sortSizes, toNumber, type ShopSizePrice } from "@/lib/shops";
+
+export const runtime = "nodejs";
 
 async function isAdmin() {
   return hasAdminSession(await cookies());
@@ -34,8 +35,8 @@ export async function POST() {
   }
 
   try {
-    const snap = await getDocs(collection(db, "shops"));
-    const batch = writeBatch(db);
+    const snap = await shopCollection().get();
+    const batch = shopBatch();
     let updated = 0;
 
     snap.docs.forEach((docSnap) => {
@@ -63,7 +64,7 @@ export async function POST() {
               .filter(Boolean)
           );
 
-      batch.update(doc(db, "shops", docSnap.id), {
+      batch.update(shopDocument(docSnap.id), {
         sizePrices: normalizedSizePrices,
         sizes: normalizedSizes,
         updatedAt: serverTimestamp(),
@@ -76,8 +77,8 @@ export async function POST() {
     }
 
     return NextResponse.json({ updated });
-  } catch (error) {
-    console.error("shops:admin:normalize", error);
+  } catch {
+    console.error("shops:admin:normalize");
     return NextResponse.json({ error: "Failed to normalize sizes." }, { status: 500 });
   }
 }

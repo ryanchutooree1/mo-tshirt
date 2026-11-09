@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { shopCollection } from "@/lib/shops-server";
 import {
   getQuoteColorOptionsByGarment,
   sortQuoteColors,
@@ -19,11 +18,11 @@ type QuoteOptionsResponse = {
   colorsByGarment: Record<QuoteGarmentOption, string[]>;
 };
 
+export const runtime = "nodejs";
+
 export async function GET() {
   try {
-    const snap = await getDocs(
-      query(collection(db, "shops"), where("isActive", "==", true))
-    );
+    const snap = await shopCollection().where("isActive", "==", true).get();
 
     const items: QuoteOptionSource[] = snap.docs.map((doc) => {
       const data = doc.data() as Record<string, unknown>;
@@ -41,8 +40,8 @@ export async function GET() {
     };
 
     return NextResponse.json(response);
-  } catch (error) {
-    console.error("quote-options:get", error);
+  } catch {
+    console.error("quote-options:get");
     return NextResponse.json(
       { error: "Failed to load quote options." },
       { status: 500 }
