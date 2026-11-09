@@ -107,6 +107,13 @@ const TSHIRT_DTF_PLACEMENT_PRICES = {
   FRONT_LARGE_BACK_LARGE: 500,
 };
 
+const TSHIRT_DTF_FRONT_BACK_PRICES_BY_SIZE = {
+  "2XL": 600,
+  XXL: 600,
+  "3XL": 600,
+  XXXL: 600,
+};
+
 const QUANTITY_PRICE_FACTORS = [
   { min: 50, factor: 0.8 },
   { min: 30, factor: 0.85 },
@@ -161,14 +168,22 @@ function getVinylCosts({ rollPrice = VINYL_ROLL_PRICE, wasteFactor = VINYL_WASTE
   return { rollArea, costPerCm2, small, large };
 }
 
-function getPriceBookPrice({ itemType, sizeBand, method, printOption, quantity = 1 } = {}) {
+function getPriceBookPrice({ itemType, sizeBand, size, method, printOption, quantity = 1 } = {}) {
   const itemKey = ITEM_TYPE_KEYS[itemType] || ITEM_TYPE_KEYS[`${itemType}`] || "TSHIRT";
   const sizeKey = SIZE_BAND_KEYS[sizeBand] || SIZE_BAND_KEYS[`${sizeBand}`] || "XS_XL";
   const methodKey = METHOD_KEYS[method] || METHOD_KEYS[`${method}`] || "SCREEN";
   const printKey = printOption || "FRONT_SMALL";
   if (itemKey === "TSHIRT" && methodKey === "DTF") {
     const fixedPlacementPrice = TSHIRT_DTF_PLACEMENT_PRICES[printKey];
-    if (fixedPlacementPrice) return fixedPlacementPrice;
+    if (fixedPlacementPrice) {
+      // Keep the exact garment size: the shared 3XL-4XL cost band must not
+      // apply the 3XL front-and-back selling price to 4XL garments.
+      const exactSize = String(size || sizeBand || "").replace(/\s+/g, "").toUpperCase();
+      const sizePrice = printKey.includes("_BACK_")
+        ? TSHIRT_DTF_FRONT_BACK_PRICES_BY_SIZE[exactSize]
+        : null;
+      return sizePrice || fixedPlacementPrice;
+    }
   }
   const retailPrice = (
     PRICE_BOOK?.[itemKey]?.[sizeKey]?.[methodKey]?.[printKey] ||
@@ -200,6 +215,7 @@ function computeQuote(input) {
     getPriceBookPrice({
       itemType: input.itemType,
       sizeBand: input.sizeBand || input.blankSizeBand,
+      size: input.size,
       method,
       printOption: input.printOption || "FRONT_SMALL",
       quantity: qty,

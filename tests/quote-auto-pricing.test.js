@@ -207,3 +207,60 @@ test("does not change manual prices, sent quotes, orders or mismatched lines", (
     assert.equal(buildMissingPricePatch({ ...openRequest(), ...changes }), null);
   }
 });
+
+test("automatic DTF front-and-back prices respect every adult size and alias", () => {
+  for (const [size, expected] of [["XS", 500], ["S", 500], ["M", 500], ["L", 500], ["XL", 500], ["2XL", 600], ["XXL", 600], ["3XL", 600], ["XXXL", 600], [" 3xl ", 600], ["4XL", 500], ["XXXXL", 500], ["8 years", 500]]) {
+    for (const printPlacement of ["small_front_back", "small_front_large_back", "large_front_small_back", "front_back", "large_front_large_back", "logo_front_back", "Front + Back"]) {
+      for (const quantity of [1, 5, 10, 30, 50]) {
+        assert.equal(getAutomaticUnitPrice({ garment: { garment: "T-Shirt", size, quantity }, printMethod: "DTF", printPlacement }), expected, `${size}, ${printPlacement}, quantity ${quantity}`);
+      }
+    }
+  }
+});
+
+test("mixed-size quote lines, subtotal and delivery use the same size prices", () => {
+  const result = buildAutomaticQuotePricing({
+    garments: [
+      { garment: "T-Shirt", color: "Black", size: "M", quantity: 2 },
+      { garment: "T-Shirt", color: "Black", size: "2XL", quantity: 2 },
+      { garment: "T-Shirt", color: "Red", size: "3XL", quantity: 1 },
+      { garment: "T-Shirt", color: "White", size: "4XL", quantity: 1 },
+    ],
+    printMethod: "Not sure",
+    designBrief: { printPlacement: "Front + Back" },
+    delivery: "Post Office Express Delivery (Rs 150)",
+  });
+  assert.deepEqual(result.lines.map(line => line.unitPrice), [500, 600, 600, 500]);
+  assert.deepEqual(result.lines.map(line => line.automaticPrice), [500, 600, 600, 500]);
+  assert.deepEqual(result.lines.map(line => line.unitProfit), [150, 250, 250, 150]);
+  assert.equal(result.subtotal, 3300);
+  assert.equal(result.deliveryFee, 150);
+  assert.equal(result.total, 3450);
+  assert.equal(result.requiresReview, false);
+});
+
+test("size-specific DTF front-and-back prices do not affect other printing or garments", () => {
+  for (const size of ["2XL", "3XL", "XXL", "XXXL"]) {
+    for (const printPlacement of ["small_front_only", "large_front_only", "small_back_only", "back_only"]) {
+      assert.equal(getAutomaticUnitPrice({ garment: { garment: "T-Shirt", size }, printMethod: "DTF", printPlacement }), 450);
+    }
+  }
+  for (const [garment, printMethod, expected] of [["T-Shirt", "Screen", 745], ["T-Shirt", "Vinyl", 775], ["Poloshirt", "DTF", 1025], ["T-Shirt", "No customization", 300]]) {
+    assert.equal(getAutomaticUnitPrice({ garment: { garment, size: "3XL" }, printMethod, printPlacement: "front_back" }), expected);
+  }
+});
+
+test("an existing saved automatic price is not overwritten by the new price rule", () => {
+  const record = {
+    status: "new",
+    garments: [{ garment: "T-Shirt", size: "3XL", quantity: 1 }],
+    printMethod: "DTF",
+    designBrief: { printPlacement: "Front + Back" },
+    quote: { lines: [{ quantity: 1, unitPrice: 500, priceSource: "automatic" }], deliveryFee: 150, total: 650 },
+  };
+  assert.equal(buildMissingPricePatch(record), null);
+  const missing = { ...record, quote: { ...record.quote, lines: [{ quantity: 1, unitPrice: 0 }] } };
+  const patch = buildMissingPricePatch(missing);
+  assert.equal(patch.quote.lines[0].unitPrice, 600);
+  assert.equal(patch.quote.total, 750);
+});

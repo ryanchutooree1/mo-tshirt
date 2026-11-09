@@ -163,6 +163,7 @@ function getAutomaticUnitPrice({ garment, printMethod, printPlacement }) {
   const unitPrice = getPriceBookPrice({
     itemType,
     sizeBand,
+    size: garment?.size,
     method,
     printOption,
     quantity: garment?.quantity,
@@ -188,6 +189,7 @@ function getAutomaticUnitCost({ garment, printMethod, printPlacement }) {
     qty: garment?.quantity,
     itemType,
     sizeBand,
+    size: garment?.size,
     method,
     printOption,
     blankCost: blankInfo?.cost || 0,
