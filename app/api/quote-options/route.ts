@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { shopCollection } from "@/lib/shops-server";
+import { shopCollection, logShopServerError } from "@/lib/shops-server";
 import {
   getQuoteColorOptionsByGarment,
   sortQuoteColors,
@@ -40,8 +40,8 @@ export async function GET() {
     };
 
     return NextResponse.json(response);
-  } catch {
-    console.error("quote-options:get");
+  } catch (error) {
+    logShopServerError("firestore", error);
     return NextResponse.json(
       { error: "Failed to load quote options." },
       { status: 500 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { hasAdminSession } from "@/lib/admin-auth";
-import { shopCollection, shopDocument, shopBatch, serverTimestamp } from "@/lib/shops-server";
+import { shopCollection, shopDocument, shopBatch, serverTimestamp, logShopServerError } from "@/lib/shops-server";
 import { normalizeSizeLabel, sortSizePrices, sortSizes, toNumber, type ShopSizePrice } from "@/lib/shops";
 
 export const runtime = "nodejs";
@@ -77,8 +77,8 @@ export async function POST() {
     }
 
     return NextResponse.json({ updated });
-  } catch {
-    console.error("shops:admin:normalize");
+  } catch (error) {
+    logShopServerError("firestore", error);
     return NextResponse.json({ error: "Failed to normalize sizes." }, { status: 500 });
   }
 }

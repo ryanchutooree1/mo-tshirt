@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { hasAdminSession } from "@/lib/admin-auth";
-import { shopDocument, serverTimestamp } from "@/lib/shops-server";
+import { shopDocument, serverTimestamp, logShopServerError } from "@/lib/shops-server";
 
 export const runtime = "nodejs";
 
@@ -54,8 +54,8 @@ export async function PUT(
   try {
     await shopDocument(id).update(patch);
     return NextResponse.json({ ok: true });
-  } catch {
-    console.error("shops:admin:studio-images");
+  } catch (error) {
+    logShopServerError("firestore", error);
     return NextResponse.json({ error: "Failed to save studio images." }, { status: 500 });
   }
 }

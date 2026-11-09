@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { shopCollection } from "@/lib/shops-server";
+import { shopCollection, logShopServerError } from "@/lib/shops-server";
 import { normalizeSizeLabel, sortShopItems, sortSizes, sortSizePrices, toNumber, type ShopItem } from "@/lib/shops";
 
 function getPositionValue(data: Record<string, any>) {
@@ -68,8 +68,8 @@ export async function GET() {
     const snap = await shopCollection().where("isActive", "==", true).get();
     const items = sortShopItems(snap.docs.map((doc) => mapDoc(doc.id, doc.data())));
     return NextResponse.json({ items });
-  } catch {
-    console.error("shops:get");
+  } catch (error) {
+    logShopServerError("firestore", error);
     return NextResponse.json({ error: "Failed to load shops." }, { status: 500 });
   }
 }

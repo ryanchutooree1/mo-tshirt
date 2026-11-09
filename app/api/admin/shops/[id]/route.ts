@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { hasAdminSession } from "@/lib/admin-auth";
-import { shopDocument, serverTimestamp } from "@/lib/shops-server";
+import { shopDocument, serverTimestamp, logShopServerError } from "@/lib/shops-server";
 import { parseShopPayload } from "@/lib/shops-api";
 
 export const runtime = "nodejs";
@@ -34,8 +34,8 @@ export async function PUT(
       updatedAt: serverTimestamp(),
     });
     return NextResponse.json({ ok: true });
-  } catch {
-    console.error("shops:admin:put");
+  } catch (error) {
+    logShopServerError("firestore", error);
     return NextResponse.json({ error: "Failed to update shop item." }, { status: 500 });
   }
 }
@@ -55,8 +55,8 @@ export async function DELETE(
   try {
     await shopDocument(id).delete();
     return NextResponse.json({ ok: true });
-  } catch {
-    console.error("shops:admin:delete");
+  } catch (error) {
+    logShopServerError("firestore", error);
     return NextResponse.json({ error: "Failed to delete shop item." }, { status: 500 });
   }
 }

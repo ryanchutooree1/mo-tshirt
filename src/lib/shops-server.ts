@@ -47,7 +47,14 @@ function getShopDatabase(): Firestore {
     subject_token_supplier: {
       // Fetch a current request token when Google refreshes its short-lived
       // access token. Never persist or log the Vercel token or Google token.
-      getSubjectToken: () => getVercelOidcToken({ audience }),
+      getSubjectToken: async () => {
+        try {
+          return await getVercelOidcToken({ audience });
+        } catch (error) {
+          logShopServerError("vercel-oidc", error);
+          throw error;
+        }
+      },
     },
     scopes: ["https://www.googleapis.com/auth/datastore"],
   });
@@ -76,3 +83,43 @@ export function shopBatch() {
 }
 
 export const serverTimestamp = () => FieldValue.serverTimestamp();
+
+/** Only fixed categories and bounded numeric codes may reach logs. Never log
+ * SDK messages, request/response objects, URLs, credentials or document data. */
+export function logShopServerError(operation: string, error: unknown) {
+  let stage = operation === "vercel-oidc" ? "vercel-oidc" : "firestore-or-configuration";
+  let status: number | null = null;
+  let code: number | null = null;
+  let oauth: string | null = null;
+  const oauthErrors = ["invalid_grant", "invalid_target", "invalid_request", "unauthorized_client", "access_denied", "invalid_scope"];
+  const httpStatus = (value: unknown): number | null =>
+    typeof value === "number" && Number.isInteger(value) && value >= 100 && value <= 599 ? value : null;
+  const seen = new Set<object>();
+  let current = error;
+  // GAX wraps auth/transport errors in GoogleError.cause. Inspect at most five
+  // distinct error objects, retaining only allowlisted scalar diagnostics.
+  for (let depth = 0; depth < 5 && current && typeof current === "object"; depth += 1) {
+    if (seen.has(current)) break;
+    seen.add(current);
+    const value = current as Record<string, unknown>;
+    const response = value.response && typeof value.response === "object"
+      ? value.response as Record<string, unknown> : {};
+    const config = value.config && typeof value.config === "object"
+      ? value.config as Record<string, unknown> : {};
+    const url = typeof config.url === "string" ? config.url : "";
+    const origin = config.url && typeof config.url === "object"
+      ? (config.url as { origin?: unknown }).origin : "";
+    if (stage === "firestore-or-configuration") {
+      if (url.startsWith("https://sts.googleapis.com/") || origin === "https://sts.googleapis.com") stage = "google-sts";
+      else if (url.startsWith("https://iamcredentials.googleapis.com/") || origin === "https://iamcredentials.googleapis.com") stage = "google-impersonation";
+    }
+    status ??= httpStatus(response.status) ?? httpStatus(value.httpStatusCode);
+    if (code === null && typeof value.code === "number" && Number.isInteger(value.code)
+        && value.code >= 0 && value.code <= 16) code = value.code;
+    const data = response.data && typeof response.data === "object"
+      ? response.data as Record<string, unknown> : {};
+    if (oauth === null && typeof data.error === "string" && oauthErrors.includes(data.error)) oauth = data.error;
+    current = value.cause;
+  }
+  console.error("shops:server-failure", { stage, status, code, oauth });
+}

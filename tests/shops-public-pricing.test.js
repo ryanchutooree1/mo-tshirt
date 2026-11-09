@@ -29,6 +29,7 @@ function setup({ records = [], signedIn = false, failRead = false } = {}) {
     "next/server": { NextResponse: { json: (body, options) => Response.json(body, options) } },
     "next/headers": { cookies: async () => ({}) },
     "@/lib/shops-server": {
+      logShopServerError() {},
       shopCollection: () => {
         const constraints = [];
         const chain = {

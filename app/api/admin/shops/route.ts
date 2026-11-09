@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { hasAdminSession } from "@/lib/admin-auth";
-import { shopCollection, serverTimestamp } from "@/lib/shops-server";
+import { shopCollection, serverTimestamp, logShopServerError } from "@/lib/shops-server";
 import { parseShopPayload } from "@/lib/shops-api";
 import { normalizeSizeLabel, sortShopItems, sortSizes, sortSizePrices, toNumber, type ShopItem } from "@/lib/shops";
 
@@ -81,8 +81,8 @@ export async function GET() {
     const snap = await shopCollection().orderBy("createdAt", "desc").get();
     const items = sortShopItems(snap.docs.map((doc) => mapDoc(doc.id, doc.data())));
     return NextResponse.json({ items });
-  } catch {
-    console.error("shops:admin:get");
+  } catch (error) {
+    logShopServerError("firestore", error);
     return NextResponse.json({ error: "Failed to load shops." }, { status: 500 });
   }
 }
@@ -107,8 +107,8 @@ export async function POST(req: Request) {
     };
     const ref = await shopCollection().add(payload);
     return NextResponse.json({ id: ref.id });
-  } catch {
-    console.error("shops:admin:post");
+  } catch (error) {
+    logShopServerError("firestore", error);
     return NextResponse.json({ error: "Failed to save shop item." }, { status: 500 });
   }
 }

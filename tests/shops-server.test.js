@@ -12,7 +12,7 @@ const config = {
   GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID: "vercel-prod",
 };
 function setup(env = config, { nullClient = false, failToken = false } = {}) {
-  const calls = { firestore: [], tokens: [], auth: [], federation: [] };
+  const calls = { logs: [], firestore: [], tokens: [], auth: [], federation: [] };
   const client = {};
   const modules = {
     "server-only": {},
@@ -38,7 +38,7 @@ function setup(env = config, { nullClient = false, failToken = false } = {}) {
   const source = fs.readFileSync("src/lib/shops-server.ts", "utf8");
   vm.runInNewContext(ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
-  }).outputText, { exports, process: { env }, require: (name) => {
+  }).outputText, { exports, console: { error: (...args) => calls.logs.push(args) }, process: { env }, require: (name) => {
     assert.ok(Object.hasOwn(modules, name), `Unexpected import ${name}`);
     return modules[name];
   } });
@@ -118,4 +118,52 @@ test("all migrated routes use the server-only adapter and no client database imp
     assert.doesNotMatch(source, /console\.error\([^\n]+,\s*error/);
   }
   assert.match(fs.readFileSync("src/lib/shops-server.ts", "utf8"), /import "server-only"/);
+});
+
+
+test("diagnostics emit only fixed categories and bounded numeric codes", () => {
+  const { api, calls } = setup();
+  api.logShopServerError("attacker-controlled", {
+    message: "SYNTHETIC_SECRET", code: "SYNTHETIC_SECRET",
+    config: { url: "https://sts.googleapis.com/v1/token", headers: { Authorization: "SYNTHETIC_SECRET" } },
+    response: { status: 400, data: { error: "invalid_grant", error_description: "SYNTHETIC_SECRET" } },
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(calls.logs[0])), ["shops:server-failure", { stage: "google-sts", status: 400, code: null, oauth: "invalid_grant" }]);
+  api.logShopServerError("vercel-oidc", { code: 7, response: { status: 999, data: { error: "SYNTHETIC_SECRET" } } });
+  assert.deepEqual(JSON.parse(JSON.stringify(calls.logs[1])), ["shops:server-failure", { stage: "vercel-oidc", status: null, code: 7, oauth: null }]);
+  assert.doesNotMatch(JSON.stringify(calls.logs), /SYNTHETIC_SECRET|attacker-controlled/);
+});
+
+
+test("diagnostics unwrap GAX causes and preserve bounded HTTP status", () => {
+  const { api, calls } = setup();
+  const original = {
+    message: "SYNTHETIC_SECRET", code: "SYNTHETIC_SECRET",
+    config: { url: { origin: "https://iamcredentials.googleapis.com" }, data: "SYNTHETIC_SECRET" },
+    response: { status: 403, data: { error: "access_denied", details: "SYNTHETIC_SECRET" } },
+  };
+  api.logShopServerError("firestore", { code: 2, httpStatusCode: 403, cause: original });
+  assert.deepEqual(JSON.parse(JSON.stringify(calls.logs[0])), ["shops:server-failure", { stage: "google-impersonation", status: 403, code: 2, oauth: "access_denied" }]);
+  api.logShopServerError("firestore", { httpStatusCode: 429 });
+  assert.equal(calls.logs[1][1].status, 429);
+  for (const invalid of [99, 600, 403.5, "403", Infinity, NaN, "SYNTHETIC_SECRET"]) {
+    api.logShopServerError("firestore", { httpStatusCode: invalid });
+    assert.equal(calls.logs.at(-1)[1].status, null);
+  }
+  assert.doesNotMatch(JSON.stringify(calls.logs), /SYNTHETIC_SECRET/);
+});
+
+test("diagnostics terminate cycles and limit cause traversal to five objects", () => {
+  const { api, calls } = setup();
+  const cyclic = { code: 7 }; cyclic.cause = cyclic;
+  api.logShopServerError("firestore", cyclic);
+  assert.equal(calls.logs.length, 1);
+  assert.equal(calls.logs[0][1].code, 7);
+  let chain = { httpStatusCode: 418, message: "SYNTHETIC_SECRET" };
+  for (let i = 0; i < 5; i += 1) chain = { cause: chain };
+  api.logShopServerError("firestore", chain);
+  assert.equal(calls.logs[1][1].status, null);
+  api.logShopServerError("firestore", chain.cause);
+  assert.equal(calls.logs[2][1].status, 418);
+  assert.doesNotMatch(JSON.stringify(calls.logs), /SYNTHETIC_SECRET/);
 });

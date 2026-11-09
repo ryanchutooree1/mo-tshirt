@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { hasAdminSession } from "@/lib/admin-auth";
-import { shopDocument, shopBatch, serverTimestamp } from "@/lib/shops-server";
+import { shopDocument, shopBatch, serverTimestamp, logShopServerError } from "@/lib/shops-server";
 
 export const runtime = "nodejs";
 
@@ -41,8 +41,8 @@ export async function POST(req: Request) {
 
     await batch.commit();
     return NextResponse.json({ ok: true });
-  } catch {
-    console.error("shops:admin:reorder");
+  } catch (error) {
+    logShopServerError("firestore", error);
     return NextResponse.json({ error: "Failed to reorder items." }, { status: 500 });
   }
 }
