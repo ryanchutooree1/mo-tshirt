@@ -79,10 +79,10 @@ import uploadStyles from "./ArtworkUploadSlot.module.css";
 import {
   getMinSizePrice,
   getShopDesignProductId,
-  getSizePrice,
+  getStudioGarmentPrice,
   getSizes,
   type ShopDesignProductId,
-  type ShopItem,
+  type StudioShopItem,
 } from "@/lib/shops";
 
 type ProductId = ShopDesignProductId;
@@ -157,7 +157,7 @@ type PremiumDesignStudioClientProps = {
 };
 
 
-function getPreferredShopItem(items: ShopItem[], productId: ProductId) {
+function getPreferredShopItem(items: StudioShopItem[], productId: ProductId) {
   const variants = items.filter((item) => getShopDesignProductId(item.title) === productId);
   return variants.find((item) => item.colors.some((color) => color.toLowerCase() === "black")) ?? variants[0] ?? null;
 }
@@ -197,7 +197,7 @@ export default function PremiumDesignStudioClient({
   const journey = useJourneyTracking("design", requestSource);
   const [step, setStep] = useState<StudioStep>(1);
   const [productId, setProductId] = useState<ProductId>("tshirt");
-  const [shopItems, setShopItems] = useState<ShopItem[]>([]);
+  const [shopItems, setShopItems] = useState<StudioShopItem[]>([]);
   const [selectedShopItemId, setSelectedShopItemId] = useState<string | null>(null);
   const [shopLoading, setShopLoading] = useState(true);
   const [shopError, setShopError] = useState<string | null>(null);
@@ -244,8 +244,8 @@ export default function PremiumDesignStudioClient({
 
     async function loadShopProducts() {
       try {
-        const response = await fetch("/api/shops", { signal: controller.signal });
-        const body = (await response.json()) as { items?: ShopItem[]; error?: string };
+        const response = await fetch("/api/shops?purpose=design-studio", { signal: controller.signal });
+        const body = (await response.json()) as { items?: StudioShopItem[]; error?: string };
         if (!response.ok) throw new Error(body.error || "Could not load shop products.");
 
         const catalog = (Array.isArray(body.items) ? body.items : []).filter(
@@ -278,7 +278,7 @@ export default function PremiumDesignStudioClient({
     return () => controller.abort();
   }, [initialShopItemId]);
 
-  const catalogByProduct = useMemo<Record<ProductId, ShopItem[]>>(
+  const catalogByProduct = useMemo<Record<ProductId, StudioShopItem[]>>(
     () => ({
       tshirt: shopItems.filter((item) => getShopDesignProductId(item.title) === "tshirt"),
       polo: shopItems.filter((item) => getShopDesignProductId(item.title) === "polo"),
@@ -318,10 +318,13 @@ export default function PremiumDesignStudioClient({
   const hasCustomization = decoratedSides > 0;
   const artworkSides = (["front", "back"] as Side[]).filter((side) => artworkFiles[side]).map((side) => `${side[0].toUpperCase()}${side.slice(1)}`).join(" + ") || (hasCustomization ? "Text only" : "None");
   const discount = totalQty >= 100 ? 0.14 : totalQty >= 50 ? 0.1 : totalQty >= 20 ? 0.06 : 0;
-  const garmentSubtotal = availableSizes.reduce((sum, size) => {
-    const garmentPrice = selectedShopItem ? getSizePrice(selectedShopItem, size) : product.base;
-    return sum + garmentPrice * (sizes[size] || 0);
-  }, 0);
+  const selectedPricing = availableSizes.filter((size) => (sizes[size] || 0) > 0).map((size) => ({
+    quantity: sizes[size] || 0,
+    garmentPrice: selectedShopItem ? getStudioGarmentPrice(selectedShopItem, size, hasCustomization)
+      : hasCustomization ? product.base : null,
+  }));
+  const needsGarmentPriceReview = selectedPricing.some(({ garmentPrice }) => garmentPrice === null);
+  const garmentSubtotal = selectedPricing.reduce((sum, line) => sum + (line.garmentPrice ?? 0) * line.quantity, 0);
   const printUnitPrice = hasCustomization ? method.add + Math.max(0, decoratedSides - 1) * 35 : 0;
   const productionSubtotal = Math.round((garmentSubtotal + printUnitPrice * totalQty) * (1 - discount));
   const minimumOrderAdjustment = getMinimumOrderAdjustment({
@@ -331,9 +334,10 @@ export default function PremiumDesignStudioClient({
     productionSubtotal,
   });
   const totalPrice = productionSubtotal + minimumOrderAdjustment;
+  const displayTotal = needsGarmentPriceReview ? "Price to confirm" : formatMoney(totalPrice);
   const printMethodLabel = hasCustomization ? method.label : "No customization";
   const needsDelivery = delivery !== DELIVERY_OPTIONS[0];
-  const canSubmit = totalQty > 0 && client.name.trim() !== "" && (client.email.trim() !== "" || client.phone.trim() !== "") && (!needsDelivery || (client.deliveryName.trim() !== "" && client.address.trim() !== ""));
+  const canSubmit = totalQty > 0 && !needsGarmentPriceReview && client.name.trim() !== "" && (client.email.trim() !== "" || client.phone.trim() !== "") && (!needsDelivery || (client.deliveryName.trim() !== "" && client.address.trim() !== ""));
   const today = useMemo(() => new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 10), []);
 
   useEffect(() => () => { if (artworkUrls.front) URL.revokeObjectURL(artworkUrls.front); }, [artworkUrls.front]);
@@ -392,7 +396,7 @@ export default function PremiumDesignStudioClient({
     }
   }
 
-  function selectShopItem(item: ShopItem) {
+  function selectShopItem(item: StudioShopItem) {
     const nextProductId = getShopDesignProductId(item.title);
     if (!nextProductId) return;
     trackProductInterest(item.id, item.title);
@@ -658,7 +662,9 @@ export default function PremiumDesignStudioClient({
 
   async function submitQuote(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!canSubmit) { setResult({ ok: false, text: "Add a client name, contact method and valid delivery details." }); return; }
+    if (!canSubmit) { setResult({ ok: false, text: needsGarmentPriceReview
+      ? "This garment price needs confirmation before you can submit."
+      : "Add a client name, contact method and valid delivery details." }); return; }
     setSubmitting(true);
     setSubmissionStatus("Preparing final mockups…");
     setResult(null);
@@ -815,7 +821,7 @@ export default function PremiumDesignStudioClient({
                   </div>
                 </div>
               </div>
-              <div data-studio-part="stats" className="grid grid-cols-4 border-t border-[#ecebe6] bg-[#fbfbf9]"><PreviewStat label="Garment" value={product.label} /><PreviewStat label="Colour" value={selectedColor} /><PreviewStat label="Quantity" value={String(totalQty)} /><PreviewStat label="Estimate" value={formatMoney(totalPrice)} accent /></div>
+              <div data-studio-part="stats" className="grid grid-cols-4 border-t border-[#ecebe6] bg-[#fbfbf9]"><PreviewStat label="Garment" value={product.label} /><PreviewStat label="Colour" value={selectedColor} /><PreviewStat label="Quantity" value={String(totalQty)} /><PreviewStat label="Estimate" value={displayTotal} accent /></div>
             </section>
 
             <div className="absolute inset-x-2 bottom-[max(.5rem,env(safe-area-inset-bottom))] z-[70] sm:hidden"><MobileStudioDock activeTool={mobileTool} expanded={mobileToolExpanded} onSelect={selectMobileTool} /></div>
@@ -842,7 +848,7 @@ export default function PremiumDesignStudioClient({
                       </div>
                       <div className="studio-dark rounded-2xl bg-[#171714] p-5 !text-white">
                         <div className="flex justify-between text-xs text-[#aaa9a2]"><span>Total quantity</span><span>{totalQty}</span></div>
-                        <div className="mt-3 flex items-end justify-between"><span className="text-xs text-[#aaa9a2]">Estimated total</span><span className="text-2xl font-extrabold">{formatMoney(totalPrice)}</span></div>
+                        <div className="mt-3 flex items-end justify-between"><span className="text-xs text-[#aaa9a2]">Estimated total</span><span className="text-2xl font-extrabold">{displayTotal}</span></div>
                       </div>
                       <Field label="Order notes"><textarea value={client.notes} onChange={(event) => setClient((current) => ({ ...current, notes: event.target.value }))} className="studio-field min-h-24 resize-none py-3" placeholder="Placement details or special instructions" /></Field>
                       <Field label="Your name *"><input required value={client.name} onChange={(event) => setClient((current) => ({ ...current, name: event.target.value }))} className="studio-field" placeholder="Full name" /></Field>
@@ -996,9 +1002,9 @@ export default function PremiumDesignStudioClient({
 
                 {step === 7 ? <div className="space-y-5"><label className="flex items-center justify-between rounded-2xl border border-[#e2e1dc] p-4"><span className="flex items-center gap-2 text-sm font-bold"><TypeIcon className="h-4 w-4 text-[#ff5a0a]" />Custom text</span><input type="checkbox" checked={activeText.enabled} onChange={(event) => patchText({ enabled: event.target.checked })} className="h-5 w-5 accent-[#ff5a0a]" /></label><Field label="Your text"><input value={activeText.value} onChange={(event) => patchText({ value: event.target.value, enabled: true })} className="studio-field" placeholder="e.g. Team Mauritius" /></Field><div className="grid grid-cols-[1fr_72px] gap-3"><Field label="Font"><select value={activeText.font} onChange={(event) => patchText({ font: event.target.value })} className="studio-field"><option value="Arial, sans-serif">Modern sans</option><option value="Impact, sans-serif">Impact</option><option value="Georgia, serif">Classic serif</option><option value="cursive">Signature</option></select></Field><Field label="Colour"><input type="color" value={activeText.color} onChange={(event) => patchText({ color: event.target.value })} className="studio-field p-1.5" /></Field></div><RangeControl icon={<TypeIcon />} label="Text size" value={activeText.size} min={TEXT_SIZE_MIN} max={TEXT_SIZE_MAX} onChange={(value) => patchText({ size: value })} /><RangeControl icon={<RotateCcw />} label="Rotation" value={activeText.rotate} min={-180} max={180} suffix="°" onChange={(value) => patchText({ rotate: value })} /><div className="grid grid-cols-3 gap-2"><PresetButton icon={<Crosshair />} label={upperPlacement.label} onClick={() => patchText(upperPlacement.text)} /><PresetButton icon={<Focus />} label="Centre" onClick={() => patchText({ x: 0, y: 0 })} /><PresetButton icon={<Move />} label="Lower" onClick={() => patchText({ x: 0, y: 24 })} /></div></div> : null}
 
-                {step === 8 ? <div className="space-y-4"><div className="rounded-2xl border border-[#e2e1dc] p-4"><Label>Order summary</Label><dl className="mt-3 space-y-3"><SummaryRow label="Product" value={product.label} /><SummaryRow label="Shop colour" value={selectedColor} /><SummaryRow label="Artwork files" value={artworkSides} /><SummaryRow label="Print method" value={printMethodLabel} /><SummaryRow label="Sizes" value={selectedSizes} /><SummaryRow label="Lead time" value={product.lead} /></dl><button type="button" onClick={editSizes} className="mt-3 min-h-11 text-xs font-bold underline">Edit sizes & quantities</button></div><div className="studio-dark rounded-2xl bg-[#171714] p-5 !text-white"><div className="flex justify-between text-xs text-[#aaa9a2]"><span>Total quantity</span><span>{totalQty}</span></div><div className="mt-3 flex items-end justify-between"><span className="text-xs text-[#aaa9a2]">Estimated total</span><span className="text-2xl font-extrabold">{formatMoney(totalPrice)}</span></div><p className="mt-3 border-t border-white/10 pt-3 text-[9px] leading-4 text-[#888780]">Garment pricing and available sizes come directly from Shops. Final printing price is confirmed after artwork review.</p></div><Field label="Order notes"><textarea value={client.notes} onChange={(event) => setClient((current) => ({ ...current, notes: event.target.value }))} className="studio-field min-h-24 resize-none py-3" placeholder="Special instructions, placement details..." /></Field></div> : null}
+                {step === 8 ? <div className="space-y-4"><div className="rounded-2xl border border-[#e2e1dc] p-4"><Label>Order summary</Label><dl className="mt-3 space-y-3"><SummaryRow label="Product" value={product.label} /><SummaryRow label="Shop colour" value={selectedColor} /><SummaryRow label="Artwork files" value={artworkSides} /><SummaryRow label="Print method" value={printMethodLabel} /><SummaryRow label="Sizes" value={selectedSizes} /><SummaryRow label="Lead time" value={product.lead} /></dl><button type="button" onClick={editSizes} className="mt-3 min-h-11 text-xs font-bold underline">Edit sizes & quantities</button></div><div className="studio-dark rounded-2xl bg-[#171714] p-5 !text-white"><div className="flex justify-between text-xs text-[#aaa9a2]"><span>Total quantity</span><span>{totalQty}</span></div><div className="mt-3 flex items-end justify-between"><span className="text-xs text-[#aaa9a2]">Estimated total</span><span className="text-2xl font-extrabold">{displayTotal}</span></div><p className="mt-3 border-t border-white/10 pt-3 text-[9px] leading-4 text-[#888780]">Garment pricing and available sizes come directly from Shops. Final printing price is confirmed after artwork review.</p></div><Field label="Order notes"><textarea value={client.notes} onChange={(event) => setClient((current) => ({ ...current, notes: event.target.value }))} className="studio-field min-h-24 resize-none py-3" placeholder="Special instructions, placement details..." /></Field></div> : null}
 
-                {step === 9 ? result?.ok ? <Success message={result.text} onReset={() => { setResult(null); setStep(1); }} /> : <div className="space-y-4"><Field label="Client name *"><input required value={client.name} onChange={(event) => setClient((current) => ({ ...current, name: event.target.value }))} className="studio-field" placeholder="Full name" /></Field><div className="grid gap-3 2xl:grid-cols-2"><Field label="Email"><input type="email" value={client.email} onChange={(event) => setClient((current) => ({ ...current, email: event.target.value }))} className="studio-field" placeholder="you@example.com" /></Field><Field label="Phone / WhatsApp"><input type="tel" value={client.phone} onChange={(event) => setClient((current) => ({ ...current, phone: event.target.value }))} className="studio-field" placeholder="+230 5..." /></Field></div><Field label="Preferred deadline"><input type="date" min={today} value={client.deadline} onChange={(event) => setClient((current) => ({ ...current, deadline: event.target.value }))} className="studio-field" /></Field><Field label="Delivery"><select value={delivery} onChange={(event) => setDelivery(event.target.value)} className="studio-field">{DELIVERY_OPTIONS.map((option) => <option key={option}>{option}</option>)}</select></Field>{needsDelivery ? <div className="space-y-3 rounded-2xl bg-[#f5f4f0] p-4"><Field label="Delivery name *"><input value={client.deliveryName} onChange={(event) => setClient((current) => ({ ...current, deliveryName: event.target.value }))} className="studio-field" /></Field><Field label="Address *"><input value={client.address} onChange={(event) => setClient((current) => ({ ...current, address: event.target.value }))} className="studio-field" /></Field><div className="grid grid-cols-2 gap-2"><input value={client.postCode} onChange={(event) => setClient((current) => ({ ...current, postCode: event.target.value }))} className="studio-field" placeholder="Post code" /><input value={client.deliveryPhone} onChange={(event) => setClient((current) => ({ ...current, deliveryPhone: event.target.value }))} className="studio-field" placeholder="Phone" /></div></div> : null}<div className="rounded-2xl border border-[#ffd2bd] bg-[#fff7f1] p-4"><div className="flex items-center justify-between"><span className="text-xs font-bold text-[#8b5d47]">{hasCustomization ? "Estimated total" : "Garment total"}</span><span className="text-xl font-extrabold text-[#dd4904]">{formatMoney(totalPrice)}</span></div>{!hasCustomization ? <p className="mt-2 text-[10px] text-[#9a725f]">Printing and setup charges begin only after artwork or custom text is added.</p> : null}</div>{result && !result.ok ? <p className="rounded-xl bg-[#fff1f1] p-3 text-xs text-[#b91c1c]">{result.text}</p> : null}</div> : null}
+                {step === 9 ? result?.ok ? <Success message={result.text} onReset={() => { setResult(null); setStep(1); }} /> : <div className="space-y-4"><Field label="Client name *"><input required value={client.name} onChange={(event) => setClient((current) => ({ ...current, name: event.target.value }))} className="studio-field" placeholder="Full name" /></Field><div className="grid gap-3 2xl:grid-cols-2"><Field label="Email"><input type="email" value={client.email} onChange={(event) => setClient((current) => ({ ...current, email: event.target.value }))} className="studio-field" placeholder="you@example.com" /></Field><Field label="Phone / WhatsApp"><input type="tel" value={client.phone} onChange={(event) => setClient((current) => ({ ...current, phone: event.target.value }))} className="studio-field" placeholder="+230 5..." /></Field></div><Field label="Preferred deadline"><input type="date" min={today} value={client.deadline} onChange={(event) => setClient((current) => ({ ...current, deadline: event.target.value }))} className="studio-field" /></Field><Field label="Delivery"><select value={delivery} onChange={(event) => setDelivery(event.target.value)} className="studio-field">{DELIVERY_OPTIONS.map((option) => <option key={option}>{option}</option>)}</select></Field>{needsDelivery ? <div className="space-y-3 rounded-2xl bg-[#f5f4f0] p-4"><Field label="Delivery name *"><input value={client.deliveryName} onChange={(event) => setClient((current) => ({ ...current, deliveryName: event.target.value }))} className="studio-field" /></Field><Field label="Address *"><input value={client.address} onChange={(event) => setClient((current) => ({ ...current, address: event.target.value }))} className="studio-field" /></Field><div className="grid grid-cols-2 gap-2"><input value={client.postCode} onChange={(event) => setClient((current) => ({ ...current, postCode: event.target.value }))} className="studio-field" placeholder="Post code" /><input value={client.deliveryPhone} onChange={(event) => setClient((current) => ({ ...current, deliveryPhone: event.target.value }))} className="studio-field" placeholder="Phone" /></div></div> : null}<div className="rounded-2xl border border-[#ffd2bd] bg-[#fff7f1] p-4"><div className="flex items-center justify-between"><span className="text-xs font-bold text-[#8b5d47]">{hasCustomization ? "Estimated total" : "Garment total"}</span><span className="text-xl font-extrabold text-[#dd4904]">{displayTotal}</span></div>{!hasCustomization ? <p className="mt-2 text-[10px] text-[#9a725f]">Printing and setup charges begin only after artwork or custom text is added.</p> : null}</div>{result && !result.ok ? <p className="rounded-xl bg-[#fff1f1] p-3 text-xs text-[#b91c1c]">{result.text}</p> : null}</div> : null}
               </motion.div>
               {!result?.ok ? <div className="sticky bottom-[94px] mt-auto border-t border-[#ecebe6] bg-[#fff]/95 p-4 backdrop-blur sm:bottom-0"><div className="flex gap-2.5">{step > 1 ? <button type="button" onClick={() => goTo(step - 1)} className="inline-flex h-12 items-center gap-2 rounded-xl border border-[#deddd7] px-4 text-sm font-bold"><ChevronLeft className="h-4 w-4" />Back</button> : null}{step < STEPS.length ? <button type="button" onClick={() => goTo(step + 1)} className="studio-primary inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#ff5a0a] px-4 text-sm font-bold !text-white shadow-[0_10px_24px_rgba(255,90,10,.22)]">Next step<ArrowRight className="h-4 w-4" /></button> : <button type="submit" disabled={!canSubmit || submitting} className="studio-primary inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#ff5a0a] px-4 text-sm font-bold !text-white shadow-[0_10px_24px_rgba(255,90,10,.22)] disabled:cursor-not-allowed disabled:opacity-45">{submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{submitting ? submissionStatus : "Request final price"}</button>}</div></div> : null}
             </aside>

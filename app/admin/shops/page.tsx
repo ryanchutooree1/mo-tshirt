@@ -20,6 +20,10 @@ import {
 } from "@/lib/shops";
 import { formatMoney as formatDisplayMoney } from "@/lib/money";
 import {
+  getPlainPricingClass, getVerifiedPoloMaterial, parsePoloMaterial, POLO_MATERIALS,
+  resolvePlainCustomerPrice, type PoloMaterial,
+} from "@/lib/shop-customer-pricing";
+import {
   downloadShopImage,
   getStudioImageField,
   prepareStudioImageFile,
@@ -111,6 +115,7 @@ function getFirstPricedRow(rows: SizePriceRow[]): SizePriceRow | null {
 
 type FormState = {
   title: string;
+  poloMaterial: PoloMaterial | null;
   colors: string;
   pricingMode: PriceMode;
   singlePrice: SizePriceRow;
@@ -131,6 +136,7 @@ type ImageFileState = Record<ShopImageViewKey, File | null>;
 function buildEmptyFormState(): FormState {
   return {
     title: "",
+    poloMaterial: null,
     colors: "",
     pricingMode: "sized",
     singlePrice: buildSinglePriceRow(),
@@ -438,6 +444,7 @@ export default function AdminShopsPage() {
     setEditingId(item.id);
     setForm({
       title: item.title,
+      poloMaterial: item.poloMaterial ?? null,
       colors: item.colors.join(", "),
       pricingMode: singlePriceMode ? "single" : "sized",
       singlePrice: buildSinglePriceRow(sizePrices),
@@ -740,6 +747,7 @@ export default function AdminShopsPage() {
 
       const payload = {
         title: form.title,
+        poloMaterial: getPlainPricingClass(form.title) === "polo" ? form.poloMaterial : null,
         colors: form.colors,
         sizeMode: form.pricingMode,
         singlePrice: form.pricingMode === "single" ? form.singlePrice.price : null,
@@ -1172,6 +1180,9 @@ export default function AdminShopsPage() {
                           <div className="min-w-0">
                             <h3 className="text-[1.45rem] font-semibold tracking-tight text-slate-900">
                               {item.title}
+                              {getPlainPricingClass(item.title) === "polo" && !getVerifiedPoloMaterial(item) && (
+                                <span className="block text-xs font-medium text-amber-700">Confirm fabric before customers can order plain.</span>
+                              )}
                             </h3>
                             <p className="mt-1 text-sm text-slate-500">
                               {colorLabels.length ? `Colors: ${colorLabels.join(", ")}` : "No colors configured"}
@@ -1490,6 +1501,36 @@ export default function AdminShopsPage() {
                             <h3 className="mt-2 text-lg font-semibold text-slate-900">How this item should sell</h3>
                           </div>
 
+                          {getPlainPricingClass(form.title) === "polo" && (
+                            <label className="mb-3 grid gap-2 text-sm font-semibold text-slate-700">
+                              Plain polo fabric
+                              <select
+                                value={form.poloMaterial ?? ""}
+                                onChange={(e) => setForm((prev) => ({ ...prev, poloMaterial: parsePoloMaterial(e.target.value) }))}
+                                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                              >
+                                <option value="">Not confirmed (or use explicit material in title)</option>
+                                {POLO_MATERIALS.map((entry) => (
+                                  <option key={entry.id} value={entry.id}>{entry.label} · {money(entry.price)}</option>
+                                ))}
+                              </select>
+                              <span className="text-xs font-normal text-slate-500">
+                                {getVerifiedPoloMaterial(form)
+                                  ? `Plain customer price: ${money(resolvePlainCustomerPrice(form, "")!)}.`
+                                  : "Plain customer price: to confirm. Check the fabric before selecting it."}
+                              </span>
+                            </label>
+                          )}
+                          {getPlainPricingClass(form.title) === "tee" && (
+                            <p className="mb-3 text-xs leading-5 text-slate-600">
+                              Plain shop prices update automatically: adult XS–XL Rs 200, 2XL–4XL Rs 300, children ages 1–14 Rs 150.
+                            </p>
+                          )}
+                          {getPlainPricingClass(form.title) !== "other" && (
+                            <p className="mb-3 text-xs leading-5 text-slate-600">
+                              The existing sales prices below remain the garment base for custom printing. They do not override plain shop prices.
+                            </p>
+                          )}
                           <div className="space-y-3">
                             <label className="text-sm font-semibold text-slate-700">Pricing *</label>
                             <div className="grid gap-3 sm:grid-cols-2">

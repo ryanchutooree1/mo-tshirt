@@ -1,72 +1,16 @@
 import { NextResponse } from "next/server";
 import { shopCollection, logShopServerError } from "@/lib/shops-server";
-import { normalizeSizeLabel, sortShopItems, sortSizes, sortSizePrices, toNumber, type ShopItem } from "@/lib/shops";
-
-function getPositionValue(data: Record<string, any>) {
-  if (Number.isFinite(data.position)) return Number(data.position);
-  const createdAt = data.createdAt;
-  if (createdAt?.toMillis) return createdAt.toMillis();
-  if (Number.isFinite(createdAt)) return Number(createdAt);
-  return 0;
-}
-
-function normalizeSizePrices(list: unknown) {
-  if (!Array.isArray(list)) return [];
-
-  return sortSizePrices(
-    list
-      .map((entry) => {
-        const raw = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
-        const size = normalizeSizeLabel(String(raw.size || "").trim());
-        const price = toNumber(raw.price);
-        if (!size || price === null || price < 0) return null;
-        return {
-          size,
-          price,
-        };
-      })
-      .filter(Boolean) as ShopItem["sizePrices"]
-  );
-}
-
-function mapDoc(id: string, data: Record<string, any>): ShopItem {
-  const sizePrices = normalizeSizePrices(data.sizePrices);
-  const sizes = sizePrices.length
-    ? sizePrices.map((entry) => entry.size)
-    : sortSizes(
-        (Array.isArray(data.sizes) ? data.sizes : [])
-          .map((size) => normalizeSizeLabel(String(size || "").trim()))
-          .filter(Boolean)
-      );
-
-  return {
-    id,
-    title: String(data.title ?? ""),
-    colors: Array.isArray(data.colors) ? data.colors : [],
-    sizePrices,
-    sizes,
-    basePrice: Number(data.basePrice ?? 0),
-    pickupPrice: data.pickupPrice ?? null,
-    deliveryFee: data.deliveryFee ?? null,
-    pickupPoint: null,
-    collectionPoint: data.collectionPoint ?? null,
-    photoUrl: data.photoUrl ?? null,
-    backPhotoUrl: data.backPhotoUrl ?? null,
-    sidePhotoUrl: data.sidePhotoUrl ?? null,
-    studioPhotoUrl: data.studioPhotoUrl ?? null,
-    studioBackPhotoUrl: data.studioBackPhotoUrl ?? null,
-    position: getPositionValue(data),
-    isActive: Boolean(data.isActive),
-    inStock: data.inStock !== false,
-  };
-}
+import { sortShopItems } from "@/lib/shops";
+import { mapPublicShopItem } from "@/lib/shops-public-api";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(request?: Request) {
   try {
     const snap = await shopCollection().where("isActive", "==", true).get();
-    const items = sortShopItems(snap.docs.map((doc) => mapDoc(doc.id, doc.data())));
+    // Custom printing uses the existing customer garment base; it is never a supplier cost.
+    const studio = request ? new URL(request.url).searchParams.get("purpose") === "design-studio" : false;
+    const items = sortShopItems(snap.docs.map((doc) => mapPublicShopItem(doc.id, doc.data(), studio)));
     return NextResponse.json({ items });
   } catch (error) {
     logShopServerError("firestore", error);

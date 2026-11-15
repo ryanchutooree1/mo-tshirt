@@ -10,19 +10,20 @@ import { READY_MADE_UNIFORMS_PATH } from "@/data/ready-made-uniforms";
 import { getWhatsAppUrl } from "@/data/work";
 import { trackProductInterest, trackWhatsAppClick } from "@/lib/analytics";
 import { formatMoney as formatDisplayMoney, formatWholeMoney as formatDisplayWholeMoney } from "@/lib/money";
+import { POLO_MATERIALS } from "@/lib/shop-customer-pricing";
 import type { ReadyMadeUniformItem } from "@/lib/ready-made-uniforms-store";
 import {
   buildShopWhatsAppMessageForLines,
   formatSizeLabel,
-  getSizePrice,
+  getExactShopPrice,
   getShopDesignProductId,
   getShopImageViews,
-  getSizePrices,
   getSizes,
   isOneSizeLabel,
   sortShopItems,
   sortSizes,
   type DeliveryInfo,
+  type PublicShopItem,
   type ShopItem,
   type ShopOrderLine,
   type ShopOrderLineWithPrice,
@@ -257,7 +258,7 @@ function ProductThumbnailRail({
 
 export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformItem[] }) {
   const [catalogView, setCatalogView] = useState<"plain" | "uniforms">("plain");
-  const [items, setItems] = useState<ShopItem[]>([]);
+  const [items, setItems] = useState<PublicShopItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -390,29 +391,18 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
     return map;
   }, [items]);
 
-  const subtotal = useMemo(() => {
-    return orderLines.reduce((sum, line) => {
-      const item = itemsById.get(line.itemId);
-      if (!item) return sum;
-      const price = getSizePrice(item, line.size);
-      return sum + price * line.quantity;
-    }, 0);
-  }, [orderLines, itemsById]);
-
   const orderLinesWithPrice = useMemo<ShopOrderLineWithPrice[]>(() => {
     return orderLines.map((line) => {
       const item = itemsById.get(line.itemId);
-      if (!item) {
-        return { ...line, unitPrice: null, lineTotal: null };
-      }
-      const unitPrice = getSizePrice(item, line.size);
-      return {
-        ...line,
-        unitPrice,
-        lineTotal: unitPrice * line.quantity,
-      };
+      const unitPrice = item?.inStock && item.colors.includes(line.color)
+        ? getExactShopPrice(item, line.size)
+        : null;
+      return { ...line, unitPrice, lineTotal: unitPrice === null ? null : unitPrice * line.quantity };
     });
   }, [orderLines, itemsById]);
+
+  const subtotal = orderLinesWithPrice.reduce((sum, line) => sum + (line.lineTotal ?? 0), 0);
+  const needsPriceReview = orderLinesWithPrice.some((line) => line.unitPrice === null);
 
   const selectedDelivery = DELIVERY_METHODS.find((method) => method.value === deliveryMethod);
   const deliveryFeeTotal =
@@ -461,7 +451,7 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
         deliveryInfo.address.trim() &&
         deliveryInfo.phone.trim()
     );
-  const canOrder = orderLines.length > 0 && deliveryInfoValid;
+  const canOrder = orderLines.length > 0 && !needsPriceReview && deliveryInfoValid;
 
   const orderMessage = useMemo(
     () =>
@@ -495,7 +485,8 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
 
   function addLineItem(item: ShopItem) {
     const current = selections[item.id];
-    if (!current) return;
+    if (!current || !item.inStock || !item.colors.includes(current.color) ||
+        getExactShopPrice(item, current.size) === null) return;
     const rawQty = current.quantity === "" ? 1 : Number(current.quantity);
     const quantity = Number.isFinite(rawQty) ? Math.max(1, rawQty) : 1;
     const line: ShopOrderLine = {
@@ -641,20 +632,15 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
             <section className={styles.productGrid} aria-label="Plain apparel products">
               {filtered.map((item) => {
             const sizes = getSizes(item);
-            const sizePrices = getSizePrices(item);
-            const isOneSizeItem =
-              sizePrices.length === 1 && isOneSizeLabel(sizePrices[0]?.size || "");
+            const isOneSizeItem = sizes.length === 1 && isOneSizeLabel(sizes[0] || "");
             const hasMultipleColors = item.colors.length > 1;
-            const priceValues = sizePrices
-              .map((entry) => entry.price)
-              .filter((price) => Number.isFinite(price)) as number[];
-            const minPrice = priceValues.length ? Math.min(...priceValues) : 0;
             const selection =
               selections[item.id] || {
                 color: item.colors[0] || "Default",
                 size: sizes[0] || "",
                 quantity: 1,
               };
+            const selectedPrice = getExactShopPrice(item, selection.size);
             const displayColor = selection.color || item.colors[0] || "Color";
             const imageViews = getShopImageViews(item);
             const displayPhotoUrl = selectedImageUrls[item.id] || imageViews[0]?.url || item.photoUrl;
@@ -701,11 +687,12 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
                       <span>{item.title}</span>
                     </h2>
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                      <span className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 font-semibold text-neutral-700">
-                        {isOneSizeItem
-                          ? formatDisplayWholeMoney(minPrice)
-                          : `From ${formatDisplayWholeMoney(minPrice)}`}
+                      <span aria-live="polite" className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 font-semibold text-neutral-700">
+                        {selectedPrice === null ? "Price to confirm" : formatDisplayWholeMoney(selectedPrice)}
                       </span>
+                      {item.poloMaterial && (
+                        <span className="text-neutral-600">{POLO_MATERIALS.find(({ id }) => id === item.poloMaterial)?.label}</span>
+                      )}
                       <ProductThumbnailRail
                         item={item}
                         activeUrl={displayPhotoUrl || null}
@@ -718,23 +705,26 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
 
                   {!isOneSizeItem && (
                     <div className="flex flex-wrap gap-2 text-xs text-neutral-600">
-                      {sizePrices.length ? (
-                      sizePrices.map((entry) => (
+                      {sizes.length ? (
+                      sizes.map((size) => {
+                        const price = getExactShopPrice(item, size);
+                        return (
                         <button
-                          key={entry.size}
-                          aria-pressed={selection.size === entry.size}
-                          title={`${formatSizeLabel(entry.size)} · ${formatDisplayWholeMoney(entry.price)}`}
+                          key={size}
+                          aria-pressed={selection.size === size}
+                          title={`${formatSizeLabel(size)} · ${price === null ? "Price to confirm" : formatDisplayWholeMoney(price)}`}
                           type="button"
-                          onClick={() => updateSelection(item.id, { size: entry.size })}
+                          onClick={() => updateSelection(item.id, { size })}
                           className={`rounded-full border px-3 py-1 transition ${
-                            selection.size === entry.size
+                            selection.size === size
                               ? "border-black bg-black text-white"
                               : "border-neutral-200 hover:border-neutral-400"
                           }`}
                         >
-                          {formatSizeLabel(entry.size)}
+                          {formatSizeLabel(size)}
                         </button>
-                      ))
+                        );
+                      })
                       ) : (
                         <span className="text-neutral-400">Sizes not set</span>
                       )}
@@ -788,7 +778,7 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
                     <button
                       type="button"
                       onClick={() => addLineItem(item)}
-                      disabled={!item.inStock}
+                      disabled={!item.inStock || selectedPrice === null}
                       className="inline-flex items-center justify-center rounded-full border border-black px-4 py-2 text-xs font-semibold text-black transition hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Add to order
@@ -965,6 +955,10 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
                       <div key={`${group.key}-${line.size}`} className="flex items-center justify-between gap-2">
                         <span className="text-[11px] text-neutral-600">
                           {isOneSizeLabel(line.size) ? "One size" : `Size ${formatSizeLabel(line.size)}`}
+                          {" · "}
+                          {orderLinesWithPrice[line.index]?.unitPrice != null
+                            ? `${money(orderLinesWithPrice[line.index].unitPrice!)} each`
+                            : "Price to confirm"}
                         </span>
                         <div className="flex items-center gap-2">
                           <input
@@ -997,6 +991,11 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
             )}
           </div>
 
+          {needsPriceReview && (
+            <p className="mt-4 text-xs font-medium text-red-700" role="status">
+              Remove any item marked “Price to confirm” before sending the order.
+            </p>
+          )}
           <div className="mt-4 space-y-2 text-xs text-neutral-700">
             <div className="flex items-center justify-between">
               <span>Subtotal</span>
@@ -1067,7 +1066,7 @@ export default function ShopClient({ uniforms }: { uniforms: ReadyMadeUniformIte
 
           <div className="mt-5 space-y-3">
             <a
-              href={getWhatsAppUrl(orderMessage)}
+              href={canOrder ? getWhatsAppUrl(orderMessage) : undefined}
               target="_blank"
               rel="noopener noreferrer"
               className={`inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition ${

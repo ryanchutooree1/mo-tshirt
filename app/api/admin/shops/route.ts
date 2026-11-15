@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { hasAdminSession } from "@/lib/admin-auth";
 import { shopCollection, serverTimestamp, logShopServerError } from "@/lib/shops-server";
+import { parsePoloMaterial } from "@/lib/shop-customer-pricing";
 import { parseShopPayload } from "@/lib/shops-api";
 import { normalizeSizeLabel, sortShopItems, sortSizes, sortSizePrices, toNumber, type ShopItem } from "@/lib/shops";
 
@@ -53,6 +54,7 @@ function mapDoc(id: string, data: Record<string, any>): ShopItem {
   return {
     id,
     title: String(data.title ?? ""),
+    poloMaterial: parsePoloMaterial(data.poloMaterial),
     colors: Array.isArray(data.colors) ? data.colors : [],
     sizePrices,
     sizes,

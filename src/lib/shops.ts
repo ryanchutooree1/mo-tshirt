@@ -1,4 +1,5 @@
 import { formatMoney as formatDisplayMoney } from "@/lib/money";
+import type { PoloMaterial } from "@/lib/shop-customer-pricing";
 
 export const DEFAULT_PICKUP_POINT = "Nouvelle France";
 export const DEFAULT_COLLECTION_POINT = "Surinam";
@@ -49,6 +50,8 @@ export type ShopImageViewField = (typeof SHOP_IMAGE_VIEWS)[number]["field"];
 export type ShopItem = {
   id: string;
   title: string;
+  poloMaterial?: PoloMaterial | null;
+  priceReviewSizes?: string[];
   colors: string[];
   sizePrices: ShopSizePrice[];
   sizes?: string[];
@@ -67,7 +70,20 @@ export type ShopItem = {
   inStock: boolean;
 };
 
-export type ShopItemInput = Omit<ShopItem, "id">;
+export type ShopItemInput = Omit<ShopItem, "id" | "priceReviewSizes">;
+export type PublicShopItem = Omit<ShopItem, "sizePrices" | "pickupPoint"> & {
+  sizePrices: Pick<ShopSizePrice, "size" | "price">[];
+};
+
+export type StudioShopItem = PublicShopItem & {
+  studioSizePrices?: PublicShopItem["sizePrices"];
+};
+
+export function getStudioGarmentPrice(item: StudioShopItem, size: string, hasCustomization: boolean) {
+  if (!hasCustomization) return getExactShopPrice(item, size);
+  const prices = item.studioSizePrices ?? [];
+  return prices.find((row) => row.size === normalizeSizeLabel(size))?.price ?? prices[0]?.price ?? null;
+}
 
 export type ShopDesignProductId = "tshirt" | "polo";
 
@@ -379,6 +395,7 @@ export function getSizePrices(item: ShopItem): ShopSizePrice[] {
     if (cleaned.length) return cleaned;
   }
 
+  if (item.priceReviewSizes?.length) return [];
   const sizes = Array.isArray(item.sizes) ? item.sizes : [];
   const fallbackPrice =
     (Number.isFinite(item.basePrice) ? item.basePrice : null) ??
@@ -401,7 +418,7 @@ export function getSizePrices(item: ShopItem): ShopSizePrice[] {
 }
 
 export function getSizes(item: ShopItem): string[] {
-  return getSizePrices(item).map((entry) => entry.size);
+  return sortSizes([...getSizePrices(item).map((entry) => entry.size), ...(item.priceReviewSizes ?? [])]);
 }
 
 export function getSizePrice(item: ShopItem, size: string): number {
@@ -409,6 +426,12 @@ export function getSizePrice(item: ShopItem, size: string): number {
   const match = list.find((entry) => entry.size === size);
   if (match) return match.price;
   return list[0]?.price ?? 0;
+}
+
+export function getExactShopPrice(item: ShopItem, size: string): number | null {
+  const normalized = normalizeSizeLabel(size);
+  if (item.priceReviewSizes?.includes(normalized)) return null;
+  return getSizePrices(item).find((entry) => entry.size === normalized)?.price ?? null;
 }
 
 export function getMinSizePrice(item: ShopItem): number {

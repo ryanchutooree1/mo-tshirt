@@ -9,7 +9,7 @@ function load(file, modules) {
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(file, "utf8"), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText, {
-    exports, process, console: { error() {} },
+    exports, process, URL, console: { error() {} },
     require(name) {
       assert.ok(Object.hasOwn(modules, name), `Unexpected import ${name}`);
       return modules[name];
@@ -33,7 +33,9 @@ test("shop CRUD, query, batches and timestamps round-trip through the real serve
   });
   const money = load("src/lib/money.ts", {});
   const shops = load("src/lib/shops.ts", { "@/lib/money": money });
-  const payloads = load("src/lib/shops-api.ts", { "@/lib/shops": shops });
+  const pricing = load("src/lib/shop-customer-pricing.ts", {});
+  const payloads = load("src/lib/shops-api.ts", { "@/lib/shops": shops, "@/lib/shop-customer-pricing": pricing });
+  const publicShop = load("src/lib/shops-public-api.ts", { "@/lib/shops": shops, "@/lib/shop-customer-pricing": pricing });
   let signedIn = true;
   const modules = {
     "next/server": { NextResponse: { json: (body, options) => Response.json(body, options) } },
@@ -42,6 +44,8 @@ test("shop CRUD, query, batches and timestamps round-trip through the real serve
     "@/lib/shops-server": server,
     "@/lib/shops": shops,
     "@/lib/shops-api": payloads,
+    "@/lib/shops-public-api": publicShop,
+    "@/lib/shop-customer-pricing": pricing,
   };
   const routes = Object.fromEntries(["shops", "quote-options", "admin/shops", "admin/shops/[id]", "admin/shops/[id]/studio-images", "admin/shops/reorder", "admin/shops/normalize-sizes"].map((name) => [name, load(`app/api/${name}/route.ts`, modules)]));
   const request = (body) => new Request("http://localhost/api/admin/shops", { method: "POST", body: JSON.stringify(body) });
@@ -63,7 +67,7 @@ test("shop CRUD, query, batches and timestamps round-trip through the real serve
     const adminBody = await (await routes["admin/shops"].GET()).json();
     assert.deepEqual(adminBody.items.find((item) => item.id === id).sizePrices, fixture.sizePrices);
     let publicBody = await (await routes.shops.GET()).json();
-    assert.deepEqual(publicBody.items.find((item) => item.id === id).sizePrices, [{ size: "M", price: 100 }]);
+    assert.deepEqual(publicBody.items.find((item) => item.id === id).sizePrices, [{ size: "M", price: 200 }]);
     assert.doesNotMatch(JSON.stringify(publicBody), /buyingPrice|profit/);
     assert.equal((await routes["quote-options"].GET()).status, 200);
 

@@ -1,3 +1,4 @@
+import { getPlainPricingClass, parsePoloMaterial, getVerifiedPoloMaterial } from "@/lib/shop-customer-pricing";
 import {
   DEFAULT_COLLECTION_POINT,
   DEFAULT_PICKUP_POINT,
@@ -69,6 +70,11 @@ export function parseShopPayload(body: unknown): ParseResult {
   const title = cleanString(payload.title);
   if (!title) return { ok: false, error: "Title is required." };
 
+  const poloMaterial = parsePoloMaterial(payload.poloMaterial);
+  if (payload.poloMaterial && !poloMaterial) return { ok: false, error: "Select a supported polo fabric." };
+  if (poloMaterial && (getPlainPricingClass(title) !== "polo" || !getVerifiedPoloMaterial({ title, poloMaterial }))) {
+    return { ok: false, error: "The selected polo fabric must match this product's title." };
+  }
   const colors = normalizeList(payload.colors);
   if (!colors.length) return { ok: false, error: "Add at least one color." };
 
@@ -131,6 +137,7 @@ export function parseShopPayload(body: unknown): ParseResult {
 
   const data: ShopItemInput = {
     title,
+    poloMaterial,
     colors,
     sizes,
     sizePrices,
