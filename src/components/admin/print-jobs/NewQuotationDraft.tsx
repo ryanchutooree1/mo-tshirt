@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { collection, doc, runTransaction, serverTimestamp, type DocumentReference } from "firebase/firestore";
-import { CalendarDays, Check, ChevronDown, FilePlus2, Layers3, Loader2, MessageCircle, Package, Palette, Save, UserRound, UsersRound } from "lucide-react";
+import { CalendarDays, Check, ChevronDown, FilePlus2, Layers3, Loader2, MessageCircle, Package, Palette, Save, UserRound, UsersRound, X } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { ensureAdminFirebaseSession } from "@/lib/firebase-admin-client-auth";
 import { normalizeWhatsAppPhone } from "@/lib/quotation-whatsapp";
@@ -41,6 +41,7 @@ export function parseSizeQuantities(value: string): SizeQuantity[] {
 }
 
 export default function NewQuotationDraft({ onCreated }: { onCreated: (id: string, intent: CreationIntent) => void }) {
+  const [isOpen, setIsOpen] = useState(true);
   const [customerType, setCustomerType] = useState<CustomerType>("normal");
   const [phone, setPhone] = useState("");
   const [customerName, setCustomerName] = useState("");
@@ -171,7 +172,10 @@ export default function NewQuotationDraft({ onCreated }: { onCreated: (id: strin
     }
   }
 
+  if (!isOpen) return <button type="button" className={styles.quickQuoteLauncher} onClick={() => setIsOpen(true)} aria-label="Open new quotation form"><FilePlus2 size={20} /><span><strong>New plain quotation</strong><small>Open the quick quotation form</small></span><span>Open</span></button>;
+
   return <section className={styles.quickQuote} aria-labelledby="new-plain-quotation">
+    <button type="button" className={styles.quickQuoteClose} onClick={() => setIsOpen(false)} aria-label="Close quotation form" title="Close quotation form" disabled={Boolean(busy)}><X size={19} /></button>
     <div className={styles.quickQuoteTitle}><FilePlus2 size={25} /><div><h2 id="new-plain-quotation">New plain quotation</h2><p>Complete the essentials once. The quotation is saved in Rs.</p></div></div>
 
     <div className={styles.customerType} role="radiogroup" aria-label="Customer type">

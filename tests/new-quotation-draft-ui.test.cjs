@@ -82,6 +82,16 @@ async function test(name, fn) {
     await waitFor(() => assert.ok(screen.getByRole("option", { name: "Bottle Green" })));
     assert.ok(screen.getByRole("option", { name: "No colour — price only" }));
   });
+  await test("quotation form can close and reopen without losing entered details", async () => {
+    mount(); fill(/Phone \/ WhatsApp/, "5712 3456");
+    fireEvent.click(screen.getByRole("button", { name: "Close quotation form" }));
+    assert.equal(screen.queryByRole("heading", { name: "New plain quotation" }), null);
+    assert.equal(screen.queryByLabelText(/Phone \/ WhatsApp/), null);
+    assert.equal(authCalls, 0); assert.equal(operations.length, 0);
+    fireEvent.click(screen.getByRole("button", { name: "Open new quotation form" }));
+    assert.ok(screen.getByRole("heading", { name: "New plain quotation" }));
+    assert.equal(screen.getByLabelText(/Phone \/ WhatsApp/).value, "5712 3456");
+  });
   await test("normal plain quotation uses Customer when the name is blank and saves complete Rs lines", async () => {
     mount(); setSizes(); await clickDraft(); await saved();
     assert.equal(authCalls, 1); assert.equal(allocations().length, 1); assert.equal(sets().length, 1); assert.equal(records.size, 1);
