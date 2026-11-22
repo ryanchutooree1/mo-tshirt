@@ -44,6 +44,7 @@ const code = ts.transpileModule(fs.readFileSync(root + "/src/components/admin/pr
 vm.runInNewContext(code, {
   module: mod, exports: mod.exports, console, URL, window: dom.window, document: dom.window.document,
   fetch: async (url, options) => {
+    if (url === "/api/quote-options") return { ok: true, async json() { return { colors: ["Black", "White", "Burgundy", "Bottle Green", "Sky Blue", "Mustard"] }; } };
     fetchCalls.push({ url, options });
     return { ok: true, async json() { return { whatsappUrl: "https://wa.me/23057123456?text=Quotation" }; } };
   },
@@ -78,6 +79,8 @@ async function test(name, fn) {
     assert.equal(screen.getByRole("radio", { name: "Normal customer" }).getAttribute("aria-checked"), "true");
     assert.equal(screen.getByLabelText("Approved unit price in Rs").value, "150");
     assert.equal(authCalls, 0); assert.equal(operations.length, 0); assert.equal(records.size, 0); assert.deepEqual(callbacks, []);
+    await waitFor(() => assert.ok(screen.getByRole("option", { name: "Bottle Green" })));
+    assert.ok(screen.getByRole("option", { name: "No colour — price only" }));
   });
   await test("normal plain quotation uses Customer when the name is blank and saves complete Rs lines", async () => {
     mount(); setSizes(); await clickDraft(); await saved();
@@ -95,6 +98,13 @@ async function test(name, fn) {
     assert.match(record.quote.validUntil, /^\d{4}-\d{2}-\d{2}$/);
     assert.ok(screen.getByRole("status").textContent.includes("saved as a draft")); assert.equal(fetchCalls.length, 0);
     for (const key of ["bankDetails", "bankAccount", "accountNumber", "clientDecision", "paymentEvidence", "paymentReceipt", "sentAt"]) assert.equal(Object.hasOwn(record, key) || Object.hasOwn(record.quote, key), false);
+  });
+  await test("price-only quotation saves clean descriptions without requiring a colour", async () => {
+    mount(); fireEvent.change(screen.getByLabelText(/Colour/), { target: { value: "" } }); setSizes("M: 2"); await clickDraft(); await saved();
+    const record = [...records.values()][0];
+    assert.equal(record.garments[0].color, "");
+    assert.equal(record.quote.lines[0].description, "Plain T-shirt — M");
+    assert.doesNotMatch(record.quote.lines[0].description, /—\s*—/);
   });
   await test("bulk create-and-send uses the approved price and duplicate clicks create and prepare once", async () => {
     mount(); fireEvent.click(screen.getByRole("radio", { name: "Bulk buyer" }));

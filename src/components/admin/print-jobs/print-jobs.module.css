@@ -253,6 +253,7 @@
     color:var(--muted);
     transition:border-color .16s,box-shadow .16s,background-color .16s;
   }
+  .currencyInput { flex-wrap:nowrap; }
   .inputShell:focus-within,.currencyInput:focus-within { border-color:#e84a12; box-shadow:0 0 0 4px var(--soft); background:var(--paper); }
   .inputShell>input,.inputShell>select,.currencyInput>input {
     width:100%;
@@ -268,7 +269,7 @@
   }
   .inputShell>select { appearance:none; cursor:pointer; }
   .inputShell>svg:last-child:not(:first-child) { margin-left:-24px; pointer-events:none; }
-  .currencyInput>b { flex:0 0 auto; color:var(--accent); font-size:13px; white-space:nowrap; }
+  .currencyInput>b { display:inline-block; flex:0 0 auto; min-width:2ch; color:var(--accent); font-size:13px; white-space:nowrap; word-break:normal; overflow-wrap:normal; }
   .sizesField { grid-column:span 2; }
   .quickTotal { min-height:76px; padding:13px 16px; border:1px solid #f1c4aa; border-radius:15px; background:var(--soft); display:flex; flex-direction:column; justify-content:center; }
   .quickTotal>span { color:var(--orange-ink); font-size:10px; font-weight:750; text-transform:uppercase; letter-spacing:.09em; }

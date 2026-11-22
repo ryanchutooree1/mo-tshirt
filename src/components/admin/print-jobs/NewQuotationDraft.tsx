@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { collection, doc, runTransaction, serverTimestamp, type DocumentReference } from "firebase/firestore";
 import { CalendarDays, Check, ChevronDown, FilePlus2, Layers3, Loader2, MessageCircle, Package, Palette, Save, UserRound, UsersRound } from "lucide-react";
 import { db } from "@/lib/firebase";
@@ -14,7 +14,7 @@ type CreationIntent = "draft" | "send";
 type SizeQuantity = { size: string; quantity: number };
 
 const PRODUCT_PRICES: Record<Product, number> = { "T-Shirt": 150, Polo: 450 };
-const COLOURS = ["Black", "White", "Navy", "Royal blue", "Red", "Grey", "Other"];
+const FALLBACK_COLOURS = ["Black", "White", "Navy", "Royal blue", "Red", "Grey", "Burgundy", "Green", "Pink", "Purple", "Yellow", "Orange", "Brown", "Beige", "Cream", "Other"];
 const SAVED_DRAFT_CONFLICT = "This quotation was already saved with the previous details. Refresh the job list before starting another quotation.";
 
 const mauritiusDate = (date = new Date()) => new Intl.DateTimeFormat("en-CA", {
@@ -46,6 +46,7 @@ export default function NewQuotationDraft({ onCreated }: { onCreated: (id: strin
   const [customerName, setCustomerName] = useState("");
   const [product, setProduct] = useState<Product>("T-Shirt");
   const [colour, setColour] = useState("Black");
+  const [colourOptions, setColourOptions] = useState(FALLBACK_COLOURS);
   const [sizes, setSizes] = useState("");
   const [unitPrice, setUnitPrice] = useState(String(PRODUCT_PRICES["T-Shirt"]));
   const [deliveryDate, setDeliveryDate] = useState("");
@@ -64,6 +65,24 @@ export default function NewQuotationDraft({ onCreated }: { onCreated: (id: strin
   const quantity = parsedSizes.reduce((sum, entry) => sum + entry.quantity, 0);
   const price = Number(unitPrice);
   const total = Number.isFinite(price) && price > 0 ? quantity * price : 0;
+
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/quote-options")
+      .then(async response => response.ok ? response.json() : Promise.reject(new Error("Could not load colours.")))
+      .then(body => {
+        if (!active || !Array.isArray(body.colors)) return;
+        const unique = new Map<string, string>();
+        [...body.colors, ...FALLBACK_COLOURS].forEach(entry => {
+          const label = String(entry || "").trim();
+          const key = label.toLocaleLowerCase();
+          if (label && !unique.has(key)) unique.set(key, label);
+        });
+        setColourOptions([...unique.values()]);
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   function resetForm() {
     setPhone(""); setCustomerName(""); setProduct("T-Shirt"); setColour("Black"); setSizes("");
@@ -92,7 +111,7 @@ export default function NewQuotationDraft({ onCreated }: { onCreated: (id: strin
       const name = customerName.trim() || "Customer";
       const requestFingerprint = JSON.stringify({ customerType, phone: phone.trim(), name, product, colour, requestedSizes, approvedPrice, deliveryDate, notes: notes.trim() });
       const lines = requestedSizes.map(entry => ({
-        description: `Plain ${product === "Polo" ? "polo shirt" : "T-shirt"} — ${colour} — ${entry.size}`,
+        description: [`Plain ${product === "Polo" ? "polo shirt" : "T-shirt"}`, colour, entry.size].filter(Boolean).join(" — "),
         quantity: entry.quantity,
         unitPrice: approvedPrice,
         includeInTotals: true,
@@ -165,7 +184,7 @@ export default function NewQuotationDraft({ onCreated }: { onCreated: (id: strin
       <label className={styles.quickField}><span>Phone / WhatsApp</span><span className={styles.inputShell}><MessageCircle size={17} /><input value={phone} onChange={event => setPhone(event.target.value)} inputMode="tel" autoComplete="tel" placeholder="e.g. 5 7XX XXXX" /></span></label>
       <label className={styles.quickField}><span>Customer name <small>(optional)</small></span><span className={styles.inputShell}><UserRound size={17} /><input value={customerName} onChange={event => setCustomerName(event.target.value)} autoComplete="name" placeholder="Leave blank if unknown" /></span><small>The quotation will use “Customer” when left blank.</small></label>
       <label className={styles.quickField}><span>Product</span><span className={styles.inputShell}><Package size={17} /><select value={product} onChange={event => { const next = event.target.value as Product; setProduct(next); setUnitPrice(customerType === "bulk" ? "" : String(PRODUCT_PRICES[next])); }}><option value="T-Shirt">T-Shirt</option><option value="Polo">Polo shirt</option></select><ChevronDown size={16} /></span></label>
-      <label className={styles.quickField}><span>Colour</span><span className={styles.inputShell}><Palette size={17} /><select value={colour} onChange={event => setColour(event.target.value)}>{COLOURS.map(option => <option key={option}>{option}</option>)}</select><ChevronDown size={16} /></span></label>
+      <label className={styles.quickField}><span>Colour <small>(optional)</small></span><span className={styles.inputShell}><Palette size={17} /><select value={colour} onChange={event => setColour(event.target.value)}><option value="">No colour — price only</option>{colourOptions.map(option => <option key={option} value={option}>{option}</option>)}</select><ChevronDown size={16} /></span></label>
       <label className={`${styles.quickField} ${styles.sizesField}`}><span>Sizes & quantities</span><span className={styles.inputShell}><Layers3 size={17} /><input value={sizes} onChange={event => setSizes(event.target.value)} placeholder="e.g. S: 2, M: 5, L: 3" /></span></label>
       <label className={styles.quickField}><span>Approved unit price</span><span className={styles.currencyInput}><b>Rs</b><input value={unitPrice} onChange={event => setUnitPrice(event.target.value)} inputMode="decimal" aria-label="Approved unit price in Rs" /></span></label>
       <label className={styles.quickField}><span>Required date <small>(optional)</small></span><span className={styles.inputShell}><CalendarDays size={17} /><input type="date" min={mauritiusDate()} value={deliveryDate} onChange={event => setDeliveryDate(event.target.value)} /></span></label>
