@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+.studio-fonts {
+  --font-studio-display: var(--font-sans), Arial, sans-serif;
+  --font-studio-body: var(--font-sans), Arial, sans-serif;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
