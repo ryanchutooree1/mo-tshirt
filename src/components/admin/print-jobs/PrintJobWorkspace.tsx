@@ -2,13 +2,14 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, BriefcaseBusiness, Check, CircleAlert, Clock3, Copy, Download, FileImage, FileText, Inbox, Loader2, Mail, MessageSquare, RefreshCw, Search, Trash2, X, XCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, BriefcaseBusiness, Check, CheckCircle2, CircleAlert, Clock3, Copy, Download, FileImage, FileText, ImageOff, Inbox, Loader2, Mail, MessageSquare, RefreshCw, Search, Trash2, X, XCircle } from "lucide-react";
 import { useAdminTheme } from "@/admin/AdminThemeContext";
 import { PRINT_JOB_STAGES, type PrintJob, type PrintJobStage, type PrintJobClosureKind, stageLabel } from "@/lib/print-job-workflow";
 import { type RequestSource } from "@/lib/quotation-inbox";
 import type { EmailIntake } from "@/lib/email-intake-model";
 import EmailEnquiryDetails from "@/components/admin/EmailEnquiryDetails";
 import TanviHandoffPanel, { HandoffSettingsPanel } from "./TanviHandoffPanel";
+import FinalMockupUpload from "./FinalMockupUpload";
 import type { PrintJobVisual } from "@/lib/print-job-visuals";
 import JobOrderDetails, { JobListSummary } from "./JobOrderDetails";
 import styles from "./print-jobs.module.css";
@@ -28,6 +29,9 @@ const displayDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) ? new D
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Indian/Mauritius", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 const stageDescription = (stage: PrintJobStage) => PRINT_JOB_STAGES.find((entry) => entry.id === stage)?.description || "";
 function StageBadge({ stage }: { stage: PrintJobStage }) { return <span className={styles.badge} data-stage={stage}><i />{stageLabel(stage)}</span>; }
+function MockupStatus({ ready }: { ready: boolean }) {
+  return <span className={styles.mockupStatus} data-state={ready ? "uploaded" : "needed"}>{ready ? <CheckCircle2 size={12} aria-hidden="true" /> : <ImageOff size={12} aria-hidden="true" />}{ready ? "Mockup uploaded" : "Mockup needed"}</span>;
+}
 
 export default function PrintJobWorkspace({ requestedQuoteId, openSetup = false }: { requestedQuoteId?: string; openSetup?: boolean } = {}) {
   const { theme } = useAdminTheme();
@@ -269,7 +273,7 @@ export default function PrintJobWorkspace({ requestedQuoteId, openSetup = false 
             {data && filtered.length > 0 && <div className={styles.jobTableHeader} role="row"><span>Client</span><span>Product</span><span>Quotation no.</span><span>Date</span><span>Status</span><span>Total</span><span>Action</span></div>}
             {!data && !error ? <div className={styles.empty}><Loader2 className={styles.spin} size={22} /><p>Loading client designs…</p></div> : filtered.slice(0, visibleCount).map(item => <article key={item.key} className={styles.jobTableRow} role="row">
               <span className={styles.jobClient} role="cell"><strong>{item.name || "Customer"}</strong><small>{item.phone || item.email || "No contact saved"}</small></span>
-              <span className={styles.jobProduct} role="cell"><JobListSummary item={item} /></span>
+              <span className={styles.jobProduct} role="cell"><JobListSummary item={item} /><MockupStatus ready={item.mockups.some(mockup => mockup.adminUploaded)} /></span>
               <span className={styles.jobReference} role="cell">{item.reference}</span>
               <span className={styles.jobDate} role="cell">{item.createdAt ? new Date(item.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Indian/Mauritius" }) : "—"}</span>
               <span role="cell"><StageBadge stage={item.stage} /></span>
@@ -284,7 +288,7 @@ export default function PrintJobWorkspace({ requestedQuoteId, openSetup = false 
         <section className={styles.selectedJob} hidden={!selected} aria-label="Selected client design">
           {selected ? <div ref={detailRef} tabIndex={-1} className={styles.selectedJobBody} aria-label={`Job overview for ${selected.name}`}>
             <div className={styles.selectedHeading}><button className={styles.backToList} disabled={panelBusy} onClick={closeJob}><ArrowLeft size={15}/>Client list</button><div><span>{selected.reference}</span><h2>{selected.name}</h2></div><StageBadge stage={selected.stage}/>{data?.canQuotes && <SellingRulesReference/>}</div>
-            <div className={styles.jobCanvas}><div className={styles.visualColumn}><JobVisuals item={selected}/>
+            <div className={styles.jobCanvas}><div className={styles.visualColumn}><JobVisuals item={selected} uploadControl={selected.quoteId && selected.editable && selected.stage !== "completed" && selected.stage !== "declined" && data?.canQuotes ? <FinalMockupUpload quoteId={selected.quoteId} mockups={selected.mockups} disabled={dirty || panelBusy} onUploaded={() => { setNotice("Final mockup uploaded. Tanvi can now see the green status."); void refresh(); }} /> : undefined}/>
               <div className={styles.secondaryJobActions}>{selected.editable&&<><button disabled={dirty||panelBusy} onClick={()=>openStage({item:selected,stage:"awaiting_client"})}><Clock3 size={14}/>Waiting for client</button><button disabled={dirty||panelBusy} onClick={()=>openStage({item:selected,stage:"declined"})}><XCircle size={14}/>Unable to fulfil</button><button disabled={dirty||panelBusy} onClick={()=>openStage({item:selected})}>Change job status</button></>}</div>
             </div><div className={styles.actionColumn}>{selected.quoteId ? <TanviHandoffPanel key={selected.quoteId} quoteId={selected.quoteId} refreshKey={handoffRevision} onDirtyChange={setDirty} onBusyChange={setPanelBusy} onUpdated={()=>void refresh()} onOpenSettings={()=>setSetupOpen(true)}/> : selected.intakeId ? <div className={styles.enquiryNext}><h3>Complete the enquiry first</h3><p>Review the client’s details, then prepare their quotation. Price, payment and production stay in this same workspace.</p><button className={styles.primary} onClick={()=>openEditor("intake",selected)}>Review enquiry<ArrowRight size={16}/></button></div> : <div className={styles.enquiryNext}><h3>Existing production order</h3><p>{selected.reason}</p>{data?.canOrders ? <a className={styles.secondary} href={`/admin/orders?orderId=${encodeURIComponent(selected.orderId || "")}`}>Open order record<ArrowRight size={15}/></a> : <p>Production status and job details are shown here. Contact the order manager for changes to the original order.</p>}</div>}</div></div>
             <JobOrderDetails item={selected}/>
@@ -300,7 +304,7 @@ export default function PrintJobWorkspace({ requestedQuoteId, openSetup = false 
   </div>;
 }
 
-function JobVisuals({item,compact=false}:{item:PrintJob;compact?:boolean}) {
+function JobVisuals({item,compact=false,uploadControl}:{item:PrintJob;compact?:boolean;uploadControl?:React.ReactNode}) {
   const mockups=item.mockups||[];const artworks=item.artworks||[];
   const renderImage=(visual:PrintJobVisual,index:number)=>{
     const label=visual.side==="front"?"Front":visual.side==="back"?"Back":visual.name||"Preview";
@@ -312,7 +316,7 @@ function JobVisuals({item,compact=false}:{item:PrintJob;compact?:boolean}) {
     return visual.processed ? <span key={`${visual.url}-${index}`} className={styles.artworkPair} role="group" aria-label={`${label} artwork versions`}>{figure(visual.processed.url,visual.processed.name,visual.processed.transparent?"Transparent":"Processed")}{figure(visual.url,visual.name,visual.originalProvenance==="client-upload"?"Original upload":"Saved source")}</span> : figure(visual.url,visual.name,visual.originalProvenance==="client-upload"?"Original upload":undefined);
   };
   if(compact)return <span className={styles.queueVisuals}><span className={styles.queueMockups}>{mockups.length?mockups.slice(0,2).map(renderImage):<MissingMockup item={item} hasArtwork={artworks.length > 0} compact />}</span>{artworks.length>0&&<span className={styles.queueArtworks}>{artworks.slice(0,4).map(renderImage)}{artworks.length>4&&<span>+{artworks.length-4}</span>}</span>}</span>;
-  return <div className={styles.visualOverview}><div className={styles.visualSectionTitle}><h3>Finished product</h3><span>{mockups.length ? "Client’s saved design" : "Generic garment illustration"}</span></div><div className={styles.finishedProducts}>{mockups.length?mockups.map(renderImage):<MissingMockup item={item} hasArtwork={artworks.length > 0} />}</div><div className={styles.visualSectionTitle}><h3>Logos & print artwork</h3><span>{artworks.length} artwork{artworks.length===1?"":"s"}</span></div><div className={styles.printArtworks}>{artworks.length?artworks.map(renderImage):<p className={styles.help}>{item.artwork.length?"The supplied files have no image preview. Open them in the files section below.":"No print artwork attached yet."}</p>}</div>{artworks.some(visual=>Boolean(visual.processed)&&visual.originalProvenance!=="client-upload")&&<p className={styles.help}>Saved source is the file received before admin cleanup. It may already have been edited.</p>}</div>;
+  return <div className={styles.visualOverview}><div className={styles.visualSectionTitle}><h3>Finished product</h3><span>{mockups.length ? "Client’s saved design" : "Generic garment illustration"}</span></div>{uploadControl}<div className={styles.finishedProducts}>{mockups.length?mockups.map(renderImage):<MissingMockup item={item} hasArtwork={artworks.length > 0} />}</div><div className={styles.visualSectionTitle}><h3>Logos & print artwork</h3><span>{artworks.length} artwork{artworks.length===1?"":"s"}</span></div><div className={styles.printArtworks}>{artworks.length?artworks.map(renderImage):<p className={styles.help}>{item.artwork.length?"The supplied files have no image preview. Open them in the files section below.":"No print artwork attached yet."}</p>}</div>{artworks.some(visual=>Boolean(visual.processed)&&visual.originalProvenance!=="client-upload")&&<p className={styles.help}>Saved source is the file received before admin cleanup. It may already have been edited.</p>}</div>;
 }
 function MissingMockup({ item, hasArtwork, compact = false }: { item: PrintJob; hasArtwork: boolean; compact?: boolean }) {
   const productDescriptions = item.details?.products.map(product => product.description).join(" ") || item.garmentSummary || item.lines.map(line => line.description).join(" ");

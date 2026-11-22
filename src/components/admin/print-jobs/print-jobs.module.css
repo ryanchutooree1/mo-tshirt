@@ -310,6 +310,27 @@
   .jobProduct { min-width:0; }
   .jobProduct :global(strong) { font-size:11px; }
   .jobProduct :global(span) { font-size:9px; }
+  .mockupStatus { display:inline-flex; align-items:center; gap:5px; width:max-content; max-width:100%; min-height:23px; margin-top:7px; padding:4px 8px; border:1px solid transparent; border-radius:999px; font-size:8px!important; font-weight:800; line-height:1; white-space:nowrap; }
+  .mockupStatus[data-state=uploaded] { border-color:#b8e5ca; background:#eaf8f0; color:#176a43; }
+  .mockupStatus[data-state=needed] { border-color:#efdfb5; background:#fff8e8; color:#8a5a08; }
+  .mockupUploadBar { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin:-2px 0 14px; padding:11px 12px; border:1px solid #eadfd8; border-radius:14px; background:#fffaf7; }
+  .mockupUploadCopy { display:flex; flex:1; flex-direction:column; gap:3px; min-width:0; }
+  .mockupUploadCopy>strong { color:var(--ink); font-size:10px; }
+  .mockupUploadCopy>span { display:flex; align-items:center; gap:6px; color:var(--ink); font-size:10px; font-weight:750; }
+  .mockupUploadCopy>span[data-state=uploaded] { color:#176a43; }
+  .mockupUploadCopy small { color:var(--muted); font-size:8px; line-height:1.45; }
+  .mockupUploadControls { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .mockupSideChoice { display:inline-flex; gap:3px; padding:3px; border:1px solid var(--line); border-radius:999px; background:var(--paper); }
+  .mockupSideChoice>button { min-height:29px; padding:5px 9px; border:0; border-radius:999px; background:transparent; color:var(--muted); font-size:8px; font-weight:750; }
+  .mockupSideChoice>button[aria-pressed=true] { background:#eaf8f0; color:#176a43; }
+  .mockupUploadButton { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:36px; padding:8px 12px; border:0; border-radius:999px; background:#e84a12; color:#fff; font-size:9px; font-weight:800; cursor:pointer; }
+  .mockupUploadButton:hover:not(:disabled) { background:#c83a0b; }
+  .mockupUploadButton:disabled { cursor:not-allowed; opacity:.55; }
+  .mockupUploadNotice { flex-basis:100%; margin:0; padding:8px 10px; border-radius:10px; background:#eaf8f0; color:#176a43; font-size:9px; line-height:1.5; }
+  .mockupUploadNotice[role=alert] { background:#fff0ed; color:#a13435; }
+  .workspace[data-theme=dark] .mockupStatus[data-state=uploaded],.workspace[data-theme=dark] .mockupSideChoice>button[aria-pressed=true] { border-color:#2b6448; background:#183929; color:#9de0b8; }
+  .workspace[data-theme=dark] .mockupStatus[data-state=needed] { border-color:#5f4b21; background:#382d16; color:#f4d38b; }
+  .workspace[data-theme=dark] .mockupUploadBar { border-color:#493a34; background:#2a2422; }
   .jobReference,.jobDate { color:var(--muted); font-size:10px; overflow-wrap:anywhere; }
   .jobTotal { font-size:12px; white-space:nowrap; }
   .jobActions { display:flex; align-items:center; justify-content:flex-end; gap:7px; }
@@ -399,4 +420,8 @@
   .toolPanel { padding:19px 16px; }
   .copyRow { grid-template-columns:18px minmax(0,1fr); }
   .copyRow button { grid-column:2; width:max-content; }
+  .mockupUploadBar { align-items:stretch; flex-direction:column; }
+  .mockupUploadControls { align-items:stretch; flex-direction:column; }
+  .mockupSideChoice { display:grid; grid-template-columns:1fr 1fr; }
+  .mockupUploadButton { width:100%; }
 }

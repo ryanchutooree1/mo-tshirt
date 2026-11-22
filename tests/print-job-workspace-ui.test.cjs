@@ -60,9 +60,9 @@ function reset() {
   quoteRecords = [
     quote("alpha", "Alpha New", "new", { createdAt: NOW - 8000, printJobWorkflow: workflow("new", { reason: "" }) }),
     quote("bravo", "Bravo Details", "needs_details", { source: "WhatsApp", createdAt: NOW - 7000 }),
-    quote("charlie", "Charlie Waiting", "awaiting_client", { source: "Design studio", createdAt: NOW - 6000 }),
+    quote("charlie", "Charlie Waiting", "awaiting_client", { source: "Design studio", createdAt: NOW - 6000, attachments: [{ filename: "Client design mockup.png", role: "final-mockup", side: "front", contentType: "image/png", url: "https://synthetic.example.test/client-mockup.png" }] }),
     quote("delta", "Delta Confirmed", "confirmed", { source: "Team", createdAt: NOW - 5000, orderTransactionId: "order-delta", quote: { documentNumber: "INV-DELTA", documentType: "invoice", clientAddress: "456 Synthetic Office, Test City", currency: "Rs", total: 2400, paymentStatus: "Paid", lines: [{ description: "Cotton polo", quantity: 12, unitPrice: 200, color: "Navy", size: "XL" }] }, paymentReceipt: { documentNumber: "AUTO-DELTA" }, attachments: [{ filename: "Synthetic artwork.pdf", url: "https://synthetic.example.test/artwork.pdf" }], message: "Synthetic conference uniforms", delivery: "Collection", deliveryAddress: "123 Synthetic Lane, Test City", deadline: "2026-12-20" }),
-    quote("echo", "Echo Production", "production", { source: "Team", createdAt: NOW - 4000, attachments: [{ filename: "Synthetic front mockup.png", role: "final-mockup", side: "front", contentType: "image/png", url: "https://synthetic.example.test/front-mockup.png" }, { filename: "Synthetic back mockup.png", role: "final-mockup", side: "back", contentType: "image/png", url: "https://synthetic.example.test/back-mockup.png" }, { filename: "Synthetic logo.png", role: "print-artwork", side: "front", contentType: "image/png", url: "https://synthetic.example.test/synthetic-logo.png" }] }),
+    quote("echo", "Echo Production", "production", { source: "Team", createdAt: NOW - 4000, attachments: [{ filename: "Synthetic front mockup.png", role: "final-mockup", side: "front", source: "admin-final-mockup", contentType: "image/png", url: "https://synthetic.example.test/front-mockup.png" }, { filename: "Synthetic back mockup.png", role: "final-mockup", side: "back", source: "admin-final-mockup", contentType: "image/png", url: "https://synthetic.example.test/back-mockup.png" }, { filename: "Synthetic logo.png", role: "print-artwork", side: "front", contentType: "image/png", url: "https://synthetic.example.test/synthetic-logo.png" }] }),
     quote("foxtrot", "Foxtrot Ready", "ready", { source: "Email", createdAt: NOW - 3000 }),
     quote("golf", "Golf Completed", "completed", { source: "Team", createdAt: NOW - 2000 }),
     quote("hotel", "Hotel Declined", "declined", { source: "Email", createdAt: NOW - 1000 }),
@@ -155,6 +155,12 @@ const customRequire = (name) => {
       React.createElement("button", { onClick: onClose }, "Cancel synthetic settings"),
       React.createElement("button", { onClick: onSaved }, "Save synthetic settings")),
   };
+  if (name === "./FinalMockupUpload") return { __esModule: true,
+    default: (props) => React.createElement("section", {
+      "aria-label": "Synthetic final mockup upload",
+      "data-quote-id": props.quoteId || props.item?.quoteId || "",
+    }, "Final mockup upload controls"),
+  };
   if (name === "./DailyTools") return loadComponent("DailyTools.tsx");
   if (name === "@/admin/AdminThemeContext") return { useAdminTheme: () => ({ theme: "dark" }) };
   if (name === "@/data/work") return { CONTACT_TEL: "+23059883880" };
@@ -233,6 +239,8 @@ function addEnquiry() { queueFlags.canEnquiries = true; enquiries = [{ id: "synt
     assert.equal(screen.getByRole("combobox", { name: "Job status" }).value, "active");
     const table = within(list()).getByRole("table", { name: "Quotation jobs" });
     for (const heading of ["Client", "Product", "Quotation no.", "Date", "Status", "Total", "Action"]) assert.ok(within(table).getByText(heading, { exact: true }));
+    assert.ok(within(tableRow("Echo Production")).getByText("Mockup uploaded", { exact: true }));
+    assert.ok(within(tableRow("Charlie Waiting")).getByText("Mockup needed", { exact: true }), "A client/design-studio mockup does not claim that Ryan uploaded the final mockup");
     assert.equal(table.querySelectorAll('[role="row"]').length, 7, "The compact table has one header and six active jobs");
     assert.ok(screen.getByRole("complementary", { name: "Client design list" })); assert.equal(Boolean(screen.queryByRole("region", { name: "Selected client design" })), false);
     for (const stage of domain.PRINT_JOB_STAGES) { await status(stage.id); assert.equal(rows().length, 1); assert.ok(rows()[0].getAttribute("aria-label").endsWith(stage.label)); }
@@ -309,6 +317,7 @@ function addEnquiry() { queueFlags.canEnquiries = true; enquiries = [{ id: "synt
     assert.equal(frontDownloadUrl.searchParams.get("url"), "https://synthetic.example.test/front-mockup.png");
     assert.equal(frontDownloadUrl.searchParams.get("name"), "Synthetic front mockup.png");
     assert.equal(frontDownload.hasAttribute("download"), true);
+    assert.equal(within(overview()).getByRole("region", { name: "Synthetic final mockup upload" }).dataset.quoteId, "echo");
     assert.equal(handoff().dataset.quoteId, "echo");
     assert.equal(Boolean(screen.queryByRole("region", { name: "Synthetic quote editor" })), false);
     assert.ok(document.activeElement === overview()); assert.equal(patches().length, 0);

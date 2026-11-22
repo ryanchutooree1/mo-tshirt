@@ -7,6 +7,8 @@ export type PrintJobVisual = {
   /** Same attachment only; primary URL remains the original for existing consumers. */
   processed?: { url: string; name: string; transparent: boolean };
   originalProvenance?: "client-upload";
+  /** True only for a final mockup explicitly uploaded from the admin order workspace. */
+  adminUploaded?: true;
 };
 export const MAX_PRINT_JOB_VISUALS = 64;
 
@@ -64,6 +66,7 @@ function addVisual(list: PrintJobVisual[], visual: PrintJobVisual) {
   if (duplicate) {
     // Conflicting claims about the same image cannot prove one garment side.
     if (duplicate.side !== visual.side) duplicate.side = "other";
+    if (visual.adminUploaded) duplicate.adminUploaded = true;
     return;
   }
   if (list.length < MAX_PRINT_JOB_VISUALS) list.push(visual);
@@ -100,7 +103,8 @@ export function buildPrintJobVisuals(rawQuote: unknown): { mockups: PrintJobVisu
       ? { url: current, name: filename || name, transparent: ["already-transparent", "solid-color", "ai"].includes(text(file.backgroundRemovalMethod)) }
       : undefined;
     const originalProvenance = !isMockup && original && url === original && file.originalProvenance === "client-upload" ? "client-upload" as const : undefined;
-    addVisual(isMockup ? mockups : artworks, { url, name, side: resolvedSide, kind, ...(processed ? { processed } : {}), ...(originalProvenance ? { originalProvenance } : {}) });
+    const adminUploaded = isMockup && file.source === "admin-final-mockup" ? true as const : undefined;
+    addVisual(isMockup ? mockups : artworks, { url, name, side: resolvedSide, kind, ...(processed ? { processed } : {}), ...(originalProvenance ? { originalProvenance } : {}), ...(adminUploaded ? { adminUploaded } : {}) });
   }
   for (const side of ["front", "back"] as const) {
     // Current attachment is authoritative if a saved brief still references an
