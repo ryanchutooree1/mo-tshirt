@@ -1,15 +1,21 @@
 import { NextResponse } from "next/server";
 import {
   arrayUnion,
+  collection,
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
+  limit,
+  query,
   serverTimestamp,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import { getAdminPasswordFromEnv } from "@/lib/admin-auth";
 import { verifyManagedAdminCredentials } from "@/lib/admin-users";
 import { getAdminRequestSession } from "@/lib/admin-request";
+import { hasAdminPageAccess } from "@/lib/admin-access";
 import { db } from "@/lib/firebase";
 import { verifyProductionManagerPassword } from "@/lib/production-manager-auth";
 import {
@@ -87,11 +93,14 @@ export async function PATCH(
   if (!session) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
-  if (!id) {
-    return NextResponse.json({ error: "Missing id." }, { status: 400 });
+  if (!hasAdminPageAccess(session.allowedPages, "/admin/quotation-approval", session)) {
+    return NextResponse.json({ error: "Quotation access is required." }, { status: 403 });
   }
   if (!isRequestOriginAllowed(req)) {
     return NextResponse.json({ error: "Origin not allowed." }, { status: 403 });
+  }
+  if (!id || id.length > 160 || /[\/\\\u0000-\u001f]/.test(id) || id === "." || id === "..") {
+    return NextResponse.json({ error: "Missing id." }, { status: 400 });
   }
   if (!isContentLengthWithinLimit(req.headers, MAX_DECISION_REQUEST_BYTES)) {
     return NextResponse.json({ error: "Decision note is too large." }, { status: 413 });
@@ -213,8 +222,17 @@ export async function DELETE(
   if (!session) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
-  if (!id) {
+  if (!hasAdminPageAccess(session.allowedPages, "/admin/quotation-approval", session)) {
+    return NextResponse.json({ error: "Quotation access is required." }, { status: 403 });
+  }
+  if (!isRequestOriginAllowed(req)) {
+    return NextResponse.json({ error: "Origin not allowed." }, { status: 403 });
+  }
+  if (!id || id.length > 160 || /[\/\\\u0000-\u001f]/.test(id) || id === "." || id === "..") {
     return NextResponse.json({ error: "Missing id." }, { status: 400 });
+  }
+  if (!isContentLengthWithinLimit(req.headers, MAX_DECISION_REQUEST_BYTES)) {
+    return NextResponse.json({ error: "Delete confirmation is too large." }, { status: 413 });
   }
 
   const body = await req.json().catch(() => ({}));
@@ -245,6 +263,14 @@ export async function DELETE(
   }
 
   try {
+    const quoteRef = doc(db, "quotes", id);
+    const quoteSnapshot = await getDoc(quoteRef);
+    if (!quoteSnapshot.exists()) return NextResponse.json({ error: "Quotation not found." }, { status: 404 });
+    const quote = quoteSnapshot.data() as Record<string, unknown>;
+    const linkedOrders = await getDocs(query(collection(db, "transactions"), where("quoteId", "==", id), limit(1)));
+    if (cleanString(quote.orderTransactionId, 160) || !linkedOrders.empty) {
+      return NextResponse.json({ error: "This quotation is linked to an order and cannot be deleted here." }, { status: 409 });
+    }
     await deleteDoc(doc(db, "quotes", id));
     return NextResponse.json({ ok: true });
   } catch (error) {

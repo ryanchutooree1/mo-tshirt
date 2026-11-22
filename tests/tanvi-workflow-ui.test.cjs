@@ -125,6 +125,13 @@ global.fetch = window.fetch = async (url, options = {}) => {
     } catch (error) { if (error.name === 'HandoffError') { status = error.status; response = { error: error.message }; } else throw error; }
   }
   // Capture results before delay and deliberately ignore abort, proving UI lifecycle guards.
+  if (failure.hangUntilAbort) await new Promise((resolve, reject) => {
+    const signal = options.signal;
+    if (!signal) return;
+    const rejectAbort = () => reject(new Error('Synthetic hanging request aborted'));
+    if (signal.aborted) rejectAbort();
+    else signal.addEventListener('abort', rejectAbort, { once: true });
+  });
   if (failure.gate) await failure.gate.promise;
   if (failure.network || failure.loseResponse) throw new Error('Synthetic response lost');
   return Response.json(response, { status });
@@ -312,6 +319,39 @@ async function test(name, run) {
   await test('failed and wrong-job initial GETs offer explicit retry without making a mutation', async () => {
     fault('GET', endpoint(), { status: 503 }); render(React.createElement(App, props())); await waitFor(() => assert.ok(screen.queryByRole('alert'))); assert.ok(button('Retry')); assert.deepEqual(mutations(), []);
     fault('GET', endpoint(), { wrongId: 'synthetic-b' }); await click(button('Retry')); assert.match(screen.getByRole('alert').textContent, /wrong job/); assert.deepEqual(mutations(), []); await click(button('Retry')); assert.ok(button('Confirm client price'));
+  });
+
+  await test('never-resolving initial GET times out and Retry opens the workflow without a mutation', async () => {
+    const nativeSetTimeout = window.setTimeout;
+    const nativeClearTimeout = window.clearTimeout;
+    const timeoutId = 20001;
+    let fireLoadTimeout;
+    try {
+      window.setTimeout = (callback, delay, ...args) => {
+        if (delay !== 20000) return nativeSetTimeout(callback, delay, ...args);
+        fireLoadTimeout = () => callback(...args);
+        return timeoutId;
+      };
+      window.clearTimeout = id => { if (id !== timeoutId) nativeClearTimeout(id); };
+      fault('GET', endpoint(), { hangUntilAbort: true });
+      render(React.createElement(App, props()));
+      assert.match(screen.getByText(/Opening the next step/).textContent, /Opening the next step/);
+      assert.equal(typeof fireLoadTimeout, 'function', 'The handoff load must schedule its timeout');
+      await act(async () => { fireLoadTimeout(); await Promise.resolve(); await Promise.resolve(); });
+      await waitFor(() => assert.match(screen.getByRole('alert').textContent, /Opening took too long\. Retry\./));
+      assert.ok(button('Retry'));
+      const timedOutRequest = requests.find(item => item.method === 'GET' && item.url === endpoint());
+      assert.equal(timedOutRequest.signal.aborted, true);
+      assert.equal(timedOutRequest.signal.reason, 'timeout');
+      assert.deepEqual(mutations(), []);
+    } finally {
+      window.setTimeout = nativeSetTimeout;
+      window.clearTimeout = nativeClearTimeout;
+    }
+    await click(button('Retry'));
+    assert.ok(button('Confirm client price'));
+    assert.equal(requests.filter(item => item.method === 'GET' && item.url === endpoint()).length, 2);
+    assert.deepEqual(mutations(), []);
   });
 
   await test('wrong-job mutation response retains the current price form and does not notify success', async () => {

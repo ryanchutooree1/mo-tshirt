@@ -44,6 +44,7 @@ import jsPDF from "jspdf";
 import { normalizeInventorySizeMap } from "@/lib/inventory-stock";
 import { formatMoney as formatDisplayMoney } from "@/lib/money";
 import { formatSizeLabel, normalizeSizeLabel } from "@/lib/shops";
+import { BUSINESS_PAYMENT_DETAILS as PAYMENT_DETAILS } from "@/lib/business-payment-details";
 
 type ProductLine = {
   product: string;
@@ -207,12 +208,6 @@ const BUSINESS_INFO = {
   addressLines: ["School Lane", "Surinam, 60907"],
   phone: "+230 5988 3880",
   brn: "I20009899",
-};
-
-const PAYMENT_DETAILS = {
-  payee: "Manavshree Chutooree",
-  bankName: "SBM BANK",
-  accountNumber: "50300001273751",
 };
 
 const ORDER_DOC_LABELS: Record<OrderDocumentType, string> = {

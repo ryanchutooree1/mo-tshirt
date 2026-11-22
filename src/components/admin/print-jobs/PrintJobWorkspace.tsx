@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, CircleAlert, Clock3, Copy, Download, FileImage, Inbox, Loader2, Mail, MessageSquare, Plus, RefreshCw, Search, X, XCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, BriefcaseBusiness, Check, CircleAlert, Clock3, Copy, Download, FileImage, FileText, Inbox, Loader2, Mail, MessageSquare, RefreshCw, Search, Trash2, X, XCircle } from "lucide-react";
 import { useAdminTheme } from "@/admin/AdminThemeContext";
 import { PRINT_JOB_STAGES, type PrintJob, type PrintJobStage, type PrintJobClosureKind, stageLabel } from "@/lib/print-job-workflow";
 import { type RequestSource } from "@/lib/quotation-inbox";
@@ -16,10 +16,12 @@ import styles from "./print-jobs.module.css";
 const EditorLoading = () => <div className={styles.empty}><Loader2 className={styles.spin} size={24} /><p>Opening document workspace…</p></div>;
 const SellingRulesReference = dynamic(() => import("@/components/admin/selling-rules/SellingRulesReference"));
 const NewQuotationDraft = dynamic(() => import("./NewQuotationDraft"), { loading: EditorLoading });
+const DailyTools = dynamic(() => import("./DailyTools"), { loading: EditorLoading });
 const OrderEditor = dynamic(() => import("@/components/admin/OrdersEditorPage"), { loading: EditorLoading });
 type QueueData = { items: PrintJob[]; warnings: string[]; canQuotes: boolean; canOrders: boolean; canInbox?: boolean; canEnquiries?: boolean; canProductionWorkspace?: boolean; updatedAt: number; enquiries?: EmailIntake[]; lastEmailSync?: string | null };
 type View = PrintJobStage | "active" | "attention" | "all";
 type Editor = { kind: "quote" | "order" | "intake"; id?: string; name: string };
+type WorkspaceTab = "quotations" | "daily";
 const closed = (stage: PrintJobStage) => stage === "completed" || stage === "declined";
 const money = (item: PrintJob) => item.total === null ? item.orderId && !item.quoteId ? "Production record" : "To price" : `${item.currency || "Rs"} ${new Intl.NumberFormat("en-MU", { maximumFractionDigits: 2 }).format(item.total)}`;
 const displayDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T12:00:00+04:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : value;
@@ -47,6 +49,11 @@ export default function PrintJobWorkspace({ requestedQuoteId, openSetup = false 
   const [setupOpen, setSetupOpen] = useState(openSetup);
   const [handoffRevision, setHandoffRevision] = useState(0);
   const [panelBusy, setPanelBusy] = useState(false);
+  const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>("quotations");
+  const [deleteTarget, setDeleteTarget] = useState<PrintJob | null>(null);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleting, setDeleting] = useState(false);
   useEffect(() => { if (openSetup) setSetupOpen(true); }, [openSetup]);
   const requestRef = useRef<AbortController | null>(null);
   const detailRef = useRef<HTMLDivElement>(null);
@@ -217,19 +224,61 @@ export default function PrintJobWorkspace({ requestedQuoteId, openSetup = false 
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not check new email."); }
     finally { checkRef.current = false; setChecking(false); }
   };
+  const closeDelete = () => {
+    if (deleting) return;
+    setDeleteTarget(null); setDeletePassword(""); setDeleteError("");
+  };
+  const deleteQuotation = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!deleteTarget?.quoteId || deleting) return;
+    if (!deletePassword) { setDeleteError("Enter your own login password to confirm deletion."); return; }
+    setDeleting(true); setDeleteError("");
+    try {
+      const response = await fetch(`/api/admin/quotes/${encodeURIComponent(deleteTarget.quoteId)}`, {
+        method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: deletePassword }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || "Could not delete this quotation.");
+      const reference = deleteTarget.reference;
+      setDeleteTarget(null); setDeletePassword("");
+      setNotice(`${reference} was deleted.`);
+      await refresh();
+    } catch (reason) {
+      setDeleteError(reason instanceof Error ? reason.message : "Could not delete this quotation.");
+    } finally { setDeleting(false); }
+  };
   const focusedIntake = editor?.kind === "intake" ? (editingIntake?.id === editor.id ? editingIntake : data?.enquiries?.find((intake) => intake.id === editor.id)) : null;
   const focusView = Boolean(editor && (editor.kind !== "quote" || !editor.id || !selected));
   const statusOptions = [{id:"active",label:`All active (${activeCount})`},{id:"attention",label:`Needs attention (${attentionCount})`},...PRINT_JOB_STAGES.map(stage=>({id:stage.id,label:`${stage.label} (${counts[stage.id]})`})),{id:"all",label:`All records (${items.length})`}];
 
   return <div className={`${styles.workspace} ${styles.simpleWorkspace}`} data-theme={theme}>
     <div hidden={focusView || setupOpen}>
-      <header className={styles.header} hidden={Boolean(selected)}><div><p className={styles.eyebrow}>MO T-SHIRT · QUOTATIONS</p><h1>Quotes & invoices<span>.</span></h1><p>Choose the design. Confirm price, check payment, send to production.</p></div><div className={styles.headerActions}>{data?.canQuotes && <SellingRulesReference/>}{data?.canInbox && <button className={styles.secondary} onClick={() => void checkEmail()} disabled={checking || panelBusy}><Mail size={16} />{checking ? "Checking…" : "Check email"}</button>}<button className={styles.primary} onClick={() => openEditor("quote")} disabled={!data?.canQuotes || panelBusy}><Plus size={17} />New quotation</button></div></header>
+      <nav className={styles.pillNav} hidden={Boolean(selected)} aria-label="Tanvi quotation workspace">
+        <button type="button" data-active={workspaceTab === "quotations"} aria-current={workspaceTab === "quotations" ? "page" : undefined} onClick={() => setWorkspaceTab("quotations")}><FileText size={19} /><span>Quotations</span></button>
+        <button type="button" data-active={workspaceTab === "daily"} aria-current={workspaceTab === "daily" ? "page" : undefined} onClick={() => setWorkspaceTab("daily")}><BriefcaseBusiness size={19} /><span>Daily tools</span></button>
+      </nav>
+      {workspaceTab === "daily" && !selected ? <DailyTools /> : <>
+      <header className={styles.header} hidden={Boolean(selected)}><div><p className={styles.eyebrow}>MO T-SHIRT · TANVI’S WORKSPACE</p><h1>Quotations<span>.</span></h1><p>Create a plain garment quotation and send it to your client quickly.</p></div><div className={styles.headerActions}>{data?.canQuotes && <SellingRulesReference/>}{data?.canInbox && <button className={styles.secondary} onClick={() => void checkEmail()} disabled={checking || panelBusy}><Mail size={16} />{checking ? "Checking…" : "Check email"}</button>}</div></header>
+      {!selected && data?.canQuotes && <NewQuotationDraft onCreated={(id, intent) => { const reference = `Q-${id.slice(-8).toUpperCase()}`; setNotice(intent === "send" ? `${reference} was created and prepared for WhatsApp.` : `${reference} was saved as a draft.`); void refresh(); }} />}
       {Boolean(error || data?.warnings?.length) && <div className={styles.warning} role="alert"><CircleAlert size={17} /><span>{error || data?.warnings.join(" ")}</span><button onClick={() => void refresh()}>Retry</button></div>}
       {notice && <p className={styles.notice} role="status">{notice}</p>}
       <div className={styles.simpleDesk}>
         <aside className={styles.clientQueue} hidden={Boolean(selected)} aria-label="Client design list">
           <div className={styles.clientTools}><div><h2>{view === "active" ? "All active jobs" : view === "all" ? "All jobs" : view === "attention" ? "Needs attention" : stageLabel(view)} <span>{filtered.length}</span></h2><button className={styles.iconButton} onClick={() => void refresh()} disabled={refreshing} aria-label="Refresh job list"><RefreshCw size={15} className={refreshing ? styles.spin : ""} /></button></div><label className={styles.search}><Search size={16} /><input aria-label="Search jobs" placeholder="Search client, design or quotation…" value={search} onChange={event => { setSearch(event.target.value); setVisibleCount(30); }} /></label><select className={styles.statusSelect} aria-label="Job status" value={view} onChange={event => changeView(event.target.value as View)}>{statusOptions.map(option=><option key={option.id} value={option.id}>{option.label}</option>)}</select></div>
-          <div className={styles.clientList}>{!data && !error ? <div className={styles.empty}><Loader2 className={styles.spin} size={22} /><p>Loading client designs…</p></div> : filtered.slice(0,visibleCount).map(item=><button key={item.key} className={`${styles.clientCard} ${selectedKey === item.key ? styles.clientCardActive : ""}`} onClick={()=>openJob(item)} aria-pressed={selectedKey===item.key} aria-label={`Open job for ${item.name}, ${stageLabel(item.stage)}`}><JobVisuals item={item} compact /><span className={styles.clientCardInfo}><JobListSummary item={item}/><span className={styles.listClientName}>{item.name}</span><span className={styles.listMetadata}>{({studio:"Design studio",form:"Website enquiry",email:"Email",whatsapp:"WhatsApp",team:"Team"})[item.source]} · {item.reference}{item.createdAt ? ` · ${new Date(item.createdAt).toLocaleDateString("en-GB", { day:"numeric", month:"short", timeZone:"Indian/Mauritius" })}` : ""}</span><span className={styles.clientCardBottom}><StageBadge stage={item.stage}/>{item.deadline&&<span>Requested {displayDate(item.deadline)}</span>}</span></span><span className={styles.listValue}><b>{money(item)}</b><span>View job <ArrowRight size={15}/></span></span></button>)}{!filtered.length && data && <div className={styles.empty}><Inbox size={24}/><h3>No matching clients</h3><p>Try another search or status.</p></div>}{visibleCount<filtered.length&&<button className={styles.loadMore} onClick={()=>setVisibleCount(count=>count+30)}>Show more clients</button>}</div>
+          <div className={styles.clientList} role="table" aria-label="Quotation jobs">
+            {data && filtered.length > 0 && <div className={styles.jobTableHeader} role="row"><span>Client</span><span>Product</span><span>Quotation no.</span><span>Date</span><span>Status</span><span>Total</span><span>Action</span></div>}
+            {!data && !error ? <div className={styles.empty}><Loader2 className={styles.spin} size={22} /><p>Loading client designs…</p></div> : filtered.slice(0, visibleCount).map(item => <article key={item.key} className={styles.jobTableRow} role="row">
+              <span className={styles.jobClient} role="cell"><strong>{item.name || "Customer"}</strong><small>{item.phone || item.email || "No contact saved"}</small></span>
+              <span className={styles.jobProduct} role="cell"><JobListSummary item={item} /></span>
+              <span className={styles.jobReference} role="cell">{item.reference}</span>
+              <span className={styles.jobDate} role="cell">{item.createdAt ? new Date(item.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Indian/Mauritius" }) : "—"}</span>
+              <span role="cell"><StageBadge stage={item.stage} /></span>
+              <strong className={styles.jobTotal} role="cell">{money(item)}</strong>
+              <span className={styles.jobActions} role="cell"><button type="button" className={styles.openJob} onClick={() => openJob(item)} aria-label={`Open job for ${item.name}, ${stageLabel(item.stage)}`}>Open <ArrowRight size={15} /></button>{item.quoteId && item.editable && !item.orderId && <button type="button" className={styles.deleteJob} onClick={() => { setDeleteTarget(item); setDeletePassword(""); setDeleteError(""); }} aria-label={`Delete ${item.reference}`} title="Delete quotation"><Trash2 size={17} /></button>}</span>
+            </article>)}
+            {!filtered.length && data && <div className={styles.empty}><Inbox size={24}/><h3>No matching clients</h3><p>Try another search or status.</p></div>}
+            {visibleCount < filtered.length && <button className={styles.loadMore} onClick={() => setVisibleCount(count => count + 30)}>Show more quotations</button>}
+          </div>
           <p className={styles.clientFooter}>{data ? `${filtered.length} in this list` : "Connecting…"}{followUps ? ` · ${followUps} follow-ups due` : ""}</p>
         </aside>
         <section className={styles.selectedJob} hidden={!selected} aria-label="Selected client design">
@@ -242,9 +291,11 @@ export default function PrintJobWorkspace({ requestedQuoteId, openSetup = false 
           </div> : <div className={styles.pickDesign}><FileImage size={34}/><h2>Pick the client’s design</h2><p>The finished front and back, print files and the next action appear here.</p><span>1 Price agreed · 2 Payment received · 3 Send to production</span></div>}
         </section>
       </div>
+      </>}
     </div>
     {setupOpen && <HandoffSettingsPanel onClose={()=>setSetupOpen(false)} onSaved={()=>{setSetupOpen(false);setHandoffRevision(value=>value+1);setNotice("Test-only delivery is configured. No email has been sent.");}}/>}
     {focusView && !setupOpen && editor && <section className={styles.focusView}><header className={styles.focusHeader}><button ref={backRef} className={styles.secondary} disabled={panelBusy} onClick={closeEditor}><ArrowLeft size={16}/>Back to clients</button><div><p className={styles.eyebrow}>{editor.kind==="intake"?"CLIENT ENQUIRY":"QUOTATION"}</p><h2>{editor.name}</h2></div>{dirty&&<span className={styles.unsaved}>Unsaved changes</span>}{data?.canQuotes && <SellingRulesReference/>}</header><div className={styles.editor}>{editor.kind==="quote" ? editor.id ? <TanviHandoffPanel key={editor.id} quoteId={editor.id} onDirtyChange={setDirty} onBusyChange={setPanelBusy} onUpdated={()=>void refresh()} onOpenSettings={()=>setSetupOpen(true)} refreshKey={handoffRevision}/> : <NewQuotationDraft onCreated={id=>{const next:Editor={kind:"quote",id,name:"New quotation"};window.history.replaceState({...window.history.state,printDeskEditor:next,printDeskJob:`quote:${id}`},"",window.location.href);setEditor(next);setSelectedKey(`quote:${id}`);void refresh();}}/> : editor.kind==="order" ? data?.canOrders ? <OrderEditor embedded initialOrderId={editor.id} onDirtyChange={setDirty}/> : <p>Order editor access is required.</p> : focusedIntake ? <EmailEnquiryDetails workspaceOnly={Boolean(data?.canProductionWorkspace && !data?.canInbox)} intake={focusedIntake} isDark={theme==="dark"} onUpdated={refresh} onDirtyChange={setDirty} onOpenQuote={id=>{const next:Editor={kind:"quote",id,name:editor.name};window.history.replaceState({...window.history.state,printDeskEditor:next,printDeskJob:`quote:${id}`},"",window.location.href);setEditor(next);setSelectedKey(`quote:${id}`);setDirty(false);void refresh();}}/> : <div className={styles.empty}><p>This enquiry changed. Return to the client list and refresh.</p></div>}</div></section>}
+    {deleteTarget && <div className={styles.deleteBackdrop} role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) closeDelete(); }}><section className={styles.deleteDialog} role="dialog" aria-modal="true" aria-labelledby="delete-title"><button type="button" className={styles.deleteClose} onClick={closeDelete} aria-label="Close delete dialog"><X size={18} /></button><Trash2 size={25} /><h2 id="delete-title">Delete {deleteTarget.reference}?</h2><p>This permanently removes the quotation. Linked orders cannot be deleted here.</p><form onSubmit={event => void deleteQuotation(event)}><label>Your login password<input type="password" autoComplete="current-password" autoFocus value={deletePassword} onChange={event => setDeletePassword(event.target.value)} disabled={deleting} /></label>{deleteError && <p className={styles.formError} role="alert">{deleteError}</p>}<div><button type="button" className={styles.secondary} onClick={closeDelete} disabled={deleting}>Cancel</button><button type="submit" className={styles.dangerButton} disabled={deleting}>{deleting ? <Loader2 size={16} className={styles.spin} /> : <Trash2 size={16} />}{deleting ? "Deleting…" : "Delete quotation"}</button></div></form></section></div>}
     {transition&&<StageDialog item={transition.item} initialStage={transition.stage} onClose={closeStage} onStateChange={(isDirty,isSaving)=>{navigationRef.current.dialogDirty=isDirty;navigationRef.current.dialogSaving=isSaving;}} onSaved={async message=>{closeStage();setNotice(message);await refresh();}}/>}
   </div>;
 }

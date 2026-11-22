@@ -92,6 +92,15 @@ global.fetch = window.fetch = async (url, options = {}) => {
     assert.deepEqual(body, { action: "sync" });
     return Response.json({ ok: true });
   }
+  if (/^\/api\/admin\/quotes\/[^/]+$/.test(url) && method === "DELETE") {
+    const id = decodeURIComponent(url.slice("/api/admin/quotes/".length));
+    assert.ok(body?.password, "Deleting a quotation requires the current user's password");
+    const index = quoteRecords.findIndex((entry) => entry.id === id);
+    assert.notEqual(index, -1, "Deletes must target a known synthetic quotation");
+    assert.equal(orderRecords.some((entry) => entry.data.quoteId === id), false, "The quick delete control must not delete a quotation linked to an order");
+    quoteRecords.splice(index, 1);
+    return Response.json({ ok: true });
+  }
   assert.equal(method, "PATCH", "No unapproved write or customer message may leave the test");
   assert.match(url, /^\/api\/admin\/print-jobs\/[^/]+$/, "The test must never access an unexpected endpoint");
   if (deferredPatch) { const gate = deferredPatch; deferredPatch = null; await gate.promise; }
@@ -119,7 +128,17 @@ function MockEditor({ kind, ...props }) {
 const customRequire = (name) => {
   if (name === "next/dynamic") return { __esModule: true, default: (loader) => {
     if (String(loader).includes("SellingRulesReference")) return () => React.createElement("button", null, "Selling rules");
-    if (String(loader).includes("NewQuotationDraft")) return ({ onCreated }) => React.createElement("section", { "aria-label": "Synthetic new quotation creation" }, React.createElement("button", { onClick: () => onCreated("synthetic-created-quote") }, "Create synthetic blank quotation"));
+    if (String(loader).includes("NewQuotationDraft")) return ({ onCreated }) => React.createElement("section", { "aria-label": "Synthetic new plain quotation" },
+      React.createElement("h2", null, "New plain quotation"),
+      React.createElement("div", { role: "radiogroup", "aria-label": "Customer type" },
+        React.createElement("button", { type: "button", role: "radio", "aria-checked": "true" }, "Normal customer"),
+        React.createElement("button", { type: "button", role: "radio", "aria-checked": "false" }, "Bulk buyer")),
+      React.createElement("label", null, "Phone / WhatsApp", React.createElement("input", { "aria-label": "Phone / WhatsApp" })),
+      React.createElement("label", null, "Customer name (optional)", React.createElement("input", { "aria-label": "Customer name (optional)" })),
+      React.createElement("label", null, "Approved unit price", React.createElement("input", { "aria-label": "Approved unit price in Rs", defaultValue: "175" })),
+      React.createElement("button", { type: "button", onClick: () => onCreated("synthetic-created-quote", "draft") }, "Save draft"),
+      React.createElement("button", { type: "button", onClick: () => onCreated("synthetic-created-quote", "send") }, "Create & send"));
+    if (String(loader).includes("DailyTools")) return loadComponent("DailyTools.tsx").default;
     assert.equal(String(loader).includes("QuoteEditorPage"), false, "The legacy quote editor must never mount in the simplified workflow");
     const kind = "order";
     return (props) => React.createElement(MockEditor, { ...props, kind });
@@ -136,7 +155,11 @@ const customRequire = (name) => {
       React.createElement("button", { onClick: onClose }, "Cancel synthetic settings"),
       React.createElement("button", { onClick: onSaved }, "Save synthetic settings")),
   };
+  if (name === "./DailyTools") return loadComponent("DailyTools.tsx");
   if (name === "@/admin/AdminThemeContext") return { useAdminTheme: () => ({ theme: "dark" }) };
+  if (name === "@/data/work") return { CONTACT_TEL: "+23059883880" };
+  if (name === "@/lib/business-payment-details") return { BUSINESS_PAYMENT_DETAILS: { payee: "Manavshree Chutooree", bankName: "SBM BANK", accountNumber: "50300001273751" } };
+  if (name === "@/lib/quotation-payment") return { JUICE_PHONE: "57701144", PAYMENT_WHATSAPP_PHONE: "59883880" };
   if (name === "@/lib/print-job-workflow") return domain;
   if (name.startsWith("@/lib/print-job")) return loadDomain(name.slice("@/lib/".length) + ".ts");
   if (name === "./JobOrderDetails") return loadComponent("JobOrderDetails.tsx");
@@ -148,7 +171,7 @@ const customRequire = (name) => {
 function loadComponent(file) {
   const result = { exports: {} };
   const source = ts.transpileModule(fs.readFileSync(root + "/src/components/admin/print-jobs/" + file, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText;
-  vm.runInNewContext(source, { module: result, exports: result.exports, require: customRequire, console }, { filename: file + ".test.js" });
+  vm.runInNewContext(source, { module: result, exports: result.exports, require: customRequire, console, window, document, navigator, setTimeout, clearTimeout, URL, URLSearchParams }, { filename: file + ".test.js" });
   return result.exports;
 }
 const componentModule = { exports: {} };
@@ -166,6 +189,7 @@ const patches = () => requests.filter((request) => request.method === "PATCH");
 const list = () => screen.getByRole("complementary", { name: "Client design list" });
 const rows = () => within(list()).queryAllByRole("button", { name: /^Open job for / });
 const rowNames = () => rows().map((row) => row.getAttribute("aria-label").replace(/^Open job for /, "").split(",")[0]);
+const tableRow = (name) => screen.getByRole("button", { name: new RegExp(`^Open job for ${name},`) }).closest('[role="row"]');
 const overview = () => screen.getByLabelText(/^Job overview for /);
 const dialog = () => screen.getByRole("dialog", { name: "What happens next?" });
 const form = () => screen.getByRole("form", { name: "Update job stage" });
@@ -195,16 +219,61 @@ const handoff = () => screen.getByRole("region", { name: "Synthetic Tanvi workfl
 function addEnquiry() { queueFlags.canEnquiries = true; enquiries = [{ id: "synthetic-intake", subject: "Synthetic enquiry", status: "review", email: "pending@synthetic.example.test", draft: { name: "Indigo Enquiry", phone: "", lines: [] }, summary: "Sizes missing", lastReplyAt: new Date(NOW).toISOString(), updatedAtIso: new Date(NOW).toISOString() }]; }
 
 (async () => {
-  await test("one status dropdown replaces category tabs and defaults to active clients", async () => {
+  await test("compact quotation table, inline fast form and one status dropdown default to active clients", async () => {
     await mount(); assert.equal(rows().length, 6);
+    const workspaceNav = screen.getByRole("navigation", { name: "Tanvi quotation workspace" });
+    assert.equal(within(workspaceNav).getByRole("button", { name: "Quotations" }).getAttribute("aria-current"), "page");
+    assert.ok(screen.getByRole("region", { name: "Synthetic new plain quotation" }));
+    assert.ok(screen.getByRole("heading", { name: "New plain quotation" }));
+    assert.ok(screen.getByRole("radio", { name: "Normal customer" }));
+    assert.ok(screen.getByRole("radio", { name: "Bulk buyer" }));
+    assert.equal(screen.getByLabelText("Approved unit price in Rs").value, "175");
     assert.equal(Boolean(screen.queryByRole("navigation", { name: "Job categories" })), false);
     assert.equal(screen.getAllByRole("combobox").length, 1);
     assert.equal(screen.getByRole("combobox", { name: "Job status" }).value, "active");
+    const table = within(list()).getByRole("table", { name: "Quotation jobs" });
+    for (const heading of ["Client", "Product", "Quotation no.", "Date", "Status", "Total", "Action"]) assert.ok(within(table).getByText(heading, { exact: true }));
+    assert.equal(table.querySelectorAll('[role="row"]').length, 7, "The compact table has one header and six active jobs");
     assert.ok(screen.getByRole("complementary", { name: "Client design list" })); assert.equal(Boolean(screen.queryByRole("region", { name: "Selected client design" })), false);
     for (const stage of domain.PRINT_JOB_STAGES) { await status(stage.id); assert.equal(rows().length, 1); assert.ok(rows()[0].getAttribute("aria-label").endsWith(stage.label)); }
     await status("all"); assert.equal(rows().length, 8);
     await status("attention"); assert.equal(rows().length, 4);
     assert.ok(rowNames().every((name) => !/Completed|Declined/.test(name))); assert.equal(patches().length, 0);
+  });
+
+  await test("Daily tools replaces quotation work with downloadable charts and one-click copy details", async () => {
+    await mount();
+    await user.click(screen.getByRole("button", { name: "Daily tools" }));
+    assert.ok(screen.getByRole("heading", { name: "Daily tools." }));
+    assert.equal(Boolean(screen.queryByRole("region", { name: "Synthetic new plain quotation" })), false);
+    assert.equal(Boolean(screen.queryByRole("complementary", { name: "Client design list" })), false);
+    const charts = screen.getByRole("heading", { name: "Size charts" }).closest("section");
+    assert.equal(within(charts).getAllByRole("link").length, 4);
+    const adult = within(charts).getByRole("link", { name: "Adult T-shirt" });
+    assert.equal(adult.getAttribute("href"), "/T-Shirt%20Measurement.webp");
+    assert.equal(adult.hasAttribute("download"), true);
+    await user.click(screen.getByRole("button", { name: "Copy Bank account number" }));
+    assert.deepEqual(clipboardWrites, ["50300001273751"]);
+    assert.ok(screen.getByRole("button", { name: "Copy Bank account number" }).textContent.includes("Copied"));
+    await user.click(screen.getByRole("button", { name: "Quotations" }));
+    assert.ok(screen.getByRole("region", { name: "Synthetic new plain quotation" }));
+    assert.ok(screen.getByRole("complementary", { name: "Client design list" }));
+  });
+
+  await test("trash action deletes only an unlinked quotation after a compact password confirmation", async () => {
+    await mount();
+    assert.equal(Boolean(screen.queryByRole("button", { name: "Delete INV-DELTA" })), false, "A quotation linked to an order cannot be quick-deleted");
+    await user.click(screen.getByRole("button", { name: "Delete Q-alpha" }));
+    const deleteDialog = screen.getByRole("dialog", { name: "Delete Q-alpha?" });
+    assert.match(deleteDialog.textContent, /permanently removes the quotation/i);
+    await user.click(within(deleteDialog).getByRole("button", { name: "Delete quotation" }));
+    assert.match(within(deleteDialog).getByRole("alert").textContent, /login password/i);
+    assert.equal(requests.some((request) => request.method === "DELETE"), false);
+    await user.fill(within(deleteDialog).getByLabelText("Your login password"), "synthetic-password");
+    await user.click(within(deleteDialog).getByRole("button", { name: "Delete quotation" }));
+    await waitFor(() => assert.equal(Boolean(screen.queryByRole("button", { name: /^Open job for Alpha New,/ })), false));
+    assert.deepEqual(requests.filter((request) => request.method === "DELETE"), [{ url: "/api/admin/quotes/alpha", method: "DELETE", body: { password: "synthetic-password" } }]);
+    assert.match(screen.getByRole("status").textContent, /Q-alpha was deleted/);
   });
 
   await test("search and status persist when opening a full-width client detail and returning to the list", async () => {
@@ -222,12 +291,11 @@ function addEnquiry() { queueFlags.canEnquiries = true; enquiries = [{ id: "synt
     await waitFor(() => assert.equal(screen.getByRole("combobox", { name: "Job status" }).value, "completed")); assert.deepEqual(rowNames(), ["Golf Completed"]);
   });
 
-  await test("client list displays saved mockups and print artwork; selected design shows front and back", async () => {
-    await mount(); const row = screen.getByRole("button", { name: "Open job for Echo Production, In production" });
-    assert.equal(within(row).getByRole("img", { name: "Finished product · Front" }).getAttribute("src"), "https://synthetic.example.test/front-mockup.png");
-    assert.ok(within(row).getByRole("img", { name: "Finished product · Back" }));
-    assert.ok(within(row).getByRole("img", { name: "Print artwork · Front" }));
-    assert.ok(within(row).getByText("Echo Production", { exact: true }));
+  await test("compact client row stays scannable; selected design preserves front, back and artwork downloads", async () => {
+    await mount(); const row = tableRow("Echo Production");
+    assert.ok(row); assert.ok(within(row).getByText("Echo Production", { exact: true }));
+    assert.ok(within(row).getByText("Q-echo", { exact: true }));
+    assert.equal(within(row).queryByRole("img"), null, "The compact job table does not repeat heavy artwork previews");
     await openJob("Echo Production"); assert.equal(Boolean(screen.queryByRole("complementary", { name: "Client design list" })), false, "Opening a client hides the list rather than retaining a narrow split");
     assert.ok(screen.getByRole("region", { name: "Selected client design" }));
     assert.ok(within(overview()).getByRole("heading", { name: "Finished product" }));
@@ -235,7 +303,6 @@ function addEnquiry() { queueFlags.canEnquiries = true; enquiries = [{ id: "synt
     assert.equal(within(overview()).getAllByRole("img").length, 3);
     const downloads = within(overview()).getAllByRole("link", { name: /^Download / });
     assert.equal(downloads.length, 3, "Every full-size mockup and artwork image has a quick download control");
-    assert.equal(within(row).queryByRole("link", { name: /^Download / }), null, "Compact job cards do not nest download links inside their open-job button");
     const frontDownload = within(overview()).getByRole("link", { name: "Download Finished product · Front" });
     const frontDownloadUrl = new URL(frontDownload.getAttribute("href"), "http://localhost:3007");
     assert.equal(frontDownloadUrl.pathname, "/api/shops/download");
@@ -252,37 +319,27 @@ function addEnquiry() { queueFlags.canEnquiries = true; enquiries = [{ id: "synt
     const artworkOnly = quoteRecords.find(entry => entry.id === "bravo");
     artworkOnly.data.attachments = [{ filename: "Synthetic print.png", role: "print-artwork", contentType: "image/png", url: "https://synthetic.example.test/print.png" }];
     await mount();
-    const emptyRow = screen.getByRole("button", { name: "Open job for Alpha New, New enquiry" });
-    assert.ok(within(emptyRow).getByText("No saved preview"));
-    const shirt = within(emptyRow).getByRole("img", { name: "Generic T-shirt illustration" });
+    assert.equal(within(tableRow("Alpha New")).queryByRole("img"), null);
+    await openJob("Alpha New");
+    assert.ok(within(overview()).getByText("No saved preview"));
+    const shirt = within(overview()).getByRole("img", { name: "Generic T-shirt illustration" });
     assert.equal(shirt.tagName.toLowerCase(), "svg", "The fallback is an honest code illustration, not a fabricated customer photo");
-    assert.equal(within(emptyRow).queryByText("Artwork below"), null);
-    assert.equal(emptyRow.querySelector(".queueMockups img"), null);
-    const poloRow = screen.getByRole("button", { name: "Open job for Delta Confirmed, Confirmed" });
-    assert.ok(within(poloRow).getByRole("img", { name: "Generic polo illustration" }));
-    assert.equal(within(poloRow).queryByText("Artwork below"), null, "A non-image attachment is not artwork shown below");
-    const artworkRow = screen.getByRole("button", { name: "Open job for Bravo Details, Needs details" });
-    assert.ok(within(artworkRow).getByText("Artwork below"));
-    assert.ok(within(artworkRow).getByRole("img", { name: /^Print artwork/ }));
+    assert.equal(within(overview()).queryByText("Artwork below"), null);
+    await openJob("Delta Confirmed");
+    assert.ok(within(overview()).getByRole("img", { name: "Generic polo illustration" }));
+    assert.equal(within(overview()).queryByText("Artwork below"), null, "A non-image attachment is not artwork shown below");
     await openJob("Bravo Details");
     assert.ok(within(overview()).getByText("No saved preview"));
     assert.ok(within(overview()).getByText("Generic garment illustration"));
     assert.ok(within(overview()).getByText("Artwork below"));
     assert.equal(overview().querySelector(".finishedProducts img"), null);
-    await openJob("Alpha New");
-    assert.ok(within(overview()).getByRole("img", { name: "Generic T-shirt illustration" }));
-    assert.equal(within(overview()).queryByText("Artwork below"), null);
     assert.equal(patches().length, 0);
   });
 
   await test("same-asset artwork variants show transparent left and unverified saved source right below garments", async () => {
     const attachment = quoteRecords.find(entry => entry.id === "echo").data.attachments[2];
     Object.assign(attachment, { originalUrl: "https://synthetic.example.test/original-logo.jpg", originalFilename: "Original logo.jpg", originalContentType: "image/jpeg", backgroundRemovalMethod: "ai" });
-    await mount();
-    const row = screen.getByRole("button", { name: "Open job for Echo Production, In production" });
-    const pair = within(row).getByRole("group", { name: "Front artwork versions" });
-    assert.deepEqual(within(pair).getAllByRole("img").map(image => [image.alt, image.getAttribute("src")]), [["Print artwork · Front · Transparent", "https://synthetic.example.test/synthetic-logo.png"], ["Print artwork · Front · Saved source", "https://synthetic.example.test/original-logo.jpg"]]);
-    await openJob("Echo Production");
+    await mount(); await openJob("Echo Production");
     const detailPair = within(overview()).getByRole("group", { name: "Front artwork versions" });
     assert.ok(within(overview()).getByText("Saved source is the file received before admin cleanup. It may already have been edited."));
     assert.equal(within(overview()).queryByText("Front · Original"), null);
@@ -308,12 +365,7 @@ function addEnquiry() { queueFlags.canEnquiries = true; enquiries = [{ id: "synt
   await test("raw-only retained original appears once without an invented transparent copy", async () => {
     const file = quoteRecords.find(entry => entry.id === "echo").data.attachments[2];
     Object.assign(file, { originalUrl: file.url, originalFilename: file.filename, originalContentType: file.contentType, originalProvenance: "client-upload" });
-    await mount();
-    const row = screen.getByRole("button", { name: "Open job for Echo Production, In production" });
-    assert.equal(within(row).getAllByRole("img", { name: /Print artwork/ }).length, 1);
-    assert.ok(within(row).getByRole("img", { name: "Print artwork · Front · Original upload" }));
-    assert.equal(within(row).queryByText(/may already have been edited/), null);
-    await openJob("Echo Production");
+    await mount(); await openJob("Echo Production");
     assert.equal(within(overview()).queryByRole("group", { name: "Front artwork versions" }), null);
     assert.equal(within(overview()).getAllByRole("img", { name: /Print artwork/ }).length, 1);
   });
@@ -359,10 +411,10 @@ function addEnquiry() { queueFlags.canEnquiries = true; enquiries = [{ id: "synt
     await openJob("Echo Production"); assert.equal(handoff().dataset.quoteId, "echo");
   });
 
-  await test("in-flight handoff blocks detail dismissal, new quotation and browser Back", async () => {
+  await test("in-flight handoff blocks detail dismissal, the inline quotation form and browser Back", async () => {
     await mount(); await openJob(); await user.click(within(handoff()).getByRole("button", { name: "Start synthetic handoff action" }));
     assert.equal(Boolean(screen.queryByRole("complementary", { name: "Client design list" })), false);
-    assert.equal(Boolean(screen.queryByRole("button", { name: "New quotation" })), false);
+    assert.equal(Boolean(screen.queryByRole("region", { name: "Synthetic new plain quotation" })), false);
     await user.click(within(overview()).getByRole("button", { name: "Client list" })); assert.equal(handoff().dataset.quoteId, "alpha");
     await popTo({}); assert.ok(screen.queryByRole("region", { name: "Synthetic Tanvi workflow" }), "Browser Back must retain an in-flight handoff");
     assert.equal(handoff().dataset.quoteId, "alpha");
@@ -439,14 +491,17 @@ function addEnquiry() { queueFlags.canEnquiries = true; enquiries = [{ id: "synt
     assert.match(within(dialog()).getByRole("alert").textContent, /Someone updated/);
   });
 
-  await test("new quotation remains explicit and then opens the new three-step panel without legacy editor", async () => {
-    await mount(); await user.click(screen.getByRole("button", { name: "New quotation" }));
-    assert.ok(screen.getByRole("region", { name: "Synthetic new quotation creation" })); assert.equal(patches().length, 0);
-    const length = window.history.length;
-    await user.click(screen.getByRole("button", { name: "Create synthetic blank quotation" }));
-    assert.equal(handoff().dataset.quoteId, "synthetic-created-quote"); assert.equal(window.history.length, length);
-    assert.equal(window.history.state.printDeskJob, "quote:synthetic-created-quote");
-    await user.click(screen.getByRole("button", { name: "Back to clients" })); assert.ok(screen.getByRole("complementary", { name: "Client design list" })); assert.equal(Boolean(screen.queryByRole("region", { name: "Selected client design" })), false);
+  await test("inline plain quotation saves or prepares WhatsApp without opening the legacy editor", async () => {
+    await mount();
+    const fastForm = screen.getByRole("region", { name: "Synthetic new plain quotation" });
+    const historyBefore = window.history.length;
+    await user.click(within(fastForm).getByRole("button", { name: "Save draft" }));
+    assert.match(screen.getByRole("status").textContent, /saved as a draft/i);
+    assert.equal(window.history.length, historyBefore);
+    assert.equal(Boolean(screen.queryByRole("region", { name: "Synthetic Tanvi workflow" })), false);
+    await user.click(within(fastForm).getByRole("button", { name: "Create & send" }));
+    assert.match(screen.getByRole("status").textContent, /prepared for WhatsApp/i);
+    assert.equal(patches().length, 0);
   });
 
   await test("enquiry dirty guard pins snapshot through background conversion until saved", async () => {
@@ -486,7 +541,7 @@ function addEnquiry() { queueFlags.canEnquiries = true; enquiries = [{ id: "synt
 
   await test("empty and failed client list stay read-only and recover through Retry", async () => {
     quoteRecords = []; orderRecords = []; queueFlags.canQuotes = false; await mount();
-    assert.ok(screen.getByRole("heading", { name: "No matching clients" })); assert.equal(screen.getByRole("button", { name: "New quotation" }).disabled, true);
+    assert.ok(screen.getByRole("heading", { name: "No matching clients" })); assert.equal(Boolean(screen.queryByRole("region", { name: "Synthetic new plain quotation" })), false);
     cleanup(); failNextGet = 503; await mount(); assert.match(screen.getByRole("alert").textContent, /Synthetic job list interruption/);
     await user.click(screen.getByRole("button", { name: "Retry" })); await waitFor(() => assert.equal(Boolean(screen.queryByRole("alert")), false));
     assert.equal(rows().length, 0);
@@ -505,7 +560,7 @@ function addEnquiry() { queueFlags.canEnquiries = true; enquiries = [{ id: "synt
   await test("pagination and legacy requested IDs work with the simplified selected-design workflow", async () => {
     quoteRecords = Array.from({ length: 37 }, (_, index) => quote(`page-${index}`, `Page ${String(index).padStart(2, "0")}`, "new")); orderRecords = [];
     const mounted = await mount(); assert.equal(rows().length, 30);
-    await user.click(screen.getByRole("button", { name: "Show more clients" })); assert.equal(rows().length, 37);
+    await user.click(screen.getByRole("button", { name: "Show more quotations" })); assert.equal(rows().length, 37);
     await user.fill(screen.getByRole("textbox", { name: "Search jobs" }), "Page 36"); assert.deepEqual(rowNames(), ["Page 36"]);
     await act(async () => { mounted.rerender(React.createElement(App, { requestedQuoteId: "page-36" })); }); assert.equal(handoff().dataset.quoteId, "page-36");
     await act(async () => { mounted.rerender(React.createElement(App, { requestedQuoteId: "synthetic-unloaded-legacy" })); }); assert.equal(handoff().dataset.quoteId, "synthetic-unloaded-legacy");

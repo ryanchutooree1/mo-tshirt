@@ -33,6 +33,7 @@ import { db } from "@/lib/firebase";
 import { formatMoney as formatDisplayMoney } from "@/lib/money";
 import { normalizeWhatsAppPhone } from "@/lib/quotation-whatsapp";
 import { FULL_PAYMENT_TERM, JUICE_PHONE, PAYMENT_WHATSAPP_PHONE } from "@/lib/quotation-payment";
+import { BUSINESS_PAYMENT_DETAILS as PAYMENT_DETAILS } from "@/lib/business-payment-details";
 import {
   assessPaymentEvidence,
   comparePaymentAmount,
@@ -715,12 +716,6 @@ const TERMS_BY_TYPE: Record<DocumentType, string> = {
 };
 
 const getDefaultTerms = (type: DocumentType) => TERMS_BY_TYPE[type] || QUOTATION_TERMS;
-
-const PAYMENT_DETAILS = {
-  payee: "Manavshree Chutooree",
-  bankName: "SBM BANK",
-  accountNumber: "50300001273751",
-};
 
 const DEFAULT_PREPARED_BY = "Mo T-Shirt Team";
 

@@ -45,6 +45,7 @@ export default function TanviHandoffPanel({ quoteId, onDirtyChange, onBusyChange
   const load = useCallback(async () => {
     controllerRef.current?.abort();
     const controller = new AbortController(); controllerRef.current = controller;
+    const timeout = window.setTimeout(() => controller.abort("timeout"), 20000);
     setLoading(true);
     try {
       const response = await fetch(endpoint, { cache: "no-store", signal: controller.signal });
@@ -52,9 +53,15 @@ export default function TanviHandoffPanel({ quoteId, onDirtyChange, onBusyChange
       if (!response.ok) throw new Error(body.error || "Could not load this job’s next step.");
       const next = (body.view || body) as HandoffView;
       if (next.quoteId !== quoteId) throw new Error("The wrong job was returned. Please reload.");
-      if (!controller.signal.aborted && activeRef.current) { setView(next); setError(""); setSendFailure(false); }
-    } catch (reason) { if (!controller.signal.aborted && activeRef.current) setError(reason instanceof Error ? reason.message : "Could not load the next step."); }
-    finally { if (!controller.signal.aborted && activeRef.current) setLoading(false); }
+      if (!controller.signal.aborted && activeRef.current && controllerRef.current === controller) { setView(next); setError(""); setSendFailure(false); }
+    } catch (reason) {
+      const isCurrent = activeRef.current && controllerRef.current === controller;
+      const timedOut = controller.signal.aborted && controller.signal.reason === "timeout";
+      if (isCurrent && (!controller.signal.aborted || timedOut)) setError(timedOut ? "Opening took too long. Retry." : reason instanceof Error ? reason.message : "Could not load the next step.");
+    } finally {
+      window.clearTimeout(timeout);
+      if (activeRef.current && controllerRef.current === controller) setLoading(false);
+    }
   }, [endpoint, quoteId]);
   useEffect(() => {
     activeRef.current = true; generation.current += 1; busyRef.current = false; setBusy(false); busyCallback.current?.(false);
